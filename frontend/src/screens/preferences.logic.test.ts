@@ -147,7 +147,7 @@ describe("draft diffing", () => {
 });
 
 describe("choice building", () => {
-  const wordingOf = (key: string) => `"Send me ${key}."`;
+  const wordingOf = (purpose: PurposeView) => `"Send me ${purpose.key}."`;
 
   // The load-bearing rule: an untouched purpose is never submitted. A choice
   // writes an append-only proof row, so submitting one the subject didn't

@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CaptureHealthCard } from "./capturehealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Whether mail capture keeps up, for an administrator who may not see the mail.
 // The states worth a picture: every pass keeping up, passes that need

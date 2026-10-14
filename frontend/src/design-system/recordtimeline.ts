@@ -5,11 +5,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
-import { entityTimelineKeys } from "../screens/activitykeys";
-import { unwrap } from "../screens/common";
+import { timelineBaseKey } from "../lib/activitykeys";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -120,9 +120,9 @@ export function useTimelineFilters(
 }
 
 /**
- * RecordTimeline is what a page renders a timeline from: every row loaded so
- * far, whether the server holds older ones, and the one verb that fetches
- * them. `LoadMoreButton` in screens/common takes it as-is.
+ * RecordTimeline is what a page renders a timeline from. It holds every row
+ * loaded so far, whether the server holds older ones, and the one verb that
+ * fetches them. `LoadMoreButton` in `querystates.tsx` takes it as-is.
  */
 export type RecordTimeline = Readonly<{
   activities: Activity[];
@@ -185,7 +185,7 @@ export function useRecordTimeline(
     // admin moved it, and the rows it returns are cut at day boundaries that
     // have moved with it.
     queryKey: [
-      ...entityTimelineKeys(entityType, id)[0],
+      ...timelineBaseKey(entityType, id),
       filters,
       // `seeded` as well as the edge, and NOT because the edge is usually
       // enough. A seed whose page is the whole history has no next cursor, so

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AutonomySettingsCard } from "./autonomy-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AutonomySettingsCard } from "./autonomy-settings";
 
 // What a rep has let answer itself. There is no permission story here: the card
 // reads and writes the reader's own rows, so no seat can be shown the switches
@@ -22,14 +22,12 @@ type Row = {
   rejected: number;
 };
 
-function row(kind: string, mode: "manual" | "auto", counts: number[]): Row {
-  return {
-    kind,
-    mode,
-    approved_clean: counts[0],
-    approved_edited: counts[1],
-    rejected: counts[2],
-  };
+function row(
+  kind: string,
+  mode: "manual" | "auto",
+  [approved_clean, approved_edited, rejected]: [number, number, number],
+): Row {
+  return { kind, mode, approved_clean, approved_edited, rejected };
 }
 
 function story(data: Row[]) {

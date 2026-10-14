@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AgentConnectionsCard } from "./agent-token-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AgentConnectionsCard } from "./agent-token-settings";
 
 // The passport lifetime, editable and refused. The refused seat holds the read
 // and not the write, so it sees the number and the sentence saying why it is

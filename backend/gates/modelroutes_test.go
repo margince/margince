@@ -37,7 +37,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -129,18 +128,6 @@ func contractModelRoutes(t *testing.T) map[string]string {
 // for /brief.
 const modelRouteDeadlineFile = "internal/compose/modelroutedeadline.go"
 
-// oneDeliberateSuffixGap ratifies each contract path this gate accepts as
-// permanently unmatched to no safe suffix, with the reason the point-fix
-// every other gap here got does not apply to it. Bidirectional the same way
-// every waiver here is: fix the path with a real suffix and this entry goes
-// stale on its own, with AssertAllMatched below the one place that says so.
-var oneDeliberateSuffixGap = gatekit.Waive(map[string]string{
-	"/deals/{id}/status": "margince#4914 — \"/status\" alone also matches" +
-		" /contracts/{id}/status, /embeddings/reindex/status and" +
-		" /overlay/sync-status, none of which call a model, and suffix" +
-		" matching cannot require the segment before it be \"deals\"",
-})
-
 // TestTheModelRouteDeadlineSuffixesCoverTheContract holds modelRouteSuffixes
 // to the same contract marker TestTheClientsModelRouteTableIsTheContracts
 // holds the client to — the mechanism differs (a suffix list has no method,
@@ -149,9 +136,9 @@ var oneDeliberateSuffixGap = gatekit.Waive(map[string]string{
 // in oneDeliberateSuffixGap with the reason a suffix cannot say it safely.
 func TestTheModelRouteDeadlineSuffixesCoverTheContract(t *testing.T) {
 	t.Parallel()
-	defer oneDeliberateSuffixGap.AssertAllMatched(t)
 	marked := contractModelRoutes(t)
 	suffixes := modelRouteDeadlineSuffixes(t)
+	patterns := modelRouteDeadlinePatterns(t)
 
 	paths := map[string]bool{}
 	for route := range marked {
@@ -162,21 +149,79 @@ func TestTheModelRouteDeadlineSuffixesCoverTheContract(t *testing.T) {
 		paths[path] = true
 	}
 	for path := range paths {
-		covered := false
-		for _, suffix := range suffixes {
-			if strings.HasSuffix(path, suffix) {
-				covered = true
-				break
-			}
-		}
-		if covered {
-			continue
-		}
-		if oneDeliberateSuffixGap.Waived(t, path) {
+		if deadlineReaches(path, suffixes, patterns) {
 			continue
 		}
 		t.Errorf("%s calls a model per %s and no entry in %s's modelRouteSuffixes matches it — the caller gets only the server-wide 30s WriteTimeout and 502s once the model runs long", path, modelRouteContract, modelRouteDeadlineFile)
 	}
+}
+
+// TestTheModelRouteDeadlineReachesNothingTheContractDoesNotMark is the other
+// direction, and the one a suffix gets wrong. Coverage asks whether every
+// marked route is reached; this asks whether anything else is.
+//
+// A long write deadline on a route that calls no model is not a harmless
+// spare. It lets a slow-reading client hold a connection and its handler
+// goroutine for five minutes, which the server-wide WriteTimeout is kept short
+// to prevent.
+//
+// `/status` is the worked example. As a suffix it also ends
+// `/contracts/{id}/status`, `/embeddings/reindex/status` and the chassis's own
+// liveness path. So the pattern list carries that route, and this test is what
+// refuses the shortcut.
+func TestTheModelRouteDeadlineReachesNothingTheContractDoesNotMark(t *testing.T) {
+	t.Parallel()
+	marked := contractModelRoutes(t)
+	suffixes := modelRouteDeadlineSuffixes(t)
+	patterns := modelRouteDeadlinePatterns(t)
+
+	markedPaths := map[string]bool{}
+	for route := range marked {
+		_, path, ok := strings.Cut(route, " ")
+		if !ok {
+			t.Fatalf("route %q has no method/path split", route)
+		}
+		markedPaths[path] = true
+	}
+	// Read from the contract rather than from a list here, so a route added
+	// tomorrow is in this census the day it is declared.
+	paths := contractPaths(t)
+	if len(paths) <= len(markedPaths) {
+		t.Fatalf("read %d contract paths against %d marked ones — this census is reading a shape that is gone", len(paths), len(markedPaths))
+	}
+	for _, path := range paths {
+		if markedPaths[path] {
+			continue
+		}
+		if deadlineReaches(path, suffixes, patterns) {
+			t.Errorf("%s is not marked x-waits-on-model, yet %s's lists reach it: it would hold a connection for ai.RouteWriteDeadline, which only a model call is owed", path, modelRouteDeadlineFile)
+		}
+	}
+}
+
+// contractPaths collects the paths the contract declares, which is the corpus
+// the over-match census reads. It parses the document contractModelRoutes
+// parses, so both censuses read one declaration of the paths.
+func contractPaths(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile(modelRouteContract)
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	var doc struct {
+		Paths map[string]map[string]any `yaml:"paths"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	paths := make([]string, 0, len(doc.Paths))
+	for path := range doc.Paths {
+		paths = append(paths, path)
+	}
+	if len(paths) == 0 {
+		t.Fatalf("no paths parsed out of %s — a census that reads nothing agrees with everything", modelRouteContract)
+	}
+	return paths
 }
 
 // modelRouteDeadlineSuffixes reads modelRouteSuffixes out of its own source,
@@ -185,28 +230,71 @@ func TestTheModelRouteDeadlineSuffixesCoverTheContract(t *testing.T) {
 // declares it.
 func modelRouteDeadlineSuffixes(t *testing.T) []string {
 	t.Helper()
+	return modelRouteDeadlineList(t, "modelRouteSuffixes")
+}
+
+// modelRouteDeadlinePatterns reads the sibling list of segment patterns, the
+// ones whose last segment is a word that other routes also end in.
+func modelRouteDeadlinePatterns(t *testing.T) []string {
+	t.Helper()
+	return modelRouteDeadlineList(t, "modelRoutePatterns")
+}
+
+// modelRouteDeadlineList reads one of the file's two []string literals by name.
+// One parser serves both, rather than two that can come to disagree about the
+// shape they read.
+func modelRouteDeadlineList(t *testing.T, name string) []string {
+	t.Helper()
 	source, err := os.ReadFile(modelRouteDeadlineFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", modelRouteDeadlineFile, err)
 	}
-	const marker = "var modelRouteSuffixes = []string{"
-	start := indexAfter(string(source), marker)
+	start := indexAfter(string(source), "var "+name+" = []string{")
 	if start < 0 {
-		t.Fatalf("%s no longer declares modelRouteSuffixes as a []string literal — this gate is reading a shape that is gone", modelRouteDeadlineFile)
+		t.Fatalf("%s no longer declares %s as a []string literal — this gate is reading a shape that is gone", modelRouteDeadlineFile, name)
 	}
 	end := strings.Index(string(source)[start:], "}")
 	if end < 0 {
-		t.Fatalf("%s's modelRouteSuffixes literal is unterminated", modelRouteDeadlineFile)
+		t.Fatalf("%s's %s literal is unterminated", modelRouteDeadlineFile, name)
 	}
 	block := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
-	var suffixes []string
+	var entries []string
 	for _, m := range goStringLiteral.FindAllStringSubmatch(block, -1) {
-		suffixes = append(suffixes, m[1])
+		entries = append(entries, m[1])
 	}
-	if len(suffixes) == 0 {
-		t.Fatalf("no suffixes parsed out of %s's modelRouteSuffixes — a gate that reads nothing agrees with everything", modelRouteDeadlineFile)
+	if len(entries) == 0 {
+		t.Fatalf("no entries parsed out of %s's %s — a gate that reads nothing agrees with everything", modelRouteDeadlineFile, name)
 	}
-	return suffixes
+	return entries
+}
+
+// deadlineReaches answers the production matcher's question. Does any suffix or
+// pattern reach this contract path? A `*` takes the one segment the contract
+// spells as `{id}`.
+func deadlineReaches(path string, suffixes, patterns []string) bool {
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(path, suffix) {
+			return true
+		}
+	}
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	for _, pattern := range patterns {
+		want := strings.Split(strings.Trim(pattern, "/"), "/")
+		if len(segments) < len(want) {
+			continue
+		}
+		reaches := true
+		for i, segment := range want {
+			if segment != "*" && segment != segments[len(segments)-len(want)+i] {
+				reaches = false
+				break
+			}
+		}
+		if reaches {
+			return true
+		}
+	}
+	return false
 }
 
 // goStringLiteral reads one Go double-quoted string literal. modelRouteSuffixes

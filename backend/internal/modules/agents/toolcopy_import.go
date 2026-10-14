@@ -28,7 +28,7 @@ var previewImportCopy = toolCopy{
 		"`company_ref` names a company's ref. " +
 		"read_import with view format lists each file's columns.",
 	Instead: "create_record for one record you already know.",
-	Retain: "Keep the run_id. The counts it answers — created, duplicates, skipped — and the " +
+	Retain: "Keep the run_id. The counts its report answers — created, duplicates, skipped — and the " +
 		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
 }
@@ -59,7 +59,8 @@ var commitImportCopy = toolCopy{
 	Purpose: "Write a checked import into the workspace. The dry run is the check; this starts the " +
 		"write and answers at once with the run running.",
 	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
-		"so there is always a report first. This cannot be undone from here — undoing an import " +
+		"so there is always a report first, or from a failed commit, which resumes at the row it " +
+		"stopped at. This cannot be undone from here — undoing an import " +
 		"needs the web app. A request to get a file in is not a review of it: unless the asker " +
 		"says they have already been through these rows, show the counts and the mapping and wait " +
 		"for their go-ahead.",

@@ -42,7 +42,7 @@ reviewer reads a Vietnamese change against this page.
   "từ khi mở danh sách", "Tin nhắn vẫn nằm ngoài danh sách". Keep it in "Bạn không có quyền thực hiện thao
   tác này" and beside "Deal của nhóm". Lowercase mid-sentence; a capital only where a sentence opens.
 - **Five families are read by an outsider**: the four German Sie families in
-  `frontend/src/i18n/address-register.test.ts` (`privacynotice.`, `confirm.`, `buyer.`, `prefs.`) and
+  `frontend/scripts/lib/german-catalogs.ts` (`privacynotice.`, `confirm.`, `buyer.`, `prefs.`) and
   `book.`, the public booking form a guest fills in. There the reader is **quý khách** where the English
   says you, never bạn, and "Vui lòng" is allowed. Use quý khách only where the sentence needs it: "Xin cảm
   ơn", "Xác nhận đăng ký". `book.name` and `book.email` share a form with `scheduling.` keys, so they
@@ -379,8 +379,8 @@ vocabulary.
 | No failure word in a short value | thất bại in a value of at most 8 words: a title, label, status or counter |
 
 The prefixes come from the gates that own them: the speaker exemptions from
-`copy-style.test.ts`, the outsider families from `address-register.test.ts`
-with `book.` added, the consent keys from `marketingquestion_test.go`, and the
+`copy-style.test.ts`, the outsider families from `german-catalogs.ts` with
+`book.` added, the consent keys from `marketingquestion_test.go`, and the
 retired words and their kept compounds from the Vocabulary table. Two more
 tests fail a `vi.json` a unit ships that the gate did not read, and a unit
 value whose words equal its English.

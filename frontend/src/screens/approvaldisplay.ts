@@ -324,7 +324,9 @@ export function displayFields(kind: string): readonly DisplayField[] {
   // Own-property only, for the reason editableStrings checks it: `kind` is a
   // wire string, and one spelled `constructor` would otherwise find a function
   // on Object's prototype and crash the queue rather than falling back.
-  return Object.hasOwn(DISPLAY_FIELDS, kind) ? DISPLAY_FIELDS[kind] : [];
+  return Object.hasOwn(DISPLAY_FIELDS, kind)
+    ? (DISPLAY_FIELDS[kind] ?? [])
+    : [];
 }
 
 /**

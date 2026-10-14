@@ -304,7 +304,7 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 	for _, f := range filters {
 		field, ok := entity.Lookup(f.Field)
 		if !ok {
-			return nil, unknownField(entity, f.Field, KindDimension)
+			return nil, unknownFilterField(entity, f.Field)
 		}
 		form := filterSQL[f.Op]
 		if valuelessOps[f.Op] {

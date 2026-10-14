@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
-import { StoryProviders } from "./story-utils";
 
 // The head of a lead record: what it does and where, then the two pills that
 // say what kind of record this is and where it stands. The pills are the reason

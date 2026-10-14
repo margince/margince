@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { House, UserRound } from "lucide-react";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { type NavSection, railTrail } from "./nav";
 import { NavLevelView } from "./navlevel";
 
@@ -47,8 +47,14 @@ const SETTINGS: NavSection = {
   ],
 };
 
-const primary = railTrail({ screen: "home" })[0];
+const [primary] = railTrail({ screen: "home" });
 const settings = railTrail({ screen: "settings", id: "account" }, SETTINGS);
+const [settingsTop, settingsDrilled] = settings;
+if (!primary || !settingsTop || !settingsDrilled) {
+  throw new Error(
+    "railTrail no longer answers with the levels these stories draw",
+  );
+}
 
 function level(
   which: (typeof settings)[number],
@@ -124,7 +130,7 @@ export const Collapsed: Story = {
  * of the section above them.
  */
 export const Drilled: Story = {
-  render: level(settings[1], RESTING, undefined, settings[0]),
+  render: level(settingsDrilled, RESTING, undefined, settingsTop),
 };
 
 /** At 390px the rail is the phone's own bar rather than a column, so the rows

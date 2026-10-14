@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func embedStateOf(ctx context.Context, t *testing.T, store *knowledge.Store, corpus ids.UUID) crmcontracts.KnowledgeCoverageEmbedState {
+func embedStateOf(ctx context.Context, t *testing.T, store *knowledge.Store, corpus ids.UUID) crmcontracts.KnowledgeEmbedState {
 	t.Helper()
 	read, err := store.ReadCorpus(ctx, corpus)
 	if err != nil {
@@ -38,26 +38,26 @@ func TestACorpusSaysWhyItsPassagesAreOrAreNotSearchable(t *testing.T) {
 	ee := newEmbedEnv(t)
 	bound := ee.store.WithEmbedIdentity(func() string { return ee.embedder.identity })
 
-	if got := embedStateOf(ee.ctx, t, ee.store, ee.corpus); got != crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel {
+	if got := embedStateOf(ee.ctx, t, ee.store, ee.corpus); got != crmcontracts.KnowledgeEmbedStateNoEmbeddingModel {
 		t.Errorf("with no embed lane bound, embed_state = %q, want no_embedding_model", got)
 	}
-	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeCoverageEmbedStateIndexing {
+	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeEmbedStateIndexing {
 		t.Errorf("ingested but not yet embedded, embed_state = %q, want indexing", got)
 	}
 	if _, err := bound.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("embed: %v", err)
 	}
-	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeCoverageEmbedStateComplete {
+	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeEmbedStateComplete {
 		t.Errorf("every passage embedded, embed_state = %q, want complete", got)
 	}
 
 	rebound := ee.store.WithEmbedIdentity(func() string { return "fake/other@8" })
-	if got := embedStateOf(ee.ctx, t, rebound, ee.corpus); got != crmcontracts.KnowledgeCoverageEmbedStateIndexing {
+	if got := embedStateOf(ee.ctx, t, rebound, ee.corpus); got != crmcontracts.KnowledgeEmbedStateIndexing {
 		t.Errorf("vectors under a superseded model, embed_state = %q, want indexing", got)
 	}
 
 	ee.upload(t, "waiting.md", "text/markdown", prose(1))
-	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeCoverageEmbedStateIndexing {
+	if got := embedStateOf(ee.ctx, t, bound, ee.corpus); got != crmcontracts.KnowledgeEmbedStateIndexing {
 		t.Errorf("a document still queued, embed_state = %q, want indexing", got)
 	}
 }
@@ -104,7 +104,7 @@ func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.
 		e.BootstrapWorkspace(t)
 		createCorpusOverHTTP(t, e)
 		offered, state := readEmbedAgreement(t, e)
-		if offered || state != string(crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel) {
+		if offered || state != string(crmcontracts.KnowledgeEmbedStateNoEmbeddingModel) {
 			t.Errorf("unbound: reindex offered = %v, embed_state = %q, want false and no_embedding_model", offered, state)
 		}
 	})
@@ -116,7 +116,7 @@ func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.
 		e.BootstrapWorkspace(t)
 		createCorpusOverHTTP(t, e)
 		offered, state := readEmbedAgreement(t, e)
-		if !offered || state != string(crmcontracts.KnowledgeCoverageEmbedStateComplete) {
+		if !offered || state != string(crmcontracts.KnowledgeEmbedStateComplete) {
 			t.Errorf("bound: reindex offered = %v, embed_state = %q, want true and an empty corpus complete", offered, state)
 		}
 	})
@@ -140,11 +140,11 @@ func TestKnowledgeAndSystemHealthAgreeAcrossARebind(t *testing.T) {
 		name    string
 		routing ai.RoutingConfig
 		offered bool
-		state   crmcontracts.KnowledgeCoverageEmbedState
+		state   crmcontracts.KnowledgeEmbedState
 	}{
-		{"booted unbound", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel},
-		{"bound after boot", boundEmbedRouting("embed-rebound"), true, crmcontracts.KnowledgeCoverageEmbedStateComplete},
-		{"unbound again", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel},
+		{"booted unbound", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeEmbedStateNoEmbeddingModel},
+		{"bound after boot", boundEmbedRouting("embed-rebound"), true, crmcontracts.KnowledgeEmbedStateComplete},
+		{"unbound again", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeEmbedStateNoEmbeddingModel},
 	}
 	for _, step := range steps {
 		if err := router.Rebind(step.routing); err != nil {

@@ -7,8 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { navigate, parseHash, useRoute } from "../app/router";
+import { navigate, parseHash, useRoute } from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import {
   dryRun,
@@ -33,6 +33,9 @@ function RoutedImport() {
 
 const RUN_PAGE = "#/settings/import/run";
 
+const DRAFT_CLOSED =
+  "This draft is not offered again. Upload the file again to start over.";
+
 // The run page is a page of its own under the hub. Nothing is on screen until
 // /me has answered whether this seat may import at all, so the page is waited
 // for rather than looked up.
@@ -53,8 +56,14 @@ async function toTheMap(user: UserEvent, file = "leads.csv") {
   await screen.findByRole("row", { name: /Notes/ });
 }
 
+// The save the test run follows: the last PATCH before the validate.
 function staged(sent: ReturnType<typeof stubRoutes>) {
-  return sent.filter((s) => s.path === "POST /imports").at(-1);
+  const validated = sent.findIndex((s) => s.path.endsWith("/validate"));
+  if (validated < 0) return undefined;
+  return sent
+    .slice(0, validated)
+    .filter((s) => s.method === "PATCH")
+    .at(-1);
 }
 
 afterEach(() => {
@@ -88,12 +97,10 @@ describe("one CSV through the run page", () => {
     // "Notes" was suggested nothing, so it stays out: an unmapped column is
     // not a column mapped to nothing.
     expect(staged(sent)?.body).toEqual({
-      connector: "csv",
-      source_ref: "ws/import/abc",
+      version: run.version,
       object: "lead",
       mapping: { Email: "email", "Full Name": "full_name" },
-      on_broken_link: "skip_row",
-      file_name: "leads.csv",
+      draft_step: "map",
     });
     expect(
       await screen.findByText(/the "Email" column is empty/),
@@ -217,6 +224,60 @@ describe("one CSV through the run page", () => {
     expect(await screen.findByText("File could not be read")).toBeVisible();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("says to split a file with more rows than one test run reads", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports/sources": () =>
+        jsonResponse(
+          {
+            status: 422,
+            code: "validation_error",
+            detail: "The request is not valid.",
+            details: {
+              errors: [
+                {
+                  field: "file",
+                  code: "too_many_rows",
+                  message: "this upload has 15001 rows",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    expect(
+      await screen.findByText("File is too long for one test run"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "This file has more rows than one test run can read. Split it into smaller files and import each one.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("File could not be read")).toBeNull();
+  });
+
+  it("refuses an upload answer that names no run", async () => {
+    const user = userEvent.setup();
+    const { run_id: _unnamed, ...unnamed } = profile;
+    stubRoutes({ "POST /imports/sources": () => jsonResponse(unnamed) });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    expect(await screen.findByText("File could not be read")).toBeVisible();
+  });
 });
 
 describe("who is offered the import", () => {
@@ -312,6 +373,51 @@ describe("a run named by the address", () => {
     expect(
       screen.queryByRole("button", { name: "Undo this import" }),
     ).toBeNull();
+  });
+
+  it("says a cancelled run was canceled and starts again from an upload", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "cancelled" }),
+    });
+    renderAtImport("r1");
+
+    expect(await screen.findByText("This import was canceled")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Upload a file" }));
+    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(globalThis.location.hash).not.toContain("run=");
+  });
+
+  it("says why a draft's last test stopped when this page no longer holds its file", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "pending",
+          error: "The test run stopped before it finished.",
+        }),
+    });
+    renderAtImport("r1");
+
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
+    expect(
+      screen.getByText("The test run stopped before it finished."),
+    ).toBeVisible();
+  });
+
+  it("says a draft that never stopped wrote nothing, rather than an empty notice", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "pending", error: null }),
+    });
+    renderAtImport("r1");
+
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
+    expect(
+      screen.getByText("This import stopped before anything was imported."),
+    ).toBeVisible();
   });
 
   it("says so when the server will not answer for the run", async () => {

@@ -77,10 +77,14 @@ function runOf(
   movable: (key: string) => boolean,
 ): readonly [number, number] {
   const at = keys.indexOf(key);
+  const movableAt = (index: number) => {
+    const candidate = keys[index];
+    return candidate !== undefined && movable(candidate);
+  };
   let from = at;
-  while (from > 0 && movable(keys[from - 1])) from -= 1;
+  while (from > 0 && movableAt(from - 1)) from -= 1;
   let to = at + 1;
-  while (to < keys.length && movable(keys[to])) to += 1;
+  while (to < keys.length && movableAt(to)) to += 1;
   return [from, to];
 }
 

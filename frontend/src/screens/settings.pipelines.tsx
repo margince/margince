@@ -14,18 +14,20 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Disclosure } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { SortableList } from "../design-system/sortablelist";
 import { StageStrip } from "../design-system/stagestrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useUrlParams } from "../lib/urlstate";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
+import { LegalReviewSettingsCard } from "./legalreviewsettings";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
 import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
@@ -404,6 +406,8 @@ export function PipelinesCard() {
     <div className="settings-pipelines">
       <PipelineCatalog query={query} openId={opened?.id} onOpen={open} />
       {opened && <PipelineDetail pipeline={opened} />}
+      {/* Whether a stage may wait for legal is a pipeline question. */}
+      <LegalReviewSettingsCard />
     </div>
   );
 }

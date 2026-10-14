@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { TimelineEntry, TimelineGroup } from "../design-system/composed";
+import { StoryProviders } from "../testing/story-utils";
 import { ConversationList } from "./recordconversations";
-import { StoryProviders } from "./story-utils";
 
 // The record's exchanges as CONVERSATIONS: one row per thread, whose move it
 // is, and — expanded — the same TimelineRow the chronicle renders. Two facts

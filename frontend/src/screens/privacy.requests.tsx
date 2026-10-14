@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button, Field, Textarea } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
@@ -19,7 +18,9 @@ import { ruleText } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ProblemError, problemMessageOf, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
+import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
 import {
   EntityRef,
   RosterPartialNote,
@@ -27,7 +28,6 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
-import { useMemberName } from "./membernames";
 import {
   DSR_KIND_LABEL,
   DSR_STATUS_LABEL,

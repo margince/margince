@@ -80,10 +80,9 @@ func CounterFor(spec mcp.ToolSpec) Counter {
 	}
 }
 
-// The default thresholds (api-rate-limits-and-abuse §2.2, SaaS column). They are
-// defaults and mode-tunable — the operator's lever — and §4.2 makes lowering one
-// below its floor an ADR matter, since these are security controls rather than
-// performance knobs.
+// The default thresholds, from the SaaS column of the rate-limit spec. An admin
+// changes them in the installation settings, within each setting's floor and
+// ceiling. These bind until a policy source answers.
 const (
 	// DefaultReads is MCP-SESS-READS: the records a Passport may be handed
 	// inside one window before its next read needs a human's release.
@@ -112,7 +111,7 @@ const (
 // the same words.
 const DefaultWindow = 24 * time.Hour
 
-// Limits is one deployment's thresholds. A zero field takes the default above,
+// Limits is one installation's thresholds. A zero field takes the default above,
 // so a caller configuring one counter does not silently unbound the other three.
 type Limits struct {
 	Reads  int

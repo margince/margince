@@ -12,11 +12,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { useHash } from "../app/router";
 import { UnsavedGuard } from "../app/unsaved";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { useHash } from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import type { FilterResource, FilterVocabulary } from "./filterdata";
 import { visitAnswer } from "./lists.fixtures";
 import type { List } from "./lists.queries";

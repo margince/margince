@@ -7,7 +7,6 @@ package compose
 // is found by name, the amount in minor units, the close date as a day.
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -38,10 +38,8 @@ func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (
 		return nil, problem
 	}
 	if choice.semantic == crmcontracts.StageSemanticLost && strings.TrimSpace(fields[dealTargetLostReason]) == "" {
-		return nil, &cellProblem{
-			Target: dealTargetLostReason, Value: fields[dealTargetLostReason],
-			Message: "a lost deal needs the reason it was lost",
-		}
+		return nil, problemOf(dealTargetLostReason, fields[dealTargetLostReason],
+			migration.Why(migration.ReasonLostReasonMissing))
 	}
 	return typed, nil
 }
@@ -55,7 +53,7 @@ func (d dealStages) stageOf(fields map[string]string) (stageChoice, bool, *cellP
 		return stageChoice{}, false, nil
 	}
 	if strings.TrimSpace(stage) == "" {
-		return stageChoice{}, false, &cellProblem{Target: dealTargetStage, Value: stage, Message: "name the deal's stage"}
+		return stageChoice{}, false, problemOf(dealTargetStage, stage, migration.Why(migration.ReasonStageUnnamed))
 	}
 	choice, problem := d.resolve(fields[dealTargetPipeline], stage)
 	return choice, problem == nil, problem
@@ -68,10 +66,8 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	currency := strings.ToUpper(strings.TrimSpace(fields[dealTargetCurrency]))
 	if currency != "" {
 		if !values.ValidCurrency(currency) {
-			return &cellProblem{
-				Target: dealTargetCurrency, Value: fields[dealTargetCurrency],
-				Message: fmt.Sprintf("%q is not a currency code; write its three letters, like EUR", currency),
-			}
+			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
+				migration.Why(migration.ReasonCurrencyNotACode, "value", currency))
 		}
 		typed[dealTargetCurrency] = currency
 	}
@@ -79,19 +75,13 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 		return nil
 	}
 	if currency == "" {
-		return &cellProblem{
-			Target: dealTargetAmount, Value: fields[dealTargetAmount],
-			Message: fmt.Sprintf("%q needs a currency: fill the currency column, like EUR", amount),
-		}
+		return problemOf(dealTargetAmount, fields[dealTargetAmount],
+			migration.Why(migration.ReasonCurrencyUnset, "value", amount))
 	}
 	minor, ok := values.MinorUnits(amount, currency)
 	if !ok {
-		scale := values.MinorUnitScale(currency)
-		return &cellProblem{
-			Target: dealTargetAmount, Value: fields[dealTargetAmount],
-			Message: fmt.Sprintf("%q is not an amount in %s; write it like %s", amount, currency,
-				values.MajorUnits(12000*scale+scale/2, currency)),
-		}
+		return problemOf(dealTargetAmount, fields[dealTargetAmount],
+			migration.Why(migration.ReasonNotAnAmount, "value", amount, "currency", currency))
 	}
 	typed[dealTargetAmount] = minor
 	return nil
@@ -106,16 +96,12 @@ func (d dealStages) checkCloseDate(fields map[string]string, choice stageChoice,
 	}
 	date, err := time.Parse(time.DateOnly, text)
 	if err != nil {
-		return &cellProblem{
-			Target: dealTargetCloseDate, Value: fields[dealTargetCloseDate],
-			Message: fmt.Sprintf("%q is not a date; write it as YYYY-MM-DD", text),
-		}
+		return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
+			migration.Why(migration.ReasonNotADate, "value", text))
 	}
 	if choice.semantic == crmcontracts.StageSemanticOpen && deals.CloseDateIsPast(date, d.today) {
-		return &cellProblem{
-			Target: dealTargetCloseDate, Value: fields[dealTargetCloseDate],
-			Message: fmt.Sprintf("%q is in the past, and an open deal's close date cannot be", text),
-		}
+		return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
+			migration.Why(migration.ReasonCloseDatePast, "value", text))
 	}
 	typed[dealTargetCloseDate] = openapi_types.Date{Time: date}
 	return nil

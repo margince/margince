@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Breadcrumb } from "../design-system/breadcrumb";
 import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
@@ -11,6 +10,8 @@ import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
@@ -19,7 +20,7 @@ import {
   type BookingSlot,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
-import { unwrap } from "./common";
+import { contactQuery } from "./contact.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
@@ -49,15 +50,8 @@ export function BookingInviteScreen({
   const profile = useSchedulingProfile(true);
   const selectedId = edits.contact?.id ?? contactId ?? "";
   const contact = useQuery({
-    queryKey: ["booking-contact", selectedId],
+    ...contactQuery(selectedId || undefined),
     enabled: !!selectedId,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}", {
-          params: { path: { id: selectedId } },
-        }),
-      );
-    },
   });
   const saved = profile.data;
   const provider = saved?.provider ?? "";
@@ -224,10 +218,11 @@ function BookingHead({
 
 function bookingRecipient(contact?: Contact) {
   const addresses = contact?.emails ?? [];
+  const [only, ...others] = addresses;
   return (
     contact?.primary_email ??
     addresses.find((address) => address.is_primary)?.email ??
-    (addresses.length === 1 ? addresses[0].email : "")
+    (only !== undefined && others.length === 0 ? only.email : "")
   );
 }
 

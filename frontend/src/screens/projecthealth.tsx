@@ -1,9 +1,9 @@
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import {
   type ProjectHealthAssessment,
   type ProjectHealthState,

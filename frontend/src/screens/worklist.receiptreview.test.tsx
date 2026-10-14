@@ -2,9 +2,9 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { formatDayMonth, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
+import { meFixture } from "../testing/mefixture";
 import { BriefChanges } from "./brief.changes";
 import { jsonResponse, render, stubApi, writes } from "./brief.testkit";
 import { ReceiptReview } from "./worklist.receiptreview";

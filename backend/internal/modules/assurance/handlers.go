@@ -54,7 +54,7 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Data []crmcontracts.InputCheck `json:"data"`
-	}{Data: exceptionsToWire(found)})
+	}{Data: ExceptionsToWire(found)})
 }
 
 // subjectOf names the record a finding is about, so the row can open it.
@@ -87,7 +87,9 @@ var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"deal": crmcontracts.AttentionSubjectTypeDeal,
 }
 
-func exceptionsToWire(in []Exception) []crmcontracts.InputCheck {
+// ExceptionsToWire renders findings on the listInputChecks item shape; the
+// team weekly carries the same items.
+func ExceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 	// Empty, never nil. "Nothing to check" is a real answer and arrives shaped
 	// like the array it is; null reads as "unknown", which on this surface
 	// would be the difference between a clean pipeline and an unread one.

@@ -4,9 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProviderCard } from "./integrations-provider";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ProviderCard stories for the fe-uat render gate: the same three postures
 // integrations-provider.test.tsx asserts (every write, connect-only, read-only)

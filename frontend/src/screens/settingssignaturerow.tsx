@@ -10,10 +10,11 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
+import { WriteRefused } from "../design-system/querystates";
 import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { unwrap, WriteRefused } from "./common";
+import { unwrap } from "../lib/problem";
 import { useSignOff } from "./composesignoff";
 import { useSaveSignature } from "./settingssignature";
 import { SignatureHtml } from "./signaturehtml";
@@ -183,6 +184,6 @@ function rowAnswer(
   if (templated) {
     return t("settings.signatureFromTemplate");
   }
-  const firstLine = body.split("\n")[0].trim();
+  const firstLine = (body.split("\n")[0] ?? "").trim();
   return firstLine === "" ? t("settings.signatureNone") : firstLine;
 }

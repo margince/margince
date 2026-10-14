@@ -3,12 +3,13 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useDealSignals } from "./dealsignals";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -71,9 +72,10 @@ const VERDICT_TONE: Record<string, StandingTone> = {
 // must show, and colouring it green would report an unreadable word as good
 // news in the loudest element on the page.
 function verdictTone(standing: string): StandingTone {
-  return Object.hasOwn(VERDICT_TONE, standing)
+  const tone = Object.hasOwn(VERDICT_TONE, standing)
     ? VERDICT_TONE[standing]
-    : "unknown";
+    : undefined;
+  return tone ?? "unknown";
 }
 
 // The card's read, shared. Deal360 draws the briefing from it and the email

@@ -2,13 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { BriefChanges } from "./brief.changes";
 import { digest } from "./brief.fixtures";
 import { OvernightDigest } from "./brief.rail.overnight";
 import { MagicPanel } from "./magic";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import { automaticStageReceipt } from "./worklist.receiptreview.fixtures";
 
 const meta: Meta<typeof MagicPanel> = {

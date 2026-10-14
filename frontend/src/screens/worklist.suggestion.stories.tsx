@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { Panel, PanelRow } from "../design-system/panel";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SuggestionDecision } from "./worklist.suggestion";
 
 // A Deal Scout suggestion, decided on its Worklist row — see

@@ -3,8 +3,8 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { isVersionSkewOf, throwProblem } from "./common";
-import { downloadBytes } from "./download";
+import { downloadBytes } from "../lib/download";
+import { isVersionSkewOf, throwProblem } from "../lib/problem";
 import { type ReportingEvaluation, reportingQuery } from "./reporting.model";
 import { reloadReportingFigures } from "./reporting.queries";
 

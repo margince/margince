@@ -8,9 +8,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { throwProblem, unwrap } from "../lib/problem";
 import { invalidateProviderHealth } from "./ai-provider-health";
 import type { CredentialKind } from "./ai-provider-key-entry";
-import { throwProblem, unwrap } from "./common";
 
 // Reading and changing the vendor credentials. No hook here returns a key: the
 // server has no read path for one, and neither does this file.

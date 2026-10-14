@@ -1,7 +1,7 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { StoryProviders } from "../testing/story-utils";
 import { ContactOpening } from "./contactopening";
-import { StoryProviders } from "./story-utils";
 
 const ID = "c-1";
 

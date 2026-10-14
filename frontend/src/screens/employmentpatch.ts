@@ -2,8 +2,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
-import { sameEditValue, saveIndependentEdit } from "./independentedit";
+import { sameEditValue, saveIndependentEdit } from "../lib/independentedit";
+import { throwProblem, unwrap } from "../lib/problem";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type UpdateRelationshipRequest =

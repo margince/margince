@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { LeadDealSection } from "./leadraillinks";
-import { LeadScreen } from "./leads";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { LeadDealSection } from "./leadraillinks";
+import { LeadScreen } from "./leads";
 
 // The deal slice of a lead's rail: the deal this lead became, when it became
 // one, and otherwise the one verb that earns it. The three states are what a
@@ -122,6 +122,7 @@ export const AttachingAProject: Story = {
     const [attach] = await canvas.findAllByRole("button", {
       name: "Attach project",
     });
+    if (!attach) throw new Error("the rail shows no Attach project button");
     await userEvent.click(attach);
     const panel = within(await within(document.body).findByRole("dialog"));
     await userEvent.type(panel.getByRole("combobox"), "Beacon");

@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -14,7 +11,10 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, unwrap } from "./common";
+import { useCanWriteRecord } from "../lib/capability";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { routeHash } from "../lib/router";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";
@@ -145,10 +145,15 @@ export function CompanyRail({
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
-        <DealsSection view={view} loading={loading} onTab={onTab} />
-        <ProjectsSection view={view} loading={loading} onTab={onTab} />
-        <ContactsSection view={view} loading={loading} onTab={onTab} />
-        <ListsSection companyId={companyId} />
+        {/* The server refuses an archived account's 360 and its lists. */}
+        {!resolved?.archived_at && (
+          <>
+            <DealsSection view={view} loading={loading} onTab={onTab} />
+            <ProjectsSection view={view} loading={loading} onTab={onTab} />
+            <ContactsSection view={view} loading={loading} onTab={onTab} />
+            <ListsSection companyId={companyId} />
+          </>
+        )}
         <CompanyHoldSection company={resolved} />
         {/* Beside the hold, and for the same reason: both are about the
             account's mail DOMAIN rather than about the work on it. */}

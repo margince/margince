@@ -24,6 +24,9 @@ run:
     - bench
     - e2e_llm
     - voicelive
+    # The vendor live check (make vendor-live). Its scheduled job compiles it
+    # only when the vendor key is set, so this pass is what keeps it building.
+    - vendorlive
 
 linters:
   default: standard

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -37,6 +38,8 @@ type Handlers struct {
 	// transport, not the store — OfferStore's PrepareRender/
 	// SetPdfAssetRef seams (offer_render.go) stay blobstore-free.
 	blob blobstore.Store
+	// settings reads and writes the legal review switch; nil answers 501.
+	settings *settings.Store
 }
 
 // NewHandlers wires the transport over the workspace-bound app pool and the

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { unwrap } from "../common";
+import { unwrap } from "../../lib/problem";
 
 // Saving the member's own LinkedIn answer (ADR-0078 §2.1b).
 //

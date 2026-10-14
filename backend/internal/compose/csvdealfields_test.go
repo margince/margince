@@ -59,7 +59,7 @@ func TestADealsNewStageIsAnAdvanceNotAFieldWrite(t *testing.T) {
 func TestADealRowIsSkippedAtCommitUntilItsWriterLands(t *testing.T) {
 	w := &csvWriters{object: migration.ObjectDeal}
 	landed, err := w.create(context.Background(), migration.ObjectDeal, migration.Row{ExternalID: "D1"}, nil)
-	if err != nil || !landed.Skipped || landed.SkipReason != dealWriterPendingReason {
+	if err != nil || !landed.Skipped || landed.SkipReason != dealWriterPendingReason.English() {
 		t.Fatalf("landed = %+v, err = %v; want the row skipped with its reason, never a failed run", landed, err)
 	}
 }

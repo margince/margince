@@ -10,14 +10,6 @@ import {
   useState,
 } from "react";
 import { FIRST_PAGE } from "../api/client";
-import { navigate, type Route, routeHash, useHash } from "../app/router";
-import { useScrollMemory } from "../app/scrollmemory";
-import {
-  currentParams,
-  GLOBAL_DIALS,
-  type UrlParams,
-  useUrlParams,
-} from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -29,7 +21,15 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
+import { navigate, type Route, routeHash, useHash } from "../lib/router";
+import { useScrollMemory } from "../lib/scrollmemory";
+import {
+  currentParams,
+  GLOBAL_DIALS,
+  type UrlParams,
+  useUrlParams,
+} from "../lib/urlstate";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
 import "./listquery.css";
@@ -1172,8 +1172,11 @@ function useActiveView(
   const [pickedId, setPickedId] = useState<string | null>(null);
   const matched = views.findIndex((spec) => matchesView(spec, query));
   const pinned = views.findIndex((spec) => spec.id === pickedId);
+  const pinnedView = views[pinned];
   const view =
-    pinned >= 0 && matchesView(views[pinned], query) ? pinned : matched;
+    pinnedView !== undefined && matchesView(pinnedView, query)
+      ? pinned
+      : matched;
   // The press reports an index into the rail just rendered, which is where the
   // id it names comes from. A press on nothing (the surface's own "clear
   // everything" reports index 0 against an empty rail) unpins rather than

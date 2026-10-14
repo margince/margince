@@ -74,10 +74,9 @@ func (t previewImport) previewFiles(ctx context.Context, args previewArgs) (json
 	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// Kept for the reason the single-file path keeps it: the run is resumable.
-		return nil, err
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
-	return json.Marshal(ImportPreviewResult{Run: importRunResult(run), Files: previews})
+	return t.answered(ctx, run, ImportPreviewResult{Files: previews})
 }
 
 // importFilesFrom checks every file before anything is stored: a known type,

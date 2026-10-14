@@ -826,16 +826,18 @@ export const vi = {
   "trust.loggedInByVia": "{name} đã ghi nhận trong {via}",
   "trust.loggedInBy": "{name} đã ghi nhận",
   "trust.sourceUnknown": "Không ghi nhận nguồn",
+  "trust.imported": "Đã nhập",
+  "trust.importedFrom": "Đã nhập từ {uploadName}",
   "trust.agentTag": "Do {agent} tự động làm",
   "trust.agentUnnamed": "Do trợ lý AI tự động làm",
   "trust.systemTag": "Tác vụ hệ thống: {job}",
   "trust.systemUnnamed": "Tác vụ hệ thống",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
-  "systemJob.agent_scheduler": "Trợ lý AI chạy theo lịch",
+  "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
   "systemJob.ai_activity_reconcile": "Cập nhật bù hoạt động AI",
   "systemJob.ai_activity_retention": "Dọn dẹp hoạt động AI",
-  "systemJob.ai_budget_resume": "Tiếp tục khi có lại hạn mức AI",
+  "systemJob.ai_budget_resume": "Tiếp tục tác vụ AI đã tạm dừng",
   "systemJob.ai_price_sync": "Cập nhật giá mô hình",
   "systemJob.alias_discovery": "Tìm địa chỉ email",
   "systemJob.approval_expiry": "Hết hạn phê duyệt",
@@ -849,7 +851,7 @@ export const vi = {
   "systemJob.automation": "Tự động hóa",
   "systemJob.brief_overnight": "Tóm tắt qua đêm",
   "systemJob.capture": "Thu thập thư",
-  "systemJob.capture_auto_enrich": "Bổ sung dữ liệu liên hệ từ thư",
+  "systemJob.capture_auto_enrich": "Bổ sung dữ liệu công ty từ thư",
   "systemJob.capture_classify": "Phân loại thư",
   "systemJob.capture_credential_backfill": "Cập nhật kết nối hộp thư",
   "systemJob.capture_part_slim_worker": "Dọn dẹp dữ liệu thư đã lưu",
@@ -879,6 +881,7 @@ export const vi = {
   "systemJob.graph_edge_reconcile": "Cập nhật độ mạnh của quan hệ",
   "systemJob.handbook_corpus": "Lập chỉ mục sổ tay",
   "systemJob.import_run_sweep": "Kiểm tra lượt nhập bị dừng",
+  "systemJob.import_worker": "Xử lý lượt nhập",
   "systemJob.installation_setup_read": "Kiểm tra thiết lập",
   "systemJob.intro_advance": "Việc tiếp theo cho lời giới thiệu",
   "systemJob.introduction_expiry": "Hết hạn lời giới thiệu",
@@ -890,7 +893,7 @@ export const vi = {
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách động",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
-  "systemJob.waiting_horizon_refresh": "Cập nhật tầm theo dõi chờ phản hồi",
+  "systemJob.waiting_horizon_refresh": "Đo thời gian phản hồi",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
   "systemJob.notice_case_open": "Tiếp nhận yêu cầu về quyền riêng tư",
@@ -1148,6 +1151,8 @@ export const vi = {
   "shell.signOutAria": "Đăng xuất",
   "shell.signOutErr": "Không thể đăng xuất",
   "shell.version": "Phiên bản {version}",
+  "shell.instanceVersion": "Bản triển khai {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
@@ -1228,6 +1233,8 @@ export const vi = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.expand": "Mở rộng",
+  "common.collapse": "Thu gọn",
   "clipboard.copyFailedTitle": "Truy cập bộ nhớ tạm bị từ chối",
 
   "explain.open": "Giải thích con số này",
@@ -2271,7 +2278,7 @@ export const vi = {
   "co.growthFit.dim.access": "Khả năng tiếp cận",
   "co.growthFit.band.moderate": "Phù hợp vừa",
   "co.growthFit.band.weak": "Ít phù hợp",
-  "co.growthFit.band.unknown": "Chưa đủ để đánh giá",
+  "co.growthFit.band.unknown": "Chưa đủ dữ liệu",
   "co.growthFit.completeness":
     "Đã ghi nhận {present}/{expected} dữ liệu đầu vào",
   "co.growthFit.missing": "Còn thiếu",
@@ -3365,6 +3372,9 @@ export const vi = {
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
+  "deals.lostReasonNeeded": "Nhập lý do thua deal.",
+  "deals.winReasonNeeded": "Chọn cách chốt được deal.",
+  "deals.winDetailNeeded": "Mô tả cách chốt được deal.",
   "deals.closeTasks.legend_one":
     "Xử lý {count} việc còn mở của deal này thế nào?",
   "deals.closeTasks.legend_other":
@@ -3960,6 +3970,35 @@ export const vi = {
     "Thiếu bằng chứng về việc tiếp theo",
   "teamweekly.focus.strong_week": "Tuần hiệu quả",
   "teamweekly.focus.quiet_week": "Chưa xác định ưu tiên",
+  "teamweekly.focus.forecast_downgrades": "Dự báo bị hạ",
+  "teamweekly.focus.stage_regressions": "Deal bị lùi giai đoạn",
+  "teamweekly.focus.close_dates_provisional": "Ngày chốt còn tạm tính",
+  "teamweekly.focus.no_next_step_coverage": "Thiếu bước tiếp theo",
+  "teamweekly.funnel.line": "{stage} → {next}: {rep} so với {team} của nhóm",
+  "teamweekly.funnel.lineLast": "{stage}: {rep} so với {team} của nhóm",
+  "teamweekly.attention.title": "Cần chú ý ngay",
+  "teamweekly.attention.live": "Hiện tại",
+  "teamweekly.attention.basis":
+    "Đọc ngay từ các deal của thành viên nhóm, không cố định cùng tuần.",
+  "teamweekly.attention.empty": "Hiện không có deal nào của nhóm cần chú ý.",
+  "teamweekly.attention.quiet": "Không có hoạt động trong {days} ngày",
+  "teamweekly.quality.title": "Chất lượng dữ liệu",
+  "teamweekly.quality.accepted": "Đề xuất được chấp nhận",
+  "teamweekly.quality.rejected": "Đề xuất bị từ chối",
+  "teamweekly.quality.reversals": "Thay đổi tự động đã hoàn tác",
+  "teamweekly.quality.notMeasured": "Chưa đo",
+  "teamweekly.quality.basis": "Cố định cùng tuần",
+  "teamweekly.coverage.title": "Độ phủ giá trị deal",
+  "teamweekly.coverage.month": "Tháng",
+  "teamweekly.coverage.quarter": "Quý",
+  "teamweekly.coverage.atRisk": "Độ phủ có rủi ro so với {basis}",
+  "teamweekly.coverage.holds": "Độ phủ đạt so với {basis}",
+  "teamweekly.coverage.percent": "{percent} giá trị deal cần có",
+  "teamweekly.coverage.replan": "Nên lập lại kế hoạch",
+  "teamweekly.coverage.notAuthorized":
+    "Không đọc được nhận định của kỳ này khi tuần khép lại.",
+  "teamweekly.coverage.basis.manager_call": "nhận định của quản lý",
+  "teamweekly.coverage.basis.historical_median": "trung vị lịch sử",
 
   "plan.loading": "Đang tải kế hoạch…",
   "plan.empty": "Chưa có gì trong kế hoạch.",
@@ -4974,6 +5013,7 @@ export const vi = {
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
   "analytics.field.owner_id": "Phụ trách",
   "analytics.field.partner_company_id": "Công ty đối tác",
+  "analytics.field.partner_sourced": "Do đối tác mang về",
   "analytics.field.period_month": "Tháng chốt",
   "analytics.field.period_quarter": "Quý chốt",
   "analytics.field.period_year": "Năm chốt",
@@ -4985,6 +5025,7 @@ export const vi = {
   "analytics.field.size_band": "Quy mô công ty",
   "analytics.field.source": "Nguồn",
   "analytics.field.stage_id": "Giai đoạn",
+  "analytics.field.stalled": "Đình trệ",
   "analytics.field.status": "Trạng thái",
   "analytics.field.weighted_amount_minor": "Số tiền có trọng số",
   "analytics.field.weighted_base_minor": "Số tiền có trọng số đã quy đổi",
@@ -5281,6 +5322,7 @@ export const vi = {
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Danh mục dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
+  "analytics.retiredPipeline": "{name} (đã ngừng dùng)",
   "analytics.forecastBanner":
     "Mỗi ô hiển thị tổng thô và, bên dưới, tổng có trọng số theo xác suất. Làm tròn theo từng deal, nên luôn khớp với “Giải thích con số này”.",
   "analytics.company": "Công ty",
@@ -5690,7 +5732,7 @@ export const vi = {
   "import.recent.files_other": "{count} tệp",
   "import.recent.filesBy": "{files} · bởi {name}",
   "import.recent.undo": "Hoàn tác",
-  "import.status.pending": "Đang chờ",
+  "import.status.pending": "Bản nháp",
   "import.status.validating": "Đang kiểm tra",
   "import.status.awaiting_approval": "Chưa nhập",
   "import.status.running": "Đang nhập",
@@ -5698,6 +5740,27 @@ export const vi = {
   "import.status.failed": "Đã dừng",
   "import.status.undoing": "Đang hoàn tác",
   "import.status.undone": "Đã hoàn tác",
+  "import.status.cancelled": "Đã hủy",
+  "import.closed.cancelled": "Lần nhập này đã bị hủy",
+  "import.closed.draft":
+    "Bản nháp này sẽ không được mở lại. Hãy tải tệp lên lại để bắt đầu lần nhập mới.",
+  "import.closed.stopped":
+    "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
+  "import.closed.upload": "Tải tệp lên",
+  "import.cancelFailed": "Chưa hủy được lần nhập này",
+  "import.conflictDismiss": "Đã hiểu",
+  "import.conflictOtherTab":
+    "Lần nhập này đã được đổi ở một tab khác. Màn hình giờ hiện các lựa chọn đã lưu.",
+  "import.superseded": "Một lần chạy thử mới hơn đã thay thế lần nhập này",
+  "import.supersededOpen": "Mở lần chạy thử mới hơn",
+  "import.draft.continue": "Tiếp tục",
+  "import.draft.cancel": "Hủy",
+  "import.sourceBusy":
+    "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi chạy thử lại.",
+  "import.sourceBusyOpen": "Mở lần nhập đó",
+  "import.upload.tooManyRowsTitle": "Tệp quá dài cho một lần chạy thử",
+  "import.upload.tooManyRows":
+    "Tệp này có nhiều hàng hơn mức một lần chạy thử có thể đọc. Hãy chia thành các tệp nhỏ hơn và nhập từng tệp.",
   "import.undoConfirm.title": "Hoàn tác lần nhập này?",
   "import.undoConfirm.confirm": "Hoàn tác lần nhập",
   "import.undoConfirm.order": "Hoàn tác theo thứ tự ngược: {order}.",
@@ -5765,12 +5828,40 @@ export const vi = {
   "import.map.run": "Chạy thử",
   "import.map.running": "Đang chạy thử…",
   "import.map.stageFailed": "Không thể bắt đầu chạy thử",
+  "import.map.testStopped": "Chạy thử đã dừng",
   "import.step.hintStaged":
     "Đã tạo lần chạy thử nên tệp và ánh xạ đã cố định. Sửa và tải lại sẽ bắt đầu lại.",
   "import.progress.waiting": "Đang chờ",
   "import.progress.running": "Đang chạy",
   "import.progress.done": "Xong",
   "import.progress.rows": "{type}: {done} trên {total} dòng",
+  "import.progress.working": "Đang xử lý…",
+  "import.progress.queued": "Đang chờ bắt đầu",
+  "import.progress.records": "các bản ghi",
+  "import.progress.links": "Liên kết",
+  "import.progress.overall": "Tất cả tệp",
+  "import.progress.total": "{done} trên {total} dòng",
+  "import.progress.rate": "{rate} dòng/giây",
+  "import.progress.elapsed": "đã qua {span}",
+  "import.progress.etaObject": "còn khoảng {minutes} phút cho {type}",
+  "import.progress.etaRun": "còn khoảng {minutes} phút",
+  "import.progress.counts": "Số dòng đến lúc này",
+  "import.progress.count.created": "Mới",
+  "import.progress.count.updated": "Đã cập nhật",
+  "import.progress.count.unchanged": "Giữ nguyên",
+  "import.progress.count.skipped": "Đã bỏ qua",
+  "import.progress.count.problems": "Vấn đề",
+  "import.progress.stalled.working": "Vẫn đang xử lý",
+  "import.progress.stalled.server": "Đang chờ máy chủ",
+  "import.progress.stalled.body":
+    "Đã {span} chưa có tiến triển. Trang này vẫn kiểm tra và sẽ báo khi có chuyển động.",
+  "import.phase.reading": "Đang đọc tệp",
+  "import.phase.checking": "Đang kiểm tra {type}",
+  "import.phase.creating_tags": "Đang tạo thẻ",
+  "import.phase.importing": "Đang nhập {type}",
+  "import.phase.linking": "Đang liên kết các bản ghi",
+  "import.phase.undoing": "Đang hoàn tác {type}",
+  "import.phase.finishing": "Đang hoàn tất",
   "import.progress.leave":
     "Bạn có thể rời trang này. Lần nhập vẫn tiếp tục, và mục Lần nhập gần đây cho biết khi nào xong.",
   "import.result.detail": "{created} tạo mới · {updated} cập nhật",
@@ -5799,6 +5890,10 @@ export const vi = {
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway": "Vẫn nhập",
   "import.test.counts": "Số dòng theo loại hồ sơ",
+  "import.test.testing": "Đang kiểm tra tệp của bạn…",
+  "import.test.stop": "Dừng kiểm tra",
+  "import.test.stopFailed":
+    "Không thể dừng kiểm tra. Nhấn “Dừng kiểm tra” lần nữa.",
   "import.test.problems_one": "1 vấn đề",
   "import.test.problems_other": "{count} vấn đề",
   "import.test.col.where": "Vị trí",
@@ -5807,6 +5902,138 @@ export const vi = {
   "import.test.row": "Dòng {line}",
   "import.test.rowColumn": "Dòng {line} · {column}",
   "import.test.wholeFile": "Toàn bộ tệp",
+  "import.reason.link_row_not_imported":
+    "Hàng này sẽ không được nhập nên không có ai để liên kết với {name}.",
+  "import.reason.link_contact_not_imported":
+    "Liên hệ “{from}” chưa được nhập nên không có ai để liên kết với “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "Nhập CSV không có liên kết {from} → {to} nên liên kết này không được áp dụng.",
+  "import.reason.undo_grant_lost":
+    "Quyền của bạn không còn bao gồm bản ghi này.",
+  "import.reason.undo_not_visible": "Bạn không còn thấy bản ghi này.",
+  "import.reason.undo_rule_protects":
+    "Bản ghi từ chối hoàn tác vì có một quy tắc nghiệp vụ bảo vệ nó.",
+  "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
+  "import.reason.cannot_create":
+    "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
+  "import.reason.cannot_create_tags":
+    "Bạn không có quyền tạo thẻ nên thẻ mới đối với CRM không được thêm.",
+  "import.reason.cannot_edit":
+    "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua.",
+  "import.reason.cannot_edit_and_tag":
+    "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua và không thẻ nào được thêm vào.",
+  "import.reason.cannot_read_tags":
+    "Bạn không có quyền đọc thẻ nên cột thẻ không được nhập.",
+  "import.reason.cannot_write_type":
+    "Không thể ghi “{value}” vào trường kiểu {type}.",
+  "import.reason.company_duplicate_found":
+    "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
+  "import.reason.company_duplicate_skipped":
+    "Đã có công ty cùng tên trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
+  "import.reason.company_name_empty":
+    "Tên hiển thị đã ánh xạ để trống nên hàng không xác định được công ty nào.",
+  "import.reason.contact_duplicate_found":
+    "Đã có liên hệ khớp với hàng này trong CRM. Hàng có địa chỉ đã tồn tại bị từ chối, còn hàng gần giống sẽ được tạo và đưa cặp này vào hàng đợi xem xét.",
+  "import.reason.contact_duplicate_skipped":
+    "Đã có liên hệ khớp với hàng này trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
+  "import.reason.contact_email_held":
+    "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+  "import.reason.contact_unnamed":
+    "Hàng không có tên lẫn email nên không xác định được liên hệ nào.",
+  "import.reason.currency_unset":
+    "Không đọc được “{value}”: trường tiền tệ này chưa đặt đơn vị tiền.",
+  "import.reason.description_too_long":
+    "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
+  "import.reason.domain_held":
+    "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
+  "import.reason.duplicate_email":
+    "Địa chỉ email này đã thuộc về một liên hệ khác.",
+  "import.reason.employer_column_empty":
+    "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
+  "import.reason.employer_column_empty_dropped":
+    "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_not_found":
+    "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này.",
+  "import.reason.employer_not_found_dropped":
+    "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.empty_payload": "Hàng không có trường nào.",
+  "import.reason.field_inactive":
+    "Không thể ghi “{value}”: trường này không còn hoạt động.",
+  "import.reason.id_not_a_company_id":
+    "“{value}” không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
+  "import.reason.id_not_visible":
+    "Không có công ty nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+  "import.reason.id_on_non_company":
+    "Chỉ hàng công ty mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
+  "import.reason.link_ambiguous":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
+  "import.reason.link_ambiguous_dropped":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.link_not_found":
+    "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.link_not_found_dropped":
+    "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.linkedin_held":
+    "URL LinkedIn này đã thuộc về một bản ghi khác trong CRM nên hàng không thể dùng nó.",
+  "import.reason.natural_key_taken": "Đã có một bản ghi dùng khóa này.",
+  "import.reason.not_a_date":
+    "“{value}” không phải ngày. Hãy viết dạng YYYY-MM-DD.",
+  "import.reason.not_a_domain": "“{value}” không phải tên miền có thể ghi.",
+  "import.reason.not_a_number": "“{value}” không phải là số.",
+  "import.reason.not_an_amount":
+    "“{value}” không phải số tiền bằng {currency}. Hãy viết như 12000.50.",
+  "import.reason.not_an_email":
+    "“{value}” không phải địa chỉ email có thể ghi.",
+  "import.reason.not_yes_no": "“{value}” không phải có hoặc không.",
+  "import.reason.option_not_allowed":
+    "“{value}” không thuộc các giá trị được phép của trường này.",
+  "import.reason.option_not_in_list":
+    "“{value}” không thuộc các giá trị được phép: {options}.",
+  "import.reason.options_need_semicolons":
+    "“{value}”: hãy phân tách nhiều giá trị bằng dấu chấm phẩy.",
+  "import.reason.owner_refused":
+    "Bạn không thể đặt thành viên này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
+  "import.reason.owner_unknown":
+    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu.",
+  "import.reason.phone_needs_country":
+    "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
+  "import.reason.record_archived":
+    "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
+  "import.reason.ref_taken_by_another_company":
+    "Tham chiếu “{ref}” đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
+  "import.reason.row_key_empty":
+    "Cột “{column}” để trống nên không nhận diện được hàng này khi nhập lại hoặc hoàn tác.",
+  "import.reason.row_key_repeated":
+    "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
+  "import.reason.size_band_invalid":
+    "Nhóm quy mô “{value}” không thuộc: {allowed}.",
+  "import.reason.tag_created":
+    "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
+  "import.reason.tag_name_invalid":
+    "Không thể tạo thẻ “{name}”. Lý do: {detail}",
+  "import.reason.tag_new":
+    "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
+  "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
+  "import.reason.stage_unnamed":
+    "Hãy nêu giai đoạn của deal.",
+  "import.reason.pipeline_unnamed":
+    "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
+  "import.reason.pipeline_unknown":
+    "“{value}” không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
+  "import.reason.stage_unknown":
+    "“{value}” không phải giai đoạn của quy trình “{pipeline}”. Các giai đoạn: {names}.",
+  "import.reason.currency_not_a_code":
+    "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+  "import.reason.close_date_past":
+    "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
+  "import.reason.lost_reason_missing":
+    "Deal đã thua cần có lý do thua.",
+  "import.reason.deal_not_yet_written":
+    "Deal được kiểm tra khi chạy thử nhưng nhập chưa ghi deal.",
+  "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
   "import.problem.invalid_value": "Giá trị không hợp lệ",
@@ -5880,6 +6107,77 @@ export const vi = {
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đến từ tầng tác vụ, không bao giờ từ nguyên nhân thô của worker. Lỗi mà tầng này không diễn đạt được sẽ hiện câu thay thế cố định và không có lớp lỗi.",
   "jobs.generatedAt": "Tính đến {time}",
+  "jobs.kind.account_scan": "Phân tích công ty",
+  "jobs.kind.agent_task_retention": "Dọn dẹp tác vụ của trợ lý AI",
+  "jobs.kind.ai_price_sync_sweep": "Cập nhật giá mô hình",
+  "jobs.kind.approval_auto_apply": "Duyệt tự động",
+  "jobs.kind.assurance_run": "Kiểm tra dự báo theo yêu cầu",
+  "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
+  "jobs.kind.brief_generate": "Bản tin sáng",
+  "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
+  "jobs.kind.capture_backfill": "Nhập thư cũ",
+  "jobs.kind.capture_backfill_reconcile": "Khôi phục lượt nhập thư cũ",
+  "jobs.kind.capture_confidentiality_verdict": "Kiểm tra tính bảo mật của thư",
+  "jobs.kind.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
+  "jobs.kind.capture_digest": "Bản tổng hợp thư buổi sáng",
+  "jobs.kind.capture_enrich": "Lấy thông tin liên hệ từ chữ ký thư",
+  "jobs.kind.capture_part_slim": "Dọn dẹp dữ liệu thư đã lưu",
+  "jobs.kind.capture_sync": "Đồng bộ hộp thư",
+  "jobs.kind.check_company_vat": "Kiểm tra mã số VAT",
+  "jobs.kind.close_date_sweep": "Kiểm tra ngày chốt",
+  "jobs.kind.comms_authz_disagreement": "Xem lại quyền gửi",
+  "jobs.kind.comms_controller_payload_sweep":
+    "Dọn dẹp liên kết xác nhận đã hết hạn",
+  "jobs.kind.comms_scheduled_send": "Gửi thư hẹn giờ",
+  "jobs.kind.comms_scheduled_send_recovery": "Khôi phục thư hẹn giờ",
+  "jobs.kind.comms_send_email": "Gửi thư",
+  "jobs.kind.company_name_promotion": "Lấy tên công ty từ chữ ký thư",
+  "jobs.kind.deal_scout": "Trinh sát deal",
+  "jobs.kind.document_extract": "Trích xuất tài liệu",
+  "jobs.kind.embed_drift_sweep": "Cập nhật bù chỉ mục tìm kiếm",
+  "jobs.kind.embed_reindex": "Dựng lại chỉ mục tìm kiếm",
+  "jobs.kind.employment_import_sweep": "Nhập lịch sử công tác",
+  "jobs.kind.finance_sync_sweep": "Đồng bộ dữ liệu kế toán",
+  "jobs.kind.follow_up_reconcile": "Đề xuất việc tiếp theo cho deal",
+  "jobs.kind.forecast_snapshot_sweep": "Ảnh chụp dự báo hằng ngày",
+  "jobs.kind.fx_rate_refresh": "Cập nhật tỷ giá",
+  "jobs.kind.geocode_company": "Tra cứu địa chỉ công ty",
+  "jobs.kind.gmail_sync": "Lên lịch đồng bộ Gmail",
+  "jobs.kind.gmail_watch_renew": "Rà soát gia hạn thông báo đẩy Gmail",
+  "jobs.kind.gmail_watch_renew_connection": "Gia hạn thông báo đẩy Gmail",
+  "jobs.kind.graph_watch_renew": "Rà soát gia hạn thông báo đẩy Outlook",
+  "jobs.kind.graph_watch_renew_connection": "Gia hạn thông báo đẩy Outlook",
+  "jobs.kind.idempotency_retention": "Dọn dẹp dữ liệu phát lại yêu cầu",
+  "jobs.kind.import_commit": "Ghi dữ liệu nhập",
+  "jobs.kind.import_undo": "Hoàn tác lượt nhập",
+  "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
+  "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
+  "jobs.kind.list_evaluate": "Kiểm tra danh sách động",
+  "jobs.kind.notification_email": "Thư thông báo",
+  "jobs.kind.privacy_retention": "Áp dụng chính sách lưu giữ",
+  "jobs.kind.provider_lookup_sweep": "Bổ sung dữ liệu cho liên hệ sẵn có",
+  "jobs.kind.provider_run_poll_sweep": "Kiểm tra kết quả bổ sung dữ liệu",
+  "jobs.kind.provider_run_submit": "Yêu cầu tới nhà cung cấp bổ sung dữ liệu",
+  "jobs.kind.report_schedule_sweep": "Báo cáo theo lịch",
+  "jobs.kind.risk_verdict_sweep": "Kiểm tra rủi ro deal",
+  "jobs.kind.signal_scan": "Quét tín hiệu",
+  "jobs.kind.site_deep_read": "Đọc trang web công ty",
+  "jobs.kind.stored_object_reap": "Dọn dẹp kho tệp",
+  "jobs.kind.suppression_journal_export": "Xuất sổ ghi xóa dữ liệu",
+  "jobs.kind.tag_scout": "Gợi ý thẻ",
+  "jobs.kind.technical_enrich_backfill": "Tra cứu kỹ thuật còn tồn đọng",
+  "jobs.kind.technical_enrich_company": "Tra cứu kỹ thuật công ty",
+  "jobs.kind.telegram_ingest": "Tiếp nhận tin nhắn Telegram",
+  "jobs.kind.telegram_poll": "Lấy tin nhắn Telegram",
+  "jobs.kind.telegram_poll_sweep": "Lên lịch lấy tin nhắn Telegram",
+  "jobs.kind.time_scan": "Kiểm tra tự động hóa theo thời gian",
+  "jobs.kind.transcript_propose": "Đọc bản chép lời",
+  "jobs.kind.vcard_ingest": "Nhập danh thiếp",
+  "jobs.kind.voice_build": "Phân tích giọng văn",
+  "jobs.kind.voice_build_retry": "Thử lại phân tích giọng văn",
+  "jobs.kind.webhook_retry": "Gửi lại webhook",
+  "jobs.kind.weekly_review_generate": "Tổng kết tuần",
 
   "settings.providerHealth": "Trạng thái nhà cung cấp AI",
   "settings.providerHealthSub":
@@ -6824,7 +7122,7 @@ export const vi = {
   // surface the onboarding copy promises.
   // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt vốn đã giữ đúng
   // loại thông tin đăng nhập mà đơn vị đó dùng để cấu hình.
-  "extUnits.openNamed": "Mở trang {name}",
+  "extUnits.openNamed": "Cài đặt cho {name}",
   "extUnits.user.title": "Tài khoản khác của bạn",
   "extUnits.user.sub":
     "Tài khoản mà bản cài đặt này có thể kết nối thay bạn. Mỗi tài khoản là riêng tư với bạn, và ngắt kết nối chỉ ảnh hưởng đến bạn.",
@@ -6864,6 +7162,7 @@ export const vi = {
     "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của chính mình.",
   "heldThreads.empty": "Hộp thư của bạn không giữ lại chuỗi thư nào.",
   "heldThreads.colThread": "Chuỗi thư",
+  "heldThreads.colParties": "Bên liên quan",
   "heldThreads.colWhy": "Lý do",
   "heldThreads.colWhen": "Thời gian nhận",
   "heldThreads.release": "Chia sẻ với nhóm",
@@ -6893,6 +7192,8 @@ export const vi = {
   "heldThreads.kind.explicitlyConfidential": "Đã đánh dấu bảo mật",
   "heldThreads.kind.unsure": "Chưa rõ",
   "heldThreads.kind.other": "Lý do khác",
+  "heldThreads.moreParticipants_one": "+{count} địa chỉ khác",
+  "heldThreads.moreParticipants_other": "+{count} địa chỉ khác",
   "senders.title": "Người gửi",
   "senders.sub":
     "Quyết định về từng địa chỉ mà hộp thư đã đưa vào, kèm câu trả lời của bạn nếu có. Chỉ bạn thấy danh sách này.",
@@ -6901,8 +7202,12 @@ export const vi = {
   "senders.colSender": "Người gửi",
   "senders.colDecision": "Quyết định",
   "senders.colRecord": "Liên hệ",
-  "senders.recordYes": "Đã có hồ sơ",
   "senders.recordNo": "Chưa có liên hệ",
+  "senders.colMessages": "Thư",
+  "senders.colLastSeen": "Thư gần nhất",
+  "senders.messages_one": "{count} thư",
+  "senders.messages_other": "{count} thư",
+  "senders.lastSeen": "Thư gần nhất {date}",
   "senders.byYou": "Do người dùng quyết định",
   "senders.deletesOn": "Thư cũ nhất sẽ bị xóa vào {date}",
   "senders.markBusiness": "Đánh dấu là công việc",
@@ -8654,10 +8959,15 @@ export const vi = {
   "knowledge.archiveConfirm.title": "Chuyển {name} vào kho lưu trữ?",
   "knowledge.archiveConfirm.body":
     "Bộ tài liệu và các tài liệu trong đó sẽ không còn tìm kiếm được. Không có gì bị xóa.",
+  "knowledge.archiveShipped":
+    "Bộ tài liệu này đi kèm Margince nên không thể chuyển vào kho lưu trữ.",
+  "knowledge.uploadShipped":
+    "Bộ tài liệu này đi kèm Margince nên chỉ Margince thêm được tài liệu vào.",
   "knowledge.deleteDocument": "Xóa",
   "knowledge.deleteConfirm.title": "Xóa {name}?",
   "knowledge.deleteConfirm.body":
     "Tệp, văn bản trích xuất và chỉ mục tìm kiếm của tệp sẽ bị xóa vĩnh viễn.",
+  "knowledge.deleteShipped": "Trang này đi kèm Margince nên không thể xóa.",
   "knowledge.ingest.queued": "Đang chờ xử lý",
   "knowledge.ingest.running": "Đang nhập…",
   "knowledge.ingest.failed": "Không thể đọc",
@@ -10181,6 +10491,52 @@ export const vi = {
   "agentConnections.ttl.help": "Số phút nguyên, từ 5 đến 129.600 (90 ngày).",
   "agentConnections.ttl.refusal": "Nhập số phút nguyên từ 5 đến 129.600.",
   "agentConnections.updateFailed": "Không thể thay đổi cài đặt",
+  "agentAllowances.title": "Hạn mức passport của agent",
+  "agentAllowances.sub":
+    "Những gì một passport hoặc kết nối MCP được làm trong mỗi khung thời gian trước khi dừng. Thay đổi một con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Một passport không bao giờ tự đổi được hạn mức của chính nó.",
+  "agentAllowances.reads.label": "Bản ghi đã đọc",
+  "agentAllowances.reads.help":
+    "Số bản ghi agent được đọc mỗi khung, từ 100 đến 20.000. Quá mức đó, việc đọc chờ chủ sở hữu cho phép thêm.",
+  "agentAllowances.writes.label": "Thay đổi",
+  "agentAllowances.writes.help":
+    "Số thay đổi agent được làm mỗi khung, từ 10 đến 5.000. Quá mức đó, thay đổi chờ chủ sở hữu cho phép thêm.",
+  "agentAllowances.egress.label": "Lượt gửi",
+  "agentAllowances.egress.help":
+    "Email và các lệnh gọi khác ra khỏi Margince. Việc gửi dừng cho đến khi khung thời gian đặt lại, từ 1 đến 200.",
+  "agentAllowances.calls.label": "Tổng số lệnh gọi",
+  "agentAllowances.calls.help":
+    "Mọi lệnh gọi công cụ hoặc API. Passport tạm dừng cho đến khi khung thời gian đặt lại, từ 50 đến 20.000.",
+  "agentAllowances.window.label": "Khung thời gian (giờ)",
+  "agentAllowances.window.help":
+    "Một hạn mức kéo dài bao lâu, từ 1 đến 168. Độ dài mới bắt đầu ở lần đặt lại kế tiếp.",
+  "agentAllowances.burst":
+    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport.",
+  "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
+  "agentAllowances.pending.body":
+    "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
+  "agentUsage.title": "Mức dùng agent theo thành viên",
+  "agentUsage.sub":
+    "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
+  "agentUsage.withheld":
+    "Chỉ thành viên Quản trị, Quản lý hoặc Vận hành mới xem được mức dùng agent.",
+  "agentUsage.empty":
+    "Chưa thành viên nào có passport hoặc kết nối còn hiệu lực.",
+  "agentUsage.resets": "Mọi hạn mức đặt lại lúc {date} UTC.",
+  "agentUsage.ofLimit": "{used} / {limit}",
+  "agentUsage.counter.reads": "Bản ghi đã đọc",
+  "agentUsage.counter.writes": "Thay đổi",
+  "agentUsage.counter.egress": "Lượt gửi",
+  "agentUsage.counter.calls": "Lệnh gọi",
+  "agentUsage.col.user": "Thành viên",
+  "agentUsage.col.passports": "Passport",
+  "agentUsage.state.ok": "Đang hoạt động",
+  "agentUsage.state.near": "Gần chạm giới hạn",
+  "agentUsage.state.stopped": "Đã dừng",
+  "settings.passportColWindow": "Khung này",
+  "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
+  "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",
+  "settings.passportsShowRevoked_other": "Hiện {count} passport đã thu hồi",
+  "settings.passportsHideRevoked": "Ẩn passport đã thu hồi",
   "operations.schedules.title": "Lịch chạy nền",
   "operations.schedules.sub":
     "Tần suất chạy của từng tác vụ nền. Tiến trình nền đang chạy sẽ nhận thay đổi trong vòng một phút: tác vụ chạy một lần, rồi tiếp tục theo chu kỳ mới.",
@@ -10284,11 +10640,15 @@ export const vi = {
   "ownerIdentities.addFailed": "Không thể thêm địa chỉ",
   "ownerIdentities.domainPlaceholder": "vidu.com",
   "ownerIdentities.removedToast": "Đã gỡ địa chỉ",
+  "ownerIdentities.removedLearnedToast":
+    "Đã gỡ địa chỉ. Margince sẽ không tự thêm lại địa chỉ này.",
   "ownerIdentities.restoredToast": "Đã khôi phục địa chỉ",
-  "ownerIdentities.removeLearnedTitle": "Gỡ {value}?",
-  "ownerIdentities.removeLearnedBody":
-    "Margince tìm thấy địa chỉ này trong thư. Nếu thêm lại sau, địa chỉ được lưu như địa chỉ tự nhập.",
-  "ownerIdentities.removeConfirm": "Gỡ",
+  "ownerIdentities.restoreGone":
+    "Không thể khôi phục địa chỉ này nữa. Thêm lại địa chỉ nếu cần.",
+  "ownerIdentities.restoreMovedOn":
+    "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
+  "ownerIdentities.restoreDeclaredAgain":
+    "Địa chỉ này đã có lại trong danh sách.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -10297,6 +10657,7 @@ export const vi = {
   "captureExclusions.kind.address": "Địa chỉ",
   "captureExclusions.kind.domain": "Tên miền",
   "captureExclusions.kind.container": "Nhãn, thư mục hoặc hộp thư",
+  "captureExclusions.addedBy": "{name} đã thêm",
   "captureExclusions.scopeLabel": "Áp dụng cho",
   "capturePurge.title": "Xóa thư đã thu thập từ {value}?",
   "capturePurge.intro":
@@ -11932,7 +12293,6 @@ export const vi = {
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
-  "worklist.disposition.snoozeFor": "Thời gian tạm hoãn",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.handled": "Xong",
   "worklist.disposition.verb.not_mine": "Không phải việc của tôi",
@@ -11950,7 +12310,6 @@ export const vi = {
     "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
   "worklist.disposition.swipeCancel": "Giữ lại",
-  "worklist.disposition.menu": "Gỡ khỏi danh sách",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách.",
@@ -12065,6 +12424,7 @@ export const vi = {
   "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
+  "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
   "worklist.readings.revenue": "Doanh thu có rủi ro",
   "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",
@@ -13232,4 +13592,87 @@ export const vi = {
     "Một lệnh lưu trữ pháp lý đang áp dụng cho hồ sơ liên kết với hoạt động này, nên dấu lưu trữ vẫn còn cho đến khi lệnh được gỡ.",
   "projectFiling.refusal.hidden_project":
     "Một dự án bạn không có quyền xem vẫn đang giữ hoạt động này. Liên hệ thành viên có quyền xem dự án đó để hoàn tác.",
+  "legalReview.tab": "Rà soát pháp lý",
+  "legalReview.request": "Yêu cầu rà soát pháp lý",
+  "legalReview.requestAgain": "Yêu cầu lại",
+  "legalReview.requestConfirm": "Gửi yêu cầu",
+  "legalReview.packIntro":
+    "Bộ phận pháp lý đọc một bộ hồ sơ lấy từ deal này: công ty, giá trị, giai đoạn, ngày chốt, báo giá hiện tại, lịch sử giai đoạn và các tài liệu hợp đồng, pháp lý và báo giá.",
+  "legalReview.noteLabel": "Ghi chú cho bộ phận pháp lý",
+  "legalReview.noteHint": "Điều bộ phận pháp lý cần xem. Không bắt buộc.",
+  "legalReview.empty": "Chưa có rà soát pháp lý.",
+  "legalReview.requestedBy": "Do {name} yêu cầu",
+  "legalReview.decidedBy": "Do {name} trả lời",
+  "legalReview.someone": "một đồng nghiệp cũ",
+  "legalReview.noteShown": "Ghi chú: {note}",
+  "legalReview.commentsShown": "Pháp lý: {comments}",
+  "legalReview.openPack": "Mở hồ sơ rà soát",
+  "legalReview.withdraw": "Rút yêu cầu",
+  "legalReview.withdrawTitle": "Rút yêu cầu?",
+  "legalReview.withdrawText":
+    "Yêu cầu rời khỏi hàng chờ pháp lý. Có thể gửi lại deal sau.",
+  "legalReview.status.requested": "Chờ pháp lý",
+  "legalReview.status.approved": "Đã duyệt",
+  "legalReview.status.changes_needed": "Cần thay đổi",
+  "legalReview.status.withdrawn": "Đã rút",
+  "legalReview.queueTitle": "Rà soát pháp lý",
+  "legalReview.queueOpen": "Đang chờ",
+  "legalReview.queueDecided": "Đã trả lời",
+  "legalReview.queueEmptyOpen": "Không có yêu cầu nào chờ pháp lý.",
+  "legalReview.queueEmptyDecided": "Chưa có rà soát nào được trả lời.",
+  "legalReview.closesOn": "Chốt {date}",
+  "legalReview.back": "Tất cả rà soát pháp lý",
+  "legalReview.packTitle": "Hồ sơ rà soát",
+  "legalReview.decideTitle": "Trả lời",
+  "legalReview.ownRequest":
+    "Bạn đã yêu cầu rà soát này, nên một đồng nghiệp sẽ trả lời.",
+  "legalReview.outcome": "Kết quả",
+  "legalReview.outcomeApproved": "Duyệt",
+  "legalReview.outcomeApprovedHint":
+    "Deal có thể qua giai đoạn cần pháp lý duyệt.",
+  "legalReview.outcomeChanges": "Cần thay đổi",
+  "legalReview.outcomeChangesHint":
+    "Deal ở lại giai đoạn hiện tại cho đến khi được gửi lại và được duyệt.",
+  "legalReview.commentsLabel": "Nhận xét",
+  "legalReview.commentsHint": "Bắt buộc khi cần thay đổi.",
+  "legalReview.decide": "Lưu câu trả lời",
+  "legalReview.earlier": "Các lần rà soát trước",
+  "legalReview.packCompany": "Công ty",
+  "legalReview.packValue": "Giá trị",
+  "legalReview.packStage": "Giai đoạn",
+  "legalReview.packClose": "Ngày chốt",
+  "legalReview.packOwner": "Phụ trách",
+  "legalReview.packOffer": "Báo giá hiện tại",
+  "legalReview.offerNumber": "Báo giá",
+  "legalReview.offerRevision": "{number}, phiên bản {revision}",
+  "legalReview.offerTotal": "Tổng",
+  "legalReview.offerValidUntil": "Hiệu lực đến",
+  "legalReview.offerTerms": "Điều khoản",
+  "legalReview.packNoOffer": "Deal này chưa có báo giá.",
+  "legalReview.packDocuments": "Tài liệu",
+  "legalReview.packNoDocuments":
+    "Không có tài liệu hợp đồng, pháp lý hay báo giá nào bạn mở được.",
+  "legalReview.docCategory.contract": "Hợp đồng",
+  "legalReview.docCategory.offer": "Báo giá",
+  "legalReview.docCategory.legal": "Pháp lý",
+  "legalReview.docState.draft": "Bản nháp",
+  "legalReview.docState.current": "Hiện hành",
+  "legalReview.docState.final": "Bản cuối",
+  "legalReview.packHistory": "Lịch sử giai đoạn",
+  "legalReview.enteredStage": "{stage}, vào lúc {date}",
+  "legalReview.settingsTitle": "Rà soát pháp lý",
+  "legalReview.settingsSwitch": "Rà soát pháp lý cho deal",
+  "legalReview.settingsHint":
+    "Bên phụ trách deal có thể nhờ bộ phận pháp lý rà soát deal, và một giai đoạn có thể yêu cầu pháp lý duyệt. Tắt sẽ ẩn cả hai và giữ mọi lần rà soát đã ghi.",
+  "legalReview.settingsReadOnly": "Quản trị viên thay đổi cài đặt này.",
+  "legalReview.notSaved": "Chưa lưu được cài đặt.",
+  "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",
+  "legalReview.docUnavailable":
+    "Bạn không mở được tệp này. Hãy hỏi đồng nghiệp đã yêu cầu rà soát.",
+  "legalReview.offerLine": "Dòng {number}",
+  "legalReview.offerLineText": "{quantity} × {description}, đơn giá {price}",
+  "legalReview.offerLineRecurring_one": "{cadence}, trong {count} kỳ",
+  "legalReview.offerLineRecurring_other": "{cadence}, trong {count} kỳ",
+  "legalReview.offerLineStaged": "Được đề xuất, chưa tính vào tổng",
+  "legalReview.packBinding": "Các báo giá khác đã gửi cho khách hàng",
 } as const satisfies Record<MessageKey, string>;

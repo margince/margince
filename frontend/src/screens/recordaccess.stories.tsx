@@ -4,16 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { Badge } from "../design-system/atoms";
 import { IdentityLine } from "../design-system/identityline";
-import { RecordAccess } from "./recordaccess";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordAccess } from "./recordaccess";
 
 type Contact = components["schemas"]["Contact"];
 type Company = components["schemas"]["Company"];

@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   ContactProviderSection,
   keepPolling,
   POLL_LIMIT,
@@ -20,12 +26,6 @@ import {
   type Profile,
   queuedRun,
 } from "./contactprovider.harness";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 // Buying contact data is the one thing on this page that spends money, and the
 // contact nobody has bought for is the case that has to work: a rep who turned

@@ -17,8 +17,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import * as router from "../app/router";
 import { LocaleProvider } from "../i18n";
+import * as router from "../lib/router";
 import { ContactMemory } from "./contactmemory";
 
 type Contact360 = components["schemas"]["Contact360"];

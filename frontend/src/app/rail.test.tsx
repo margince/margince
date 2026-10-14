@@ -12,7 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { navigate, parseHash, type Route } from "./router";
+import { navigate, parseHash, type Route } from "../lib/router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,
@@ -168,9 +168,9 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("groups the items under Records / Work / Intelligence when expanded", () => {
+  it("groups the items under Records / Work / Insights when expanded", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(navGroupNames()).toEqual(["Records", "Work", "Intelligence"]);
+    expect(navGroupNames()).toEqual(["Records", "Work", "Insights"]);
   });
 
   // Collapsed, a group label has no word to show — 56px carries a glyph and not
@@ -196,7 +196,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
         [...rail.container.querySelectorAll(".navheading")].map(
           (label) => label.textContent,
         ),
-      ).toEqual(["Records", "Work", "Intelligence"]);
+      ).toEqual(["Records", "Work", "Insights"]);
     }
   });
 

@@ -15,8 +15,10 @@ import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { FileDropzone } from "../design-system/filedropzone";
+import { KeyedName } from "../design-system/keyedname";
 import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
+import { QueryStates } from "../design-system/querystates";
 import { forReader } from "../format/collate";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -29,10 +31,17 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
+import { postMultipart } from "../lib/multipart";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
+type EmbedState = components["schemas"]["KnowledgeEmbedState"];
 
 export const SETS_KEY = ["knowledge-corpora"];
 
@@ -99,18 +108,11 @@ function useDocumentWrite<Vars>(
   });
 }
 
-// Multipart by hand: the generated client serializes JSON bodies only.
 async function uploadDocument(vars: { corpusId: string; file: File }) {
-  const body = new FormData();
-  body.append("file", vars.file);
-  const response = await fetch(
+  await postMultipart(
     `/v1/knowledge/corpora/${encodeURIComponent(vars.corpusId)}/documents`,
-    { method: "POST", body, credentials: "include" },
+    { file: vars.file },
   );
-  const payload = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throwProblem(payload);
-  }
 }
 
 async function deleteDocument(vars: { id: string }) {
@@ -133,11 +135,48 @@ const INGEST_BADGE: Partial<
   failed: { label: "knowledge.ingest.failed", tone: "danger" },
 };
 
+// Why passages are not all searchable, in the reader's words, for a set or one document.
+export const NOT_SEARCHABLE: Record<
+  Exclude<EmbedState, "complete">,
+  Readonly<{ label: MessageKey; reason: MessageKey; tone: "warning" | "info" }>
+> = {
+  no_embedding_model: {
+    label: "knowledge.notSearchable",
+    reason: "knowledge.reason.noEmbeddingModel",
+    tone: "warning",
+  },
+  indexing: {
+    label: "knowledge.indexing",
+    reason: "knowledge.reason.indexing",
+    tone: "info",
+  },
+};
+
+// An importing or failed document already wears that badge.
+function documentBadge(
+  doc: CorpusDocument,
+  setSpeaksForAll: boolean,
+): Readonly<{
+  label: MessageKey;
+  tone?: "danger" | "info" | "warning";
+}> | null {
+  const ingest = INGEST_BADGE[doc.ingest_status];
+  if (ingest) return ingest;
+  return doc.embed_state === "complete" || setSpeaksForAll
+    ? null
+    : NOT_SEARCHABLE[doc.embed_state];
+}
+
+function documentName(doc: CorpusDocument): string {
+  return doc.title ?? doc.filename;
+}
+
 function documentColumns({
   t,
   plural,
   locale,
   zone,
+  setSpeaksForAll,
   canManage,
   onDelete,
 }: Readonly<{
@@ -145,6 +184,7 @@ function documentColumns({
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  setSpeaksForAll: boolean;
   canManage: boolean;
   onDelete: (doc: CorpusDocument) => void;
 }>): DataTableColumn<CorpusDocument>[] {
@@ -153,7 +193,12 @@ function documentColumns({
       key: "name",
       header: t("knowledge.col.name"),
       grow: true,
-      render: (doc) => doc.filename,
+      render: (doc) =>
+        doc.title === null ? (
+          doc.filename
+        ) : (
+          <KeyedName name={doc.title} code={doc.filename} />
+        ),
     },
     {
       key: "passages",
@@ -190,7 +235,7 @@ function documentColumns({
       header: t("knowledge.col.status"),
       fold: "end",
       render: (doc) => {
-        const badge = INGEST_BADGE[doc.ingest_status];
+        const badge = documentBadge(doc, setSpeaksForAll);
         return (
           badge && (
             <CellStack>
@@ -214,15 +259,19 @@ function documentColumns({
       header: t("knowledge.col.actions"),
       headerHidden: true,
       fold: "end",
-      render: (doc) => (
-        <span className="cell-actions">
-          <OverflowMenu label={t("table.rowActions", { name: doc.filename })}>
-            <Button aria-haspopup="dialog" onClick={() => onDelete(doc)}>
-              {t("knowledge.deleteDocument")}
-            </Button>
-          </OverflowMenu>
-        </span>
-      ),
+      // A shipped page is filed again by the next update, so deleting it undoes nothing.
+      render: (doc) =>
+        doc.shipped ? null : (
+          <span className="cell-actions">
+            <OverflowMenu
+              label={t("table.rowActions", { name: documentName(doc) })}
+            >
+              <Button aria-haspopup="dialog" onClick={() => onDelete(doc)}>
+                {t("knowledge.deleteDocument")}
+              </Button>
+            </OverflowMenu>
+          </span>
+        ),
     },
   ];
 }
@@ -231,11 +280,16 @@ function documentColumns({
 export function DocumentList({
   corpusId,
   setName,
+  setState,
+  shipped,
   canManage,
   afterDelete,
 }: Readonly<{
   corpusId: string;
   setName: string;
+  setState: EmbedState;
+  // Only Margince files pages in a set it ships.
+  shipped: boolean;
   canManage: boolean;
   // A deleted document takes its row's menu with it; focus lands here instead.
   afterDelete: () => HTMLElement | null;
@@ -250,8 +304,13 @@ export function DocumentList({
   const deleted = useRef(false);
   const label = t("knowledge.documentsIn", { set: setName });
   const documents = [...(query.data?.items ?? [])].sort((a, b) =>
-    forReader(a.filename, b.filename, locale),
+    forReader(documentName(a), documentName(b), locale),
   );
+  // The set states its searchability once, with its reason. Rows repeat it only
+  // when some differ, so the one stale document can be found.
+  const setSpeaksForAll =
+    setState !== "complete" &&
+    documents.every((doc) => doc.embed_state === setState);
   return (
     <>
       {documents.length > 0 ? (
@@ -264,6 +323,7 @@ export function DocumentList({
             plural,
             locale,
             zone: viewerZone(),
+            setSpeaksForAll,
             canManage,
             onDelete: (doc) => {
               remove.reset();
@@ -281,7 +341,7 @@ export function DocumentList({
           </QueryStates>
         </PanelBody>
       )}
-      {canManage && query.isSuccess && (
+      {canManage && !shipped && query.isSuccess && (
         <PanelBody>
           <UploadDocument corpusId={corpusId} />
         </PanelBody>
@@ -289,12 +349,16 @@ export function DocumentList({
       <ConfirmModal
         open={deleting !== null}
         title={t("knowledge.deleteConfirm.title", {
-          name: asked?.filename ?? "",
+          name: asked ? documentName(asked) : "",
         })}
         confirmLabel={t("knowledge.deleteDocument")}
         confirmVariant="danger"
         pending={remove.isPending}
-        error={remove.isError ? problemMessageOf(remove.error, t) : null}
+        error={
+          remove.isError
+            ? shippedRefusal(remove.error, t, DELETE_SHIPPED)
+            : null
+        }
         onClose={() => setDeleting(null)}
         returnFocusTo={() => (deleted.current ? afterDelete() : null)}
         onConfirm={() => {
@@ -316,6 +380,24 @@ export function DocumentList({
     </>
   );
 }
+
+// A write to what ships with Margince is refused in catalog copy, by code. The
+// list read can predate the shipped flag the press meets.
+export function shippedRefusal(
+  error: unknown,
+  t: Translator,
+  copy: ReadonlyMap<string, MessageKey>,
+): string {
+  const key = copy.get(problemCodeOf(error) ?? "");
+  return key ? t(key) : problemMessageOf(error, t);
+}
+
+const DELETE_SHIPPED = new Map<string, MessageKey>([
+  ["document_shipped", "knowledge.deleteShipped"],
+]);
+const UPLOAD_SHIPPED = new Map<string, MessageKey>([
+  ["corpus_shipped", "knowledge.uploadShipped"],
+]);
 
 // Two distinct files agreeing on all three are the same bytes for every
 // purpose here, and the server would refuse both identically.
@@ -348,7 +430,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         refused.push({
           id: fileIdentity(file),
           filename: file.name,
-          message: problemMessageOf(err, t),
+          message: shippedRefusal(err, t, UPLOAD_SHIPPED),
         });
       }
     }

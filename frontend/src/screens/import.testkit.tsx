@@ -10,8 +10,8 @@ import {
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 
@@ -37,10 +37,12 @@ export function render(ui: ReactNode): RenderResult {
 }
 
 export const profile = {
+  run_id: "019ff-run",
   source_ref: "ws/import/abc",
   object: "lead",
   file_name: "leads.csv",
   rows_profiled: 4,
+  row_count: 4,
   columns: [
     { header: "Email", fill_rate: 1, samples: ["ada@x.test", "grace@x.test"] },
     { header: "Full Name", fill_rate: 0.75, samples: ["Ada Lovelace"] },
@@ -53,10 +55,12 @@ export const profile = {
 // A ZIP of two files the server detected, each with the mapping it proposes for
 // every type it could be.
 export const zipProfile = {
+  run_id: "019ff-run",
   source_ref: "ws/import/zip",
   file_name: "pipedrive-export.zip",
   suggested_source_name: "pipedrive-export",
   rows_profiled: 0,
+  row_count: 5,
   columns: [],
   suggested_mapping: {},
   targets: [],
@@ -65,6 +69,7 @@ export const zipProfile = {
       file: "companies.csv",
       object: "company",
       rows_profiled: 2,
+      row_count: 2,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["CO-1"] },
         { header: "display_name", fill_rate: 1, samples: ["Acme"] },
@@ -80,6 +85,7 @@ export const zipProfile = {
       file: "contacts.csv",
       object: "contact",
       rows_profiled: 3,
+      row_count: 3,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["P-1"] },
         { header: "email", fill_rate: 1, samples: ["jo@acme.com"] },
@@ -101,8 +107,10 @@ export const run = {
   object: "lead",
   status: "awaiting_approval",
   checkpoint: 0,
+  version: 3,
+  source_released: false,
   source: "import_api",
-  captured_by: "u-ada",
+  captured_by: "human:u-ada",
   created_at: "2026-08-13T10:00:00Z",
   updated_at: "2026-08-13T10:00:00Z",
 };
@@ -136,17 +144,45 @@ const EXACT_DEFAULTS: Routes = {
   "GET /imports": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /users/names": () => jsonResponse({ data: [] }),
   "POST /imports/sources": () => jsonResponse(profile),
-  "POST /imports": () => jsonResponse(run, 202),
+  "POST /imports": () => jsonResponse({ ...run, status: "validating" }, 202),
 };
 
 const RUN_PATH = /^GET \/imports\/([^/]+)$/;
 
+// What the server holds between an upload and the first test: the draft the
+// upload opened, which keeps the profile it was read from.
+type Server = { draft?: typeof profile; tested: boolean };
+
+function draftRun(server: Server) {
+  const { draft } = server;
+  if (!draft || server.tested) return undefined;
+  return {
+    ...run,
+    id: draft.run_id,
+    object: draft.object,
+    status: "pending",
+    profile: draft,
+  };
+}
+
 // The answers for a run named by its id.
-function runDefault(key: string): Response | undefined {
+function runDefault(key: string, server: Server): Response | undefined {
   const read = RUN_PATH.exec(key);
   if (read) return jsonResponse({ ...run, id: read[1] });
   if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
     return jsonResponse({ ...run, status: "complete" }, 202);
+  }
+  if (key.startsWith("PATCH /imports/")) {
+    const draft = draftRun(server);
+    return jsonResponse(
+      draft ?? { ...run, status: "pending", version: run.version + 1 },
+    );
+  }
+  if (key.startsWith("POST /imports/") && key.endsWith("/validate")) {
+    return jsonResponse(
+      { ...run, status: "validating", version: run.version + 1 },
+      202,
+    );
   }
   if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
     return jsonResponse(dryRun);
@@ -154,14 +190,18 @@ function runDefault(key: string): Response | undefined {
   return undefined;
 }
 
-// First a route with the same key, the test's or the default's. Then the
-// default for a run named by its id. Last, a test route that is a prefix.
-// So a stub "GET /imports" does not answer "GET /imports/format". Nor does
-// "GET /imports/r1" answer "GET /imports/r1/report".
-function answer(routes: Routes, key: string): Response {
+// First the draft, while the upload's run is untested. Then a route with the
+// same key, the test's or the default's. Then the default for a run named by
+// its id. Last, a test route that is a prefix. So a stub "GET /imports" does
+// not answer "GET /imports/format". Nor does "GET /imports/r1" answer
+// "GET /imports/r1/report".
+function answer(routes: Routes, key: string, server: Server): Response {
+  const read = RUN_PATH.exec(key);
+  const draft = draftRun(server);
+  if (read && draft && read[1] === draft.id) return jsonResponse(draft);
   const exact = routes[key] ?? EXACT_DEFAULTS[key];
   if (exact) return exact();
-  const byRun = runDefault(key);
+  const byRun = runDefault(key, server);
   if (byRun) return byRun;
   const prefix = Object.keys(routes).find((candidate) =>
     key.startsWith(candidate),
@@ -170,10 +210,23 @@ function answer(routes: Routes, key: string): Response {
   return byPrefix ? byPrefix() : jsonResponse({});
 }
 
+// What the server does with `?view=`: the one list, cut to drafts or to the
+// runs that are history, so a test stubs the list once.
+async function viewOf(response: Response, view: string): Promise<Response> {
+  const body: { data?: { status: string }[] } = await response.json();
+  const data = (body.data ?? []).filter((one) => {
+    const draft = one.status === "pending";
+    if (view === "drafts") return draft;
+    return !draft && one.status !== "cancelled";
+  });
+  return jsonResponse({ ...body, data });
+}
+
 // Every request the screens make, recorded, so a test can assert what went to
 // the server. The mapping and the parts are what the screen composes.
 export function stubRoutes(routes: Routes = {}): Sent[] {
   const sent: Sent[] = [];
+  const server: Server = { tested: false };
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -187,7 +240,16 @@ export function stubRoutes(routes: Routes = {}): Sent[] {
       const method = request?.method ?? init?.method ?? "GET";
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       sent.push({ method, path: key, body: await bodyOf(request, init) });
-      return answer(routes, key);
+      const response = answer(routes, key, server);
+      const view = url.searchParams.get("view");
+      if (key === "GET /imports" && view) {
+        return viewOf(response, view);
+      }
+      if (key === "POST /imports/sources" && response.ok) {
+        server.draft = await response.clone().json();
+      }
+      if (/^POST \/imports\/[^/]+\/validate$/.test(key)) server.tested = true;
+      return response;
     }),
   );
   return sent;

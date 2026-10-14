@@ -13,6 +13,7 @@ import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
 import {
+  type DrawerSpan,
   FORM_DIALOG_MAX_FIELDS,
   intentForFieldCount,
   MODAL_INTENTS,
@@ -645,6 +646,94 @@ describe("an intent decides the box on its own", () => {
   it("names every intent it takes", () => {
     expect([...MODAL_INTENTS].sort()).toEqual(
       ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
+    );
+  });
+});
+
+// The Worklist's shape: a drawer whose caller keeps the span, as the address
+// does there.
+function Expandable({
+  intent,
+}: Readonly<{ intent: "drawer" | "drawer-reading" }>) {
+  const [span, setSpan] = useState<DrawerSpan>("intent");
+  return (
+    <Modal
+      open
+      onClose={() => {}}
+      labelledBy="e"
+      intent={intent}
+      span={span}
+      onSpanChange={setSpan}
+    >
+      <Heading size="large" id="e">
+        Worklist
+      </Heading>
+      <Button>First row</Button>
+    </Modal>
+  );
+}
+
+describe("a drawer the reader can expand", () => {
+  it.each<["drawer" | "drawer-reading", string]>([
+    ["drawer", "modal modal-drawer"],
+    ["drawer-reading", "modal modal-drawer modal-drawer-wide"],
+  ])("widens %s to the window and back", async (intent, box) => {
+    const user = userEvent.setup();
+    render(<Expandable intent={intent} />);
+    const dialog = screen.getByRole("dialog", { name: "Worklist" });
+    expect(dialog.className).toBe(box);
+
+    await user.click(screen.getByRole("button", { name: "Expand" }));
+    expect(dialog.className).toBe(`${box} modal-drawer-window`);
+
+    await user.click(screen.getByRole("button", { name: "Collapse" }));
+    expect(dialog.className).toBe(box);
+  });
+
+  it("keeps focus on the control, inside the dialog, as the width changes", async () => {
+    const user = userEvent.setup();
+    render(<Expandable intent="drawer-reading" />);
+    const dialog = screen.getByRole("dialog", { name: "Worklist" });
+    expect(document.activeElement?.textContent).toBe("First row");
+
+    await user.tab();
+    const expand = screen.getByRole("button", { name: "Expand" });
+    expect(document.activeElement).toBe(expand);
+    await user.keyboard("{Enter}");
+
+    expect(dialog.classList.contains("modal-drawer-window")).toBe(true);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Collapse" }),
+    );
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.tab();
+    expect(document.activeElement, "the X stays the last stop").toBe(
+      closeControl(),
+    );
+  });
+
+  it("draws no Expand on a drawer whose caller does not take the span", () => {
+    render(
+      <Modal open onClose={() => {}} labelledBy="f" intent="drawer-reading">
+        <Heading size="large" id="f">
+          Fixed
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.queryByRole("button", { name: "Expand" })).toBeNull();
+  });
+
+  it("leaves a centred dialog its own width", () => {
+    render(
+      // @ts-expect-error only a drawer takes a span
+      <Modal open onClose={() => {}} labelledBy="c" intent="form" span="window">
+        <Heading size="large" id="c">
+          Centred
+        </Heading>
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Centred" }).className).toBe(
+      "modal modal-form",
     );
   });
 });

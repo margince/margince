@@ -17,8 +17,8 @@ import {
 import type userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { expect, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 
 // Settings → AI → Model routing: which vendor this installation's text is sent
 // to. The server is the RBAC authority; this screen mirrors it by disabling
@@ -213,9 +213,8 @@ export function backendFor(
       if (req.url.includes("/ai/available-models/")) {
         // The lane rides along as a query parameter, so the provider is the
         // path segment before it — the vendor is what this stub answers for.
-        const provider = req.url
-          .split("/ai/available-models/")[1]
-          .split("?")[0];
+        const provider =
+          req.url.split("/ai/available-models/")[1]?.split("?")[0] ?? "";
         return jsonResponse(
           VENDOR_MODELS[provider] ?? { provider, models: [] },
         );

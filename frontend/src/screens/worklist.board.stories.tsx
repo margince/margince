@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { TeamBoard } from "./worklist.board";
 
 // WHO ON THE TEAM IS CARRYING WHAT — counts, not rows, because the queue below

@@ -2,17 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentProps, useId, useState } from "react";
-import { useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Modal } from "../design-system/atoms";
 import { type BoardDeal, PipelineBoard } from "../design-system/composed";
 import type { DealCardActions } from "../design-system/dealcard";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { routeHash } from "../lib/router";
+import { useWriteTo } from "../lib/writeto";
 import { dealMailAside } from "./dealmailaside";
 import { DealStatusCardPanel } from "./dealstatus";
 import { LogActivityAction } from "./logactivity";
-import { useWriteTo } from "./writeto";
 
 // The pipeline board as the deals screen draws it: the design-system board
 // with the screen's half of every card — the mail flyout read from the

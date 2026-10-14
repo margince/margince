@@ -1,18 +1,18 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { identifierNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useOpenEmail } from "../lib/openemail";
+import { useRecordZone } from "../lib/recordzone";
 import { VoiceDegradedNotice } from "./compose.notices";
 import { DraftReasons } from "./composedraftcontext";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { openCitation } from "./record360";
 
 type EmailDraft = components["schemas"]["EmailDraft"];

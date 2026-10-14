@@ -1,8 +1,6 @@
 import { ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -11,10 +9,13 @@ import {
   formatNumber,
 } from "../format/format";
 import { daysPast } from "../format/lateness";
+import { useNow } from "../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { DismissClaimButton } from "./claimdismiss";
-import { useViewerId } from "./common";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
@@ -392,6 +393,7 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const nowMs = useNow(60_000);
   // A kept commitment owes nothing, so it names no deadline: a ticked row
   // reading "overdue" would contradict its own checkbox.
   if (loop.done) {
@@ -405,7 +407,6 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
     // a promise 23 hours past due is late by no whole days and still late, and
     // reading `days > 0` as the verdict is what let this card call it "due
     // yesterday" while the task list called the same promise overdue.
-    const nowMs = Date.now();
     const { days, late } = daysPast(dueMs, nowMs);
     if (late) {
       return (

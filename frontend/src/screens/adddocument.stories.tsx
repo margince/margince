@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { AddDocumentDialog } from "./adddocument";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AddDocumentDialog } from "./adddocument";
 
 // Adding a document. The states worth looking at are not the empty form — they
 // are the refusal, which has to say WHICH thing is missing; the deal question,

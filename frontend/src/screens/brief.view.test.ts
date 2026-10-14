@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NO_URL_PARAMS, type UrlParams } from "../app/urlstate";
+import { NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";
 import {
   addressFrom,
   DEFAULT_ADDRESS,

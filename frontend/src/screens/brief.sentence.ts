@@ -61,7 +61,7 @@ export function sentenceParts(template: string): readonly SentencePart[] {
     if (hole.index > at) {
       parts.push({ kind: "text", text: template.slice(at, hole.index) });
     }
-    parts.push({ kind: "slot", name: hole[1] });
+    parts.push({ kind: "slot", name: hole[1] ?? "" });
     at = hole.index + hole[0].length;
   }
   if (at < template.length) {
@@ -98,11 +98,11 @@ export function briefSentence(
   }
   const waiting = waitingRows(day);
   const partial = Boolean(day.readings?.more_available || laneUnread(day));
-  if (waiting.length === 0 && partial) return null;
-  if (waiting.length === 0) {
+  const [lead] = waiting;
+  if (lead === undefined && partial) return null;
+  if (lead === undefined) {
     return { key: "brief.sentence.clear", values: {} };
   }
-  const lead = waiting[0];
   // A ROW TITLE IS A CLAUSE, NOT A NOUN PHRASE. `itemTitle` returns whole
   // sentences — "Die Nacht hat das herausgesucht", "43 likely automated
   // senders" — so a template that embedded it ("Start with {lead}.") produced

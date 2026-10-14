@@ -21,7 +21,8 @@ package gates
 // WHEN THE QUESTION CHANGES: edit both catalogs, and bump
 // marketingQuestionVersion in consent/marketingquestion.go. The bump is what
 // tells a reader the proposition moved; the old version stays published for the
-// grants that named it.
+// grants that named it. consent's TestEveryPublishedQuestionIsPinnedToItsVersion
+// fails a word change that keeps the version.
 //
 // THE PROPER FIX, when somebody has the appetite, is for the page to RENDER the
 // published wording rather than its own copy — one source, nothing to drift.

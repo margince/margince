@@ -14,22 +14,28 @@ import { ExtensionUnitsCard } from "./extension-units";
 // through the card purely so a test could pass one, would put a seam in
 // production code that only tests use.
 //
-// app/extensions.ts is mocked rather than @composition/extensions, because the
+// lib/extensions.ts is mocked rather than @composition/extensions, because the
 // alias resolves to the committed empty stub whose emptiness is itself pinned
-// (extensions.test.ts); mocking the module under it would make this suite pass
+// (extensions.test.ts). Mocking the module under it would make this suite pass
 // while the real filter was never called.
 const { unitsForSecretScope } = vi.hoisted(() => ({
   unitsForSecretScope:
     vi.fn<(scope: "user" | "workspace") => readonly ExtensionDescriptor[]>(),
 }));
 
-vi.mock("../app/extensions", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../app/extensions")>()),
+vi.mock("../lib/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/extensions")>()),
   unitsForSecretScope,
+}));
+
+// A unit's copy as gen-composition merges it, so a title resolves as it would composed.
+vi.mock("@composition/copy", () => ({
+  extensionCopy: { en: { "extDispactConnector.title": "Dispact" } },
 }));
 
 const DISPACT: ExtensionDescriptor = {
   name: "dispact-connector",
+  title: "extDispactConnector.title",
   secretScope: "user",
   verbs: [],
 };
@@ -48,16 +54,24 @@ afterEach(() => {
 });
 
 describe("the units offered on a settings page", () => {
-  it("names the unit and links to its own screen", () => {
+  it("names the unit by its title, with its key under it, and links to its own screen", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
     // The whole row is the link, named with the verb and the unit it opens.
-    const link = screen.getByRole("link", {
-      name: "Open dispact-connector page",
-    });
+    const link = screen.getByRole("link", { name: "Settings for Dispact" });
     expect(link.getAttribute("href")).toBe("#/ext/dispact-connector");
     // The name is visible text, not only part of the link's accessible name.
-    expect(screen.getByText("dispact-connector")).toBeTruthy();
+    expect(screen.getByText("Dispact")).toBeTruthy();
+    expect(screen.getByText("dispact-connector").tagName).toBe("CODE");
+  });
+
+  it("shows a unit with no title by its key, once", () => {
+    unitsForSecretScope.mockReturnValue([
+      { name: "notes", title: "", secretScope: "user", verbs: [] },
+    ]);
+    renderCard("user");
+    const link = screen.getByRole("link", { name: "Settings for notes" });
+    expect(link.textContent).toBe("notes");
   });
 
   it("asks for the scope of the page it was placed on", () => {
@@ -78,13 +92,13 @@ describe("the units offered on a settings page", () => {
   it("gives every offered unit its own row", () => {
     unitsForSecretScope.mockReturnValue([
       DISPACT,
-      { name: "notes", secretScope: "user", verbs: [] },
+      { name: "notes", title: "", secretScope: "user", verbs: [] },
     ]);
     renderCard("user");
     expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(
       screen
-        .getByRole("link", { name: "Open notes page" })
+        .getByRole("link", { name: "Settings for notes" })
         .getAttribute("href"),
     ).toBe("#/ext/notes");
   });

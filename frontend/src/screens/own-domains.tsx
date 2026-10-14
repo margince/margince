@@ -6,7 +6,6 @@ import { Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -23,11 +22,13 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
 import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   type MutationOutcome,
   useRowHandoff,

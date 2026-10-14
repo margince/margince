@@ -75,13 +75,11 @@ export function useIgnitionCore(running: boolean): {
       }
     };
   }, [running]);
-  if (!running) {
+  const current = CORE_BEATS[beat];
+  if (!running || current === undefined) {
     return { state: "idle", progress: undefined };
   }
-  return {
-    state: CORE_BEATS[beat].state,
-    progress: CORE_BEATS[beat].progress,
-  };
+  return { state: current.state, progress: current.progress };
 }
 
 /**

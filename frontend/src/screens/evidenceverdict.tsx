@@ -3,12 +3,12 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 

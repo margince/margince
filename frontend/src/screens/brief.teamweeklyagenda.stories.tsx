@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { stubClipboard } from "../design-system/clipboard-testing";
+import { StoryProviders } from "../testing/story-utils";
 import { teamWeek } from "./brief.fixtures";
 import { AgendaPanel } from "./brief.teamweeklyagenda";
-import { StoryProviders } from "./story-utils";
 
 // The Monday agenda: one item per member, in the order the review already
 // ranks — the contact who asked for help first, the week that went well last.

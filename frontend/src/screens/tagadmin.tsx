@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -17,11 +15,13 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { TagPill } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryStates } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
 import type { Tag } from "./tagadmin.queries";
 import {
   useArchiveTag,

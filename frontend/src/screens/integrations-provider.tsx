@@ -8,7 +8,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -23,12 +22,15 @@ import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
+import { QueryGate } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { BuyableRefused } from "./integrations-provider.notices";
 import { LookupPostureRow } from "./integrations-provider-posture";
 import { categoryName } from "./provider-categories";

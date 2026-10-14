@@ -5,7 +5,7 @@ import { Bookmark } from "lucide-react";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import type { ViewResource } from "./filtersaddress";
 import type { ListQuery, SavedViewTab } from "./listquery";
 import { ManageViewsButton } from "./savedviews.manage";

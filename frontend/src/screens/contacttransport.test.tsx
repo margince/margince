@@ -11,10 +11,14 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../testing/story-utils";
 import { ContactBriefCard } from "./contactbrief";
 import { ContactMemory } from "./contactmemory";
 import { ContactRail } from "./contactrail";
-import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
 // What the contact page says about the transport that carried a message.
 //

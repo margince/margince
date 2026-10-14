@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -40,6 +41,17 @@ func TestACommitRefusesARunThatHasNotBeenDryRun(t *testing.T) {
 		Id: openapi_types.UUID(ids.NewV7()), Status: awaitingApproval,
 	}); err != nil {
 		t.Errorf("a dry-run run was refused: %v", err)
+	}
+}
+
+// A commit that stopped part-way resumes at its checkpoint without a human.
+// Only an approved run was ever committed, so the dry run still came first.
+func TestACommitResumesAFailedCommit(t *testing.T) {
+	approved := time.Date(2026, 10, 13, 9, 0, 0, 0, time.UTC)
+	if err := refuseUncommittableRun(crmcontracts.ImportRun{
+		Id: openapi_types.UUID(ids.NewV7()), Status: failedCommit, ApprovedAt: &approved,
+	}); err != nil {
+		t.Errorf("a failed commit was refused: %v", err)
 	}
 }
 
@@ -380,12 +392,8 @@ func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
 	}
 }
 
-// A staging failure keeps its file, because a run already references it.
-//
-// stageRun persists its run before it validates, and a run that failed
-// validation is resumable from its SourceRef — so discarding here would turn a
-// run somebody can fix into one nobody can. The refusal BEFORE staging is the
-// only one where the file is provably unreferenced.
+// A staging failure keeps its draft and file. A refused test returns the run
+// to its draft, and createImportRun on that source_ref tests it again.
 func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 	var discarded []string
 	_, err := previewImport{imports: recordingImports{
@@ -400,7 +408,7 @@ func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 		t.Fatal("a staging failure was reported as success")
 	}
 	if len(discarded) != 0 {
-		t.Errorf("discarded = %v, and a failed run is resumable from that source", discarded)
+		t.Errorf("discarded = %v, and a refused draft is tested again from that source", discarded)
 	}
 }
 

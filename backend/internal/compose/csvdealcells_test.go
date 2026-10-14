@@ -51,7 +51,7 @@ func TestAStageIsFoundByNameInItsOwnPipelineOnly(t *testing.T) {
 		t.Fatalf("typed = %v, problem = %+v; want Sales' Qualified, whatever its case and spaces", typed, problem)
 	}
 	_, problem = stages.checkCells(map[string]string{dealTargetPipeline: "Sales", dealTargetStage: "Closing"}, nil)
-	if problem == nil || problem.Target != dealTargetStage || !strings.Contains(problem.Message, `"Sales"`) {
+	if problem == nil || problem.Target != dealTargetStage || !strings.Contains(problem.Message, "“Sales”") {
 		t.Fatalf("problem = %+v, want the stage refused naming the pipeline it is not in", problem)
 	}
 	_, problem = stages.checkCells(map[string]string{dealTargetPipeline: "Upsell", dealTargetStage: "Won"}, nil)

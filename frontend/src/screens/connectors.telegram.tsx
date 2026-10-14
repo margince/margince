@@ -6,7 +6,6 @@ import { Send } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -19,13 +18,14 @@ import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import {
   problemCode,
   problemMessageOf,
   throwProblem,
   unwrap,
-  useMe,
-} from "./common";
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 import { statusLabel, statusTone } from "./connector-status";
 import { TelegramConnectForm } from "./telegram-connect-form";
 

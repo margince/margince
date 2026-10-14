@@ -4,8 +4,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CompanyProjectsPanel } from "./companyprojects";
 
 type Company360 = components["schemas"]["Company360"];
@@ -21,14 +21,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function draw(view: Company360 | undefined, readOnly = false) {
+function draw(view: Company360 | undefined) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CompanyProjectsPanel companyId="o-1" view={view} readOnly={readOnly} />
+        <CompanyProjectsPanel companyId="o-1" view={view} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -212,14 +212,6 @@ describe("starting a project from the account", () => {
     draw(ANSWERED);
 
     expect(await screen.findByText("Attach project")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
-  });
-
-  it("offers no create verb on an archived account", async () => {
-    stubServer({ project: ["create", "read"] });
-    draw(ANSWERED, true);
-
-    expect(await screen.findByText("Projects")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
   });
 });

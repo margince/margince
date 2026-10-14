@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { SectionState } from "../design-system/surfacestate";
-import { ProblemError, unwrap } from "./common";
+import { ProblemError, unwrap } from "../lib/problem";
 
 // The paper filed against ONE agreement, read the same way by the two surfaces
 // that show it: the contract form's signed-document field and the contract row

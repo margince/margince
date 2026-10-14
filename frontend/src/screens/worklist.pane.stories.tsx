@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { WorklistPane } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 

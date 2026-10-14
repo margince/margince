@@ -12,11 +12,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
+import { jsonResponse } from "../testing/story-utils";
 import { LeadScreen, LeadsScreen } from "./leads";
-import { jsonResponse } from "./story-utils";
 
 type Contact = components["schemas"]["Contact"];
 

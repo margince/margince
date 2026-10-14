@@ -15,10 +15,11 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render } from "@testing-library/react";
+import { type RenderResult, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 export type Worklist = components["schemas"]["Worklist"];
@@ -31,6 +32,11 @@ export function jsonResponse(body: unknown): Response {
   });
 }
 
+function withoutQuery(url: string): string {
+  const [path = ""] = url.split("?");
+  return path;
+}
+
 // The DAY's own read, told apart from its siblings under the same prefix.
 //
 // `/worklist/hidden` and `/worklist/team` both start with `/worklist`, so a
@@ -39,7 +45,7 @@ export function jsonResponse(body: unknown): Response {
 // lands in React's render rather than in an assertion. The suite passed and
 // printed an unhandled error nobody owned.
 function isWorklistRead(url: string): boolean {
-  return url.split("?")[0].endsWith("/worklist");
+  return withoutQuery(url).endsWith("/worklist");
 }
 
 // The quietest board the server can actually send.
@@ -64,7 +70,7 @@ const QUIET_BOARD = {
 // The board's own read, so it is answered with a board rather than the
 // catch-all. A test that wants rows on it stubs fetch itself.
 function isTeamBoardRead(url: string): boolean {
-  return url.split("?")[0].endsWith("/worklist/team");
+  return withoutQuery(url).endsWith("/worklist/team");
 }
 
 // The reads `stub`'s one optional answer is served to.
@@ -93,7 +99,7 @@ export function stub(day: Worklist, answer?: unknown) {
       // retry write sit on different rows.
       if (
         answer &&
-        ANSWERED_READS.some((path) => path.test(url.split("?")[0]))
+        ANSWERED_READS.some((path) => path.test(withoutQuery(url)))
       ) {
         return jsonResponse(answer);
       }
@@ -104,7 +110,7 @@ export function stub(day: Worklist, answer?: unknown) {
       // chain — a completion is undone by a second write — and the second one
       // pins on what the first returned, so a stub answering an empty envelope
       // would make the undo refuse itself.
-      if (/\/activities\/[^/?]+$/.test(url.split("?")[0])) {
+      if (/\/activities\/[^/?]+$/.test(withoutQuery(url))) {
         return jsonResponse({ version: 4 });
       }
       return jsonResponse({ data: [] });
@@ -153,6 +159,23 @@ export function panelNamed(heading: HTMLElement): HTMLElement {
     throw new Error(`no panel around the heading "${heading.textContent}"`);
   }
   return panel;
+}
+
+/** The name of a row's menu, which names the row it belongs to. */
+export function rowMenuName(title: string): string {
+  return en["worklist.rowMenu"].replace("{title}", title);
+}
+
+/**
+ * The menu of the one row on screen, by the start of its name: the rest is the
+ * row's title as the row composes it.
+ */
+export function findRowMenu(): Promise<HTMLElement> {
+  const menu = en["worklist.rowMenu"];
+  const lead = menu.slice(0, menu.indexOf("{title}"));
+  return screen.findByRole("button", {
+    name: (name) => name.startsWith(lead),
+  });
 }
 
 export function renderWorklist(

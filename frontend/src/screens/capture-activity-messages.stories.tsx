@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CaptureMessages } from "./capture-activity-messages";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 
@@ -98,7 +102,10 @@ export const WithPayloads: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const table = await canvas.findByRole("table", { name: "Messages" });
-    await userEvent.hover(within(table).getAllByRole("row")[1]);
+    const [, firstMessage] = within(table).getAllByRole("row");
+    if (!firstMessage)
+      throw new Error("the Messages table shows no message row");
+    await userEvent.hover(firstMessage);
     await expect(table).toBeVisible();
   },
 };

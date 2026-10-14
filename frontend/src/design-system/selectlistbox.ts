@@ -119,13 +119,14 @@ type IntentActions = Readonly<{
   commitActive: () => void;
   cancel: () => void;
   leave: () => void;
-  search: (char: string) => void;
+  search: (char: string, at: number) => void;
 }>;
 
+// The typeahead reads time from the key event, so render stays pure.
 function keyDownHandler(
   open: boolean,
   actions: IntentActions,
-  typing: () => boolean,
+  typing: (at: number) => boolean,
 ) {
   return (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     // A modified press belongs to the browser or the OS (Alt+Arrow is history
@@ -134,7 +135,7 @@ function keyDownHandler(
       return;
     }
     const intent: KeyIntent =
-      open && event.key === " " && typing()
+      open && event.key === " " && typing(event.timeStamp)
         ? { act: "search", char: " " }
         : intentFor(event.key, open);
     if (!intent) {
@@ -166,7 +167,7 @@ function keyDownHandler(
       case "leave":
         return actions.leave();
       case "search":
-        return actions.search(intent.char);
+        return actions.search(intent.char, event.timeStamp);
     }
   };
 }
@@ -297,8 +298,8 @@ export function useSelectListbox<T extends ListboxOption>(
     trigger.current?.focus();
   };
 
-  const search = (char: string) => {
-    const match = typeaheadMatch(options, typed.current, char, Date.now());
+  const search = (char: string, at: number) => {
+    const match = typeaheadMatch(options, typed.current, char, at);
     typed.current = { query: match.query, at: match.at };
     if (match.hit !== -1) {
       setActive(match.hit);
@@ -347,9 +348,9 @@ export function useSelectListbox<T extends ListboxOption>(
     onKeyDown: keyDownHandler(
       open,
       actions,
-      () =>
+      (at) =>
         typed.current.query !== "" &&
-        Date.now() - typed.current.at < TYPEAHEAD_RESET_MS,
+        at - typed.current.at < TYPEAHEAD_RESET_MS,
     ),
     // Pressing the trigger a second time closes on nothing chosen, which is
     // the same answer as Escape and as a press outside, so it leaves through

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatFixture } from "../../src/screens/import.fixtures";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -11,6 +10,7 @@ import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
 import {
+  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -29,6 +29,7 @@ import {
   seats,
   seededLead,
 } from "./fixtures";
+import { importRoutes } from "./imports";
 import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
@@ -45,7 +46,7 @@ const empty = reply(page([]));
 // above any prefix row that would also match it.
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
-  { method: "GET", path: "/imports/format", handle: reply(formatFixture) },
+  ...importRoutes,
   { path: "/me/working-hours", handle: reply(session.workingHours) },
   {
     method: "GET",
@@ -100,6 +101,12 @@ export const routes: readonly MockRoute[] = [
   { path: "/leads/l-new", handle: reply(records.createdLead) },
   { method: "POST", path: "/deals", handle: records.createDeal },
   { path: "/contacts/p-anna", handle: reply(anna) },
+  { path: "/contacts/p-imported", handle: reply(records.importedContact) },
+  {
+    method: "GET",
+    path: "/contacts/p-imported/360",
+    handle: reply(records.importedContact360),
+  },
   {
     method: "GET",
     path: /^\/contacts\/[^/]+\/360$/,
@@ -126,6 +133,12 @@ export const routes: readonly MockRoute[] = [
     handle: reply({ state: [], events: [] }),
   },
   { method: "GET", path: "/companies", handle: reply(page([brandt])) },
+  {
+    method: "GET",
+    path: "/companies/o-imported/360",
+    handle: reply(records.importedCompany360),
+  },
+  { path: "/companies/o-imported", handle: reply(records.importedCompany) },
   {
     method: "GET",
     path: /^\/companies\/[^/]+\/360$/,
@@ -290,6 +303,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },

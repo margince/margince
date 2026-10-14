@@ -332,6 +332,9 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		// normalized bytes here. Nil (no blobstore configured) leaves every
 		// company on its monogram — the read itself is unaffected.
 		Blobstore: lanes.blob,
+		// An import commit reads its upload from the same store, under the
+		// upload's own cap.
+		ImportUploadCap: cfg.csvImportCap,
 		// The embed-reindex worker registers regardless: without an embed
 		// lane (nil Embedder) a picked-up job fails clearly rather than
 		// sitting queued forever behind a job no one can work — the same

@@ -10,11 +10,11 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { EXTENSION_SCREEN } from "../lib/extensions";
+import type { Route, Screen } from "../lib/router";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
-import { type EntityKind, SCREEN_ENTITY } from "./entity";
-import { EXTENSION_SCREEN } from "./extensions";
-import type { Route, Screen } from "./router";
 import {
   type NavLevelEntry,
   type NavSection,
@@ -132,7 +132,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // Closes the group as the AUTHORING surface over lists: a filter written
       // here becomes a dynamic list, a saved view or an export, and writing one
       // is work somebody does rather than a record they keep. Nothing on this
-      // screen aggregates, so it is not Intelligence either. It reuses the
+      // screen aggregates, so it is not Insights either. It reuses the
       // screen's own title rather than a `nav.*` label, because a surface named
       // twice gets renamed once.
       //

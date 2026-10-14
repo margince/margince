@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { Badge, Disclosure } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { type Source, summarize } from "./ai-request-summary";
-import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What the serving editor reads beside the text: every field the served schema

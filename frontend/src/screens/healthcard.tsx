@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import { EmptyState } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { QueryGate, type QueryLike, useMe } from "./common";
+import { QueryGate, type QueryLike } from "../design-system/querystates";
+import { useMe } from "../lib/session";
 
 // The shell every Settings → System health card wears.
 //

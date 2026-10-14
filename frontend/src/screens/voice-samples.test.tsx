@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { tableRowCells } from "./tablerow.testkit";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { VoiceSamples } from "./voice-samples";
 import { VoiceHistory } from "./voice-versions";
 

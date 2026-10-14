@@ -17,7 +17,7 @@ import { type ReactNode, useRef, useState } from "react";
 
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Panel, PanelBody, PanelGroupHead, PanelRow } from "./panel";

@@ -66,12 +66,12 @@ func authorFrom(fields map[string]string) storekit.SourceAuthorInput {
 
 // authorUnwritableReason refuses an author cell the create would refuse, so the
 // dry run promises what the commit does.
-func authorUnwritableReason(fields map[string]string) string {
+func authorUnwritableReason(fields map[string]string) migration.Reason {
 	name := importString(fields, csvTargetAuthor)
 	if name == nil || utf8.RuneCountInString(*name) <= provenance.SourceAuthorNameMax {
-		return ""
+		return migration.Reason{}
 	}
-	return fmt.Sprintf("author is longer than %d characters", provenance.SourceAuthorNameMax)
+	return migration.WhyCount(migration.ReasonAuthorTooLong, "max", provenance.SourceAuthorNameMax)
 }
 
 // authorSeats caches one answer per author cell for the run, so a file naming

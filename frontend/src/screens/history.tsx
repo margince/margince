@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { EntityKind } from "../app/entity";
 import { SegmentedControl } from "../design-system/atoms";
 import { useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
 
 // The record-level entry point (B-EP09.x): a SegmentedControl toggling
 // between the plain-language change list and the per-field diff timeline —

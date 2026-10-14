@@ -1,8 +1,8 @@
 import type { EvidenceMarkSource } from "../design-system/evidencemark";
+import { provenanceOf } from "../design-system/provenanceof";
 import { confidenceLevel } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import type { Locale } from "../i18n";
-import { provenanceOf } from "./common";
 
 /**
  * A row carrying its own provenance: a profile field, a fact, a technical

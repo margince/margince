@@ -9,7 +9,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select, type SelectOption } from "../design-system/select";
 import { isTagTone, TAG_TONES } from "../design-system/tagpill";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { nearMatches } from "./tagadmin.logic";
 import type { Tag, TagColor } from "./tagadmin.queries";
 import { useCreateTag, useUpdateTag } from "./tagadmin.queries";

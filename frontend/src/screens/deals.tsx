@@ -20,14 +20,8 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
-import { scrollPageToTop } from "../app/reveal";
-import { navigate, routeHash } from "../app/router";
-import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -51,8 +45,9 @@ import {
   type ListColumn,
   type ListSelection,
 } from "../design-system/listtable";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useRecordTimeline } from "../design-system/recordtimeline";
@@ -71,23 +66,24 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { dealRecordKeys, dealWinKeys } from "../lib/activitykeys";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { useCanWriteRecord, useRecordWriteRefusal } from "../lib/capability";
+import { useMemberNames } from "../lib/membernames";
+import { useOpenEmail } from "../lib/openemail";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { scrollPageToTop } from "../lib/reveal";
+import { navigate, routeHash } from "../lib/router";
+import { useMe, useViewerId } from "../lib/session";
+import { currentParams, replaceDial, useUrlParams } from "../lib/urlstate";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
 } from "./acquisitionsources.queries";
-import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
-import {
-  LoadMoreButton,
-  provenanceOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useMe,
-  useViewerId,
-} from "./common";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import {
@@ -101,6 +97,7 @@ import {
 } from "./deal360/closereviewoffer";
 import {
   type AdvanceInput,
+  advanceErrorBehind,
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
@@ -118,6 +115,7 @@ import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
+import { DealLegalTab } from "./deal360/deallegaltab";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { DealWatchCard } from "./deal360/dealwatchcard";
@@ -152,6 +150,8 @@ import {
   useEntityName,
 } from "./entityref";
 import { searchCompanies } from "./filterreference";
+import { LegalReviewQueueLink } from "./legalreviews";
+import { useLegalReviewAvailable } from "./legalreviews.queries";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -165,8 +165,7 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { useMemberNames } from "./membernames";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
@@ -1080,7 +1079,8 @@ export function buildStageTotals(
       0,
     );
     const mixed = stageRows.length > 1;
-    const single = stageRows[0];
+    const [single] = stageRows;
+    if (single === undefined) continue;
     // ONE row is not the same fact as one CURRENCY. A stage whose deals are all
     // unpriced groups into a single row whose `currency` is null, so the
     // cross-currency test says nothing about it — and its figures belong to no
@@ -1537,7 +1537,7 @@ function DealViewTools({
                 names from the place; a screen reader gets no place, so the
                 field says its own name to it. */}
             <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
-            {pipelines[0].name}
+            {pipelines[0]?.name}
           </span>
         )
       )}
@@ -2207,7 +2207,12 @@ export function DealsScreen({
         columns={dealColumns(t, locale, recordZone, stageName)}
         rowKey={(deal) => deal.id}
         rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
-        action={createAction}
+        action={
+          <>
+            <LegalReviewQueueLink />
+            {createAction}
+          </>
+        }
         tools={tools}
         saveView={saveView}
         body={boardBody}
@@ -2240,7 +2245,7 @@ export function DealsScreen({
           unit: "unit.deals",
         })}
       />
-      <ErrorLine error={advance.error} />
+      <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -2609,7 +2614,7 @@ export function OffersPanel({
   );
 }
 
-const DEAL_TABS = ["overview", "room", "files", "history"] as const;
+const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
 type DealTab = (typeof DEAL_TABS)[number];
 
 // The deal 360's "overview" pane, split out of DealScreen so the tab switch
@@ -2809,6 +2814,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
+  const legalReview = useLegalReviewAvailable();
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // The deal that just closed, while the review is on offer for it. Separate
   // from `pending`, which is the question BEFORE the close; this is the offer
@@ -3030,7 +3036,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 // as two controls on one page instead of one nested in the other.
                 tabs={
                   <RecordTabs
-                    options={DEAL_TABS}
+                    options={DEAL_TABS.filter(
+                      (each) => legalReview || each !== "legal",
+                    )}
                     value={tab}
                     onChange={(next) => {
                       setTab(next);
@@ -3040,6 +3048,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       overview: t("tab.overview"),
                       room: t("tab.dealRoom"),
                       files: t("tab.documents"),
+                      legal: t("legalReview.tab"),
                       history: t("tab.history"),
                     }}
                     // The switch for the deal's details column, at the end of the
@@ -3090,6 +3099,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   <DealRoomTab dealId={deal.id} dealName={deal.name} />
                 )}
                 {tab === "files" && <DealFiles deal={deal} />}
+                {tab === "legal" && legalReview && <DealLegalTab deal={deal} />}
                 {tab === "history" && (
                   <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
                 )}
@@ -3101,7 +3111,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                <ErrorLine error={advance.error} />
+                <ErrorLine
+                  error={advanceErrorBehind(advance.error, pending !== null)}
+                />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

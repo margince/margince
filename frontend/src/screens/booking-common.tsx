@@ -1,8 +1,8 @@
 import { useRef } from "react";
-import { navigate } from "../app/router";
 import { Button, Field } from "../design-system/atoms";
 import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { PoweredBy } from "./buyerroomframe";
 
 export function BookingFooter() {

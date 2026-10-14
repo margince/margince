@@ -178,7 +178,7 @@ To import your old emails into Margince, open **Settings → Connections** and c
 2. Open the **…** (**Actions**) menu on the mailbox and choose **Import old emails**.
 3. Pick **How far back**, from **3 months** to **10 years**. 6 months is the default.
 4. Read the email count and the AI cost, then press **Start import**, or **Not now**.
-**Stop** keeps what was captured so far. IMAP mailboxes have no history import, and the window can only be widened later.
+**Stop** keeps what was captured so far. The menu offers **Import old emails** only for a mailbox that can import; IMAP mailboxes cannot. The window can only be widened later.
 Also called: backfill, import past mail, sync old emails, email history.
 
 ## Importing your mail history

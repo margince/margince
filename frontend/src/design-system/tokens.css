@@ -477,6 +477,9 @@
   --dialogFormWidth: 600px;
   --drawerWidth: 560px;
   --drawerReadingWidth: 880px;
+  /* A drawer grown to the window stops here: past it a row is a line too long
+     to read across. */
+  --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already
@@ -883,7 +886,7 @@
  * The same dark palette, for a document whose host stated NOTHING.
  *
  * The attribute arm above is the whole answer only where something stamps the
- * attribute. The SPA does (app/theme.ts resolves the theme before React
+ * attribute. The SPA does (lib/theme.ts resolves the theme before React
  * mounts, precisely so no surface renders un-themed), but the SPA is not the
  * only document that reads these tokens: an MCP App view is drawn inside a
  * third-party host whose theme statement is OPTIONAL (SEP-1865), and an

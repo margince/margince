@@ -11,9 +11,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "./company.fixtures";
 import { OAuthAppCard } from "./oauth-app";
 

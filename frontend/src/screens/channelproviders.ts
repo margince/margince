@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { providerName } from "../format/connectorprovider";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 type Carriage = components["schemas"]["ChannelProviderEntry"]["attachments"];
 

@@ -11,13 +11,15 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
-import { meFixture } from "./app/mefixture";
-import { navigate } from "./app/router";
+import { navigate } from "./lib/router";
 import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp } from "./testing/appharness";
+import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.
+// The run is the state. A profiled file is a draft the server keeps, so only
+// an upload still in flight is work the page could lose by leaving.
 
 const SETTLE_MS = 10_000;
 
@@ -34,31 +36,47 @@ const run = {
   object: "lead",
   status: "awaiting_approval",
   checkpoint: 0,
+  version: 1,
   source: "import_api",
   created_at: "2026-08-13T10:00:00Z",
   updated_at: "2026-08-13T10:00:00Z",
 };
 
 // The run's status as the server holds it: approving it lands it.
-let status = "awaiting_approval";
+let status = "pending";
 
-function answers(): Readonly<Record<string, unknown>> {
+const profile = {
+  run_id: "019ff-run",
+  source_ref: "ws/import/abc",
+  object: "lead",
+  file_name: "estate.csv",
+  rows_profiled: 1,
+  row_count: 1,
+  columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
+  suggested_mapping: { Email: "email" },
+  targets: ["full_name", "email"],
+};
+
+function answers(view: string | null): Readonly<Record<string, unknown>> {
   return {
     "GET /v1/me": meFixture({
       allow: { import_run: ["create", "update", "read"] },
     }),
     "GET /v1/imports/format": formatFixture,
-    "POST /v1/imports/sources": {
-      source_ref: "ws/import/abc",
-      object: "lead",
-      file_name: "estate.csv",
-      rows_profiled: 1,
-      columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
-      suggested_mapping: { Email: "email" },
-      targets: ["full_name", "email"],
-    },
+    "POST /v1/imports/sources": profile,
     "POST /v1/imports": run,
-    "GET /v1/imports/019ff-run": { ...run, status },
+    "GET /v1/imports/019ff-run": {
+      ...run,
+      status,
+      draft_step: "files",
+      profile,
+    },
+    "GET /v1/imports": {
+      data: [{ ...run, status, profile }].filter(
+        (one) => (one.status === "pending") === (view === "drafts"),
+      ),
+    },
+    "PATCH /v1/imports/019ff-run": { ...run, status },
     "GET /v1/imports/019ff-run/report": {
       run_id: run.id,
       status,
@@ -77,13 +95,15 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
   const url = new URL(request ? request.url : String(input), "https://t.test");
   const method = request?.method ?? init?.method ?? "GET";
   const key = `${method} ${url.pathname}`;
-  if (key === "POST /v1/imports/019ff-run/approve") {
-    status = "complete";
+  const lands = key === "POST /v1/imports/019ff-run/approve";
+  if (lands) status = "complete";
+  if (key === "POST /v1/imports/019ff-run/validate") {
+    status = "awaiting_approval";
   }
   const body =
-    key === "POST /v1/imports/019ff-run/approve"
+    lands || key === "POST /v1/imports/019ff-run/validate"
       ? { ...run, status }
-      : answers()[key];
+      : answers(url.searchParams.get("view"))[key];
   return body === undefined
     ? new Response(JSON.stringify({ code: "unavailable" }), {
         status: 503,
@@ -121,7 +141,7 @@ const browserLanguages = Object.getOwnPropertyDescriptor(
 );
 
 beforeEach(() => {
-  status = "awaiting_approval";
+  status = "pending";
   vi.stubGlobal("localStorage", memoryStorage());
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
   Object.defineProperty(globalThis.navigator, "languages", {
@@ -144,7 +164,7 @@ afterEach(() => {
 
 describe("the CSV import page in the shell", () => {
   it(
-    "asks before leaving a profiled file that was never imported",
+    "lets the reader leave a profiled file and finds it waiting as a draft",
     async () => {
       const user = userEvent.setup();
       await arriveAtRunPage();
@@ -153,13 +173,16 @@ describe("the CSV import page in the shell", () => {
       await leaveForTheRow(user);
 
       expect(
-        await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+        await screen.findByRole(
+          "link",
+          { name: "Continue" },
+          { timeout: SETTLE_MS },
+        ),
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole("combobox", { name: "Record type for estate.csv" }),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
-    SETTLE_MS * 2,
+    LEAVE_AFTER_COMMIT_TEST_MS,
   );
 
   it(

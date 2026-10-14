@@ -45,12 +45,23 @@ const catalogPage = "../docs/reference/agent-tools.md"
 // The remaining columns are not this gate's subject and are left unread.
 var catalogRow = regexp.MustCompile("^\\|\\s*`([a-z0-9_]+)`\\s*\\|\\s*([^|]+?)\\s*\\|")
 
+// rowActions reads the actions a row lists inside its own cell.
+var rowActions = regexp.MustCompile("`([a-z0-9_]+)`")
+
+// lastCell is the final column of a row, where a tool lists its actions. The
+// earlier cells name the tool and its scope in the same quotes.
+func lastCell(row string) string {
+	cells := strings.Split(strings.TrimSuffix(strings.TrimSpace(row), "|"), "|")
+	return cells[len(cells)-1]
+}
+
 // catalogHeader opens the table this gate reads. The page holds a SECOND table
 // of the same row shape — the passport scopes, keyed by scope name — and a scan
 // that took every matching row read `enrich` as tier "1", which is that table's
 // route count. Rows are therefore read only between this header and the blank
-// line that ends its table.
-const catalogHeader = "| Tool | Tier | Scope | Egress |"
+// line that ends its table. The page's other tables are keyed by scope or
+// error name, so they never open with these columns.
+var catalogHeader = regexp.MustCompile(`^\| (Tool|Action) \| Tier \| Scope \| Egress \|`)
 
 // The marks the page uses, and what each means in the contract's own
 // vocabulary. Spelled here rather than inferred, because the mapping IS the
@@ -91,7 +102,7 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 	documented := map[string]string{}
 	inTable := false
 	for _, line := range strings.Split(string(page), "\n") {
-		if strings.TrimSpace(line) == catalogHeader {
+		if catalogHeader.MatchString(strings.TrimSpace(line)) {
 			inTable = true
 			continue
 		}
@@ -102,8 +113,16 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 			inTable = false
 			continue
 		}
-		if match := catalogRow.FindStringSubmatch(line); match != nil {
-			documented[match[1]] = strings.TrimSpace(match[2])
+		match := catalogRow.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		tier := strings.TrimSpace(match[2])
+		documented[match[1]] = tier
+		// A row lists the actions its tool fronts. An action takes the tier of
+		// that tool, because a router refuses targets whose tiers differ.
+		for _, action := range rowActions.FindAllStringSubmatch(lastCell(line), -1) {
+			documented[action[1]] = tier
 		}
 	}
 	if len(documented) == 0 {

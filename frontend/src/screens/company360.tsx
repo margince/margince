@@ -3,8 +3,6 @@ import { Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -32,14 +30,12 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  unwrap,
-  useFinanceSummary,
-} from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
+import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
 import { HealthStat, WITHHELD_READING } from "./company360health";
@@ -75,9 +71,9 @@ type NextStep = components["schemas"]["Company360NextStep"];
 /**
  * useCompany360 reads the whole company page in one round trip.
  *
- * `enabled` exists for callers that are not the page: chrome mounted on every
- * screen has to hold the hook unconditionally and ask for nothing when there is
- * no record under it — an empty id is a 422, not an empty answer.
+ * `enabled` lets a caller hold the hook while it asks for nothing. The page
+ * does so once the row says archived, because the server refuses that 360.
+ * Chrome with no record under it does too: an empty id is a 422.
  */
 export function useCompany360(id: string, enabled = true) {
   return useQuery<Company360>({

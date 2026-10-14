@@ -22,7 +22,21 @@ type SkippedRow struct {
 	// Kind is one of ProblemKinds, so a screen can group the problems.
 	Kind  string `json:"kind,omitempty"`
 	Value string `json:"value,omitempty"`
+	// Code and Params let a screen say Reason in its own language. A report
+	// stored before they existed has neither, and Reason alone is shown.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
+
+// Because answers the row with its reason, in English and as code and params.
+func (s SkippedRow) Because(why Reason) SkippedRow {
+	s.Reason, s.Code, s.Params = why.English(), why.Code, why.Params
+	return s
+}
+
+// Why is the reason the row was written with, empty for a stored report that
+// has no code.
+func (s SkippedRow) Why() Reason { return Reason{Code: s.Code, Params: s.Params} }
 
 // The kinds of problem a report names. The contract's ImportProblemKind enum
 // is this same list, and a test holds the two equal.
@@ -48,7 +62,7 @@ func ProblemKinds() []string {
 // skipReasonEmptyPayload marks a source row with no fields at all — the
 // "payload-less system entries" class the parity preview must disclose
 // rather than silently drop (UC-E18-04 E2).
-const skipReasonEmptyPayload = "empty_payload"
+var skipReasonEmptyPayload = Why(ReasonEmptyPayload)
 
 // ObjectReport is one object class's slice of the run/dry-run report.
 type ObjectReport struct {
@@ -129,13 +143,17 @@ type SkippedAssoc struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Reason string `json:"reason"`
+	// Code and Params say the reason in the reader's language; a report stored
+	// before they existed has only Reason.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.
 func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason}
+		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason, Code: res.SkipWhy.Code, Params: res.SkipWhy.Params}
 		if res.Problem != nil {
 			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
 		}
@@ -196,21 +214,46 @@ func (r Report) mergedWith(next Report) Report {
 	if next.Associations == 0 && len(next.AssociationsSkipped) == 0 && r.Walks() > 1 {
 		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
 	}
-	out := Report{
+	return Report{
 		Associations:        associations,
 		AssociationsSkipped: append([]SkippedAssoc(nil), associationsSkipped...),
 		Imported:            r.Imported + next.Imported,
 		Attempts:            r.Walks() + next.Walks(),
+		Objects:             foldObjects(r.Objects, next.Objects),
 	}
+}
+
+// withLeg folds one leg of a sliced commit into the stored report. Legs cover
+// disjoint stretches of one walk, so every count adds, edges included. A leg
+// that starts the walk drops the edge count the test run predicted, which the
+// commit's own edges replace. The caller counts the walks.
+func (r Report) withLeg(leg Report, startsWalk bool) Report {
+	out := Report{
+		Associations:        r.Associations + leg.Associations,
+		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), leg.AssociationsSkipped...),
+		Imported:            r.Imported + leg.Imported,
+		Attempts:            r.Attempts,
+		Objects:             foldObjects(r.Objects, leg.Objects),
+	}
+	if startsWalk {
+		out.Associations = leg.Associations
+		out.AssociationsSkipped = append([]SkippedAssoc(nil), leg.AssociationsSkipped...)
+	}
+	return out
+}
+
+// foldObjects folds per-object entries by class, earlier first.
+func foldObjects(earlier, later []ObjectReport) []ObjectReport {
+	var out []ObjectReport
 	at := map[string]int{}
-	for _, or := range append(append([]ObjectReport(nil), r.Objects...), next.Objects...) {
+	for _, or := range append(append([]ObjectReport(nil), earlier...), later...) {
 		i, seen := at[or.Object]
 		if !seen {
-			at[or.Object] = len(out.Objects)
-			out.Objects = append(out.Objects, or)
+			at[or.Object] = len(out)
+			out = append(out, or)
 			continue
 		}
-		into := &out.Objects[i]
+		into := &out[i]
 		into.Created += or.Created
 		into.Updated += or.Updated
 		into.Unchanged += or.Unchanged

@@ -1,10 +1,10 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RbacObject } from "../app/capability";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { navGroupNames } from "../app/testing/shellharness";
 import { translate } from "../i18n";
+import type { RbacObject } from "../lib/capability";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   expectNavSettlesTo,
   floorPlus,

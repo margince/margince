@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { CoverageExplorer } from "./coverageexplorer";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CoverageExplorer } from "./coverageexplorer";
 
 // Who on our side knows whom on theirs. The explorer is a dialog behind a link,
 // so a `play` opens it — a closed one screenshots the trigger and nothing else.

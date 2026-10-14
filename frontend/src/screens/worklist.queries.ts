@@ -7,7 +7,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 
 export type Worklist = components["schemas"]["Worklist"];
 export type WorklistItem = components["schemas"]["WorklistItem"];

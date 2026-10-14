@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SRC_ROOT, screenFiles } from "../testing/screenfiles";
 
 // Fitness function for a list that claims an ordering it cannot have.
 //
@@ -33,15 +33,12 @@ import { describe, expect, it } from "vitest";
 // which declare theirs in another file; a gate whose rules are that fiddly is
 // one that gets worked around rather than fixed. That half is stated as a rule
 // in `design-system/README.md` instead, where the next author reads it.
-const dir = dirname(fileURLToPath(import.meta.url));
 
 /** Every screen that reads a list through the shared wrapper. */
 function listScreens(): string[] {
-  return readdirSync(dir)
-    .filter((file) => file.endsWith(".tsx"))
-    .filter((file) => !file.includes(".test.") && !file.includes(".stories."))
+  return screenFiles()
     .filter((file) => {
-      const source = readFileSync(resolve(dir, file), "utf8");
+      const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
       // Calls it, rather than declaring it: listquery.tsx is the wrapper itself
       // and owns no fetcher of its own.
       return (
@@ -53,8 +50,11 @@ function listScreens(): string[] {
 }
 
 /** Does this screen's list fetcher put `sort` on the wire? */
+// The sort on the wire, bare or cast to the endpoint's sort type.
 function sendsSort(source: string): boolean {
-  return /\n\s*sort: query\.sort \|\| undefined,/.test(source);
+  return /\n\s*sort: \(?query\.sort \|\| undefined\)?(?: as \w+)?,/.test(
+    source,
+  );
 }
 
 /** Every way this screen names an ordering to the reader. */
@@ -80,13 +80,17 @@ describe("a list claims no ordering its endpoint cannot give", () => {
   it("finds the list screens rather than trusting a list written here", () => {
     // The census IS the directory. A hand-kept list would be the thing that
     // went stale, which is the failure this test exists to prevent.
-    expect(listScreens()).toContain("contacts.tsx");
-    expect(listScreens()).toContain("partners.tsx");
+    expect(listScreens().map((file) => basename(file))).toContain(
+      "contacts.tsx",
+    );
+    expect(listScreens().map((file) => basename(file))).toContain(
+      "partners.tsx",
+    );
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });
 
   it.each(listScreens())("%s", (file) => {
-    const source = readFileSync(resolve(dir, file), "utf8");
+    const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
     if (sendsSort(source)) {
       return;
     }

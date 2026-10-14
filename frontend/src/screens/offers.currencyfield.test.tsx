@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import { StoryProviders } from "../testing/story-utils";
 import { OfferCurrencyField } from "./offers.currencyfield";
-import { StoryProviders } from "./story-utils";
 
 afterEach(cleanup);
 

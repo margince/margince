@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ENTITY } from "../app/entity";
-import { routeHash } from "../app/router";
 import { EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import {
@@ -11,6 +9,8 @@ import {
   formatNumber,
 } from "../format/format";
 import { type Locale, useT } from "../i18n";
+import { ENTITY } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import {
   BarFigure,
   columnScale,

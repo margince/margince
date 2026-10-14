@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRoute } from "../app/router";
+import { useRoute } from "../lib/router";
 import { navigateKeepingReturn } from "./worklist.return";
 
 /**

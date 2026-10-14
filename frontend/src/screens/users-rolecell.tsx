@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
-import { holdsAdminRole } from "../app/capability";
 import { ErrorLine } from "../design-system/errorline";
+import type { QueryLike } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { type QueryLike, unwrap } from "./common";
+import { holdsAdminRole } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import {
   type AssignableRole,
   roleLabel,

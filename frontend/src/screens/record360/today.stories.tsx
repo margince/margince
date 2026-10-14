@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button } from "../../design-system/atoms";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { MomentEvidence } from "./momentevidence";
 import { FoundMove, TodayPanel, TodoRow } from "./today";
 

@@ -13,10 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "./company.fixtures";
 import { ProjectScreen } from "./project360";
 import { project, project360 } from "./projects.fixtures";

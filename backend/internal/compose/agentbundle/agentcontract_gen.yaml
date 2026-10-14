@@ -8084,13 +8084,15 @@ paths:
       tags: [Import]
       operationId: createImportRun
       security: [{bearerAuth: []}]
-      summary: Create an import run from an uploaded source and a column mapping, and dry-run it.
+      summary: Create an import run from an uploaded source and a column mapping, and start its test run.
       description: |-
         Takes the connector, the `source_ref` from
-        `uploadImportSource`, and the mapping the human settled on, and runs the
-        validation pass — which writes **no** domain rows (AC-M5). The run
-        arrives at `awaiting_approval` carrying the report
-        `getImportRunReport` reads.
+        `uploadImportSource`, and the mapping the human settled on, and queues
+        the test run, which writes **no** domain rows (AC-M5). The call answers
+        at once with the run at `validating`. The worker then reads the file
+        and moves the run to `awaiting_approval` carrying the report
+        `getImportRunReport` reads, or back to `pending` with the reason in
+        `error` when the test stopped on the file or ran past its time.
 
         Needs the passport permission Change records.
 
@@ -8102,13 +8104,14 @@ paths:
             schema: {$ref: '#/components/schemas/CreateImportRunRequest'}
       responses:
         '202':
-          description: 'The run, validated and awaiting a human (dry run complete, zero rows written).'
+          description: 'The run at `validating`: its test run is queued, and zero rows are written.'
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ImportRun'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/format:
     get:
@@ -8191,14 +8194,26 @@ paths:
       security: [{bearerAuth: []}]
       summary: Approve a validated import run and commit it.
       description: |-
-        Valid **only** from
-        `awaiting_approval`: approving a run that is already running, complete
-        or failed is a conflict, not a no-op, because each of those means the
-        approver is looking at a state that is not the one they judged.
+        Valid from
+        `awaiting_approval`: approving a run that is already running or
+        complete is a conflict, not a no-op, because each of those means the
+        approver is looking at a state that is not the one they judged. A
+        `version`, when sent, must equal the run's, so the report approved is
+        the one read; a mismatch is a 409 `version_skew`. A `failed` run that
+        was approved once resumes from its
+        checkpoint; one never approved is a 409. A run that a newer test run
+        replaced is a 409 whose `details.run_id` names that run. A resume while
+        another run of the same `source_name` holds the name is a 409
+        `import_source_busy` naming it the same way.
 
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ApproveImportRunRequest'}
       responses:
         '202':
           description: 'Approved; the commit is under way (or complete — the run record says which).'
@@ -8701,7 +8716,7 @@ components:
       description: |-
         The installation's identity and reporting basis. Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
         name:
           type: string
@@ -8775,6 +8790,8 @@ components:
             they were issued with.
         operations:
           $ref: '#/components/schemas/OperationSettings'
+        agent_allowances:
+          $ref: '#/components/schemas/AgentAllowanceSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -8832,6 +8849,48 @@ components:
         send_rate_limit: {type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.'}
         send_rate_window_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.'}
         send_max_age_hours: {type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.'}
+    AgentAllowanceSettings:
+      type: object
+      additionalProperties: false
+      description: |-
+        How much one agent may do in one window. A passport a user minted has its own allowance;
+        a connected MCP client has one allowance for all its passports, so a renewed credential
+        keeps counting where the last one stopped. An agent that reaches a count is refused on
+        its next call until the window resets or the user who lent it releases more. A change to
+        a count applies within a minute, in the window that is running: a raised count gives
+        headroom within that minute, and a lowered one refuses an agent already past it on its
+        next call. The per-minute limits are fixed by the build and shown here read-only.
+      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      properties:
+        agent_reads_per_window: {type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.'}
+        agent_writes_per_window: {type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.'}
+        agent_egress_per_window: {type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.'}
+        agent_calls_per_window: {type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.'}
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |-
+            How long the window in force lasts, in hours. Default 24. Every passport's window
+            resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+        agent_window_resets_at:
+          type: string
+          format: date-time
+          description: When the window in force resets and every count starts again from zero.
+        agent_window_next_hours:
+          type: [integer, 'null']
+          description: |-
+            The window length an admin saved that is not in force yet, in hours. Null when no
+            change is waiting.
+        agent_window_next_starts_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            When the saved window length takes over: the next reset of the window in force that
+            is at least a minute away. Null when no change is waiting. The first window under the
+            new length may be shorter than that length, never longer.
+        mcp_calls_per_minute: {type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.'}
+        mcp_stream_opens_per_minute: {type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.'}
     SourceAuthor:
       type: object
       description: |-
@@ -9144,6 +9203,95 @@ components:
       enum: [company, lead, contact, deal]
       description: |-
         What the file's rows are, and therefore what the run creates.
+    ImportColumn:
+      type: object
+      description: One column of the uploaded file, described well enough to map it without opening the file elsewhere.
+      required: [header, fill_rate, samples]
+      properties:
+        header: {type: string, description: 'The column name as the file spells it.'}
+        fill_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 'Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.'
+        samples:
+          type: array
+          maxItems: 3
+          items: {type: string}
+          description: 'Up to three non-empty values, in file order. Values, not statistics — a human recognizes their own data.'
+    ImportSourceProfile:
+      type: object
+      description: |-
+        What one uploaded file looks like, plus the mapping proposed for it.
+        The upload's draft run keeps it; the human may change every line of
+        `suggested_mapping` before `createImportRun` accepts one.
+      required: [run_id, source_ref, columns, rows_profiled, row_count, suggested_mapping, targets]
+      properties:
+        run_id: {type: string, format: uuid, description: 'The draft run the upload opened. Every later choice and test is made on it.'}
+        source_ref: {type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.'}
+        row_count: {type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.'}
+        object: {$ref: '#/components/schemas/ImportObject'}
+        file_name: {type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.'}
+        suggested_source_name:
+          type: string
+          maxLength: 80
+          description: |-
+            The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+            every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+            single CSV, so a re-upload of one keeps the namespace it was first imported under.
+        parts:
+          type: array
+          items: {$ref: '#/components/schemas/ImportPartProfile'}
+          description: 'One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.'
+        ignored:
+          type: array
+          items: {$ref: '#/components/schemas/ImportIgnoredEntry'}
+          description: 'The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one.'
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/ImportColumn'}
+        rows_profiled:
+          type: integer
+          minimum: 0
+          description: 'Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.'
+        suggested_mapping:
+          type: object
+          additionalProperties: {type: string}
+          description: 'Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.'
+        targets:
+          type: array
+          items: {type: string}
+          description: |-
+            The closed set a mapping may name — every field this object can receive THROUGH AN
+            IMPORT, which is not every field it has.
+    ImportPartProfile:
+      type: object
+      description: One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`.
+      required: [file, object, columns, rows_profiled, row_count, suggested_mappings]
+      properties:
+        file: {type: string, description: 'The entry''s path inside the ZIP.'}
+        object: {$ref: '#/components/schemas/ImportObject'}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/ImportColumn'}
+        rows_profiled: {type: integer, minimum: 0}
+        row_count: {type: integer, minimum: 0, description: 'Rows the file holds, as `ImportRun.parts[].row_count` counts them.'}
+        suggested_mappings:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {type: string}
+          description: 'One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file''s type needs no second call.'
+    ImportIgnoredEntry:
+      type: object
+      description: One ZIP entry no part was made from.
+      required: [file, reason]
+      properties:
+        file: {type: string, description: 'The entry''s path inside the ZIP.'}
+        reason:
+          type: string
+          enum: [unknown_name, not_yet_importable]
+          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
     ImportPartRequest:
       type: object
       description: One file of a ZIP run, with the type and mapping the human settled for it.
@@ -9173,6 +9321,10 @@ components:
       type: string
       enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+    ImportReasonCode:
+      type: string
+      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_past, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_not_a_code, currency_unset, deal_not_yet_written, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_not_found, link_not_found_dropped, link_row_not_imported, linkedin_held, lost_reason_missing, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, value_refused, value_unreadable]
+      description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.'
     CreateImportRunRequest:
       type: object
       description: |-
@@ -9264,6 +9416,11 @@ components:
         from: {type: string, description: 'The record the link starts at, by the key the file identified it with.'}
         to: {type: string, description: 'What the file named as the other end — a company name, not an id, because no id was found.'}
         reason: {type: string, description: 'Why it was not applied, in the words of the contact who made the file.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: The values `reason_code`'s sentence names. Absent on a report stored before codes.
     ImportRunDisposition:
       type: object
       description: What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
@@ -9344,6 +9501,11 @@ components:
         kind: {$ref: '#/components/schemas/ImportProblemKind'}
         value: {type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.'}
         reason: {type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.'
     ImportPartReport:
       type: object
       description: One file's slice of a run's report.
@@ -9387,14 +9549,28 @@ components:
         undo:
           allOf: [{$ref: '#/components/schemas/ImportUndoReport'}]
           description: 'Present once the run has been undone; absent otherwise.'
+    ApproveImportRunRequest:
+      type: object
+      description: 'What the approver read. Without a body, the run is approved at whatever version it holds.'
+      properties:
+        version: {type: integer, minimum: 1, description: 'The run''s `version` the approved report was read at.'}
+    ImportDraftStep:
+      type: string
+      enum: [files, map]
+      description: 'The wizard step a draft reopens on.'
     ImportRunStatus:
       type: string
-      enum: [pending, validating, awaiting_approval, running, complete, failed, undoing, undone]
+      enum: [pending, validating, awaiting_approval, running, complete, failed, undoing, undone, cancelled]
       description: |-
-        `failed` is resumable, not terminal: the run
-        carries the checkpoint it stopped at, and resuming continues from
-        there rather than re-reading the file from the top. `undoing`/`undone` are the reversal's own states, reachable only from
-        `complete` and only for the `csv` connector.
+        `pending` is a draft: uploaded, with choices
+        still being made, and carrying the reason in `error` when its last test
+        stopped. `failed` only ever means a commit stopped, and it is
+        resumable, not terminal: the run carries the checkpoint it stopped at,
+        and resuming continues from there rather than re-reading the file from
+        the top. `undoing`/`undone` are the reversal's own states, reachable only from
+        `complete` and only for the `csv` connector. `cancelled` ended before
+        the run wrote anything: cancelled, superseded by a newer test run of
+        its source, or left idle as a draft. Its file is released.
     ImportUndoReport:
       type: object
       description: |-
@@ -9436,9 +9612,10 @@ components:
               object: {$ref: '#/components/schemas/ImportObject'}
               id: {type: string, format: uuid}
               reason: {type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.'}
+              reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
     ImportRun:
       type: object
-      required: [id, connector, status, checkpoint, source, captured_by, created_at, updated_at]
+      required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         connector: {type: string, enum: [csv, salesforce]}
@@ -9454,11 +9631,58 @@ components:
           $ref: '#/components/schemas/ImportOnBrokenLink'
         status: {$ref: '#/components/schemas/ImportRunStatus'}
         checkpoint: {type: integer, minimum: 0, description: 'What a resume continues from.'}
-        error: {type: [string, 'null'], description: 'Why a failed run stopped, in the uploader''s terms. Never a driver or SQL message.'}
+        error: {type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.'}
+        version: {type: integer, minimum: 1, description: 'Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.'}
+        draft_step: {$ref: '#/components/schemas/ImportDraftStep'}
+        profile:
+          allOf: [{$ref: '#/components/schemas/ImportSourceProfile'}]
+          description: 'What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.'
+        approved_at: {type: string, format: date-time, description: 'When the run was approved. Absent for a run never approved.'}
+        superseded_by: {type: string, format: uuid, description: 'The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.'}
+        source_released: {type: boolean, description: 'The uploaded file is no longer kept: the run completed, was cancelled or was superseded.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        phase: {$ref: '#/components/schemas/ImportRunPhase'}
+        phase_object: {type: string, description: 'The object the run is working on in `phase`, when it is working on one.'}
+        progress: {$ref: '#/components/schemas/ImportRunProgress'}
+        started_at: {type: string, format: date-time, description: 'When a worker took up the run''s current job: its test, its commit or its undo. Absent while the job only waits.'}
+        finished_at: {type: string, format: date-time, description: 'When the run reached a final status: complete, undone or cancelled. Absent while it can still move.'}
+        elapsed_seconds: {type: integer, minimum: 0, description: 'Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.'}
+        idle_seconds: {type: integer, minimum: 0, description: 'Seconds since the run last made progress. Absent when the run is not being worked.'}
+        heartbeat_age_seconds: {type: integer, minimum: 0, description: 'Seconds since the worker last said it is alive. Absent when the run is not being worked.'}
+        rate_rows_per_second: {type: number, minimum: 0, description: 'Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.'}
+        eta_seconds_low: {type: integer, minimum: 1, description: 'The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.'}
+        eta_seconds_high: {type: integer, minimum: 1, description: 'The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.'}
+        eta_scope: {type: string, enum: [object, run], description: '`object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.'}
+    ImportRunPhase:
+      type: string
+      enum: [reading, checking, creating_tags, importing, linking, undoing, finishing]
+      description: 'What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.'
+    ImportRunProgress:
+      type: object
+      description: 'What a run has done so far, per object and in total. Absent on a run that never moved.'
+      required: [objects, counts]
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            required: [object, rows_done, rows_total]
+            properties:
+              object: {type: string, description: 'An import object, or `links` for the link phase after every object.'}
+              rows_done: {type: integer, minimum: 0}
+              rows_total: {type: integer, minimum: 0}
+        counts:
+          type: object
+          required: [created, updated, unchanged, skipped, problems]
+          properties:
+            created: {type: integer, minimum: 0}
+            updated: {type: integer, minimum: 0}
+            unchanged: {type: integer, minimum: 0}
+            skipped: {type: integer, minimum: 0}
+            problems: {type: integer, minimum: 0, description: 'Rows that carry a problem, skipped or landed.'}
     ImportRunPart:
       type: object
       required: [file, object, row_count]
@@ -9466,6 +9690,10 @@ components:
         file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
+        mapping:
+          type: object
+          additionalProperties: {type: string}
+          description: '`{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none.'
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.
@@ -14588,7 +14816,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
     StageEvidenceAuthorSide:
       type: string
       description: |-
@@ -14641,7 +14869,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     TransitionPolicyList:
       type: object
       required: [data, automation_enabled]

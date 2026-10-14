@@ -14,7 +14,12 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
-import { useMe } from "../screens/common";
+import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { type Route, routeHash, useRoute } from "../lib/router";
+import { useScrollMemory } from "../lib/scrollmemory";
+import { useMe } from "../lib/session";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { usePhoneViewport } from "../lib/viewport";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
@@ -23,7 +28,6 @@ import { CaptureChip } from "./capture-chip";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { LicenseBanner } from "./licensebanner";
 import {
   currentClaim,
@@ -53,11 +57,7 @@ import {
 } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
-import { type Route, routeHash, useRoute } from "./router";
-import { useScrollMemory } from "./scrollmemory";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { TopBar } from "./topbar";
-import { usePhoneViewport } from "./viewport";
 import "./shell.css";
 
 // The app shell: one sidebar against the left edge of the viewport, and the
@@ -823,12 +823,11 @@ export function Shell({
   // it is what the list surface's own reset already uses, and it is a property
   // every environment the tests run in actually has.
   const address = routeHash(route);
-  // A new page opens at its top; a page the reader is RETURNING to opens where
-  // they left it. Both live in app/scrollmemory.ts, because the second one needs
-  // an identity for the history entry that the browser does not give an entry,
-  // and a retry while the column grows — a list restores its rows a moment after
-  // the address arrives, so a single assignment lands against a column that is
-  // still short and gets clamped.
+  // A new page opens at its top; a page the reader is returning to opens where
+  // they left it. Both live in lib/scrollmemory.ts. The second needs an identity
+  // for the history entry, which the browser does not give, and a retry while the
+  // column grows. A list restores its rows a moment after the address arrives,
+  // so a single assignment lands on a column still short and gets clamped.
   useScrollMemory(scroller, address);
 
   const toggle = useCallback(() => {
@@ -977,5 +976,5 @@ export function Shell({
   );
 }
 
-export { navigate } from "./router";
+export { navigate } from "../lib/router";
 export { useRoute };

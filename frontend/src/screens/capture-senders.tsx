@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Badge,
   Button,
@@ -19,13 +18,15 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RowOpen } from "../design-system/rowopen";
 import { useToast } from "../design-system/toast";
-import { formatDate, formatNumber } from "../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { EntityRef } from "./entityref";
 import "./capture-senders.css";
 
@@ -207,10 +208,14 @@ function SenderTable({
   verbs,
 }: Readonly<{ rows: SenderDecision[]; verbs: SenderVerbs }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = viewerZone();
   const columns: DataTableColumn<SenderDecision>[] = [
     {
       key: "address",
       header: t("senders.colSender"),
+      grow: true,
       render: (row) => (
         <span className="capture-senders-address">{row.address}</span>
       ),
@@ -223,8 +228,40 @@ function SenderTable({
     {
       key: "record",
       header: t("senders.colRecord"),
-      render: (row) => (row.record_exists ? t("senders.recordYes") : "—"),
-      folded: (row) => (row.record_exists ? undefined : t("senders.recordNo")),
+      render: (row) =>
+        row.contact_id ? (
+          <EntityRef
+            kind="contact"
+            id={row.contact_id}
+            name={row.contact_name}
+          />
+        ) : (
+          "—"
+        ),
+      folded: (row) => (row.contact_id ? undefined : t("senders.recordNo")),
+    },
+    {
+      key: "messages",
+      header: t("senders.colMessages"),
+      align: "end",
+      render: (row) => formatNumber(row.message_count, locale),
+      folded: (row) =>
+        plural("senders.messages", row.message_count, {
+          count: formatNumber(row.message_count, locale),
+        }),
+    },
+    {
+      key: "lastSeen",
+      header: t("senders.colLastSeen"),
+      align: "end",
+      render: (row) =>
+        row.last_seen_at ? formatDateTime(row.last_seen_at, locale, zone) : "—",
+      folded: (row) =>
+        row.last_seen_at
+          ? t("senders.lastSeen", {
+              date: formatDateTime(row.last_seen_at, locale, zone),
+            })
+          : null,
     },
     {
       key: "verbs",

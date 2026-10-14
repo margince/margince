@@ -3,10 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiBudgetCard } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 function story(
   band: "normal" | "degraded" | "queued",
@@ -91,6 +95,9 @@ export const Preview: Story = {
 // decision form it cannot use follows; a two-rung ladder opens to the rungs
 // behind its lead.
 const [lead] = feature.effective_candidates;
+if (!lead) {
+  throw new Error("the feature fixture carries no candidate to lead with");
+}
 const mixedFeatures = [
   { ...feature, task: "summarize" },
   {

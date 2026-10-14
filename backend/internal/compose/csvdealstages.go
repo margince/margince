@@ -8,12 +8,12 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -116,35 +116,24 @@ func foldName(name string) string {
 // default pipeline when the pipeline cell is empty.
 func (d dealStages) resolve(pipeline, stage string) (stageChoice, *cellProblem) {
 	if !d.readable {
-		return stageChoice{}, &cellProblem{
-			Target: dealTargetStage, Value: stage,
-			Message: "the stage cannot be checked: your role may not read pipelines",
-		}
+		return stageChoice{}, problemOf(dealTargetStage, stage, migration.Why(migration.ReasonCannotReadPipelines))
 	}
 	key := foldName(pipeline)
 	if key == "" {
 		key = d.defaultPipeline
 	}
 	if key == "" {
-		return stageChoice{}, &cellProblem{
-			Target: dealTargetPipeline, Value: pipeline,
-			Message: "name the pipeline: this CRM has no default pipeline",
-		}
+		return stageChoice{}, problemOf(dealTargetPipeline, pipeline, migration.Why(migration.ReasonPipelineUnnamed))
 	}
 	p, found := d.byPipeline[key]
 	if !found {
-		return stageChoice{}, &cellProblem{
-			Target: dealTargetPipeline, Value: pipeline,
-			Message: fmt.Sprintf("%q is not a pipeline; the pipelines are: %s", strings.TrimSpace(pipeline), strings.Join(d.names, ", ")),
-		}
+		return stageChoice{}, problemOf(dealTargetPipeline, pipeline, migration.Why(migration.ReasonPipelineUnknown,
+			"value", strings.TrimSpace(pipeline), "names", strings.Join(d.names, ", ")))
 	}
 	s, found := p.stages[foldName(stage)]
 	if !found {
-		return stageChoice{}, &cellProblem{
-			Target: dealTargetStage, Value: stage,
-			Message: fmt.Sprintf("%q is not a stage of pipeline %q; its stages are: %s",
-				strings.TrimSpace(stage), p.name, strings.Join(p.names, ", ")),
-		}
+		return stageChoice{}, problemOf(dealTargetStage, stage, migration.Why(migration.ReasonStageUnknown,
+			"value", strings.TrimSpace(stage), "pipeline", p.name, "names", strings.Join(p.names, ", ")))
 	}
 	return stageChoice{pipeline: p.id, stage: s.id, semantic: s.semantic}, nil
 }

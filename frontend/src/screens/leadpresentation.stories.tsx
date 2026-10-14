@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LeadBoard } from "./leadpresentation";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The board's terminal columns count from the leads-by-status report, so a
 // board with a failed report must say the zeros are not figures.

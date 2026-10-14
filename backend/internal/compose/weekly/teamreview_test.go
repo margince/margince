@@ -22,7 +22,7 @@ func TestARepWhoAskedForHelpIsRaisedFirst(t *testing.T) {
 		MeetingsHeld: 2, MeetingsWithNextStep: 0,
 	}
 
-	kind, label := focusFor(counts, 1, "forecast fell")
+	kind, label := focusFor(counts, 1, &DealBlock{ForecastDown: 1})
 
 	if kind != FocusHelpRequested {
 		t.Errorf("focus = %q, want %q — walking past a request to raise a metric "+
@@ -33,41 +33,42 @@ func TestARepWhoAskedForHelpIsRaisedFirst(t *testing.T) {
 	}
 }
 
-// Every rep gets a focus, including the one whose week went well. Without this
-// a page promising one row per rep quietly shortens to the troubled ones.
-// focusRules is one case per rule focusFor can fire, IN THE ORDER the switch
-// tries them. Ordered and one-per-kind on purpose: the agenda's ranking is read
-// off this sequence by TestTheAgendaOrderIsTheOrderTheRulesAreTried, so a case
-// added out of order, or a second case for a kind, would quietly re-rank the
-// Monday meeting.
+// focusRules is one case per rule patternsFor can fire, in the order it tries
+// them. TestTheAgendaOrderIsTheOrderTheRulesAreTried reads the agenda's ranking
+// off this sequence, so a case added out of order re-ranks the Monday meeting.
 //
-// Each case supplies only what its own rule needs. One that supplies more would
-// still reach its rule and still pass, while proving nothing about the rules
-// above it.
+// Each case supplies only what its own rule needs, so it fires alone.
 var focusRules = []struct {
-	name     string
-	counts   Counts
-	help     int
-	recovery string
-	want     string
+	name   string
+	counts Counts
+	help   int
+	deals  *DealBlock
+	want   string
 }{
-	{"asked for help", Counts{}, 2, "", FocusHelpRequested},
-	{"a lead went past", Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, "", FocusLeadsBreached},
-	{"missed commitments", Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, "", FocusCommitmentsMissed},
-	{"deal recovery", Counts{DealsWon: 2}, 0, "Forecast downgraded on 1 deal", FocusDealsAtRisk},
-	{"won something", Counts{DealsWon: 2}, 0, "", FocusStrongWeek},
+	{"asked for help", Counts{}, 2, nil, FocusHelpRequested},
+	{"a lead went past", Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, nil, FocusLeadsBreached},
+	{"missed commitments", Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, nil, FocusCommitmentsMissed},
+	{"forecast down", Counts{}, 0, &DealBlock{ForecastDown: 1}, FocusForecastDowngrades},
+	{"moved backwards", Counts{}, 0, &DealBlock{Regressions: 1}, FocusStageRegressions},
+	{"provisional dates", Counts{}, 0, &DealBlock{Open: 3, WithNextStep: 3, CloseDateProvisional: new(2)}, FocusCloseDatesProvisional},
+	{"no next steps", Counts{}, 0, &DealBlock{Open: 4, WithNextStep: 1}, FocusNoNextStepCoverage},
+	{"won something", Counts{DealsWon: 2}, 0, nil, FocusStrongWeek},
 	{
 		"meetings with no next step",
 		Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1},
-		0, "", FocusMeetingsWithoutNextStep,
+		0, nil, FocusMeetingsWithoutNextStep,
 	},
-	{"nothing happened", Counts{}, 0, "", FocusQuietWeek},
+	{"nothing happened", Counts{}, 0, nil, FocusQuietWeek},
 }
 
 func TestEveryWeekProducesAFocus(t *testing.T) {
 	for _, tc := range focusRules {
 		t.Run(tc.name, func(t *testing.T) {
-			kind, label := focusFor(tc.counts, tc.help, tc.recovery)
+			patterns := patternsFor(tc.counts, tc.help, tc.deals)
+			if len(patterns) != 1 {
+				t.Fatalf("the case fired %d rules, want only its own: %v", len(patterns), patterns)
+			}
+			kind, label := patterns[0].Kind, patterns[0].Label
 			if kind != tc.want {
 				t.Errorf("focus = %q, want %q", kind, tc.want)
 			}
@@ -82,7 +83,7 @@ func TestEveryWeekProducesAFocus(t *testing.T) {
 // kept. It is the second route to strong_week and so cannot sit in focusRules,
 // which carries one case per kind because the agenda's order is read off it.
 func TestKeepingEveryCommitmentIsAStrongWeek(t *testing.T) {
-	kind, label := focusFor(Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0, "")
+	kind, label := focusFor(Counts{CommitmentsDue: 3, CommitmentsKept: 3}, 0, nil)
 	if kind != FocusStrongWeek {
 		t.Errorf("focus = %q, want %q — a rep who kept all three has something to copy", kind, FocusStrongWeek)
 	}
@@ -94,7 +95,7 @@ func TestKeepingEveryCommitmentIsAStrongWeek(t *testing.T) {
 // The label states a stored figure and nothing else, so it cannot say something
 // the snapshot does not hold.
 func TestTheFocusLabelNamesTheFiguresItRestsOn(t *testing.T) {
-	_, label := focusFor(Counts{CommitmentsDue: 5, CommitmentsKept: 2}, 0, "")
+	_, label := focusFor(Counts{CommitmentsDue: 5, CommitmentsKept: 2}, 0, nil)
 
 	if label != "Kept 2 of 5 commitments" {
 		t.Errorf("label = %q, want the two stored figures", label)
@@ -147,14 +148,14 @@ func TestATeamWeekWithoutAForecastSendsNoOutlook(t *testing.T) {
 }
 
 func TestActivityWithoutACoachingSignalDoesNotMeanAQuietWeek(t *testing.T) {
-	kind, label := focusFor(Counts{DealsMoved: 12, LeadsRouted: 8, LeadsAnsweredInTarget: 8}, 0, "")
+	kind, label := focusFor(Counts{DealsMoved: 12, LeadsRouted: 8, LeadsAnsweredInTarget: 8}, 0, nil)
 	if kind != FocusQuietWeek || label != "No priority indicated by the recorded metrics" {
 		t.Fatalf("unsupported productivity verdict: %s / %s", kind, label)
 	}
 }
 
 func TestRecordedSuccessOutranksMissingMeetingDocumentation(t *testing.T) {
-	kind, _ := focusFor(Counts{DealsWon: 1, MeetingsHeld: 5}, 0, "")
+	kind, _ := focusFor(Counts{DealsWon: 1, MeetingsHeld: 5}, 0, nil)
 	if kind != FocusStrongWeek {
 		t.Fatalf("won deal overshadowed by recording gaps: %s", kind)
 	}

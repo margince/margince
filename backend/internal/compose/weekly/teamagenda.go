@@ -16,18 +16,22 @@ import (
 // would read as guidance somebody derived from something — while nothing in the
 // product knows a team's size or how long it meets.
 
-// focusPriority is the order a lead raises the focuses in, which is the order
-// focusFor tries its rules in and the order the constants are declared in.
+// focusPriority is the order a lead raises patterns in, which is the order
+// patternsFor tries its rules in. deals_at_risk keeps the slot it held before
+// the four deal rules replaced it, so an older snapshot still ranks.
 //
-// Stated as a list because an ORDER is what the agenda needs and a switch
-// cannot be asked for one. TestTheAgendaOrderIsTheOrderTheRulesAreTried holds
-// the two together in both directions: every declared focus is ranked here, and
-// the rules fire in this sequence.
+// Stated as a list because an ORDER is what the agenda needs and a chain of
+// rules cannot be asked for one. TestTheAgendaOrderIsTheOrderTheRulesAreTried
+// holds the two together.
 var focusPriority = []string{
 	FocusHelpRequested,
 	FocusLeadsBreached,
 	FocusCommitmentsMissed,
 	FocusDealsAtRisk,
+	FocusForecastDowngrades,
+	FocusStageRegressions,
+	FocusCloseDatesProvisional,
+	FocusNoNextStepCoverage,
 	FocusStrongWeek,
 	FocusMeetingsWithoutNextStep,
 	FocusQuietWeek,

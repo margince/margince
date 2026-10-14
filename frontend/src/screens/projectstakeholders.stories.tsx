@@ -4,10 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,
 } from "./projectstakeholders";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The verbs on the project page's stakeholders card, drawn on their own so both
 // dialogs can be read in either theme without the surrounding 360 read.

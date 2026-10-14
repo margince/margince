@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
-import { problemMessageOf, throwProblem } from "../common";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyForm } from "../onboarding";
 import type { ConfirmRefusal } from "./artifact";

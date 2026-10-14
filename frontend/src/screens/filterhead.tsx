@@ -6,11 +6,11 @@
 // included, prints exactly one h1 from here.
 
 import type { ReactNode } from "react";
-import { navigate } from "../app/router";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { navigate } from "../lib/router";
 import "./filters.css";
 
 /** The page's name, what it is, and the controls that act on the whole page. */

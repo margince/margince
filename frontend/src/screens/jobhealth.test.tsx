@@ -15,11 +15,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { JobHealthCard } from "./jobhealth";
 import { DeadWorkCallout } from "./jobhealthdead";
-import { tableRowCells } from "./tablerow.testkit";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -171,6 +171,23 @@ describe("JobHealthCard", () => {
     ).toBeInTheDocument();
     // 4,500 seconds is one hour in its largest whole unit, never "0 hr".
     expect(kind["Oldest wait"]).toHaveTextContent(/^1 hour$/);
+  });
+
+  it("names a kind it knows over its key, and shows an unknown kind's key once", async () => {
+    stubRoutes();
+    render(<JobHealthCard />);
+    const counted = await tableRowCells("This company", "capture_classify");
+    expect(within(counted.Job).getByText("Mail sorting")).toBeInTheDocument();
+    expect(within(counted.Job).getByText("capture_classify").tagName).toBe(
+      "CODE",
+    );
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(within(failure.Job).getByText("Mail sorting")).toBeInTheDocument();
+    const unnamed = await tableRowCells(
+      "Fleet dispatchers",
+      "retention_sweep_dispatch",
+    );
+    expect(unnamed.Job).toHaveTextContent(/^retention_sweep_dispatch$/);
   });
 
   it("states nothing is runnable rather than claiming a wait of zero", async () => {

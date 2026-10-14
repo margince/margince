@@ -171,7 +171,7 @@ func TestThePerWriteNotesGiveEachToolOnlyAdviceItCanAct(t *testing.T) {
 		{"endpoint pair", true, "naming an endpoint pair is a thing only a create can do"},
 		{"stamps its own provenance", true, "no update request type carries `source` at all, so it is refused as " +
 			"unknown rather than overwritten — the opposite advice"},
-		{"come from list_pipelines", true, "a patch is not required to supply either id, so this is advice about a " +
+		{"come from " + pipelinesSource, true, "a patch is not required to supply either id, so this is advice about a " +
 			"problem update_record does not have"},
 		{"links are NOT patchable", false, "create_record and log_activity both ACCEPT links, so on create this is " +
 			"advice against a field the tool takes"},

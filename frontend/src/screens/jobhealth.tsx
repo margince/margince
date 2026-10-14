@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -17,13 +16,14 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { formatAge } from "../format/interval";
+import { jobKindNameKey } from "../format/jobkinds";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
-import "./jobhealth.css";
 
 // GET /admin/job-health — the operator's only window onto the background
 // system, for Settings → Maintenance. Until this card existed a stalled queue
@@ -51,14 +51,11 @@ const FAILURE_STATE: Record<
   cancelled: { label: "jobs.state.cancelled", tone: undefined },
 };
 
-// River's own key, verbatim: the string an operator greps the worker log for.
-// One line, so a narrow column never breaks the string mid-word.
+// River's kind stays under the name: it is the string the worker log carries.
 function JobKind({ kind }: Readonly<{ kind: string }>) {
-  return (
-    <span className="jobhealth-kind">
-      <KeyedName name={kind} code={kind} />
-    </span>
-  );
+  const t = useT();
+  const name = jobKindNameKey(kind);
+  return <KeyedName name={name === undefined ? kind : t(name)} code={kind} />;
 }
 
 const COUNTED = ["waiting", "running", "retrying", "dead"] as const;

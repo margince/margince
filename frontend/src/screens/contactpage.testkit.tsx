@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { ContactPageV2 } from "./contactpage";
-import type { CONTACT_TABS } from "./contacttab";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactPageV2 } from "./contactpage";
+import type { CONTACT_TABS } from "./contacttab";
 
 // The fixture and the mount every `contactpage*.test.tsx` suite shares, in one
 // place: a second suite reading its own copy of this fixture is the shape

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ConnectorsCard } from "./connectors";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectorsCard } from "./connectors";
 
 // Every story draws both panels, mail and the workspace's Telegram bot,
 // because the card does.
@@ -28,6 +28,7 @@ function stubAsBotManager(routes: RouteMap) {
 const gmailConnected: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   scopes: [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -53,6 +54,7 @@ const gmailNoSendGrant: CaptureConnection = {
 const gcalReauth: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c2",
   provider: "gcal",
+  can_backfill: false,
   status: "reauth_required",
   scopes: ["read"],
   account_label: "lars@example.de",
@@ -63,6 +65,7 @@ const gcalReauth: CaptureConnection = {
 const imapError: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c3",
   provider: "imap",
+  can_backfill: false,
   status: "error",
   scopes: [],
   last_synced_at: "2026-07-18T12:00:00Z",
@@ -75,6 +78,7 @@ const imapError: CaptureConnection = {
 const imapPolled: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c4",
   provider: "imap",
+  can_backfill: false,
   status: "connected",
   scopes: [],
   account_label: "sales@example.org",

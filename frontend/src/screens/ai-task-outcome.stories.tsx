@@ -7,8 +7,8 @@ import type { components } from "../api/schema";
 import { Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { en } from "../i18n/en";
+import { StoryProviders } from "../testing/story-utils";
 import { TaskOutcome } from "./ai-task-outcome";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Settings/AI/AI models/Task outcome",

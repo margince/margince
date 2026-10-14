@@ -9,8 +9,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { AddDocumentDialog } from "./adddocument";
-import { unwrap } from "./common";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
@@ -60,7 +60,7 @@ export function AddDocument({
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
   const [attachmentId, setAttachmentId] = useState("");
-  const [group, setGroup] = useState(DOCUMENT_GROUPS[0].key);
+  const [group, setGroup] = useState(DOCUMENT_GROUPS[0]?.key ?? "");
   const [uploading, setUploading] = useState(false);
   // The deal's Files area — uploads and the files its emails carried, hidden
   // ones excluded — is what a room may share; the server refuses anything else.

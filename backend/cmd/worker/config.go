@@ -34,7 +34,10 @@ type workerConfig struct {
 	allowDataReset  bool
 	ratesFx         string
 	ratesCurrencies []string
-	redisAddr       string
+	// csvImportCap is uploads.csv_import_mb in bytes: an import commit reads
+	// its stored upload under the limits the api accepted it with.
+	csvImportCap int64
+	redisAddr    string
 	// redisPassword is the bus credential, empty where the instance requires
 	// none. The bus carries job payloads and therefore CRM data, so an
 	// instance reachable by anything but this deployment has to require one —

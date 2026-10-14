@@ -192,6 +192,8 @@ type ConnectionView struct {
 	// rather than a missing value: a mailbox that never chose moves with the
 	// default, and one that did keeps its answer whatever the default becomes.
 	SignatureEnrichEnabled *bool
+
+	CanBackfill bool // supportsBackfill, asked of this provider's connector
 }
 
 // Connections lists the CALLING human's own standing connections in the
@@ -248,6 +250,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 				return err
 			}
 			out[i].Backfill = run
+			out[i].CanBackfill = r.canBackfill(out[i].Provider)
 		}
 		return nil
 	})

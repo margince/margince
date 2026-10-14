@@ -17,6 +17,22 @@ import {
   stubRoutes,
 } from "./import.testkit";
 import { handOverUpload } from "./importflow";
+import { IMPORT_POLL_MS } from "./importrun";
+
+// The ids each `GET /users/names` request carried, in the order sent.
+function namesAskedFor(): string[][] {
+  return vi
+    .mocked(fetch)
+    .mock.calls.map(
+      ([input]) =>
+        new URL(
+          String(input instanceof Request ? input.url : input),
+          "https://test.local",
+        ),
+    )
+    .filter((url) => url.pathname.endsWith("/users/names"))
+    .map((url) => url.searchParams.getAll("id"));
+}
 
 afterEach(() => {
   cleanup();
@@ -51,6 +67,62 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
+  it("lists a draft to continue or cancel, and leaves a replaced test out of the history", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+            {
+              ...run,
+              id: "r2",
+              file_name: "gone.csv",
+              status: "cancelled",
+              superseded_by: "r9",
+            },
+            { ...run, id: "r1", file_name: "leads.csv", status: "complete" },
+          ],
+        }),
+    });
+    render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getByText("Draft")).toBeVisible();
+    expect(
+      within(rows[1]).getByRole("link", { name: "Continue" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r3"));
+    expect(screen.queryByText("gone.csv")).toBeNull();
+    // Each list is asked for on its own. A draft or a replaced test then
+    // cannot push a finished import out of the one page of history.
+    const asked = sent.filter((s) => s.path === "GET /imports").length;
+    expect(asked).toBeGreaterThanOrEqual(2);
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r3/cancel"),
+    );
+  });
+
+  it("says when a draft could not be canceled", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+          ],
+        }),
+      "POST /imports/r3/cancel": () =>
+        jsonResponse({ status: 403, code: "permission_denied" }, 403),
+    });
+    render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByText("The import was not canceled"),
+    ).toBeVisible();
+  });
+
   it("names who ran an import and how many files and rows it took", async () => {
     stubRoutes({
       "GET /imports": () =>
@@ -68,13 +140,29 @@ describe("the data import hub", () => {
           ],
         }),
       "GET /users/names": () =>
-        jsonResponse({ data: [{ id: run.captured_by, display_name: "Ada" }] }),
+        jsonResponse({ data: [{ id: "u-ada", display_name: "Ada" }] }),
     });
     render(<ImportCard />);
     const row = (await screen.findAllByRole("row"))[1];
     expect(await within(row).findByText("2 files · by Ada")).toBeVisible();
     expect(within(row).getByText("1,203")).toBeVisible();
     expect(within(row).getByText("Complete")).toBeVisible();
+    // The run carries the principal, `human:<uuid>`; the names endpoint takes
+    // the seat id alone and refuses the prefixed form.
+    expect(namesAskedFor()).toEqual([["u-ada"]]);
+  });
+
+  it("asks no seat name for a run an agent started", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [{ ...run, file_name: "crm.csv", captured_by: "agent:pp-1" }],
+        }),
+    });
+    render(<ImportCard />);
+    const row = (await screen.findAllByRole("row"))[1];
+    expect(within(row).getByText("crm.csv")).toBeVisible();
+    expect(namesAskedFor()).toEqual([]);
   });
 
   it("reads the import order from the format", async () => {
@@ -141,7 +229,7 @@ describe("the data import hub", () => {
         invalidated.mock.calls.filter((call) => call[0] === undefined).length;
       expect(everything()).toBe(0);
       status = "undone";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       await waitFor(() => expect(everything()).toBe(1));
     } finally {
       vi.useRealTimers();

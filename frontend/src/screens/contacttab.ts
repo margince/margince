@@ -1,4 +1,4 @@
-import type { Route } from "../app/router";
+import type { Route } from "../lib/router";
 
 // The contact record's tabs, and the ONE way to address one.
 //

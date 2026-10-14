@@ -19,19 +19,18 @@ export default meta;
 
 type Story = StoryObj<typeof ChoiceList>;
 
-const REACH = [
-  {
-    value: "everyone_except" as const,
-    label: "Everyone I talk to — except the contacts I leave out",
-    description:
-      "Every conversation goes into the CRM until you name somebody to leave out.",
-  },
-  {
-    value: "only_chosen" as const,
-    label: "Only the contacts I choose",
-    description: "Nothing goes in until you name somebody.",
-  },
-];
+const EVERYONE_EXCEPT = {
+  value: "everyone_except" as const,
+  label: "Everyone I talk to — except the contacts I leave out",
+  description:
+    "Every conversation goes into the CRM until you name somebody to leave out.",
+};
+const ONLY_CHOSEN = {
+  value: "only_chosen" as const,
+  label: "Only the contacts I choose",
+  description: "Nothing goes in until you name somebody.",
+};
+const REACH = [EVERYONE_EXCEPT, ONLY_CHOSEN];
 
 // Stateful, because a radio group that never moves is the one thing this
 // control must not be caught doing: the story IS the interaction.
@@ -82,8 +81,12 @@ export const OneAnswerRefused: Story = {
     legend: "Which conversations go into the CRM?",
     value: "only_chosen",
     choices: [
-      { ...REACH[0], disabled: true, description: "Connect a mailbox first." },
-      REACH[1],
+      {
+        ...EVERYONE_EXCEPT,
+        disabled: true,
+        description: "Connect a mailbox first.",
+      },
+      ONLY_CHOSEN,
     ],
     onChange: () => {},
   },

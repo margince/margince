@@ -3,7 +3,7 @@ import type { Dispatch } from "react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { unwrap } from "../common";
+import { unwrap } from "../../lib/problem";
 import { pickBuiltVersion } from "../onboarding";
 import { ensureProfileId } from "../voice-profile";
 import type {

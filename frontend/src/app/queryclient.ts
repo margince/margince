@@ -5,14 +5,14 @@ import {
   QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import { isRecordRead } from "../screens/activitykeys";
-import { logUnexpectedError, ProblemError } from "../screens/common";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
+import { isRecordRead } from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
+import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { ENTITY_NAME_KEY } from "../screens/entityref";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the

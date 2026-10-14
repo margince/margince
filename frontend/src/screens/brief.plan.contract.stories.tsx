@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { PlanContract } from "./brief.plan.contract";
-import { StoryProviders } from "./story-utils";
 import type { WeeklyPlan } from "./weeklyplan.queries";
 
 // What the week is UP AGAINST: the room the calendar has left, and the two

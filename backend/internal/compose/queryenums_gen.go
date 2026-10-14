@@ -142,7 +142,13 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/forecast/movement": {
 		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case"}, Array: false, Explode: true},
 	},
+	"GET /v1/imports": {
+		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
+	},
 	"GET /v1/imports/format": {
+		{Name: "lang", Values: []string{"en", "de", "vi"}, Array: false, Explode: true},
+	},
+	"GET /v1/imports/{id}/problems.csv": {
 		{Name: "lang", Values: []string{"en", "de", "vi"}, Array: false, Explode: true},
 	},
 	"GET /v1/leads": {
@@ -150,6 +156,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "sla_state", Values: []string{"within_target", "at_risk", "breached"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"new", "contacted", "engaged", "promoted", "disqualified"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
+	},
+	"GET /v1/legal-reviews": {
+		{Name: "status", Values: []string{"open", "decided"}, Array: false, Explode: true},
 	},
 	"GET /v1/lists": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},

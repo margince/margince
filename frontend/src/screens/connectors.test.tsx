@@ -13,13 +13,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { useMe } from "../lib/session";
 import { locationDouble } from "../testing/locationdouble";
-import { useMe } from "./common";
+import { meFixture } from "../testing/mefixture";
+import { type RouteMap, stubWithSession } from "../testing/story-utils";
+import { openRowMenu } from "../testing/tablerow.testkit";
 import { ConnectorsCard } from "./connectors";
-import { type RouteMap, stubWithSession } from "./story-utils";
-import { openRowMenu } from "./tablerow.testkit";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a
@@ -30,17 +30,14 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 const gmailConnected: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   scopes: [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send",
   ],
   last_synced_at: "2026-07-23T09:30:00Z",
-  // A finished backfill: mounting BackfillPanel below the row must not fire
-  // an extra request (the panel seeds from this embedded snapshot). "none"
-  // would auto-fire the setup screen's scope preview against an unstubbed
-  // route — "done" is the honest, inert terminal state for an established
-  // connection these fixtures otherwise don't care about.
+  // Inert: "none" would fire the import's scope preview at an unstubbed route.
   backfill: { state: "done" },
 };
 
@@ -61,6 +58,7 @@ const imapConnected: CaptureConnection = {
   ...gmailConnected,
   id: "018f3a1b-0000-7000-8000-0000000000c9",
   provider: "imap",
+  can_backfill: false,
   scopes: [],
 };
 
@@ -71,6 +69,7 @@ const gcalConnected: CaptureConnection = {
   ...gmailConnected,
   id: "018f3a1b-0000-7000-8000-0000000000ca",
   provider: "gcal",
+  can_backfill: false,
   scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
 };
 
@@ -189,10 +188,8 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
   );
 }
 
-// Adding a connection is the card's create verb, so it lives in the panel
-// header and its provider picks live in the dialog it opens — a strip of
-// buttons in a row's right column was the shape it replaced. Every claim about
-// a pick therefore opens the dialog first and scopes its queries to it.
+// The provider picks live in the dialog the header's verb opens. Every claim
+// about a pick opens that dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
     await screen.findByRole("button", { name: "Add connector" }),
@@ -262,6 +259,16 @@ describe("the connected-inboxes card", () => {
     expect(
       within(dialog).getByRole("heading", { name: /Import old emails/ }),
     ).toBeTruthy();
+  });
+
+  // The connector says whether old mail can come in; an IMAP mailbox cannot.
+  it("offers no import where the connector cannot import old mail", async () => {
+    stubApi([imapConnected]);
+    render(<ConnectorsCard />);
+    const menu = await openRowMenu(userEvent.setup(), "IMAP mailbox");
+    expect(
+      menu.queryByRole("button", { name: "Import old emails" }),
+    ).toBeNull();
   });
 
   // A calendar is not a mailbox: no history to import, no posture to take.
@@ -589,11 +596,8 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 });
 
-// The OAuth return outcome (Task 2): the backend now lands the callback on
-// #/settings/connections/{outcome} — the route parses to
-// {screen:"settings", id:"connections", id2:<outcome>} and the card renders
-// a dismissible inline note from that segment, never a claim the server
-// hasn't confirmed.
+// The OAuth callback lands on #/settings/connections/{outcome}, and the card
+// says only what that segment confirms, in a note the reader can dismiss.
 describe("the OAuth return outcome", () => {
   it("renders an honest denial note when the user declined access", async () => {
     globalThis.location.hash = "#/settings/connections/denied";
@@ -680,11 +684,8 @@ describe("the OAuth return outcome", () => {
   });
 });
 
-// The "Add connector" affordance (Task 1): one verb in the card's header
-// opens a dialog listing the providers still addable, each with the sentence
-// its choice needs. An OAuth pick connects+redirects, IMAP hands over to the
-// inline form, and a 501 from a specific provider's connect renders an honest
-// named note — in the dialog the press happened in.
+// The header's verb lists the providers still addable. An OAuth pick redirects,
+// IMAP opens its form, and a 501 is named in the dialog the press came from.
 describe("add a connection", () => {
   it("offers only not-yet-connected providers when one is connected", async () => {
     stubApi([gmailConnected]);

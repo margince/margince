@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,7 +33,7 @@ const (
 
 // dealWriterPendingReason skips a deal row at commit: the test run checks
 // deals, and this build writes none yet.
-const dealWriterPendingReason = "deals are checked by the test run but not yet written by an import"
+var dealWriterPendingReason = migration.Why(migration.ReasonDealNotYetWritten)
 
 // dealStoredColumns names the stored deal's JSON field for each target the
 // file spells differently, so an unedited cell compares equal to it.

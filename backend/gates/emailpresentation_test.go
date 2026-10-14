@@ -114,7 +114,7 @@ var emailRenderers = map[string]bool{
 // surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
 	"design-system/activitytimeline.tsx": "maps an Activity onto a TimelineEntry, email_summary included, for composed.tsx to draw; it builds the entry and renders nothing",
-	"screens/openemail.ts":               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
+	"lib/openemail.ts":                   "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"screens/recordchronology.tsx":       "wires onOpenEmail onto the entries it hands to the timeline; the rendering is composed.tsx's",
 	"screens/worklist.row.tsx":           "same branch as the focus card, for the list row",
 	"screens/brief.focus.tsx":            "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",

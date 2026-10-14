@@ -21,13 +21,13 @@
 // still stands for every other kind.
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Avatar, Badge } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { PanelBody } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import "./company360.css";
 
 type Activity = components["schemas"]["Activity"];

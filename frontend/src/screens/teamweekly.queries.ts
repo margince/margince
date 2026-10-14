@@ -4,7 +4,7 @@
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 
 export type Team = components["schemas"]["Team"];
 export type TeamWeeklyReview = components["schemas"]["TeamWeeklyReview"];

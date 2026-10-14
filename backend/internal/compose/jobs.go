@@ -297,7 +297,13 @@ type JobRunnerConfig struct {
 	// crawls (A55). Nil is a worker role with no object store: reads still
 	// run and still land their facts, and every company keeps the monogram
 	// the render layer draws when no logo is on file.
+	//
+	// It also holds the uploads an import commits from. Nil registers the
+	// import jobs anyway, and a commit then fails with that cause.
 	Blobstore blobstore.Store
+	// ImportUploadCap is the deployment's ceiling for an import upload, so a
+	// commit reads a stored ZIP under the limits its upload was accepted with.
+	ImportUploadCap int64
 	// Embedder is the retrieval embed lane (ModelPath.Embedder) both embed
 	// passes re-embed under, and it is the one field whose two kinds take
 	// OPPOSITE postures — for a reason that is about who enqueues them.
@@ -391,6 +397,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addAuthzDisagreementWorker(reg, pool, log)
 	addNotificationMailJobs(reg, pool, cfg, log)
 	addNotificationDigestJobs(reg, pool, cfg, log)
+	addImportJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
 		addMeetingDeliveryJob(reg, pool, cfg),

@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge } from "../design-system/atoms";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
  * How a captured interaction is drawn and named.

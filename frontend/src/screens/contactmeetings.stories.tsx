@@ -1,15 +1,15 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { bookingProfile, bookingProposals } from "./book.testkit";
-import { ContactMeetingsTab } from "./contactmeetings";
-import { useMeetingProposals, WaitingSection } from "./contactmeetings.waiting";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { bookingProfile, bookingProposals } from "./book.testkit";
+import { ContactMeetingsTab } from "./contactmeetings";
+import { useMeetingProposals, WaitingSection } from "./contactmeetings.waiting";
 
 const view: components["schemas"]["Contact360"] = {
   as_of: "2026-10-05T09:00:00Z",

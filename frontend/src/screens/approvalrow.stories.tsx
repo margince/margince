@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ApprovalRow } from "./approvalrow";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ApprovalRow } from "./approvalrow";
 
 // One staged proposal as a decidable row — the canonical affordance for
 // anything an agent proposes and a human decides. Several surfaces draw this

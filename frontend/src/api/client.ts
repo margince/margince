@@ -5,8 +5,8 @@ import {
   connectivityNow,
   reportReached,
   reportUnreached,
-} from "../app/connectivity";
-import { readStored, STORAGE_KEYS } from "../app/storage";
+} from "../lib/connectivity";
+import { readStored, STORAGE_KEYS } from "../lib/storage";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
@@ -294,7 +294,7 @@ const MODEL_ROUTE_MATCHERS: readonly (readonly [
   path: RegExp,
   wait: ModelWait,
 ])[] = Object.entries(MODEL_ROUTES).map(([route, wait]) => {
-  const [method, template] = route.split(" ", 2);
+  const [method = "", template = ""] = route.split(" ", 2);
   const pattern = template
     .split("/")
     .map((segment) =>

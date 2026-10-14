@@ -146,6 +146,7 @@ var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
 	"presets/openrouter_cloud.yaml": "a broker deployment has no local rung to offer",
 	"presets/openrouter_cloud_eu.yaml": "the same, pinned to EU endpoints — which bounds the REGION the " +
 		"prompt reaches but not the machine, and local_only is about the machine",
+	"presets/openrouter_openai.yaml": "a broker deployment has no local rung to offer",
 	"presets/consumer_class_brokered.yaml": "it exists to measure consumer-class WEIGHTS through a broker " +
 		"before the Ollama binding of those same weights exists; its own header says so, and names the " +
 		"endpoints it actually reaches",

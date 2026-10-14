@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Logomark } from "../design-system/logomark";
 import { useT } from "../i18n";
-import { usePublicLocale } from "../i18n/publiclocale";
+import { usePublicLocale } from "./publiclocale";
 import "./preferences.css";
 
 /**

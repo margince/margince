@@ -288,7 +288,6 @@ internal/modules/agents/registration.go#func unitOwned
 internal/modules/agents/reserved.go#const block at const approvalIDArg
 internal/modules/agents/runner/window.go#const triggerProvenance
 internal/modules/agents/schemacheck.go#func ResultDefect
-internal/modules/agents/toollist.go#func DescribeForClient
 internal/modules/agents/toollist.go#func invocableByCaller
 internal/modules/agents/tools_enrich.go#func readEnrichArgs
 internal/modules/agents/tools_import.go#const block at const importObjectCompany

@@ -4,6 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { BriefScreen } from "./brief";
 import {
   type Approval,
@@ -28,14 +36,6 @@ import {
   wholeMeetings,
 } from "./brief.fixtures";
 import type { MorningDigest } from "./brief.queries";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-  stubWithSession,
-} from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 import {
   automaticDateReceipt,
@@ -173,7 +173,7 @@ export const DecisionsInToday: Story = {
 };
 
 export const OneDecision: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
 };
 
 async function openDecision(canvasElement: HTMLElement) {
@@ -187,7 +187,7 @@ async function openDecision(canvasElement: HTMLElement) {
 }
 
 export const DecisionOpened: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await drawer.findByRole("button", { name: en["brief.approval.approve"] });
@@ -195,7 +195,7 @@ export const DecisionOpened: Story = {
 };
 
 export const DecisionApproved: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await userEvent.click(
@@ -333,13 +333,13 @@ export const SixPriorities: Story = {
 export const RowDetailsOpen: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(
-      (
-        await within(canvasElement).findAllByRole("button", {
-          name: en["brief.focus.context"],
-        })
-      )[0],
-    );
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
     await within(document.body).findByRole("dialog", {
       name: en["brief.focus.context"],
     });
@@ -376,13 +376,13 @@ export const TaskEvidence: Story = {
     },
   }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(
-      (
-        await within(canvasElement).findAllByRole("button", {
-          name: en["brief.focus.context"],
-        })
-      )[0],
-    );
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
   },
 };
 export const SixPrioritiesPhone: Story = {

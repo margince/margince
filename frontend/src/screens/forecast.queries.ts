@@ -11,8 +11,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
+import { unwrap } from "../lib/problem";
 import { type AnalyticsScope, scopeKey, scopeQuery } from "./analytics.context";
-import { unwrap } from "./common";
 
 export type ForecastReadings = components["schemas"]["ForecastReadings"];
 

@@ -5,14 +5,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { isOption } from "../app/options";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { isOption } from "../lib/options";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // RECORDING a decision about a domain: the form, what it refuses to send, and
 // the write itself.

@@ -19,7 +19,7 @@ import {
   problemMessageOf,
   throwProblem,
   unwrap,
-} from "./common";
+} from "../lib/problem";
 
 // The roles a workspace defines, as the pickers and the role editor read them.
 // A role is a row the server holds, not a list compiled into the client: an

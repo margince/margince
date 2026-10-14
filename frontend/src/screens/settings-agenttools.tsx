@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { dotTier } from "../app/autonomy";
 import { Badge, EmptyState, SearchField } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -15,10 +14,12 @@ import {
   PassportSelect,
   scopeChipLabel,
 } from "../design-system/passportselect";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { dotTier } from "../lib/autonomy";
+import { unwrap } from "../lib/problem";
 import { usePassports } from "./passports.queries";
 import "./settings-agents.css";
 

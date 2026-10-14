@@ -11,10 +11,10 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
-import { routeHash } from "../app/router";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { routeHash } from "../lib/router";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   type ActivityDrawer,
   CompanyHeaderActions,

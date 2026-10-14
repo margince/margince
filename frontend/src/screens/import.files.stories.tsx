@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ImportDropzone } from "./import.files";
-import { formatFixture, recentRunsFixture } from "./import.fixtures";
-import { ImportWizardPage } from "./import.wizard";
-import { ImportMappingTable } from "./importmapping";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ImportDropzone } from "./import.files";
+import { formatFixture, recentRunsFixture } from "./import.fixtures";
+import { ImportWizardPage } from "./import.wizard";
+import { ImportMappingTable } from "./importmapping";
 
 // The wizard's first three steps: drop a file, check the type of each file in
 // it, and map each file's columns on its own tab. A story reaches a step by
@@ -27,10 +27,12 @@ export default meta;
 type Story = StoryObj;
 
 const ZIP_PROFILE = {
+  run_id: "019ff-draft",
   source_ref: "ws/import/zip",
   file_name: "pipedrive-export.zip",
   suggested_source_name: "pipedrive-export",
   rows_profiled: 0,
+  row_count: 266,
   columns: [],
   suggested_mapping: {},
   targets: [],
@@ -39,6 +41,7 @@ const ZIP_PROFILE = {
       file: "companies.csv",
       object: "company",
       rows_profiled: 52,
+      row_count: 52,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["CO-1", "CO-2"] },
         { header: "display_name", fill_rate: 1, samples: ["Acme GmbH"] },
@@ -52,6 +55,7 @@ const ZIP_PROFILE = {
       file: "contacts.csv",
       object: "contact",
       rows_profiled: 214,
+      row_count: 214,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["P-1"] },
         { header: "email", fill_rate: 0.98, samples: ["jo@acme.com"] },

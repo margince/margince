@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SetupClaimScreen } from "./setupclaim";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
  * The first-run claim (ADR-0105).
@@ -48,7 +52,8 @@ type Story = StoryObj<typeof SetupClaimScreen>;
  */
 async function fill(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  const user = userEvent.setup();
+  // No pause between keys: on software WebGL each waits out a ~100 ms frame.
+  const user = userEvent.setup({ delay: null });
   await user.type(
     canvas.getByLabelText(/setup token/i),
     "9f2c-not-a-real-token",
@@ -56,10 +61,7 @@ async function fill(canvasElement: HTMLElement) {
   await user.type(canvas.getByLabelText(/company name/i), "Brandt Automotive");
   await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");
   await user.type(canvas.getByLabelText(/your email/i), "ilse@brandt.example");
-  await user.type(
-    canvas.getByLabelText(/choose a password/i),
-    "correct horse battery",
-  );
+  await user.type(canvas.getByLabelText(/^password/i), "correct horse battery");
   await pickOption(user, canvas.getByLabelText(/jurisdiction/i), "Germany");
   return { canvas, user };
 }
@@ -70,7 +72,7 @@ async function submitAgainst(canvasElement: HTMLElement, status: number) {
     "POST /setup/claim": () => jsonResponse({}, status),
   });
   const { canvas, user } = await fill(canvasElement);
-  await user.click(canvas.getByRole("button", { name: /create the company/i }));
+  await user.click(canvas.getByRole("button", { name: /create company/i }));
 }
 
 /** The screen an operator's first visit lands on. */
@@ -97,7 +99,7 @@ export const Ready: Story = {
 export const PasswordTooShort: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(
       canvas.getByLabelText(/setup token/i),
       "9f2c-not-a-real-token",
@@ -111,7 +113,7 @@ export const PasswordTooShort: Story = {
       canvas.getByLabelText(/your email/i),
       "ilse@brandt.example",
     );
-    await user.type(canvas.getByLabelText(/choose a password/i), "short");
+    await user.type(canvas.getByLabelText(/^password/i), "short");
   },
 };
 

@@ -111,7 +111,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -765,6 +765,11 @@ GOVULNCHECK ?= $(call resolve-gate-tool,govulncheck,golang\.org/x/vuln,$(GOVULNC
 vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 	$(GOVULNCHECK) ./...
 
+# -v because the scheduled lane reads the VENDOR_LIVE line, and go test hides a
+# passing test's output without it. The key comes from MARGINCE_SURFE_LIVE_KEY.
+vendor-live: ## Read Surfe's credit balance through the production adapter (network; needs MARGINCE_SURFE_LIVE_KEY; fails without it)
+	$(GO) test -count=1 -v -tags vendorlive ./internal/modules/integrations/surfe/ -run TestSurfeLiveCreditRead
+
 # Fresh-machine bootstrap. golangci-lint is the one gate binary `make check`
 # runs from an install rather than a pinned `go run`; the lint target
 # resolves it out of GOPATH/bin itself (see GOLANGCI_LINT above), so no
@@ -799,7 +804,7 @@ tools: ## Install every gate binary at its pinned version (fresh-machine bootstr
 
 # `git rev-parse --git-path hooks` honors core.hooksPath, so this works
 # both on a plain clone (.git/hooks) and after the root `make hooks`
-# switched the repo to .githooks/ for the pre-push craft gate.
+# switched the repo to .githooks/.
 hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 	install -m 0755 ../scripts/pre-commit "$$(git rev-parse --git-path hooks)/pre-commit"
 

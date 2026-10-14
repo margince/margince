@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { type GrantSpec, meFixture } from "./mefixture";
 
 // The banner's status read is embedding_reindex:read server-side, granted to
 // admin and ops alone — so the fixtures name that grant rather than the roles

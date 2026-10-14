@@ -13,8 +13,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";

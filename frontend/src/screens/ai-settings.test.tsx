@@ -9,9 +9,9 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ProvidersStat, SpendEstimate } from "./ai-settings";
 
 // Settings → AI, as one page: two readings above a strip that chooses between

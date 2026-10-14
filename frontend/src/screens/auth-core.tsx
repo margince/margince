@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "../design-system/ambient-waves";
 import { Heading } from "../design-system/heading";
 import {
@@ -7,6 +6,7 @@ import {
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { useDocumentIntro, useTypeStream } from "../design-system/motion";
+import { ThemeToggle } from "../design-system/theme-toggle";
 import { useT } from "../i18n";
 
 /**

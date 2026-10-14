@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useDrawsImportRun } from "../lib/import-onscreen";
+import { problemMessageOf } from "../lib/problem";
 import { ImportWindowPicker } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
-import { problemMessageOf } from "./common";
 import { errorClassKey } from "./connector-status";
 import "./onboarding-backread.css";
 

@@ -19,6 +19,11 @@ Biome holds the size of a function in product code: 300 lines, blank lines not c
 no such limit. A `biome-ignore` for either rule in product
 code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
 
+`make fe-compiler-lint` runs the rules of the React Compiler (`eslint-plugin-react-hooks`). Two
+examples: no read or write of `ref.current` during render, and no state set in an effect body. Findings from before the
+gate are counted per file and rule in `scripts/compiler-lint-waivers.txt`. When you fix a finding,
+lower its count there. Never raise a count to let a new one in.
+
 ## Read the design system before you build something a user can see
 
 Read [`src/design-system/README.md`](src/design-system/README.md) before you build a control, every
@@ -63,6 +68,13 @@ mean a result, not a source. The tokens, the edge and text rules, and `Provenanc
 in [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it). `check-ds-purity.sh`
 holds that these values come from tokens; nothing can tell you that the token you use means the wrong
 thing.
+
+## Imports flow down
+
+`src/lib/` holds shared code that draws nothing. `lib`, `api`, `i18n` and `format` sit at the bottom:
+they never import `app/` or `screens/`, and the Biome rule `noRestrictedImports` fails one that
+does. Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the
+PR changes nothing else.
 
 ## Text follows the writing guides
 
@@ -138,6 +150,8 @@ What the gates cover, and what they do not:
 
 - `make fe-bundle` builds the catalog in CI and is a check that must pass. So a story that fails to
   compile, or fails to register, is found every time.
+- `make fe-uat ARGS="--all-stories"` renders every story the build registers, whatever the diff.
+  `scheduled.yml` runs it on `main` daily and files an issue when a story fails there.
 - `make fe-uat` is the render gate for what a change touches. It fails on a render error, on a
   changed component with no story, and on a changed story the build does not register. Two things
   limit it. It is a lane that need not pass, and `ARGS="--allow-missing"` turns the missing-story

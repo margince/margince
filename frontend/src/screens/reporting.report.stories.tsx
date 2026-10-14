@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingReportDetail } from "./reporting.report";
 import {
   reportingEditions,
@@ -7,7 +12,6 @@ import {
   reportingSchedule,
 } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Saved report detail" };
 export default meta;
@@ -50,7 +54,7 @@ export const Expired: Story = {
       redacted: true,
       withheld: true,
       evaluation: {
-        ...reportingEditions[0].evaluation,
+        ...reportingEditions[0]?.evaluation,
         charts: [],
         metrics: [],
       },

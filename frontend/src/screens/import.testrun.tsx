@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Badge, Button, Checkbox } from "../design-system/atoms";
+import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
-import type { ImportWizardState } from "./importflow";
+import { ImportRefusal } from "./import.notices";
+import { hasProgress, ImportProgressPanel } from "./import.progress";
+import { reasonText } from "./importreason";
+import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
   ImportPartReport,
@@ -20,10 +24,14 @@ import type {
   ImportRowIssue,
   ImportRun,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
-/** Where the server builds one run's problems as a spreadsheet. */
-export function problemsHref(id: string): string {
-  return `/v1/imports/${encodeURIComponent(id)}/problems.csv`;
+/**
+ * Where the server builds one run's problems as a spreadsheet, with its header
+ * and its reasons in the reader's language.
+ */
+export function problemsHref(id: string, lang: Locale): string {
+  return `/v1/imports/${encodeURIComponent(id)}/problems.csv?lang=${lang}`;
 }
 
 const PROBLEM_TONE = {
@@ -78,6 +86,9 @@ export function TestRunStep({
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
   const { report, runId } = wizard;
+  if (wizard.run.data?.status === "validating") {
+    return <TestingBody run={wizard.run.data} />;
+  }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
       {report.data && runId ? (
@@ -89,6 +100,29 @@ export function TestRunStep({
         />
       ) : null}
     </QueryStates>
+  );
+}
+
+// A test can read for minutes, so the one waiting on it can stop it.
+function TestingBody({ run }: Readonly<{ run: ImportRun }>) {
+  const t = useT();
+  const stop = useStopImportTest();
+  return (
+    <div className="import">
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.test.testing")} />
+      ) : (
+        <PendingBody visible label={t("import.test.testing")} />
+      )}
+      <div className="import__actions">
+        <Button pending={stop.isPending} onClick={() => stop.mutate(run.id)}>
+          {t("import.test.stop")}
+        </Button>
+      </div>
+      {stop.error ? (
+        <ImportRefusal title={t("import.test.stopFailed")} error={stop.error} />
+      ) : null}
+    </div>
   );
 }
 
@@ -108,7 +142,7 @@ function TestRunBody({
   const { locale } = useLocale();
   const invalid = countOf(report.issues, "invalid_value");
   const linkless = countOf(report.issues, "broken_link", "dropped_link");
-  const restaging = wizard.stage.isPending;
+  const restaging = wizard.test.isPending;
   const landing = report.disposition.created + report.disposition.updated;
   return (
     <div className="import">
@@ -137,7 +171,7 @@ function TestRunBody({
         </Callout>
       ) : null}
       <ProblemTable issues={report.issues} />
-      {wizard.profile && linkless > 0 ? (
+      {linkless > 0 ? (
         <Checkbox
           checked={wizard.anyway}
           disabled={restaging}
@@ -149,7 +183,11 @@ function TestRunBody({
       ) : null}
       <div className="import__actions">
         {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(runId)} download>
+          <a
+            className="link-button"
+            href={problemsHref(runId, locale)}
+            download
+          >
             {t("import.result.problemsFile")}
           </a>
         ) : null}
@@ -161,7 +199,10 @@ function TestRunBody({
           disabled={restaging}
           pending={wizard.approve.isPending}
           busyLabel={t("import.importing")}
-          onClick={() => wizard.approve.mutate(runId)}
+          onClick={() => {
+            const run = wizard.run.data;
+            if (run) wizard.approve.mutate(run);
+          }}
         >
           {wizard.anyway
             ? t("import.test.importAnyway")
@@ -175,14 +216,11 @@ function TestRunBody({
           {problemMessageOf(wizard.approve.error, t)}
         </Callout>
       ) : null}
-      {wizard.stage.error ? (
-        <Callout
-          tone="danger"
-          kind="outcome"
+      {wizard.test.error ? (
+        <ImportRefusal
           title={t("import.map.stageFailed")}
-        >
-          {problemMessageOf(wizard.stage.error, t)}
-        </Callout>
+          error={wizard.test.error}
+        />
       ) : null}
     </div>
   );
@@ -267,7 +305,9 @@ export function ProblemTable({
                   {t(`import.problem.${issue.kind}`)}
                 </Badge>
               ) : null}
-              <div className="t-sub">{issue.reason}</div>
+              <div className="t-sub">
+                {reasonText(t, issue.reason, issue.reason_code, issue.params)}
+              </div>
             </>
           ),
         },

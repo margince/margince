@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CompanyLifecycleControl } from "./companylifecycle";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The account's stage beside its name: the design system's dropdown worn as a
 // filled button at the control height. The header stories show it in place.

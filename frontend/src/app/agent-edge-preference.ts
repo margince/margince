@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useSyncExternalStore } from "react";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 
 /**
  * Whether this reader wants the margins lit at all.

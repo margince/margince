@@ -268,6 +268,7 @@ func TestSeedModelRatesFilesTheEmbeddersAsEmbedders(t *testing.T) {
 		providerOpenAICompatible + "/mistralai/mistral-embed-2312":  false,
 		providerOpenAICompatible + "/baai/bge-m3":                   false,
 		providerOpenAICompatible + "/openai/text-embedding-3-small": false,
+		providerOpenAICompatible + "/openai/text-embedding-3-large": false,
 	}
 	for _, r := range SeedModelRates(seedRatesTestDay) {
 		key := r.Provider + "/" + r.ModelID

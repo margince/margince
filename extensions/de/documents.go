@@ -28,7 +28,7 @@ type documentEntry struct {
 }
 
 var documentEntries = []documentEntry{
-	{"documents/de/mitarbeiterinformation.md", "mitarbeiterinformation", "Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz", "de", compliancedocs.Employee, compliancedocs.Template},
+	{"documents/de/mitarbeiterinformation.md", "mitarbeiterinformation", "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz", "de", compliancedocs.Employee, compliancedocs.Template},
 	{"documents/de/empfangsbestaetigung.md", "empfangsbestaetigung", "Empfangsbestätigung", "de", compliancedocs.Employee, compliancedocs.Template},
 	{"documents/de/einwilligung-email-erfassung.md", "einwilligung-email-erfassung", "Einwilligung in die Erfassung privater E-Mail-Korrespondenz", "de", compliancedocs.Employee, compliancedocs.Template},
 	{"documents/de/betriebsvereinbarung-vorlage.md", "betriebsvereinbarung-vorlage", "Betriebsvereinbarung über die Erfassung von E-Mail-Korrespondenz", "de", compliancedocs.Employer, compliancedocs.Template},

@@ -28,7 +28,7 @@ import (
 
 const (
 	httperrPath          = "github.com/margince/margince/backend/internal/platform/httperr"
-	problemCopyOwner     = "../frontend/src/screens/problemcodecopy.ts"
+	problemCopyOwner     = "../frontend/src/lib/problemcodecopy.ts"
 	duplicateCopyKeyStem = "common.duplicate."
 )
 

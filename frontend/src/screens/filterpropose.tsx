@@ -24,7 +24,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, unwrap } from "./common";
+import { problemCodeOf, unwrap } from "../lib/problem";
 import {
   type FilterResource,
   fieldLabel,

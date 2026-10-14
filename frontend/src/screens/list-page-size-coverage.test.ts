@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SRC_ROOT, screenFiles } from "../testing/screenfiles";
 
 // Fitness function for the ONE page size.
 //
@@ -24,15 +24,12 @@ import { describe, expect, it } from "vitest";
 // because nothing derived the obligation from the tree. This does: the screen
 // list comes from the directory, so a NEW list screen is covered the day it is
 // written rather than the day somebody remembers to add it here.
-const dir = dirname(fileURLToPath(import.meta.url));
 
 /** Every screen that reads a list through the shared wrapper. */
 function listScreens(): string[] {
-  return readdirSync(dir)
-    .filter((file) => file.endsWith(".tsx"))
-    .filter((file) => !file.includes(".test.") && !file.includes(".stories."))
+  return screenFiles()
     .filter((file) => {
-      const source = readFileSync(resolve(dir, file), "utf8");
+      const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
       // Calls it, rather than declaring it: listquery.tsx is the wrapper
       // itself and owns no fetcher of its own.
       return (
@@ -47,13 +44,17 @@ describe("every list fetcher asks for the page size the reader picked", () => {
   it("finds the list screens rather than trusting a list written here", () => {
     // The census IS the directory. A hand-kept list would be the thing that
     // went stale, which is the failure this test exists to prevent.
-    expect(listScreens()).toContain("contacts.tsx");
-    expect(listScreens()).toContain("companies.tsx");
+    expect(listScreens().map((file) => basename(file))).toContain(
+      "contacts.tsx",
+    );
+    expect(listScreens().map((file) => basename(file))).toContain(
+      "companies.tsx",
+    );
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });
 
   it.each(listScreens())("%s reads its limit from the query", (file) => {
-    const source = readFileSync(resolve(dir, file), "utf8");
+    const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
     // A literal limit in the same object that spreads the list query is the
     // mismatch. Other reads on these screens legitimately cap themselves — a
     // typeahead asks for 10 and always should — so only the list fetcher's own

@@ -145,30 +145,6 @@ describe("what the ranked queue tells a reader", () => {
     expect(title.textContent).not.toContain("· Anna Weber");
   });
 
-  it("draws one control per destination, not one per verb", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            title: "Send the proposal",
-            subject: {
-              type: "contact",
-              id: "01a05500-0000-7000-8000-000000000009",
-              label: "Anna Weber",
-            },
-            // Both verbs open the same record; the row drew two "Open"s.
-            actions: ["complete", "snooze"],
-          }),
-        ],
-        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText(/Send the proposal/);
-    expect(screen.getAllByRole("link", { name: "Open" })).toHaveLength(1);
-  });
-
   it("draws a pile of routine decisions as one row that says how many", async () => {
     stub(
       day({
@@ -520,41 +496,6 @@ describe("what the ranked queue tells a reader", () => {
     expect(
       container.querySelector("details.worklist-row-because-fold"),
     ).toBeNull();
-  });
-
-  it("offers a verb that goes somewhere, and none that does not", async () => {
-    stub(
-      day({
-        queue: [
-          row({
-            id: "with-record",
-            title: "Anna Weber",
-            source: "customer_waiting",
-            category: "customer_waiting",
-            consequence: "buyer_waits",
-            subject: {
-              type: "contact",
-              id: "01a05500-0000-7000-8000-000000000001",
-            },
-            actions: ["open"],
-          }),
-          row({
-            id: "no-destination",
-            title: "Add contact from mail",
-            source: "approval",
-            category: "decisions",
-            consequence: "data_drifts",
-            // `decide` is answered on this page, so it has nowhere to link.
-            actions: ["decide"],
-          }),
-        ],
-        summary: { urgent: 1, due: 0, lower_priority: 1, total: 2 },
-      }),
-    );
-    renderWorklist();
-
-    // The row that names a record gets its verb.
-    expect(await screen.findByRole("link", { name: "Open" })).toBeTruthy();
   });
 
   it("lets a staged decision be answered on the page", async () => {

@@ -14,11 +14,13 @@ import {
 } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { today } from "../format/calendarday";
 import { PER_MTOK_PRICE } from "../format/priceinput";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import type { ModelLane } from "./ai-models";
 import {
   offeredModels,
@@ -26,7 +28,6 @@ import {
   useAvailableModels,
 } from "./ai-models";
 import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
-import { problemMessageOf, unwrap, WriteRefused } from "./common";
 import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];

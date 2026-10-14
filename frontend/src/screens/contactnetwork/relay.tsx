@@ -8,13 +8,12 @@
 // coloured circles. The state is textual, never colour alone.
 
 import { Check } from "lucide-react";
-
-import { useRecordZone } from "../../app/recordzone";
 import { Avatar } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useMe } from "../common";
+import { useRecordZone } from "../../lib/recordzone";
+import { useMe } from "../../lib/session";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";

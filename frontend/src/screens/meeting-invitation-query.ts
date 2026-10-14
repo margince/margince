@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 type Status = components["schemas"]["MeetingInvitation"]["status"];
 

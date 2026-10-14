@@ -25,12 +25,13 @@ import { Button, Card } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   explainPublicError,
   LinkInvalidError,
   RateLimitedError,
 } from "./preferences";
+import { labelOf } from "./preferences.logic";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
 
@@ -53,9 +54,7 @@ export function SubscriptionConfirm({
   // The sentence THIS page shows, which is the one the server stores verbatim
   // as consent evidence. Read where it is rendered, not re-derived at submit
   // time, because the two drifting is how proof stops matching the promise.
-  const wording = t("confirm.subscription.ask", {
-    purpose: card.purpose_label,
-  });
+  const wording = subscriptionWording(t, card);
 
   const submit = useMutation({
     mutationFn: async ({ policyText }: { policyText: string }) => {
@@ -96,6 +95,20 @@ export function SubscriptionConfirm({
   );
 }
 
+// The purpose in the reader's language when the product seeded it.
+function purposeName(t: ReturnType<typeof useT>, card: SubscriptionPage) {
+  return labelOf(t, { key: card.purpose_key, label: card.purpose_label });
+}
+
+// The sentence the reader agrees to keeps the stored label. The server records
+// the published question filled with that label, so proof and page agree.
+function subscriptionWording(
+  t: ReturnType<typeof useT>,
+  card: SubscriptionPage,
+) {
+  return t("confirm.subscription.ask", { purpose: card.purpose_label });
+}
+
 export function SubscriptionConfirmBody({
   card,
   onConfirm,
@@ -111,6 +124,7 @@ export function SubscriptionConfirmBody({
   error?: string;
 }>) {
   const t = useT();
+  const purpose = purposeName(t, card);
 
   // ALREADY ANSWERED is its own state, not a disabled button.
   //
@@ -126,7 +140,7 @@ export function SubscriptionConfirmBody({
           </Heading>
           <p className="t-body">
             {t("confirm.subscription.alreadyBody", {
-              purpose: card.purpose_label,
+              purpose,
             })}
           </p>
         </Card>
@@ -141,11 +155,9 @@ export function SubscriptionConfirmBody({
       </Heading>
       <Card>
         <Heading size="large" className="t-h3">
-          {card.purpose_label}
+          {purpose}
         </Heading>
-        <p className="t-body">
-          {t("confirm.subscription.ask", { purpose: card.purpose_label })}
-        </p>
+        <p className="t-body">{subscriptionWording(t, card)}</p>
         {/* One affirmative act, never a pre-selected one: a page that arrives
             with the answer already given is not the contact's own act. */}
         <Button onClick={onConfirm} disabled={submitting}>

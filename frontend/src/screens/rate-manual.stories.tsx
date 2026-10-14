@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ModelPriceDialog } from "./rate-manual";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The free-form "add a rate": the provider is chosen from the vendors the
 // product knows, and the model box then offers what that vendor serves. A

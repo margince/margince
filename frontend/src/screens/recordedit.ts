@@ -1,9 +1,9 @@
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
-import { unwrap } from "./common";
+import { saveIndependentEdit } from "../lib/independentedit";
+import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
 import { contactEditComparison } from "./contactformfields";
-import { saveIndependentEdit } from "./independentedit";
 import type { FieldRecord } from "./recordfields";
 
 // Core and custom fields use the same conditional write and recovery policy.

@@ -23,6 +23,18 @@ Three lanes run without blocking: `vuln`, the SonarCloud scan and `live-boot`. `
 for why a gate that does not block needs that second check. Why they do not block yet is under
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
 
+`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that
+call is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and
+that the answer still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does
+not reach the calls that cost money.
+
+The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which is
+not a pass. The job is not required, so a vendor that is down blocks no merge.
+
+`scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
+`make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
+some change reaches it.
+
 **The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
 holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
 the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
@@ -130,7 +142,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
-| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `.github/workflows/**`, `.github/actions/**` | the license gate |
+| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
 What the `backend` scope adds on top of `backend_db`:
 
@@ -420,8 +432,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 ### Why some jobs are shaped as they are
 
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
-- **`craftsmanship` runs after `deterministic-gates`**, so a red build is never judged on how the code
-  reads.
+- **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
+  not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
   and the shard profiles cannot reach them.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws

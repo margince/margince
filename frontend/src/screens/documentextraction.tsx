@@ -12,7 +12,7 @@ import { formatMoney, formatNumber } from "../format/format";
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 
 // What a document says, staged for a human to accept onto the deal.
 //

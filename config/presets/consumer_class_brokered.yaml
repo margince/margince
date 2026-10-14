@@ -3,6 +3,17 @@
 # their own consumer hardware, served through the broker so we can measure them
 # before anybody buys a GPU.
 #
+# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
+# certification records do not grade every one of those bindings as certified.
+# Which tasks, and how badly, is in docs/reference/ai-certification.md under
+# this file's name. Read it before binding this preset to a workspace whose
+# confidentiality decisions matter: a task graded `supported_degraded` or
+# `not_supported` answers wrongly often enough to have been measured doing so.
+#
+# No task list here on purpose. The bands move when a prompt is fixed or the
+# corpus grows, and a list in this comment would read as true long after it
+# stopped being.
+#
 # This preset answers ONE question: is the open-weight class that fits on a
 # 24GB card good enough to carry Margince's tasks? It is deliberately NOT the
 # sovereign binding. Every call here leaves the building — the models are the

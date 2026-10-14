@@ -86,14 +86,14 @@ func TestAFailedCommitReportsOnlyTheRowsItReached(t *testing.T) {
 
 // A tag the commit created is reported as created, not as one still to come.
 func TestANewTagReadsAsCreatedOnceTheCommitRan(t *testing.T) {
-	tag := migration.SkippedRow{Kind: migration.ProblemNewTag, Value: "Partner", Reason: newTagReason}
+	tag := migration.SkippedRow{Kind: migration.ProblemNewTag, Value: "Partner", Reason: newTagWhy.English()}
 	stored := migration.Report{Objects: []migration.ObjectReport{
 		{Object: migration.ObjectCompany, MirrorCount: 1, Created: 1, Warnings: []migration.SkippedRow{tag}},
 	}}
 	for status, want := range map[string]string{
-		migration.StatusAwaitingApproval: newTagReason,
-		migration.StatusComplete:         createdTagReason,
-		migration.StatusFailed:           createdTagReason,
+		migration.StatusAwaitingApproval: newTagWhy.English(),
+		migration.StatusComplete:         createdTagWhy.English(),
+		migration.StatusFailed:           createdTagWhy.English(),
 	} {
 		report := toContractImportReport(migration.Run{Status: status, Checkpoint: 1, Report: &stored})
 		if len(report.Issues) != 1 || report.Issues[0].Reason != want {
@@ -101,7 +101,7 @@ func TestANewTagReadsAsCreatedOnceTheCommitRan(t *testing.T) {
 		}
 	}
 	notCreated := migration.Run{Status: migration.StatusFailed, Error: importTagsFailedCause, Report: &stored}
-	if report := toContractImportReport(notCreated); report.Issues[0].Reason != newTagReason {
+	if report := toContractImportReport(notCreated); report.Issues[0].Reason != newTagWhy.English() {
 		t.Errorf("issues = %+v, want the prediction kept when creating the tags is what failed", report.Issues)
 	}
 }

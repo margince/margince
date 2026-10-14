@@ -10,7 +10,7 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // Answering an undecided domain, from the row that asked.

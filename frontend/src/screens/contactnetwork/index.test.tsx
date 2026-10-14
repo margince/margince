@@ -7,9 +7,9 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { type GrantSpec, meFixture } from "../../app/mefixture";
 import { type Locale, LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ContactNetworkTab } from "./index";
 
 // What the tab says when it has LESS to say than the full case.

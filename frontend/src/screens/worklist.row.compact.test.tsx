@@ -4,9 +4,11 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
+import { waitingEmailRow } from "./brief.fixtures";
 import { render } from "./brief.testkit";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
+import { findRowMenu } from "./worklist.testkit";
 
 // The row at LIST DENSITY.
 //
@@ -80,12 +82,34 @@ describe("a worklist row at list density", () => {
     ).toBeNull();
   });
 
-  // The default density keeps that verb. Holding both halves in one test is
-  // what makes this a statement about the DENSITY rather than about the row:
-  // asserting only the compact half would pass just as well on a row that had
-  // lost the verb everywhere.
-  it("keeps that verb at the default density", () => {
+  // The default density withholds it on the same grounds, from the line and
+  // from the row's menu: its title links the record there too.
+  it("withholds that verb at the default density too", async () => {
+    const user = userEvent.setup();
     render(<WorklistRow item={item()} position={1} owner="" />);
+
+    await user.click(await findRowMenu());
+
+    expect(
+      screen.queryByRole("link", { name: en["worklist.verb.open"] }),
+    ).toBeNull();
+  });
+
+  // A waiting message names itself with the message, so its title links
+  // nothing. The way to the record stays, as a line of the row's menu.
+  // This half makes the case above a statement about the title.
+  it("keeps that verb on a row named by its message", async () => {
+    const user = userEvent.setup();
+    render(
+      <WorklistRow
+        item={waitingEmailRow()}
+        position={1}
+        owner=""
+        onOpenEmail={() => {}}
+      />,
+    );
+
+    await user.click(await findRowMenu());
 
     expect(
       screen.getByRole("link", { name: en["worklist.verb.open"] }),
@@ -164,11 +188,12 @@ describe("a worklist row at list density", () => {
     ).toBeNull();
   });
 
-  // The reader's own mark stays a glyph on the trailing edge at this density:
-  // the pin already IS the verb, and it is the one control on the row with no
-  // word to lose.
-  it("keeps the pin as a named glyph", () => {
+  // The reader's own mark is a line of the row's menu at this density too.
+  it("keeps the pin in the row's menu", async () => {
+    const user = userEvent.setup();
     render(row());
+
+    await user.click(await findRowMenu());
 
     expect(
       screen.getByRole("button", { name: en["worklist.verb.pin"] }),

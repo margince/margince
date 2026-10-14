@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { ContactBriefCard } from "./contactbrief";
 import {
   ContactCommercialCard,
@@ -33,7 +33,7 @@ import {
   meRoute,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
 
 // The contact record page V2 (ADR-0096) — its own gallery, one per surface the
 // concept names: the whole page behind the three reads it makes, the lead
