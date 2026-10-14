@@ -4696,6 +4696,7 @@ public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.version integer NOT NULL gen=- def=1
 public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_active_per_source_name ON public.import_run USING btree (source_name) WHERE ((connector = 'csv'::text) AND (source_name <> ''::text) AND (status = ANY (ARRAY['validating'::text, 'awaiting_approval'::text, 'running'::text, 'undoing'::text])))
 public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
+public.import_run_one_test_per_agent CREATE UNIQUE INDEX import_run_one_test_per_agent ON public.import_run USING btree (((actor ->> 'id'::text))) WHERE ((status = 'validating'::text) AND ((actor ->> 'type'::text) = 'agent'::text))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
@@ -7313,6 +7314,7 @@ public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON 
 public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
+public.uq_close_date_run_one_running CREATE UNIQUE INDEX uq_close_date_run_one_running ON public.close_date_run USING btree (status) WHERE (status = 'running'::text)
 public.uq_commission_live_per_deal CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL))
 public.uq_commission_trigger_event CREATE UNIQUE INDEX uq_commission_trigger_event ON public.commission_entry USING btree (trigger_event_id) WHERE (trigger_event_id IS NOT NULL)
 public.uq_company_anchor CREATE UNIQUE INDEX uq_company_anchor ON public.company USING btree ((true)) WHERE (is_anchor AND (archived_at IS NULL))

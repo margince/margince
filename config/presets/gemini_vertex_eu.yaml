@@ -2,6 +2,17 @@
 # config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
 # at an EU location, under eu_hosted.
 #
+# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
+# certification records do not grade every one of those bindings as certified.
+# Which tasks, and how badly, is in docs/reference/ai-certification.md under
+# this file's name. Read it before binding this preset to a workspace whose
+# confidentiality decisions matter: a task graded `supported_degraded` or
+# `not_supported` answers wrongly often enough to have been measured doing so.
+#
+# No task list here on purpose. The bands move when a prompt is fixed or the
+# corpus grows, and a list in this comment would read as true long after it
+# stopped being.
+#
 # What it guarantees: Google processes every prompt, and every text embedded,
 # in EU member states. The chat tiers use the `eu` multi-region; the embeddings
 # lane uses europe-west4, because `eu` serves no embedding model. eu_hosted

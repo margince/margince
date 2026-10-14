@@ -12,17 +12,17 @@ import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { useT } from "../i18n";
+import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
-import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
-import { usePopoverDismiss } from "./popover";
-import { routeHash } from "./router";
 import {
   setThemeChoice,
   THEME_CHOICES,
   type ThemeChoice,
   useThemeChoice,
-} from "./theme";
+} from "../lib/theme";
+import { SETTINGS_SCREEN } from "../screens/settingsnav";
+import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
+import { usePopoverDismiss } from "./popover";
 import "./account.css";
 
 type SessionUser = components["schemas"]["MeResponse"]["user"];

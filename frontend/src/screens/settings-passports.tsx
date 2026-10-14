@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -31,6 +30,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { resetToSignedOut } from "../lib/session";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";

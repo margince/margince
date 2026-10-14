@@ -137,7 +137,7 @@ the tree and fails a store method with no gate. Such a method is a way into tena
 to it can reach it, and a review cannot see it.
 
 **Client side.** Bind the control to the **grant**, never to a role name. The hooks are in
-`frontend/src/app/capability.ts`. They take the generated `RbacObject` union, so a wrong object name fails
+`frontend/src/lib/capability.ts`. They take the generated `RbacObject` union, so a wrong object name fails
 the compile:
 
 | Hook | Use it for |

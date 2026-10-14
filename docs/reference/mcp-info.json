@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 177159,
+    "tool_catalog_bytes": 179445,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45179,
+    "approx_wire_tokens_total": 45751,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 49588,
+      "description_bytes": 49596,
       "input_schema_bytes": 53866,
-      "output_schema_bytes": 59966,
-      "description_plus_input_schema_bytes": 103454
+      "output_schema_bytes": 62244,
+      "description_plus_input_schema_bytes": 103462
     }
   },
   "tools": {
@@ -5531,7 +5531,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. Files that link to each other go together in `files`, at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's `company_ref` names a company's ref. read_import with view format lists each file's columns. create_record for one record you already know. Keep the run_id. The counts it answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. Files that link to each other go together in `files`, at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's `company_ref` names a company's ref. read_import with view format lists each file's columns. create_record for one record you already know. Keep the run_id. The counts its report answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5678,6 +5678,252 @@
                   "additionalProperties": {
                     "type": "string"
                   },
+                  "type": "object"
+                },
+                "next": {
+                  "type": "string"
+                },
+                "report": {
+                  "properties": {
+                    "disposition": {
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
+                          "type": "integer"
+                        },
+                        "skipped": {
+                          "type": "integer"
+                        },
+                        "unchanged": {
+                          "type": "integer"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "skipped",
+                        "unchanged",
+                        "updated"
+                      ],
+                      "type": "object"
+                    },
+                    "estimated_duration_seconds": {
+                      "type": "integer"
+                    },
+                    "issues": {
+                      "items": {
+                        "properties": {
+                          "column": {
+                            "type": "string"
+                          },
+                          "file": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "line": {
+                            "type": "integer"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "links": {
+                      "properties": {
+                        "applied": {
+                          "type": "integer"
+                        },
+                        "offered": {
+                          "type": "integer"
+                        },
+                        "unresolved": {
+                          "items": {
+                            "properties": {
+                              "from": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "from",
+                              "reason",
+                              "to"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "applied",
+                        "offered"
+                      ],
+                      "type": "object"
+                    },
+                    "mapping": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "parts": {
+                      "items": {
+                        "properties": {
+                          "disposition": {
+                            "properties": {
+                              "created": {
+                                "type": "integer"
+                              },
+                              "duplicates": {
+                                "type": "integer"
+                              },
+                              "skipped": {
+                                "type": "integer"
+                              },
+                              "unchanged": {
+                                "type": "integer"
+                              },
+                              "updated": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "created",
+                              "skipped",
+                              "unchanged",
+                              "updated"
+                            ],
+                            "type": "object"
+                          },
+                          "file": {
+                            "type": "string"
+                          },
+                          "object": {
+                            "type": "string"
+                          },
+                          "rows_read": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "disposition",
+                          "file",
+                          "object",
+                          "rows_read"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "rows_read": {
+                      "type": "integer"
+                    },
+                    "run_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "source_key_used": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "undo": {
+                      "properties": {
+                        "errored": {
+                          "items": {
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "object": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "object",
+                              "reason"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "kept": {
+                          "items": {
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "object": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "object"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "reversed_count": {
+                          "type": "integer"
+                        },
+                        "run_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "updates_not_reversed": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "errored",
+                        "kept",
+                        "reversed_count",
+                        "run_id",
+                        "status"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "disposition",
+                    "issues",
+                    "rows_read",
+                    "run_id",
+                    "source_key_used",
+                    "status"
+                  ],
                   "type": "object"
                 },
                 "run": {

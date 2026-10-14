@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useMe } from "../lib/session";
+import { meFixture } from "../testing/mefixture";
 import {
   grants,
   type RbacAction,
@@ -16,7 +16,7 @@ import {
   useHoldsOperatorSeat,
   useRecordWriteRefusal,
 } from "./capability";
-import { meFixture } from "./mefixture";
+import { useMe } from "./session";
 
 // useCan is the single place a permission question is answered, so every way
 // it can be wrong is a whole class of wrong buttons. The cases below are the

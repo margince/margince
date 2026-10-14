@@ -10,11 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { STORAGE_KEYS } from "../lib/storage";
+import { meFixture } from "../testing/mefixture";
 import { AgentEdge } from "./agent-edge";
 import { edgeLightShown, setEdgeLightShown } from "./agent-edge-preference";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 const EDGE_LIGHT_KEY = STORAGE_KEYS.edgeLight.name;
 

@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { useAuthCapabilities } from "../app/capabilities";
 import { LocaleProvider } from "../i18n";
+import { useAuthCapabilities } from "../lib/capabilities";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./releaseskew";
 
 // The gate, exercised the way App uses it: a probe answer goes in, and either the

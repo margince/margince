@@ -10,8 +10,8 @@ import {
 } from "react";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { navigate, type Route, useHash } from "./router";
-import type { UrlParams } from "./urlstate";
+import { navigate, type Route, useHash } from "../lib/router";
+import type { UrlParams } from "../lib/urlstate";
 
 /**
  * Unsaved edits, and what happens when the reader leaves without saving them.

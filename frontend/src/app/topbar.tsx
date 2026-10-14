@@ -2,9 +2,10 @@ import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
+import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { type Route, routeHash } from "../lib/router";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountMenu } from "./account";
-import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import { useFiltersCrumbs } from "./filterstrail";
 import {
   entryLabel,
@@ -16,7 +17,6 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
-import { type Route, routeHash } from "./router";
 import "./topbar.css";
 
 // The top bar: the one strip that is true of the whole session rather than of

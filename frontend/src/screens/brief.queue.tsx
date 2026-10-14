@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { navigateReplacing, useHash } from "../app/router";
-import { useScrollMemory } from "../app/scrollmemory";
-import { useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
+import { navigateReplacing, useHash } from "../lib/router";
+import { useScrollMemory } from "../lib/scrollmemory";
+import { useUrlParams } from "../lib/urlstate";
 import { WorklistScreen } from "./worklist";
 import { drawerScope } from "./worklist.address";
 import { worklistFilterFrom } from "./worklist.header";

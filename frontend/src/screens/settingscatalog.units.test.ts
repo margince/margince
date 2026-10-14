@@ -32,7 +32,7 @@ function scopesDeclaredIn(file: string, name: string): string[] {
 describe("the mirrored UnitSecretScope", () => {
   it("names exactly the scopes the registry names", () => {
     const registry = scopesDeclaredIn(
-      join(here, "..", "app", "extensions.ts"),
+      join(here, "..", "lib", "extensions.ts"),
       "UnitSecretScope",
     );
     const catalog = scopesDeclaredIn(
@@ -47,7 +47,7 @@ describe("the mirrored UnitSecretScope", () => {
     // would report agreement between nothing and nothing.
     expect(
       scopesDeclaredIn(
-        join(here, "..", "app", "extensions.ts"),
+        join(here, "..", "lib", "extensions.ts"),
         "UnitSecretScope",
       ),
     ).toContain("workspace");

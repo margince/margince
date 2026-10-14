@@ -20,6 +20,7 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
 import { en } from "../i18n/en";
+import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
 import { SettingsSearchBox } from "../screens/settingssearchbox";
 import {
@@ -30,10 +31,9 @@ import {
   StoryProviders,
   WithInstallationBrand,
 } from "../screens/story-utils";
-import type { GrantSpec } from "./mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import type { NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
-import type { Route } from "./router";
 import { PageTitle, Shell, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
 // The settings stack's own sheet. A screen sheet loads with its screen, and the
@@ -417,10 +417,10 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * The rail's foot under both panel states side by side.
  *
  * A licence is stubbed because the shell's providers want one, not because the
- * foot reports it — it has not since the posture moved to its own banner. Two
- * further frames stubbed an over-cap licence and a seat without `license:read`
- * and photographed this same picture, which is what retired them; what each of
- * them knew is now said where the behaviour is, in app/license-posture.ts.
+ * foot reports it; the posture has its own banner. A frame with an over-cap
+ * licence or a seat without `license:read` draws this same picture, so none
+ * exists. What each would show is said where the behaviour is, in
+ * lib/license-posture.ts.
  *
  * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
  * box, so the collapsed panel neither scrolls nor clips: in a window shorter

@@ -4,7 +4,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
-import { routeHash, useRoute } from "../app/router";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
@@ -16,6 +15,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { routeHash, useRoute } from "../lib/router";
 import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,

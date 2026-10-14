@@ -7,13 +7,13 @@
 // why this record is NOT on a Live List, clause by clause.
 
 import { useCallback, useRef, useState } from "react";
-import { navigate } from "../app/router";
 import { Button, Field } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { LiveExplanation } from "./listexplain";
 import { ListKindBadge } from "./listlibrary";
 import {

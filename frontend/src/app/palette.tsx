@@ -11,11 +11,13 @@ import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { useLocale, useT } from "../i18n";
+import { useHoldsAdminRole } from "../lib/capability";
+import { navigate, type Route } from "../lib/router";
+import { openAsk } from "../lib/urlstate";
 import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import type { SettingsPageId } from "../screens/settingscatalog";
 import { useVisibleSettingsPages } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
-import { useHoldsAdminRole } from "./capability";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
@@ -24,8 +26,6 @@ import {
 import { CREATE_ID, NAV } from "./nav";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
-import { navigate, type Route } from "./router";
-import { openAsk } from "./urlstate";
 
 // ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
 // tag (screen / action / record); record entries are fed by the search seam

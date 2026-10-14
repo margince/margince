@@ -9,7 +9,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { navigate } from "../app/router";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
@@ -26,6 +25,7 @@ import { Select } from "../design-system/select";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,

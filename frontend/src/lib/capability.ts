@@ -1,9 +1,9 @@
 import type { components } from "../api/schema";
-import { useMe } from "../lib/session";
 // The pure half lives in its own module. A consumer that only reads the
 // vocabulary then leaves `useMe`, React and the query client out of its bundle.
 // It is re-exported here, so every call site in the app keeps one import.
 import { grants } from "./accessgrants";
+import { useMe } from "./session";
 
 export { type AccessSnapshot, grants } from "./accessgrants";
 

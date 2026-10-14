@@ -9,7 +9,6 @@ import {
 } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import {
   Badge,
   Button,
@@ -22,6 +21,7 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import { CitedDocument } from "./citeddocument";
 import { AnswerView } from "./corpusanswer";
 import "./corpusask.css";

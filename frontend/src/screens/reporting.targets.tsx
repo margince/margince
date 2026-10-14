@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Field,
@@ -15,7 +13,9 @@ import { isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import {
   useAnalyticsContext,
   useAnalyticsSelection,

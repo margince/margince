@@ -3,7 +3,6 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { ContactLink } from "../design-system/contactlink";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Popover } from "../design-system/popover";
@@ -14,6 +13,7 @@ import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import { useMemberName } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
 import { buyingRoleLabel } from "./companycontacts/summary";
 import { rosterOwnerName } from "./entityref";

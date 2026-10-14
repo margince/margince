@@ -1,8 +1,8 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import { useFinanceSummary } from "./financesummary";
 import type { Grounding } from "./record360";
 

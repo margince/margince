@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import { settingsHref } from "../screens/settingsrouting";
-import { useCan, useCanWrite } from "./capability";
-import { routeHash } from "./router";
 
 export function EconomyBanner() {
   const t = useT();

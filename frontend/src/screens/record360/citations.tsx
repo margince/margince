@@ -9,13 +9,13 @@
 // everywhere else, never a control that does nothing.
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Badge, Button } from "../../design-system/atoms";
 import { EmailReference } from "../../design-system/emailreference";
 import { Popover } from "../../design-system/popover";
 import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useRecordZone } from "../../lib/recordzone";
 import { citationOpensRecord } from "./citationroute";
 
 /**

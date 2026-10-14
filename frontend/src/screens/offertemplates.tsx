@@ -1,12 +1,12 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import { Badge, OverflowMenu } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";

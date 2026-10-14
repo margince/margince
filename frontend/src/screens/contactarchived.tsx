@@ -4,12 +4,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { IdentityLine } from "../design-system/identityline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordView } from "../design-system/recordview";
 import { useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { ContactActions } from "./contactactions";
 import { ContactFacts } from "./contactfacts";
 import { RecordHistoryTab } from "./history";

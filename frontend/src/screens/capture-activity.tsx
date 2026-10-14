@@ -6,7 +6,6 @@ import "./capture-activity.css";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -26,6 +25,7 @@ import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import { throwProblem } from "../lib/problem";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";

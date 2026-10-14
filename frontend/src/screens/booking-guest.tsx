@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Calendar, type ISODay } from "../design-system/calendar";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
@@ -17,6 +16,7 @@ import {
 import { dayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { BookingFooter, useBookingIntent } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {

@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { EmptyState, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
@@ -13,6 +12,7 @@ import { RowOpen } from "../design-system/rowopen";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
 // answer the whole import is for.

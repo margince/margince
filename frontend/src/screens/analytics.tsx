@@ -3,8 +3,6 @@ import { Info } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { useRoute } from "../app/router";
 import { Button, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { FilterBar } from "../design-system/filterbar";
@@ -23,7 +21,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useRoute } from "../lib/router";
 import {
   openAnalyticsSection,
   SECTIONS,

@@ -14,7 +14,7 @@ import {
   THEME_CHOICES,
   type Theme,
   type ThemeChoice,
-} from "./theme";
+} from "../lib/theme";
 import { resetTheme } from "./theme-reset";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -253,7 +253,7 @@ describe("a stored value this build cannot name", () => {
       const machine = stubSystemPreference(true);
 
       vi.resetModules();
-      const booted = await import("./theme");
+      const booted = await import("../lib/theme");
       booted.startTheme();
 
       expect(booted.resolveTheme()).toBe("dark");
@@ -273,7 +273,7 @@ describe("a stored value this build cannot name", () => {
     const machine = stubSystemPreference(true);
 
     vi.resetModules();
-    const booted = await import("./theme");
+    const booted = await import("../lib/theme");
     booted.startTheme();
 
     expect(document.documentElement.dataset.theme).toBe("dark");

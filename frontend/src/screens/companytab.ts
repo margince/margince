@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { navigateReplacing, type Route } from "../app/router";
+import { navigateReplacing, type Route } from "../lib/router";
 import { keptWorklistReturn } from "./worklist.return";
 
 // The account record's tabs, and the ONE way to address one.

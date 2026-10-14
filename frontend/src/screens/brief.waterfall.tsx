@@ -1,5 +1,4 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
@@ -7,6 +6,7 @@ import { middayInstant } from "../format/calendarday";
 import { formatDate, formatMoney, formatMoneyOrAbsent } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 
 type Review = components["schemas"]["WeeklyReview"];
 type Outlook = NonNullable<Review["outlook"]>[number];

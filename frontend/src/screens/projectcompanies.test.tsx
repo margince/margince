@@ -3,9 +3,8 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-
-import { parseHash } from "../app/router";
 import { LocaleProvider } from "../i18n";
+import { parseHash } from "../lib/router";
 import { ProjectCompanies } from "./projectcompanies";
 
 // Every OTHER link in this tree spells a company `#/companies/<id>`; this

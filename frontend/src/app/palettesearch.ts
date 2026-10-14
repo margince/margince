@@ -17,8 +17,8 @@ import {
   problemMessageOf,
   throwProblem,
 } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import type { Command } from "./palette";
-import { useRecordZone } from "./recordzone";
 import {
   groupSearchHits,
   SEARCH_GROUP_KEY,

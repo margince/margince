@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { useInstallationSettings } from "../app/uploadlimit";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -11,7 +9,9 @@ import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { formatInterval } from "../format/interval";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
+import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];

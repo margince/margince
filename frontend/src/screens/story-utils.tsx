@@ -9,10 +9,10 @@ import {
 import { type ReactNode, useEffect } from "react";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { recordUnroutedSessionProbe } from "../testing/unrouted-session";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat

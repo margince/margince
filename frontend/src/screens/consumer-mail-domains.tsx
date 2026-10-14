@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
-import { useCanUpsert, useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
 import {
   Button,
   Disclosure,
@@ -29,6 +27,8 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanUpsert, useCanWrite } from "../lib/capability";
+import { isOption } from "../lib/options";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { captureValueMessage } from "./capturevalue";
 import "./consumer-mail-domains.css";

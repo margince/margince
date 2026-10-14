@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useCan, useCanWrite } from "../app/capability";
-import { navigate, routeHash } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -13,8 +11,10 @@ import { RecordBack } from "../design-system/recordview";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { useMemberNames } from "../lib/membernames";
 import { problemMessageOf } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
 import { UndoConfirm } from "./import.notices";

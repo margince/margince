@@ -16,8 +16,6 @@
 // waiting itself, at a size that reads before the words around it.
 
 import { type ReactNode, useRef } from "react";
-
-import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
 import { PanelBody } from "../../design-system/panel";
 import {
@@ -35,6 +33,7 @@ import {
 } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useRecordZone } from "../../lib/recordzone";
 import { EXCHANGE_KINDS, type ExchangeKind, isExchange } from "./exchangekinds";
 import { isContactBy, lastContactAt, waitingSince } from "./lastcontact";
 import "./spine.css";

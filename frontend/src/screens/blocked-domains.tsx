@@ -4,8 +4,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useId, useState } from "react";
 import { api } from "../api/client";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import {
   Badge,
   Button,
@@ -27,7 +25,9 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import {
   ADMISSION_LABEL,
   BLANK_DECISION,

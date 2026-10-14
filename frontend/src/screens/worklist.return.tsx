@@ -2,22 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { createContext, type ReactNode, useContext } from "react";
+import { RecordBack } from "../design-system/recordview";
+import { useT } from "../i18n";
 import {
   navigate,
   parseHash,
   type Route,
   routeHash,
   type Screen,
-} from "../app/router";
+} from "../lib/router";
 import {
   currentParams,
   hashWithParams,
   parseParams,
   type UrlParams,
   useUrlParams,
-} from "../app/urlstate";
-import { RecordBack } from "../design-system/recordview";
-import { useT } from "../i18n";
+} from "../lib/urlstate";
 import { type ContactTab, contactTabRoute } from "./contacttab";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 

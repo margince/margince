@@ -22,12 +22,12 @@
 // cascade for a class it was never handed a stylesheet for, so the reading
 // would be of the harness rather than of the product.
 //
-// The AST reads the three lists from the files that OWN them — the `SCREENS`
-// union in app/router.tsx, the `SCREEN_VIEWS` dispatch in App.tsx, and
-// `RAIL_LESS_SCREENS` in app/nav.ts — and asserts the first two agree, so a
-// destination cannot be added and quietly go unjudged. This is the same
-// approach as screens/mutation-variable-coverage.test.ts and
-// design-system/native-controls.test.ts, and for the same reason: the rule is
+// The AST reads the three lists from the files that own them: the `SCREENS`
+// union in lib/router.tsx, the `SCREEN_VIEWS` dispatch in App.tsx, and
+// `RAIL_LESS_SCREENS` in app/nav.ts. It asserts the first two agree, so a
+// destination cannot be added and go unjudged. This is the same approach as
+// screens/mutation-variable-coverage.test.ts and
+// design-system/native-controls.test.ts. The reason is the same: the rule is
 // one sentence about the source, and the TypeScript parser already knows the
 // language.
 //
@@ -65,7 +65,7 @@ import { describe, expect, it } from "vitest";
 import { resolveRelative, sourceFileAt } from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ROUTER = join(srcRoot, "app/router.tsx");
+const ROUTER = join(srcRoot, "lib/router.tsx");
 const NAV = join(srcRoot, "app/nav.ts");
 const APP = join(srcRoot, "App.tsx");
 

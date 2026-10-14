@@ -7,7 +7,6 @@
 // opening.
 
 import { useState } from "react";
-import { navigate } from "../app/router";
 import { useGuardedLeave } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -16,6 +15,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useFilterVocabulary } from "./filterdata";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import { FilterEditor, useRowsFocus } from "./filtereditor";

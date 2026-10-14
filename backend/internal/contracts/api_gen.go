@@ -69733,7 +69733,7 @@ type ServerInterface interface {
 	// List this workspace's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
-	// Create an import run from an uploaded source and a column mapping, and dry-run it.
+	// Create an import run from an uploaded source and a column mapping, and start its test run.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
 	// Describe the files an import takes, column by column, for this workspace.
@@ -69754,7 +69754,7 @@ type ServerInterface interface {
 	// Approve a validated import run and commit it.
 	// (POST /imports/{id}/approve)
 	ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Cancel a draft or a report nobody will approve.
+	// Cancel a draft, a test run, or a report nobody will approve.
 	// (POST /imports/{id}/cancel)
 	CancelImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Download the run's row problems as a CSV.
@@ -73588,7 +73588,7 @@ func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create an import run from an uploaded source and a column mapping, and dry-run it.
+// Create an import run from an uploaded source and a column mapping, and start its test run.
 // (POST /imports)
 func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -73630,7 +73630,7 @@ func (_ Unimplemented) ApproveImportRun(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Cancel a draft or a report nobody will approve.
+// Cancel a draft, a test run, or a report nobody will approve.
 // (POST /imports/{id}/cancel)
 func (_ Unimplemented) CancelImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

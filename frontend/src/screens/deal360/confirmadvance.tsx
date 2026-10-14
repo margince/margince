@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { useAgentTierMap, verbTier } from "../../app/autonomy";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useAgentTierMap, verbTier } from "../../lib/autonomy";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";

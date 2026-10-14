@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { routeHash } from "../lib/router";
 import { TeamPlanReview } from "./brief.teamplan";
 import type {
   TeamWeeklyFocusKind,

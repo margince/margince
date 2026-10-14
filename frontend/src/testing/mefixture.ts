@@ -1,5 +1,5 @@
 import type { components } from "../api/schema";
-import type { RbacAction, RbacObject } from "./capability";
+import type { RbacAction, RbacObject } from "../lib/capability";
 
 // The /me body a test serves, built from the grants under test rather than
 // from a role name.

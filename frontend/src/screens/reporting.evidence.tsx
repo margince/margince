@@ -2,7 +2,6 @@ import "./reporting.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 import { api } from "../api/client";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
@@ -15,6 +14,7 @@ import { Stack } from "../design-system/stack";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isVersionSkewOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import {
   metricLabel,
   type ReportingEvaluation,

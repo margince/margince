@@ -6,7 +6,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { isOption } from "../app/options";
 import { usePageName } from "../app/pagemeta";
 import {
   Button,
@@ -22,6 +21,7 @@ import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { isOption } from "../lib/options";
 import { throwProblem, unwrap } from "../lib/problem";
 import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";

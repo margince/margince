@@ -1,7 +1,6 @@
 import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Sparkline } from "../design-system/readings";
@@ -10,6 +9,7 @@ import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { BillingContactsPanel } from "./billingcontacts";
 import { RecentInvoices } from "./financeinvoices";
 import { OverdueLead } from "./financeoverdue";

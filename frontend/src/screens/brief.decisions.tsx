@@ -3,8 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { navigate } from "../app/router";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
@@ -33,7 +31,9 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { approvalKindLabel, decisionSkewKey } from "./approvalkind";

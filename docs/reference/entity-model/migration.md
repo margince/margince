@@ -81,4 +81,5 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 - `idx_import_run_status`: `btree (status)`
 - `import_run_one_active_per_source_name`: `unique, btree (source_name) WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
 - `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
+- `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`

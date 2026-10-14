@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { routeHash } from "../app/router";
+import { routeHash } from "../lib/router";
 import {
   currentParams,
   hashWithParams,
   replaceParams,
   useUrlParams,
-} from "../app/urlstate";
+} from "../lib/urlstate";
 import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
 
 const RUN_PARAM = "run";

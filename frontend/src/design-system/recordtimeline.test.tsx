@@ -10,8 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider, useT } from "../i18n";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { withEmailOpener } from "../screens/openemail";
 import { groupChronology } from "../screens/timelinegroups";
 import { activityTimeline } from "./activitytimeline";

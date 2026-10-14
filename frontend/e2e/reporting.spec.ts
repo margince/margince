@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { meFixture } from "../src/app/mefixture";
+import { meFixture } from "../src/testing/mefixture";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,

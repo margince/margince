@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,9 +35,11 @@ var ErrSuperseded = errors.New("the import run moved on to another attempt")
 // ended. It fits inside the worker's cancel window, so the flush lands first.
 const StopFlushTimeout = 2 * time.Second
 
-// The phases a commit or undo reports. import_run_phase_check also holds those
-// of the test run, which reports none yet.
+// The phases a run reports; import_run_phase_check holds the same list. A
+// test run reads, then checks; a commit or an undo reports the rest.
 const (
+	PhaseReading      = "reading"
+	PhaseChecking     = "checking"
 	PhaseCreatingTags = "creating_tags"
 	PhaseImporting    = "importing"
 	PhaseLinking      = "linking"
@@ -166,6 +169,18 @@ func (s *RunStore) Claim(ctx context.Context, l Lease) (Run, error) {
 	return run, nil
 }
 
+// Heartbeat tells the sweep the lease's attempt is alive while it writes no
+// progress. It leaves updated_at alone, which dates the run's last real change.
+func (s *RunStore) Heartbeat(ctx context.Context, l Lease) error {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
+		return err
+	}
+	ctx = database.Detached(ctx)
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return execFenced(ctx, tx, l, `heartbeat_at = now()`)
+	})
+}
+
 // Yield hands the attempt back to its queue between two slices. The run then
 // reads queued, so a wait behind other runs never reads as a dead process.
 func (s *RunStore) Yield(ctx context.Context, l Lease) error {
@@ -173,7 +188,7 @@ func (s *RunStore) Yield(ctx context.Context, l Lease) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return execFenced(ctx, tx, l, `claimed_attempt = NULL, updated_at = now()`)
+		return execFenced(ctx, tx, l, restartingTest(l, `claimed_attempt = NULL, updated_at = now()`))
 	})
 }
 
@@ -230,9 +245,10 @@ func nullable(s string) *string {
 	return &s
 }
 
-// FailLease records why the attempt stopped. A commit becomes failed, which a
-// resume continues from its checkpoint. An undo stays undoing with the cause,
-// because failing it would let a resume re-run the commit over a half-undone run.
+// FailLease records why the attempt stopped. A test run returns to its draft
+// with the cause. A commit becomes failed, which a resume continues from its
+// checkpoint. An undo stays undoing with the cause, because failing it would
+// let a resume re-run the commit over a half-undone run.
 // Its job_status is cleared: no job is queued for it, so the sweep leaves it to
 // an undo request.
 func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
@@ -254,6 +270,8 @@ func failLeaseInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string) error 
 		_, err := storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
 			map[string]any{auditFieldStatus: l.Status}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
+	case StatusValidating:
+		return refuseValidationInTx(ctx, tx, l, cause)
 	case StatusUndoing:
 		var prior *string
 		err := tx.QueryRow(ctx, `SELECT error FROM import_run`+fence+` FOR UPDATE`, l.args()...).Scan(&prior)

@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it } from "vitest";
-import { ENTITY, ENTITY_KINDS } from "../../app/entity";
-import { routeHash } from "../../app/router";
+import { ENTITY, ENTITY_KINDS } from "../../lib/entity";
+import { routeHash } from "../../lib/router";
 import {
   CITED_RECORD_KINDS,
   citationOpensRecord,

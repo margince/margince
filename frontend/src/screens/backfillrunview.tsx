@@ -3,7 +3,6 @@
 
 import { Building2, CircleCheck, History, Mail, Users } from "lucide-react";
 import type { components } from "../api/schema";
-import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
 import { ErrorLine } from "../design-system/errorline";
@@ -11,6 +10,7 @@ import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { progressFraction } from "../lib/capture-progress";
 import { isLiveRun } from "./backfill-run";
 import "./backfill.css";
 

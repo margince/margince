@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { announceAddressChanged, useHash } from "./router";
 
 /**
- * The query half of the address: the state that names a VIEW of what is on
- * screen — how a list is narrowed, in what order, on which page — rather than
- * what is on screen, which is the path's job (app/router.tsx).
+ * The query half of the address. It names a view of what is on screen: how a
+ * list is narrowed, in what order, on which page. What is on screen is the
+ * path's job (lib/router.tsx).
  *
  * This exists because none of it was addressable. A reader who filtered the
  * companies list, opened a company and pressed Back arrived at an unfiltered
@@ -110,13 +110,12 @@ export function currentParams(): UrlParams {
  * entry left behind therefore always describes the list as it stands, which is
  * exactly what makes Back from a record restore it.
  *
- * `history.replaceState` and not `location.replace`: the latter DISCARDS the
- * entry's state object. Nothing here keeps state in it, but app/scrollmemory.ts
- * stamps the entry's identity there, so every turn of a dial threw away the name
- * of the place the reader was standing in and the offset remembered under it
- * became unreachable. Passing the current state through keeps the entry the same
- * entry. app/router.tsx's `navigateReplacing` is the same write for the PATH
- * half, held to the same obligation by app/addressstate.test.ts.
+ * `history.replaceState` and not `location.replace`: the latter discards the
+ * entry's state object. Nothing here keeps state in it, but lib/scrollmemory.ts
+ * stamps the entry's identity there. Without passing that state through, every
+ * turn of a dial would lose the offset saved for this entry. Passing the current state through keeps the
+ * entry the same entry. lib/router.tsx's `navigateReplacing` is the same write
+ * for the path half, held to the same obligation by app/addressstate.test.ts.
  *
  * It costs the `hashchange` that `location.replace` would have fired, which is
  * why the announcement below is not an optimisation but the thing that makes

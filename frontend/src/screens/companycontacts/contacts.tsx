@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { api } from "../../api/client";
 import type { components, paths } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Badge } from "../../design-system/atoms";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { CoverageExplorer } from "../coverageexplorer";
 import {
   type ListPage,

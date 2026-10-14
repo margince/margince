@@ -10,11 +10,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import { meFixture } from "../app/mefixture";
 import { createQueryClient } from "../app/queryclient";
 import { LocaleProvider } from "../i18n";
 import { connectivityNow } from "../lib/connectivity";
 import { memoryStorage } from "../testing/appharness";
+import { meFixture } from "../testing/mefixture";
 
 afterEach(() => {
   cleanup();

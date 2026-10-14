@@ -214,6 +214,9 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		// An approve or an undo queues its job, as the api role does; the
 		// suite works the job through importjobtest.
 		compose.WithImportJobs(sendInserter),
+		// No runner works a test run here, so preview_import answers at once and
+		// the suite drains; a suite about the wait composes its own clock.
+		compose.WithImportPreviewWaitForTest(nil, 0),
 	}, e.wiring(origin)...)
 	var importJobsErr error
 	allOpts = append(allOpts, compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr))

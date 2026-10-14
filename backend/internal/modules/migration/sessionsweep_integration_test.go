@@ -39,7 +39,6 @@ func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
 	s := NewRunStore(db)
 	const week = 7 * 24 * time.Hour
 	rules := map[string]func() (int, error){
-		"return":  func() (int, error) { return s.ReturnStaleTestRuns(ctx, time.Minute) },
 		"stopped": func() (int, error) { return s.CancelStoppedTestRuns(ctx) },
 		"expire":  func() (int, error) { return s.CancelIdleDrafts(ctx, week) },
 		"release": func() (int, error) { return s.ReleaseFinishedSources(ctx) },
@@ -50,7 +49,6 @@ func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
 		rule          string
 		want          sweptRun
 	}{
-		{StatusValidating, "", time.Hour, "return", sweptRun{StatusPending, CauseTestRunStopped, false}},
 		{StatusFailed, CauseValidationStopped, time.Hour, "stopped", sweptRun{StatusCancelled, CauseValidationStopped, true}},
 		{StatusPending, "", week + time.Hour, "expire", sweptRun{StatusCancelled, CauseDraftExpired, true}},
 		{StatusAwaitingApproval, "", week + time.Hour, "expire", sweptRun{StatusCancelled, CauseDraftExpired, true}},

@@ -3,15 +3,15 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Row } from "../design-system/stack";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];

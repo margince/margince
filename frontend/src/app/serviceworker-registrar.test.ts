@@ -33,11 +33,11 @@ function namesServiceWorker(source: ts.SourceFile): boolean {
 
 // It parses the whole tree, so it takes the conformance suite's scan budget, for its reason.
 describe("the service worker's registrar", { timeout: 60_000 }, () => {
-  it("is app/pwa.ts, and no other shipped module reaches for navigator.serviceWorker", () => {
+  it("is lib/pwa.ts, and no other shipped module reaches for navigator.serviceWorker", () => {
     const named = shipped
       .filter((file) => namesServiceWorker(sourceFileAt(file)))
       .map((file) => relative(frontendRoot, file));
-    expect(named).toEqual(["src/app/pwa.ts"]);
+    expect(named).toEqual(["src/lib/pwa.ts"]);
   });
 
   it("reads the plain scripts the tree ships, the worker's own source among them", () => {

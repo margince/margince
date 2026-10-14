@@ -19,7 +19,6 @@ import {
   useState,
 } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
   Field,
@@ -46,6 +45,7 @@ import {
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
+import { navigate, type Route, type Screen } from "../lib/router";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import {
   type NameOffers,

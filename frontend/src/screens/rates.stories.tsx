@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { FxRatesCard, ModelCostsCard } from "./rates";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

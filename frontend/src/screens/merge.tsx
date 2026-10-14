@@ -3,7 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useId, useState } from "react";
-import { navigate, type Route } from "../app/router";
 import { Button, Modal } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
@@ -12,6 +11,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { navigate, type Route } from "../lib/router";
 import "../design-system/querystates.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds

@@ -3,9 +3,10 @@
 
 package compose
 
-// An import's commit and undo run in the worker as slices of one attempt. The
-// run row is the fence and the checkpoint. Every slice claims the attempt its
-// job names, works until its budget is spent, and snoozes for the next one.
+// An import's commit and undo run in the worker as slices of one attempt, and
+// its test run as one unsliced attempt. The run row is the fence and the
+// checkpoint. Every slice claims the attempt its job names, works until its
+// budget is spent, and snoozes for the next one.
 
 import (
 	"context"
@@ -74,7 +75,7 @@ func (ImportUndoArgs) insertOpts() *river.InsertOpts {
 	return jobs.QueuedAs[ImportUndoArgs](importInsertOpts())
 }
 
-// importJobArgs is an attempt's job, commit or undo.
+// importJobArgs is an attempt's job: test, commit or undo.
 type importJobArgs interface {
 	jobs.WorkspaceScoped
 	lease() migration.Lease
@@ -107,6 +108,13 @@ func (e importEnqueuer) enqueue(ctx context.Context, tx pgx.Tx, args importJobAr
 		return fmt.Errorf("%s: attempt %d of import run %s was already queued", args.Kind(), lease.Attempt, lease.Run)
 	}
 	return nil
+}
+
+// validates queues the test-run job of the attempt a move into validating opened.
+func (e *importEnqueuer) validates(ws ids.UUID) migration.Enqueue {
+	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
+		return e.enqueue(ctx, tx, ImportValidateArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+	}
 }
 
 // commits queues the commit job of the attempt a move into running opened.
@@ -183,7 +191,8 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	system := principal.SystemActing(ctx, importWorkerActor)
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			result, err = s.stop(system, runs, lease, fmt.Errorf("%s panicked: %v", args.Kind(), recovered), migration.CauseStopped)
+			panicked := fmt.Errorf("%s panicked: %v", args.Kind(), recovered)
+			result, err = s.stop(system, runs, lease, panicked, migration.StopCause(lease.Status, panicked))
 		}
 	}()
 	actorCtx, trace, err := s.actAs(ctx, system, runs, lease)
@@ -193,14 +202,17 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	if err != nil {
 		return s.settle(ctx, system, runs, lease, err)
 	}
-	release, err := runs.LockRunWrites(actorCtx, lease.Run)
-	if errors.Is(err, migration.ErrRunWritesHeld) {
-		return importSliceResult{end: importSliceLockHeld}, nil
+	// A test run writes nothing to the estate, so it takes no run lock.
+	if lease.Status != migration.StatusValidating {
+		release, err := runs.LockRunWrites(actorCtx, lease.Run)
+		if errors.Is(err, migration.ErrRunWritesHeld) {
+			return importSliceResult{end: importSliceLockHeld}, nil
+		}
+		if err != nil {
+			return s.settle(ctx, system, runs, lease, err)
+		}
+		defer release()
 	}
-	if err != nil {
-		return s.settle(ctx, system, runs, lease, err)
-	}
-	defer release()
 	run, err := runs.Claim(actorCtx, lease)
 	if err != nil {
 		return s.settle(ctx, system, runs, lease, err)
@@ -266,9 +278,9 @@ func (s importSlicer) settle(
 	case errors.Is(ctx.Err(), context.Canceled):
 		return s.yield(system, runs, lease)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return s.stop(system, runs, lease, err, migration.CauseOverBudget)
+		return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, ctx.Err()))
 	}
-	return s.stop(system, runs, lease, err, migration.StopCause(err))
+	return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, err))
 }
 
 // stop writes why the attempt stopped, on a context of its own: the slice's may
@@ -285,11 +297,12 @@ func (s importSlicer) stop(
 	return importSliceResult{stopped: stopped}, err
 }
 
-// addImportJobs registers the commit and undo slices. They always register: a
-// worker with no object store fails a commit with that cause rather than
-// leaving it queued.
+// addImportJobs registers the test run and the commit and undo slices. They
+// always register: a worker with no object store stops a run with that cause
+// rather than leaving it queued.
 func addImportJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	slicer := newImportSlicer(pool, log)
+	addDeclaredWorker[ImportValidateArgs](reg, &importValidateWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
 	addDeclaredWorker[ImportCommitArgs](reg, &importCommitWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
 	addDeclaredWorker[ImportUndoArgs](reg, &importUndoWorker{slicer: slicer})
 }

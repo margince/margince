@@ -13,10 +13,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
-import type { RbacAction } from "../app/capability";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { RbacAction } from "../lib/capability";
+import { meFixture } from "../testing/mefixture";
 import { ConfirmSubmissionsPanel } from "./privacy.corrections";
 
 // Deciding what a contact typed into the link we mailed them.

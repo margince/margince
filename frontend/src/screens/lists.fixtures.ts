@@ -4,7 +4,7 @@
 // One Live List, one Shortlist and the answers their pages read, shared by the
 // list stories and tests so both draw the same lists.
 
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import type { FilterVocabulary } from "./filterdata";
 import type {
   List,

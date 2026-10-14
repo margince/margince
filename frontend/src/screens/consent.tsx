@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import {
   Badge,
   Button,
@@ -17,6 +16,7 @@ import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWriteRecord } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { humanizeToken } from "./audit";
 import "./consent.css";

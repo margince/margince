@@ -3,17 +3,17 @@ import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { InlineChoice } from "../design-system/inlinechoice";
+import { useT } from "../i18n";
 import {
   useCanWrite,
   useCanWriteRecord,
   useRecordWriteRefusal,
-} from "../app/capability";
-import { navigate } from "../app/router";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
-import { InlineChoice } from "../design-system/inlinechoice";
-import { useT } from "../i18n";
+} from "../lib/capability";
 import { useMemberName } from "../lib/membernames";
 import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";

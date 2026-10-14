@@ -3,7 +3,6 @@ import { ChevronDown } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -28,6 +27,7 @@ import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
 import {
   DocumentList,

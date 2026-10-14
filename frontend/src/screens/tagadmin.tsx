@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -22,6 +20,7 @@ import { Select } from "../design-system/select";
 import { TagPill } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import type { Tag } from "./tagadmin.queries";
 import {

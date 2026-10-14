@@ -4,9 +4,10 @@
 package compose
 
 // The pass that settles every import run nothing else will move. A stale or
-// lost attempt of a commit or undo is queued again. A commit old code started
-// fails once idle, so approve resumes it. Idle test runs and drafts are closed,
-// and finished runs release their file. River's tables are never read.
+// lost attempt of a test run, a commit or an undo is queued again. A commit old
+// code started fails once idle, so approve resumes it. Test runs old code
+// started and idle drafts are closed, and finished runs release their file.
+// River's tables are never read.
 
 import (
 	"context"
@@ -20,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -28,10 +28,6 @@ import (
 // staleImportCause is the error a swept run carries; GET shows it beside the
 // checkpoint approve resumes from.
 const staleImportCause = "the import stopped because the server restarted; approve it again to continue from its checkpoint"
-
-// staleValidationAfter is when a test run is past saving. Its request ends at
-// the response deadline, so twice that leaves the request time to record it.
-const staleValidationAfter = 2 * httpserver.ResponseDeadline
 
 // ImportRunSweepArgs carries nothing: the pass reads which runs are stale.
 type ImportRunSweepArgs struct{}
@@ -62,9 +58,6 @@ var importSweepRules = []importSweepRule{
 	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.FailStaleRunning(ctx, importLegacyIdleAfter, staleImportCause)
 	}},
-	{"test_runs_returned", func(ctx context.Context, runs *migration.RunStore) (int, error) {
-		return runs.ReturnStaleTestRuns(ctx, staleValidationAfter)
-	}},
 	{"stopped_test_runs_cancelled", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.CancelStoppedTestRuns(ctx)
 	}},
@@ -93,6 +86,8 @@ func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bo
 		args = ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
 	case migration.StatusUndoing:
 		args = ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	case migration.StatusValidating:
+		args = ImportValidateArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
 	default:
 		return false, fmt.Errorf("import run %s is %s, which no job works", run.ID, run.Status)
 	}

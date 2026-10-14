@@ -4,7 +4,7 @@
 // The shapes the Questions stories and suites answer with, in one place so a
 // story and a test cannot come to model two different servers.
 
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import type {
   AnalyticsAnswer,
   AnalyticsEntity,

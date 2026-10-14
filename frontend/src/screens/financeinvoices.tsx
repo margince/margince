@@ -1,9 +1,9 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, TableScroll } from "../design-system/atoms";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 
 type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];

@@ -132,10 +132,10 @@ func TestABrokenLinkSkipsTheRowUnlessTheRunSaysImportAnyway(t *testing.T) {
 func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importRunDTO {
 	t.Helper()
 	var run importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": uploadZip(t, e, "b.zip", zipBytes(t, files)).SourceRef,
 		"source_name": "b", "on_broken_link": policy, "parts": contactRefParts(),
-	}, nil, &run); status != http.StatusAccepted {
+	}, &run); status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
 	return run
@@ -219,10 +219,10 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 			e := setupImportApp(t)
 			files := map[string]string{"contacts.csv": "ref,email,name,company\nP-1,lu@" + policy + ".example,Lu,Nowhere Ltd\n"}
 			var run importRunDTO
-			if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+			if status := testCall(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "source_ref": uploadZip(t, e, "c.zip", zipBytes(t, files)).SourceRef,
 				"source_name": "c", "on_broken_link": policy, "parts": nameParts,
-			}, nil, &run); status != http.StatusAccepted {
+			}, &run); status != http.StatusAccepted {
 				t.Fatalf("stage → %d, want 202", status)
 			}
 			wantKind, wantCreated := "broken_link", 0

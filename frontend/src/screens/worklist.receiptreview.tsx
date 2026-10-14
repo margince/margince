@@ -4,10 +4,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { throwProblem } from "../lib/problem";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";

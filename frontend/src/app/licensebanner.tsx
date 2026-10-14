@@ -3,9 +3,9 @@
 
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
+import { useLicensePosture } from "../lib/license-posture";
+import { routeHash } from "../lib/router";
 import { settingsHref } from "../screens/settingsrouting";
-import { useLicensePosture } from "./license-posture";
-import { routeHash } from "./router";
 
 // A refused licence is a standing installation condition, not something the
 // agent is doing, so it stands in the shell's chrome rather than on the rail's

@@ -3,12 +3,12 @@
 
 import { ArrowLeft } from "lucide-react";
 import type { MouseEvent } from "react";
-import { navigate } from "../app/router";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
 import { useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import type {
   SettingsGroupId,

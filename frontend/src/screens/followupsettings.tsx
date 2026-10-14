@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { ErrorLine } from "../design-system/errorline";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
 import { worklistKey } from "./worklist.queries";
 

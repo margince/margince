@@ -20,14 +20,8 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
-import { scrollPageToTop } from "../app/reveal";
-import { navigate, routeHash } from "../app/router";
-import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -73,9 +67,15 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { useCanWriteRecord, useRecordWriteRefusal } from "../lib/capability";
 import { useMemberNames } from "../lib/membernames";
 import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { scrollPageToTop } from "../lib/reveal";
+import { navigate, routeHash } from "../lib/router";
 import { useMe, useViewerId } from "../lib/session";
+import { currentParams, replaceDial, useUrlParams } from "../lib/urlstate";
 import {
   type AcquisitionSource,
   useAcquisitionSources,

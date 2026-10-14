@@ -167,6 +167,8 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 	restRun := d.restStatus(t, "POST", "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef, "mapping": mapping,
 	}, http.StatusAccepted)
+	// One agent tests one run at a time, so the route's test ends before the tool's starts.
+	importjobtest.Drain(t, d.e)
 	toolRun := d.tool(t, "preview_import", map[string]any{"object": "lead", "csv": csv("tool"), "mapping": mapping})
 	var previewed struct {
 		Run struct {
@@ -182,6 +184,7 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 	if err := json.Unmarshal(restRun, &viaRESTRun); err != nil || viaRESTRun.Status != previewed.Run.State {
 		t.Errorf("the route's run is %q (%v) and the tool's %q, want the same state", viaRESTRun.Status, err, previewed.Run.State)
 	}
+	importjobtest.Drain(t, d.e)
 	report := func(id string) json.RawMessage {
 		return d.restStatus(t, "GET", "/v1/imports/"+id+"/report", nil, http.StatusOK)
 	}

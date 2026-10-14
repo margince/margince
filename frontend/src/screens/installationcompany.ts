@@ -4,7 +4,7 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
+import { useHoldsAdminRole } from "../lib/capability";
 import { throwProblem } from "../lib/problem";
 import { useMe } from "../lib/session";
 

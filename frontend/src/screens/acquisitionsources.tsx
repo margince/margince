@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
 import { Button, EmptyState } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { KeyedName } from "../design-system/keyedname";
@@ -21,6 +20,7 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import {
   type AcquisitionSource,

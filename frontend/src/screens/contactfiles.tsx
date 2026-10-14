@@ -2,7 +2,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { LoadMoreButton } from "../design-system/querystates";
@@ -11,6 +10,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { AddDocumentDialog } from "./adddocument";
 import "./contact360.css";
 

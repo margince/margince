@@ -5,13 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Hash } from "lucide-react";
 import { api } from "../api/client";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { CreateAction } from "./create";
 import { EntityRef } from "./entityref";
 import {

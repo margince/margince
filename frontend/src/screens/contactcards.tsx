@@ -1,8 +1,6 @@
 import { ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -14,6 +12,8 @@ import { daysPast } from "../format/lateness";
 import { useNow } from "../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
 import { DismissClaimButton } from "./claimdismiss";
 

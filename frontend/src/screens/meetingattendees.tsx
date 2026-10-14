@@ -9,7 +9,6 @@
 
 import { useCallback } from "react";
 import { api } from "../api/client";
-import type { EntityKind } from "../app/entity";
 import { Field } from "../design-system/atoms";
 import {
   RecordPicker,
@@ -18,6 +17,7 @@ import {
 import { Select } from "../design-system/select";
 import { TokenList } from "../design-system/tokeninput";
 import { useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import type { MeetingAttendees } from "./activitybody";

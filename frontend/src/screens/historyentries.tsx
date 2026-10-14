@@ -7,8 +7,6 @@ import {
 import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
@@ -16,7 +14,9 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { EntityKind } from "../lib/entity";
 import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
 import {
   type EntryFieldChange,

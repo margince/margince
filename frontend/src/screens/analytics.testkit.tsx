@@ -13,8 +13,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 function jsonResponse(body: unknown, status = 200) {

@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Button,
@@ -22,6 +21,7 @@ import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { AiFeatureTable } from "./ai-feature-table";
 import { SpendEstimate } from "./ai-settings";

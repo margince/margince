@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { InlineText } from "../design-system/inlinetext";
 import { formatDateAbbrev } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import type { Employment, EmploymentActions } from "./contactemployers";
 import {
   EmploymentLogo,
