@@ -11,8 +11,14 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { postMultipart } from "../lib/multipart";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import {
+  ProblemError,
+  problemCode,
+  problemMessageOf,
+  unwrap,
+} from "../lib/problem";
 import { storeCompany } from "./installationcompany";
 import "./companymark.css";
 
@@ -62,6 +68,8 @@ export function CompanyMark({
   const wide = useMarkWrites("/v1/company/logo", deleteWideMark, settle);
   const icon = useMarkWrites("/v1/company/logo/icon", deleteIconMark, settle);
   const hintId = useId();
+  const wideRefusalId = useId();
+  const iconRefusalId = useId();
 
   return (
     <Panel title={t("settings.brandTitle")}>
@@ -82,6 +90,7 @@ export function CompanyMark({
               remove: t("settings.companyMarkRemoveWide"),
             }}
             writes={wide}
+            refusalId={wide.refusal ? wideRefusalId : undefined}
           />
           <MarkSlot
             profile={profile}
@@ -97,8 +106,33 @@ export function CompanyMark({
               remove: t("settings.companyMarkRemoveIcon"),
             }}
             writes={icon}
+            refusalId={icon.refusal ? iconRefusalId : undefined}
           />
         </div>
+        {(wide.refusal || icon.refusal) && (
+          <div className="brand-refusals">
+            {wide.refusal && (
+              <MarkRefusal
+                id={wideRefusalId}
+                refusal={wide.refusal}
+                titles={{
+                  upload: t("settings.companyMarkUploadFailedWide"),
+                  remove: t("settings.companyMarkRemoveFailedWide"),
+                }}
+              />
+            )}
+            {icon.refusal && (
+              <MarkRefusal
+                id={iconRefusalId}
+                refusal={icon.refusal}
+                titles={{
+                  upload: t("settings.companyMarkUploadFailedIcon"),
+                  remove: t("settings.companyMarkRemoveFailedIcon"),
+                }}
+              />
+            )}
+          </div>
+        )}
         <p className="t-caption" id={hintId}>
           {t("settings.brandHint")}
         </p>
@@ -131,17 +165,60 @@ function useMarkWrites(
   removeMark: () => Promise<CompanyProfile>,
   settle: (next: CompanyProfile) => void,
 ) {
-  const upload = useMutation({
-    mutationFn: async (file: File): Promise<CompanyProfile> => {
+  // One mutation for both verbs, so a slot has one error and a new attempt of
+  // either verb clears the last refusal. `null` is the removal.
+  const write = useMutation({
+    mutationFn: async (file: File | null): Promise<CompanyProfile> => {
+      if (file === null) {
+        return removeMark();
+      }
       const payload = await postMultipart(uploadPath, { file });
       return payload as CompanyProfile;
     },
     onSuccess: settle,
   });
-  // Removal carries no body, so it goes through the typed client like every
-  // other write. Only the upload has to be spelled by hand.
-  const remove = useMutation({ mutationFn: removeMark, onSuccess: settle });
-  return { upload, remove };
+  const verb = write.variables === null ? "remove" : "upload";
+  return {
+    send: (file: File | null) => write.mutate(file),
+    uploading: write.isPending && verb === "upload",
+    removing: write.isPending && verb === "remove",
+    refusal: write.error === null ? null : { verb, error: write.error },
+  } as const;
+}
+
+type MarkRefusalState = NonNullable<MarkWrites["refusal"]>;
+
+// The server's sentence is for an API reader: lowercase, and a list of formats
+// with nothing to do. These two codes get a sentence that says what to do.
+const REFUSAL_COPY = new Map<string, MessageKey>([
+  ["unsupported_media_type", "settings.companyMarkUnsupported"],
+  ["payload_too_large", "settings.companyMarkTooLarge"],
+]);
+
+// Below the tiles, not inside a slot: a notice in a slot widens it and pushes
+// the other tile onto its own row.
+function MarkRefusal({
+  id,
+  refusal,
+  titles,
+}: Readonly<{
+  id: string;
+  refusal: MarkRefusalState;
+  titles: Record<MarkRefusalState["verb"], string>;
+}>) {
+  const t = useT();
+  const copy = REFUSAL_COPY.get(
+    problemCode(
+      refusal.error instanceof ProblemError ? refusal.error.problem : null,
+    ) ?? "",
+  );
+  return (
+    <div id={id}>
+      <Callout tone="danger" kind="outcome" title={titles[refusal.verb]}>
+        {copy ? t(copy) : problemMessageOf(refusal.error, t)}
+      </Callout>
+    </div>
+  );
 }
 
 // `verbs` holds each button's accessible name, so two slots never offer two
@@ -156,6 +233,7 @@ function MarkSlot({
   emptyLabel,
   verbs,
   writes,
+  refusalId,
 }: Readonly<{
   profile: CompanyProfile;
   canEdit: boolean;
@@ -166,19 +244,21 @@ function MarkSlot({
   emptyLabel: string;
   verbs: { add: string; replace: string; remove: string };
   writes: MarkWrites;
+  refusalId?: string;
 }>) {
   const t = useT();
   const nameId = useId();
   const inputId = useId();
   const tile = useRef<HTMLDivElement>(null);
-  const { upload, remove } = writes;
+  const { send, uploading, removing } = writes;
+  const describedBy = refusalId ? `${hintId} ${refusalId}` : hintId;
   // The tile takes nothing while a write is out: a drop racing a DELETE lands
   // in whichever order the two answer.
-  const busy = upload.isPending || remove.isPending;
+  const busy = uploading || removing;
   const control = {
     id: inputId,
     "aria-labelledby": nameId,
-    "aria-describedby": hintId,
+    "aria-describedby": describedBy,
     disabled: busy,
   };
   const choose = () => {
@@ -200,7 +280,7 @@ function MarkSlot({
             control={control}
             emptyLabel={emptyLabel}
             accept={ACCEPTED_IMAGES}
-            onPick={(file) => upload.mutate(file)}
+            onPick={send}
           />
         )}
         <div className="brand-tile-mark">
@@ -219,8 +299,9 @@ function MarkSlot({
             variant="ghost"
             aria-label={src ? verbs.replace : verbs.add}
             onClick={choose}
-            disabled={remove.isPending}
-            pending={upload.isPending}
+            aria-describedby={refusalId}
+            disabled={removing}
+            pending={uploading}
           >
             {src
               ? t("settings.companyMarkReplace")
@@ -230,34 +311,15 @@ function MarkSlot({
             <Button
               variant="ghost"
               aria-label={verbs.remove}
-              onClick={() => remove.mutate()}
-              disabled={upload.isPending}
-              pending={remove.isPending}
+              onClick={() => send(null)}
+              aria-describedby={refusalId}
+              disabled={uploading}
+              pending={removing}
             >
               {t("settings.companyMarkRemove")}
             </Button>
           )}
         </div>
-      )}
-      {/* One notice per verb: a single heading over `upload.error ?? remove.error`
-          left the reader unable to tell which of the two the server refused. */}
-      {upload.error !== null && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("settings.companyMarkUploadFailed")}
-        >
-          {problemMessageOf(upload.error, t)}
-        </Callout>
-      )}
-      {remove.error !== null && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("settings.companyMarkRemoveFailed")}
-        >
-          {problemMessageOf(remove.error, t)}
-        </Callout>
       )}
     </section>
   );

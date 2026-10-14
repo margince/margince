@@ -218,13 +218,7 @@ it.each([
   expect(request.method).toBe("DELETE");
 });
 
-// A refusal is shown where the contact is standing, and only there. The server
-// is the one that judges an image: the picker's filter goes on media type and
-// says nothing about whether the bytes behind it decode, so a file that passes
-// the picker can still be refused — and a refusal that surfaced under BOTH
-// slots would accuse a mark the contact never touched.
-it("shows the server's refusal under the slot that was refused", async () => {
-  const user = userEvent.setup();
+function refuseUploads() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
@@ -240,17 +234,65 @@ it("shows the server's refusal under the slot that was refused", async () => {
       ),
     ),
   );
+}
+
+const NOT_AN_IMAGE = () =>
+  new File(["truncated"], "half-a-logo.png", { type: "image/png" });
+
+// The refusal names its slot and is tied to that slot's control only.
+// A notice under both slots would accuse a mark never touched.
+it("names the refused slot and describes only that slot's control", async () => {
+  const user = userEvent.setup();
+  refuseUploads();
   mark(WITHOUT_MARK);
 
   await user.upload(
     slot("Square icon").getByLabelText("Square icon"),
-    new File(["truncated"], "half-a-logo.png", { type: "image/png" }),
+    NOT_AN_IMAGE(),
   );
 
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByText("Square icon not uploaded")).toBeTruthy();
   expect(
-    await slot("Square icon").findByText(/not an image this server can read/),
+    within(alert).getByText("Use a PNG, JPEG, GIF, WebP, ICO or SVG file."),
   ).toBeTruthy();
-  expect(slot("Wide logo").queryByRole("alert")).toBeNull();
+  const described = slot("Square icon")
+    .getByLabelText("Square icon")
+    .getAttribute("aria-describedby");
+  expect(described?.split(" ")).toContain(alert.parentElement?.id);
+  expect(
+    slot("Wide logo")
+      .getByLabelText("Wide logo")
+      .getAttribute("aria-describedby"),
+  ).not.toContain(alert.parentElement?.id ?? "none");
+});
+
+// A notice inside a slot widens it and wraps the other tile onto its own row.
+it("draws the refusals below the tiles, wide first, never inside a slot", async () => {
+  const user = userEvent.setup();
+  refuseUploads();
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Square icon").getByLabelText("Square icon"),
+    NOT_AN_IMAGE(),
+  );
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    NOT_AN_IMAGE(),
+  );
+
+  const alerts = await screen.findAllByRole("alert");
+  expect(alerts).toHaveLength(2);
+  expect(
+    alerts.map((alert) => alert.querySelector(".callout-title")?.textContent),
+  ).toEqual(["Wide logo not uploaded", "Square icon not uploaded"]);
+  for (const alert of alerts) {
+    expect(alert.closest(".brand-slot")).toBeNull();
+  }
+  const slots = alerts[0].closest(".brand-refusals")?.previousElementSibling;
+  expect(slots?.className).toBe("brand-slots");
+  expect(slots?.querySelectorAll("section")).toHaveLength(2);
 });
 
 // The removal is judged by the server too, and its refusal lands in the same
@@ -278,6 +320,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
 
   await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
+  expect(await screen.findByText("Wide logo not removed")).toBeTruthy();
   expect(
     await screen.findByText(/being replaced by another write/),
   ).toBeTruthy();

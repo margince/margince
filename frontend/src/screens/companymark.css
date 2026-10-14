@@ -7,8 +7,7 @@
   margin-bottom: var(--space-3);
 }
 
-/* Sized by its tile, so the two tiles stand side by side; a refusal widens
-   only the slot it is about. */
+/* Sized by its tile, so the two tiles stand side by side. */
 .brand-slot {
   display: flex;
   flex-direction: column;
@@ -16,10 +15,6 @@
   gap: var(--space-2);
   flex: 0 1 auto;
   min-width: 0;
-}
-
-.brand-slot > .callout {
-  align-self: stretch;
 }
 
 .brand-tile {
@@ -105,4 +100,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--gapActions);
+}
+
+/* Under the tiles, full width of the panel body, so a refusal never changes
+   how wide a slot is. */
+.brand-refusals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }

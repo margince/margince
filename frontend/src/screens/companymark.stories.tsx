@@ -81,47 +81,95 @@ export const NotYoursToChange: Story = {
   args: { profile: BOTH, canEdit: false, readOnly: true },
 };
 
-// The server is the one that judges an image: the picker filters on media type
-// and says nothing about whether the bytes behind it decode. This frame is that
-// refusal, under the slot it is about and not under the other one.
-export const TheServerRefusesTheImage: Story = {
+function refuseUploads(...paths: string[]) {
+  const refuse = () =>
+    new Response(
+      JSON.stringify({
+        type: "about:blank",
+        title: "Unsupported media type",
+        status: 415,
+        code: "unsupported_media_type",
+        detail:
+          "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
+      }),
+      {
+        status: 415,
+        headers: { "content-type": "application/problem+json" },
+      },
+    );
+  installFetchStub(
+    Object.fromEntries(paths.map((path) => [`POST ${path}`, refuse])),
+  );
+}
+
+async function refuseUpload(canvasElement: HTMLElement, slotName: string) {
+  const region = await within(canvasElement).findByRole("region", {
+    name: slotName,
+  });
+  const tile = region.querySelector<HTMLInputElement>("input[type=file]");
+  if (tile === null) {
+    throw new Error(`the ${slotName} tile takes no file`);
+  }
+  await userEvent.upload(
+    tile,
+    new File(["not an image"], "mark.png", { type: "image/png" }),
+  );
+}
+
+// The server judges an image: the picker filters on media type only. The
+// refusal sits below the tiles, so the pair stays on one row.
+export const TheServerRefusesTheWideLogo: Story = {
   args: { profile: WITHOUT_MARK, canEdit: true },
   render: (args) => {
-    installFetchStub({
-      "POST /company/logo/icon": () =>
-        new Response(
-          JSON.stringify({
-            type: "about:blank",
-            title: "Unsupported media type",
-            status: 415,
-            code: "unsupported_media_type",
-            detail:
-              "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
-          }),
-          {
-            status: 415,
-            headers: { "content-type": "application/problem+json" },
-          },
-        ),
-    });
+    refuseUploads("/company/logo");
     return (
       <StoryProviders>
         <CompanyMark {...args} />
       </StoryProviders>
     );
   },
-  // Driven to the refusal: the callout appears only after a file is judged.
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const region = await canvas.findByRole("region", { name: "Square icon" });
-    const tile = region.querySelector<HTMLInputElement>("input[type=file]");
-    if (tile === null) {
-      throw new Error("the square tile takes no file");
-    }
-    await userEvent.upload(
-      tile,
-      new File(["not an image"], "mark.png", { type: "image/png" }),
-    );
-    await within(region).findByRole("alert");
+    await refuseUpload(canvasElement, "Wide logo");
+    await within(canvasElement).findByText("Wide logo not uploaded");
   },
+};
+
+export const TheServerRefusesTheSquareIcon: Story = {
+  ...TheServerRefusesTheWideLogo,
+  render: (args) => {
+    refuseUploads("/company/logo/icon");
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await refuseUpload(canvasElement, "Square icon");
+    await within(canvasElement).findByText("Square icon not uploaded");
+  },
+};
+
+export const TheServerRefusesBothImages: Story = {
+  ...TheServerRefusesTheWideLogo,
+  render: (args) => {
+    refuseUploads("/company/logo", "/company/logo/icon");
+    return (
+      <StoryProviders>
+        <CompanyMark {...args} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await refuseUpload(canvasElement, "Square icon");
+    await refuseUpload(canvasElement, "Wide logo");
+    await within(canvasElement).findByText("Wide logo not uploaded");
+    await within(canvasElement).findByText("Square icon not uploaded");
+  },
+};
+
+export const TheServerRefusesBothImagesPhone: Story = {
+  ...TheServerRefusesBothImages,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
