@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { TagsPanel } from "./tagspanel";
 
 // Taking a tag off a record runs at once, with the toast's Undo as the way

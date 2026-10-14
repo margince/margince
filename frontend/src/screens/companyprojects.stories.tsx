@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CompanyProjectsPanel } from "./companyprojects";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 type View = components["schemas"]["Company360"];
 type Project = components["schemas"]["Company360Project"];

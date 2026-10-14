@@ -4,7 +4,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { SourceEmailPanel } from "./sourceemailpanel";
 
 const ACTIVITY = "11111111-1111-4111-8111-111111111111";

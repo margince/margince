@@ -7,7 +7,11 @@ import { Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { WaitingReply } from "./worklist.reply";

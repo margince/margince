@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BulkVerbs } from "./bulkverbs";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BulkVerbs } from "./bulkverbs";
 
 // The bar the contacts, companies and deals lists show while rows are selected.
 // Each verb opens the preview in bulkchange.stories.tsx.

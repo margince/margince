@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { CommissionDecision } from "./commissiondecide";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CommissionDecision } from "./commissiondecide";
 
 // One verb on one ledger row, and the confirm step a money decision deserves.
 //

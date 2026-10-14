@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
@@ -11,7 +12,6 @@ import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {

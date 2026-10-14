@@ -18,9 +18,9 @@ import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
+import { entityTimelineKeys } from "../lib/activitykeys";
 import { problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { entityTimelineKeys } from "./activitykeys";
 import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,

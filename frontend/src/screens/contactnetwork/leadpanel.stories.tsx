@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { availabilityLabel } from "../contactroutes";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
 import { LeadPanel } from "./leadpanel";
 import "../contactnetwork.css";
 

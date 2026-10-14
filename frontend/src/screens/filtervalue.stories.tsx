@@ -3,11 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { VocabularyField } from "./filterdata";
 import type { Reference } from "./filterreference";
 import { ValueControl } from "./filtervalue";
 import type { FilterOp, LeafValue } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // One control per kind of value a clause can compare against. The
 // Filters builder and the Analytics question builder both draw this, so each

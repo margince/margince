@@ -6,14 +6,14 @@ import { createQueryClient } from "../app/queryclient";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CompanyScreen } from "./companies";
-import { company, company360 } from "./company.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyScreen } from "./companies";
+import { company, company360 } from "./company.fixtures";
 
 afterEach(() => {
   cleanup();

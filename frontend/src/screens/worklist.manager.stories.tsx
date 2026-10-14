@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 

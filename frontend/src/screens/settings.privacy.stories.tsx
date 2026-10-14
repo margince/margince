@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { GrantSpec } from "../testing/mefixture";
-import { PrivacyLanes } from "./settings.privacy";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PrivacyLanes } from "./settings.privacy";
 
 // The whole Privacy and retention page, every lane populated, in the order an
 // officer works them.

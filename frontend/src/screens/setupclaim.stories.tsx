@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SetupClaimScreen } from "./setupclaim";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
  * The first-run claim (ADR-0105).

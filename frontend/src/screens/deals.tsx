@@ -45,7 +45,6 @@ import {
   type ListColumn,
   type ListSelection,
 } from "../design-system/listtable";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { provenanceOf } from "../design-system/provenanceof";
 import { LoadMoreButton, QueryGate } from "../design-system/querystates";
@@ -67,9 +66,11 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { dealRecordKeys, dealWinKeys } from "../lib/activitykeys";
 import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
 import { useCanWriteRecord, useRecordWriteRefusal } from "../lib/capability";
 import { useMemberNames } from "../lib/membernames";
+import { useOpenEmail } from "../lib/openemail";
 import { throwProblem, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { scrollPageToTop } from "../lib/reveal";
@@ -80,7 +81,6 @@ import {
   type AcquisitionSource,
   useAcquisitionSources,
 } from "./acquisitionsources.queries";
-import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
@@ -161,7 +161,7 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";

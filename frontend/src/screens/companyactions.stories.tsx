@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { NewDealAction } from "./companyactions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { NewDealAction } from "./companyactions";
 
 // The three verbs the company page hands the rep directly, so none of them
 // is a click-through to another screen: open a deal on this account, tag it,

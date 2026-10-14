@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ContactLink } from "../design-system/contactlink";
 import { LocaleProvider } from "../i18n";
-import { WriteToHost } from "./writeto";
+import { WriteToHost } from "./writetohost";
 
 // An address pressed anywhere under the shell opens the product's composer on
 // the record the address belongs to, with the address already in the To line.

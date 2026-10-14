@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FieldHistoryTimeline } from "./historyfields";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { FieldHistoryTimeline } from "./historyfields";
 
 // The per-field change view on its own, rather than behind RecordHistoryTab's
 // toggle: history.stories.tsx reaches it only after a click, and this is the

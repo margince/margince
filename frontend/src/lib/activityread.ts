@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useT } from "../i18n";
-import { unwrap } from "../lib/problem";
+import { unwrap } from "./problem";
 
 /**
  * One activity, read whole, under the key a write to it invalidates. Nothing is

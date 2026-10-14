@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ImportCard } from "./import";
-import { formatFixture, recentRunsFixture } from "./import.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ImportCard } from "./import";
+import { formatFixture, recentRunsFixture } from "./import.fixtures";
 
 // Bringing a customer's data in. The settings page is the hub: the template,
 // the drop zone, the import order and the recent runs. The wizard that performs

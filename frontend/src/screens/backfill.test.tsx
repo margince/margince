@@ -12,8 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub } from "../testing/story-utils";
 import { BackfillPanel } from "./backfill";
-import { installFetchStub } from "./story-utils";
 
 // The connect-time backfill is the coldstart payoff: the scope must auto-load
 // (honest scope before any click), the spend must still wait for the explicit

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ConsentSection } from "./consent";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConsentSection } from "./consent";
 
 // The Contact 360's Art. 7 proof log + DOI redeem field (G-4/G-5). Three
 // purposes cover the ternary state matrix in one render: transactional

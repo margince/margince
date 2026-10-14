@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import type { ConversationQuestion } from "./conversation-types";
 import { type CandidateFacts, DecisionScene } from "./decision-scene";
 import "./conversation.css";

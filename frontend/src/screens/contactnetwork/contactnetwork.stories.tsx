@@ -10,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { ContactNetworkTab } from "./index";
 
 // The contact's network, in the readings a rep actually meets.

@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { EntityKind } from "../lib/entity";
+import type { EntityKind } from "./entity";
 
 // Which cached reads render a record's timeline. Writing an activity has to
 // invalidate ALL of them, and they are not the same set for every record kind:

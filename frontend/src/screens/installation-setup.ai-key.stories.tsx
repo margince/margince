@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiKeyFields } from "./installation-setup.ai-key";
 import { SETUP_PROVIDERS, type SetupProviderId } from "./setup-providers";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The model step's credential: a pasted key for most vendors, the key file and
 // a location for Gemini on Vertex. Before the key is saved Google cannot be

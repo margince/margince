@@ -10,7 +10,7 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { RecordView } from "../design-system/recordview";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { installFetchStub } from "../screens/story-utils";
+import { installFetchStub } from "../testing/story-utils";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
 import { UnsavedGuard, useUnsavedGuard } from "./unsaved";
 

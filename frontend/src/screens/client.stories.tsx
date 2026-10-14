@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ClientSurfaceScreen } from "./client";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ClientSurfaceScreen } from "./client";
 
 // The extension client surface: rail-less, its own dark "Back to Margince" bar
 // instead of the shell, a sender lookup, and the isolation footer that states

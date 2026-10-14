@@ -75,7 +75,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree.
+  tree. No file in `design-system/` imports `app/` or `screens/`: a part that needs
+  a feature, such as the record page's mail drawer, lives in `screens/`.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the

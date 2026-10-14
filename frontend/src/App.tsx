@@ -60,7 +60,7 @@ import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
-import { WriteToHost } from "./screens/writeto";
+import { WriteToHost } from "./screens/writetohost";
 
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer

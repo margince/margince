@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { ExtensionAccessCard } from "./extension-access";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ExtensionAccessCard } from "./extension-access";
 
 // The role × CRUD matrix: what each composed unit brought into the installation
 // and which roles may reach it. Until a grant, an enabled unit tells every seat

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { AcquisitionSourcesCard } from "./acquisitionsources";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AcquisitionSourcesCard } from "./acquisitionsources";
 
 // Settings › the business channels a deal is attributed to.
 // The retired entry stays listed with its switch off, because deals still carry

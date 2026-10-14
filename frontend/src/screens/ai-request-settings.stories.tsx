@@ -5,12 +5,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { feature } from "./ai-admin.testkit";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import type { SliceValue } from "./ai-routing-slice";
 import { ServingSection } from "./ai-serving-editor";
 import { TaskSheet } from "./ai-task-sheet";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The request settings an advanced admin tunes, each beside the figures it is
 // decided by: the OpenRouter connection's privacy, a tier's serving JSON, and a

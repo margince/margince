@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { Panel, PanelRow } from "../design-system/panel";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { PairDecision } from "./worklist.pair";
 
 // The duplicate pair, reviewed on the row — see worklist.pair.tsx for why the

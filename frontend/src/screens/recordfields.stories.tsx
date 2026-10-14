@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { type FieldRecord, RecordFields } from "./recordfields";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Records/Record 360/Details fields",

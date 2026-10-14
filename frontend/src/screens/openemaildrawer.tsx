@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useRef } from "react";
-
+import { EmailDetail } from "../design-system/emaildetail";
 import { formatDateTime } from "../format/format";
 import { useLocale } from "../i18n";
-import { EmailAccessEditor } from "../screens/emailaccesseditor";
-import { EmailRecordLinks } from "../screens/emailrecords";
-import { EmailReplyAction } from "../screens/emailreply";
-import { EmailDetail } from "./emaildetail";
+import { EmailAccessEditor } from "./emailaccesseditor";
+import { EmailRecordLinks } from "./emailrecords";
+import { EmailReplyAction } from "./emailreply";
 
 /**
  * The record page's one email drawer.

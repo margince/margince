@@ -8,8 +8,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ImportContextTag, ImportContextTagSummary } from "./import.contexttag";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The picker sits on the mapping step, which is off screen once a report
 // exists — so the run's word has to be named again beside the outcome, at the

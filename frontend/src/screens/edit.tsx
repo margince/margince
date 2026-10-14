@@ -5,13 +5,13 @@ import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { derivedRecordKeys } from "../lib/activitykeys";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import { derivedRecordKeys } from "./activitykeys";
 import {
   type CreateField,
   type FormRows,

@@ -9,8 +9,12 @@ import type { QueryLike } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ProblemError } from "../lib/problem";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { HealthCard } from "./healthcard";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The shell three System health cards wear, with the body reduced to the least
 // that can stand in for one: what is worth looking at here is the four

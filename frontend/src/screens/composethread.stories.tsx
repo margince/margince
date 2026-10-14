@@ -5,14 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ComposeModal } from "./compose";
-import { ThreadPane } from "./composethread";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ComposeModal } from "./compose";
+import { ThreadPane } from "./composethread";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",

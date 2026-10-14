@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ConnectPostureStep } from "./connect-posture";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The posture question asked while a mailbox is being connected, before its
 // history has been read.

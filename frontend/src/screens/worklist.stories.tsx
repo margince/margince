@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { WorklistScreen } from "./worklist";
 
 // The ranked queue, in the three readings that matter: a full day, a clear one,

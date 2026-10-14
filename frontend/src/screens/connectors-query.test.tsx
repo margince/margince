@@ -7,8 +7,8 @@ import {
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { useConnectors } from "./connectors";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 afterEach(() => {
   cleanup();

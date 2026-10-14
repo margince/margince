@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
-import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { ContactMeetingBrief } from "./drawer";
 import {
   briefEmpty,

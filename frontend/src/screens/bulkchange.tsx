@@ -24,7 +24,7 @@ import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
-import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
+import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import {
   dialogWords,

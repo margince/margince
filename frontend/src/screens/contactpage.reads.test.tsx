@@ -11,13 +11,17 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+} from "../testing/story-utils";
+import {
   archivedContact,
   archivedContactRoutes,
   refusedRead,
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
 import { view as liveView } from "./contactpage.testkit";
-import { installFetchStub, jsonResponse, type RouteMap } from "./story-utils";
 
 // The page's two reads, the row and the 360, against each other: which one
 // decides that the page opens, opens archived, or cannot open.

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { DealBulkBar } from "./dealbulk";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealBulkBar } from "./dealbulk";
 
 // The bar under the deals table while rows are selected. It reads the roster
 // for the owner picker and the session (`GET /me`) for the Shortlist verb;

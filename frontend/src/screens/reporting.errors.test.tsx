@@ -5,6 +5,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -23,7 +28,6 @@ import {
   reportingStoryScope,
 } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {

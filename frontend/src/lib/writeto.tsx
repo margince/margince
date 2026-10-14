@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useState,
-} from "react";
-import { isMailbox } from "../format/connectorprovider";
-import { ComposeModal, type RelinkKind } from "./compose";
-import { useConnectors } from "./connectors";
+import { createContext, type ReactNode, useContext } from "react";
+import type { RelinkKind } from "./recordtargets";
 
 /**
  * Writing to an address, from wherever the address is shown.
@@ -29,6 +21,7 @@ import { useConnectors } from "./connectors";
  * own — the contact page, whose drawer also offers chat transports — answers
  * the same call with that one through `WriteToProvider`, so its address and
  * its header verb open the same drawer rather than two.
+ * The host is `WriteToHost` in `screens/writetohost.tsx`.
  *
  * Only while the reader has a mailbox the product can write from. The composer
  * sends from the reader's own connected mailbox and can only refuse without
@@ -67,21 +60,6 @@ export function useWriteTo(): WriteTo | null {
 }
 
 /**
- * Whether this reader has a mailbox the product can send from: a connected
- * mail connection, as distinct from a calendar. Read from the roster the
- * shell already holds for its rail, so a record page rarely meets it
- * unanswered; unanswered reads as none, because a drawer offered on a guess
- * would open onto a refusal.
- */
-export function useMailboxConnected(): boolean {
-  const connectors = useConnectors();
-  return (connectors.data?.data ?? []).some(
-    (connection) =>
-      connection.status === "connected" && isMailbox(connection.provider),
-  );
-}
-
-/**
  * A page's own answer to the call, for one that keeps its own composer — or
  * null, the same "nothing writes from here" the host says. Always a provider
  * and never the bare children: swapping between the two would remount the
@@ -94,57 +72,6 @@ export function WriteToProvider({
   return (
     <WriteToContext.Provider value={writeTo}>
       {children}
-    </WriteToContext.Provider>
-  );
-}
-
-/**
- * The shell's composer for an address pressed anywhere under it: an
- * account-started mail to the record the address belongs to, in the drawer
- * every other mail leaves from — while the reader has a mailbox to send it
- * from, and nothing otherwise.
- */
-export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
-  // The target OUTLIVES the close: the composer stays mounted so it can animate
-  // out, and a target dropped at the moment of closing would empty the drawer
-  // the reader is watching leave. `writing` is what is open, and `seq` counts
-  // the opens — it rides in the key below, so every press mounts a fresh
-  // composer, which is the reset the old unmount gave for free.
-  const [target, setTarget] = useState<
-    (WriteToTarget & Readonly<{ seq: number }>) | null
-  >(null);
-  const [writing, setWriting] = useState(false);
-  const connected = useMailboxConnected();
-  const writeTo = useCallback((next: WriteToTarget) => {
-    setTarget((prior) => ({ ...next, seq: (prior?.seq ?? 0) + 1 }));
-    setWriting(true);
-  }, []);
-  return (
-    <WriteToContext.Provider value={connected ? writeTo : null}>
-      {children}
-      {/* The guard falls only before the first address is ever pressed: the
-          target outlives the close, so from then on the composer stays mounted
-          and can animate out. */}
-      {target !== null && (
-        // Keyed by the record AND the open, so a press on another record's
-        // address while the composer is open remounts it rather than
-        // re-pointing it — the text written for one record must not be filed
-        // against another.
-        <ComposeModal
-          key={`${target.entityId}:${target.seq}`}
-          entityType={target.entityType}
-          entityId={target.entityId}
-          // A contact IS the contact the composer files under; every other
-          // record resolves its contacts from its own links.
-          contactId={
-            target.entityType === "contact" ? target.entityId : undefined
-          }
-          recordAddress={target.address}
-          kind="email"
-          open={writing}
-          onClose={() => setWriting(false)}
-        />
-      )}
     </WriteToContext.Provider>
   );
 }

@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { screen, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Where a project is, and the one dialog that moves it.
 //

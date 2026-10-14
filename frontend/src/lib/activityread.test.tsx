@@ -7,8 +7,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, test } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { useActivity } from "./activityread";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 const MEETING = {
   id: "meeting-9",
