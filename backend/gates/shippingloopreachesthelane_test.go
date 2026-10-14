@@ -5,50 +5,70 @@
 
 package gates
 
-// The routine the rulebook tells a contributor to run reaches the integration
-// lane.
-//
-// It did not, and nothing said so. The shipping loop's step 2 named `make check`
-// and added "with nothing to add on top" — while `check`'s test target is
-// `go test ./...` and every integration file carries `//go:build integration`,
-// so those packages compile into nothing. A contributor followed the documented
-// routine exactly and pushed backend changes no local run had exercised. The
-// lane's own security cases are in there.
-//
-// Two claims, and either alone rots into the same silence: the rulebook must
-// name a target that reaches the lane, and that target must still reach it. A
-// gate on the prose alone passes over a target that stopped running the lane;
-// one on the Makefile alone passes over a rulebook that stopped naming it.
+// A backend change cannot land without the integration lane. CI's required
+// `ci` check runs it on every PR that touches backend/. `make check` cannot:
+// every integration file carries `//go:build integration`. Each claim below is
+// one link from a backend diff to the lane, read from the file that holds it.
 
 import (
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
-const integrationRoutine = "check-all"
+const (
+	integrationJob     = "integration"
+	integrationScope   = "needs.changes.outputs.backend_db"
+	integrationRoutine = "check-all"
+	packageRoutine     = "test-it"
+)
 
-func TestTheShippingLoopNamesARoutineThatReachesTheIntegrationLane(t *testing.T) {
+func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 	t.Parallel()
+	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	if err != nil {
+		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
+	}
+	var wf aggregateJobs
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", aggregateWorkflow, err)
+	}
+	if !slices.Contains(wf.Jobs[aggregateJob].Needs, integrationJob) {
+		t.Errorf("the required %q check no longer needs %q, so a red integration lane merges",
+			aggregateJob, integrationJob)
+	}
+	if !strings.Contains(wf.Jobs[integrationJob].If, integrationScope) {
+		t.Errorf("job %q no longer runs on %s, so this gate cannot say which changes reach it",
+			integrationJob, integrationScope)
+	}
+	scope := section(t, string(raw), "backend_db: &backend_db")
+	if end := strings.Index(scope, "\n            frontend:"); end >= 0 {
+		scope = scope[:end]
+	}
+	if !strings.Contains(scope, "- 'backend/**'") {
+		t.Errorf("the backend_db scope no longer lists 'backend/**', so a backend Go change can " +
+			"skip the integration lane")
+	}
+}
 
+func TestTheShippingLoopNamesTheIntegrationRoutines(t *testing.T) {
+	t.Parallel()
 	rules := readRepoFile(t, filepath.Join(repoRoot, "AGENTS.md"))
 	shipping := section(t, rules, "## Shipping a change")
-	// The COMMAND, not the word: a step that mentions check-all while telling a
-	// contributor to run something else reads to this gate exactly like one that
-	// tells them to run it.
-	if !strings.Contains(shipping, "`make "+integrationRoutine+"`") {
-		t.Errorf("the shipping loop does not name `make %s`, so the routine a contributor is told "+
-			"to run stops at `check` — which reaches the integration lane not at all, because its "+
-			"test target is `go test ./...` and every integration file is behind a build tag",
-			integrationRoutine)
+	for _, routine := range []string{packageRoutine, integrationRoutine} {
+		if !strings.Contains(shipping, "`make "+routine) {
+			t.Errorf("the shipping loop does not name `make %s`", routine)
+		}
 	}
 
 	root := readRepoFile(t, filepath.Join(repoRoot, "Makefile"))
-	recipe := section(t, root, "\n"+integrationRoutine+":")
-	if !invokes(recipe, "test-integration") {
-		t.Errorf("`make %s` no longer runs test-integration, so the rulebook now points at a "+
-			"routine as blind as the one it replaced — and blind in the way that reports success",
-			integrationRoutine)
+	if !invokes(section(t, root, "\n"+integrationRoutine+":"), "test-integration") {
+		t.Errorf("`make %s` no longer runs test-integration, so the rulebook points at a "+
+			"routine that reports success without running the lane", integrationRoutine)
 	}
 }
 

@@ -40,8 +40,8 @@
 #   - CI's `deterministic-gates` job, which runs `make check-backend`, installs
 #     Go and nothing else. There is no pnpm on it and it does not need one.
 #
-# So the environment this leg exists for is a developer's: `make check-backend`
-# or the pre-push hook, where a backend-only author never runs the lane that
+# So the environment this leg exists for is a developer's: `make check-backend`,
+# where a backend-only author never runs the lane that
 # would catch it. That is exactly the gap #1639 describes.
 #
 # The CI half is not left to trust either — it is pinned by

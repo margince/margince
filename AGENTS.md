@@ -115,7 +115,7 @@ without labels tells the next reader something false. All the labels:
 
 ## Build and test
 
-`make check` is the merge gate (`check-backend` + `check-fe`). Run it before you push.
+`make check` is the merge gate (`craft-static` + `check-backend` + `check-fe`). Run it before you push.
 `make test-integration` is the lane with a real Postgres and needs `make db-up`. Without a database
 it fails with an error instead of skipping, because a skipped security gate looks the same as a
 passing one.
@@ -163,10 +163,10 @@ because the sandbox may not see the host's key store. Every mutation on GitHub n
 Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
-2. Run `make check` before you push: both parts, `frontend/` included. For a change that touches
-   backend Go, **run `make check-all` instead**. `check` does not reach the integration lane, so a
-   green `check` says nothing about it. The `pre-push` hook also runs `craft static --strict` on the
-   diff. Fix what it finds and never skip it; install it with `make hooks`.
+2. Run `make check` before you push, `frontend/` and `craft static --strict` included. `check` does
+   not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
+   each integration package it touches. CI runs the whole lane on every PR that changes `backend/`;
+   `make check-all` runs it locally.
 3. Push and open a PR.
 4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
 5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
@@ -269,7 +269,7 @@ rubric below is how the gate checks it.
 
 The gate's rubric is the standard; `craft rubric` prints it. It has the anti-tells T1–T11 and the
 rules for good code P1–P5 (`idiomatic`, `small-focused`, `tests-as-spec`, `pr-tells-story`,
-`restraint`). When this text and the rubric disagree, the rubric is what blocked your push;
+`restraint`). When this text and the rubric disagree, the rubric is what fails `make check` and CI;
 `make craft-prose` fails if they stop agreeing.
 
 - Comments say *why* and leave *what* to the code (T1). Use domain names instead of
@@ -297,10 +297,10 @@ rules for good code P1–P5 (`idiomatic`, `small-focused`, `tests-as-spec`, `pr-
 - Ask before you send it: is this how a senior writes it? Does it match the rest of the file? Is it
   the smallest diff that does the job?
 
-**The strict gate runs before every push.** `.githooks/pre-push` runs `craft static --strict` over the
-Go and TypeScript files this push changes against `origin/main`. The code checks read whole Go files
-and the tree has no findings, so code you touch must be clean. The comment checks read only the lines
-you add; the rules are in [docs-prose-style.md](docs/reference/docs-prose-style.md#comments-in-code).
+**`make check` and CI run the strict gate.** `craft static --strict` reads every hand-written
+Go file, and the tree has no findings, so code you touch must be clean. The comment checks read only
+the lines you add; the rules are in
+[docs-prose-style.md](docs/reference/docs-prose-style.md#comments-in-code).
 
 - `BLOCKER` and `MAJOR` both block; `MINOR` is advisory.
 - Size limits: 80 code lines per function and 500 per file; 160 and 1000 for `*_test.go`. A line that

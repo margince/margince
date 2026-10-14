@@ -147,39 +147,31 @@ check-backend:
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
-## check — the full merge gate: both halves. Spelled as recipe lines rather than
-## prerequisites because it owns the timing ledger, and a prerequisite would
-## record a phase before the reset. check-fe needs `make install` first.
+## check — the full merge gate: both halves, plus the craft bar CI's
+## craftsmanship job holds. Spelled as recipe lines rather than prerequisites
+## because it owns the timing ledger, and a prerequisite would record a phase
+## before the reset. check-fe needs `make install` first.
 check:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh report
 
-## check-all — `check` plus the integration lane, which is what a change touching
-## backend Go actually has to pass. `check` reaches the integration lane NOT AT
-## ALL: its `test` target is `go test ./...`, and every integration file carries
-## `//go:build integration`, so the lane's packages compile into nothing and a
-## green `check` says nothing about them.
+## check-all — `check` plus the integration lane. `check` reaches that lane
+## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
+## carries `//go:build integration`, so the lane's packages compile into nothing.
 ##
-## Its own target rather than folding the lane into `check`, because `check` is
-## what a docs or frontend change runs and that is most changes: the lane takes
-## minutes and needs Postgres up, so paying it on a README edit would train
-## everybody to skip the gate that also holds the security cases.
-##
-## The pre-push hook DOES run the lane, for a push that changes backend Go or
-## SQL — a migration is the likeliest thing of all to redden it.
-## It did not until 2026-09-12, and the reason it gave had expired: parallel
-## sessions were said to share one test template, so a hook would have them
-## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
-## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
-## is two weeks before that reasoning was written down.
-##
-## What is still shared: two shells in the SAME worktree, and the primary
-## checkout. The hook skips rather than blocks when pg_isready says Postgres is
-## not ready, because a push blocked on a stopped stack gets the hook disabled.
+## Optional, not the shipping loop: CI runs the whole lane on every backend PR,
+## sharded, and a contributor runs `make test-it DIR=<pkg>` for the packages a
+## change touches. This target is for wanting the whole lane locally anyway.
 check-all:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
@@ -917,8 +909,8 @@ fe-edge-padding:
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
 ## added since origin/main, so old comments improve as files are touched; with
-## no origin/main the gate fails instead of judging nothing. The pre-push hook
-## runs the same bar over the files a push changes.
+## no origin/main the gate fails instead of judging nothing. `make check` runs
+## it locally.
 ##
 ## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
 ## them and the bar has to name them: a first-party unit ships the same product,
@@ -1464,11 +1456,11 @@ check-extension-modules:
 pkg-freeze:
 	@./scripts/check-pkg-freeze.sh
 
-## hooks — install the repo's git hooks (the pre-push craft-static gate).
+## hooks — install the repo's git hooks (the pre-commit gofmt + license gate).
 ## Run once after cloning.
 hooks:
 	git config core.hooksPath .githooks
-	@echo "installed: core.hooksPath=.githooks (pre-push runs craft static on changed backend files)"
+	@echo "installed: core.hooksPath=.githooks (pre-commit runs gofmt + the license-header gate)"
 
 # --- Desktop build (macOS arm64) ---
 # The self-contained folder a non-technical user runs with no Docker: a
