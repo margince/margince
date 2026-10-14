@@ -177,9 +177,10 @@ function isConflict(error: unknown): boolean {
 }
 
 /**
- * The one line every save of a draft goes through. Saves run one at a time and
- * each carries the version the previous answer gave, so two quick edits never
- * race each other into a conflict. A conflict can only come from another tab.
+ * The one line every save of a draft goes through.
+ * Saves run one at a time, and each carries the version the previous answer gave.
+ * So two quick edits never race each other into a conflict.
+ * A conflict can only come from another tab.
  */
 export function useDraftWrites() {
   const queryClient = useQueryClient();

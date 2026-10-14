@@ -51,9 +51,9 @@ async function postSource(input: UploadInput): Promise<ImportProfile> {
 type Test = Readonly<{ id: string; patch: DraftPatch }>;
 
 // The run flow: upload, check the files, map their columns, test, import and
-// read the result. The run is the state: the step, the profile and the choices
-// are read from it, so a reload or a deep link lands where the reader was. Only
-// the upload in flight and the edits not yet answered live here.
+// read the result. The run is the state. The step, the profile and the choices
+// are read from it, so a reload or a deep link lands where the reader was.
+// Only the upload in flight and the edits not yet answered live here.
 export function useImportWizard() {
   const queryClient = useQueryClient();
   const generation = useRef(0);

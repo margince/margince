@@ -34,9 +34,9 @@ export function problemsHref(id: string, lang: Locale): string {
 }
 
 // A problem in the reader's language: the sentence of its code, filled with the
-// values the server names. A report written before codes existed, a code this
-// bundle does not know, or a value the server did not send reads as the
-// English sentence the server wrote.
+// values the server names. Three cases read as the English sentence the server
+// wrote. A report written before codes existed. A code this bundle does not
+// know. A value the server did not send.
 function reasonOf(issue: ImportRowIssue, t: ReturnType<typeof useT>): string {
   const { reason_code: code, params } = issue;
   if (code === undefined) return issue.reason;

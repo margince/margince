@@ -25,8 +25,8 @@ type Shown = Readonly<{
 }>;
 
 // The minutes left, rounded up from the high bound. A lower figure shows only
-// once two polls in a row agree on it; a higher one shows at once, so the
-// estimate never flickers down and back up on one noisy reading.
+// once two polls in a row agree on it. A higher one shows at once. The estimate
+// then never flickers down and back up on one noisy reading.
 function settleEta(before: Shown, run: ImportRun): Shown {
   const high = run.eta_seconds_high;
   if (run.eta_seconds_low === undefined || high === undefined) {
@@ -178,10 +178,11 @@ function Counts({
 }
 
 /**
- * What a run that is moving has done so far: its phase, one bar overall and one
- * per object, the rate, the time spent and an estimate of the time left, the
- * counts, and a notice when it has made no progress for a while. Every figure
- * is the server's; a run that sends none reads as plain "Working…".
+ * What a run that is moving has done so far.
+ * It shows the phase, one bar overall and one per object, the rate, the time
+ * spent, an estimate of the time left and the counts.
+ * It also shows a notice when the run has made no progress for a while.
+ * Every figure is the server's. A run that sends none reads as plain "Working…".
  */
 export function ImportProgressPanel({
   run,

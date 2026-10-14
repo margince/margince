@@ -66,8 +66,9 @@ export function useRecentImports() {
   });
 }
 
-// One run, read again every IMPORT_POLL_MS while it is moving, and when the
-// reader returns to the tab, which is when a run they left has most likely moved.
+// One run, read again every IMPORT_POLL_MS while it is moving.
+// It is also read again when the reader returns to the tab, because a run they
+// left has most likely moved.
 export function useImportRun(id: string | null) {
   return useQuery({
     queryKey: [IMPORTS_KEY, "run", id],
