@@ -98,3 +98,22 @@ func lookupNative(ctx context.Context, s *RunStore, system, object, externalID s
 	binding, found, err := s.LookupBinding(ctx, system, object, externalID)
 	return binding.NativeID, found, err
 }
+
+func TestRecordingARefMappedToAnotherRecordIsRefusedAndAReplayIsNot(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	l := approvedRun(ctx, t, s)
+	first := ids.NewV7()
+	if err := recordCreated(ctx, s, l.Run, "import:csv", ObjectLead, "row-1", first); err != nil {
+		t.Fatalf("first record: %v", err)
+	}
+	if err := recordCreated(ctx, s, l.Run, "import:csv", ObjectLead, "row-1", first); err != nil {
+		t.Fatalf("replaying the same record must stay a no-op: %v", err)
+	}
+	if err := recordCreated(ctx, s, l.Run, "import:csv", ObjectLead, "row-1", ids.NewV7()); err == nil {
+		t.Fatal("a ref already mapped to another record was recorded without an error")
+	}
+	if got, _, _ := lookupNative(ctx, s, "import:csv", ObjectLead, "row-1"); got != first {
+		t.Fatalf("ref resolves to %v, want the first record %v", got, first)
+	}
+}

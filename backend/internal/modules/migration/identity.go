@@ -121,6 +121,18 @@ func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, row identit
 		if !exists {
 			return fmt.Errorf("import run %s: %w", runID, apperrors.ErrNotFound)
 		}
+		// A concurrent run may have mapped the identity to another record
+		// since the caller's pre-check; a replay of the same record is a no-op.
+		var incumbent ids.UUID
+		if probeErr := tx.QueryRow(ctx, `
+			SELECT native_id FROM import_record_map
+			 WHERE source_system = $1 AND object = $2 AND external_id = $3`,
+			row.sourceSystem, row.object, row.externalID).Scan(&incumbent); probeErr != nil {
+			return fmt.Errorf("migration: resolving the %s %s identity: %w", row.object, row.externalID, probeErr)
+		}
+		if incumbent != row.nativeID {
+			return fmt.Errorf("migration: %s %s already maps to another record", row.object, row.externalID)
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("migration: recording the %s %s identity: %w", row.object, row.externalID, err)
