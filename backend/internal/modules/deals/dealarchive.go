@@ -124,7 +124,9 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 	if err != nil {
 		return fmt.Errorf("audit deal archive: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealArchived{}); err != nil {
+	archived := crmcontracts.PublicEventDealArchived{}
+	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, archived); err != nil {
 		return fmt.Errorf("emit deal.archived: %w", err)
 	}
 	return nil

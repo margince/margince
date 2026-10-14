@@ -87,8 +87,15 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	return nil
 }
 
+// closedSemantic is whether a stage ends a deal; the zero semantic of a row
+// naming no stage is neither.
+func closedSemantic(s crmcontracts.StageSemantic) bool {
+	return s == crmcontracts.StageSemanticWon || s == crmcontracts.StageSemanticLost
+}
+
 // checkCloseDate reads the close date as a day. An open deal's may not be in
-// the past; a row naming no stage leaves that to the deals store's write.
+// the past, and a won or lost deal's may not be in the future; a row naming no
+// stage leaves that to the deals store's write.
 func (d dealStages) checkCloseDate(fields map[string]string, choice stageChoice, typed map[string]any) *cellProblem {
 	text := strings.TrimSpace(fields[dealTargetCloseDate])
 	if text == "" {
@@ -102,6 +109,10 @@ func (d dealStages) checkCloseDate(fields map[string]string, choice stageChoice,
 	if choice.semantic == crmcontracts.StageSemanticOpen && deals.CloseDateIsPast(date, d.today) {
 		return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
 			migration.Why(migration.ReasonCloseDatePast, "value", text))
+	}
+	if closedSemantic(choice.semantic) && deals.CloseDateIsFuture(date, d.today) {
+		return problemOf(dealTargetCloseDate, fields[dealTargetCloseDate],
+			migration.Why(migration.ReasonCloseDateFuture, "value", text))
 	}
 	typed[dealTargetCloseDate] = openapi_types.Date{Time: date}
 	return nil

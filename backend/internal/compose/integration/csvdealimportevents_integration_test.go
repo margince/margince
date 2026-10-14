@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -47,5 +48,29 @@ func TestEveryEventOfAnImportedWonDealNamesTheRunSoNoAutomationOrCommissionStart
 		if !types[want] {
 			t.Errorf("no %s event was staged for the imported deal (saw %v)", want, types)
 		}
+	}
+}
+
+func TestTheArchiveAnUndoWritesOnAnImportedDealNamesTheRunToo(t *testing.T) {
+	e := setupImportApp(t)
+	pipeline, open, _, _ := seededStages(t, e)
+	run, _ := importDeals(t, e, "crm", map[string]string{
+		"deals.csv": fmt.Sprintf("ref,name,pipeline,stage,close_date\nD-1,Undone open,%s,%s,2099-01-01\n", pipeline, open),
+	}, dealImportParts("ref,name,pipeline,stage,close_date"))
+	deal := dealNamed(t, e, "Undone open")
+	var undone importRunDTO
+	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
+		t.Fatalf("undo -> %d", status)
+	}
+	var payload string
+	err := e.Owner.QueryRow(context.Background(), `
+		SELECT envelope -> 'payload' FROM event_outbox
+		 WHERE envelope #>> '{entity,id}' = $1 AND envelope ->> 'type' = 'deal.archived'`, deal.ID).Scan(&payload)
+	if err != nil {
+		t.Fatalf("reading the deal.archived event of the undo: %v", err)
+	}
+	env := events.Envelope{Type: "deal.archived", Payload: []byte(payload)}
+	if !events.IsImported(env) {
+		t.Errorf("deal.archived written by the undo of run %s does not name it: %s", run.ID, payload)
 	}
 }

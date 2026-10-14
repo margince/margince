@@ -106,6 +106,10 @@ func carriesImportMarker(eventType string) bool {
 
 // ImportedStreams is the set of streams an import writes events on. A group
 // that reads one of them owes a decision.
+//
+// The activity stream is listed ahead of its marker: no activity writer stamps
+// storekit.ImportMark yet, so its entries become live news to a group only once
+// the activity importer writes them.
 func ImportedStreams() map[string]bool {
 	return map[string]bool{
 		StreamPrefix + dealStreamEntity:     true,

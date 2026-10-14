@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,7 +62,7 @@ func TestAStageIsFoundByNameInItsOwnPipelineOnly(t *testing.T) {
 }
 
 func TestADealWithNoPipelineGoesToTheDefaultOne(t *testing.T) {
-	typed, problem := testDealStages().checkCells(map[string]string{dealTargetStage: "won", dealTargetCloseDate: "2026-07-10"}, nil)
+	typed, problem := testDealStages().checkCells(map[string]string{dealTargetStage: "won", dealTargetCloseDate: "2026-07-01"}, nil)
 	if problem != nil || typed[dealTargetStage] != ids.From[ids.StageKind](salesWon.id) {
 		t.Fatalf("typed = %v, problem = %+v; want the default pipeline's Won", typed, problem)
 	}
@@ -117,5 +118,24 @@ func TestAClosedDealMayCloseInThePast(t *testing.T) {
 	delete(cells, dealTargetLostReason)
 	if _, problem = testDealStages().checkCells(cells, nil); problem == nil || problem.Target != dealTargetLostReason {
 		t.Fatalf("problem = %+v, want a lost deal without its reason refused on lost_reason", problem)
+	}
+}
+
+func TestAClosedDealWithACloseDateAfterTodayIsRefusedAndTodayIsNot(t *testing.T) {
+	stages := testDealStages()
+	for _, stage := range []string{"Won", "Lost"} {
+		fields := map[string]string{dealTargetPipeline: "Sales", dealTargetStage: stage, dealTargetCloseDate: "2026-07-05", dealTargetLostReason: "price"}
+		_, problem := stages.checkCells(fields, nil)
+		if problem == nil || problem.Why.Code != migration.ReasonCloseDateFuture {
+			t.Errorf("%s with a close date tomorrow: problem = %+v, want close_date_future", stage, problem)
+		}
+		fields[dealTargetCloseDate] = "2026-07-04"
+		if _, problem := stages.checkCells(fields, nil); problem != nil {
+			t.Errorf("%s closed today: problem = %+v, want it accepted", stage, problem)
+		}
+	}
+	open := map[string]string{dealTargetPipeline: "Sales", dealTargetStage: "Qualified", dealTargetCloseDate: "2026-07-05"}
+	if _, problem := stages.checkCells(open, nil); problem != nil {
+		t.Errorf("an open deal's future close date: problem = %+v, want it accepted", problem)
 	}
 }

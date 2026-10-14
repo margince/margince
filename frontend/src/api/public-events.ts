@@ -463,8 +463,16 @@ export interface components {
              */
             import_run_id?: string;
         };
-        /** @description Payload for deal.archived — a deal was archived. Carries no data. */
-        PublicEventDealArchived: Record<string, never>;
+        /** @description Payload for deal.archived — a deal was archived. Carries only the import mark, when an import's undo wrote the event. */
+        PublicEventDealArchived: {
+            /** @description True when a data import wrote the event. Absent otherwise. */
+            imported?: boolean;
+            /**
+             * Format: uuid
+             * @description The import run that wrote the event. Present when `imported` is true.
+             */
+            import_run_id?: string;
+        };
         /** @description Payload for deal.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, an accepted-offer amount sync, a close-date-correction note, a relationship delta), so the honest shape is a change-set map rather than a fixed field list. */
         PublicEventDealUpdated: {
             /** @description What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. */
@@ -479,8 +487,16 @@ export interface components {
              */
             import_run_id?: string;
         };
-        /** @description Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data. */
-        PublicEventDealRestored: Record<string, never>;
+        /** @description Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries only the import mark. */
+        PublicEventDealRestored: {
+            /** @description True when a data import wrote the event. Absent otherwise. */
+            imported?: boolean;
+            /**
+             * Format: uuid
+             * @description The import run that wrote the event. Present when `imported` is true.
+             */
+            import_run_id?: string;
+        };
         /** @description Payload for offer.created — a new Angebot revision was opened (either the first revision, via CreateOffer, or a fresh draft revision minted by RegenerateOffer). */
         PublicEventOfferCreated: {
             /**

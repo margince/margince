@@ -137,3 +137,22 @@ func (d dealStages) resolve(pipeline, stage string) (stageChoice, *cellProblem) 
 	}
 	return stageChoice{pipeline: p.id, stage: s.id, semantic: s.semantic}, nil
 }
+
+// goneStage is the reason for a stage the run resolved from its cached read
+// and the store has since found archived. The stage is left out of the names it
+// offers, since it is the one that no longer is.
+func (d dealStages) goneStage(pipeline, stage string) migration.Reason {
+	key := foldName(pipeline)
+	if key == "" {
+		key = d.defaultPipeline
+	}
+	p := d.byPipeline[key]
+	remaining := make([]string, 0, len(p.names))
+	for _, name := range p.names {
+		if foldName(name) != foldName(stage) {
+			remaining = append(remaining, name)
+		}
+	}
+	return migration.Why(migration.ReasonStageUnknown,
+		"value", strings.TrimSpace(stage), "pipeline", p.name, "names", strings.Join(remaining, ", "))
+}

@@ -382,6 +382,14 @@ func CloseDateIsPast(closeDate, today time.Time) bool {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today)
 }
 
+// CloseDateIsFuture reports whether the day a close date names is after today,
+// as CloseDateIsPast reads the day. A deal cannot have closed on a day that has
+// not come.
+func CloseDateIsFuture(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).After(today)
+}
+
 // InstallationToday is today in the installation's reporting zone, the day a
 // close date is held against.
 func (s *Store) InstallationToday(ctx context.Context) (time.Time, error) {

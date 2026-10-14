@@ -35,7 +35,7 @@ Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
 To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
-Undo goes in reverse order: prospects first, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. Those are listed under "Kept because they were edited after the import:".
+Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Kept because they were edited after the import:".
 
 Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 

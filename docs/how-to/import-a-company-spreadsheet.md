@@ -181,7 +181,9 @@ causes are:
 Events of an imported deal carry `imported: true` and the `import_run_id`. Automations and commissions
 skip them. Webhooks get them with that mark, so a receiver decides for itself.
 
-Undo archives the deals an import created, before contacts, and keeps a deal someone edited since.
+Undo archives the deals an import created, before contacts, and keeps a deal someone edited since. Only
+an edit to the deal itself keeps it. A note, an email or a task logged against the deal does not keep
+it, and undo archives the deal.
 
 ## Importing several files over MCP
 

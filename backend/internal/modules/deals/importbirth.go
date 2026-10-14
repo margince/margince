@@ -59,11 +59,13 @@ func (s *Store) ImportDealTx(
 		return crmcontracts.Deal{}, err
 	}
 	birth := in
+	birthStage, err := s.RefuseImportBirth(ctx, tx, in, terminal)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	if terminal != nil {
 		born.pastCloseAllowed = true
-		if birth.StageID, err = firstOpenStage(ctx, tx, in.PipelineID); err != nil {
-			return crmcontracts.Deal{}, err
-		}
+		birth.StageID = birthStage
 	}
 	created, err := s.createDealInTx(ctx, tx, birth, born, cols.cols)
 	if err != nil || terminal == nil {
@@ -75,6 +77,45 @@ func (s *Store) ImportDealTx(
 		WonWithoutContractReason: &importedWinReason,
 		closedAt:                 terminal.ClosedAt,
 	}, cols.cols)
+}
+
+// RefuseImportBirth asks, without writing, the refusals a closed or open import
+// birth can meet for reasons that live outside the row's own cells: the
+// pipeline has no open stage to be born on, a stage past a legal gate, a
+// closing that has no FX rate to freeze. It answers the stage the deal is born
+// on. ImportDealTx runs it before writing and the dry run runs it alone, so the
+// preview and the commit refuse the same rows.
+func (s *Store) RefuseImportBirth(
+	ctx context.Context, tx pgx.Tx, in CreateDealInput, terminal *ImportTerminal,
+) (ids.StageID, error) {
+	birthStage := in.StageID
+	if terminal != nil {
+		var err error
+		if birthStage, err = firstOpenStage(ctx, tx, in.PipelineID); err != nil {
+			return ids.StageID{}, err
+		}
+	}
+	if err := refuseBirthPastLegalGate(ctx, tx, birthStage); err != nil {
+		return ids.StageID{}, err
+	}
+	if terminal == nil {
+		return birthStage, nil
+	}
+	// A deal not yet born has no review, so the zero id asks whether the move
+	// passes a gate at all.
+	if err := ensureLegalReviewed(ctx, tx, ids.DealID{}, birthStage, terminal.StageID); err != nil {
+		return ids.StageID{}, err
+	}
+	if in.AmountMinor != nil && in.Currency != nil {
+		closedAt := s.clock().UTC()
+		if terminal.ClosedAt != nil {
+			closedAt = terminal.ClosedAt.UTC()
+		}
+		if _, _, err := s.FreezeRateAt(ctx, tx, *in.Currency, closedAt); err != nil {
+			return ids.StageID{}, err
+		}
+	}
+	return birthStage, nil
 }
 
 // firstOpenStage is the stage a deal that will be closed is born on: the live

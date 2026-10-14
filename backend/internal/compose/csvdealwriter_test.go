@@ -19,24 +19,25 @@ func TestEveryRefusalTheStoreGivesADealRowIsASkipNotAFailedRun(t *testing.T) {
 		err  error
 		want migration.ReasonCode
 	}{
-		"a past close date":   {&deals.PastCloseDateError{}, migration.ReasonCloseDatePast},
-		"another pipeline":    {&deals.StagePipelineMismatchError{}, migration.ReasonDealPipelineFixed},
-		"no lost reason":      {&deals.LostReasonRequiredError{}, migration.ReasonLostReasonMissing},
-		"no exchange rate":    {&deals.MissingFxRateError{From: "VND", To: "EUR"}, migration.ReasonFxRateMissing},
-		"a legal gate":        {&deals.LegalReviewRequiredError{}, migration.ReasonDealLegalGate},
-		"a gate at birth":     {&deals.LegalGateOnCreateError{}, migration.ReasonDealLegalGate},
-		"no open stage":       {&deals.PipelineHasNoOpenStageError{}, migration.ReasonPipelineNoOpenStage},
-		"the write completed": {fmt.Errorf("wrapped: %w", &deals.PastCloseDateError{}), migration.ReasonCloseDatePast},
+		"a past close date":               {&deals.PastCloseDateError{}, migration.ReasonCloseDatePast},
+		"another pipeline":                {&deals.StagePipelineMismatchError{}, migration.ReasonDealPipelineFixed},
+		"no lost reason":                  {&deals.LostReasonRequiredError{}, migration.ReasonLostReasonMissing},
+		"no exchange rate":                {&deals.MissingFxRateError{From: "VND", To: "EUR"}, migration.ReasonFxRateMissing},
+		"a legal gate":                    {&deals.LegalReviewRequiredError{}, migration.ReasonDealLegalGate},
+		"a gate at birth":                 {&deals.LegalGateOnCreateError{}, migration.ReasonDealLegalGate},
+		"no open stage":                   {&deals.PipelineHasNoOpenStageError{}, migration.ReasonPipelineNoOpenStage},
+		"a stage archived since the read": {fmt.Errorf("advance: %w", &deals.StageGoneError{}), migration.ReasonStageUnknown},
+		"the write completed":             {fmt.Errorf("wrapped: %w", &deals.PastCloseDateError{}), migration.ReasonCloseDatePast},
 	} {
-		why, refused := dealRefusal(tc.err, fields)
+		why, refused := dealRefusalOf(tc.err, fields, dealStages{})
 		if !refused || why.Code != tc.want {
 			t.Errorf("%s: reason = %q, refused = %v, want %q", name, why.Code, refused, tc.want)
 		}
 	}
-	if _, refused := dealRefusal(fmt.Errorf("the database is down"), fields); refused {
+	if _, refused := dealRefusalOf(fmt.Errorf("the database is down"), fields, dealStages{}); refused {
 		t.Error("an error the store did not mean as a refusal was answered as a bad row, which would hide a failed run")
 	}
-	if why, _ := dealRefusal(&deals.PastCloseDateError{}, fields); why.Params["value"] != "2020-01-01" {
+	if why, _ := dealRefusalOf(&deals.PastCloseDateError{}, fields, dealStages{}); why.Params["value"] != "2020-01-01" {
 		t.Errorf("params = %v, want the date as the file spelled it, trimmed", why.Params)
 	}
 }

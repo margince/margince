@@ -10476,6 +10476,7 @@ const (
 	ImportReasonCodeCannotReadPipelines        ImportReasonCode = "cannot_read_pipelines"
 	ImportReasonCodeCannotReadTags             ImportReasonCode = "cannot_read_tags"
 	ImportReasonCodeCannotWriteType            ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCloseDateFuture            ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast              ImportReasonCode = "close_date_past"
 	ImportReasonCodeCompanyDuplicateFound      ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped    ImportReasonCode = "company_duplicate_skipped"
@@ -10567,6 +10568,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCannotReadTags:
 		return true
 	case ImportReasonCodeCannotWriteType:
+		return true
+	case ImportReasonCodeCloseDateFuture:
 		return true
 	case ImportReasonCodeCloseDatePast:
 		return true

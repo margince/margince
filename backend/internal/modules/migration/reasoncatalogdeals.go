@@ -21,6 +21,7 @@ const (
 	ReasonStageUnknown           ReasonCode = "stage_unknown"
 	ReasonCurrencyNotACode       ReasonCode = "currency_not_a_code"
 	ReasonCloseDatePast          ReasonCode = "close_date_past"
+	ReasonCloseDateFuture        ReasonCode = "close_date_future"
 	ReasonLostReasonMissing      ReasonCode = "lost_reason_missing"
 	ReasonDealPipelineFixed      ReasonCode = "deal_pipeline_fixed"
 	ReasonDealAlreadyClosed      ReasonCode = "deal_already_closed"
@@ -74,6 +75,11 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",
 		textlang.German:     "{value:q} liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
 		textlang.Vietnamese: "{value:q} đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
+	}},
+	ReasonCloseDateFuture: {params: []string{"value"}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is in the future, and a closed deal’s close date cannot be.",
+		textlang.German:     "{value:q} liegt in der Zukunft, und das Abschlussdatum eines abgeschlossenen Deals darf das nicht sein.",
+		textlang.Vietnamese: "{value:q} ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
 	}},
 	ReasonLostReasonMissing: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "A lost deal needs the reason it was lost.",

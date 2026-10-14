@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -105,20 +104,13 @@ func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typ
 	}
 	var seated bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		kindPos, dealPos, contactPos := arg(relationshipKindStakeholder), arg(dealID), arg(contact)
-		scope, err := auth.EdgeReadScope(ctx, "r", arg)
-		if err != nil {
-			return err
-		}
-		if scope == "" {
-			scope = "TRUE"
-		}
-		return tx.QueryRow(ctx, storekit.SQLf(`
+		// Not read through the caller's edge scope: an edge the caller cannot
+		// see is still a seat, and counting it absent would add a second one.
+		return tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM relationship r
-			                WHERE r.kind = $%d AND r.deal_id = $%d AND r.contact_id = $%d
-			                  AND r.archived_at IS NULL AND %s)`, kindPos, dealPos, contactPos, scope), args...).Scan(&seated)
+			                WHERE r.kind = $1 AND r.deal_id = $2 AND r.contact_id = $3
+			                  AND r.archived_at IS NULL)`,
+			relationshipKindStakeholder, dealID, contact).Scan(&seated)
 	}); err != nil {
 		return nil, fmt.Errorf("import: reading the deal's stakeholders: %w", err)
 	}
@@ -147,7 +139,7 @@ func (w *csvWriters) reconcileDeal(
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
 	err = w.writeDealUpdate(ctx, id, plan, typed, w.provenanceOf(row.ExternalID))
-	if why, refused := dealRefusal(err, textFields(row.Fields)); refused {
+	if why, refused := w.dealRefusal(err, textFields(row.Fields)); refused {
 		return skippedFor(why), nil
 	}
 	if err != nil {

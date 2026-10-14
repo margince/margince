@@ -332,3 +332,24 @@ func TestPromotionAndImportWriteTheStakeholderEdgeThroughOneFunction(t *testing.
 		t.Fatalf("promotion wrote %+v, import wrote %+v, want the same row: kind, no role, contact and deal only, audited as a creation", promoted, imported)
 	}
 }
+
+func TestTheDryRunSkipsAClosedDealInACurrencyWithNoRateForTheReasonTheCommitGives(t *testing.T) {
+	e := setupImportApp(t)
+	pipeline, _, won, _ := seededStages(t, e)
+	header := "ref,name,pipeline,stage,close_date,amount,currency"
+	files := map[string]string{"deals.csv": header + "\n" +
+		fmt.Sprintf("D-1,No rate,%s,%s,2025-06-30,1000,ISK\n", pipeline, won)}
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", dealImportParts(header))
+	preview := readImportReport(t, e, run.ID)
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if committed.Disposition.Skipped != 1 || len(committed.Issues) != 1 {
+		t.Fatalf("commit = %+v, want the closed deal skipped", committed)
+	}
+	if preview.Disposition.Created != 0 || preview.Disposition.Skipped != 1 || len(preview.Issues) != 1 {
+		t.Fatalf("dry run = %+v, want the skip the commit gives, not a created deal", preview.Disposition)
+	}
+	if got, want := preview.Issues[0].Reason, committed.Issues[0].Reason; got != want {
+		t.Errorf("dry run reason = %q, commit reason = %q, want them equal", got, want)
+	}
+}

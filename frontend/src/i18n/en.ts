@@ -6307,6 +6307,8 @@ export const en = {
     "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.close_date_future":
+    "“{value}” is in the future, and a closed deal’s close date cannot be.",
   "import.reason.close_date_past":
     "“{value}” is in the past, and an open deal’s close date cannot be.",
   "import.reason.lost_reason_missing":

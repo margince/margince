@@ -130,6 +130,9 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
 func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
+	if w.object == migration.ObjectDeal {
+		return w.predictDealCreate(ctx, row, typed)
+	}
 	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err

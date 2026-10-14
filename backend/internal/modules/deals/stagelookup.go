@@ -26,6 +26,18 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 	return stage.semantic, stage.winProbability, nil
 }
 
+// StageGoneError is a stage nobody has or that is archived. It answers as
+// apperrors.ErrNotFound, so a transport keeps its 404, and names the cause for
+// a caller that holds a stage it read earlier, such as an import run.
+type StageGoneError struct{ StageID ids.StageID }
+
+func (e *StageGoneError) Error() string {
+	return "stage " + e.StageID.String() + " is not a live stage"
+}
+
+// Unwrap lets errors.Is match apperrors.ErrNotFound.
+func (e *StageGoneError) Unwrap() error { return apperrors.ErrNotFound }
+
 // liveStage is the part of a stage row a move or a birth decides on.
 type liveStage struct {
 	semantic       string
@@ -44,7 +56,7 @@ func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipel
 			lockLiveStageTarget,
 		stageID).Scan(&stage.semantic, &stagePipeline, &stage.winProbability)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return liveStage{}, apperrors.ErrNotFound
+		return liveStage{}, &StageGoneError{StageID: stageID}
 	}
 	if err != nil {
 		return liveStage{}, fmt.Errorf("resolve target stage: %w", err)

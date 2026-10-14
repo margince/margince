@@ -1417,8 +1417,14 @@ type PublicEventConversationClaimChanged struct {
 	Status string `json:"status"`
 }
 
-// PublicEventDealArchived Payload for deal.archived — a deal was archived. Carries no data.
-type PublicEventDealArchived struct{}
+// PublicEventDealArchived Payload for deal.archived — a deal was archived. Carries only the import mark, when an import's undo wrote the event.
+type PublicEventDealArchived struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealCreated Payload for deal.created — a deal was opened.
 type PublicEventDealCreated struct {
@@ -1447,8 +1453,14 @@ type PublicEventDealOwnerChanged struct {
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
-type PublicEventDealRestored struct{}
+// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries only the import mark.
+type PublicEventDealRestored struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
 // Its releases survive, so what a buyer was shown stays answerable.

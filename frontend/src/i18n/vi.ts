@@ -6034,6 +6034,8 @@ export const vi = {
     "“{value}” không phải giai đoạn của quy trình “{pipeline}”. Các giai đoạn: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+  "import.reason.close_date_future":
+    "“{value}” ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
   "import.reason.close_date_past":
     "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
