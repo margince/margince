@@ -64,6 +64,8 @@ type Progress struct {
 	// Attempt is the attempt that wrote it, so an attempt's first flush counts
 	// one more walk in the report.
 	Attempt int `json:"attempt,omitempty"`
+	// Window is the recent samples the speed is read from, oldest first.
+	Window []Sample `json:"window,omitempty"`
 }
 
 // ObjectProgress is one object's rows, or the links, done of its total.
@@ -204,10 +206,10 @@ func (s *RunStore) Flush(ctx context.Context, l Lease, f Flush) error {
 }
 
 func flushInTx(ctx context.Context, tx pgx.Tx, l Lease, f Flush) error {
-	var stored []byte
-	var writtenBy *int
-	err := tx.QueryRow(ctx, `SELECT report, (progress->>'attempt')::int FROM import_run`+fence+` FOR UPDATE`,
-		l.args()...).Scan(&stored, &writtenBy)
+	var stored, priorProgress []byte
+	var dbNow time.Time
+	err := tx.QueryRow(ctx, `SELECT report, progress, now() FROM import_run`+fence+` FOR UPDATE`,
+		l.args()...).Scan(&stored, &priorProgress, &dbNow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("import run %s attempt %d: %w", l.Run, l.Attempt, ErrSuperseded)
 	}
@@ -220,8 +222,14 @@ func flushInTx(ctx context.Context, tx pgx.Tx, l Lease, f Flush) error {
 			return fmt.Errorf("decoding import run %s's recorded report: %w", l.Run, err)
 		}
 	}
+	var prior Progress
+	if len(priorProgress) > 0 {
+		if err := json.Unmarshal(priorProgress, &prior); err != nil {
+			return fmt.Errorf("decoding import run %s's recorded progress: %w", l.Run, err)
+		}
+	}
 	folded := base.withLeg(f.Leg, f.StartsWalk)
-	if writtenBy == nil || *writtenBy != l.Attempt {
+	if prior.Attempt == 0 || prior.Attempt != l.Attempt {
 		folded.Attempts = base.Walks() + 1
 	}
 	report, err := json.Marshal(folded)
@@ -229,6 +237,7 @@ func flushInTx(ctx context.Context, tx pgx.Tx, l Lease, f Flush) error {
 		return fmt.Errorf("encoding import run %s's report: %w", l.Run, err)
 	}
 	f.Progress.Attempt = l.Attempt
+	f.Progress.foldWindow(prior, dbNow)
 	progress, err := json.Marshal(f.Progress)
 	if err != nil {
 		return fmt.Errorf("encoding import run %s's progress: %w", l.Run, err)

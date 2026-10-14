@@ -44,6 +44,11 @@ type Session struct {
 	AttemptCorrelationID *ids.UUID
 	Phase                string
 	Progress             *Progress
+	// StartedAt, FinishedAt, ProgressAt and HeartbeatAt are the lease's own
+	// instants; nil until the worker has set them. ReadAt is the database
+	// clock at the read, so ages are never taken against a client's clock.
+	StartedAt, FinishedAt, ProgressAt, HeartbeatAt *time.Time
+	ReadAt                                         time.Time
 }
 
 // The wizard steps a draft can be reopened on.
