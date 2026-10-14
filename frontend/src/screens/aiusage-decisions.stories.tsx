@@ -27,7 +27,7 @@ const meta: Meta<typeof DecisionSummary> = {
   component: DecisionSummary,
   render: (args) => (
     <StoryProviders>
-      <Panel title="Estimated AI spend and usage">
+      <Panel title="AI spend">
         <DecisionSummary {...args} />
       </Panel>
     </StoryProviders>

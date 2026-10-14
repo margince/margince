@@ -58,12 +58,12 @@ function story(
     );
   };
 }
-const meta: Meta<typeof AiBudgetCard> = {
+const meta = {
   title: "Settings/AI/AI usage/Allowance",
   component: AiBudgetCard,
-};
+} satisfies Meta<typeof AiBudgetCard>;
 export default meta;
-type Story = StoryObj<typeof AiBudgetCard>;
+type Story = StoryObj<typeof meta>;
 export const Degraded: Story = { render: story("degraded") };
 export const Normal: Story = { render: story("normal") };
 export const OverAllowance: Story = { render: story("queued") };
@@ -73,7 +73,17 @@ export const DegradedDark: Story = {
   globals: { theme: "dark" },
   render: story("degraded"),
 };
-export const Phone: Story = { tags: ["uat-phone"], render: story("queued") };
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story("queued"),
+};
+// The normal band carries no callout: the meter already says the month is fine.
+export const NormalPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story("normal"),
+};
 export const Preview: Story = {
   render: story("degraded"),
   play: async ({ canvasElement }) => {

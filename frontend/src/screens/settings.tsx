@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { operations } from "../api/schema";
 import { THEME_LABEL_KEYS } from "../app/account";
-import { Avatar, Button, Disclosure, TextInput } from "../design-system/atoms";
+import { Avatar, Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -70,7 +70,7 @@ import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
-import { FxRatesCard, ModelCostsCard } from "./rates";
+import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
@@ -98,7 +98,6 @@ import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
-import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -279,11 +278,6 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "models":
       return (
         <>
-          {/* Which vendors are answering, above the bindings that name them.
-              It was a header reading on the old combined page and belongs with
-              the lanes it qualifies: a binding to a vendor holding no key is
-              the thing an operator came here to fix. */}
-          <ProvidersStat />
           <AiProviderKeysCard />
           {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
           <ModelPricesCard />
@@ -296,11 +290,9 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "usage":
       return (
         <>
-          {/* The allowance with the month's spend in it, then where it went, then
-              the prices the estimate is drawn from. */}
+          {/* The token allowance, then what the month's calls cost. */}
           <AiBudgetCard />
           <AiUsageCard />
-          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -880,14 +872,5 @@ function ResetDataCard() {
         />
       </ConfirmModal>
     </Panel>
-  );
-}
-
-function ModelPriceDetails() {
-  const t = useT();
-  return (
-    <Disclosure summary={t("aiRouting.priceSheet")}>
-      <ModelCostsCard />
-    </Disclosure>
   );
 }

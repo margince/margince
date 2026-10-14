@@ -84,10 +84,7 @@ function mount(
 }
 it("explains pooled tokens, UTC reset and unchanged model selection", async () => {
   mount();
-  expect(
-    await screen.findByText(/22\.5M of 24M tokens used · 94%/),
-  ).toBeTruthy();
-  expect(screen.getByText(/1\.5M tokens remaining/)).toBeTruthy();
+  expect(await screen.findByText("22.5M of 24M tokens · 94%")).toBeTruthy();
   expect(
     screen.getByText("Active full users: 2 × 12M tokens per user per month."),
   ).toBeTruthy();
@@ -96,6 +93,23 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
   ).toBeTruthy();
   expect(screen.getByText(/UTC/)).toBeTruthy();
   expect(screen.queryByText(/own hardware/)).toBeNull();
+});
+it("states the band only once it is off normal, and never the spend in money", async () => {
+  mount();
+  expect(
+    await screen.findByText(
+      "80% threshold reached: reduced-tier routing is active",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/spent/)).toBeNull();
+  cleanup();
+  mount(undefined, false, {
+    ...status,
+    budget: { ...status.budget, band: "normal" },
+  });
+  await screen.findByText("22.5M of 24M tokens · 94%");
+  expect(screen.queryByText(/threshold reached/)).toBeNull();
+  expect(document.querySelector(".callout")).toBeNull();
 });
 it("previews both fields before writing the allowance with its revision", async () => {
   const user = userEvent.setup({ delay: null });
@@ -184,7 +198,7 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
 });
 it("allows management to read without offering an editor", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
-  await screen.findByText(/22\.5M of 24M tokens used/);
+  await screen.findByText(/22\.5M of 24M tokens/);
   expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
 });
 
@@ -261,7 +275,7 @@ it("explains each routing impact in operational language", async () => {
 });
 it("withholds model identities from an allowance reader without routing access", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
-  await screen.findByText(/22\.5M of 24M tokens used/);
+  await screen.findByText(/22\.5M of 24M tokens/);
   expect(screen.queryByText("example-model")).toBeNull();
 });
 it("explains the one-user floor when there are no eligible full users", async () => {

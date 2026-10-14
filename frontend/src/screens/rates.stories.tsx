@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { FxRatesCard, ModelCostsCard } from "./rates";
+import { ModelPricesCard } from "./ai-price-sync";
+import { FxRatesCard } from "./rates";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // READ before create. Both cards gate on `useCan(<object>, "read")` and skip
@@ -100,16 +101,15 @@ function RateSheets() {
   return (
     <>
       <FxRatesCard />
-      <ModelCostsCard />
+      <ModelPricesCard />
     </>
   );
 }
 
 // Filed under the tree rather than under a page, because it is neither page's
-// story: `FxRatesCard` renders on Company profile and `ModelCostsCard` on AI
-// usage, and this puts them side by side on purpose — the two price sheets an
-// operator reconciles against each other. A title naming one page would say the
-// other card lives there.
+// story. `FxRatesCard` renders on Company profile and `ModelPricesCard` on AI
+// models. These are the two price sheets an operator reconciles against each
+// other, so a title naming one page would say the other card lives there.
 const meta: Meta<typeof RateSheets> = {
   title: "Settings/Across pages/Rates and model costs",
   component: RateSheets,
@@ -124,6 +124,7 @@ export const Populated: Story = {
     installFetchStub({
       "GET /me": admin(),
       "GET /fx-rates": () => jsonResponse(FX),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
@@ -134,15 +135,10 @@ export const Populated: Story = {
   },
 };
 
-// The reason the header action band was restructured on this branch, pictured.
-// Beside the title, Refresh + "Set rate" were one unwrappable row sized to their
-// max content: at 390px the pair measured 353px inside a 324px card and pushed
-// the page 12px past the viewport. Both cards now put the pair in the panel's own
-// wrapping action band, and this is the only render that can show it holds —
-// nothing else in the catalogue draws either sheet below 1024px.
+// Both sheets at 390px. Each card's verbs must wrap rather than push the page
+// past the viewport, and this render shows it holds.
 //
-// No `layout` override: the canvas frame's 2rem gutter is what puts the card at
-// the ~324px the regression was measured in.
+// No `layout` override: the canvas frame's 2rem gutter puts the card at ~324px.
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -150,6 +146,7 @@ export const PopulatedPhone: Story = {
     installFetchStub({
       "GET /me": admin(),
       "GET /fx-rates": () => jsonResponse(FX),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
@@ -166,6 +163,7 @@ export const Empty: Story = {
     installFetchStub({
       "GET /me": admin(),
       "GET /fx-rates": () => jsonResponse({ data: [] }),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse({ data: [] }),
     });
     return (
@@ -188,6 +186,7 @@ export const ReadOnly: Story = {
           meFixture({ allow: { fx_rate: ["read"], ai_model_rate: ["read"] } }),
         ),
       "GET /fx-rates": () => jsonResponse(FX),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
@@ -218,6 +217,7 @@ export const SetRateDialog: Story = {
     installFetchStub({
       "GET /me": admin(),
       "GET /fx-rates": () => jsonResponse(FX),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
@@ -238,6 +238,7 @@ export const ModelPriceDialog: Story = {
     installFetchStub({
       "GET /me": admin(),
       "GET /fx-rates": () => jsonResponse(FX),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
@@ -255,11 +256,12 @@ export const ModelPricesDark: Story = {
   render: () => {
     installFetchStub({
       "GET /me": admin(),
+      "GET /ai/price-sync": () => jsonResponse({ auto_sync: true }),
       "GET /ai-model-rates": () => jsonResponse(MODELS),
     });
     return (
       <StoryProviders>
-        <ModelCostsCard />
+        <ModelPricesCard />
       </StoryProviders>
     );
   },

@@ -549,16 +549,17 @@ export const vi = {
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":
     "Hạn mức chung của công ty. Không phải hạn mức cá nhân hay mức trần chi tiêu bằng đô la.",
-  "aiAdmin.consumption": "Đã dùng {spent}/{total} token · {pct}%",
-  "aiAdmin.remaining": "Còn {tokens} token",
-  "aiAdmin.reset": "Đặt lại lúc {date} UTC",
+  "aiAdmin.consumption": "{spent}/{total} token · {pct}%",
+  "aiAdmin.used": "Đã dùng",
+  "aiAdmin.resets": "Đặt lại lúc",
+  "aiAdmin.basis": "Cách tính",
+  "aiAdmin.reset": "{date} theo giờ UTC",
   "aiAdmin.fixed":
     "Hạn mức cố định của công ty thay cho cách tính theo người dùng.",
   "aiAdmin.formula":
     "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
   "aiAdmin.floor":
     "Khi không có người dùng đủ điều kiện, hạn mức tính là 1 người dùng.",
-  "aiAdmin.normal": "Trong ngưỡng hạn mức bình thường",
   "aiAdmin.degraded": "Đã đạt ngưỡng 80%: đang định tuyến sang cấp thấp hơn",
   "aiAdmin.queued": "Đã chạm hạn mức: AI nền bị hoãn",
   "aiAdmin.policy":
@@ -9052,8 +9053,6 @@ export const vi = {
     "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
   "settings.rates.fxWithheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được tỷ giá. Mọi số liệu tổng hợp trong bản cài đặt đều quy đổi theo tỷ giá này.",
-  "settings.rates.modelWithheld":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được giá mô hình.",
   "settings.rates.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi tỷ giá và giá mô hình.",
   "settings.rates.fxTableLabel": "Tỷ giá đang áp dụng",
@@ -9061,9 +9060,6 @@ export const vi = {
   "settings.rates.fxEmpty": "Chưa có tỷ giá nào.",
   "settings.rates.fxModalTitle": "Nhập tỷ giá",
   "settings.rates.rateToBase": "Tỷ giá (quy đổi sang loại tiền cơ sở)",
-  "settings.rates.modelTitle": "Chi phí mô hình AI",
-  "settings.rates.modelIntro":
-    "Giá từng mô hình tính bằng USD cho mỗi 1M token, dùng để ước tính chi phí AI. Giá không bao giờ ảnh hưởng đến định tuyến mô hình.",
   "settings.rates.modelTableLabel": "Giá đang áp dụng",
   "settings.rates.modelAdd": "Thêm giá mô hình",
   "settings.rates.modelEmpty": "Chưa có giá mô hình nào.",
@@ -9672,11 +9668,11 @@ export const vi = {
   "tools.noMatch": "Không có công cụ nào khớp với tìm kiếm này.",
   "tools.descriptionToggle": "Mô tả đầy đủ của {tool}",
 
-  "aiusage.title": "Chi phí AI ước tính và mức sử dụng",
+  "aiusage.title": "Chi phí AI",
   "aiusage.withheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành xem được chi phí AI. Số liệu bao gồm toàn bộ bản cài đặt.",
   "aiusage.sub":
-    "Mức sử dụng của tháng đã chọn. Số ước tính tách biệt với hạn mức token đang áp dụng và với hóa đơn của nhà cung cấp.",
+    "Số ước tính cho tháng đã chọn, tách biệt với hạn mức token và với hóa đơn của nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiTier.decide": "Mô hình quyết định",
   "aiTier.local_small": "Cục bộ nhỏ",
@@ -9689,14 +9685,20 @@ export const vi = {
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.cost": "Chi phí ước tính",
   "aiusage.col.tokens": "Token vào / ra",
-  "aiusage.days.label": "Lượt gọi theo ngày",
+  "aiusage.days.label": "Chi phí theo ngày",
   "aiusage.days.col.day": "Ngày",
   "aiusage.costNote": "Chi phí là số ước tính theo mức giá đã cấu hình.",
-  "aiusage.costPartial":
-    "Tổng này chỉ gồm các lượt gọi có giá: {calls} lượt khác chưa cấu hình mức giá, và mức sử dụng của chúng chỉ hiện trong số token.",
-  "aiusage.monthLabel": "Tháng",
   "aiusage.spendLabel": "Chi phí theo tác vụ",
-  "aiusage.days.show": "Hiển thị theo ngày",
+  "aiusage.totals": "Tổng của tháng",
+  "aiusage.notPriced": "Chưa có giá",
+  "aiusage.unpriced_one":
+    "{count} lượt gọi chưa có giá, không tính vào tổng này.",
+  "aiusage.unpriced_other":
+    "{count} lượt gọi chưa có giá, không tính vào tổng này.",
+  "aiusage.view.label": "Cách xem chi phí",
+  "aiusage.view.task": "Theo tác vụ",
+  "aiusage.view.day": "Theo ngày",
+  "aiusage.pricesLink": "Giá được thiết lập trong Mô hình AI",
   "aiusage.empty": "Không có lượt gọi AI nào trong tháng này.",
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
@@ -9977,18 +9979,13 @@ export const vi = {
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.ai.keyFailed": "Không thể lưu khóa",
   "firstRun.ai.bindFailed": "Không thể gán nhà cung cấp",
-  "aiSettings.withheld": "Bị hạn chế",
-  "aiSettings.unread": "Không khả dụng",
-  "aiSettings.pending": "Đang tải…",
-  "aiSettings.spend.estimated": "≈ {amount} đã chi",
-  "aiSettings.spend.notPriced": "Chưa có giá",
-  "aiSettings.providers.label": "Khóa nhà cung cấp",
-  "aiSettings.providers.value": "{count} trên {total}",
+  "aiSettings.providers.value": "Khóa đã lưu: {count}/{total}",
   "aiSettings.providers.missing": "{count} đã gán, chưa có khóa",
   "aiSettings.providers.lastCall": "lần gọi gần nhất {elapsed}",
-  "aiSettings.providers.lastCallOnly": "Lần gọi gần nhất {elapsed}",
   "aiSettings.providers.neverCalled": "Chưa từng gọi",
   "aiSettings.providers.traceFailed": "Dấu vết lượt gọi không khả dụng",
+  "aiSettings.providers.standIn":
+    "đang trả lời bằng nhà cung cấp thử nghiệm tích hợp",
   "elapsed.justNow": "vừa xong",
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
@@ -10012,7 +10009,6 @@ export const vi = {
     "Điền sẵn máy chủ và mô hình. Khóa nằm trong JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các cấp.",
-  "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
   "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khóa",
@@ -10173,17 +10169,13 @@ export const vi = {
   "aiProviderKeys.reason.unreachable":
     "Nhà cung cấp không phản hồi. Kiểm tra máy chủ và mạng.",
   "aiRouting.intro":
-    "Chọn nhà cung cấp và mô hình cho từng cấp, cho embedding và, nếu muốn, cho mô hình quyết định. Cấu hình gán đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
+    "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
-  "aiTerms.providerGloss": "bên được gọi",
   "aiTerms.tier": "Cấp",
-  "aiTerms.tierGloss": "một loại công việc, gán với một mô hình",
-  "aiTerms.task": "Tác vụ",
-  "aiTerms.taskGloss": "việc sản phẩm làm",
   "aiRouting.taskCount_one": "{count} tác vụ",
   "aiRouting.taskCount_other": "{count} tác vụ",
   "aiRouting.colTasks": "Tác vụ",
@@ -10192,6 +10184,10 @@ export const vi = {
   "aiRouting.unkeyed.title": "Một số cấp không thể trả lời",
   "aiRouting.unkeyed.body":
     "Chưa có khóa cho {providers}. Thêm khóa trong mục Nhà cung cấp. Trước khi thêm, các mục sau không thể trả lời: {lanes}.",
+  "aiRouting.standIn.title":
+    "Các cấp đang trả lời bằng nhà cung cấp thử nghiệm",
+  "aiRouting.standIn.body":
+    "Chưa có khóa cho {providers}, nên các cấp sau trả lời bằng văn bản thử nghiệm từ nhà cung cấp thử nghiệm tích hợp: {lanes}. Thêm khóa trong mục Nhà cung cấp.",
   "aiRouting.noPrice": "Chưa có giá. Thêm giá trong mục nhà cung cấp.",
   "aiRouting.editTitle": "Sửa cấu hình gán {lane}",
   "aiRouting.saveBinding": "Lưu cấu hình gán",
@@ -10205,7 +10201,7 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Mỗi dòng hiển thị cấp của tác vụ; mô hình của cấp được thiết lập trong Cấp mô hình. Chọn tên tác vụ để xem tác vụ làm gì, trạng thái hiện tại và cách xử lý khi nhà cung cấp ngừng hoạt động. Mở dòng để thiết lập mức suy nghĩ và thời gian chờ; cấp của tác vụ cố định theo hợp đồng.",
+    "Tác vụ được nhóm theo cấp chạy chúng; chọn tên để xem tác vụ làm gì, hoặc mở dòng để thiết lập mức suy nghĩ và thời gian chờ.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
@@ -12699,7 +12695,7 @@ export const vi = {
   "aiPriceSync.autoSync.help":
     "Đọc giá của từng nhà cung cấp đã cấu hình mỗi ngày một lần. Giá nhập thủ công vẫn được giữ nguyên.",
   "aiPriceSync.sources": "Nguồn: models.dev · OpenRouter",
-  "aiPriceSync.lastSynced": "Đồng bộ lần cuối {ago}",
+  "aiPriceSync.lastSyncedLabel": "Đồng bộ lần cuối",
   "aiPriceSync.never": "Chưa đồng bộ",
   "aiPriceSync.adminOnly": "Vai trò hiện tại không có quyền đổi mục này.",
   "aiPriceSync.withheld": "Bạn không có quyền xem giá mô hình.",

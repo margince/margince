@@ -48,17 +48,22 @@ function Tasks({ editable }: Readonly<{ editable: boolean }>) {
   );
 }
 
-const meta: Meta<typeof Tasks> = {
+const meta = {
   title: "Settings/AI/AI models/Task table",
   component: Tasks,
   args: { editable: true },
-};
+} satisfies Meta<typeof Tasks>;
 export default meta;
-type Story = StoryObj<typeof Tasks>;
+type Story = StoryObj<typeof meta>;
 
+// One table per tier, headed by its name, smallest tier first.
 export const InTasksPanel: Story = {
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("table");
+    const canvas = within(canvasElement);
+    const tables = await canvas.findAllByRole("table");
+    if (tables[0]?.getAttribute("aria-label") !== "Small local") {
+      throw new Error("the first group is not the smallest tier");
+    }
   },
 };
 
@@ -70,6 +75,6 @@ export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("table");
+    await within(canvasElement).findByRole("table", { name: "Premium" });
   },
 };

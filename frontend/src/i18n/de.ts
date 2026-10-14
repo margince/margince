@@ -559,16 +559,17 @@ export const de = {
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
     "Gemeinsamer Pool des Unternehmens. Kein individuelles Kontingent und keine Ausgabengrenze in Dollar.",
-  "aiAdmin.consumption": "{spent} von {total} Tokens verbraucht · {pct} %",
-  "aiAdmin.remaining": "{tokens} Tokens verbleibend",
-  "aiAdmin.reset": "Wird am {date} UTC zurückgesetzt",
+  "aiAdmin.consumption": "{spent} von {total} Tokens · {pct} %",
+  "aiAdmin.used": "Verbraucht",
+  "aiAdmin.resets": "Zurückgesetzt am",
+  "aiAdmin.basis": "Berechnung",
+  "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Ein festes Kontingent für das Unternehmen ersetzt die Berechnung pro Nutzerkonto.",
   "aiAdmin.formula":
     "Aktive Nutzende mit vollem Platz: {users} × {tokens} Tokens pro Nutzerkonto und Monat.",
   "aiAdmin.floor":
     "Ohne berechtigte Nutzende wird das Kontingent für 1 Nutzerkonto berechnet.",
-  "aiAdmin.normal": "Im normalen Kontingentbereich",
   "aiAdmin.degraded":
     "Schwelle von 80 % erreicht: Routing auf niedrigere Modellstufen ist aktiv",
   "aiAdmin.queued":
@@ -9252,8 +9253,6 @@ export const de = {
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später; frühere Kurse ändern sich nie.",
   "settings.rates.fxWithheld":
     "Nur Admins und Operations sehen Währungskurse. Jede Gesamtsumme in der Installation wird damit umgerechnet.",
-  "settings.rates.modelWithheld":
-    "Nur Admins und Operations sehen Modellpreise.",
   "settings.rates.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Kurse ändern.",
   "settings.rates.fxTableLabel": "Geltende Kurse",
@@ -9261,9 +9260,6 @@ export const de = {
   "settings.rates.fxEmpty": "Noch keine Währungskurse.",
   "settings.rates.fxModalTitle": "Währungskurs festlegen",
   "settings.rates.rateToBase": "Kurs (zur Basiswährung)",
-  "settings.rates.modelTitle": "KI-Modellkosten",
-  "settings.rates.modelIntro":
-    "Preis pro Modell in USD pro Million Tokens, zur Schätzung der KI-Kosten. Preise beeinflussen das Modell-Routing nie.",
   "settings.rates.modelTableLabel": "Geltende Preise",
   "settings.rates.modelAdd": "Modellpreis hinzufügen",
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
@@ -9880,11 +9876,11 @@ export const de = {
   "tools.noMatch": "Keine Werkzeuge passen zu dieser Suche.",
   "tools.descriptionToggle": "Vollständige Beschreibung von {tool}",
 
-  "aiusage.title": "Geschätzte KI-Kosten und Nutzung",
+  "aiusage.title": "KI-Kosten",
   "aiusage.withheld":
     "Nur Admins und Operations sehen die KI-Kosten. Die Zahlen umfassen die gesamte Installation.",
   "aiusage.sub":
-    "Bisherige Nutzung im gewählten Monat. Die Schätzungen sind unabhängig vom aktuellen Token-Kontingent und von der Rechnung deines Anbieters.",
+    "Schätzungen für den gewählten Monat, unabhängig vom Token-Kontingent und von der Rechnung deines Anbieters.",
   "aiusage.col.task": "Aufgabe",
   "aiTier.decide": "Entscheidungsmodell",
   "aiTier.local_small": "Lokal, klein",
@@ -9897,15 +9893,20 @@ export const de = {
   "aiusage.col.cached": "Aus dem Cache",
   "aiusage.col.cost": "Geschätzte Kosten",
   "aiusage.col.tokens": "Tokens ein / aus",
-  "aiusage.days.label": "Aufrufe nach Tag",
+  "aiusage.days.label": "Kosten nach Tag",
   "aiusage.days.col.day": "Tag",
   "aiusage.costNote":
     "Die Kosten sind Schätzungen auf Basis der konfigurierten Preise.",
-  "aiusage.costPartial":
-    "Diese Summe umfasst nur Aufrufe mit Preis: Für {calls} weitere war kein Preis konfiguriert, ihre Nutzung erscheint nur in den Token-Zahlen.",
-  "aiusage.monthLabel": "Monat",
   "aiusage.spendLabel": "Kosten nach Aufgabe",
-  "aiusage.days.show": "Tage anzeigen",
+  "aiusage.totals": "Summen des Monats",
+  "aiusage.notPriced": "Ohne Preis",
+  "aiusage.unpriced_one": "{count} Aufruf ohne Preis fehlt in dieser Summe.",
+  "aiusage.unpriced_other":
+    "{count} Aufrufe ohne Preis fehlen in dieser Summe.",
+  "aiusage.view.label": "Aufschlüsselung der Kosten",
+  "aiusage.view.task": "Nach Aufgabe",
+  "aiusage.view.day": "Nach Tag",
+  "aiusage.pricesLink": "Preise legst du unter KI-Modelle fest",
   "aiusage.empty": "Keine KI-Aufrufe in diesem Monat.",
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
@@ -10193,18 +10194,13 @@ export const de = {
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Schlüssel nicht gespeichert",
   "firstRun.ai.bindFailed": "Anbieter nicht zugeordnet",
-  "aiSettings.withheld": "Eingeschränkt",
-  "aiSettings.unread": "Nicht verfügbar",
-  "aiSettings.pending": "Wird geladen…",
-  "aiSettings.spend.estimated": "≈ {amount} ausgegeben",
-  "aiSettings.spend.notPriced": "Ohne Preis",
-  "aiSettings.providers.label": "Anbieterschlüssel",
-  "aiSettings.providers.value": "{count} von {total}",
+  "aiSettings.providers.value": "Hinterlegte Schlüssel: {count} von {total}",
   "aiSettings.providers.missing": "Zugeordnet ohne Schlüssel: {count}",
   "aiSettings.providers.lastCall": "letzter Aufruf {elapsed}",
-  "aiSettings.providers.lastCallOnly": "Letzter Aufruf {elapsed}",
   "aiSettings.providers.neverCalled": "Noch nie aufgerufen",
   "aiSettings.providers.traceFailed": "Aufrufprotokoll nicht verfügbar",
+  "aiSettings.providers.standIn":
+    "Antworten kommen vom integrierten Testanbieter",
   "elapsed.justNow": "gerade eben",
   "elapsed.minutes": "vor {minutes} min",
   "elapsed.hours": "vor {hours} h",
@@ -10228,7 +10224,6 @@ export const de = {
     "Trägt Host und Modell ein. Der Schlüssel gehört in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
-  "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
   "aiProviderKeys.title": "Anbieter",
   "aiProviderKeys.keyless": "Kein Schlüssel nötig",
@@ -10392,17 +10387,13 @@ export const de = {
   "aiProviderKeys.reason.unreachable":
     "Der Anbieter hat nicht geantwortet. Prüfe den Host und das Netzwerk.",
   "aiRouting.intro":
-    "Wähle Anbieter und Modell für jede Stufe, für Embeddings und optional für das Entscheidungsmodell. Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
+    "Jede Stufe bindet eine Art von Arbeit an einen Anbieter und ein Modell; gespeicherte Änderungen gelten innerhalb einer Minute.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Es begrenzt, welche Anbieter eine Stufe nutzen kann, und wird vom Betrieb festgelegt.",
   "aiRouting.notBound": "Nicht gebunden",
   "aiRouting.lastResponse": "Letzte Antwort {when}",
   "aiTerms.provider": "Anbieter",
-  "aiTerms.providerGloss": "wer aufgerufen wird",
   "aiTerms.tier": "Stufe",
-  "aiTerms.tierGloss": "eine Art von Arbeit, an ein Modell gebunden",
-  "aiTerms.task": "Aufgabe",
-  "aiTerms.taskGloss": "was das Produkt tut",
   "aiRouting.taskCount_one": "{count} Aufgabe",
   "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiRouting.colTasks": "Aufgaben",
@@ -10411,6 +10402,9 @@ export const de = {
   "aiRouting.unkeyed.title": "Einige Modellstufen können nicht antworten",
   "aiRouting.unkeyed.body":
     "Für {providers} ist kein Schlüssel hinterlegt. Füge einen unter Anbieter hinzu. Bis dahin können diese nicht antworten: {lanes}.",
+  "aiRouting.standIn.title": "Modellstufen antworten über den Testanbieter",
+  "aiRouting.standIn.body":
+    "Für {providers} ist kein Schlüssel hinterlegt, daher antworten diese Stufen mit Testtext vom integrierten Testanbieter: {lanes}. Füge unter Anbieter einen Schlüssel hinzu.",
   "aiRouting.noPrice": "Kein Preis hinterlegt. Beim Anbieter ergänzen.",
   "aiRouting.editTitle": "Zuordnung {lane} bearbeiten",
   "aiRouting.saveBinding": "Zuordnung speichern",
@@ -10424,7 +10418,7 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Jede Zeile zeigt die Stufe einer Aufgabe; das Modell der Stufe legst du unter Modellstufen fest. Wähle den Namen einer Aufgabe für das, was sie tut, ihren Zustand und was sie tut, während ihr Anbieter ausfällt. Öffne die Zeile, um Denkstufe und Zeitlimits festzulegen; die Stufe ist vertraglich festgelegt.",
+    "Aufgaben nach der Stufe, die sie ausführt; wähle einen Namen für das, was eine Aufgabe tut, oder öffne eine Zeile, um Denkstufe und Zeitlimits festzulegen.",
   "aiTasks.whatItDoes": "{task}: was es tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
@@ -12977,7 +12971,7 @@ export const de = {
   "aiPriceSync.autoSync.help":
     "Liest die Preise jedes eingerichteten Anbieters einmal täglich. Manuell gesetzte Preise bleiben erhalten.",
   "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
-  "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
+  "aiPriceSync.lastSyncedLabel": "Zuletzt abgeglichen",
   "aiPriceSync.never": "Noch nicht abgeglichen",
   "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
   "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",

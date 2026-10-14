@@ -12,7 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { FxRatesCard, ModelCostsCard } from "./rates";
+import { ModelPricesCard } from "./ai-price-sync";
+import { FxRatesCard } from "./rates";
 
 // Each price sheet has three honest states, and a grant picks which one:
 // WITHHELD without the object's read grant (fx_rate and ai_model_rate are
@@ -45,6 +46,12 @@ function jsonResponse(body: unknown, status = 200) {
 const RATE_SETTER: GrantSpec = {
   fx_rate: ["read", "create"],
   ai_model_rate: ["read", "create"],
+};
+
+// A run of the price refresh both adds rows and updates them, so it takes both.
+const PRICE_ADMIN: GrantSpec = {
+  fx_rate: ["read", "create"],
+  ai_model_rate: ["read", "create", "update"],
 };
 
 // Read on both objects, no write verb anywhere: the read-only state.
@@ -86,6 +93,9 @@ function ratesBackend(allow: GrantSpec, seat: "full" | "read", urls: string[]) {
           },
         ],
       });
+    }
+    if (url.endsWith("/v1/ai/price-sync")) {
+      return jsonResponse({ auto_sync: true });
     }
     if (url.endsWith("/v1/ai-model-rates/refresh")) {
       return jsonResponse({
@@ -166,14 +176,14 @@ function render(ui: ReactNode) {
   );
 }
 
-// The two sheets are on different settings pages now (FX under Company,
-// model prices under AI). They are rendered as a pair here because one fixture
+// The two sheets are on different settings pages (FX under Company, model
+// prices under AI models). They are rendered as a pair here because one fixture
 // backend answers both, and every case below asserts on one of them alone.
 function RateSheets() {
   return (
     <>
       <FxRatesCard />
-      <ModelCostsCard />
+      <ModelPricesCard />
     </>
   );
 }
@@ -212,9 +222,11 @@ describe("the rate sheets", () => {
   it("groups the model prices under each vendor's name, leaving the test adapter out", async () => {
     mount(RATE_READER);
     await screen.findByText("claude-opus-4-8");
-    const card = rateCard("AI model costs");
-    const anthropic = within(card).getByRole("heading", { name: "Anthropic" });
-    const openai = within(card).getByRole("heading", { name: "OpenAI" });
+    const card = rateCard("Model prices");
+    // One fold per vendor, its name in the summary.
+    const anthropic = within(card).getByText("Anthropic").closest("summary");
+    const openai = within(card).getByText("OpenAI").closest("summary");
+    if (!anthropic || !openai) throw new Error("a vendor has no fold");
     expect(anthropic.compareDocumentPosition(openai)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -283,7 +295,7 @@ describe("the rate sheets", () => {
     );
 
     await user.click(
-      within(rateCard("AI model costs")).getByRole("button", {
+      within(rateCard("Model prices")).getByRole("button", {
         name: "Add model rate",
       }),
     );
@@ -314,7 +326,7 @@ describe("the rate sheets", () => {
   });
 
   it("shows write affordances for an admin", async () => {
-    mount(RATE_SETTER);
+    mount(PRICE_ADMIN);
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Set rate" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add model rate" })).toBeTruthy();
@@ -334,7 +346,7 @@ describe("the rate sheets", () => {
   // wrote: how many prices moved, and which vendors could not be asked.
   it("reports what a refresh wrote and which vendors it could not reach", async () => {
     const user = userEvent.setup();
-    mount(RATE_SETTER);
+    mount(PRICE_ADMIN);
     await user.click(
       await screen.findByRole("button", { name: "Refresh model prices" }),
     );
@@ -366,7 +378,7 @@ describe("the rate sheets", () => {
 
     // The model sheet still renders its rows — it is the WRITING that is
     // withheld, not the reading.
-    const model = rateCard("AI model costs");
+    const model = rateCard("Model prices");
     expect(within(model).getByText("claude-opus-4-8")).toBeTruthy();
     expect(
       within(model).queryByRole("button", { name: "Add model rate" }),
@@ -382,13 +394,14 @@ describe("the rate sheets", () => {
     mount({ fx_rate: ["read"], ai_model_rate: ["read", "update"] });
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
 
-    const model = rateCard("AI model costs");
+    const model = rateCard("Model prices");
     expect(
       within(model).getByRole("button", { name: "Add model rate" }),
     ).toBeTruthy();
+    // A refresh also adds rows, which an update grant alone would be refused.
     expect(
-      within(model).getByRole("button", { name: "Refresh model prices" }),
-    ).toBeTruthy();
+      within(model).queryByRole("button", { name: "Refresh model prices" }),
+    ).toBeNull();
 
     const fx = rateCard("Currency rates");
     expect(within(fx).getByText("USD")).toBeTruthy();
@@ -416,14 +429,18 @@ describe("the rate sheets", () => {
     ).toEqual([]);
 
     // The read-only posture is stated once per readable sheet, and the withheld
-    // reason is NOT: stacking both would explain one denial twice, in two
-    // mutually contradictory ways.
-    for (const title of ["Currency rates", "AI model costs"]) {
-      const card = rateCard(title);
-      expect(
-        within(card).getByText(/your role cannot change rates/i),
-      ).toBeTruthy();
-    }
+    // reason is not. Stacking both would explain one denial twice, two ways.
+    // The model prices say it on their switch.
+    expect(
+      within(rateCard("Currency rates")).getByText(
+        /your role cannot change rates/i,
+      ),
+    ).toBeTruthy();
+    expect(
+      within(rateCard("Model prices")).getByText(
+        "Your role cannot change this.",
+      ),
+    ).toBeTruthy();
     expect(
       screen.queryByText(/only an administrator or operations user can see/i),
     ).toBeNull();
@@ -458,7 +475,7 @@ describe("the rate sheets", () => {
 
     // The model sheet is unaffected — the grants are per object, and a card that
     // read the wrong one would fail here rather than pass by symmetry.
-    const model = rateCard("AI model costs");
+    const model = rateCard("Model prices");
     expect(within(model).getByText("claude-opus-4-8")).toBeTruthy();
     expect(urls.some((url) => url.includes("/v1/ai-model-rates"))).toBe(true);
   });
@@ -468,14 +485,9 @@ describe("the rate sheets", () => {
 
     // Awaited on the readable sibling, for the same reason as above.
     expect(await screen.findByText("USD")).toBeTruthy();
-    expect(
-      screen.getByText(
-        /only an administrator or operations user can see model prices/i,
-      ),
-    ).toBeTruthy();
-    const model = rateCard("AI model costs");
+    expect(screen.getByText("Model prices are not yours to see.")).toBeTruthy();
+    const model = rateCard("Model prices");
     expect(within(model).queryByText("claude-opus-4-8")).toBeNull();
-    expect(within(model).queryByText("Prices in force")).toBeNull();
     expect(
       within(model).queryByText(/your role cannot change rates/i),
     ).toBeNull();
@@ -499,12 +511,11 @@ describe("the rate sheets", () => {
     expect(
       screen.queryByText(/only an administrator or operations user can see/i),
     ).toBeNull();
-    for (const title of ["Currency rates", "AI model costs"]) {
-      const card = rateCard(title);
-      expect(
-        within(card).getByText(/your role cannot change rates/i),
-      ).toBeTruthy();
-    }
+    expect(
+      within(rateCard("Currency rates")).getByText(
+        /your role cannot change rates/i,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Set rate" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
   });

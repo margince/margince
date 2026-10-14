@@ -2,209 +2,142 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
+import { Panel } from "../design-system/panel";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ProvidersStat, SpendEstimate } from "./ai-settings";
+import { ProvidersStatus } from "./ai-settings";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-/** The pair, composed here because no single page carries both any more. */
-const AiReadings = () => (
-  <>
-    <SpendEstimate />
-    <ProvidersStat />
-  </>
-);
-
-// The two AI readings, side by side.
-//
-// They used to sit in a header above a five-tab strip; each of those tabs is its
-// own page now, so the readings ride the two pages they belong to. The pair is
-// still worth one story because of what follows.
-//
-// The two header readings are the point of the shape and they follow DIFFERENT
-// grants — spend and the call trace on `ai_diagnostics:read`, the vendor keys
-// on `ai_routing:read` — so a seat holding one and not the other sees one
-// figure and one withheld notice side by side. That pair is what these stories
-// are for; each tab's own card has its own story.
+// The status line at the top of the Providers panel on AI models. The key count
+// rides `ai_routing:read`. The last call and the stand-in ride
+// `ai_diagnostics:read`, so a seat holding one grant sees half a line.
 const OPERATOR: GrantSpec = {
   ai_routing: ["read", "update"],
   ai_diagnostics: ["read"],
-  automation: ["read", "update"],
-  ai_model_rate: ["read"],
 };
-// Reaches the page on the automations read alone: no spend, no vendor keys.
-const AUTOMATIONS_ONLY: GrantSpec = { automation: ["read"] };
 
 const ROUTING = {
-  profile: "eu_hosted",
+  profile: "eu_hosted" as const,
   tiers: {
-    local_small: { provider: "ollama", model: "gemma3" },
     cheap_cloud: { provider: "gemini", model: "gemini-3.1-flash-lite" },
     premium: { provider: "anthropic", model: "claude-opus-4-8" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
 
-// A month with the budget a fifth spent, so the meter has something to draw and
-// the estimate has something to price.
-const USAGE = {
-  days: [
-    {
-      date: "2026-09-01",
-      tasks: [
-        {
-          task: "company.enrich",
-          tier: "cheap_cloud",
-          calls: 640,
-          cached_hits: 96,
-          tokens_in: 190000,
-          tokens_out: 24000,
-          cost_est_minor: 412,
-        },
-      ],
-    },
-  ],
-  budget: {
-    monthly_tokens: 1000000,
-    spent_tokens: 214000,
-    band: "normal",
-    currency: "USD",
+const PROVIDERS = [
+  {
+    provider: "gemini",
+    configured: true,
+    env_var: "GEMINI_API_KEY",
+    usable: true,
+    optional: false,
+    credential_kind: "api_key" as const,
+  },
+  {
+    provider: "openai",
+    configured: true,
+    env_var: "OPENAI_API_KEY",
+    usable: true,
+    optional: false,
+    credential_kind: "api_key" as const,
+  },
+  // Bound by the premium lane and holding nothing.
+  {
+    provider: "anthropic",
+    configured: false,
+    env_var: "ANTHROPIC_API_KEY",
+    usable: false,
+    optional: false,
+    credential_kind: "api_key" as const,
+  },
+];
+
+const CALL = {
+  id: "01a0-0000-7000-8000-000000000001",
+  occurred_at: new Date(Date.now() - 20 * 60_000).toISOString(),
+  kind: "completion",
+  task: "company.enrich",
+  tier: "cheap_cloud",
+  provider: "gemini",
+  model_id: "gemini-3.1-flash-lite",
+  served_model: "gemini-3.1-flash-lite",
+  calls_attempted: 1,
+  tokens_in: 3102,
+  tokens_out: 480,
+  reasoning_tokens: 0,
+  cached_tokens: 0,
+  latency_ms: 804,
+  cache_hit: false,
+  degraded: false,
+  has_payload: false,
+  decision_attempted: false,
+};
+
+function Status({
+  allow,
+  calls,
+  served,
+}: Readonly<{ allow: GrantSpec; calls: unknown[]; served: string[] }>) {
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({ allow })),
+    "GET /ai/provider-health": () =>
+      jsonResponse({ providers: [], configured: served }),
+    "GET /ai/calls": () =>
+      jsonResponse({
+        data: calls,
+        page: { next_cursor: null, has_more: false },
+        tasks: [],
+        task_options: [],
+        payload_capture_enabled: false,
+      }),
+  });
+  return (
+    <StoryProviders>
+      <Panel title="Providers">
+        <ProvidersStatus providers={PROVIDERS} routing={ROUTING} />
+      </Panel>
+    </StoryProviders>
+  );
+}
+
+const meta = {
+  title: "Settings/AI/AI models/Providers status",
+  component: Status,
+  args: { allow: OPERATOR, calls: [CALL], served: ["anthropic", "gemini"] },
+} satisfies Meta<typeof Status>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+// Two of three keyed, the bound one without a key in the danger ink, and when
+// a vendor last answered.
+export const Operator: Story = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(/^last call/);
   },
 };
 
-// The same month metered and never priced: no task carries a cost, so the
-// estimate has nothing to state. Absent is not zero, which is the whole reason
-// the card says so in words.
-const UNPRICED_USAGE = {
-  ...USAGE,
-  days: [
-    {
-      date: "2026-09-01",
-      tasks: [
-        {
-          task: "company.enrich",
-          tier: "cheap_cloud",
-          calls: 640,
-          cached_hits: 96,
-          tokens_in: 190000,
-          tokens_out: 24000,
-        },
-      ],
-    },
-  ],
+export const OperatorDark: Story = { globals: { theme: "dark" } };
+
+export const OperatorPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
-function story(
-  allow: GrantSpec,
-  reads: { usage?: unknown; calls?: unknown[] } = {},
-) {
-  return () => {
-    installFetchStub({
-      "GET /me": () => jsonResponse(meFixture({ allow })),
-      "GET /ai/routing": () => jsonResponse(ROUTING),
-      "GET /ai/usage": () => jsonResponse(reads.usage ?? USAGE),
-      "GET /ai-model-rates": () => jsonResponse({ data: [] }),
-      "GET /ai/provider-keys": () =>
-        jsonResponse({
-          providers: [
-            {
-              provider: "gemini",
-              configured: true,
-              env_var: "GEMINI_API_KEY",
-              usable: true,
-            },
-            {
-              provider: "openai",
-              configured: true,
-              env_var: "OPENAI_API_KEY",
-              usable: true,
-            },
-            // Bound by the premium lane and holding nothing — the join the
-            // header's second line reports and the lane row's pill repeats.
-            {
-              provider: "anthropic",
-              configured: false,
-              env_var: "ANTHROPIC_API_KEY",
-              usable: false,
-            },
-          ],
-        }),
-      "GET /ai/calls": () =>
-        jsonResponse({
-          data: reads.calls ?? [
-            {
-              id: "01a0-0000-7000-8000-000000000001",
-              occurred_at: "2026-09-01T14:22:09Z",
-              kind: "completion",
-              task: "company.enrich",
-              tier: "cheap_cloud",
-              provider: "gemini",
-              model_id: "gemini-3.1-flash-lite",
-              served_model: "gemini-3.1-flash-lite",
-              calls_attempted: 1,
-              tokens_in: 3102,
-              tokens_out: 480,
-              reasoning_tokens: 0,
-              cached_tokens: 0,
-              latency_ms: 804,
-              cache_hit: false,
-              degraded: false,
-              has_payload: false,
-              decision_attempted: false,
-            },
-          ],
-          page: { next_cursor: null, has_more: false },
-          tasks: ["company.enrich"],
-          task_options: [{ task: "company.enrich" }],
-          payload_capture_enabled: false,
-        }),
-    });
-    return (
-      <StoryProviders>
-        <AiReadings />
-      </StoryProviders>
-    );
-  };
-}
+// A fresh installation: no call yet, said in words rather than an empty tail.
+export const NeverCalled: Story = { args: { calls: [] } };
 
-// Across pages, not on one: `ProvidersStat` renders on Models & routing and
-// `SpendEstimate` in the allowance card. The pair is the point — the two readings an operator
-// opens AI settings for — so the title says across rather than picking one and
-// misplacing the other.
-const meta: Meta<typeof AiReadings> = {
-  title: "Settings/Across pages/AI readings",
-  component: AiReadings,
-};
-export default meta;
-type Story = StoryObj<typeof AiReadings>;
-
-// The shape an operator holding everything sees: both readings answered, the
-// strip open on Routing.
-export const Operator: Story = { render: story(OPERATOR) };
-
-// The seat the page's self-gating exists for. Both header readings say they are
-// withheld rather than vanishing — an absent spend card would claim this
-// installation had spent nothing, which is a statement about the DATA where the
-// truth is only about who may read it.
-export const WithheldReadings: Story = { render: story(AUTOMATIONS_ONLY) };
-
-// The keys are readable and the per-call trace is not — two different grants,
-// so the count still answers and the line under it simply goes quiet. "Never
-// called" here would be a claim about the installation made on no evidence.
+// The keys are readable and the trace is not, so the line stops at the count.
 export const TraceWithheld: Story = {
-  render: story({ ai_routing: ["read", "update"], ai_model_rate: ["read"] }),
+  args: { allow: { ai_routing: ["read"] } },
 };
 
-// Dark. The header's figures and the strip's current-tab underline are the two
-// things a flattened token costs the reader here.
-export const OperatorDark: Story = {
-  globals: { theme: "dark" },
-  render: story(OPERATOR),
-};
-
-// Nothing priced and nothing called yet, which is a fresh installation's first
-// month. Both cards answer in WORDS where a figure would be invented: an absent
-// estimate reads as a month that cost nothing, and an absent last-call line
-// used to draw a caption with nothing in it.
-export const NothingPricedOrCalled: Story = {
-  render: story(OPERATOR, { usage: UNPRICED_USAGE, calls: [] }),
+// The process serves the offline fake: answers come from the test provider.
+export const AnsweringFromTestProvider: Story = {
+  args: { served: ["fake"] },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      "answering from the built-in test provider",
+    );
+  },
 };

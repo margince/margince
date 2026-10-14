@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The allowance's share as a bar beside the figures it is drawn from. */
+.ai-budget-used {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-budget-used > .meterbar {
+  inline-size: 8rem;
+  margin: 0;
+}

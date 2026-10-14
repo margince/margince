@@ -9,6 +9,7 @@ import { AccountMenu } from "../app/account";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { allowance } from "./ai-admin.testkit";
 import { SIGN_OFF_QUERY } from "./composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import {
@@ -74,24 +75,20 @@ function aiRateReaderBackend() {
         meFixture({
           roles: ["ops"],
           allow: {
-            // What opens both pages. The price grant authors the table on one
-            // of them but reaches neither on its own, so a fixture without this
-            // would be testing the access boundary.
+            // Not `ai_diagnostics:read`, which is what the spend and trace
+            // cards check: reach the page, be refused the card.
             //
-            // NOT `ai_diagnostics:read`, which is what the cards check — that
-            // is the whole fixture: reach the page, be refused the card. The
-            // cards asked `automation:update` before the runtime's spend got an
-            // object of its own.
-            //
-            // Usage opens on `ai_model_rate` alone, so this reader gets there
-            // and finds the spend withheld. Model calls asks for the same grant
-            // its card does, so there is no such state on that page any more:
-            // a reader who reaches it can read it. The case below therefore
-            // asserts the page is UNREACHABLE rather than reachable-and-empty.
+            // Usage opens on the allowance read, so this reader gets there and
+            // finds the spend withheld. Model calls asks for the same grant its
+            // card does, so the case below asserts that page is unreachable.
             ai_model_rate: ["read", "update"],
+            ai_budget: ["read"],
           },
         }),
       );
+    }
+    if (url.endsWith("/v1/ai/budget")) {
+      return jsonResponse(allowance);
     }
     const keyed = keyedEnvelope(url);
     if (keyed) {
@@ -471,30 +468,18 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 
-  // The spend cards follow `automation:update` rather than any AI-named object,
-  // so the principal here holds the model-price grants that open AI usage and
-  // nothing else: the read reaches the page, the write authors the price table on
-  // it, and the card whose endpoint would 403 keeps its place and says why.
-  //
-  // The five-tab strip that used to carry these is gone — each card is its own
-  // address now — so the two withheld readings are asserted on the two pages
-  // that hold them rather than one page's tabs.
+  // The allowance opens AI usage for this principal; the spend card beside it
+  // asks `ai_diagnostics:read`, so it keeps its place and says why.
   it("withholds the AI spend from a principal without the diagnostics read", async () => {
     vi.stubGlobal("fetch", aiRateReaderBackend());
     render(<SettingsScreen route={settingsHref("usage")} />);
 
-    // The model prices this grant authors are on screen...
-    await waitFor(() =>
-      expect(screen.getByText("AI model costs")).toBeTruthy(),
-    );
+    // The allowance this grant reads is on screen...
+    expect(await screen.findByText("Monthly AI allowance")).toBeTruthy();
     // ...and the card whose endpoint requires `ai_diagnostics:read` KEEPS its
     // place and says it is withheld. Absent, it would claim the installation had
-    // spent nothing — a statement about the data, where the truth is only about
-    // who may read it. No request is made for it, so a rep never hits a 403
-    // error box (GET /ai/usage).
-    expect(
-      await screen.findByText("Estimated AI spend and usage"),
-    ).toBeTruthy();
+    // spent nothing. No request is made for it (GET /ai/usage).
+    expect(screen.getByRole("heading", { name: "AI spend" })).toBeTruthy();
     expect(
       await screen.findByText(
         /only an administrator or operations user can see AI spend/i,

@@ -65,6 +65,9 @@ function backend(allow: GrantSpec, state: unknown) {
         }
         return jsonResponse(state);
       }
+      if (req.url.endsWith("/ai-model-rates")) {
+        return jsonResponse({ data: [] });
+      }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
@@ -106,7 +109,8 @@ describe("ModelPricesCard", () => {
     vi.setSystemTime(NOW);
     backend(ADMIN, SYNCED);
     mount();
-    expect(await screen.findByText("Last synced 2 h ago")).toBeInTheDocument();
+    expect(await screen.findByText("2 h ago")).toBeInTheDocument();
+    expect(screen.getByText("Last synced")).toBeInTheDocument();
     expect(screen.getByText("2 models added")).toBeInTheDocument();
     expect(screen.getByText("1 hand-set price kept")).toBeInTheDocument();
     expect(screen.queryByText(/Ollama/)).not.toBeInTheDocument();
@@ -146,6 +150,43 @@ describe("ModelPricesCard", () => {
     expect(
       screen.queryByRole("button", { name: "Refresh model prices" }),
     ).not.toBeInTheDocument();
+  });
+
+  // The sheet the sync writes reads in the same panel, one fold per vendor.
+  it("holds the prices in force and the verb that adds one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me"))
+          return jsonResponse(meFixture({ allow: ADMIN }));
+        if (url.endsWith("/ai/price-sync"))
+          return jsonResponse({ auto_sync: true });
+        return jsonResponse({
+          data: [
+            {
+              provider: "anthropic",
+              model_id: "claude-opus-4-8",
+              input_per_mtok: "5",
+              output_per_mtok: "25",
+              cache_read_per_mtok: "0.5",
+              cache_write_per_mtok: "6.25",
+              effective_date: "2026-07-23",
+            },
+          ],
+        });
+      }),
+    );
+    mount();
+    const summary = (await screen.findByText("Anthropic")).closest("summary");
+    expect(summary?.getAttribute("aria-expanded")).toBe("false");
+    expect(summary?.textContent).toContain("1");
+    expect(
+      screen.getByRole("button", { name: "Add model rate" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "Refresh model prices" }),
+    ).toHaveLength(1);
   });
 
   it("withholds the card from a seat without the price sheet", async () => {

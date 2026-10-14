@@ -3,13 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
-import {
-  ModelRef,
-  PanelTitle,
-  TermChip,
-  TermLegend,
-  TierChips,
-} from "./ai-terms";
+import { ModelRef, PanelTitle, TermChip, TierChips } from "./ai-terms";
 import { StoryProviders } from "./story-utils";
 
 // The three words of the AI settings area, each with one icon wherever it
@@ -21,7 +15,6 @@ function Terms() {
     <StoryProviders>
       <Panel title={<PanelTitle term="tier">Model tiers</PanelTitle>}>
         <PanelBody>
-          <TermLegend />
           <p>
             <TermChip term="provider">OpenAI-compatible</TermChip>{" "}
             <TermChip term="tier">Everyday cloud</TermChip>{" "}

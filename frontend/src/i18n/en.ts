@@ -545,15 +545,16 @@ export const en = {
   "aiAdmin.allowance": "Monthly AI allowance",
   "aiAdmin.pool":
     "Shared company pool. Not an individual quota or a dollar spending cap.",
-  "aiAdmin.consumption": "{spent} of {total} tokens used · {pct}%",
-  "aiAdmin.remaining": "{tokens} tokens remaining",
-  "aiAdmin.reset": "Resets {date} UTC",
+  "aiAdmin.consumption": "{spent} of {total} tokens · {pct}%",
+  "aiAdmin.used": "Used",
+  "aiAdmin.resets": "Resets",
+  "aiAdmin.basis": "Calculation",
+  "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Fixed company allowance overrides the per-user calculation.",
   "aiAdmin.formula":
     "Active full users: {users} × {tokens} tokens per user per month.",
   "aiAdmin.floor": "With no eligible users, the allowance counts 1 user.",
-  "aiAdmin.normal": "Within the normal allowance band",
   "aiAdmin.degraded": "80% threshold reached: reduced-tier routing is active",
   "aiAdmin.queued": "Allowance reached: background AI is deferred",
   "aiAdmin.policy":
@@ -9390,17 +9391,12 @@ export const en = {
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later; past rates never change.",
   "settings.rates.fxWithheld":
     "Only an administrator or operations user can see currency rates. Every roll-up in the installation is converted with them.",
-  "settings.rates.modelWithheld":
-    "Only an administrator or operations user can see model prices.",
   "settings.rates.readOnly": "Read-only. Your role cannot change rates.",
   "settings.rates.fxTableLabel": "Rates in force",
   "settings.rates.fxAdd": "Set rate",
   "settings.rates.fxEmpty": "No currency rates yet.",
   "settings.rates.fxModalTitle": "Set currency rate",
   "settings.rates.rateToBase": "Rate (to base currency)",
-  "settings.rates.modelTitle": "AI model costs",
-  "settings.rates.modelIntro":
-    "Price per model in USD per 1M tokens, used to estimate AI spend. Prices never affect model routing.",
   "settings.rates.modelTableLabel": "Prices in force",
   "settings.rates.modelAdd": "Add model rate",
   "settings.rates.modelEmpty": "No model rates yet.",
@@ -10004,11 +10000,11 @@ export const en = {
   "tools.noMatch": "No tools match this search.",
   "tools.descriptionToggle": "Full description of {tool}",
 
-  "aiusage.title": "Estimated AI spend and usage",
+  "aiusage.title": "AI spend",
   "aiusage.withheld":
     "Only an administrator or operations user can see AI spend. The figures cover the whole installation.",
   "aiusage.sub":
-    "Historical usage for the selected month. Estimates are separate from the live token allowance and from your provider bill.",
+    "Estimates for the chosen month, separate from the token allowance and from your provider bill.",
   "aiusage.col.task": "Task",
   "aiTier.decide": "Decision model",
   "aiTier.local_small": "Small local",
@@ -10021,14 +10017,19 @@ export const en = {
   "aiusage.col.cached": "Cached",
   "aiusage.col.cost": "Estimated cost",
   "aiusage.col.tokens": "Tokens in / out",
-  "aiusage.days.label": "Calls by day",
+  "aiusage.days.label": "Spend by day",
   "aiusage.days.col.day": "Day",
   "aiusage.costNote": "Costs are estimates at configured rates.",
-  "aiusage.costPartial":
-    "This total covers priced calls only: {calls} more had no configured rate, and their usage appears only in the token counts.",
-  "aiusage.monthLabel": "Month",
   "aiusage.spendLabel": "Spend by task",
-  "aiusage.days.show": "Show days",
+  "aiusage.totals": "Month totals",
+  "aiusage.notPriced": "Not priced",
+  "aiusage.unpriced_one": "{count} call had no rate and is not in this total.",
+  "aiusage.unpriced_other":
+    "{count} calls had no rate and are not in this total.",
+  "aiusage.view.label": "Spend breakdown",
+  "aiusage.view.task": "By task",
+  "aiusage.view.day": "By day",
+  "aiusage.pricesLink": "Prices are set on AI models",
   "aiusage.empty": "No AI calls this month.",
   "aiusage.prevMonth": "Previous month",
   "aiusage.nextMonth": "Next month",
@@ -10310,18 +10311,12 @@ export const en = {
   "firstRun.ai.bindFailed": "Provider not bound",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
-  "aiSettings.withheld": "Restricted",
-  "aiSettings.unread": "Unavailable",
-  "aiSettings.pending": "Loading…",
-  "aiSettings.spend.estimated": "≈ {amount} spent",
-  "aiSettings.spend.notPriced": "Not priced",
-  "aiSettings.providers.label": "Provider keys",
-  "aiSettings.providers.value": "{count} of {total}",
+  "aiSettings.providers.value": "Keys held: {count} of {total}",
   "aiSettings.providers.missing": "{count} bound, no key",
   "aiSettings.providers.lastCall": "last call {elapsed}",
-  "aiSettings.providers.lastCallOnly": "Last call {elapsed}",
   "aiSettings.providers.neverCalled": "Never called",
   "aiSettings.providers.traceFailed": "Call trace unavailable",
+  "aiSettings.providers.standIn": "answering from the built-in test provider",
   "elapsed.justNow": "just now",
   "elapsed.minutes": "{minutes} min ago",
   "elapsed.hours": "{hours} h ago",
@@ -10343,7 +10338,6 @@ export const en = {
   "aiRouting.decisions.preset.openrouterKey":
     "Fills in host and model. The key goes in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent": "No decision model. Every task uses the tiers.",
-  "aiRouting.priceSheet": "Price sheet",
   "aiRouting.provider.label": "Provider",
   "aiProviderKeys.title": "Providers",
   "aiProviderKeys.keyless": "No key needed",
@@ -10502,17 +10496,13 @@ export const en = {
   "aiProviderKeys.reason.unreachable":
     "The provider did not respond. Check the host and the network.",
   "aiRouting.intro":
-    "Pick a provider and model for each tier, for embeddings and, optionally, for the decision model. Saved bindings reach every process within a minute, without a restart.",
+    "Each tier binds a class of work to one provider and model; saved changes apply within a minute.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
   "aiRouting.notBound": "Not bound",
   "aiRouting.lastResponse": "Last response {when}",
   "aiTerms.provider": "Provider",
-  "aiTerms.providerGloss": "who is called",
   "aiTerms.tier": "Tier",
-  "aiTerms.tierGloss": "a class of work, bound to a model",
-  "aiTerms.task": "Task",
-  "aiTerms.taskGloss": "what the product does",
   "aiRouting.taskCount_one": "{count} task",
   "aiRouting.taskCount_other": "{count} tasks",
   "aiRouting.colTasks": "Tasks",
@@ -10521,6 +10511,9 @@ export const en = {
   "aiRouting.unkeyed.title": "Some tiers cannot answer",
   "aiRouting.unkeyed.body":
     "No key is held for {providers}. Add one under Providers. Until then these cannot answer: {lanes}.",
+  "aiRouting.standIn.title": "Tiers answer from the test provider",
+  "aiRouting.standIn.body":
+    "No key is held for {providers}, so these tiers answer with test text from the built-in test provider: {lanes}. Add a key under Providers.",
   "aiRouting.noPrice": "No price set. Add it under the provider.",
   "aiRouting.editTitle": "Edit {lane} binding",
   "aiRouting.saveBinding": "Save binding",
@@ -10534,7 +10527,7 @@ export const en = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "AI tasks",
   "aiTasks.intro":
-    "Each row shows a task’s tier; the tier’s model is set under Model tiers. Select a task’s name for what it does, its state, and what it does while its provider is down. Open the row to set its thinking level and timeouts; its tier is fixed by contract.",
+    "Tasks grouped by the tier that runs them; select a name for what a task does, or open a row to set its thinking level and timeouts.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
   "aiTasks.viewCalls": "View calls",
@@ -13096,7 +13089,7 @@ export const en = {
   "aiPriceSync.autoSync.help":
     "Reads each configured provider’s prices once a day. A price you set by hand is kept.",
   "aiPriceSync.sources": "Sources: models.dev · OpenRouter",
-  "aiPriceSync.lastSynced": "Last synced {ago}",
+  "aiPriceSync.lastSyncedLabel": "Last synced",
   "aiPriceSync.never": "Not synced yet",
   "aiPriceSync.adminOnly": "Your role cannot change this.",
   "aiPriceSync.withheld": "Model prices are not yours to see.",
