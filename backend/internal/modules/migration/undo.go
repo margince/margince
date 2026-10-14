@@ -128,8 +128,8 @@ func isRowRefusal(err error) bool {
 }
 
 // reversalRefusalReason turns a Reverse error into the operator-facing cause
-// errored rows carry — never a database or driver message, the same discipline
-// the forward commit's SkippedRow reasons already keep.
+// errored rows carry. It is never a database or driver message, the same rule
+// the forward commit's SkippedRow reasons keep.
 func reversalRefusalReason(err error) Reason {
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):

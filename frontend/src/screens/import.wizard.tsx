@@ -43,7 +43,7 @@ export function ImportWizardPage() {
   const { locale } = useLocale();
   const format = useImportFormat(locale);
   const recent = useRecentImports();
-  // Only the upload still on its way is work the page could lose: once it
+  // Only the upload still on its way is work the page could lose. Once it
   // answers, the draft is the server's and the hub lists it.
   useUnsavedGuard(wizard.upload.isPending);
   // The file the hub's drop zone took starts here, once the format can say

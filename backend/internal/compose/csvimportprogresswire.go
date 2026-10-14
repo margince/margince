@@ -47,8 +47,8 @@ func applyProgress(out *crmcontracts.ImportRun, run migration.Run) {
 }
 
 // elapsedEnd is when the clock stops. Only a run a worker holds is still
-// counting; one that failed or waits on approval stopped at its last change,
-// so a report read a day later does not say the run took a day.
+// counting. A run that failed or waits on approval stopped at its last change.
+// A report read a day later then does not say the run took a day.
 func elapsedEnd(run migration.Run, finished *time.Time) time.Time {
 	switch {
 	case finished != nil:

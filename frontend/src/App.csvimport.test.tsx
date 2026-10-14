@@ -18,7 +18,7 @@ import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.
-// The run is the state: a profiled file is a draft the server keeps, so only
+// The run is the state. A profiled file is a draft the server keeps, so only
 // an upload still in flight is work the page could lose by leaving.
 
 const SETTLE_MS = 10_000;

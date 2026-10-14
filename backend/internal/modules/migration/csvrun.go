@@ -195,7 +195,7 @@ func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
 }
 
 // RunView narrows a run list to one of the two things the Data import page
-// shows, so drafts and abandoned runs cannot push a finished import out of
+// shows. Drafts and abandoned runs then cannot push a finished import out of
 // one page.
 type RunView string
 

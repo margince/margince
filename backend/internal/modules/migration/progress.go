@@ -64,7 +64,7 @@ func (p Progress) rowsDone() int {
 // foldWindow carries the previous window forward with one more sample, taken
 // at `at` on the database clock. A window that ran backwards is another pass
 // over the rows, so it starts over and a rate never spans two passes. It also
-// starts over when the run moves to the next item: a file of another type is
+// starts over when the run moves to the next item. A file of another type is
 // walked at another speed, and the estimate quotes the current item's rate.
 func (p *Progress) foldWindow(prior Progress, at time.Time) {
 	done := p.rowsDone()

@@ -50,9 +50,9 @@ function inReadersWords(
 
 /**
  * A reason in the reader's language, from its code and the values the server
- * names. Three cases read as the English sentence the server wrote instead: a
- * report stored before codes existed, a code this bundle has no sentence for,
- * and a value the sentence needs that the server did not send.
+ * names. Three cases read as the English sentence the server wrote instead.
+ * A report stored before codes existed. A code this bundle has no sentence
+ * for. A value the sentence needs that the server did not send.
  */
 export function reasonText(
   t: Translator,

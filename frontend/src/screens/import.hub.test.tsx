@@ -93,8 +93,8 @@ describe("the data import hub", () => {
       within(rows[1]).getByRole("link", { name: "Continue" }),
     ).toHaveAttribute("href", expect.stringContaining("run=r3"));
     expect(screen.queryByText("gone.csv")).toBeNull();
-    // Each list is asked for on its own, so a draft or a replaced test cannot
-    // push a finished import out of the one page of history.
+    // Each list is asked for on its own. A draft or a replaced test then
+    // cannot push a finished import out of the one page of history.
     const asked = sent.filter((s) => s.path === "GET /imports").length;
     expect(asked).toBeGreaterThanOrEqual(2);
     await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));

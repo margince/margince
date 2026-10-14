@@ -58,9 +58,9 @@ func TestReasonCodesMatchTheContractEnum(t *testing.T) {
 // same cause as a code. A literal that sets the sentence and not the code is a
 // reason a screen can only show in English.
 //
-// ImportIgnoredEntry is left out on purpose: its Reason is itself the closed
-// enum (not_yet_importable, unknown_name) the screen words, with no sentence
-// beside it.
+// ImportIgnoredEntry is left out: its Reason is itself the closed enum
+// (not_yet_importable, unknown_name) the screen words, with no sentence beside
+// it.
 var reasonSentenceKeys = map[string][2]string{
 	"SkippedRow":           {"Reason", "Code"},
 	"SkippedAssoc":         {"Reason", "Code"},
@@ -93,8 +93,8 @@ func writesImportReasons(path string) bool {
 
 // Every place that words a refusal sets the code with it, so a screen never
 // meets a skip it can only show in English. The census reads the writers' own
-// source in both packages that write reasons, as literals and as assignments to
-// a field, and fails when it sees too few of any type to be the whole walk.
+// source in both packages that write reasons, as literals and as assignments.
+// It fails when it sees too few of any type to be the whole walk.
 func TestEveryReasonWriterSetsACode(t *testing.T) {
 	seen := map[string]int{}
 	var assigned []string
@@ -236,7 +236,7 @@ func TestImportRunAnswersProgressComputedOnTheDatabaseClock(t *testing.T) {
 }
 
 // A run that stopped moving reads the same elapsed time however long after
-// the stop it is read, whichever final or at-rest status it is in.
+// the stop it is read. That holds for a failed run and one awaiting approval.
 func TestElapsedStopsWhereTheRunStoppedMoving(t *testing.T) {
 	read := time.Date(2026, 3, 2, 11, 0, 0, 0, time.UTC)
 	started := read.Add(-2*time.Hour - 10*time.Minute)

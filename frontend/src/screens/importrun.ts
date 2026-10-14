@@ -53,8 +53,8 @@ export const IMPORT_POLL_MS = 5000;
 
 // The newest runs first, as the server lists them. Polled while one of them is
 // still moving, so the list shows the end of a run the reader walked away from.
-// A view asks for history or for drafts alone: a draft or a cancelled test must
-// not push a finished import out of the one page of history.
+// A view asks for history or for drafts alone. A draft or a cancelled test
+// then cannot push a finished import out of the one page of history.
 export function useRecentImports(view?: "history" | "drafts") {
   return useQuery({
     queryKey: [IMPORTS_KEY, "recent", view ?? "all"],
