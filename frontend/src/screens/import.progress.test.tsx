@@ -83,6 +83,7 @@ describe("the import progress panel", () => {
     expect(container.firstElementChild).toHaveClass("import--fill");
     const css = readFileSync("src/screens/import.css", "utf8");
     expect(css).toMatch(/\.import--fill\s*{[^}]*align-items:\s*stretch/);
+    expect(css).toMatch(/\.import--fill\s*{[^}]*align-self:\s*stretch/);
   });
 
   it("reads the rows, the rate, the elapsed time and the counts", () => {
