@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { Button, Card, Disclosure, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
@@ -274,4 +275,28 @@ export const BleedAtPhoneWidth: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// 32rem is the pane beside the rail at 768px. A story cannot set that viewport,
+// and the collapse depends only on the row's own width.
+export const LongValueInNarrowPane: Story = {
+  render: () => (
+    <div style={{ width: "32rem" }}>
+      <SettingList>
+        <SettingRow
+          label="Projection basis for the quarterly forecast"
+          value="Weighted pipeline by expected close date across every open opportunity in the workspace"
+          control={<Button>Edit</Button>}
+          testId="long-row"
+        />
+      </SettingList>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const label = await within(canvasElement).findByText(
+      "Projection basis for the quarterly forecast",
+    );
+    const naming = label.closest(".settingrow-naming");
+    expect(naming?.getBoundingClientRect().width).toBeGreaterThanOrEqual(120);
+  },
 };

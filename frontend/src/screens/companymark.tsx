@@ -144,11 +144,8 @@ function useMarkWrites(
   return { upload, remove };
 }
 
-/**
- * One slot: a tile in the mark's shape that previews it and takes a file, then
- * the slot's name and its verbs. `verbs` holds each button's accessible name,
- * so two slots never offer two controls both called "Replace".
- */
+// `verbs` holds each button's accessible name, so two slots never offer two
+// controls both called "Replace".
 function MarkSlot({
   profile,
   canEdit,

@@ -57,15 +57,10 @@ export const PROFILE_GROUPS = [
   fields: readonly (keyof CompanyInput)[];
 }[];
 
-// The three the save demands, and the two groups that say more. The server's
-// required check is this first group, so those rows stand open. All three are
-// still one form in the dialog, because one PUT writes the whole profile.
+// The server's required check is the first group, so those rows stand open.
 const [ESSENTIALS, ...ELABORATIONS] = PROFILE_GROUPS;
 
-/**
- * What we hold, as one row per fact. Every row opens the one editor, because
- * one PUT writes all of them. A value the site read carries a provenance mark.
- */
+// Every row opens the one editor, because one PUT writes the whole profile.
 export function CompanyFactsCard({
   company,
   form,
@@ -190,11 +185,8 @@ function GroupSummary({
   );
 }
 
-/**
- * What we hold for one field, as a row: the fact named and what it says. The
- * row's chevron is the keyboard path to the editor; a press anywhere else on
- * the row opens it too.
- */
+// The chevron is the keyboard path to the editor; a press elsewhere on the row
+// opens it too.
 function CompanyFactRow({
   field,
   value,
@@ -219,9 +211,7 @@ function CompanyFactRow({
     >
       <SettingRow
         label={label}
-        // An empty field says so, in the words every other surface uses for it.
-        // A blank right column is indistinguishable from a row that failed to
-        // render its answer.
+        // A blank right column reads as a row that failed to render.
         value={
           value.trim() === "" ? (
             <span className="company-fact-unset">{t("field.unset")}</span>
@@ -246,11 +236,8 @@ function CompanyFactRow({
   );
 }
 
-/**
- * Where a value came from, when a contact did not type it. A typed value gets
- * no mark, as on the record page, so the mark keeps its meaning. It carries no
- * date: this page has no record zone to read a timestamp against.
- */
+// A typed value gets no mark, as on the record page, so the mark keeps its
+// meaning.
 function derivedSource(
   stored: components["schemas"]["CompanyProfileField"],
 ): EvidenceMarkSource | undefined {

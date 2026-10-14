@@ -54,18 +54,8 @@ function trimDecimal(value: string): string {
   return value.replace(/(?<!0)0+$/, "").replace(/\.$/, "");
 }
 
-// Withheld, not absent (design-system README, "Absent, disabled, or withheld"):
-// a PERMISSION is what denies a price sheet — fx_rate and ai_model_rate grants
-// exist only for admin and ops — so the card keeps its place and says so. Both
-// sheets sit on settings pages other roles open for their other cards (currency
-// rates on Company, model prices on AI), and a sheet that vanished there
-// would read as "this installation has no rates" rather than "not yours to see".
-//
-// It asks the server for NOTHING: each caller keeps `enabled: canRead` on its
-// list query, because the answer is already known and fetching the 403 in order
-// to render it turns a settled denial into red error text with a Retry that can
-// only be refused again. Gated on the /me probe so the notice waits for the
-// grants instead of flashing at every reader while they are still in flight.
+// Withheld, not absent: a vanished sheet reads as "no rates here", not "not
+// yours to see". Callers skip the query, since fetching the 403 shows a Retry.
 function WithheldRateCard({
   title,
   reason,

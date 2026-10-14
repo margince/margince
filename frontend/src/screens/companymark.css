@@ -1,5 +1,4 @@
-/* The company's two marks, each in a tile cut to its own shape: a wordmark in
-   a wide box and a badge in a square one, so a file in the wrong slot looks
+/* Each mark in a tile cut to its own shape, so a file in the wrong slot looks
    wrong before the sidebar shows it. */
 .brand-slots {
   display: flex;

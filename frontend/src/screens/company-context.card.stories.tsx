@@ -11,10 +11,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// What the AI is told about the company it is selling for. Two independent
-// conditions govern this card and they mean different things: a rollout FLAG
-// says whether the surface exists on this installation at all, and the
-// company grant says whether this reader may change it.
+// Two conditions, not one: a rollout flag says whether the surface exists, the
+// company grant whether this reader may change it.
 const PROFILE = {
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
@@ -103,37 +101,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Filled: Story = { render: story(CAPABILITIES, EDITOR) };
 
-// A permission, not a rollout: the profile stays readable and says once that it
-// is not this reader's to change.
 export const ReadOnly: Story = { render: story(CAPABILITIES, READER) };
 
-// The installation cannot read a company profile at all — a capability this
-// deployment does not have, which is the one cause that justifies the surface
-// being absent rather than withheld.
+// The one cause that justifies the surface being absent rather than withheld.
 export const NotEnabledHere: Story = {
   render: story({ ...CAPABILITIES, read_enabled: false }, EDITOR),
 };
 
-// The filled profile in dark. Look at the logo tiles, the group counts and the
-// dotted evidence marks, not the text.
+// Look at the logo tiles, group counts and dotted evidence marks.
 export const FilledDark: Story = {
   globals: { theme: "dark" },
   render: story(CAPABILITIES, EDITOR),
 };
 
-// The profile at 390px, which is where the row language earns or loses its
-// keep: below 640px a row stops holding its answer to the right and stacks the
-// naming above it, and the website value is a full URL with no space to break
-// at.
+// The website value is a full URL with no space to break at.
 export const FilledPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(CAPABILITIES, EDITOR),
 };
 
-// The editor a row opens: seventeen fields in their three sections, one Save,
-// and focus on the fact whose row was pressed. The rows behind it are answers;
-// this is the only place on the page that is a form.
+// Focus lands on the fact whose row was pressed.
 export const EditingEssentials: Story = {
   render: story(CAPABILITIES, EDITOR),
   play: async ({ canvasElement }) => {
@@ -144,8 +132,6 @@ export const EditingEssentials: Story = {
   },
 };
 
-// A profile nobody has filled in past the three the save demands. Both groups
-// count none set, and every row behind them reads "Not set".
 export const Sparse: Story = {
   render: story(CAPABILITIES, EDITOR, {
     display_name: "Brandt Automotive GmbH",

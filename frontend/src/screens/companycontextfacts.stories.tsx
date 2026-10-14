@@ -7,10 +7,6 @@ import type { components } from "../api/schema";
 import { CompanyFactsCard } from "./companycontextfacts";
 import { StoryProviders } from "./story-utils";
 
-// What drafts, offers, search and agents are told about the company. Three
-// essentials stand open; two optional groups fold with their fill counts. The
-// editor every row opens is in company-context.card.stories.tsx.
-
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 type CompanyInput = components["schemas"]["CompanyProfileInput"];
 
@@ -92,14 +88,13 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// Some of each optional group filled in: the counts say so on the folded rows.
 export const SomeSet: Story = {};
 
 export const AllSet: Story = {
   args: { company: loaded(ALL_SET), form: ALL_SET },
 };
 
-// One group open at a time; a long answer reads as its first two lines.
+// A long answer reads as its first two lines.
 export const GroupOpen: Story = {
   args: { company: loaded(ALL_SET), form: ALL_SET },
   play: async ({ canvasElement }) => {
@@ -117,15 +112,11 @@ export const SomeSetDark: Story = {
   globals: { theme: "dark" },
 };
 
-// Below 640px each row stacks its answer under its name; the chevron stays at
-// the row's end.
 export const SomeSetPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
 
-// A permission, not a rollout: the facts stay readable, no row opens, and the
-// panel says once that it is not this reader's to change.
 export const ReadOnly: Story = {
   args: { canEdit: false, readOnly: true },
 };

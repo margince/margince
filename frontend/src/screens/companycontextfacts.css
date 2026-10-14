@@ -13,19 +13,6 @@
   padding-block: 0;
 }
 
-/* A long answer wraps rather than squeezing the name to a letter a line in a
-   narrow pane (768px beside the rail). */
-@media (min-width: 641px) {
-  .company-fact .settingrow-naming {
-    flex: 1 0 10rem;
-  }
-
-  .company-fact .settingrow-control {
-    flex-shrink: 1;
-    min-width: 0;
-  }
-}
-
 /* A long answer (a history, an address) reads as its first lines here; the
    editor this row opens holds all of it. */
 .company-fact .settingrow-value {
