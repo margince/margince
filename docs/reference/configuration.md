@@ -1604,7 +1604,7 @@ Margince still reads a `model_pricing:` key that an older file still has, does n
 writes a warning at boot; remove it.
 
 Model credentials (BYOK cloud tiers) live in the **key vault**. An admin puts them there under
-Settings → AI → Model provider keys. No binary flag holds one, and the binding does not either: a
+Settings → AI → AI models → Providers. No binary flag holds one, and the binding does not either: a
 binding names providers and never a credential.
 
 The normal environment variable of a provider is a **seed** for a role the vault backs. A boot that

@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import type { STAT_CARD_TONES } from "../design-system/statcard";
 import { formatNumber } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
+import { answersFromStandIn } from "./ai-provider-health";
 
 // Each System health report read down to one answer. It says what the slot in
 // the page's row shows, and whether the full card stands under the row.
@@ -159,9 +160,6 @@ export function intakeReading(
   };
 }
 
-// The built-in test provider answers every call without a model behind it.
-const STAND_IN = "fake";
-
 export function providersReading(
   health: components["schemas"]["AiProviderHealth"],
   { t, plural, locale }: Words,
@@ -189,11 +187,12 @@ export function providersReading(
       panel: false,
     };
   }
-  if (health.configured.every((provider) => provider === STAND_IN)) {
+  if (answersFromStandIn(health.configured)) {
     return {
       card: {
         value: t("systemHealth.providers.standIn"),
         tone: "info",
+        detail: t("systemHealth.providers.standInDetail"),
         href: setUpHref,
       },
       panel: false,

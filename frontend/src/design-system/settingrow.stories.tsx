@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { Button, Card, Disclosure, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
@@ -161,6 +162,30 @@ function Catalog() {
 }
 
 export const Catalogue: Story = { render: () => <Catalog /> };
+
+// At 390px a switch keeps its name's line while the description wraps beside
+// it; a dropdown still drops under its name.
+export const SwitchBesideNameAtPhoneWidth: Story = {
+  render: () => <Catalog />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const rect = (element: Element) => element.getBoundingClientRect();
+    const name = rect(canvas.getByText("Auto-enrich captured companies"));
+    const track = rect(
+      await canvas.findByRole("switch", {
+        name: "Auto-enrich captured companies",
+      }),
+    );
+    await expect(track.top).toBeGreaterThanOrEqual(name.top);
+    await expect(track.top).toBeLessThan(name.bottom);
+    await expect(track.left).toBeGreaterThan(name.left);
+    const language = rect(canvas.getByText("Language"));
+    const select = rect(canvas.getByRole("combobox", { name: "Language" }));
+    await expect(select.top).toBeGreaterThanOrEqual(language.bottom);
+  },
+};
 
 // bleed="settings": a form standing straight in the Panel. The hairlines reach
 // the pane's edges and the row text keeps the intro's x; no row lights up.

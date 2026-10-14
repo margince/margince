@@ -247,6 +247,23 @@ describe("the starter library", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  // The row says what the template does; the dialog it opens reads the rest,
+  // so no description is ever cut off mid-sentence.
+  it("reads a template's whole description in the dialog its row opens", async () => {
+    const user = userEvent.setup();
+    mount();
+    const template = await screen.findByTestId("template-stage_change_notify");
+    expect(template).not.toHaveTextContent(/deal history|…/);
+    await user.click(
+      within(template).getByRole("button", { name: /^Use template/ }),
+    );
+    expect(
+      within(await screen.findByRole("dialog")).getByText(
+        AUTOMATION_CATALOG[2].description ?? "",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("stays readable without the create grant, but no row opens", async () => {
     const user = userEvent.setup();
     mount({ automation: ["read"] });

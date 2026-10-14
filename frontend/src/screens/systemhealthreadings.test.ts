@@ -156,20 +156,23 @@ describe("providersReading", () => {
     ).toEqual({ card: { value: "Not set up", href }, panel: false });
   });
 
-  it("does not call the built-in test provider an answering model", () => {
-    const reading = providersReading(
-      { providers: [], configured: ["fake"] },
-      words,
-      href,
-    );
-    expect(reading.card?.value).toBe("Test provider only");
-    expect(reading.card?.tone).toBe("info");
+  it("names the built-in test provider wherever a lane answers from it", () => {
+    for (const configured of [["fake"], ["anthropic", "fake"]]) {
+      expect(
+        providersReading({ providers: [], configured }, words, href).card,
+      ).toEqual({
+        value: "Built-in test provider",
+        tone: "info",
+        detail: "The bound models cannot be called. Add a key under AI models.",
+        href,
+      });
+    }
   });
 
   it("answers for real providers that are all answering", () => {
     expect(
       providersReading(
-        { providers: [], configured: ["anthropic", "fake"] },
+        { providers: [], configured: ["anthropic"] },
         words,
         href,
       ).card,

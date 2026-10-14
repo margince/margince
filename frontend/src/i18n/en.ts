@@ -1130,7 +1130,6 @@ export const en = {
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
   "nav.settings": "Settings",
-  "nav.automations": "Automations",
   "nav.group.records": "Records",
   "nav.group.work": "Work",
   "nav.group.intelligence": "Intelligence",
@@ -6203,7 +6202,6 @@ export const en = {
   "jobs.failingSince": "failing since {when}",
   "jobs.reasonVetted":
     "Reasons, classes and remedies come from the job layer, never the worker’s raw cause. A failure it cannot phrase shows a fixed substitute and no class.",
-  "jobs.generatedAt": "As of {time}",
   "jobs.kind.account_scan": "Company analysis",
   "jobs.kind.agent_task_retention": "Agent task cleanup",
   "jobs.kind.ai_price_sync_sweep": "Model price update",
@@ -6279,6 +6277,27 @@ export const en = {
   "settings.providerHealth": "AI provider status",
   "settings.providerHealthSub":
     "Whether each AI provider is answering, as this server has seen it.",
+  "systemHealth.strip": "Status",
+  "systemHealth.asOf": "As of {time}",
+  "systemHealth.checking": "Checking…",
+  "systemHealth.unread": "Could not check",
+  "systemHealth.notSetUp": "Not set up",
+  "systemHealth.jobs.idle": "Idle",
+  "systemHealth.jobs.keepingUp": "Keeping up",
+  "systemHealth.jobs.dead_one": "{count} dead",
+  "systemHealth.jobs.dead_other": "{count} dead",
+  "systemHealth.jobs.retrying_one": "{count} retrying",
+  "systemHealth.jobs.retrying_other": "{count} retrying",
+  "systemHealth.intake.label": "Connector records",
+  "systemHealth.intake.none": "None",
+  "systemHealth.intake.refused_one": "{count} refused",
+  "systemHealth.intake.refused_other": "{count} refused",
+  "systemHealth.providers.answering": "Answering",
+  "systemHealth.providers.affected_one": "{count} needs attention",
+  "systemHealth.providers.affected_other": "{count} need attention",
+  "systemHealth.providers.standIn": "Built-in test provider",
+  "systemHealth.providers.standInDetail":
+    "The bound models cannot be called. Add a key under AI models.",
   "providerHealth.adminOnly":
     "AI provider status covers the whole installation and requires a permission your role does not have.",
   "providerHealth.healthy": "All AI providers are answering.",
@@ -6336,7 +6355,6 @@ export const en = {
   // looking for a bug rather than for the connector's own log.
   "extIngest.noDetail":
     "Shows counts and the refusing check only, never the record, because the refused field can quote sender content. The connector log has the full reason for each.",
-  "extIngest.generatedAt": "As of {time}",
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
@@ -6366,7 +6384,6 @@ export const en = {
   "recoveryHealth.lastBackupHint":
     "Backups run outside Margince, so your backup tool is where to check them.",
   "recoveryHealth.backupNotObserved": "Not observed by Margince",
-  "recoveryHealth.generatedAt": "As of {time}",
   "settings.captureHealth": "Mail capture checks",
   "settings.captureHealthSub":
     "Whether mail capture keeps up with the questions it has to answer.",
@@ -6399,6 +6416,7 @@ export const en = {
   "captureHealth.fact.pending": "Senders waiting for the check",
   "captureHealth.fact.unsure": "Senders the check is unsure of",
   "captureHealth.fact.exhausted": "Senders with no retries left",
+  "captureHealth.fact.mailboxes": "Mailboxes with something waiting",
   "captureHealth.oldestWaited": "oldest has waited {age}",
   "captureHealth.contactsWaiting_one": "{count} contact waiting",
   "captureHealth.contactsWaiting_other": "{count} contacts waiting",
@@ -6409,13 +6427,10 @@ export const en = {
   "captureHealth.mailboxes": "Mailboxes",
   "captureHealth.noDetail":
     "Counts only. Each mailbox owner alone can see which contacts and threads wait.",
-  "captureHealth.mailboxesEmpty": "No mailbox has anything waiting.",
   "captureHealth.unnamedMailbox": "Unnamed mailbox",
-  "captureHealth.installation": "Whole installation",
   "captureHealth.heldMeetings": "Held meetings",
   "captureHealth.heldMeetingsSub":
     "Filed meetings still hidden from colleagues. The nightly pass shares them.",
-  "captureHealth.generatedAt": "As of {time}",
 
   "audit.you": "You",
   "audit.system": "System",
@@ -6426,12 +6441,9 @@ export const en = {
   "audit.viaDealRoom": "in the Deal Room",
   "audit.viaNamed": "via {client}",
   "audit.noHumanAuthority": "No human authority recorded",
-  "settings.auditSub":
-    "Every action, attributed to a user, agent or connector.",
   "settings.auditAdminOnly":
     "Your role cannot read the full audit log. It records every actor and every record they accessed.",
   "settings.auditFilters": "Filters",
-  "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
   "settings.auditActor": "Actor",
   "settings.auditEntity": "Entity type",
@@ -6452,11 +6464,6 @@ export const en = {
   "settings.auditAllowedBy": "Allowed by",
   "settings.auditRecordId": "Record ID",
   "settings.auditEvidence": "Evidence",
-  "settings.auditChanges": "Changed fields",
-  "settings.auditColField": "Field",
-  "settings.auditColValue": "Value",
-  "settings.auditColChange": "Before and after",
-  "settings.auditColRemoved": "Removed value",
   "settings.auditNoValue": "No value",
   "settings.auditRuleSystem": "System, no role check",
   "settings.auditRuleDealRoom": "Deal Room session",
@@ -8620,14 +8627,15 @@ export const en = {
 
   "auto.tier.approval": "Needs approval",
   "auto.sub":
-    "Rules act on their own. A rule marked “Needs approval” sends its actions to Approvals first.",
+    "A rule marked “Needs approval” sends its actions to Approvals first.",
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
   "auto.instances": "Configured automations",
+  "auto.instances.empty":
+    "No automations yet. Start one from the starter library.",
   "auto.use": "Use template",
   "auto.useNamed": "Use template: {name}",
-  "auto.modeAuto": "Runs on its own",
   "auto.name": "Name",
   "auto.create": "Create",
   "auto.createdPaused": "Created paused. Nothing runs until it is enabled.",
@@ -8655,7 +8663,6 @@ export const en = {
   "auto.dateField.empty": "This object has no active date fields yet.",
   "auto.dateField.loadError": "Could not load date fields. Retry.",
   "auto.enabledFor": "{name} is enabled",
-  "auto.colMode": "Mode",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
   "auto.colStatus": "Status",
@@ -8690,7 +8697,7 @@ export const en = {
   "auto.runs.open": "Runs",
   "auto.runs.title": "Run history",
   "auto.runsFor": "Run history of {name}",
-  "auto.runs.filterAll": "All",
+  "auto.runs.filterAll": "All outcomes",
   "auto.runs.filterFired": "Fired",
   "auto.runs.filterFailed": "Failed",
   "auto.runs.filterBlocked": "Blocked",
@@ -8708,6 +8715,7 @@ export const en = {
   "auto.runs.outcomeBlocked": "Blocked",
   "auto.runs.outcomeSkipped": "Skipped",
   "auto.runs.outcomeQueued": "Queued for approval",
+  "auto.runs.outcome": "Outcome",
 
   "auto.preview.open": "Preview",
   "auto.preview.title": "Dry-run impact",
@@ -9928,6 +9936,9 @@ export const en = {
   "settings.companyManualSub":
     "Website reading is not enabled for this installation. These 3 answers create usable company context without a model call or external request.",
   "settings.companyCreateWorkspace": "Create company context",
+  "settings.auditActorExample": "agent:sdr",
+  "settings.auditEntityExample": "deal",
+  "settings.auditAnyAction": "Any action",
   "product.title": "Products",
   "product.settingsSub": "Price list entries that offer lines copy from.",
   "product.readOnly": "Read-only. Your role cannot change products.",
@@ -10055,8 +10066,6 @@ export const en = {
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
     "Only an administrator or operations user can read the call trace. It records every model call the installation made.",
-  "aicalls.sub":
-    "Every model call: routing identity, tokens, retries, captured payload.",
   "aicalls.col.detail": "Detail",
   "aicalls.expandCall": "Show attempts for {task} at {when}",
   "aicalls.col.when": "When",
@@ -10386,7 +10395,7 @@ export const en = {
   "aiRouting.location.loading":
     "Asking Google which locations this key can reach…",
   "aiRouting.location.noKey":
-    "No service-account key is held yet. Add it under Model provider keys and the locations it can reach are listed here.",
+    "No service-account key is held yet. Add it under Providers and the locations it can reach are listed here.",
   "aiRouting.location.unreachable":
     "Google did not answer, so only the stored location is offered. Saving checks it again.",
   "aiRouting.location.noModels":
@@ -10644,60 +10653,67 @@ export const en = {
   "operations.schedules.title": "Background schedules",
   "operations.schedules.sub":
     "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
+  "operations.schedules.fold": "All schedules",
   "operations.pacing.title": "Send pacing",
   "operations.pacing.sub":
     "How fast one mailbox may send. A change applies to the next send.",
   "operations.adminOnly":
     "Only an administrator or operations user can change this.",
   "operations.updateFailed": "Setting not changed",
-  "operations.refusal": "Enter a whole number in the range shown.",
-  "operations.inWords": "= {interval}",
   "operations.off": "Off",
-  "operations.agentRunner.label": "Agent runs (seconds)",
+  "operations.agentRunner.label": "Agent runs",
   "operations.agentRunner.help":
-    "How often scheduled agents are checked for a run that is due, 10 to 3,600.",
-  "operations.webhookRetry.label": "Webhook retries (seconds)",
+    "How often scheduled agents are checked for a run that is due.",
+  "operations.webhookRetry.label": "Webhook retries",
   "operations.webhookRetry.help":
-    "How often failed webhook deliveries are retried, 10 to 3,600.",
-  "operations.timeScan.label": "Time-based automations (seconds)",
-  "operations.timeScan.help":
-    "How often rules that fire on time are checked, 60 to 86,400.",
-  "operations.closeDate.label": "Overdue close dates (seconds)",
+    "How often failed webhook deliveries are retried.",
+  "operations.timeScan.label": "Time-based automations",
+  "operations.timeScan.help": "How often rules that fire on time are checked.",
+  "operations.closeDate.label": "Overdue close dates",
   "operations.closeDate.help":
-    "How often deals past their close date are flagged, 3,600 to 604,800.",
-  "operations.followUp.label": "Follow-up proposals (seconds)",
+    "How often deals past their close date are flagged.",
+  "operations.followUp.label": "Follow-up proposals",
   "operations.followUp.help":
-    "How often stalled deals are checked for a follow-up to propose, 3,600 to 604,800.",
-  "operations.retention.label": "Data retention (seconds)",
+    "How often stalled deals are checked for a follow-up to propose.",
+  "operations.retention.label": "Data retention",
   "operations.retention.help":
-    "How often data past its retention period is removed, 3,600 to 604,800. Always on.",
-  "operations.geocode.label": "Address lookup sweep (seconds)",
+    "How often data past its retention period is removed. Always on.",
+  "operations.geocode.label": "Address lookup sweep",
   "operations.geocode.help":
-    "How often addresses without coordinates are looked up, 300 to 604,800, or 0 for off.",
-  "operations.technical.label": "Technical lookup sweep (seconds)",
+    "How often addresses without coordinates are looked up. 0 switches it off.",
+  "operations.technical.label": "Technical lookup sweep",
   "operations.technical.help":
-    "How often domains without technical facts are looked up, 300 to 604,800, or 0 for off.",
-  "operations.gmailWatchScan.label": "Gmail push check (seconds)",
+    "How often domains without technical facts are looked up. 0 switches it off.",
+  "operations.gmailWatchScan.label": "Gmail push check",
   "operations.gmailWatchScan.help":
-    "How often Gmail push subscriptions are checked for renewal, 600 to 43,200.",
-  "operations.graphWatchScan.label": "Microsoft 365 push check (seconds)",
+    "How often Gmail push subscriptions are checked for renewal.",
+  "operations.graphWatchScan.label": "Microsoft 365 push check",
   "operations.graphWatchScan.help":
-    "How often Microsoft 365 mail subscriptions are checked for renewal, 600 to 43,200.",
-  "operations.gmailWatchRenew.label": "Gmail renewal margin (hours)",
+    "How often Microsoft 365 mail subscriptions are checked for renewal.",
+  "operations.gmailWatchRenew.label": "Gmail renewal margin",
   "operations.gmailWatchRenew.help":
-    "How long before its 7-day expiry a Gmail subscription is renewed, 24 to 144.",
-  "operations.graphWatchRenew.label": "Microsoft 365 renewal margin (hours)",
+    "How long before its 7-day expiry a Gmail subscription is renewed.",
+  "operations.graphWatchRenew.label": "Microsoft 365 renewal margin",
   "operations.graphWatchRenew.help":
-    "How long before its 3-day expiry a Microsoft 365 subscription is renewed, 24 to 60.",
+    "How long before its 3-day expiry a Microsoft 365 subscription is renewed.",
   "operations.sendRateLimit.label": "Messages per window",
   "operations.sendRateLimit.help":
-    "How many messages one mailbox may send in one window, 1 to 1,000.",
-  "operations.sendRateWindow.label": "Window (seconds)",
-  "operations.sendRateWindow.help":
-    "The window messages are counted over, 10 to 3,600.",
-  "operations.sendMaxAge.label": "Longest wait (hours)",
+    "How many messages one mailbox may send in one window.",
+  "operations.sendRateWindow.label": "Window",
+  "operations.sendRateWindow.help": "The window messages are counted over.",
+  "operations.sendMaxAge.label": "Longest wait",
   "operations.sendMaxAge.help":
-    "How long a held-back message may wait before it stops with a reason, 1 to 168.",
+    "How long a held-back message may wait before it stops with a reason.",
+  "operations.reading": "{amount} = {interval}",
+  "operations.unit.seconds_one": "{count} second",
+  "operations.unit.seconds_other": "{count} seconds",
+  "operations.unit.hours_one": "{count} hour",
+  "operations.unit.hours_other": "{count} hours",
+  "operations.refusal.seconds": "Enter whole seconds from {min} to {max}.",
+  "operations.refusal.secondsOrOff":
+    "Enter 0 to switch it off, or whole seconds from {min} to {max}.",
+  "operations.refusal.hours": "Enter whole hours from {min} to {max}.",
+  "operations.refusal.count": "Enter a whole number from {min} to {max}.",
   "captureMailSync.title": "Mail sync",
   "captureMailSync.sub":
     "How often each connected mailbox is checked for new mail.",
@@ -13543,6 +13559,9 @@ export const en = {
   "aiFigures.line.prefix": "7 d: {sentence}",
   "aicalls.filtered": "Showing calls that ended on {filter}.",
   "aicalls.filtered.clear": "Show all calls",
+  "aicalls.filters": "Filters",
+  "aicalls.folded.tokens": "Tokens: {in} in, {out} out",
+  "aicalls.folded.latency": "Latency: {value} ms",
   "aiOpenRouter.title": "OpenRouter settings",
   "aiOpenRouter.privacyDocs": "Data policies ↗",
   "aiOpenRouter.routingDocs": "Provider routing ↗",

@@ -674,11 +674,11 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    expect(screen.queryByLabelText("Actor")).toBeNull();
     cleanup();
 
-    // ...and the trail, on the address it moved to: its filters — in a
-    // disclosure now, closed on arrival — and an entry answering them.
+    // ...and the trail, on the address it moved to: its filters, open above
+    // the table, and an entry answering them.
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
@@ -690,10 +690,8 @@ describe("SettingsScreen restructured pages", () => {
       }),
     );
     renderSettings("audit");
-    expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
-    ).toBeTruthy();
-    expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
+    const filters = await screen.findByRole("group", { name: "Filters" });
+    expect(within(filters).getByLabelText("Actor")).toBeVisible();
     expect(await screen.findByText("update")).toBeTruthy();
   });
 
@@ -723,7 +721,7 @@ describe("SettingsScreen restructured pages", () => {
     // The surface they came for, which is now the whole page rather than one tab
     // of five sharing an address.
     expect(
-      await screen.findByRole("heading", { name: "Automations" }),
+      await screen.findByRole("heading", { name: "Configured automations" }),
     ).toBeTruthy();
   });
 
@@ -738,9 +736,7 @@ describe("SettingsScreen restructured pages", () => {
     });
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
-    expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("group", { name: "Filters" })).toBeTruthy();
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.

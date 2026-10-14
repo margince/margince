@@ -1127,7 +1127,6 @@ export const vi = {
   "nav.deals": "Deal",
   "nav.analytics": "Analytics",
   "nav.settings": "Cài đặt",
-  "nav.automations": "Tự động hóa",
   "nav.group.records": "Hồ sơ",
   "nav.group.work": "Công việc",
   "nav.group.intelligence": "Phân tích",
@@ -5930,7 +5929,6 @@ export const vi = {
   "jobs.failingSince": "lỗi từ {when}",
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đến từ tầng tác vụ, không bao giờ từ nguyên nhân thô của worker. Lỗi mà tầng này không diễn đạt được sẽ hiện câu thay thế cố định và không có lớp lỗi.",
-  "jobs.generatedAt": "Tính đến {time}",
   "jobs.kind.account_scan": "Phân tích công ty",
   "jobs.kind.agent_task_retention": "Dọn dẹp tác vụ của trợ lý AI",
   "jobs.kind.ai_price_sync_sweep": "Cập nhật giá mô hình",
@@ -6006,6 +6004,27 @@ export const vi = {
   "settings.providerHealth": "Trạng thái nhà cung cấp AI",
   "settings.providerHealthSub":
     "Từng nhà cung cấp AI có đang phản hồi hay không, theo ghi nhận của máy chủ này.",
+  "systemHealth.strip": "Trạng thái",
+  "systemHealth.asOf": "Tính đến {time}",
+  "systemHealth.checking": "Đang kiểm tra…",
+  "systemHealth.unread": "Không kiểm tra được",
+  "systemHealth.notSetUp": "Chưa thiết lập",
+  "systemHealth.jobs.idle": "Đang rảnh",
+  "systemHealth.jobs.keepingUp": "Đang theo kịp",
+  "systemHealth.jobs.dead_one": "{count} đã hỏng",
+  "systemHealth.jobs.dead_other": "{count} đã hỏng",
+  "systemHealth.jobs.retrying_one": "{count} đang thử lại",
+  "systemHealth.jobs.retrying_other": "{count} đang thử lại",
+  "systemHealth.intake.label": "Mục từ trình kết nối",
+  "systemHealth.intake.none": "Không có",
+  "systemHealth.intake.refused_one": "{count} bị từ chối",
+  "systemHealth.intake.refused_other": "{count} bị từ chối",
+  "systemHealth.providers.answering": "Đang phản hồi",
+  "systemHealth.providers.affected_one": "{count} cần xử lý",
+  "systemHealth.providers.affected_other": "{count} cần xử lý",
+  "systemHealth.providers.standIn": "Nhà cung cấp thử nghiệm tích hợp",
+  "systemHealth.providers.standInDetail":
+    "Không thể gọi các mô hình đã gán. Thêm khóa trong mục Mô hình AI.",
   "providerHealth.adminOnly":
     "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ bản cài đặt và cần quyền mà vai trò hiện tại không có.",
   "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
@@ -6057,7 +6076,6 @@ export const vi = {
   "extIngest.col.lastRefused": "Lần từ chối gần nhất",
   "extIngest.noDetail":
     "Chỉ hiển thị số lượng và bước kiểm tra đã từ chối, không bao giờ hiển thị chính mục đó, vì trường bị từ chối có thể trích dẫn nội dung của bên gửi. Nhật ký trình kết nối có lý do đầy đủ cho từng trường hợp.",
-  "extIngest.generatedAt": "Tính đến {time}",
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
@@ -6087,7 +6105,6 @@ export const vi = {
   "recoveryHealth.lastBackupHint":
     "Sao lưu chạy bên ngoài Margince, vì vậy hãy kiểm tra trong công cụ sao lưu của bạn.",
   "recoveryHealth.backupNotObserved": "Margince không theo dõi",
-  "recoveryHealth.generatedAt": "Đọc lúc {time}",
   "settings.captureHealth": "Kiểm tra thu thập thư",
   "settings.captureHealthSub":
     "Thu thập thư có theo kịp các câu hỏi cần trả lời hay không.",
@@ -6120,6 +6137,7 @@ export const vi = {
   "captureHealth.fact.pending": "Người gửi chờ kiểm tra",
   "captureHealth.fact.unsure": "Người gửi chưa kiểm tra chắc chắn được",
   "captureHealth.fact.exhausted": "Người gửi đã hết lượt thử lại",
+  "captureHealth.fact.mailboxes": "Hộp thư có mục đang chờ",
   "captureHealth.oldestWaited": "mục cũ nhất đã chờ {age}",
   "captureHealth.contactsWaiting_one": "{count} liên hệ đang chờ",
   "captureHealth.contactsWaiting_other": "{count} liên hệ đang chờ",
@@ -6130,13 +6148,10 @@ export const vi = {
   "captureHealth.mailboxes": "Hộp thư",
   "captureHealth.noDetail":
     "Chỉ có số đếm. Chỉ chủ hộp thư mới thấy liên hệ và chuỗi thư nào đang chờ.",
-  "captureHealth.mailboxesEmpty": "Không hộp thư nào có mục đang chờ.",
   "captureHealth.unnamedMailbox": "Hộp thư chưa đặt tên",
-  "captureHealth.installation": "Toàn bộ bản cài đặt",
   "captureHealth.heldMeetings": "Cuộc họp bị giữ lại",
   "captureHealth.heldMeetingsSub":
     "Cuộc họp đã gắn hồ sơ nhưng vẫn ẩn với đồng nghiệp. Tác vụ chạy hằng đêm sẽ chia sẻ các cuộc họp này.",
-  "captureHealth.generatedAt": "Tính đến {time}",
 
   "audit.you": "Bạn",
   "audit.system": "Hệ thống",
@@ -6147,12 +6162,9 @@ export const vi = {
   "audit.viaDealRoom": "trong Deal Room",
   "audit.viaNamed": "qua {client}",
   "audit.noHumanAuthority": "Không ghi nhận người ủy quyền",
-  "settings.auditSub":
-    "Mọi hành động, gắn với thành viên, trợ lý AI hoặc trình kết nối.",
   "settings.auditAdminOnly":
     "Vai trò hiện tại không có quyền xem toàn bộ nhật ký hoạt động. Nhật ký ghi lại mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
   "settings.auditFilters": "Bộ lọc",
-  "settings.auditEntries": "Nhật ký hoạt động",
   "settings.auditTrailLabel": "Hành động đã ghi nhận",
   "settings.auditActor": "Tác nhân",
   "settings.auditEntity": "Loại đối tượng",
@@ -6173,11 +6185,6 @@ export const vi = {
   "settings.auditAllowedBy": "Căn cứ cho phép",
   "settings.auditRecordId": "ID đối tượng",
   "settings.auditEvidence": "Bằng chứng",
-  "settings.auditChanges": "Các trường đã thay đổi",
-  "settings.auditColField": "Trường",
-  "settings.auditColValue": "Giá trị",
-  "settings.auditColChange": "Trước và sau",
-  "settings.auditColRemoved": "Giá trị đã xóa",
   "settings.auditNoValue": "Không có giá trị",
   "settings.auditRuleSystem": "Hệ thống, không kiểm tra vai trò",
   "settings.auditRuleDealRoom": "Phiên Deal Room",
@@ -8281,14 +8288,14 @@ export const vi = {
     "Đăng ký lại là một lựa chọn đồng ý rõ ràng và không bao giờ tự động bật lại. Lưu bên dưới để ghi nhận sự đồng ý, hoặc bỏ thay đổi.",
 
   "auto.tier.approval": "Cần duyệt",
-  "auto.sub":
-    "Quy tắc tự hành động. Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
+  "auto.sub": "Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
   "auto.readOnly": "Chỉ đọc: bạn không có quyền thay đổi tự động hóa.",
   "auto.catalog": "Thư viện khởi đầu",
   "auto.instances": "Tự động hóa đã cấu hình",
+  "auto.instances.empty":
+    "Chưa có tự động hóa nào. Bắt đầu từ thư viện khởi đầu.",
   "auto.use": "Dùng mẫu",
   "auto.useNamed": "Dùng mẫu: {name}",
-  "auto.modeAuto": "Tự chạy",
   "auto.name": "Tên",
   "auto.create": "Tạo",
   "auto.createdPaused":
@@ -8319,7 +8326,6 @@ export const vi = {
     "Đối tượng này chưa có trường ngày nào đang hoạt động.",
   "auto.dateField.loadError": "Không thể tải trường ngày. Thử lại.",
   "auto.enabledFor": "{name} đang bật",
-  "auto.colMode": "Chế độ",
   "auto.colLastRun": "Lần chạy gần nhất",
   "auto.colRuns30": "Số lần chạy (30 ngày)",
   "auto.colStatus": "Trạng thái",
@@ -8354,7 +8360,7 @@ export const vi = {
   "auto.runs.open": "Lượt chạy",
   "auto.runs.title": "Lịch sử chạy",
   "auto.runsFor": "Lịch sử chạy của {name}",
-  "auto.runs.filterAll": "Tất cả",
+  "auto.runs.filterAll": "Mọi kết quả",
   "auto.runs.filterFired": "Đã kích hoạt",
   "auto.runs.filterFailed": "Bị lỗi",
   "auto.runs.filterBlocked": "Bị chặn",
@@ -8372,6 +8378,7 @@ export const vi = {
   "auto.runs.outcomeBlocked": "Bị chặn",
   "auto.runs.outcomeSkipped": "Đã bỏ qua",
   "auto.runs.outcomeQueued": "Chờ duyệt",
+  "auto.runs.outcome": "Kết quả",
 
   "auto.preview.open": "Xem trước",
   "auto.preview.title": "Tác động khi chạy thử",
@@ -9594,6 +9601,9 @@ export const vi = {
   "settings.companyManualSub":
     "Bản cài đặt này chưa bật đọc trang web. 3 câu trả lời này tạo bối cảnh công ty dùng được mà không gọi mô hình hay gửi yêu cầu ra bên ngoài.",
   "settings.companyCreateWorkspace": "Tạo bối cảnh công ty",
+  "settings.auditActorExample": "agent:sdr",
+  "settings.auditEntityExample": "deal",
+  "settings.auditAnyAction": "Mọi hành động",
   "product.title": "Sản phẩm",
   "product.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi sản phẩm.",
@@ -9725,8 +9735,6 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới đọc được dấu vết lượt gọi. Dấu vết này ghi lại mọi lượt gọi mô hình của bản cài đặt.",
-  "aicalls.sub":
-    "Mọi lượt gọi mô hình: danh tính định tuyến, token, số lần thử lại, nội dung đã ghi lại.",
   "aicalls.col.detail": "Chi tiết",
   "aicalls.expandCall": "Xem các lần thử của {task} lúc {when}",
   "aicalls.col.when": "Thời điểm",
@@ -10055,7 +10063,7 @@ export const vi = {
   "aiRouting.location.loading":
     "Đang hỏi Google khóa này truy cập được những vị trí nào…",
   "aiRouting.location.noKey":
-    "Chưa có khóa tài khoản dịch vụ. Thêm khóa trong Khóa nhà cung cấp mô hình, rồi các vị trí khóa truy cập được sẽ hiện ở đây.",
+    "Chưa có khóa tài khoản dịch vụ. Thêm khóa trong mục Nhà cung cấp, rồi các vị trí khóa truy cập được sẽ hiện ở đây.",
   "aiRouting.location.unreachable":
     "Google không phản hồi nên chỉ có vị trí đã lưu. Khi lưu, hệ thống kiểm tra lại.",
   "aiRouting.location.noModels":
@@ -10313,61 +10321,67 @@ export const vi = {
   "operations.schedules.title": "Lịch chạy nền",
   "operations.schedules.sub":
     "Tần suất chạy của từng tác vụ nền. Tiến trình nền đang chạy sẽ nhận thay đổi trong vòng một phút: tác vụ chạy một lần, rồi tiếp tục theo chu kỳ mới.",
+  "operations.schedules.fold": "Tất cả lịch chạy",
   "operations.pacing.title": "Nhịp gửi thư",
   "operations.pacing.sub":
     "Tốc độ gửi tối đa của một hộp thư. Thay đổi sẽ áp dụng từ lần gửi tiếp theo.",
   "operations.adminOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể thay đổi mục này.",
   "operations.updateFailed": "Không thể thay đổi cài đặt",
-  "operations.refusal": "Nhập một số nguyên trong khoảng đã nêu.",
-  "operations.inWords": "= {interval}",
   "operations.off": "Tắt",
-  "operations.agentRunner.label": "Chạy trợ lý AI (giây)",
+  "operations.agentRunner.label": "Lượt chạy trợ lý AI",
   "operations.agentRunner.help":
-    "Tần suất kiểm tra các trợ lý AI đã lên lịch có lần chạy nào đến hạn không, 10 đến 3.600.",
-  "operations.webhookRetry.label": "Thử lại webhook (giây)",
+    "Tần suất kiểm tra các trợ lý AI đã lên lịch có lần chạy nào đến hạn không.",
+  "operations.webhookRetry.label": "Lượt thử lại webhook",
   "operations.webhookRetry.help":
-    "Tần suất thử gửi lại các webhook gửi không thành công, 10 đến 3.600.",
-  "operations.timeScan.label": "Tự động hóa theo thời gian (giây)",
+    "Tần suất thử gửi lại các webhook gửi không thành công.",
+  "operations.timeScan.label": "Tự động hóa theo thời gian",
   "operations.timeScan.help":
-    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian, 60 đến 86.400.",
-  "operations.closeDate.label": "Ngày chốt quá hạn (giây)",
-  "operations.closeDate.help":
-    "Tần suất đánh dấu các deal đã quá ngày chốt, 3.600 đến 604.800.",
-  "operations.followUp.label": "Đề xuất việc tiếp theo (giây)",
+    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian.",
+  "operations.closeDate.label": "Ngày chốt quá hạn",
+  "operations.closeDate.help": "Tần suất đánh dấu các deal đã quá ngày chốt.",
+  "operations.followUp.label": "Đề xuất việc tiếp theo",
   "operations.followUp.help":
-    "Tần suất kiểm tra các deal bị đình trệ để đề xuất việc tiếp theo, 3.600 đến 604.800.",
-  "operations.retention.label": "Lưu trữ dữ liệu (giây)",
+    "Tần suất kiểm tra các deal bị đình trệ để đề xuất việc tiếp theo.",
+  "operations.retention.label": "Lưu trữ dữ liệu",
   "operations.retention.help":
-    "Tần suất xóa dữ liệu đã quá thời hạn lưu trữ, 3.600 đến 604.800. Luôn bật.",
-  "operations.geocode.label": "Tra cứu địa chỉ (giây)",
+    "Tần suất xóa dữ liệu đã quá thời hạn lưu trữ. Luôn bật.",
+  "operations.geocode.label": "Tra cứu địa chỉ",
   "operations.geocode.help":
-    "Tần suất tra cứu các địa chỉ chưa có tọa độ, 300 đến 604.800, hoặc 0 để tắt.",
-  "operations.technical.label": "Tra cứu kỹ thuật (giây)",
+    "Tần suất tra cứu các địa chỉ chưa có tọa độ. Nhập 0 để tắt.",
+  "operations.technical.label": "Tra cứu kỹ thuật",
   "operations.technical.help":
-    "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật, 300 đến 604.800, hoặc 0 để tắt.",
-  "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail (giây)",
+    "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật. Nhập 0 để tắt.",
+  "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail",
   "operations.gmailWatchScan.help":
-    "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn, 600 đến 43.200.",
-  "operations.graphWatchScan.label":
-    "Kiểm tra thông báo đẩy Microsoft 365 (giây)",
+    "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn.",
+  "operations.graphWatchScan.label": "Kiểm tra thông báo đẩy Microsoft 365",
   "operations.graphWatchScan.help":
-    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 43.200.",
-  "operations.gmailWatchRenew.label": "Gia hạn Gmail trước hạn (giờ)",
+    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn.",
+  "operations.gmailWatchRenew.label": "Gia hạn sớm Gmail",
   "operations.gmailWatchRenew.help":
-    "Gia hạn đăng ký Gmail bao lâu trước khi đăng ký hết hạn (thời hạn 7 ngày), 24 đến 144.",
-  "operations.graphWatchRenew.label": "Gia hạn Microsoft 365 trước hạn (giờ)",
+    "Gia hạn đăng ký Gmail bao lâu trước khi đăng ký hết hạn (thời hạn 7 ngày).",
+  "operations.graphWatchRenew.label": "Gia hạn sớm Microsoft 365",
   "operations.graphWatchRenew.help":
-    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi đăng ký hết hạn (thời hạn 3 ngày), 24 đến 60.",
+    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi đăng ký hết hạn (thời hạn 3 ngày).",
   "operations.sendRateLimit.label": "Số thư mỗi khung thời gian",
   "operations.sendRateLimit.help":
-    "Số thư tối đa một hộp thư có thể gửi trong một khung thời gian, 1 đến 1.000.",
-  "operations.sendRateWindow.label": "Khung thời gian (giây)",
-  "operations.sendRateWindow.help":
-    "Khung thời gian dùng để đếm số thư, 10 đến 3.600.",
-  "operations.sendMaxAge.label": "Thời gian chờ tối đa (giờ)",
+    "Số thư tối đa một hộp thư có thể gửi trong một khung thời gian.",
+  "operations.sendRateWindow.label": "Khung thời gian",
+  "operations.sendRateWindow.help": "Khung thời gian dùng để đếm số thư.",
+  "operations.sendMaxAge.label": "Thời gian chờ tối đa",
   "operations.sendMaxAge.help":
-    "Thời gian tối đa một thư bị giữ lại có thể chờ trước khi dừng kèm lý do, 1 đến 168.",
+    "Thời gian tối đa một thư bị giữ lại có thể chờ trước khi dừng kèm lý do.",
+  "operations.reading": "{amount} = {interval}",
+  "operations.unit.seconds_one": "{count} giây",
+  "operations.unit.seconds_other": "{count} giây",
+  "operations.unit.hours_one": "{count} giờ",
+  "operations.unit.hours_other": "{count} giờ",
+  "operations.refusal.seconds": "Nhập số giây nguyên từ {min} đến {max}.",
+  "operations.refusal.secondsOrOff":
+    "Nhập 0 để tắt, hoặc số giây nguyên từ {min} đến {max}.",
+  "operations.refusal.hours": "Nhập số giờ nguyên từ {min} đến {max}.",
+  "operations.refusal.count": "Nhập một số nguyên từ {min} đến {max}.",
   "captureMailSync.title": "Đồng bộ thư",
   "captureMailSync.sub":
     "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
@@ -13136,6 +13150,9 @@ export const vi = {
   "aiFigures.line.prefix": "7 ngày: {sentence}",
   "aicalls.filtered": "Đang hiển thị các lượt gọi kết thúc ở {filter}.",
   "aicalls.filtered.clear": "Hiển thị mọi lượt gọi",
+  "aicalls.filters": "Bộ lọc",
+  "aicalls.folded.tokens": "Token: {in} vào, {out} ra",
+  "aicalls.folded.latency": "Độ trễ: {value} ms",
   "aiOpenRouter.title": "Cài đặt OpenRouter",
   "aiOpenRouter.privacyDocs": "Chính sách dữ liệu ↗",
   "aiOpenRouter.routingDocs": "Định tuyến nhà cung cấp ↗",

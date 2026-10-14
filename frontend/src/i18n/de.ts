@@ -1155,7 +1155,6 @@ export const de = {
   "nav.deals": "Deals",
   "nav.analytics": "Analysen",
   "nav.settings": "Einstellungen",
-  "nav.automations": "Automatisierungen",
   "nav.group.records": "Datensätze",
   "nav.group.work": "Arbeit",
   "nav.group.intelligence": "Auswertung",
@@ -6062,7 +6061,6 @@ export const de = {
   "jobs.failingSince": "fehlerhaft seit {when}",
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
-  "jobs.generatedAt": "Stand: {time}",
   "jobs.kind.account_scan": "Unternehmensanalyse",
   "jobs.kind.agent_task_retention": "Bereinigung von Agentenaufgaben",
   "jobs.kind.ai_price_sync_sweep": "Aktualisierung der Modellpreise",
@@ -6141,6 +6139,27 @@ export const de = {
   "settings.providerHealth": "Status der KI-Anbieter",
   "settings.providerHealthSub":
     "Ob jeder KI-Anbieter antwortet, so wie dieser Server es erlebt hat.",
+  "systemHealth.strip": "Status",
+  "systemHealth.asOf": "Stand: {time}",
+  "systemHealth.checking": "Wird geprüft…",
+  "systemHealth.unread": "Prüfung fehlgeschlagen",
+  "systemHealth.notSetUp": "Nicht eingerichtet",
+  "systemHealth.jobs.idle": "Leerlauf",
+  "systemHealth.jobs.keepingUp": "Hält Schritt",
+  "systemHealth.jobs.dead_one": "{count} gestoppt",
+  "systemHealth.jobs.dead_other": "{count} gestoppt",
+  "systemHealth.jobs.retrying_one": "{count} wird wiederholt",
+  "systemHealth.jobs.retrying_other": "{count} werden wiederholt",
+  "systemHealth.intake.label": "Connector-Datensätze",
+  "systemHealth.intake.none": "Keine",
+  "systemHealth.intake.refused_one": "{count} abgelehnt",
+  "systemHealth.intake.refused_other": "{count} abgelehnt",
+  "systemHealth.providers.answering": "Erreichbar",
+  "systemHealth.providers.affected_one": "{count} mit Störung",
+  "systemHealth.providers.affected_other": "{count} mit Störung",
+  "systemHealth.providers.standIn": "Integrierter Testanbieter",
+  "systemHealth.providers.standInDetail":
+    "Die zugeordneten Modelle sind nicht aufrufbar. Füge unter KI-Modelle einen Schlüssel hinzu.",
   "providerHealth.adminOnly":
     "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "providerHealth.healthy": "Alle KI-Anbieter antworten.",
@@ -6193,7 +6212,6 @@ export const de = {
   "extIngest.col.lastRefused": "Zuletzt abgewiesen",
   "extIngest.noDetail":
     "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, weil das abgewiesene Feld Inhalte des Absenders zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
-  "extIngest.generatedAt": "Stand: {time}",
   "settings.recoveryHealth": "Wiederherstellungsproben",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt geprobt wurde und wie lange sie gedauert hat.",
@@ -6223,7 +6241,6 @@ export const de = {
   "recoveryHealth.lastBackupHint":
     "Backups laufen außerhalb von Margince. Prüfe sie in deinem Backup-Werkzeug.",
   "recoveryHealth.backupNotObserved": "Von Margince nicht erfasst",
-  "recoveryHealth.generatedAt": "Stand {time}",
   "settings.captureHealth": "Prüfungen der Mailerfassung",
   "settings.captureHealthSub":
     "Ob die Mailerfassung mit den Fragen Schritt hält, die sie beantworten muss.",
@@ -6256,6 +6273,7 @@ export const de = {
   "captureHealth.fact.pending": "Absender vor der Prüfung",
   "captureHealth.fact.unsure": "Absender, bei denen die Prüfung unsicher ist",
   "captureHealth.fact.exhausted": "Absender ohne verbleibende Versuche",
+  "captureHealth.fact.mailboxes": "Postfächer mit wartenden Einträgen",
   "captureHealth.oldestWaited": "längste Wartezeit: {age}",
   "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
   "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
@@ -6266,13 +6284,10 @@ export const de = {
   "captureHealth.mailboxes": "Postfächer",
   "captureHealth.noDetail":
     "Nur Zahlen. Welche Kontakte und Threads warten, sieht allein, wem das Postfach gehört.",
-  "captureHealth.mailboxesEmpty": "In keinem Postfach wartet etwas.",
   "captureHealth.unnamedMailbox": "Postfach ohne Namen",
-  "captureHealth.installation": "Gesamte Installation",
   "captureHealth.heldMeetings": "Zurückgehaltene Termine",
   "captureHealth.heldMeetingsSub":
     "Zugeordnete Termine, die das Team noch nicht sieht. Der nächtliche Lauf gibt sie frei.",
-  "captureHealth.generatedAt": "Stand: {time}",
 
   "audit.you": "Du",
   "audit.system": "System",
@@ -6283,12 +6298,9 @@ export const de = {
   "audit.viaDealRoom": "im Deal Room",
   "audit.viaNamed": "über {client}",
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
-  "settings.auditSub":
-    "Jede Aktion, zugeordnet zu Nutzerkonto, Agent oder Connector.",
   "settings.auditAdminOnly":
     "Deine Rolle darf das vollständige Audit-Log nicht lesen. Es verzeichnet alle Handelnden und jeden Datensatz, auf den sie zugegriffen haben.",
   "settings.auditFilters": "Filter",
-  "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
   "settings.auditActor": "Ausgeführt von",
   "settings.auditEntity": "Objekttyp",
@@ -6311,11 +6323,6 @@ export const de = {
   "settings.auditAllowedBy": "Erlaubt durch",
   "settings.auditRecordId": "Datensatz-ID",
   "settings.auditEvidence": "Nachweis",
-  "settings.auditChanges": "Geänderte Felder",
-  "settings.auditColField": "Feld",
-  "settings.auditColValue": "Wert",
-  "settings.auditColChange": "Vorher und nachher",
-  "settings.auditColRemoved": "Entfernter Wert",
   "settings.auditNoValue": "Kein Wert",
   "settings.auditRuleSystem": "System, ohne Rollenprüfung",
   "settings.auditRuleDealRoom": "Sitzung im Deal Room",
@@ -8463,14 +8470,15 @@ export const de = {
 
   "auto.tier.approval": "Freigabe erforderlich",
   "auto.sub":
-    "Regeln handeln selbstständig. Eine Regel mit „Freigabe erforderlich“ schickt ihre Aktionen zuerst an die Freigaben.",
+    "Eine Regel mit „Freigabe erforderlich“ schickt ihre Aktionen zuerst an die Freigaben.",
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",
   "auto.instances": "Eingerichtete Automatisierungen",
+  "auto.instances.empty":
+    "Noch keine Automatisierungen. Starte eine aus der Vorlagenbibliothek.",
   "auto.use": "Vorlage verwenden",
   "auto.useNamed": "Vorlage verwenden: {name}",
-  "auto.modeAuto": "Läuft selbstständig",
   "auto.name": "Name",
   "auto.create": "Anlegen",
   "auto.createdPaused":
@@ -8501,7 +8509,6 @@ export const de = {
   "auto.dateField.loadError":
     "Datumsfelder wurden nicht geladen. Versuche es erneut.",
   "auto.enabledFor": "{name} ist aktiv",
-  "auto.colMode": "Modus",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
   "auto.colStatus": "Status",
@@ -8537,7 +8544,7 @@ export const de = {
   "auto.runs.open": "Läufe",
   "auto.runs.title": "Bisherige Läufe",
   "auto.runsFor": "Bisherige Läufe von {name}",
-  "auto.runs.filterAll": "Alle",
+  "auto.runs.filterAll": "Alle Ergebnisse",
   "auto.runs.filterFired": "Ausgelöst",
   "auto.runs.filterFailed": "Fehlgeschlagen",
   "auto.runs.filterBlocked": "Blockiert",
@@ -8555,6 +8562,7 @@ export const de = {
   "auto.runs.outcomeBlocked": "Blockiert",
   "auto.runs.outcomeSkipped": "Übersprungen",
   "auto.runs.outcomeQueued": "Zur Freigabe eingereiht",
+  "auto.runs.outcome": "Ergebnis",
 
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Auswirkung des Probelaufs",
@@ -9801,6 +9809,9 @@ export const de = {
   "settings.companyManualSub":
     "Das Lesen von Websites ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
+  "settings.auditActorExample": "agent:sdr",
+  "settings.auditEntityExample": "deal",
+  "settings.auditAnyAction": "Alle Aktionen",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",
@@ -9936,8 +9947,6 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur Admins und Operations können das Aufrufprotokoll lesen. Es verzeichnet jeden Modellaufruf der Installation.",
-  "aicalls.sub":
-    "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
   "aicalls.col.detail": "Details",
   "aicalls.expandCall": "Versuche für {task} ({when}) anzeigen",
   "aicalls.col.when": "Zeitpunkt",
@@ -10272,7 +10281,7 @@ export const de = {
   "aiRouting.location.loading":
     "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
   "aiRouting.location.noKey":
-    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge ihn unter Modellanbieter-Schlüssel hinzu, dann erscheinen hier die Standorte, die er erreicht.",
+    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge ihn unter Anbieter hinzu, dann erscheinen hier die Standorte, die er erreicht.",
   "aiRouting.location.unreachable":
     "Google hat nicht geantwortet, daher steht nur der gespeicherte Standort zur Wahl. Beim Speichern wird erneut geprüft.",
   "aiRouting.location.noModels":
@@ -10535,60 +10544,67 @@ export const de = {
   "operations.schedules.title": "Hintergrundzeitpläne",
   "operations.schedules.sub":
     "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
+  "operations.schedules.fold": "Alle Zeitpläne",
   "operations.pacing.title": "Versandtempo",
   "operations.pacing.sub":
     "Wie schnell ein Postfach senden darf. Eine Änderung gilt ab dem nächsten Versand.",
   "operations.adminOnly": "Nur Admins und Operations können das ändern.",
   "operations.updateFailed": "Einstellung nicht geändert",
-  "operations.refusal": "Gib eine ganze Zahl im angegebenen Bereich ein.",
-  "operations.inWords": "= {interval}",
   "operations.off": "Aus",
-  "operations.agentRunner.label": "Agentenläufe (Sekunden)",
+  "operations.agentRunner.label": "Agentenläufe",
   "operations.agentRunner.help":
-    "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
-  "operations.webhookRetry.label": "Webhook-Wiederholungen (Sekunden)",
+    "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden.",
+  "operations.webhookRetry.label": "Webhook-Wiederholungen",
   "operations.webhookRetry.help":
-    "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden, 10 bis 3.600.",
-  "operations.timeScan.label": "Zeitgesteuerte Automationen (Sekunden)",
-  "operations.timeScan.help":
-    "Wie oft zeitgesteuerte Regeln geprüft werden, 60 bis 86.400.",
-  "operations.closeDate.label": "Überfällige Abschlussdaten (Sekunden)",
+    "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden.",
+  "operations.timeScan.label": "Zeitgesteuerte Automatisierungen",
+  "operations.timeScan.help": "Wie oft zeitgesteuerte Regeln geprüft werden.",
+  "operations.closeDate.label": "Überfällige Abschlussdaten",
   "operations.closeDate.help":
-    "Wie oft Deals mit überschrittenem Abschlussdatum markiert werden, 3.600 bis 604.800.",
-  "operations.followUp.label": "Follow-up-Vorschläge (Sekunden)",
+    "Wie oft Deals mit überschrittenem Abschlussdatum markiert werden.",
+  "operations.followUp.label": "Follow-up-Vorschläge",
   "operations.followUp.help":
-    "Wie oft stockende Deals auf ein vorzuschlagendes Follow-up geprüft werden, 3.600 bis 604.800.",
-  "operations.retention.label": "Datenaufbewahrung (Sekunden)",
+    "Wie oft stockende Deals auf ein vorzuschlagendes Follow-up geprüft werden.",
+  "operations.retention.label": "Datenaufbewahrung",
   "operations.retention.help":
-    "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden, 3.600 bis 604.800. Lässt sich nicht ausschalten.",
-  "operations.geocode.label": "Adressabgleich (Sekunden)",
+    "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden. Lässt sich nicht ausschalten.",
+  "operations.geocode.label": "Adressabgleich",
   "operations.geocode.help":
-    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden, 300 bis 604.800, oder 0 zum Ausschalten.",
-  "operations.technical.label": "Technische Abfragen (Sekunden)",
+    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden. 0 schaltet den Abgleich aus.",
+  "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
-    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden, 300 bis 604.800, oder 0 zum Ausschalten.",
-  "operations.gmailWatchScan.label": "Gmail-Push-Prüfung (Sekunden)",
+    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 schaltet die Abfragen aus.",
+  "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
-    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
-  "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung (Sekunden)",
+    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",
+  "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung",
   "operations.graphWatchScan.help":
-    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
-  "operations.gmailWatchRenew.label": "Gmail-Erneuerungsvorlauf (Stunden)",
+    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden.",
+  "operations.gmailWatchRenew.label": "Gmail-Erneuerungsvorlauf",
   "operations.gmailWatchRenew.help":
-    "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird, 24 bis 144.",
-  "operations.graphWatchRenew.label":
-    "Microsoft-365-Erneuerungsvorlauf (Stunden)",
+    "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird.",
+  "operations.graphWatchRenew.label": "Microsoft-365-Erneuerungsvorlauf",
   "operations.graphWatchRenew.help":
-    "Wie lange vor dem Ablauf nach 3 Tagen ein Microsoft-365-Abo erneuert wird, 24 bis 60.",
+    "Wie lange vor dem Ablauf nach 3 Tagen ein Microsoft-365-Abo erneuert wird.",
   "operations.sendRateLimit.label": "Nachrichten pro Zeitfenster",
   "operations.sendRateLimit.help":
-    "Wie viele Nachrichten ein Postfach in einem Zeitfenster senden darf, 1 bis 1.000.",
-  "operations.sendRateWindow.label": "Zeitfenster (Sekunden)",
+    "Wie viele Nachrichten ein Postfach in einem Zeitfenster senden darf.",
+  "operations.sendRateWindow.label": "Zeitfenster",
   "operations.sendRateWindow.help":
-    "Das Zeitfenster, über das Nachrichten gezählt werden, 10 bis 3.600.",
-  "operations.sendMaxAge.label": "Längste Wartezeit (Stunden)",
+    "Das Zeitfenster, über das Nachrichten gezählt werden.",
+  "operations.sendMaxAge.label": "Längste Wartezeit",
   "operations.sendMaxAge.help":
-    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird, 1 bis 168.",
+    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird.",
+  "operations.reading": "{amount} = {interval}",
+  "operations.unit.seconds_one": "{count} Sekunde",
+  "operations.unit.seconds_other": "{count} Sekunden",
+  "operations.unit.hours_one": "{count} Stunde",
+  "operations.unit.hours_other": "{count} Stunden",
+  "operations.refusal.seconds": "Gib ganze Sekunden von {min} bis {max} ein.",
+  "operations.refusal.secondsOrOff":
+    "Gib 0 zum Ausschalten ein oder ganze Sekunden von {min} bis {max}.",
+  "operations.refusal.hours": "Gib ganze Stunden von {min} bis {max} ein.",
+  "operations.refusal.count": "Gib eine ganze Zahl von {min} bis {max} ein.",
   "captureMailSync.title": "E-Mail-Abgleich",
   "captureMailSync.sub":
     "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
@@ -13428,6 +13444,9 @@ export const de = {
   "aiFigures.line.prefix": "7 T.: {sentence}",
   "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
   "aicalls.filtered.clear": "Alle Aufrufe zeigen",
+  "aicalls.filters": "Filter",
+  "aicalls.folded.tokens": "Tokens: {in} ein, {out} aus",
+  "aicalls.folded.latency": "Latenz: {value} ms",
   "aiOpenRouter.title": "OpenRouter-Einstellungen",
   "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
   "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",

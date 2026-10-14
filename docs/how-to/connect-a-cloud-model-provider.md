@@ -21,7 +21,7 @@ path with no cloud, see [enrich-with-a-local-llm.md](enrich-with-a-local-llm.md)
 | `openai_compatible` | the many smaller vendors on the OpenAI wire: Mistral, DeepSeek, Groq, Together, OpenRouter, a gateway you host, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
 
 A binding names only the provider. **The BYOK key lives in the key vault.** You put it there under
-Settings → AI → Model provider keys (step 4). An `api_key:` in a binding is an error at start, and
+Settings → AI → AI models → Providers (step 4). An `api_key:` in a binding is an error at start, and
 secrets never touch a config file.
 
 The value in the table above is a **seed**. When a start finds one, it may seal it into the vault, and
@@ -175,7 +175,7 @@ embeddings: { provider: openai_compatible, model: mistralai/mistral-embed-2312,
 
 ## 4. Start the stack
 
-The key lives in the **key vault**. Put it in under **Settings → AI → Model provider keys**, with
+The key lives in the **key vault**. Put it in under **Settings → AI → AI models → Providers**, with
 one field for each provider you bind. It is stored encrypted, the screen never shows it again, and you
 can change it without a restart.
 
@@ -211,7 +211,7 @@ at a location you name. It is the provider to bind when the prompt must be handl
 2. Give it **`roles/aiplatform.user`** (Vertex AI User) on the project. It needs nothing more.
 3. On the account, go to Keys → Add key → **Create new key** → JSON. You can get the file once; it is the
    credential.
-4. In Margince, open **Settings → AI → Model provider keys**. Paste the content of the file into the
+4. In Margince, open **Settings → AI → AI models → Providers**. Paste the content of the file into the
    `gemini_vertex` row, or choose the file.
 
 To save it checks the key with Google once, and Margince does not store a key that Google refuses.
@@ -299,7 +299,7 @@ the same `http` or `https`. It refuses it when it changes the host, or goes down
 |---|---|
 | Error at start: `profile sovereign forbids cloud provider …` | A binding names a cloud provider under a profile that refuses it. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Error at start: `needs an api key — set X_API_KEY …` | The key value for the cloud provider in the binding is not set. Export the one the error names, such as `GEMINI_API_KEY`. |
-| Error at start: `field api_key not found` | You put an `api_key:` in the `seeds.ai_routing` binding. Remove it. The key comes from the key vault (Settings → AI → Model provider keys), or from its seed value. |
+| Error at start: `field api_key not found` | You put an `api_key:` in the `seeds.ai_routing` binding. Remove it. The key comes from the key vault (Settings → AI → AI models → Providers), or from its seed value. |
 | Error at start: `needs a base_url …` | `openai_compatible` has no host. Set `providers.openai_compatible.base_url` (the Host field on its provider sheet) to the root of the vendor host. |
 | Error at start: `must name a public host` | A binding to a vendor with its own client (`anthropic`/`openai`/`gemini`) points inside your network. Bind `openai_compatible` for a gateway you host (see "Where a `base_url` may point"). |
 | Error at start: `must be https` | A binding to a vendor with its own client uses `http://`. Use `https://`, or bind `openai_compatible` if the endpoint serves over `http`. |
@@ -308,18 +308,18 @@ the same `http` or `https`. It refuses it when it changes the host, or goes down
 | Error from the embeddings call: `returned N vectors of width W, need 1×D` | On `openai_compatible` the client never sends `dimensions`, so `dimensions:` must be the model's own size (step 3). Set it to `W`. |
 | Model 404, or `model not found` | A `-latest` name that moves, or a wrong ID. Pin a model with a fixed version, or look it up at the `/models` endpoint of the vendor. |
 | **Test** says `Google accepted the key but refused the call` | Google answered 403. The key is valid, but the service account does not have `roles/aiplatform.user` on its project, or the project has not turned on the Vertex AI API. Give the role or turn on the API; you do not need a new key. |
-| Settings says `No service-account key is held yet` (`unavailable: no_key`) | Margince holds no key for a service account. Add it under Model provider keys (step 5), or set `GEMINI_VERTEX_SA_JSON` and restart. |
+| Settings says `No service-account key is held yet` (`unavailable: no_key`) | Margince holds no key for a service account. Add it under Providers (step 5), or set `GEMINI_VERTEX_SA_JSON` and restart. |
 | 422 `the service-account key was not accepted by Google: … invalid_grant` | Someone revoked the key or deleted the account, or the clock of the machine is wrong. Create a new JSON key on the account. |
 | 422 `invalid service account key: …` | It is not a JSON key file for a service account; the message names the field. Paste the whole file you saved. |
 | 422 `gemini_vertex does not serve model … in location …` | That location has no endpoint for the model (`no_endpoint`; Settings shows `Not served in …`). Pick a model the location lists, or another location. |
 | Log warning `routing saved with a gemini_vertex model unchecked` | The check on save could not run (`unreachable`). Either Margince could not reach Google, or the key does not have `roles/aiplatform.user`, or the project does not have the Vertex AI API. The binding is stored. Fix the role, then pick the model again in Settings to check it. |
 | 422 `… the service-account key was refused by Google … — replace the key under Provider keys` | To save a Vertex lane asked Google, and Google refused the key: it was revoked, or the account was deleted. Create a new JSON key on the account, and replace the old one. |
-| 422 `the stored gemini_vertex service-account key is not usable` | Margince cannot read the key file it holds. Replace it under Model provider keys (step 5). |
+| 422 `the stored gemini_vertex service-account key is not usable` | Margince cannot read the key file it holds. Replace it under Providers (step 5). |
 | 422 `… under profile eu_hosted: gemini_vertex location … is not an EU location` | London, Zürich, `global` and `us` are outside the EU. Choose `eu` or an EU region (step 5), or declare `cloud_frontier`. |
 | Provider badge `Out of credit` (Settings → AI models) | The vendor refused because the account has run out of money or is over its limit: a 402, or a `4xx` whose text says so, such as `credit balance is too low`. Pay into the account at the vendor. Margince checks again within 15 minutes. Work waits in that time, and you pay nothing: not for the first call to the empty account, and not for any later check that failed. |
-| Provider badge `Key rejected` | The vendor answered 401, or a 400 or 403 whose text says the key is not valid. A plain `does not have permission` never counts. Replace the key under Model provider keys (step 5). A **Test** that passes clears the badge at once, and a save clears it within about 30 seconds. |
+| Provider badge `Key rejected` | The vendor answered 401, or a 400 or 403 whose text says the key is not valid. A plain `does not have permission` never counts. Replace the key under Providers (step 5). A **Test** that passes clears the badge at once, and a save clears it within about 30 seconds. |
 | Provider badge `Unreachable` | The host did not answer, or three calls in a row returned a `5xx`. Check the `base_url` and the status of the vendor. Margince checks again after 30 seconds, and waits twice as long each time, up to 5 minutes. |
 | Provider badge `Degraded` | Three calls in a row did not answer in time. Calls still go out. If it goes on, check the network path or the status of the vendor. |
 | Users see `The AI provider has no credit left`, `refused the configured credential` or `is not answering right now` | The provider was in one of these states when a user asked. The request fails at once with a 503, and does not wait for a time-out. Read Settings → System health and fix the cause. Then see [recover-after-a-provider-outage.md](recover-after-a-provider-outage.md) for the work that waited. |
 | Log says `offline fake`, and no binding exists | Bind a tier under Settings → AI, or run `make dev-fresh` to use a `seeds.ai_routing` you declared after the last setup. |
-| Log says `offline fake`, and warns `the stored model binding cannot be served` | A binding exists but could not be built, so `--ai-fake` on the command line has it fall back to `fake`. Most of the time, the key of a vendor in a binding is missing: add it under Settings → AI → Model provider keys. |
+| Log says `offline fake`, and warns `the stored model binding cannot be served` | A binding exists but could not be built, so `--ai-fake` on the command line has it fall back to `fake`. Most of the time, the key of a vendor in a binding is missing: add it under Settings → AI → AI models → Providers. |

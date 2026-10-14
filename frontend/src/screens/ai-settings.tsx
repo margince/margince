@@ -5,20 +5,16 @@ import { formatElapsed, useNow } from "../format/now";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
-import { useProviderHealth } from "./ai-provider-health";
+import { answersFromStandIn, useProviderHealth } from "./ai-provider-health";
 import { boundProviders, type RoutingRead } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
 import "./ai-settings.css";
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
 
-// A boot whose stored binding cannot be served may fall back to the offline
-// fake. Every lane then answers with canned text, while the bindings on screen
-// still name a vendor. `configured` is what the running process serves.
 export function useAnswersFromStandIn(): boolean {
   const canDiagnose = useCan("ai_diagnostics", "read");
-  const configured = useProviderHealth(canDiagnose).data?.configured;
-  return configured?.includes("fake") === true;
+  return answersFromStandIn(useProviderHealth(canDiagnose).data?.configured);
 }
 
 // Whether this installation can call the vendors it has bound. A binding to a

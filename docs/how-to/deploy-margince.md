@@ -99,7 +99,7 @@ On the first boot against an empty database the api bootstraps the company + adm
 2. Set its `password_file` to `secrets/admin-password`, where the entrypoint writes the password.
 3. Set `MARGINCE_ADMIN_PASSWORD`. The example config's default path differs, so step 2 matters.
 4. To enable AI, declare the binding under `seeds.ai_routing`. Put each provider's key in under
-   Settings → AI → Model provider keys.
+   Settings → AI → AI models → Providers.
 5. Keep the `mcp` block only if you serve the MCP connector. It then needs
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
 6. Leave `operations:` commented out, as the example ships it.

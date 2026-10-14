@@ -21,6 +21,14 @@ export function useProviderHealth(canSee: boolean) {
   });
 }
 
+// A boot whose stored binding cannot be served may fall back to the offline
+// fake. Its lanes answer with canned text while the screen still names a vendor.
+export function answersFromStandIn(
+  configured: readonly string[] | undefined,
+): boolean {
+  return configured?.includes("fake") === true;
+}
+
 // A key, settings or routing save, and a successful key test, change what the
 // server holds about a provider's health; the badge reads it again now rather
 // than at the next poll.

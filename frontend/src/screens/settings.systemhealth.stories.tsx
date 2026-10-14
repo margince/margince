@@ -82,6 +82,13 @@ const PROVIDER_DOWN = {
   },
 };
 
+// A boot that fell back to the offline fake. The slot names it and links to
+// AI models, where a key brings the bound models back.
+const STAND_IN = {
+  ...CLEAN,
+  "GET /ai/provider-health": { providers: [], configured: ["fake"] },
+};
+
 function page(routes: Record<string, unknown>) {
   return () => {
     installFetchStub({
@@ -145,4 +152,20 @@ export const OneDegradedAtPhoneWidth: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const AnsweringFromTestProvider: Story = {
+  render: page(STAND_IN),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Built-in test provider");
+    await expect(
+      canvas.getByRole("link", { description: "AI provider status" }),
+    ).toHaveAttribute("href", "#/settings/models");
+    await expect(
+      canvas.getByText(
+        "The bound models cannot be called. Add a key under AI models.",
+      ),
+    ).toBeInTheDocument();
+  },
 };
