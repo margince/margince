@@ -369,4 +369,33 @@ describe("the two-step sign-in row", () => {
       await screen.findByText("On · 10 recovery codes left"),
     ).toBeInTheDocument();
   });
+  it("re-asks who the session is after a removal, since a required factor confines it", async () => {
+    const user = userEvent.setup();
+    serve(ON, {
+      "DELETE /v1/me/mfa": [() => new Response(null, { status: 204 })],
+    });
+    const client = mount();
+    client.setQueryData(["me"], { user: { id: "u1" } });
+
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    await screen.findByRole("dialog");
+    await user.type(codeField(), "654321{Enter}");
+    await screen.findByText("Two-step sign-in removed");
+
+    expect(client.getQueryState(["me"])?.isInvalidated).toBe(true);
+  });
+
+  it("leaves the session probe alone when a removal is refused", async () => {
+    const user = userEvent.setup();
+    serve(ON, { "DELETE /v1/me/mfa": [() => problem(401)] });
+    const client = mount();
+    client.setQueryData(["me"], { user: { id: "u1" } });
+
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    await screen.findByRole("dialog");
+    await user.type(codeField(), "111111{Enter}");
+    await screen.findByText(/code was not accepted/i);
+
+    expect(client.getQueryState(["me"])?.isInvalidated).toBe(false);
+  });
 });

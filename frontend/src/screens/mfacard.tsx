@@ -221,7 +221,8 @@ export function MfaSettingRow() {
         onRemoved={(removal) => {
           setRemoveOpen(false);
           setOutcome(removal.unfinished ? "mfa.discarded" : "mfa.removed");
-          void refresh();
+          // The session probe too: under a required factor, removing it confines the session.
+          void queryClient.invalidateQueries({ queryKey: ["me"] });
         }}
       />
     </>
