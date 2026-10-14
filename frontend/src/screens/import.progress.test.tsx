@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -53,6 +54,14 @@ function panel(next: ImportRun) {
 }
 
 describe("the import progress panel", () => {
+  it("stretches its column so the strip and the bars take the part's width", () => {
+    // jsdom cannot lay this out; the class and its rule are what keep them wide.
+    const { container } = show(panel(working));
+    expect(container.firstElementChild).toHaveClass("import--fill");
+    const css = readFileSync("src/screens/import.css", "utf8");
+    expect(css).toMatch(/\.import--fill\s*{[^}]*align-items:\s*stretch/);
+  });
+
   it("reads the rows, the rate, the elapsed time and the counts", () => {
     show(
       panel({

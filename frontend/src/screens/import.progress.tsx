@@ -208,7 +208,7 @@ export function ImportProgressPanel({
   const overall = totalsOf(run);
   const figures = figuresLine(run, minutes, t, locale);
   return (
-    <div className="import">
+    <div className="import import--fill">
       <p className="sr-only" role="status">
         {announcement}
       </p>
