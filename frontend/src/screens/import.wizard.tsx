@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
+import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -42,6 +43,9 @@ export function ImportWizardPage() {
   const { locale } = useLocale();
   const format = useImportFormat(locale);
   const recent = useRecentImports();
+  // Only the upload still on its way is work the page could lose: once it
+  // answers, the draft is the server's and the hub lists it.
+  useUnsavedGuard(wizard.upload.isPending);
   // The file the hub's drop zone took starts here, once the format can say
   // which type a CSV's name gives. The page holds it, so a page closed before
   // then drops it rather than uploading it on a later visit.
