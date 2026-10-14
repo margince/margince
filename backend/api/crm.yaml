@@ -17664,6 +17664,33 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/agent-usage:
+    get:
+      tags: [AI]
+      operationId: listAgentUsageByUser
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How much of their allowances each user's agents have used in this window.
+      description: |
+        One row per user with a live passport or connection, summed over all of them: what
+        was used, the allowance it is judged against, and the worst state among them. It names
+        no passport, label, permission or token, and says nothing about what an agent read or
+        changed: which agents act for a user is that user's own business, and this read
+        answers only how much. Readable by whoever may read the AI usage page.
+      responses:
+        '200':
+          description: Usage per user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentUsageByUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: The agent counters cannot be read right now. Try again shortly.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /ai/profile:
     get:
       tags: [AI]
@@ -29662,7 +29689,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
         name:
           type: string
@@ -29764,6 +29791,8 @@ components:
             they were issued with.
         operations:
           $ref: '#/components/schemas/OperationSettings'
+        agent_allowances:
+          $ref: '#/components/schemas/AgentAllowanceSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -29908,6 +29937,19 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
+        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.' }
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            Set how long one agent allowance window lasts, in hours. The window in force is never
+            cut short: the new length takes effect at its next reset, and the response names that
+            moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+            in force cancels a change that is still waiting.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -31333,6 +31375,49 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
+    AgentAllowanceSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        How much one agent may do in one window. A passport a user minted has its own allowance;
+        a connected MCP client has one allowance for all its passports, so a renewed credential
+        keeps counting where the last one stopped. An agent that reaches a count is refused on
+        its next call until the window resets or the user who lent it releases more. A change to
+        a count applies within a minute, in the window that is running: a raised count gives
+        headroom within that minute, and a lowered one refuses an agent already past it on its
+        next call. The per-minute limits are fixed by the build and shown here read-only.
+      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      properties:
+        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.' }
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            How long the window in force lasts, in hours. Default 24. Every passport's window
+            resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+        agent_window_resets_at:
+          type: string
+          format: date-time
+          description: When the window in force resets and every count starts again from zero.
+        agent_window_next_hours:
+          type: [integer, 'null']
+          description: |
+            The window length an admin saved that is not in force yet, in hours. Null when no
+            change is waiting.
+        agent_window_next_starts_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the saved window length takes over: the next reset of the window in force that
+            is at least a minute away. Null when no change is waiting. The first window under the
+            new length may be shorter than that length, never longer.
+        mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
+        mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
     UpdateCaptureSettingsRequest:
       type: object
@@ -56123,6 +56208,79 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        usage:
+          allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
+          description: |
+            What this passport has used of its allowances in the window that is running. A
+            connection's passports share one count, so a renewed credential keeps it. **Omitted**
+            on a revoked or expired passport, and when the counters cannot be read: the list is
+            still answered, without the usage.
+
+    AgentUsage:
+      type: object
+      description: One window's use of the four agent allowances, and when they reset.
+      required: [reads, writes, egress, calls, resets_at, state]
+      properties:
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentUsageByUser:
+      type: object
+      required: [data, resets_at]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AgentUserUsage' }
+          description: Users with at least one live passport or connection, by name.
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+
+    AgentUserUsage:
+      type: object
+      description: |
+        One user's agents in the running window. Each count and allowance is the sum over
+        their live passports and connections, so a user with two passports has twice the
+        allowance. `state` is the worst state of any one of them.
+      required: [user_id, display_name, passport_count, reads, writes, egress, calls, state]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        passport_count: { type: integer, minimum: 1, description: 'Live passports and connections. A connection counts once.' }
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentCounterUsage:
+      type: object
+      description: One allowance in the running window.
+      required: [used, limit, released]
+      properties:
+        used: { type: integer, minimum: 0, description: What has been used in this window. }
+        limit:
+          type: integer
+          minimum: 0
+          description: |
+            The allowance in force: the installation's value, plus one more allowance for each
+            release a user granted in this window.
+        released: { type: integer, minimum: 0, description: How many times a user released more in this window. }
+
+    AgentUsageState:
+      type: string
+      enum: [ok, near, stopped]
+      description: |
+        The worst of the four allowances. `stopped` when one is used up, so the next call of
+        that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 
     PassportConnection:
       type: object

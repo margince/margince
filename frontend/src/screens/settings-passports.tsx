@@ -25,13 +25,14 @@ import {
 } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
 import { QueryStates, WriteRefused } from "../design-system/querystates";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { resetToSignedOut } from "../lib/session";
+import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
@@ -56,6 +57,8 @@ function passportAnchor(id: string): HTMLElement | null {
 
 export function PassportCard() {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const [minting, setMinting] = useState(false);
   // Metadata only: PassportSummary carries no token, so this list cannot
   // re-disclose one.
@@ -65,6 +68,22 @@ export function PassportCard() {
   const minted = (list.data?.data ?? []).filter(
     (passport) => passport.connection == null,
   );
+  // A revoked passport can do nothing more, so it waits behind a toggle. One
+  // revoked from this view stays, struck, so focus has its row to land on.
+  const [showRevoked, setShowRevoked] = useState(false);
+  const [revokedHere, setRevokedHere] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const hidden = minted.filter(
+    (passport) => passport.revoked_at != null && !revokedHere.has(passport.id),
+  );
+  const shown = showRevoked
+    ? minted
+    : minted.filter((passport) => !hidden.includes(passport));
+  const askRevoke = (id: string) => {
+    setRevokedHere((ids) => new Set(ids).add(id));
+    revoke.ask(id);
+  };
 
   const revoke = usePassportRevoke({
     verb: "settings.revoke",
@@ -86,16 +105,27 @@ export function PassportCard() {
         <PassportUses apiBaseUrl={list.data?.api_base_url} />
       </PanelBody>
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
-      {list.isSuccess && minted.length > 0 ? (
-        <PassportTable passports={minted} onRevoke={revoke.ask} />
-      ) : (
+      {list.isSuccess && shown.length > 0 ? (
+        <PassportTable passports={shown} onRevoke={askRevoke} />
+      ) : list.isSuccess && hidden.length > 0 ? null : (
         <PanelBody>
           <QueryStates query={list} pendingLabel={t("settings.passports")}>
             <EmptyState>{t("common.empty")}</EmptyState>
           </QueryStates>
         </PanelBody>
       )}
-      <PanelBody>
+      <PanelBody className="form-stack">
+        {hidden.length > 0 && (
+          <span>
+            <Button variant="link" onClick={() => setShowRevoked((on) => !on)}>
+              {showRevoked
+                ? t("settings.passportsHideRevoked")
+                : plural("settings.passportsShowRevoked", hidden.length, {
+                    count: formatNumber(hidden.length, locale),
+                  })}
+            </Button>
+          </span>
+        )}
         <p className="t-caption">{t("settings.passportsMcpHint")}</p>
       </PanelBody>
       <MintDialog
@@ -118,6 +148,9 @@ function PassportTable({
 }>) {
   const t = useT();
   const dates = usePassportDates();
+  const usageDetail = usePassportUsageDetail<PassportSummary>(
+    (passport) => passport.label,
+  );
   const columns: DataTableColumn<PassportSummary>[] = [
     {
       key: "name",
@@ -125,7 +158,10 @@ function PassportTable({
       grow: true,
       fold: "title",
       render: (passport) => (
-        <PassportName passport={passport} caption={dates.caption(passport)} />
+        <span className="agents-name-usage">
+          <PassportName passport={passport} caption={dates.caption(passport)} />
+          <PassportUsageLine passport={passport} />
+        </span>
       ),
     },
     {
@@ -184,6 +220,7 @@ function PassportTable({
       columns={columns}
       rows={[...passports]}
       rowKey={(passport) => passport.id}
+      detail={usageDetail}
     />
   );
 }

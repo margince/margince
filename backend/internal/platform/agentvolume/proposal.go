@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,6 +44,9 @@ type ReleaseProposal struct {
 	// refused at staging and — worse, if it were ever accepted on one side only
 	// — would stop matching the identity it is supposed to deduplicate on.
 	Bucket string `json:"bucket"`
+	// WindowSeconds is the length Bucket was counted under, decimal, as a
+	// string for the reason Bucket is. Empty means DefaultWindow.
+	WindowSeconds string `json:"window_seconds,omitempty"`
 	// Passport names WHOSE window this is, and it is part of the identity below
 	// rather than decoration. Two agents lent by two different humans in one
 	// workspace cross the same counter in the same window constantly; without
@@ -54,17 +58,23 @@ type ReleaseProposal struct {
 	// row's own passport_id, stamped from the authenticated principal, precisely
 	// so an edited payload cannot re-aim a release.
 	Passport string `json:"passport"`
+	// Subject is whose counter crossed (SubjectOf): the connection for a
+	// passport minted under one. It keys the identity, so a renewed passport
+	// joins the question its predecessor raised. Empty means Passport.
+	Subject string `json:"subject,omitempty"`
 	// Tool is the call that was refused, for the screen to name. It is not
 	// authority: releasing the window releases the counter, not one tool.
 	Tool string `json:"tool"`
 }
 
 // NewReleaseProposal builds the proposal one refusal asks about.
-func NewReleaseProposal(reading Reading, passport ids.UUID, tool string) ReleaseProposal {
+func NewReleaseProposal(reading Reading, passport, connection ids.UUID, tool string) ReleaseProposal {
 	return ReleaseProposal{
 		Counter: reading.Counter, Observed: reading.Observed,
 		Limit: reading.Limit, Allowance: reading.Allowance,
-		Bucket: strconv.FormatInt(reading.Bucket, 10), Passport: passport.String(), Tool: tool,
+		Bucket:        strconv.FormatInt(reading.Bucket, 10),
+		WindowSeconds: strconv.FormatInt(int64(reading.Window/time.Second), 10),
+		Passport:      passport.String(), Subject: SubjectOf(passport, connection), Tool: tool,
 	}
 }
 
@@ -100,6 +110,18 @@ func (p ReleaseProposal) Window() (int64, error) {
 	return bucket, nil
 }
 
+// Length is the window length the proposal's bucket was counted under.
+func (p ReleaseProposal) Length() (time.Duration, error) {
+	if p.WindowSeconds == "" {
+		return DefaultWindow, nil
+	}
+	seconds, err := strconv.ParseInt(p.WindowSeconds, 10, 64)
+	if err != nil || seconds <= 0 {
+		return 0, fmt.Errorf("agentvolume: a staged release names window length %q, which is not a length", p.WindowSeconds)
+	}
+	return time.Duration(seconds) * time.Second, nil
+}
+
 // Identity is the proposal's logical identity for the approvals engine: one
 // pending question per counter per window.
 //
@@ -114,9 +136,18 @@ func (p ReleaseProposal) Identity() (json.RawMessage, error) {
 		Counter  Counter `json:"counter"`
 		Bucket   string  `json:"bucket"`
 		Passport string  `json:"passport"`
-	}{p.Counter, p.Bucket, p.Passport})
+	}{p.Counter, p.Bucket, p.subject()})
 	if err != nil {
 		return nil, fmt.Errorf("agentvolume: naming a release proposal's identity: %w", err)
 	}
 	return raw, nil
+}
+
+// subject is whose counter the question is about. A proposal with no Subject
+// names a passport counted as itself.
+func (p ReleaseProposal) subject() string {
+	if p.Subject != "" {
+		return p.Subject
+	}
+	return p.Passport
 }

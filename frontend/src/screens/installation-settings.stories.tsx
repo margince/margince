@@ -10,6 +10,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
+import { defaultAgentAllowances } from "./agentallowances.fixtures";
 import { InstallationSettingsCard } from "./installation-settings";
 import { defaultOperations } from "./operationsettings.fixtures";
 
@@ -28,6 +29,7 @@ const SETTINGS = {
   dead_work_banner_hours: 24,
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
+  agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
   timezone: "Europe/Berlin",
   base_currency: "EUR",

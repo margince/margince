@@ -11974,6 +11974,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/agent-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much of their allowances each user's agents have used in this window.
+         * @description One row per user with a live passport or connection, summed over all of them: what
+         *     was used, the allowance it is judged against, and the worst state among them. It names
+         *     no passport, label, permission or token, and says nothing about what an agent read or
+         *     changed: which agents act for a user is that user's own business, and this read
+         *     answers only how much. Readable by whoever may read the AI usage page.
+         */
+        get: operations["listAgentUsageByUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/profile": {
         parameters: {
             query?: never;
@@ -20281,6 +20305,7 @@ export interface components {
              */
             oauth_access_token_ttl_minutes: number;
             operations: components["schemas"]["OperationSettings"];
+            agent_allowances: components["schemas"]["AgentAllowanceSettings"];
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -20430,6 +20455,21 @@ export interface components {
             send_rate_window_seconds?: number;
             /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
             send_max_age_hours?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window. */
+            agent_reads_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window. */
+            agent_writes_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window. */
+            agent_egress_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
+            agent_calls_per_window?: number;
+            /**
+             * @description Set how long one agent allowance window lasts, in hours. The window in force is never
+             *     cut short: the new length takes effect at its next reset, and the response names that
+             *     moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+             *     in force cancels a change that is still waiting.
+             */
+            agent_window_hours?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -21415,6 +21455,51 @@ export interface components {
             send_rate_window_seconds: number;
             /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
             send_max_age_hours: number;
+        };
+        /**
+         * @description How much one agent may do in one window. A passport a user minted has its own allowance;
+         *     a connected MCP client has one allowance for all its passports, so a renewed credential
+         *     keeps counting where the last one stopped. An agent that reaches a count is refused on
+         *     its next call until the window resets or the user who lent it releases more. A change to
+         *     a count applies within a minute, in the window that is running: a raised count gives
+         *     headroom within that minute, and a lowered one refuses an agent already past it on its
+         *     next call. The per-minute limits are fixed by the build and shown here read-only.
+         */
+        AgentAllowanceSettings: {
+            /** @description How many records one passport or connection may read per window. Default 2000. */
+            agent_reads_per_window: number;
+            /** @description How many changing calls one passport or connection may make per window. Default 200. */
+            agent_writes_per_window: number;
+            /** @description How many calls that send something out of the workspace one passport or connection may make per window. Default 20. */
+            agent_egress_per_window: number;
+            /** @description How many tool calls of any kind one passport or connection may make per window. Default 1000. */
+            agent_calls_per_window: number;
+            /**
+             * @description How long the window in force lasts, in hours. Default 24. Every passport's window
+             *     resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+             */
+            agent_window_hours: number;
+            /**
+             * Format: date-time
+             * @description When the window in force resets and every count starts again from zero.
+             */
+            agent_window_resets_at: string;
+            /**
+             * @description The window length an admin saved that is not in force yet, in hours. Null when no
+             *     change is waiting.
+             */
+            agent_window_next_hours?: number | null;
+            /**
+             * Format: date-time
+             * @description When the saved window length takes over: the next reset of the window in force that
+             *     is at least a minute away. Null when no change is waiting. The first window under the
+             *     new length may be shorter than that length, never longer.
+             */
+            agent_window_next_starts_at?: string | null;
+            /** @description How many tool calls one passport may make per minute. Fixed by the build. */
+            mcp_calls_per_minute: number;
+            /** @description How many streams one passport may open per minute. Fixed by the build. */
+            mcp_stream_opens_per_minute: number;
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
@@ -41932,7 +42017,71 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /**
+             * @description What this passport has used of its allowances in the window that is running. A
+             *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
+             *     on a revoked or expired passport, and when the counters cannot be read: the list is
+             *     still answered, without the usage.
+             */
+            usage?: components["schemas"]["AgentUsage"];
         };
+        /** @description One window's use of the four agent allowances, and when they reset. */
+        AgentUsage: {
+            reads: components["schemas"]["AgentCounterUsage"];
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+            state: components["schemas"]["AgentUsageState"];
+        };
+        AgentUsageByUser: {
+            /** @description Users with at least one live passport or connection, by name. */
+            data: components["schemas"]["AgentUserUsage"][];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+        };
+        /**
+         * @description One user's agents in the running window. Each count and allowance is the sum over
+         *     their live passports and connections, so a user with two passports has twice the
+         *     allowance. `state` is the worst state of any one of them.
+         */
+        AgentUserUsage: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @description Live passports and connections. A connection counts once. */
+            passport_count: number;
+            reads: components["schemas"]["AgentCounterUsage"];
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            state: components["schemas"]["AgentUsageState"];
+        };
+        /** @description One allowance in the running window. */
+        AgentCounterUsage: {
+            /** @description What has been used in this window. */
+            used: number;
+            /**
+             * @description The allowance in force: the installation's value, plus one more allowance for each
+             *     release a user granted in this window.
+             */
+            limit: number;
+            /** @description How many times a user released more in this window. */
+            released: number;
+        };
+        /**
+         * @description The worst of the four allowances. `stopped` when one is used up, so the next call of
+         *     that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+         * @enum {string}
+         */
+        AgentUsageState: "ok" | "near" | "stopped";
         /**
          * @description The connection a grant-bound passport belongs to, so Settings can name it by the client the
          *     human actually approved instead of the raw DCR client id its label carries.
@@ -64535,6 +64684,37 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listAgentUsageByUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage per user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentUsageByUser"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The agent counters cannot be read right now. Try again shortly. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getAiProfile: {

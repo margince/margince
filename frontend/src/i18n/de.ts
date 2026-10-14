@@ -10700,6 +10700,54 @@ export const de = {
   "agentConnections.ttl.refusal":
     "Gib eine ganze Zahl von 5 bis 129.600 Minuten ein.",
   "agentConnections.updateFailed": "Einstellung nicht geändert",
+  "agentAllowances.title": "Kontingente für Agenten-Passports",
+  "agentAllowances.sub":
+    "Was ein Passport oder eine MCP-Verbindung in jedem Zeitfenster tun darf, bevor er stoppt. Eine geänderte Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Passport kann sein eigenes Kontingent nie ändern.",
+  "agentAllowances.reads.label": "Gelesene Datensätze",
+  "agentAllowances.reads.help":
+    "Datensätze, die ein Agent pro Zeitfenster lesen darf, 100 bis 20.000. Danach wartet das Lesen auf eine Freigabe.",
+  "agentAllowances.writes.label": "Änderungen",
+  "agentAllowances.writes.help":
+    "Änderungen, die ein Agent pro Zeitfenster machen darf, 10 bis 5.000. Danach warten Änderungen auf eine Freigabe.",
+  "agentAllowances.egress.label": "Sendungen",
+  "agentAllowances.egress.help":
+    "E-Mails und andere Aufrufe, die Margince verlassen. Sendungen stoppen bis zum Ende des Zeitfensters, 1 bis 200.",
+  "agentAllowances.calls.label": "Aufrufe insgesamt",
+  "agentAllowances.calls.help":
+    "Jeder Tool- oder API-Aufruf. Der Passport pausiert bis zum Ende des Zeitfensters, 50 bis 20.000.",
+  "agentAllowances.window.label": "Zeitfenster (Stunden)",
+  "agentAllowances.window.help":
+    "Wie lange ein Kontingent gilt, 1 bis 168. Eine neue Länge beginnt beim nächsten Zurücksetzen.",
+  "agentAllowances.burst":
+    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} Stream-Öffnungen pro Minute und Passport.",
+  "agentAllowances.pending.title": "Änderung des Zeitfensters wartet",
+  "agentAllowances.pending.body":
+    "Ab {date} UTC dauert jedes Zeitfenster {interval}. Bis dahin zählt das laufende Zeitfenster weiter.",
+  "agentUsage.title": "Agenten-Nutzung nach Mitglied",
+  "agentUsage.sub":
+    "Dieses Zeitfenster, summiert über die Passports und Verbindungen jedes Mitglieds. Es zeigt, wie viel, nie welche Passports oder was sie gelesen haben.",
+  "agentUsage.withheld":
+    "Nur Admins, Geschäftsleitung und Ops sehen die Agenten-Nutzung.",
+  "agentUsage.empty":
+    "Kein Mitglied hat einen gültigen Passport oder eine Verbindung.",
+  "agentUsage.resets": "Alle Kontingente werden am {date} UTC zurückgesetzt.",
+  "agentUsage.ofLimit": "{used} von {limit}",
+  "agentUsage.counter.reads": "Gelesene Datensätze",
+  "agentUsage.counter.writes": "Änderungen",
+  "agentUsage.counter.egress": "Sendungen",
+  "agentUsage.counter.calls": "Aufrufe",
+  "agentUsage.col.user": "Mitglied",
+  "agentUsage.col.passports": "Passports",
+  "agentUsage.state.ok": "Aktiv",
+  "agentUsage.state.near": "Nahe an einer Grenze",
+  "agentUsage.state.stopped": "Gestoppt",
+  "settings.passportColWindow": "Dieses Zeitfenster",
+  "settings.passportUsageToggle":
+    "Nutzung dieses Zeitfensters für {name} anzeigen",
+  "settings.passportsShowRevoked_one": "{count} widerrufenen Passport anzeigen",
+  "settings.passportsShowRevoked_other":
+    "{count} widerrufene Passports anzeigen",
+  "settings.passportsHideRevoked": "Widerrufene ausblenden",
   "operations.schedules.title": "Hintergrundzeitpläne",
   "operations.schedules.sub":
     "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
