@@ -5879,6 +5879,10 @@ export const vi = {
   "import.test.invalid_one": "1 dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
   "import.test.invalid_other":
     "{count} dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
+  "import.test.closedDeals_one": "1 deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDeals_other": "{count} deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDealsBody":
+    "{won} thắng và {lost} thua. Các deal giữ ngày chốt trong tệp, và không có tự động hóa hay hoa hồng nào chạy cho chúng.",
   "import.test.invalidBody":
     "Sửa trong tệp rồi tải lên lại để nhập các dòng này.",
   "import.test.anyway_one":
@@ -6017,8 +6021,7 @@ export const vi = {
   "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
   "import.reason.cannot_read_pipelines":
     "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
-  "import.reason.stage_unnamed":
-    "Hãy nêu giai đoạn của deal.",
+  "import.reason.stage_unnamed": "Hãy nêu giai đoạn của deal.",
   "import.reason.pipeline_unnamed":
     "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
   "import.reason.pipeline_unknown":
@@ -6029,8 +6032,7 @@ export const vi = {
     "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
   "import.reason.close_date_past":
     "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
-  "import.reason.lost_reason_missing":
-    "Deal đã thua cần có lý do thua.",
+  "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
   "import.reason.deal_already_closed":

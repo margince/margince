@@ -9515,6 +9515,8 @@ components:
         object: {$ref: '#/components/schemas/ImportObject'}
         rows_read: {type: integer, minimum: 0}
         disposition: {$ref: '#/components/schemas/ImportRunDisposition'}
+        closed_won: {type: integer, minimum: 1, description: 'Deals of a deals file that land already won, as closed history. Absent when none does.'}
+        closed_lost: {type: integer, minimum: 1, description: 'Deals of a deals file that land already lost, as closed history. Absent when none does.'}
     ImportRunReport:
       type: object
       description: |-

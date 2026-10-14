@@ -291,7 +291,7 @@ func same(text string) langcopy.Phrase {
 
 // Template is the README's own text, beside the column guides.
 var Template = struct {
-	Title, Optional, Order, Keys, Allowed, SizeLimit, Formulas, Example, Required langcopy.Phrase
+	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required langcopy.Phrase
 }{
 	Title: langcopy.Phrase{
 		En: "Margince import template (%s)",
@@ -306,6 +306,11 @@ var Template = struct {
 	Order:   langcopy.Phrase{En: "Import order", De: "Importreihenfolge", Vi: "Thứ tự nhập"},
 	Keys:    langcopy.Phrase{En: "Keys", De: "Schlüssel", Vi: "Khóa"},
 	Allowed: langcopy.Phrase{En: "Allowed values", De: "Erlaubte Werte", Vi: "Giá trị cho phép"},
+	Pipelines: langcopy.Phrase{
+		En: "Pipelines and stages (a deal names its pipeline and stage as written here)",
+		De: "Pipelines und Phasen (ein Deal nennt Pipeline und Phase so, wie sie hier stehen)",
+		Vi: "Quy trình và giai đoạn (giao dịch ghi tên quy trình và giai đoạn đúng như ở đây)",
+	},
 	SizeLimit: langcopy.Phrase{
 		En: "Largest upload: %d MB.",
 		De: "Größte Datei zum Hochladen: %d MB.",

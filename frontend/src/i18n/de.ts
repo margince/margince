@@ -6025,6 +6025,12 @@ export const de = {
     "1 Zeile hat ungültige Werte und wird übersprungen",
   "import.test.invalid_other":
     "{count} Zeilen haben ungültige Werte und werden übersprungen",
+  "import.test.closedDeals_one":
+    "1 Deal wird als abgeschlossene Historie importiert",
+  "import.test.closedDeals_other":
+    "{count} Deals werden als abgeschlossene Historie importiert",
+  "import.test.closedDealsBody":
+    "{won} gewonnen und {lost} verloren. Die Deals behalten das Abschlussdatum aus der Datei, und für sie läuft keine Automatisierung und keine Provision.",
   "import.test.invalidBody":
     "Korrigiere die Zeilen in der Datei und lade die Datei erneut hoch, um die Zeilen zu übernehmen.",
   "import.test.anyway_one":
@@ -6168,8 +6174,7 @@ export const de = {
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
   "import.reason.cannot_read_pipelines":
     "Du darfst keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
-  "import.reason.stage_unnamed":
-    "Nenne die Phase des Deals.",
+  "import.reason.stage_unnamed": "Nenne die Phase des Deals.",
   "import.reason.pipeline_unnamed":
     "Nenne die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
   "import.reason.pipeline_unknown":

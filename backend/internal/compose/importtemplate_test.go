@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
@@ -28,7 +30,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	if err := writeImportTemplate(&buf, f, langcopy.For("en")); err != nil {
+	if err := writeImportTemplate(&buf, f, langcopy.For("en"), dealStages{}); err != nil {
 		t.Fatal(err)
 	}
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
@@ -49,7 +51,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 
 func TestTheTemplateReadmeSpeaksTheLanguageItIsGiven(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeImportTemplate(&buf, crmcontracts.ImportFormat{SizeLimitMb: 10}, langcopy.For("de")); err != nil {
+	if err := writeImportTemplate(&buf, crmcontracts.ImportFormat{SizeLimitMb: 10}, langcopy.For("de"), dealStages{}); err != nil {
 		t.Fatal(err)
 	}
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
@@ -77,4 +79,22 @@ func readEntry(t *testing.T, zr *zip.Reader, name string) string {
 		t.Fatalf("reading %s: %v", name, err)
 	}
 	return string(body)
+}
+
+func TestTheTemplateListsEveryPipelineWithItsStages(t *testing.T) {
+	pipelines := []crmcontracts.Pipeline{
+		{Id: uuid.New(), Name: "Sales", IsDefault: true, Stages: &[]crmcontracts.Stage{{Id: uuid.New(), Name: "Qualified"}, {Id: uuid.New(), Name: "Won", Semantic: crmcontracts.StageSemanticWon}}},
+		{Id: uuid.New(), Name: "Renewals", Stages: &[]crmcontracts.Stage{{Id: uuid.New(), Name: "Due"}}},
+	}
+	stages := dealStagesFrom(pipelines, importToday)
+	readme := templateReadme(crmcontracts.ImportFormat{SizeLimitMb: 10}, langcopy.For("en"), stages)
+	for _, want := range []string{"Sales: Qualified, Won", "Renewals: Due"} {
+		if !strings.Contains(readme, want) {
+			t.Errorf("readme lacks %q:\n%s", want, readme)
+		}
+	}
+	unreadable := templateReadme(crmcontracts.ImportFormat{SizeLimitMb: 10}, langcopy.For("en"), dealStages{})
+	if strings.Contains(unreadable, "Sales") || strings.Contains(unreadable, "Pipelines and stages") {
+		t.Errorf("a reader who may not read pipelines is shown them:\n%s", unreadable)
+	}
 }

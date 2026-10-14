@@ -6151,6 +6151,11 @@ export const en = {
   "import.test.invalid_one": "1 row has invalid values and will be skipped",
   "import.test.invalid_other":
     "{count} rows have invalid values and will be skipped",
+  "import.test.closedDeals_one": "1 deal is imported as closed history",
+  "import.test.closedDeals_other":
+    "{count} deals are imported as closed history",
+  "import.test.closedDealsBody":
+    "{won} won and {lost} lost. They keep the close date in the file, and no automation or commission runs for them.",
   "import.test.invalidBody":
     "Fix them in the file and upload it again to bring them in.",
   "import.test.anyway_one":
@@ -6289,8 +6294,7 @@ export const en = {
   "import.reason.value_refused": "“{value}” was refused: {detail}",
   "import.reason.cannot_read_pipelines":
     "You cannot read pipelines, so a deal row naming its stage is skipped.",
-  "import.reason.stage_unnamed":
-    "Name the deal’s stage.",
+  "import.reason.stage_unnamed": "Name the deal’s stage.",
   "import.reason.pipeline_unnamed":
     "Name the pipeline: this CRM has no default pipeline.",
   "import.reason.pipeline_unknown":

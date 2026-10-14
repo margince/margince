@@ -24153,6 +24153,10 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             rows_read: number;
             disposition: components["schemas"]["ImportRunDisposition"];
+            /** @description Deals of a deals file that land already won, as closed history. Absent when none does. */
+            closed_won?: number;
+            /** @description Deals of a deals file that land already lost, as closed history. Absent when none does. */
+            closed_lost?: number;
         };
         /**
          * @description The same shape before and after approval: a dry run reports what the

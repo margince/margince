@@ -106,6 +106,10 @@ type ObjectReport struct {
 	// a dropped link. Not skips, so they never count in Skipped. The dry run and
 	// the commit both list a row's warning; the report names it once.
 	Warnings []SkippedRow `json:"warnings,omitempty"`
+	// ClosedWon and ClosedLost count the deals the dry run saw land already
+	// closed, which the commit writes as history. Only the preview counts them.
+	ClosedWon  int `json:"closed_won,omitempty"`
+	ClosedLost int `json:"closed_lost,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
@@ -265,6 +269,8 @@ func foldObjects(earlier, later []ObjectReport) []ObjectReport {
 		into.Skipped = append(into.Skipped, or.Skipped...)
 		into.Collisions = append(into.Collisions, or.Collisions...)
 		into.WillDuplicate += or.WillDuplicate
+		into.ClosedWon += or.ClosedWon
+		into.ClosedLost += or.ClosedLost
 		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
 		// Warnings add as skips do: the row walk has a checkpoint, so a resume

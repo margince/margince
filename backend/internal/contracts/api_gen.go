@@ -37176,6 +37176,12 @@ type ImportPartProfile struct {
 
 // ImportPartReport One file's slice of a run's report.
 type ImportPartReport struct {
+	// ClosedLost Deals of a deals file that land already lost, as closed history. Absent when none does.
+	ClosedLost *int `json:"closed_lost,omitempty"`
+
+	// ClosedWon Deals of a deals file that land already won, as closed history. Absent when none does.
+	ClosedWon *int `json:"closed_won,omitempty"`
+
 	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 	Disposition ImportRunDisposition `json:"disposition"`
 
