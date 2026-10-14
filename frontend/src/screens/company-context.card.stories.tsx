@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { CompanyContextCard } from "./company-context";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyContextCard } from "./company-context";
 
 // What the AI is told about the company it is selling for. Two independent
 // conditions govern this card and they mean different things: a rollout FLAG

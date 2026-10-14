@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { MailSharingCard } from "./mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSharingCard } from "./mail-sharing";
 
 // The workspace mail-sharing posture. ON is the quiet default; a posture with a
 // cost (sharing off, or seats allowed to share) states it under the switches.

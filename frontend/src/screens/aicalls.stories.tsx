@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiCallsCard } from "./aicalls";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card is gated on ai_diagnostics:read, so /me decides which branch renders.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };

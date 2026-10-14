@@ -5,12 +5,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   ProviderRefreshLine,
   RefreshModelPricesButton,
   RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Re-pricing the models this installation calls from the broker's catalogue:
 // the button, the one-line summary on the list, and each vendor's own answer

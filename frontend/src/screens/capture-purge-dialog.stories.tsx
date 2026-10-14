@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { PurgeDialog } from "./capture-purge-dialog";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The preview answers with every count a receipt can carry, so the checked
 // state shows the longest body this confirm holds.

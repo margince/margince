@@ -5,9 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { screen, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Password is always on and says so. Each provider says whether its button is
 // on the sign-in screen right now, and why not when it is missing: the verdict

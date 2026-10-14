@@ -292,6 +292,10 @@ const (
 	// teammate, read opens a led team's week. Admin, management and manager
 	// hold both; a rep on a team does not coach their teammates.
 	objTeamLead = "team_lead"
+	// Deciding a legal review on a deal: read opens the queue and the review
+	// pack, update records the outcome. Admin holds both and hands it to any
+	// seat; no other system role holds it.
+	objLegalReview = "legal_review"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

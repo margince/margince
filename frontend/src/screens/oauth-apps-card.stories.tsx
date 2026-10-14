@@ -6,8 +6,12 @@ import type { ReactNode } from "react";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { OAuthAppsCard } from "./oauth-apps-card";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card in each state an installation reaches: no app from any source, one
 // stored, one the installation's configuration supplies, and a reader who may

@@ -298,7 +298,7 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 		r, err := tx.Query(ctx, `
 			SELECT object, native_id, created_at
 			  FROM import_record_map
-			 WHERE import_run_id = $1
+			 WHERE import_run_id = $1 AND origin = 'created'
 			 ORDER BY array_position($4::text[], object), created_at, external_id
 			 OFFSET $2 LIMIT $3`, id, skip, limit, reverseImportOrder())
 		if err != nil {
@@ -344,7 +344,7 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 			r, err := tx.Query(ctx, `
 				SELECT m.native_id
 				  FROM import_record_map m
-				 WHERE m.import_run_id = $1 AND m.object = $2
+				 WHERE m.import_run_id = $1 AND m.object = $2 AND m.origin = 'created'
 				   AND m.native_id = ANY($3)
 				   AND EXISTS (
 				     SELECT 1 FROM audit_log a

@@ -56,17 +56,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
 		{"Latest", func() error { _, err := s.Latest(ctx, connectorSalesforce); return err }},
-		{"LookupIdentity", func() error {
-			_, _, err := s.LookupIdentity(ctx, "legacy_crm", "contact", "1")
-			return err
-		}},
-		{"RecordIdentity", func() error {
-			return s.RecordIdentity(ctx, runID, "legacy_crm", "contact", "1", ids.NewV7())
-		}},
-		{"RecordIdentities", func() error {
-			return s.RecordIdentities(ctx, runID, "legacy_crm", "contact",
-				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
-		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
 		{"RecordImportSourceIntent", func() error {
 			return s.RecordImportSourceIntent(ctx, "ws/import/x")
@@ -76,7 +65,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"RunOfSource", func() error { _, err := s.RunOfSource(ctx, "x"); return err }},
-		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
 		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0, queueNothing); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0, queueNothing); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
@@ -84,7 +72,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7(), OriginCreated)
 		}},
 		{"BindingsOf", func() error {
 			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
@@ -96,7 +84,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"ClaimUndo", func() error { _, err := s.ClaimUndo(ctx, runID, queueNothing); return err }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
-		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
 		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
 		{"CancelIdleDrafts", func() error { _, err := s.CancelIdleDrafts(ctx, time.Minute); return err }},
 		{"ReleaseFinishedSources", func() error { _, err := s.ReleaseFinishedSources(ctx); return err }},
@@ -107,12 +94,15 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
-		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
-		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1, RunMapping{}, queueNothing); return err }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},
 		{"Yield", func() error { return s.Yield(ctx, lease) }},
+		{"Heartbeat", func() error { return s.Heartbeat(ctx, lease) }},
+		{"FlushTestProgress", func() error { return s.FlushTestProgress(ctx, lease, Progress{}, PhaseReading, "") }},
+		{"FinishValidation", func() error { return s.FinishValidation(ctx, lease, Report{}) }},
+		{"RefuseValidation", func() error { return s.RefuseValidation(ctx, lease, CauseStopped) }},
 		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
 		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
 		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
@@ -682,18 +672,18 @@ func TestTheRepairRunsEvenWhenNoCheckpointWasEverRecorded(t *testing.T) {
 // ungranted human, which is what this table proves.
 func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
-		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
-		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
-		"RunOfSource": true, "DiscardOwnDraft": true, "AwaitApproval": true, "Approve": true,
+		"Create": true, "Get": true, "Latest": true, "Resume": true,
+		"RunOfSource": true, "DiscardOwnDraft": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 		"ClaimUndo": true, "FailStaleRunning": true,
-		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
-		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
+		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true,
+		"Cancel": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
 		"ResumeStaleAttempts": true, "RequeueLostJobs": true,
-		"Claim": true, "Yield": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
+		"Claim": true, "Yield": true, "Heartbeat": true, "Flush": true,
+		"FlushTestProgress": true, "FinishValidation": true, "RefuseValidation": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

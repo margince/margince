@@ -7,18 +7,18 @@ import { stubClipboard } from "../design-system/clipboard-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { locationDouble } from "../testing/locationdouble";
 import {
-  bookingConnection,
-  bookingHours,
-  bookingProfile,
-} from "./book.testkit";
-import { MeetingSettings } from "./meeting-settings";
-import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import {
+  bookingConnection,
+  bookingHours,
+  bookingProfile,
+} from "./book.testkit";
+import { MeetingSettings } from "./meeting-settings";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type User = ReturnType<typeof userEvent.setup>;

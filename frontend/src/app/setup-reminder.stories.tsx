@@ -8,7 +8,7 @@ import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" trigger and the checklist behind it. The default

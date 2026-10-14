@@ -5,7 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse, stubWithSession } from "../story-utils";
+import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { CompanyAct } from "./company-act";
 import type {
   ConversationQuestion,

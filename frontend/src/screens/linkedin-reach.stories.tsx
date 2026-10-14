@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LinkedInReachSection } from "./linkedin-reach";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The reach section, inside the panel it renders in, for the fe-uat render
 // gate: a list that stops short of the whole (so the caveat says where),

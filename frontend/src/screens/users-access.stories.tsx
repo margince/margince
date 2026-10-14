@@ -10,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { TeamsCard } from "./users-access";
 
 // One row per team: its name (and parent), who is on it, and its verbs. The

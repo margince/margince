@@ -12,11 +12,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import {
   ImapConnectPanel,
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The onboarding IMAP panel (G-10): the wizard's connect step for the one
 // credential provider must post through the typed client — the nested

@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import type { GrantSpec } from "../testing/mefixture";
-import { ConnectorsCard } from "./connectors";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectorsCard } from "./connectors";
 
 // ConnectorsCard stories for the fe-uat render gate: a healthy connection, a
 // reauth-needed one (the reconnect affordance), a sync-error one, the empty

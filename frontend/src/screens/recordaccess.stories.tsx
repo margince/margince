@@ -7,13 +7,13 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { IdentityLine } from "../design-system/identityline";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { RecordAccess } from "./recordaccess";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordAccess } from "./recordaccess";
 
 type Contact = components["schemas"]["Contact"];
 type Company = components["schemas"]["Company"];

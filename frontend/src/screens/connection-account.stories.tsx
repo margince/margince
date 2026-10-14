@@ -7,14 +7,14 @@ import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderList } from "../design-system/providerrow";
 import { accountsOf } from "../format/connectorprovider";
-import type { ImportWindow } from "./connect-account";
-import { ConnectionAccountRow } from "./connection-account";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import type { ImportWindow } from "./connect-account";
+import { ConnectionAccountRow } from "./connection-account";
 
 // One account on Connections in each state its services can be in: syncing
 // with the import reading, up to date, a service needing a reconnect, a grant

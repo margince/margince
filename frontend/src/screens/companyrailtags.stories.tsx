@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { TagsPanel } from "./tagspanel";
 
 // The tags panel draws four states, and three of them look alike from the

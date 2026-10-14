@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProviderHealthCard } from "./providerhealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Which AI providers are not answering. The healthy state is a finding of its
 // own, and each of the four failures says who can fix it.
@@ -16,9 +20,12 @@ const meta: Meta<typeof ProviderHealthCard> = {
 export default meta;
 type Story = StoryObj<typeof ProviderHealthCard>;
 
+/** The grant a story gets when it names none: diagnostics, read only. */
+const DIAGNOSTICS_READ: GrantSpec = { ai_diagnostics: ["read"] };
+
 function story(
   providers: unknown[],
-  allow: GrantSpec = { ai_diagnostics: ["read"] },
+  allow: GrantSpec = DIAGNOSTICS_READ,
   configured: string[] = ["anthropic", "gemini", "openai", "jev"],
 ) {
   return () => {

@@ -314,6 +314,7 @@ const SIZING: readonly Measure[] = [
   { token: "--dialogFormWidth", usage: "A form dialog." },
   { token: "--drawerWidth", usage: "A drawer." },
   { token: "--drawerReadingWidth", usage: "A drawer made for reading." },
+  { token: "--drawerWindowWidth", usage: "A drawer grown to the window." },
   { token: "--dialogFullWidth", usage: "A full-width dialog." },
   {
     token: "--phoneAgentRise",

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 
 // The backread step for the fe-uat render gate: one story per honest branch:
 // the window pick with its scope, a failed estimate that still allows the read,

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { OfferCurrencyField } from "./offers.currencyfield";
-import { StoryProviders } from "./story-utils";
 
 type Offer = components["schemas"]["Offer"];
 type Line = NonNullable<Offer["line_items"]>[number];

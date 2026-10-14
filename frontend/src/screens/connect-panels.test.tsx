@@ -12,9 +12,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { ConnectPostureStep } from "./connect-posture";
 import { OAuthReturnPanel } from "./onboarding-connect-panels";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The provider-agnostic return view: what a consent round trip came back
 // with, read fresh from the roster rather than assumed from the route.

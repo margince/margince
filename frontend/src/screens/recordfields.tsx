@@ -19,6 +19,7 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
+import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
 import {
@@ -27,7 +28,6 @@ import {
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import { derivedRecordKeys } from "./activitykeys";
 import {
   type CreateField,
   type FormRows,

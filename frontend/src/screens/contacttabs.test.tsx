@@ -13,10 +13,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactTimelineTab } from "./contacttabs";
-import { jsonResponse, stubWithSession } from "./story-utils";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Deal = components["schemas"]["Deal"];

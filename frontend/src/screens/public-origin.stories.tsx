@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { PublicOriginCard } from "./public-origin";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 type PublicOrigin = NonNullable<
   components["schemas"]["CaptureConnectionListResponse"]["public_origin"]

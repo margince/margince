@@ -5,12 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import {
   OAuthAppDrawer,
   RedirectAddressesDialog,
   RemoveOAuthAppDialog,
 } from "./oauth-app-drawer";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The setup drawer and the two dialogs a stored app's menu opens. Google and
 // Microsoft are both drawn because they differ in what the drawer asks: only

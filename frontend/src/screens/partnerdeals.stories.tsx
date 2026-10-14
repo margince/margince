@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { PartnerDeals } from "./partnerdeals";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What a partner brought us. Every row is "this partner brought this deal for
 // someone", so the customer column is the one that carries the panel — which is

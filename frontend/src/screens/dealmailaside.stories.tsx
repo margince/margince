@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { DealMailAside } from "./dealmailaside";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The flyout under a board card's mail line, drawn on its own so the three
 // readings it has can be judged without a board around them: an exchange the

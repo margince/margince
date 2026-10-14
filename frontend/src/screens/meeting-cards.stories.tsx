@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { jsonResponse } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import { bookingConnection, bookingProfile } from "./book.testkit";
 import { AvailabilityCard } from "./meeting-availability";
@@ -7,7 +8,6 @@ import { MeetingCalendarCard } from "./meeting-calendar";
 import { GuestViewCard } from "./meeting-guest-view";
 import { BookingLinksCard } from "./meeting-links";
 import { MeetingSetupCard } from "./meeting-setup";
-import { jsonResponse } from "./story-utils";
 
 // Each Meetings card alone, in the states the page composes them in. The
 // whole page is in meeting-settings.stories.tsx.

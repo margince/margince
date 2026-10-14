@@ -5,8 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
-import { StoryProviders } from "../screens/story-utils";
-import { groupChronology } from "../screens/timelinegroups";
+import { StoryProviders } from "../testing/story-utils";
 import { activityTimeline } from "./activitytimeline";
 import { Avatar, Card } from "./atoms";
 import {
@@ -15,6 +14,7 @@ import {
   TimelineList,
 } from "./composed";
 import type { RecordContact } from "./participants";
+import { groupChronology } from "./timelinegroups";
 
 const meta: Meta<typeof TimelineList> = {
   title: "Components/Text and data display/Timeline list",

@@ -8,6 +8,7 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { groupChronology } from "../design-system/timelinegroups";
 import { useLocale, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
 import { MeetingBriefAction } from "./contactmeetings";
@@ -22,7 +23,6 @@ import {
 } from "./recordchronology";
 import { ConversationList, useChronologyCut } from "./recordconversations";
 import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 import "./contact360.css";
 import { invalidateRecord } from "./recordwritekeys";
 

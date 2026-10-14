@@ -31,7 +31,7 @@
 #
 # DIFF-SCOPED, by design: it inspects only the lines THIS branch adds versus the
 # merge-base with origin/main. The large pre-existing backlog of raw px is NOT
-# gated — write it right the first time, exactly like the craft pre-push hook.
+# gated — write it right the first time, exactly like craft static's comment checks.
 # A genuine one-off is waived in-line with a reason, in the file's own comment
 # syntax: `// ds:ignore <reason>` in .tsx, `/* ds:ignore <reason> */` in .css.
 #

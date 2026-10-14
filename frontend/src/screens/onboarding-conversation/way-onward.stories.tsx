@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { WayOnward } from "./way-onward";
 
 // The button always presses; what still blocks the step is said beside it only

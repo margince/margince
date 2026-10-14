@@ -315,6 +315,9 @@ func narrowedScopes(requested, granted []string) ([]string, error) {
 		if !slices.Contains(granted, sc) {
 			return nil, errRefreshScope
 		}
+		if slices.Contains(narrowed, sc) {
+			continue
+		}
 		narrowed = append(narrowed, sc)
 	}
 	if len(narrowed) == 0 {

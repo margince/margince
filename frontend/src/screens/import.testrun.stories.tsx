@@ -3,21 +3,22 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { formatFixture } from "./import.fixtures";
-import { ProblemTable } from "./import.testrun";
-import { ImportWizardPage } from "./import.wizard";
-import type { ImportRowIssue } from "./importtypes";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { formatFixture } from "./import.fixtures";
+import { ProblemTable } from "./import.testrun";
+import { ImportWizardPage } from "./import.wizard";
+import type { ImportRowIssue } from "./importtypes";
 
 // The test run shows the counts per type and every problem with where it is.
 // It offers to bring rows with broken links in without the link. The first
 // story reaches it the way a reader does. The second opens a staged run by
-// address, where no file is in hand to stage again.
+// address, where no file is in hand to stage again. Then a test still running,
+// and one the worker refused.
 
 const meta: Meta = {
   title: "Settings/Data/Data import/Test run",
@@ -101,7 +102,7 @@ const PROFILE = {
   targets: ["email"],
 };
 
-function page(address: string) {
+function page(address: string, current: object = RUN) {
   return () => {
     globalThis.history.replaceState(null, "", address);
     installFetchStub({
@@ -110,8 +111,8 @@ function page(address: string) {
       "GET /imports": () =>
         jsonResponse({ data: [], page: { has_more: false } }),
       "POST /imports/sources": () => jsonResponse(PROFILE),
-      "POST /imports": () => jsonResponse(RUN, 202),
-      [`GET /imports/${RUN.id}`]: () => jsonResponse(RUN),
+      "POST /imports": () => jsonResponse(current, 202),
+      [`GET /imports/${RUN.id}`]: () => jsonResponse(current),
       [`GET /imports/${RUN.id}/report`]: () => jsonResponse(REPORT),
     });
     return (
@@ -122,7 +123,7 @@ function page(address: string) {
   };
 }
 
-async function stage({ canvasElement }: { canvasElement: HTMLElement }) {
+async function runTest(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.upload(
     await canvas.findByLabelText("Upload your data"),
@@ -132,8 +133,15 @@ async function stage({ canvasElement }: { canvasElement: HTMLElement }) {
     await canvas.findByRole("button", { name: /Next: map/ }),
   );
   await userEvent.click(canvas.getByRole("button", { name: "Run test" }));
+  return canvas;
+}
+
+async function stage({ canvasElement }: { canvasElement: HTMLElement }) {
+  const canvas = await runTest(canvasElement);
   await canvas.findByRole("link", { name: "problems.csv" });
 }
+
+const NO_HEADER = "The file has no header row.";
 
 /** Staged here, so the broken links may be brought in without the link. */
 export const Problems: Story = {
@@ -150,6 +158,27 @@ export const ProblemsDark: Story = {
 /** A staged run opened by its address: no file is in hand to stage again. */
 export const OpenedByAddress: Story = {
   render: page(`#/settings/import/run?run=${RUN.id}`),
+};
+
+/** A run the worker is still testing, which the reader can stop. */
+export const Testing: Story = {
+  render: page(`#/settings/import/run?run=${RUN.id}`, {
+    ...RUN,
+    status: "validating",
+  }),
+};
+
+/** A test the worker refused: back on the map with the reason. */
+export const TestRefused: Story = {
+  render: page("#/settings/import/run", {
+    ...RUN,
+    status: "pending",
+    error: NO_HEADER,
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = await runTest(canvasElement);
+    await canvas.findByText(NO_HEADER);
+  },
 };
 
 /** The problem list alone, one row per kind of problem. */

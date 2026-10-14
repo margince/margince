@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { PrivacyNotice } from "./confirmprivacy";
-import { installFetchStub, StoryProviders } from "./story-utils";
 import "./preferences.css";
 import "./confirm.css";
 

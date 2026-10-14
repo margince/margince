@@ -5,7 +5,11 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { installFetchStub, jsonResponse, meRoute } from "../story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../../testing/story-utils";
 import { BasisAct } from "./basis-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";

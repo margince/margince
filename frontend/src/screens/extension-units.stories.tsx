@@ -6,8 +6,8 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { ExtensionDescriptor, UnitSecretScope } from "../lib/extensions";
+import { StoryProviders } from "../testing/story-utils";
 import { ExtensionUnitsCard, ExtensionUnitsPanel } from "./extension-units";
-import { StoryProviders } from "./story-utils";
 
 // Where an installation's own units are offered: the manifest's declared secret
 // scope decides which of two settings pages holds the unit, because each page

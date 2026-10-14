@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { meFixture } from "../testing/mefixture";
-import { settingsReach } from "./settingscatalog";
-import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { settingsReach } from "./settingscatalog";
+import { SettingsBoundary, SettingsHome } from "./settingshome";
 
 // The settings address with NO page segment, and the two things it answers when
 // the segment it does carry names no page this reader can open.

@@ -6,9 +6,13 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CallDrawer } from "./aicalls-detail";
 import { CallTable } from "./aicalls-table";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
 

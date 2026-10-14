@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { DealCockpit } from "./dealcockpit";
 
 // The band a reader scans before reading anything: where this deal stands in

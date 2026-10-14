@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { OAuthConsent } from "./oauthconsent";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OAuthConsent } from "./oauthconsent";
 
 // The screen where a human hands an agent their own authority. It reads its
 // whole request out of the redirect FRAGMENT — every authorize param plus the

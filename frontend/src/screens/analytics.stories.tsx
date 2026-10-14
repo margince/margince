@@ -4,19 +4,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
-import { AnalyticsScreen, ForecastTile } from "./analytics";
-import { forecastEvaluation } from "./reporting.scenarios";
-import {
-  reportingStoryEvaluation,
-  reportingStoryRoutes,
-} from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { forecastEvaluation } from "./reporting.scenarios";
+import {
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 
 // The Reports screen for the fe-uat render gate. All three report segments draw
 // into ONE surface — a titled card whose head carries "Explain this number"

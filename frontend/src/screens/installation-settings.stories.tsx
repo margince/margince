@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { DateFormatsProvider } from "../app/dateformats";
-import { InstallationSettingsCard } from "./installation-settings";
-import { defaultOperations } from "./operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { InstallationSettingsCard } from "./installation-settings";
+import { defaultOperations } from "./operationsettings.fixtures";
 
 // Settings → Admin settings → General → Installation. Two surfaces in one card:
 // three ROWS that read what the installation is set to, and the one dialog that

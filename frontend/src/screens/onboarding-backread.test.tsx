@@ -15,9 +15,9 @@ import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 import { ConnectedWayOnward } from "./onboarding-conversation/connect-connected";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The mailbox backread step. Two invariants carry most of the weight here and
 // both are about honesty rather than layout: a count the wire did not send is

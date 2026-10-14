@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ChartContext } from "./reporting.chartcontext";
 import { reportingStoryEvaluation } from "./reporting.story-fixtures";
-import { StoryProviders } from "./story-utils";
 export default {
   title: "Records/Reports/Analytics/Chart context",
 } satisfies Meta;

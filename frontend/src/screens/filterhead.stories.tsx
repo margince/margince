@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { Button, OverflowMenu, SegmentedControl } from "../design-system/atoms";
+import { StoryProviders } from "../testing/story-utils";
 import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
-import { StoryProviders } from "./story-utils";
 
 // The head of a focused Filters and views page: its one h1, with the control
 // the page reads from or the verbs that act on what it holds, and the same

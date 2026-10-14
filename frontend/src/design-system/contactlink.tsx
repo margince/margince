@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import { mailbox, telUri } from "../format/contacturi";
-import { useWriteTo, type WriteToRecord } from "../screens/writeto";
+import { useWriteTo, type WriteToRecord } from "../lib/writeto";
 
 // An address or a number a reader can ACT on — an address opens the product's
 // composer to the record it belongs to, a number is the `tel:` link its scheme

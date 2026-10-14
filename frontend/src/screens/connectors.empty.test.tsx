@@ -14,8 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import type { GrantSpec } from "../testing/mefixture";
+import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
-import { jsonResponse, stubWithSession } from "./story-utils";
 
 // The Mail and calendar card before anything is connected: the steps above a
 // tile per vendor whose Connect opens the dialog on that vendor, a vendor this

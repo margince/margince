@@ -4,16 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ComposeModal } from "./compose";
-import { RelinkModal } from "./composerelink";
-import type { Transport } from "./contacttransports";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ComposeModal } from "./compose";
+import { RelinkModal } from "./composerelink";
+import type { Transport } from "./contacttransports";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
 // the same fixture shapes compose.test.tsx exercises — never a live call. The

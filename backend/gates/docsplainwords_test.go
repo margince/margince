@@ -243,7 +243,7 @@ var plainCaps = map[string]int{
 	"docs/how-to/plain-words.txt":      1387,
 	"docs/explanation/plain-words.txt": 1663,
 	"docs/handbook/plain-words.txt":    1402,
-	"docs/reference/plain-words.txt":   1771,
+	"docs/reference/plain-words.txt":   1770,
 	plainProjectFile:                   1808,
 }
 

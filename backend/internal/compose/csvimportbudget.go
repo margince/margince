@@ -5,13 +5,12 @@ package compose
 
 // The numbers that bound an import's work in the worker. A commit or an undo
 // runs as slices of one attempt. Each slice must end, flush and snooze inside
-// the window a stopping worker gives it.
+// the window a stopping worker gives it. A test run is one unsliced attempt.
 
 import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 const (
@@ -46,18 +45,20 @@ const (
 	// importLegacyIdleAfter is when a running run that moved no checkpoint has
 	// no process left working it, by the rule that held before commits sliced.
 	importLegacyIdleAfter = 30 * time.Minute
-	// importTestRunBudget bounds a test run, which answers inside its request.
-	// It ends a quarter before the response deadline, so the refused run is
-	// written while the caller still waits.
-	importTestRunBudget = httpserver.ResponseDeadline * 3 / 4
+	// importHeartbeatEvery is how often a test run tells the sweep it is alive
+	// while its one snapshot read writes nothing else.
+	importHeartbeatEvery = 10 * time.Second
 	// importRowCap is the most rows one upload may hold, summed over its files,
-	// because one test run reads them all. A mixed company, contact and lead
-	// file was read at about 1,000 rows a second on a developer machine. The
-	// cap keeps a third of the test run's budget for matching the estate.
+	// because one test run reads them all in one snapshot.
 	importRowCap = 15_000
 )
 
 const (
+	// importCheckQueue keeps test runs, which a user watches, from waiting
+	// behind a commit. Each holds a snapshot connection plus a short one.
+	importCheckQueue = "import_check"
+	// Two workers per process: one per open wizard tab.
+	importCheckMaxWorkers = 2
 	// importWriteQueue keeps commit and undo slices apart from the jobs a
 	// user is waiting on. Each slice holds the run's lock connection plus one
 	// row transaction at a time.

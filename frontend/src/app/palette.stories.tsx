@@ -7,7 +7,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
 import { type Command, CommandPalette } from "./palette";
 

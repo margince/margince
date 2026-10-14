@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { SettingList } from "../design-system/settingrow";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { OvernightGrantCard, OvernightGrantChoice } from "./overnight-grant";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The rep's standing overnight authority, in both places it is asked.
 //

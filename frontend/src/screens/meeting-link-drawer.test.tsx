@@ -13,17 +13,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   bookingConnection,
   bookingHours,
   bookingProfile,
 } from "./book.testkit";
 import { linkChanges, MeetingLinkDrawer, videoOf } from "./meeting-link-drawer";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 

@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
 // TelegramConnectForm stories for the fe-uat render gate: the idle

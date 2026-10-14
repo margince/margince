@@ -31,7 +31,6 @@
 5 react-hooks/refs src/design-system/listsurface.tsx
 2 react-hooks/set-state-in-effect src/design-system/listsurface.tsx
 1 react-hooks/set-state-in-effect src/design-system/motion.ts
-2 react-hooks/refs src/design-system/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/design-system/presence.ts
 3 react-hooks/refs src/design-system/recordview.tsx
 1 react-hooks/set-state-in-effect src/design-system/relationshipmap.tsx
@@ -102,6 +101,7 @@
 1 react-hooks/refs src/screens/onboarding-conversation/voice-scenes.tsx
 2 react-hooks/refs src/screens/onboarding-gate.tsx
 1 react-hooks/set-state-in-effect src/screens/onboarding-ignition.tsx
+2 react-hooks/refs src/screens/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/screens/preferences.tsx
 1 react-hooks/refs src/screens/privacy.caselink.ts
 1 react-hooks/refs src/screens/projecthealthmodal.tsx

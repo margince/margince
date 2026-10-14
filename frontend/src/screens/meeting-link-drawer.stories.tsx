@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import { jsonResponse } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import { bookingConnection, bookingProfile } from "./book.testkit";
 import {
   MeetingLinkDrawer,
   ReplaceAddressConfirm,
 } from "./meeting-link-drawer";
-import { jsonResponse } from "./story-utils";
 
 const meta: Meta<typeof MeetingLinkDrawer> = {
   title: "Settings/You/Meetings/Booking link drawer",

@@ -6,13 +6,13 @@ import { fn, screen, userEvent, within } from "storybook/test";
 import { Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { RetentionPolicyForm } from "./retentionpolicyform";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RetentionPolicyForm } from "./retentionpolicyform";
 import "./retention.css";
 
 // THE AUTHORING FORM for a retention rule — four inputs committed together.

@@ -16,7 +16,7 @@ import {
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import type { WorklistItem } from "./worklist.queries";
 import { TagSuggestionDecision } from "./worklist.tagsuggestion";
 

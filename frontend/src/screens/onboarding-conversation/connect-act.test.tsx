@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { jsonResponse, stubWithSession } from "../story-utils";
+import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ConnectAct } from "./connect-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";

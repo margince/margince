@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { GroupRoleGrants } from "./sign-in-group-roles";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Directory groups that hand a role to the members invited from them, behind a
 // disclosure that stays closed until somebody asks for it.

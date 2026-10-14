@@ -5,14 +5,14 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReviewTemplate } from "./outcomereview.queries";
-import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import type { ReviewTemplate } from "./outcomereview.queries";
+import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 
 const NATIVE_FETCH = globalThis.fetch;
 

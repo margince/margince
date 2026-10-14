@@ -8,13 +8,13 @@ import {
 } from "../app/shell.storykit";
 import { routeHash } from "../lib/router";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { SettingsScreen, settingsAddress } from "./settings";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { SettingsScreen, settingsAddress } from "./settings";
 
 /**
  * The /me body of a settings story: an admin holding exactly `allow`.

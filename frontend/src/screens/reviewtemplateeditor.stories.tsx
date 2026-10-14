@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof ReviewTemplateEditor> = {
   title: "Settings/Sales/Outcome reviews/Edit questions",

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MailSharingPlate } from "./mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSharingPlate } from "./mail-sharing";
 
 // The sharing rule as stated on a member's own Connections page, as the plate
 // under their accounts. A reader who may change it gets the link.

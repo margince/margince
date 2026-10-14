@@ -12,8 +12,8 @@ import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { OvernightGrantCard, OvernightGrantChoice } from "./overnight-grant";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The rep's standing overnight authority, asked in two places.
 //

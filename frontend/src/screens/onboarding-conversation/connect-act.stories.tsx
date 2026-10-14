@@ -7,7 +7,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { ConnectAct } from "./connect-act";
 import type { ProviderAvailability } from "./connect-scene";
 import { initialConversationState } from "./conversation-machine";

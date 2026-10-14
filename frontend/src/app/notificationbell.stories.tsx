@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { NotificationBell } from "./notificationbell";
 
 // What the strip shows about things waiting, and the panel behind it.

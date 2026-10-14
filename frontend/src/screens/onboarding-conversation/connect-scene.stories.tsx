@@ -9,7 +9,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { ConnectScene, type ProviderAvailability } from "./connect-scene";
 import type { MailProvider } from "./connect-vendor";
 import "./conversation.css";

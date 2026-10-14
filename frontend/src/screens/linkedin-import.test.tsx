@@ -6,8 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { LinkedInNetworkPanel } from "./linkedin-import";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The LinkedIn network panel: the import row says whether anything is imported
 // and how much, and the profile row offers Add before there is a profile and

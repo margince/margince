@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Whether an installed connector is sending records this CRM cannot represent.
 // The card stands beside the job-health reading on the same page and answers the

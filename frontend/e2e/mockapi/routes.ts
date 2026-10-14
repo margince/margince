@@ -100,6 +100,12 @@ export const routes: readonly MockRoute[] = [
   { path: "/leads/l-new", handle: reply(records.createdLead) },
   { method: "POST", path: "/deals", handle: records.createDeal },
   { path: "/contacts/p-anna", handle: reply(anna) },
+  { path: "/contacts/p-imported", handle: reply(records.importedContact) },
+  {
+    method: "GET",
+    path: "/contacts/p-imported/360",
+    handle: reply(records.importedContact360),
+  },
   {
     method: "GET",
     path: /^\/contacts\/[^/]+\/360$/,
@@ -126,6 +132,12 @@ export const routes: readonly MockRoute[] = [
     handle: reply({ state: [], events: [] }),
   },
   { method: "GET", path: "/companies", handle: reply(page([brandt])) },
+  {
+    method: "GET",
+    path: "/companies/o-imported/360",
+    handle: reply(records.importedCompany360),
+  },
+  { path: "/companies/o-imported", handle: reply(records.importedCompany) },
   {
     method: "GET",
     path: /^\/companies\/[^/]+\/360$/,

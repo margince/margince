@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { OAuthOutcomeNote } from "./connectors.notices";
-import { StoryProviders } from "./story-utils";
 
 // What comes back from a consent round trip. The note takes the landing as
 // props, so each frame poses the outcome, its provider and the roster it is

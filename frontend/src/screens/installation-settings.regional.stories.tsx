@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 import { defaultOperations } from "./operationsettings.fixtures";
-import { StoryProviders } from "./story-utils";
 
 function RegionalFields() {
   const [draft, setDraft] = useState<

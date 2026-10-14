@@ -12,7 +12,6 @@ import {
   SegmentedControl,
   StatCard,
 } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   Panel,
   PanelBody,
@@ -26,13 +25,14 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useCan } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
 import { throwProblem } from "../lib/problem";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import { CaptureSendersCard } from "./capture-senders";
 import { HeldThreadsCard } from "./held-threads";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { VerdictPassNote } from "./verdictpass";
 
 // Settings → Capture activity: what the pipeline did with the reader's own

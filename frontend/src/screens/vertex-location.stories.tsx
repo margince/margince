@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { VertexLocationField } from "./vertex-location";
 
 // Where a Gemini-on-Vertex lane is processed. Open the list: it reads EU, US,

@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { type LineRates, NewLineRates } from "./offerlinerates";
-import { StoryProviders } from "./story-utils";
 import "./offers.css";
 
 // The discount and tax controls on an offer's add-line form, in the row the

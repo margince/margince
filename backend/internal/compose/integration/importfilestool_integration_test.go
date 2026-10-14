@@ -40,9 +40,10 @@ func TestAnAgentImportsTwoLinkedFilesAsOneRun(t *testing.T) {
 			},
 		},
 	}), &preview)
-	if preview.Run.State != "awaiting_approval" || len(preview.Files) != 2 || preview.Files[0].Part != "companies.csv" {
-		t.Fatalf("the preview answered %+v, want a run awaiting approval with both files", preview)
+	if preview.Run.State != "validating" || len(preview.Files) != 2 || preview.Files[0].Part != "companies.csv" {
+		t.Fatalf("the preview answered %+v, want a run testing both files", preview)
 	}
+	importjobtest.Drain(t, d.e)
 
 	d.tool(t, "commit_import", map[string]any{"run_id": preview.Run.RunID})
 	importjobtest.Drain(t, d.e)

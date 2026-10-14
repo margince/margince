@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { TaskName } from "./ai-task-name";
-import { StoryProviders } from "./story-utils";
 
 // A task's name in the AI tasks and usage tables. Click it to read what the
 // task does; a task with nothing to say is plain text.

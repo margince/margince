@@ -6,7 +6,7 @@ import {
   jsonResponse,
   type RouteMap,
   WithInstallationBrand,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { CommandPalette, useBuiltinCommands } from "./palette";
 import { Shell } from "./shell";
 

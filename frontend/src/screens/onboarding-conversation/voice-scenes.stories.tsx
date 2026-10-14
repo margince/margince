@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useRef } from "react";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import type { ConversationQuestion } from "./conversation-types";
 import type { CorpusManifestEntry } from "./use-voice-corpus";

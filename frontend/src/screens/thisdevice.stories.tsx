@@ -6,7 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { SettingList } from "../design-system/settingrow";
 import { en } from "../i18n/en";
 import type { InstallState } from "../lib/pwa";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { InstallSettingRow } from "./thisdevice";
 
 const AVAILABLE: InstallState = {

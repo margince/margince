@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { DeepReadPanel } from "./companydeepread";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DeepReadPanel } from "./companydeepread";
 
 // Reading a company's own website, end to end. The panel is an OFFER until a
 // read exists and a REPORT afterwards, and the frames are that turn plus the

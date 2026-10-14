@@ -2,17 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { fn, userEvent, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
+import { en, type MessageKey } from "../i18n/en";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { WaitingReply } from "./worklist.reply";
 import { RowActs } from "./worklist.rowverbs";
-import { TriageActs } from "./worklist.rowverbs.triage";
 // The line's own sheet. `.worklist-row-acts` is where its trailing alignment,
 // its wrapping and its `--gapActions` interval live, so a story without it
 // draws the verbs as a bare inline run on the leading edge with no gap between
@@ -21,15 +24,12 @@ import "./worklist.row.css";
 
 // THE LINE OF VERBS, on its own.
 //
-// The row's own stories draw it through `WorklistRow`, which is the right way
-// to see a row and the wrong way to see this: the states worth checking here
-// differ only in WHICH verbs are on the line and in what order, and a picture
-// of a whole row buries that under the rank, the kind, the title and the facts.
+// The row's own stories draw it through `WorklistRow`. The states worth checking
+// here differ only in which verbs are on the line, and in what order. A whole
+// row buries that under its rank, kind, title and facts.
 //
-// What every frame is about: the line stands on the trailing edge, the lane's
-// answer is its LAST control, and the two glyphs — the reader's pin and the
-// hand-off — stand among the labelled ones, because a glyph with no word beside
-// it reads as a stray mark rather than as a verb.
+// In every frame the line stands on the trailing edge. Done and the lane's
+// answer come before the row's menu, the line's last control.
 //
 // Framed as a `PanelRow` and nothing else, so the line gets the width a row
 // gives it without the rank and kind columns standing beside it. The row's own
@@ -150,41 +150,53 @@ function meetingOutcomeRow(): WorklistItem {
 }
 
 /**
- * A TASK: the way to the record, the two glyphs, then the answer.
+ * A task: the answer, then the row's menu.
  *
- * Open · pin · hand-off · Done. The fill and the position say the same thing
- * here, which is the easy case — and the reason the waiting row below it is the
- * one worth checking: there the answer is a ghost and only its position says so.
- *
- * Only a task carries an assignee, so this is the one lane that draws the
- * hand-off at all.
+ * The fill and the position say the same thing here, which is the easy case.
+ * The waiting row below is the one worth checking: there only the position
+ * says which verb is the answer.
  */
 export const ATaskAnsweredLast: Story = {
   args: {
     item: taskRow(),
+    title: taskRow().title ?? "",
     href: rowHref(taskRow()),
     owner: "",
+    titled: true,
     primary: <Verb message="tasks.complete" answer />,
   },
 };
 
 /**
- * A BUYER WAITING: every verb a row can carry, and the wrap.
+ * The same task's menu, opened: the pin, then the hand-off. Only a task carries
+ * an assignee, so this is the one lane whose menu offers the hand-off.
+ */
+export const ATasksMenu: Story = {
+  ...ATaskAnsweredLast,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: en["worklist.rowMenu"].replace("{title}", taskRow().title ?? ""),
+      }),
+    );
+  },
+};
+
+/**
+ * A buyer waiting: the row with the most verbs, on one line.
  *
- * Draft the reply · Open · pin · Snooze ▾ · Not mine · Not a customer · Reply.
- * Seven controls is where the line WRAPS, which makes this the one frame at
- * which the order can be seen to hold — and the reason the order is what it is:
- * the answer is the end of the sentence a reader has just read, at the same x
- * on every row of the queue.
+ * Done, the prepared move, Reply, then the menu. Everything else the row
+ * offers is a line of that menu, so the line no longer wraps at this width.
  *
- * What to look for: the answer on the trailing edge, and the two glyphs still
- * among the labelled verbs rather than opening or closing a line.
+ * What to look for: Reply just before the menu, the menu on the trailing edge.
  */
 export const AWaitingRowWithEveryVerb: Story = {
   args: {
     item: waitingRow(),
+    title: waitingRow().title ?? "",
     href: rowHref(waitingRow()),
     owner: "",
+    titled: true,
     primary: <Verb message="compose.reply" answer />,
   },
 };
@@ -203,8 +215,10 @@ export const AFollowUpRow: Story = {
         { kind: "no_reply_days", value: { kind: "days", days: 3 } },
       ],
     },
+    title: "The proposal we discussed",
     href: rowHref(waitingRow()),
     owner: "",
+    titled: true,
     primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
   },
 };
@@ -224,8 +238,10 @@ export const AMeetingFollowUpRow: Story = {
         { kind: "nothing_sent_since" },
       ],
     },
+    title: "Discovery workshop",
     href: rowHref(waitingRow()),
     owner: "",
+    titled: true,
     primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
   },
 };
@@ -254,8 +270,10 @@ export const AMeetingFollowUpToThreeAttendees: Story = {
         { kind: "nothing_sent_since" },
       ],
     },
+    title: "Pricing review",
     href: rowHref(waitingRow()),
     owner: "",
+    titled: true,
     primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
   },
 };
@@ -278,8 +296,10 @@ export const AMeetingFollowUpWithNoAttendee: Story = {
         { kind: "no_attendee_on_file" },
       ],
     },
+    title: "Pricing review",
     href: rowHref(waitingRow()),
     owner: "",
+    titled: true,
   },
 };
 
@@ -296,8 +316,10 @@ export const AMeetingFollowUpWithNoAttendee: Story = {
 export const EqualVerbsHaveNoAnswer: Story = {
   args: {
     item: meetingOutcomeRow(),
+    title: meetingOutcomeRow().title ?? "",
     href: rowHref(meetingOutcomeRow()),
     owner: "",
+    titled: true,
     equals: (
       <>
         <Verb message="worklist.verb.meetingUpdate" />
@@ -308,19 +330,11 @@ export const EqualVerbsHaveNoAnswer: Story = {
 };
 
 /**
- * THE SAME LINE IN DARK, where every step this line is built from inverts.
+ * The same line in dark, where every ghost control stands on a darker panel.
  *
- * Every control on it but the answer is a ghost — `--pane` with a
- * `--borderSubtle` hairline — and the pin is that same box with no word in it.
- * So what tells one verb from the next, and the whole line from the panel it
- * stands on, is a hairline and an ink, both derived off a ground that in dark is
- * no longer the brightest thing on screen. Nothing about the arrangement can
- * say whether that still holds; only the frame can.
- *
- * What to look for: the answer still reads as the answer against the accent's
- * dark lift, the pin still reads as a control rather than as a mark, and the
- * hairlines still say where one verb ends and the next begins. The ORDER is the
- * light frames' business — this one is about whether the line stays legible.
+ * A hairline and an ink tell one verb from the next, both derived off a ground
+ * that is no longer the brightest thing on screen. Only the frame can say
+ * whether the answer still reads as the answer and the menu as a control.
  */
 export const TheLineInDark: Story = {
   ...AWaitingRowWithEveryVerb,
@@ -328,27 +342,12 @@ export const TheLineInDark: Story = {
 };
 
 /**
- * THE SAME LINE AT 390px, which is a different line.
+ * The same line at 390px, inside the row's own box.
  *
- * Two things change and neither is the wrapping. The three judgements fold into
- * ONE put-down menu — one tab stop rather than four 44px controls, which is
- * what kept the row under its height ceiling — so the line is the move, the way
- * to the record, the pin, that menu and the answer. And every control on it
- * rises to a 44px target, because a mis-hit here files somebody else's
- * judgement on a customer's message.
- *
- * What to look for: the answer still last and still on the trailing edge, the
- * pin still among the words. The thumb's own path to those judgements is the
- * row's story rather than this one — the gesture wraps the whole row, not this
- * line.
- *
- * The one frame drawn INSIDE the row's own box, because the target floor is the
- * ROW's rule rather than the line's: without that box the verbs would be drawn
- * here at the plain --controlHeight every control in the product wears, which
- * is not what a reader meets — the row raises its own targets, and it is the
- * only thing that does now that a control is one size under any pointer. At this width the box costs nothing — the row is a wrapping flex line
- * and the verbs take all of it — while above it the row's kind column would
- * stand empty beside them, which is why the other three frames go without.
+ * Done joins the menu below 720px, so the line is the move, the answer and the
+ * menu. Every control rises to a 44px target, the row's rule rather than the
+ * line's, which is why this frame is drawn inside the row's box. The thumb's
+ * path to the judgements is the row's story: the gesture wraps the whole row.
  */
 export const TheLineOnAPhone: Story = {
   ...AWaitingRowWithEveryVerb,
@@ -367,6 +366,10 @@ export const TheLineOnAPhone: Story = {
   ],
 };
 
+/**
+ * A waiting message whose row names itself with the message. Its title links
+ * nothing, so the way to the deal stays a line of the menu.
+ */
 export const ReplyToANamedDealConversation: Story = {
   args: {
     onOpenEmail: fn(),
@@ -382,59 +385,50 @@ export const ReplyToANamedDealConversation: Story = {
         activity_id: "01a00000-0000-7000-8000-000000000002",
       },
     },
+    title: waitingRow().title ?? "",
     href: "#/deals/01a00000-0000-7000-8000-000000000001",
     owner: "",
   },
 };
 
 /**
- * THE SAME VERBS, REORDERED FOR THE ROW IN HAND on the Brief.
+ * The same verbs on the Brief's card in hand, in the queue's own order.
  *
- * A queue row is one of many and its line ends on the lane's answer. The card
- * in hand is the only row a reader is looking at, so the line reads the way
- * answering ONE row goes: the set-asides lead from the opening edge, because
- * declining steps away from the work before any of it is done; the ways into
- * it follow; and the move the product prepared closes the line on the trailing
- * edge. The verb that only reaches the record is not on it at all — the card
- * names that record and links it.
- *
- * What to look for against `A waiting row with every verb` directly above: the
- * same controls, the put-downs moved from the middle of the line to its head,
- * and the prepared move moved from its head to the end.
+ * The card names and links the record, so the way to it is withheld from the
+ * menu. The card takes no pin, because its order is the queue's.
  */
 export const TheLineOnTheCardInHand: Story = {
-  render: () => (
-    <TriageActs
-      item={waitingRow()}
-      href={rowHref(waitingRow())}
-      owner=""
-      primary={<Verb message="compose.reply" answer />}
-    />
-  ),
+  args: {
+    item: waitingRow(),
+    title: waitingRow().title ?? "",
+    href: rowHref(waitingRow()),
+    owner: "",
+    framed: true,
+    allowPin: false,
+    primary: <Verb message="compose.reply" answer />,
+  },
 };
 
 /**
- * THE ANSWER A RULE PREPARED, which is the reply itself and not a button
+ * The answer a rule prepared, which is the reply itself and not a button
  * beside it.
  *
- * A waiting message whose move is `draft_reply` gets ONE control on the line:
- * the composer's own reply, wearing the agent's face and mark because the
- * ranking and the steer are a machine's doing, and carrying the word for the
- * act rather than the bare "Reply". The frames above show the same line with
- * no prepared move on it, where the answer is that bare word.
+ * A waiting message whose move is `draft_reply` gets one marked control on the
+ * line: the composer's own reply. It wears the agent's face, because a machine
+ * ranked it and wrote the steer. The frames above show the bare Reply instead.
  *
- * What to look for: one marked control and not two, still last and still on
- * the trailing edge, and the mark reading as a mark beside a word rather than
- * as a stray glyph.
+ * What to look for: one marked control and not two, just before the menu.
  */
 export const ThePreparedReplyIsTheAnswer: Story = {
   render: () => {
     const item = waitingRow();
     return (
-      <TriageActs
+      <RowActs
         item={item}
+        title={item.title ?? ""}
         href={rowHref(item)}
         owner=""
+        titled
         primary={
           <WaitingReply
             item={item}

@@ -23,14 +23,14 @@ import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
 import { SettingsSearchBox } from "../screens/settingssearchbox";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "../screens/story-utils";
-import type { GrantSpec } from "../testing/mefixture";
+} from "../testing/story-utils";
 import type { NavSection } from "./nav";
 import { PageTitle, Shell, WorkspaceRail } from "./shell";
 import {

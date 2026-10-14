@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import {
   briefManager,
   briefModel,

@@ -3,12 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   BLANK_DECISION,
   type Decision,
   DecisionDialog,
   useSetBlockedDomain,
 } from "./blocked-domains-decision";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // Where a domain is SETTLED, as against the list beside it that only reports
 // where each one stands.

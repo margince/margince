@@ -117,7 +117,7 @@ func sweptLikeTheCensus(path string) bool {
 }
 
 // moduleRootsBesideInternal gathers the backend module's top-level directories
-// apart from the one the census reads, plus the sibling Go trees the pre-push
+// apart from the one the census reads. It adds the sibling Go trees the craft
 // gate treats as product code.
 func moduleRootsBesideInternal(t *testing.T) []string {
 	t.Helper()

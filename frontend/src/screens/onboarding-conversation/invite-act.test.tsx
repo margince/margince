@@ -8,7 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { installFetchStub, meRoute } from "../story-utils";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
 import { InviteAct } from "./invite-act";

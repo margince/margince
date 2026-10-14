@@ -12,8 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub } from "../testing/story-utils";
 import { BackfillPanel } from "./backfill";
-import { installFetchStub } from "./story-utils";
 
 // The panel is the import dialog's body; these cases are about what it draws,
 // and the ones about leaving it pass their own onClose.

@@ -10,8 +10,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { LinkedInReachSection } from "./linkedin-reach";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those

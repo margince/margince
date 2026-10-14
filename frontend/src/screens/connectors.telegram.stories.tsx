@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { TelegramConnectorsPanel } from "./connectors.telegram";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TelegramConnectorsPanel } from "./connectors.telegram";
 
 // The workspace's Telegram bot on Integrations. Every story but the read-only
 // one draws an administrator's view, so the verbs its layout is judged with show.

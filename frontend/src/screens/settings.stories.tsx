@@ -5,10 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SettingsScreen } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import { me, settingsPage } from "./settingspage.storykit";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and

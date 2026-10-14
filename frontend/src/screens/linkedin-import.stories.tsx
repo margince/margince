@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { LinkedInNetworkPanel } from "./linkedin-import";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { LinkedInNetworkPanel } from "./linkedin-import";
 
 // The LinkedIn network panel for the fe-uat render gate: the import as a
 // connection row with its drop zone, the profile row, the reach and the

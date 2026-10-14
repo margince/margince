@@ -11,6 +11,7 @@ package identity
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -64,5 +65,36 @@ func TestTheScopeListIsDerivedFromTheVocabulary(t *testing.T) {
 	// that reorders it reads as a different set.
 	if want := string(principal.ScopeRead); !strings.HasPrefix(got, want) {
 		t.Errorf("list = %q, want it to open with %q", got, want)
+	}
+}
+
+// A passport holds each scope once on every mint path. The OAuth exchange and
+// refresh mint against a grant and skip the caller-chosen checks, so the
+// repeat is refused where every path passes.
+func TestARepeatedScopeIsRefusedOnEveryMintPath(t *testing.T) {
+	t.Parallel()
+	err := admitScopes([]string{string(principal.ScopeRead), string(principal.ScopeRead)})
+
+	fault, ok := errors.AsType[*InvalidPassportFieldError](err)
+	if !ok {
+		t.Fatalf("err = %v, want InvalidPassportFieldError", err)
+	}
+	if fault.Field != fieldScopes || fault.Code != "duplicate_scope" {
+		t.Errorf("fault = %s/%s, want %s/duplicate_scope", fault.Field, fault.Code, fieldScopes)
+	}
+}
+
+// An OAuth scope parameter names a set, so a refresh that repeats a scope asks
+// for it once rather than failing the mint it feeds.
+func TestARefreshThatRepeatsAScopeAsksForItOnce(t *testing.T) {
+	t.Parallel()
+	read, write := string(principal.ScopeRead), string(principal.ScopeWrite)
+
+	got, err := narrowedScopes([]string{read, scopeOfflineAccess, read}, []string{read, write})
+	if err != nil {
+		t.Fatalf("narrowedScopes: %v", err)
+	}
+	if !slices.Equal(got, []string{read}) {
+		t.Errorf("scopes = %v, want [%s]", got, read)
 	}
 }

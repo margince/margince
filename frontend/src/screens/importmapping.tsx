@@ -263,7 +263,7 @@ export function MapStep({
         <Callout
           tone="danger"
           kind="standing"
-          title={t("import.map.stageFailed")}
+          title={t("import.map.testStopped")}
         >
           {stopped}
         </Callout>

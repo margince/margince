@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import type { AccountScan } from "./accountscan";
 import { company360 } from "./company.fixtures";
 import {
@@ -10,7 +11,6 @@ import {
   TodayOnThisAccount,
   useTodayReading,
 } from "./companytoday";
-import { StoryProviders } from "./story-utils";
 
 // The daily brief, above the tab bar: a context band read off the account's
 // dated readings, then the moves — a booked meeting, a manual draft, and

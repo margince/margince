@@ -12,13 +12,13 @@ import {
 } from "storybook/test";
 import { en } from "../i18n/en";
 import type { GrantSpec } from "../testing/mefixture";
-import { PrivacyInboxCard } from "./privacy";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PrivacyInboxCard } from "./privacy";
 
 // The DSR inbox: the open form, a request worked in its drawer, and fulfilling
 // an erasure. A legal-hold 409 never carries a retention date; nor does a story.

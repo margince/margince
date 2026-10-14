@@ -109,7 +109,6 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
-  acts,
   framed = false,
   pick,
 }: Readonly<{
@@ -120,17 +119,13 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
-  /** How the verbs stand: one flow (the queue's), or the triage ORDER a row
-   *  being answered reads in — worklist.rowverbs.tsx says what divides. */
-  acts?: "triage";
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
   framed?: boolean;
   // Whose queue this row is on, empty for the reader's own. It names the
-  // contact a reassignment moves work AWAY from, which on the reader's own
-  // queue is the reader — ReassignControl resolves that rather than this
-  // prop carrying it, so an empty value is a real state and not a missing one.
+  // contact a reassignment moves work away from. On the reader's own queue
+  // that is the reader, whom ReassignForm resolves, so empty is a real state.
   owner: string;
   /** Personal ordering is available on the queue, not the Focus projection. */
   allowPin?: boolean;
@@ -322,15 +317,14 @@ export function WorklistRow({
             />
           )}
         </div>
-        {/* EVERY VERB ON ONE RIGHT-ALIGNED LINE, the lane's answer LAST. Under
-            the work where the card has no column to spare for it, beside the
-            work where it has, and on the trailing edge in both — so the answer
-            keeps one x down the whole queue. worklist.rowverbs.tsx states why
-            it is the tail of the line rather than its head. */}
+        {/* Every verb on one right-aligned line, the row's menu last. Under the
+            work where the card has no column to spare for it, beside the work
+            where it has, so the answer keeps one x down the whole queue. */}
         <RowActs
           allowPin={allowPin}
           onOpenEmail={onOpenEmail}
           item={item}
+          title={title}
           href={href}
           density={density}
           owner={owner}
@@ -338,8 +332,8 @@ export function WorklistRow({
           equals={answer.equals}
           onReview={onReview}
           context={context}
-          shape={acts}
           framed={framed}
+          titled={titleLinks(emailOpener, href)}
         />
         {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
@@ -349,6 +343,11 @@ export function WorklistRow({
       </PutDownByThumb>
     </PanelRow>
   );
+}
+
+// Whether the row's name links its record: a message row names itself instead.
+function titleLinks(opener: unknown, href?: string): boolean {
+  return opener === undefined && href !== undefined;
 }
 
 /**

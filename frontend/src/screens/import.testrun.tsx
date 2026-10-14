@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Badge, Button, Checkbox } from "../design-system/atoms";
+import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { QueryStates } from "../design-system/querystates";
@@ -14,6 +14,7 @@ import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
 import type { ImportWizardState } from "./importflow";
+import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
   ImportPartReport,
@@ -80,6 +81,9 @@ export function TestRunStep({
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
   const { report, runId } = wizard;
+  if (wizard.run.data?.status === "validating") {
+    return <TestingBody runId={wizard.run.data.id} />;
+  }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
       {report.data && runId ? (
@@ -91,6 +95,25 @@ export function TestRunStep({
         />
       ) : null}
     </QueryStates>
+  );
+}
+
+// A test can read for minutes, so the one waiting on it can stop it.
+function TestingBody({ runId }: Readonly<{ runId: string }>) {
+  const t = useT();
+  const stop = useStopImportTest();
+  return (
+    <>
+      <PendingBody visible label={t("import.test.testing")} />
+      <div className="import__actions">
+        <Button pending={stop.isPending} onClick={() => stop.mutate(runId)}>
+          {t("import.test.stop")}
+        </Button>
+      </div>
+      {stop.error ? (
+        <ImportRefusal title={t("import.test.stopFailed")} error={stop.error} />
+      ) : null}
+    </>
   );
 }
 

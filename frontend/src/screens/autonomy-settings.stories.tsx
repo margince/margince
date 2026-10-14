@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { AutonomySettingsCard } from "./autonomy-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AutonomySettingsCard } from "./autonomy-settings";
 
 // What a rep has let answer itself. There is no permission story here: the card
 // reads and writes the reader's own rows, so no seat can be shown the switches

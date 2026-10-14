@@ -13,8 +13,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The word a connector files under, as the operator sets it.
 //

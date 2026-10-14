@@ -16,8 +16,8 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { locationDouble } from "../testing/locationdouble";
 import { meFixture } from "../testing/mefixture";
+import { type RouteMap, stubWithSession } from "../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
-import { type RouteMap, stubWithSession } from "./story-utils";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a

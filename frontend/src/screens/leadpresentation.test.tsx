@@ -100,6 +100,20 @@ describe("lead work-board presentation", () => {
     expect(screen.queryByRole("button", { name: /next page/i })).toBeNull();
   });
 
+  it("names an imported lead's upload on its card, never the stamp", () => {
+    renderBoard(
+      <LeadBoard
+        rows={[{ ...lead, source: "mirror:csv:pipedrive-export:lead:l-7" }]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("Imported from pipedrive-export")).toBeTruthy();
+    expect(screen.queryByText(/mirror/i)).toBeNull();
+  });
+
   // Dragging a card WRITES the lead. The board reads `["leads", query]`; the
   // detail page reads the sibling `["lead", id]`, and prefix invalidation does
   // not walk sideways — so naming only the list left an open detail page

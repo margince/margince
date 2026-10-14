@@ -1,4 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
 import { sdrEvaluation } from "./reporting.scenarios";
 import {
@@ -7,7 +12,6 @@ import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Performance",

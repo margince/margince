@@ -7613,6 +7613,252 @@
               "type": "string"
             }
           },
+          "next": {
+            "type": "string"
+          },
+          "report": {
+            "type": "object",
+            "properties": {
+              "disposition": {
+                "type": "object",
+                "properties": {
+                  "created": {
+                    "type": "integer"
+                  },
+                  "duplicates": {
+                    "type": "integer"
+                  },
+                  "skipped": {
+                    "type": "integer"
+                  },
+                  "unchanged": {
+                    "type": "integer"
+                  },
+                  "updated": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "created",
+                  "skipped",
+                  "unchanged",
+                  "updated"
+                ]
+              },
+              "estimated_duration_seconds": {
+                "type": "integer"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "column": {
+                      "type": "string"
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "line": {
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reason"
+                  ]
+                }
+              },
+              "links": {
+                "type": "object",
+                "properties": {
+                  "applied": {
+                    "type": "integer"
+                  },
+                  "offered": {
+                    "type": "integer"
+                  },
+                  "unresolved": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "reason",
+                        "to"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "applied",
+                  "offered"
+                ]
+              },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "disposition": {
+                      "type": "object",
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
+                          "type": "integer"
+                        },
+                        "skipped": {
+                          "type": "integer"
+                        },
+                        "unchanged": {
+                          "type": "integer"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "skipped",
+                        "unchanged",
+                        "updated"
+                      ]
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "rows_read": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "disposition",
+                    "file",
+                    "object",
+                    "rows_read"
+                  ]
+                }
+              },
+              "rows_read": {
+                "type": "integer"
+              },
+              "run_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "source_key_used": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "undo": {
+                "type": "object",
+                "properties": {
+                  "errored": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "object": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "object",
+                        "reason"
+                      ]
+                    }
+                  },
+                  "kept": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "object": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "object"
+                      ]
+                    }
+                  },
+                  "reversed_count": {
+                    "type": "integer"
+                  },
+                  "run_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "updates_not_reversed": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "errored",
+                  "kept",
+                  "reversed_count",
+                  "run_id",
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "disposition",
+              "issues",
+              "rows_read",
+              "run_id",
+              "source_key_used",
+              "status"
+            ]
+          },
           "run": {
             "type": "object",
             "properties": {

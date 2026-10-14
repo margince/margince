@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { archivedContactRoutes, refusedRead } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 // The contact page on an archived row. The server refuses its 360, so the page
 // draws the row, its refused verbs and the history that can undo the archive.

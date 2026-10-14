@@ -117,7 +117,7 @@ func TestAStoppedRunCarriesASentenceNeverItsError(t *testing.T) {
 		"anything else":     {errors.New("pq: relation import_record_map does not exist"), migration.CauseStopped},
 		"a wrapped refusal": {fmt.Errorf("slice: %w", migration.RunStop{Cause: migration.CauseStorageUnavailable, Err: errNoObjectStore}), migration.CauseStorageUnavailable},
 	} {
-		if got := migration.StopCause(tc.err); got != tc.want {
+		if got := migration.StopCause(migration.StatusRunning, tc.err); got != tc.want {
 			t.Errorf("%s: cause = %q, want %q", name, got, tc.want)
 		}
 	}
@@ -126,8 +126,33 @@ func TestAStoppedRunCarriesASentenceNeverItsError(t *testing.T) {
 func TestACommitOnAWorkerWithNoObjectStoreStopsWithThatCause(t *testing.T) {
 	t.Parallel()
 	_, err := (&importCommitWorker{}).commit(context.Background(), importSlice{})
-	if got := migration.StopCause(err); got != migration.CauseStorageUnavailable {
+	if got := migration.StopCause(migration.StatusRunning, err); got != migration.CauseStorageUnavailable {
 		t.Fatalf("cause = %q (err %v), want %q", got, err, migration.CauseStorageUnavailable)
+	}
+}
+
+func TestATestRunOnAWorkerWithNoObjectStoreStopsWithThatCause(t *testing.T) {
+	t.Parallel()
+	_, err := (&importValidateWorker{}).validate(context.Background(), importSlice{})
+	if got := migration.StopCause(migration.StatusValidating, err); got != migration.CauseTestStorageUnavailable {
+		t.Fatalf("cause = %q (err %v), want %q", got, err, migration.CauseTestStorageUnavailable)
+	}
+}
+
+func TestATestRunKeepsARefusalTheImporterCanActOn(t *testing.T) {
+	t.Parallel()
+	header := fmt.Errorf("reading leads.csv: %w", migration.ErrHeaderInvalid)
+	if got := migration.StopCause(migration.StatusValidating, testRunRefusal(header)); got != header.Error() {
+		t.Errorf("a broken header: cause = %q, want the refusal's own sentence %q", got, header.Error())
+	}
+	driver := errors.New("pq: relation import_record_map does not exist")
+	if got := migration.StopCause(migration.StatusValidating, testRunRefusal(driver)); got != migration.CauseTestRunStopped {
+		t.Errorf("a driver error: cause = %q, want %q", got, migration.CauseTestRunStopped)
+	}
+	for _, own := range []error{context.DeadlineExceeded, context.Canceled, migration.ErrSuperseded, apperrors.ErrPermissionDenied} {
+		if wrapped := fmt.Errorf("reading: %w", own); !errors.Is(testRunRefusal(wrapped), own) || errors.As(testRunRefusal(wrapped), new(migration.RunStop)) {
+			t.Errorf("%v: the refusal must stay the error the job settles by, not a sentence", own)
+		}
 	}
 }
 
@@ -137,5 +162,26 @@ func TestARunPastItsTagPhaseCreatesNoTag(t *testing.T) {
 	// A nil resolver and a nil store: reaching either would panic.
 	if err := createImportTags(context.Background(), slice, nil); err != nil {
 		t.Fatalf("a run already importing ran its tag phase again: %v", err)
+	}
+}
+
+func TestATestRunsHeartbeatEndsWhenItsReadPanics(t *testing.T) {
+	t.Parallel()
+	var reading context.Context
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("the read's panic did not reach the caller")
+			}
+		}()
+		_, err := (&importValidateWorker{}).readBeating(t.Context(), importSlice{},
+			func(ctx context.Context) (migration.Report, error) {
+				reading = ctx
+				panic("a row the reader could not handle")
+			})
+		t.Errorf("readBeating answered %v past a panic", err)
+	}()
+	if reading == nil || reading.Err() == nil {
+		t.Fatal("the heartbeat's context is still live after its read panicked")
 	}
 }

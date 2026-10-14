@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { jsonResponse, StoryProviders } from "./story-utils";
-import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
+import { CoachControl, OwnerPicker, ReassignForm } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 
 // THE THREE THINGS A LEAD DOES with somebody else's queue: open it, hand one
@@ -81,32 +81,20 @@ export const AColleaguesDay: Story = {
     frame(<OwnerPicker owner={LENA} onOwner={() => {}} scope="team" />),
 };
 
-/** Both verbs at rest. The hand-off is a glyph on a row of them; the note is a
- *  titled panel that says what a note DOES before the reader spends a press
- *  finding out, with its own verb on the panel's trailing edge. */
+/** The note at rest: a titled panel that says what a note does before the
+ *  reader spends a press finding out, with its own verb on the panel's
+ *  trailing edge. The hand-off rests as a line of the row's menu. */
 export const TheVerbsAtRest: Story = {
-  render: () =>
-    frame(
-      <>
-        <ReassignControl item={aTask} owner={LENA} />
-        <CoachControl owner={LENA} name="Lena Fischer" />
-      </>,
-    ),
+  render: () => frame(<CoachControl owner={LENA} name="Lena Fischer" />),
 };
 
-/** Handing the task on: ONE line ending in the answer — the picker, then
- *  Cancel, then the confirm on the trailing edge. The confirm refuses until
- *  somebody is picked, a precondition the reader can meet, which is what
- *  `disabled` is for. */
+/** Handing the task on, the form the row's menu opens: one line ending in the
+ *  answer, the picker, then Cancel, then the confirm on the trailing edge. The
+ *  confirm refuses until somebody is picked, a precondition the reader can
+ *  meet, which is what `disabled` is for. */
 export const HandingItOn: Story = {
-  render: () => frame(<ReassignControl item={aTask} owner={LENA} />),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(
-      within(canvasElement).getByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
-  },
+  render: () =>
+    frame(<ReassignForm item={aTask} owner={LENA} onClose={() => {}} />),
 };
 
 /** The note on somebody's day, open: the kind as a segmented strip, the words

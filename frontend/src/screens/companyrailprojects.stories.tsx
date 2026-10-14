@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProjectsSection } from "./companyrailprojects";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The rail's projects section on its own: the account's work in flight, each
 // row naming the project, where it stands and who holds it. It sits under the

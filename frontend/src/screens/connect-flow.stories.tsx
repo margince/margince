@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ConnectFlow } from "./connect-flow";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The connect dialog's three steps for each account, the refusals step 1 can
 // show, and the vendor that answers "not set up here". `screen` in every play,
