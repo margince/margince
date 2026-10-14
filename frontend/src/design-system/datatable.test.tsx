@@ -6,7 +6,13 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -243,16 +249,18 @@ it("lets a hand-drawn table bleed through the same box", () => {
 
 // The first and the last cell of every row, header included, carry the pane's
 // padding, so the first column's text stands at a PanelBody's x.
-it("pads a bleeding table's outer cells to the pane", () => {
+it("pads a bleeding table's outer cells to the pane, in a bleeding disclosure too", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const css = readFileSync(join(here, "atoms.css"), "utf8");
   for (const [edge, side] of [
     ["first-child", "start"],
     ["last-child", "end"],
   ]) {
-    expect(css).toContain(
-      `.panel > .table-scroll-bleed > .table > * > tr > :${edge} {\n  padding-inline-${side}: var(--padPanel);`,
+    const rule = new RegExp(
+      `\\.panel > \\.table-scroll-bleed > \\.table > \\* > tr > :${edge}([^{]*)\\{\\s*padding-inline-${side}: var\\(--padPanel\\);`,
     );
+    const selectors = css.match(rule)?.[1] ?? "";
+    expect(selectors).toMatch(/> \.disclosure-body\s+> \.table-scroll/);
   }
 });
 
@@ -559,6 +567,77 @@ it("leaves which rows are open to a caller that holds them", async () => {
   await user.click(screen.getByText("Triage"));
   expect(toggled).toEqual(["a"]);
   expect(screen.queryByText("Two attempts")).toBeNull();
+});
+
+it("opens one row at a time when the detail is single", async () => {
+  const user = userEvent.setup();
+  render(<CallLog detail={{ ...TRACE, single: true }} />);
+  await user.click(screen.getByText("Triage"));
+  await user.click(screen.getByText("Enrich"));
+  expect(
+    screen
+      .getByRole("button", { name: "Show Triage" })
+      .getAttribute("aria-expanded"),
+  ).toBe("false");
+  expect(screen.queryByText("Two attempts")).toBeNull();
+  expect(screen.getByText("One attempt")).toBeTruthy();
+  await user.click(screen.getByText("Enrich"));
+  expect(screen.queryByText("One attempt")).toBeNull();
+});
+
+// happy-dom runs no CSS, so the fold reports a height transition that the test ends.
+it("keeps a closing detail on screen until its fold has ended", async () => {
+  const user = userEvent.setup();
+  render(<CallLog />);
+  await user.click(screen.getByText("Triage"));
+  const fold = screen
+    .getByText("Two attempts")
+    .closest(".datatable-detail-fold");
+  let end = () => {};
+  const finished = new Promise<void>((resolve) => {
+    end = resolve;
+  });
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished,
+    transitionProperty: "height",
+  };
+  Object.defineProperty(fold, "getAnimations", { value: () => [motion] });
+  await user.click(screen.getByRole("button", { name: "Show Triage" }));
+  expect(screen.getByText("Two attempts")).toBeTruthy();
+  expect(fold?.closest("tr")?.hidden).toBe(false);
+  await act(async () => end());
+  expect(screen.queryByText("Two attempts")).toBeNull();
+  expect(fold?.closest("tr")?.hidden).toBe(true);
+});
+
+it("asks a caller that holds the rows to close the open one before it opens the next", async () => {
+  const user = userEvent.setup();
+  const toggled: string[] = [];
+  const { rerender } = render(
+    <CallLog
+      detail={{
+        ...TRACE,
+        single: true,
+        expanded: new Set(["a"]),
+        onToggle: (key) => toggled.push(key),
+      }}
+    />,
+  );
+  await user.click(screen.getByText("Enrich"));
+  expect(toggled).toEqual(["a", "b"]);
+  rerender(
+    <CallLog
+      detail={{
+        ...TRACE,
+        single: true,
+        expanded: new Set(["a", "b"]),
+        onToggle: (key) => toggled.push(key),
+      }}
+    />,
+  );
+  expect(screen.getByText("Two attempts")).toBeTruthy();
+  expect(screen.getByText("One attempt")).toBeTruthy();
 });
 
 it("gives a row with nothing to open no toggle and no pointer", async () => {

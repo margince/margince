@@ -603,7 +603,7 @@ const RUNS: DemoRun[] = [
   },
 ];
 
-function RunsPanel() {
+function RunsPanel({ single }: Readonly<{ single?: boolean }>) {
   return (
     <Panel title="Rule runs">
       <DataTable<DemoRun>
@@ -620,6 +620,7 @@ function RunsPanel() {
           header: "Detail",
           toggleLabel: (run) => `Show the run of ${run.rule}`,
           render: (run) => <p>{run.result}</p>,
+          single,
         }}
       />
     </Panel>
@@ -634,6 +635,27 @@ export const RowDetail: Story = {
     });
     await userEvent.click(toggle);
     await expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  },
+};
+// `single`: opening a row closes the open one, both folds moving at once.
+export const RowDetailSingle: Story = {
+  render: () => <RunsPanel single />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const first = await canvas.findByRole("button", {
+      name: "Show the run of Welcome new leads",
+    });
+    const second = canvas.getByRole("button", {
+      name: "Show the run of Nudge a quiet deal",
+    });
+    await userEvent.click(first);
+    await expect(first).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(second);
+    await expect(second).toHaveAttribute("aria-expanded", "true");
+    await expect(first).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() =>
+      expect(canvas.queryByText("Sent 3 emails")).not.toBeInTheDocument(),
+    );
   },
 };
 export const RowDetailDark: Story = {
@@ -682,7 +704,7 @@ export const PinnedWithDetailOpen: Story = {
       ".table-scroll-sticky",
     );
     const text = canvasElement.querySelector<HTMLElement>(
-      "tr.datatable-detail:not([hidden]) td > p",
+      "tr.datatable-detail:not([hidden]) .datatable-detail-body > p",
     );
     if (box === null || text === null) {
       throw new Error("the pinned table drew no open detail");

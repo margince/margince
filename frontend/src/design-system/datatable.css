@@ -65,12 +65,18 @@
 .table > tbody > tr.datatable-detail[hidden] {
   display: none;
 }
+/* A detail still closing keeps its row joined to the one above. */
 .table > tbody > tr.datatable-open > td,
+.table > tbody > tr:has(+ tr.datatable-detail:not([hidden])) > td,
 .table > tbody > tr:has(+ tr.datatable-detail[hidden]:last-child) > td {
   border-bottom: 0;
 }
+/* The cell's block padding moves inside the fold, so a shut fold is 0 tall. */
 .table > tbody > tr.datatable-detail > td {
-  padding-block-start: 0;
+  padding-block: 0;
+}
+.datatable-detail-body {
+  padding-block-end: 10px;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
@@ -88,7 +94,12 @@
     container-type: inline-size scroll-state;
   }
 }
-.table-scroll-sticky > .table > tbody > tr.datatable-detail > td > * {
+.table-scroll-sticky
+  > .table
+  > tbody
+  > tr.datatable-detail
+  > td
+  > .datatable-detail-fold {
   --detailInset: var(--space-3);
   position: sticky;
   inset-inline-start: var(--detailInset);
@@ -100,7 +111,7 @@
   > tbody
   > tr.datatable-detail
   > td
-  > * {
+  > .datatable-detail-fold {
   --detailInset: var(--padPanel);
 }
 
@@ -221,9 +232,16 @@
 
 @container table-fold (width < 36rem) {
   .table-scroll-fold > .table > tbody > tr.datatable-detail {
-    padding-block-start: 0;
+    padding-block: 0;
+  }
+  .table-scroll-fold .datatable-detail-body {
+    padding-block-end: var(--space-3);
   }
   .table-scroll-fold > .table > tbody > tr.datatable-open,
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr:has(+ tr.datatable-detail:not([hidden])),
   .table-scroll-fold
     > .table
     > tbody

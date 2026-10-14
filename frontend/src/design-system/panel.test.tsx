@@ -243,9 +243,9 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     }
   });
 
-  // A record list reads as a table: its rows' rules reach the pane's edges, and
-  // so does the seam under its last row.
-  it("runs a record row's hairline and the seam under it edge to edge", () => {
+  // A record list reads as a table, so its rows' rules reach the pane's edges.
+  // Every seam between two bands does too, whatever band stands above it.
+  it("runs a record row's hairline and every seam edge to edge", () => {
     const rules = cssRules(panelCss());
     const insetOf = (selector: string) =>
       rules
@@ -254,16 +254,17 @@ describe("panel.css keeps the row's hover on its two variants", () => {
         .filter((value) => value !== undefined)
         .at(-1);
     expect(insetOf(".panel-row-record::before")).toBe("0 0 auto");
-    for (const lead of [
-      ".panel-row-record",
-      ".panel > .settinglist-bleed",
-      ".panel > .table-scroll-bleed",
-    ]) {
-      expect(insetOf(`${lead} + .panel-body::before`)).toBe("0 0 auto");
-    }
-    expect(insetOf(".panel-body + .panel-body::before")).toBe(
-      "0 var(--padPanel) auto",
+    expect(insetOf(".panel > :not(.panel-row) + .panel-row::before")).toBe(
+      "0 0 auto",
     );
+    const seams = rules.filter((rule) =>
+      / \+ \.panel-body::before$/.test(rule.selector),
+    );
+    expect(seams.length).toBeGreaterThanOrEqual(4);
+    for (const seam of seams) {
+      const inset = declaredValue(seam.block, "inset");
+      expect([undefined, "0 0 auto"], seam.selector).toContain(inset);
+    }
   });
 
   it("rules the boundary between a bleeding list and a bleeding table", () => {
