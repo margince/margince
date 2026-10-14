@@ -128,14 +128,9 @@ func refuseIfHumanTouched(
 	if opts.untouchedSince == nil {
 		return nil
 	}
-	var touched bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM audit_log
-			 WHERE entity_type = $1 AND entity_id = $2
-			   AND actor_type = 'human' AND occurred_at > $3)`,
-		entityType, id, *opts.untouchedSince).Scan(&touched); err != nil {
-		return fmt.Errorf("checking whether a contact has changed this %s: %w", entityType, err)
+	touched, err := storekit.HumanActedSince(ctx, tx, entityType, id, *opts.untouchedSince)
+	if err != nil {
+		return err
 	}
 	if touched {
 		return &HumanTouchedError{EntityType: entityType, EntityID: id}

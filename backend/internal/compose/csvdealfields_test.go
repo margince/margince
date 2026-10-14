@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"context"
 	"encoding/json"
 	"maps"
 	"testing"
@@ -12,7 +11,6 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -53,14 +51,6 @@ func TestADealsNewStageIsAnAdvanceNotAFieldWrite(t *testing.T) {
 	}
 	if still := dealUpdateFrom(map[string]string{dealTargetName: "Renamed"}, typed); still.Move != nil {
 		t.Fatalf("move = %+v, want none when neither pipeline nor stage changed", still.Move)
-	}
-}
-
-func TestADealRowIsSkippedAtCommitUntilItsWriterLands(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectDeal}
-	landed, err := w.create(context.Background(), migration.ObjectDeal, migration.Row{ExternalID: "D1"}, nil)
-	if err != nil || !landed.Skipped || landed.SkipReason != dealWriterPendingReason.English() {
-		t.Fatalf("landed = %+v, err = %v; want the row skipped with its reason, never a failed run", landed, err)
 	}
 }
 

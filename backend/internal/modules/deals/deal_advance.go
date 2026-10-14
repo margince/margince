@@ -56,6 +56,9 @@ type AdvanceDealInput struct {
 	// and the product must not propose it again. Without it a reversed move is
 	// re-proposable the moment the fortnight's human-move protection lapses.
 	ReversalOf *ids.UUID
+	// closedAt is the instant a closing move records as the close, set only
+	// by ImportDealTx: an imported win keeps the day its source closed it.
+	closedAt *time.Time
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -292,6 +295,7 @@ func announceStageAdvance(
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
 		return fmt.Errorf("read the stage names for the change: %w", err)
@@ -377,6 +381,9 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	case "won", "lost":
 		status = semantic
 		now := s.clock().UTC()
+		if in.closedAt != nil {
+			now = in.closedAt.UTC()
+		}
 		closedAt = &now
 		if in.LostReason != nil {
 			lostReason = strings.TrimSpace(*in.LostReason)

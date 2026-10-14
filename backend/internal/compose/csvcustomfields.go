@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -43,6 +44,8 @@ type importCatalog struct {
 type importColumns struct {
 	catalog importCatalog
 	store   contacts.CustomColumns
+	// deals is the deals store's half, read for a deal part only.
+	deals deals.CustomColumns
 }
 
 // readImportCatalog reads one object's catalog. An object no import lands has
@@ -97,7 +100,20 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return importColumns{}, err
 	}
-	return importColumns{catalog: cat, store: store}, nil
+	out := importColumns{catalog: cat, store: store}
+	if object == migration.ObjectDeal {
+		if out.deals, err = dealsStoreOver(db).ActiveDealColumns(ctx); err != nil {
+			return importColumns{}, err
+		}
+	}
+	return out, nil
+}
+
+// dealsStoreOver is the deals store an import's deal rows are read and
+// written through, with the custom-field catalog wired as the HTTP surface
+// wires it.
+func dealsStoreOver(db *database.DB) *deals.Store {
+	return deals.NewStore(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(db.Pool(), nil))
 }
 
 // requestedObjects answers the objects a create request names, in its order.

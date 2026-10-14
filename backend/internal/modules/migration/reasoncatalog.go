@@ -73,15 +73,6 @@ const (
 	ReasonUndoNotVisible             ReasonCode = "undo_not_visible"
 	ReasonUndoRuleProtects           ReasonCode = "undo_rule_protects"
 	ReasonUndoFailed                 ReasonCode = "undo_failed"
-	ReasonCannotReadPipelines        ReasonCode = "cannot_read_pipelines"
-	ReasonStageUnnamed               ReasonCode = "stage_unnamed"
-	ReasonPipelineUnnamed            ReasonCode = "pipeline_unnamed"
-	ReasonPipelineUnknown            ReasonCode = "pipeline_unknown"
-	ReasonStageUnknown               ReasonCode = "stage_unknown"
-	ReasonCurrencyNotACode           ReasonCode = "currency_not_a_code"
-	ReasonCloseDatePast              ReasonCode = "close_date_past"
-	ReasonLostReasonMissing          ReasonCode = "lost_reason_missing"
-	ReasonDealNotYetWritten          ReasonCode = "deal_not_yet_written"
 )
 
 // reasonEntry is one code: the names its sentence fills in, and the sentence per language.
@@ -94,6 +85,7 @@ type reasonEntry struct {
 // instead of skipping the row.
 var droppedTwin = map[ReasonCode]ReasonCode{
 	ReasonLinkNotFound:        ReasonLinkNotFoundDropped,
+	ReasonContactNotFound:     ReasonContactNotFoundDropped,
 	ReasonLinkAmbiguous:       ReasonLinkAmbiguousDropped,
 	ReasonEmployerColumnEmpty: ReasonEmployerColumnEmptyDropped,
 	ReasonEmployerNotFound:    ReasonEmployerNotFoundDropped,
@@ -110,7 +102,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = map[ReasonCode]reasonEntry{
+var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",
@@ -421,49 +413,4 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-	ReasonCannotReadPipelines: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "You cannot read pipelines, so a deal row naming its stage is skipped.",
-		textlang.German:     "Sie dürfen keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
-		textlang.Vietnamese: "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
-	}},
-	ReasonStageUnnamed: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "Name the deal’s stage.",
-		textlang.German:     "Nennen Sie die Phase des Deals.",
-		textlang.Vietnamese: "Hãy nêu giai đoạn của deal.",
-	}},
-	ReasonPipelineUnnamed: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "Name the pipeline: this CRM has no default pipeline.",
-		textlang.German:     "Nennen Sie die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
-		textlang.Vietnamese: "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
-	}},
-	ReasonPipelineUnknown: {params: []string{"value", "names"}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is not a pipeline. The pipelines are: {names}.",
-		textlang.German:     "{value:q} ist keine Pipeline. Es gibt: {names}.",
-		textlang.Vietnamese: "{value:q} không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
-	}},
-	ReasonStageUnknown: {params: []string{"value", "pipeline", "names"}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
-		textlang.German:     "{value:q} ist keine Phase der Pipeline {pipeline:q}. Mögliche Phasen: {names}.",
-		textlang.Vietnamese: "{value:q} không phải giai đoạn của quy trình {pipeline:q}. Các giai đoạn: {names}.",
-	}},
-	ReasonCurrencyNotACode: {params: []string{"value"}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is not a currency code. Write its three letters, like EUR.",
-		textlang.German:     "{value:q} ist kein Währungscode. Schreiben Sie die drei Buchstaben, etwa EUR.",
-		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
-	}},
-	ReasonCloseDatePast: {params: []string{"value"}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",
-		textlang.German:     "{value:q} liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
-		textlang.Vietnamese: "{value:q} đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
-	}},
-	ReasonLostReasonMissing: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "A lost deal needs the reason it was lost.",
-		textlang.German:     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
-		textlang.Vietnamese: "Deal đã thua cần có lý do thua.",
-	}},
-	ReasonDealNotYetWritten: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "Deals are checked by the test run but not yet written by an import.",
-		textlang.German:     "Deals werden vom Testlauf geprüft, aber von einem Import noch nicht geschrieben.",
-		textlang.Vietnamese: "Deal được kiểm tra khi chạy thử nhưng nhập chưa ghi deal.",
-	}},
-}
+})

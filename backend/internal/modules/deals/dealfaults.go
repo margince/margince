@@ -117,3 +117,16 @@ func (e *ClosingViaPatchError) Error() string {
 func (e *ClosingViaPatchError) FieldFault() (field, code, message string) {
 	return e.Field, "set_by_advance", e.Error()
 }
+
+// PipelineHasNoOpenStageError maps to 422: a deal can only be born on an open
+// stage, and this pipeline has none left.
+type PipelineHasNoOpenStageError struct{}
+
+func (e *PipelineHasNoOpenStageError) Error() string {
+	return "the pipeline has no open stage to start a deal on"
+}
+
+// FieldFault refuses a pipeline with no open stage.
+func (e *PipelineHasNoOpenStageError) FieldFault() (field, code, message string) {
+	return "pipeline_id", "pipeline_has_no_open_stage", e.Error()
+}

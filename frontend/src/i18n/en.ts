@@ -6303,8 +6303,22 @@ export const en = {
     "“{value}” is in the past, and an open deal’s close date cannot be.",
   "import.reason.lost_reason_missing":
     "A lost deal needs the reason it was lost.",
-  "import.reason.deal_not_yet_written":
-    "Deals are checked by the test run but not yet written by an import.",
+  "import.reason.deal_pipeline_fixed":
+    "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_already_closed":
+    "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
+  "import.reason.fx_rate_missing":
+    "No exchange rate for {currency} is on file for the day this deal closed, so the row is skipped. Add the rate, then import again.",
+  "import.reason.deal_legal_gate":
+    "A stage before this deal’s stage needs a legal review, so the deal cannot be imported as past that stage.",
+  "import.reason.pipeline_no_open_stage":
+    "The pipeline has no open stage to start a closed deal on.",
+  "import.reason.cannot_link_stakeholders":
+    "You cannot add stakeholders to deals, so this row’s contact is not linked.",
+  "import.reason.contact_not_found":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.contact_not_found_dropped":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",

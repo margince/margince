@@ -209,7 +209,7 @@ func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, co
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID,
-		relationshipUpdatedPayload(contactEntity, delta)); err != nil {
+		relationshipUpdatedPayload(ctx, contactEntity, delta)); err != nil {
 		return fmt.Errorf("contacts: publish the captured employment edge: %w", err)
 	}
 	return nil

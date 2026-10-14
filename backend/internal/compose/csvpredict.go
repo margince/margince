@@ -79,7 +79,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if link.skip {
 		return predictUnwritable, link.problem, nil
 	}
-	outcome, refusal, err := w.predictLanding(ctx, row, typed)
+	outcome, refusal, err := w.predictLanding(ctx, row, link.into(typed))
 	if refusal.Code != "" {
 		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)
 		return outcome, &why, err
@@ -172,6 +172,9 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 func (w *csvWriters) reconcilePrediction(
 	ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any,
 ) (predictedOutcome, migration.Reason, error) {
+	if w.object == migration.ObjectDeal {
+		return w.predictDealUpdate(ctx, id, row, typed)
+	}
 	current, err := w.read(ctx, id)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err

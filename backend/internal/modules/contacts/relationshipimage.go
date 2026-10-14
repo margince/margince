@@ -115,7 +115,7 @@ func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action s
 	changedFields := map[string]any{
 		"delta": map[string]any{"relationship": map[string]any{"id": rel.ID, "kind": rel.Kind, "action": action}},
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, anchorID, relationshipUpdatedPayload(anchorObject, changedFields))
+	return storekit.EmitEvent(ctx, tx, auditID, anchorID, relationshipUpdatedPayload(ctx, anchorObject, changedFields))
 }
 
 // relationshipUpdatedPayload builds the anchor's .updated event for a
@@ -127,10 +127,14 @@ func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action s
 // generated struct for the anchor.
 //
 //nolint:ireturn // dispatches to one of PublicEventDeal/Project/Contact/CompanyUpdated by anchorObject; tested directly via the interface in contact_company_payload_test.go
-func relationshipUpdatedPayload(anchorObject string, changedFields map[string]any) events.Payload {
+func relationshipUpdatedPayload(ctx context.Context, anchorObject string, changedFields map[string]any) events.Payload {
 	switch anchorObject {
 	case anchorDeal:
-		return crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}
+		// The stakeholder edge an import writes is the import's own deal change,
+		// so it carries the same marker the deal's own events do.
+		updated := crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}
+		updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+		return updated
 	case projectObjectName:
 		return crmcontracts.PublicEventProjectUpdated{ChangedFields: changedFields}
 	case anchorContact:

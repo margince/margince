@@ -10472,6 +10472,7 @@ const (
 	ImportReasonCodeCannotCreateTags           ImportReasonCode = "cannot_create_tags"
 	ImportReasonCodeCannotEdit                 ImportReasonCode = "cannot_edit"
 	ImportReasonCodeCannotEditAndTag           ImportReasonCode = "cannot_edit_and_tag"
+	ImportReasonCodeCannotLinkStakeholders     ImportReasonCode = "cannot_link_stakeholders"
 	ImportReasonCodeCannotReadPipelines        ImportReasonCode = "cannot_read_pipelines"
 	ImportReasonCodeCannotReadTags             ImportReasonCode = "cannot_read_tags"
 	ImportReasonCodeCannotWriteType            ImportReasonCode = "cannot_write_type"
@@ -10482,10 +10483,14 @@ const (
 	ImportReasonCodeContactDuplicateFound      ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped    ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld           ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactNotFound            ImportReasonCode = "contact_not_found"
+	ImportReasonCodeContactNotFoundDropped     ImportReasonCode = "contact_not_found_dropped"
 	ImportReasonCodeContactUnnamed             ImportReasonCode = "contact_unnamed"
 	ImportReasonCodeCurrencyNotACode           ImportReasonCode = "currency_not_a_code"
 	ImportReasonCodeCurrencyUnset              ImportReasonCode = "currency_unset"
-	ImportReasonCodeDealNotYetWritten          ImportReasonCode = "deal_not_yet_written"
+	ImportReasonCodeDealAlreadyClosed          ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealLegalGate              ImportReasonCode = "deal_legal_gate"
+	ImportReasonCodeDealPipelineFixed          ImportReasonCode = "deal_pipeline_fixed"
 	ImportReasonCodeDescriptionTooLong         ImportReasonCode = "description_too_long"
 	ImportReasonCodeDomainHeld                 ImportReasonCode = "domain_held"
 	ImportReasonCodeDuplicateEmail             ImportReasonCode = "duplicate_email"
@@ -10495,6 +10500,7 @@ const (
 	ImportReasonCodeEmployerNotFoundDropped    ImportReasonCode = "employer_not_found_dropped"
 	ImportReasonCodeEmptyPayload               ImportReasonCode = "empty_payload"
 	ImportReasonCodeFieldInactive              ImportReasonCode = "field_inactive"
+	ImportReasonCodeFxRateMissing              ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId            ImportReasonCode = "id_not_a_company_id"
 	ImportReasonCodeIdNotVisible               ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany             ImportReasonCode = "id_on_non_company"
@@ -10520,6 +10526,7 @@ const (
 	ImportReasonCodeOwnerRefused               ImportReasonCode = "owner_refused"
 	ImportReasonCodeOwnerUnknown               ImportReasonCode = "owner_unknown"
 	ImportReasonCodePhoneNeedsCountry          ImportReasonCode = "phone_needs_country"
+	ImportReasonCodePipelineNoOpenStage        ImportReasonCode = "pipeline_no_open_stage"
 	ImportReasonCodePipelineUnknown            ImportReasonCode = "pipeline_unknown"
 	ImportReasonCodePipelineUnnamed            ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived             ImportReasonCode = "record_archived"
@@ -10553,6 +10560,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeCannotEditAndTag:
 		return true
+	case ImportReasonCodeCannotLinkStakeholders:
+		return true
 	case ImportReasonCodeCannotReadPipelines:
 		return true
 	case ImportReasonCodeCannotReadTags:
@@ -10573,13 +10582,21 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeContactEmailHeld:
 		return true
+	case ImportReasonCodeContactNotFound:
+		return true
+	case ImportReasonCodeContactNotFoundDropped:
+		return true
 	case ImportReasonCodeContactUnnamed:
 		return true
 	case ImportReasonCodeCurrencyNotACode:
 		return true
 	case ImportReasonCodeCurrencyUnset:
 		return true
-	case ImportReasonCodeDealNotYetWritten:
+	case ImportReasonCodeDealAlreadyClosed:
+		return true
+	case ImportReasonCodeDealLegalGate:
+		return true
+	case ImportReasonCodeDealPipelineFixed:
 		return true
 	case ImportReasonCodeDescriptionTooLong:
 		return true
@@ -10598,6 +10615,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeEmptyPayload:
 		return true
 	case ImportReasonCodeFieldInactive:
+		return true
+	case ImportReasonCodeFxRateMissing:
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
@@ -10648,6 +10667,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeOwnerUnknown:
 		return true
 	case ImportReasonCodePhoneNeedsCountry:
+		return true
+	case ImportReasonCodePipelineNoOpenStage:
 		return true
 	case ImportReasonCodePipelineUnknown:
 		return true

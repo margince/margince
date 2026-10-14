@@ -208,6 +208,11 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
+		// A deal's company is a column of the deal: its row carries the id its
+		// ref resolved to, and a different one is a change.
+		if field == csvTargetCompanyRef && dealCompanyChanged(current, typed) {
+			changed[field] = incoming
+		}
 		// `id`, `ref` and the employer column are not values the record holds
 		// (isNonFieldTarget). The author is written on create only
 		// (isCreateOnlyTarget).

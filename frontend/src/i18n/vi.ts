@@ -6031,8 +6031,22 @@ export const vi = {
     "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
   "import.reason.lost_reason_missing":
     "Deal đã thua cần có lý do thua.",
-  "import.reason.deal_not_yet_written":
-    "Deal được kiểm tra khi chạy thử nhưng nhập chưa ghi deal.",
+  "import.reason.deal_pipeline_fixed":
+    "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "import.reason.deal_already_closed":
+    "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
+  "import.reason.fx_rate_missing":
+    "Chưa có tỷ giá {currency} cho ngày deal này đóng nên hàng bị bỏ qua. Hãy thêm tỷ giá rồi nhập lại.",
+  "import.reason.deal_legal_gate":
+    "Một giai đoạn trước giai đoạn của deal này cần được rà soát pháp lý nên không thể nhập deal vượt qua giai đoạn đó.",
+  "import.reason.pipeline_no_open_stage":
+    "Quy trình không có giai đoạn đang mở để bắt đầu một deal đã đóng.",
+  "import.reason.cannot_link_stakeholders":
+    "Bạn không thể thêm bên liên quan vào deal nên liên hệ của hàng này không được liên kết.",
+  "import.reason.contact_not_found":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",

@@ -8,13 +8,13 @@ package compose
 // places them.
 
 import (
+	"encoding/json"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,10 +30,6 @@ const (
 	dealTargetLostReason = "lost_reason"
 	dealTargetContactRef = "contact_ref"
 )
-
-// dealWriterPendingReason skips a deal row at commit: the test run checks
-// deals, and this build writes none yet.
-var dealWriterPendingReason = migration.Why(migration.ReasonDealNotYetWritten)
 
 // dealStoredColumns names the stored deal's JSON field for each target the
 // file spells differently, so an unedited cell compares equal to it.
@@ -86,6 +82,9 @@ func dealCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	if stage, ok := typed[dealTargetStage].(ids.StageID); ok {
 		in.StageID = stage
 	}
+	if company, ok := linkedRecord(typed, csvTargetCompanyRef); ok {
+		in.CompanyID = ptrOf(ids.From[ids.CompanyKind](company))
+	}
 	return dealCreate{Deal: in, LostReason: importString(fields, dealTargetLostReason)}
 }
 
@@ -101,6 +100,11 @@ func dealUpdateFrom(changed map[string]string, typed map[string]any) dealPatch {
 		OwnerID:       ownerFrom(changed, typed),
 		CustomFields:  customFieldsFrom(changed, typed),
 	}}
+	if _, moved := changed[csvTargetCompanyRef]; moved {
+		if company, ok := linkedRecord(typed, csvTargetCompanyRef); ok {
+			patch.Deal.CompanyID = ptrOf(ids.From[ids.CompanyKind](company))
+		}
+	}
 	_, newStage := changed[dealTargetStage]
 	_, newPipeline := changed[dealTargetPipeline]
 	if stage, ok := typed[dealTargetStage].(ids.StageID); ok && (newStage || newPipeline) {
@@ -129,4 +133,14 @@ func dealCloseDate(fields map[string]string, typed map[string]any) *time.Time {
 		return &date.Time
 	}
 	return nil
+}
+
+// ptrOf answers the address of a copy of v.
+func ptrOf[T any](v T) *T { return &v }
+
+// dealCompanyChanged reports whether a deal row names a company other than the
+// one the deal holds. A row whose link resolved to nothing changes nothing.
+func dealCompanyChanged(current map[string]json.RawMessage, typed map[string]any) bool {
+	want, ok := typed[csvTargetCompanyRef].(string)
+	return ok && textOf(current["company_id"]) != want
 }

@@ -45,7 +45,7 @@ func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
 // The DEAL's own row rides the guarded patch; the relationship sweep below
 // stays a plain statement because it is a cascade off that row rather than a
 // second decision — the guard on the deal is what serializes both.
-func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64) (crmcontracts.Deal, error) {
+func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64, opts ...ArchiveOption) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -55,7 +55,7 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := archiveDealInTx(ctx, tx, id, ifVersion); err != nil {
+		if err := archiveDealInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts)); err != nil {
 			return err
 		}
 		if out, err = readDealForCaller(ctx, tx, id, storekit.IncludeArchived, active); err != nil {
@@ -69,17 +69,22 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 // ArchiveDealTx is ArchiveDeal on the caller's transaction, for a bulk change
 // that archives many deals in one commit. It asks every gate ArchiveDeal asks
 // and answers nothing: the caller already knows which row it archived.
-func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64) error {
+func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, opts ...ArchiveOption) error {
 	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
 		return err
 	}
-	return archiveDealInTx(ctx, tx, id, ifVersion)
+	return archiveDealInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 }
 
 // archiveDealInTx is the archive itself, behind the object gate its callers
 // ask: the row's write check, the guarded patch and the cascade.
-func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64) error {
+func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, o archiveOptions) error {
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		return err
+	}
+	// Under the row lock the write takes, so a colleague's save lands wholly
+	// before this read or after the commit and never between them.
+	if err := refuseIfTouched(ctx, tx, id, o); err != nil {
 		return err
 	}
 	// A liveness probe, not a wire read — no custom columns needed.

@@ -48,6 +48,7 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 	ownerChanged := in.OwnerID != nil && (current.OwnerId == nil || ids.UUID(*current.OwnerId) != in.OwnerID.UUID)
 	if ownerChanged {
 		payload := crmcontracts.PublicEventDealOwnerChanged{ToOwnerId: openapi_types.UUID(in.OwnerID.UUID)}
+		payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 		if current.OwnerId != nil {
 			payload.FromOwnerId = current.OwnerId
 		}
@@ -63,7 +64,9 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 		rest[field] = v
 	}
 	if len(rest) > 0 {
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: rest}); err != nil {
+		updated := crmcontracts.PublicEventDealUpdated{ChangedFields: rest}
+		updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 			return fmt.Errorf("emit deal.updated: %w", err)
 		}
 	}

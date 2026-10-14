@@ -6182,8 +6182,22 @@ export const de = {
     "„{value}“ liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
   "import.reason.lost_reason_missing":
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
-  "import.reason.deal_not_yet_written":
-    "Deals werden vom Testlauf geprüft, aber von einem Import noch nicht geschrieben.",
+  "import.reason.deal_pipeline_fixed":
+    "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "import.reason.deal_already_closed":
+    "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
+  "import.reason.fx_rate_missing":
+    "Für {currency} liegt kein Wechselkurs für den Abschlusstag dieses Deals vor, daher wird die Zeile übersprungen. Hinterlege den Kurs und importiere erneut.",
+  "import.reason.deal_legal_gate":
+    "Eine Phase vor der Phase dieses Deals erfordert eine rechtliche Prüfung, daher kann der Deal nicht über diese Phase hinaus importiert werden.",
+  "import.reason.pipeline_no_open_stage":
+    "Die Pipeline hat keine offene Phase, in der ein abgeschlossener Deal beginnen kann.",
+  "import.reason.cannot_link_stakeholders":
+    "Du kannst keine Stakeholder zu Deals hinzufügen, daher wird der Kontakt dieser Zeile nicht verknüpft.",
+  "import.reason.contact_not_found":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
