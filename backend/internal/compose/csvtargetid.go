@@ -90,7 +90,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 }
 
 // refTakenBy says why a ref cannot be bound to the named company: an earlier
-// import already maps it to another one, and every slice and resume must resolve
+// import already maps it to another one. Every slice and resume must resolve
 // one ref to one record. An undone run's key is free, and the bind takes it over.
 func (w *csvWriters) refTakenBy(ctx context.Context, ref string, named ids.UUID) string {
 	if ref == "" {

@@ -23,10 +23,11 @@ type Binding struct {
 	Origin    Origin
 }
 
-// LookupBinding resolves an external id to the native row a previous (or the
-// current) run landed for it, with the status and origin of the run's identity.
-// Only the engine-owned map says "already imported": a row's own source columns
-// are client-writable, so a caller could pre-plant one and pass it off as landed.
+// LookupBinding resolves an external id to the native row a run landed for it,
+// with the status and origin of that run's identity.
+// Only the engine-owned map says "already imported".
+// A row's own source columns are client-writable, so a caller could pre-plant
+// one and pass it off as landed.
 func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, externalID string) (Binding, bool, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Binding{}, false, err

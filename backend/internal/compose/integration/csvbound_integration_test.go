@@ -31,7 +31,7 @@ func TestARefMappedToAnotherCompanyIsNotRebound(t *testing.T) {
 	}
 }
 
-// Undo frees a bound ref whatever its company is: the company was never the
+// Undo frees a bound ref whatever its company is. The company was never the
 // run's, so a live one must not keep answering for the ref.
 func TestAnUndoneRunsBoundRefIsFreeToImportAgain(t *testing.T) {
 	e := setupImportApp(t)

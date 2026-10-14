@@ -44,9 +44,10 @@ const boundArchivedReason = "this row's record was archived, so it is not update
 
 // lookup resolves an external id to the record an earlier run landed for it.
 //
-// A bound key of an undone run is free whatever its record is: undo never
+// A bound key of an undone run is free whatever its record is. Undo never
 // touched that record, so its liveness says nothing about the run. A created
-// key of an undone run, whose record is archived, is free again. Any other archived record keeps the key. A paused undo still pages its
+// key of an undone run, whose record is archived, is free again.
+// Any other archived record keeps the key. A paused undo still pages its
 // rows, and a record archived by hand must not come back as a twin.
 func (w *csvWriters) lookup(ctx context.Context, object, externalID string) (ids.UUID, bool, error) {
 	if object != w.object {
