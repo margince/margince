@@ -171,6 +171,10 @@ function ProductPrice({ product }: Readonly<{ product: Product }>) {
   );
 }
 
+function hasStatus(product: Product): boolean {
+  return Boolean(product.archived_at) || !product.active;
+}
+
 // Only a status that differs from the usual one is drawn.
 function ProductStatus({ product }: Readonly<{ product: Product }>) {
   const t = useT();
@@ -302,6 +306,14 @@ export function ProductsAdmin() {
       );
     };
 
+  // Only while some row has a status to show: a column of blanks says nothing.
+  const statusColumn: ListColumn<Product> = {
+    key: "status",
+    header: t("product.status"),
+    sort: "active",
+    cell: (p: Product) => <ProductStatus product={p} />,
+  };
+
   // The per-row affordances, in a column that exists only while at least one of
   // them does. Keeping the column and emptying its cells would leave a headed,
   // width-taking, column-picker-listed strip of nothing, which reads as a table
@@ -352,7 +364,24 @@ export function ProductsAdmin() {
   };
 
   return (
-    <Panel className="listsection" title={t("product.title")}>
+    <Panel
+      className="listsection"
+      title={t("product.title")}
+      titleAction={
+        canCreate ? (
+          <CreateAction
+            label={t("product.new")}
+            invalidate="products"
+            // `stay`: a fresh product has no page of its own to open. The list
+            // it joins is already on screen.
+            screen="settings"
+            stay
+            create={createProduct}
+            fields={fields}
+          />
+        ) : undefined
+      }
+    >
       <PanelBody className="listsection-intro">
         <PanelIntro>{t("product.settingsSub")}</PanelIntro>
         {/* A reader who holds no write verb here sees a list with no editor, and
@@ -371,23 +400,8 @@ export function ProductsAdmin() {
       </PanelBody>
       <ListTable
         state={list}
-        hideShortPager
+        hideShortChrome
         unit="unit.products"
-        action={
-          canCreate ? (
-            <CreateAction
-              label={t("product.new")}
-              invalidate="products"
-              // `stay` because a fresh product has no page of its own to
-              // open: the list the row joins is already on screen, and this
-              // panel is one of the settings surfaces the screen names.
-              screen="settings"
-              stay
-              create={createProduct}
-              fields={fields}
-            />
-          ) : undefined
-        }
         columns={[
           {
             key: "name",
@@ -409,12 +423,7 @@ export function ProductsAdmin() {
             header: t("product.billingModel"),
             cell: (p: Product) => billingLabel(p, t),
           },
-          {
-            key: "status",
-            header: t("product.status"),
-            sort: "active",
-            cell: (p: Product) => <ProductStatus product={p} />,
-          },
+          ...(list.rows.some(hasStatus) ? [statusColumn] : []),
           ...(canUpdate || canArchive ? [rowMenu] : []),
         ]}
         rowKey={(p) => p.id}

@@ -198,12 +198,31 @@ const meta: Meta<typeof KnowledgeCard> = {
 export default meta;
 type Story = StoryObj<typeof KnowledgeCard>;
 
-// The administrator's card: both sets with their coverage line, the archive verb
-// on each, and the form for a new one under the panel. The two coverage lines
-// differ on purpose — one fully embedded, one still short — because that figure
-// is the only place a reader learns a set is not yet answerable in full.
+// The administrator's card: both sets as rows with one searchability badge
+// each. The archive verb is in each row's menu, the create verb in the head.
+// One set answers in full and one does not yet, so the two badges differ.
 export const Administered: Story = {
   render: card(sets(administers, [handbook, priceBook])),
+};
+
+export const AdministeredAtPhoneWidth: Story = {
+  ...Administered,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A new set is a short form behind the head's verb: a name and the sentence a
+// refused question is answered with.
+export const NewSetDialog: Story = {
+  render: card(sets(administers, [handbook])),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "New document set",
+      }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
 };
 
 // The seeded posture, and the one this file exists for: a reader who may ASK the
@@ -226,6 +245,7 @@ export const Withheld: Story = {
 // different sentence from "this set is not ready", and the notice says so.
 export const BeingReread: Story = {
   render: card(sets(administers, [{ ...handbook, reindexing: true }])),
+  play: showDocuments,
 };
 
 // The four ingest states in one list, A to Z. Only `failed` carries a reason.

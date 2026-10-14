@@ -101,6 +101,7 @@ const chips: readonly ListChip[] = [
 function Surface({
   rows,
   columns: shownColumns = columns,
+  noAction = false,
   ...rest
 }: Readonly<{
   rows: Company[];
@@ -111,7 +112,9 @@ function Surface({
   pending?: boolean;
   problem?: ReactNode;
   hasMore?: boolean;
-  hideShortPager?: boolean;
+  hideShortChrome?: boolean;
+  /** Leaves the header verb out, for the stories of a list inside a settings card. */
+  noAction?: boolean;
   caption?: string;
   note?: string;
   /** The caller's sentence under the empty line, for the story that shows it. */
@@ -145,7 +148,7 @@ function Surface({
       columns={shownColumns}
       rowKey={(row) => row.id}
       unit="companies"
-      action={<Button>New company</Button>}
+      action={noAction ? undefined : <Button>New company</Button>}
       search={{ value: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       chips={chips}
@@ -517,29 +520,61 @@ export const CellStrips: Story = {
   ),
 };
 
-// A list that fits the smallest page size has no pages to walk. A caller that
-// opts in draws no pager under it.
-export const ShortListWithoutPager: Story = {
-  render: () => <Surface rows={companies(12)} hideShortPager />,
+// A list that fits the smallest page size has no pages to walk. Nothing narrows
+// it, so it has nothing to search either: no count, no dials, no pager.
+export const ShortListWithoutChrome: Story = {
+  render: () => <Surface rows={companies(12)} hideShortChrome noAction />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Sort by Company" });
     await expect(
       canvas.queryByRole("combobox", { name: "Rows per page" }),
     ).toBeNull();
+    await expect(canvas.queryByRole("searchbox")).toBeNull();
+    await expect(canvas.queryByText(/sorted by/)).toBeNull();
   },
 };
 
-// Past the smallest page size the pager stays, even once a larger size fits
-// every row, so the reader can always take that size back.
+// The header verb outlives the count it stood beside.
+export const ShortListKeepsVerb: Story = {
+  render: () => <Surface rows={companies(3)} hideShortChrome />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", { name: "New company" }),
+    ).toBeVisible();
+    await expect(canvas.queryByText(/sorted by/)).toBeNull();
+  },
+};
+
+// No rows reads as one line, not as a table of headings over nothing.
+export const ShortListEmpty: Story = {
+  render: () => <Surface rows={[]} hideShortChrome noAction />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("No companies yet.")).toBeVisible();
+    await expect(canvas.queryByRole("columnheader")).toBeNull();
+  },
+};
+
+export const ShortListEmptyOnPhone: Story = {
+  ...ShortListEmpty,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// Past the smallest page size the pager and the dials stay. A larger size may
+// fit every row, and the reader can still take that size back.
 export const LongerListKeepsPager: Story = {
-  render: () => <Surface rows={companies(40)} hideShortPager />,
+  render: () => <Surface rows={companies(40)} hideShortChrome />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("navigation", { name: "Pages" });
     await expect(
       canvas.getByRole("combobox", { name: "Rows per page" }),
     ).toBeVisible();
+    await expect(canvas.getByRole("searchbox")).toBeVisible();
   },
 };
 

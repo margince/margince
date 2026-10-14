@@ -1,50 +1,34 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* One document set as one record row: its name, its figures at the end edge,
- * then the row menu and the chevron at a fixed place. */
-.knowledge-set {
+/* An open set: what it covers and how much answers, then its documents. */
+.knowledge-detail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-  grid-template-areas: "name documents passages menu open";
-  align-items: center;
-  column-gap: var(--space-3);
-}
-.knowledge-set-name {
-  grid-area: name;
+  gap: var(--space-3);
   min-width: 0;
 }
-.knowledge-set-documents {
-  grid-area: documents;
-  text-align: end;
+.knowledge-detail-head {
+  display: grid;
+  gap: var(--space-1);
 }
-/* Capped, so the coverage reason wraps and the name takes the spare width. */
-.knowledge-set-passages {
-  grid-area: passages;
-  max-width: 13rem;
+.knowledge-detail-head > p {
+  margin: 0;
 }
-.knowledge-set-menu {
-  grid-area: menu;
+/* The documents line up with the set's own text above them, not one cell in. */
+.knowledge-detail .table :is(th, td):first-child {
+  padding-inline-start: 0;
 }
-.knowledge-set-open {
-  grid-area: open;
+.knowledge-detail .table :is(th, td):last-child,
+.knowledge-detail .table-scroll > .table > tbody > tr {
+  padding-inline-end: 0;
 }
-
-/* Below the width where the settings column is full, the row folds: the name
- * with its verbs, then the figures under it. */
-@media (max-width: 900px) {
-  .knowledge-set {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-      "name menu open"
-      "documents documents documents"
-      "passages passages passages";
-    row-gap: var(--space-1);
-  }
-  .knowledge-set-documents {
-    text-align: start;
-  }
-  .knowledge-set-passages {
-    max-width: none;
+.knowledge-detail .table-scroll > .table > tbody > tr {
+  padding-inline-start: 0;
+}
+/* Not left to `.table`: its last-row rule is a descendant selector, so the
+   outer table's open detail row strips every rule from the table inside it. */
+@container table-fold (width >= 36rem) {
+  .knowledge-detail .table > tbody > tr:not(:last-child) > td {
+    border-bottom: 1px solid var(--borderSubtle);
   }
 }

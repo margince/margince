@@ -55,6 +55,9 @@ const CONNECTION: ProviderConnection = {
   updated_at: "2026-01-05T09:04:00Z",
 };
 
+// The card names a provider it knows by its brand, never by its registry key.
+const PROVIDER_NAME = "Surfe";
+
 function meResponse(seat: SeatType, integrations: Grant): Me {
   return {
     user: {
@@ -227,7 +230,7 @@ describe("ProviderCard write posture", () => {
     // either way.
     await screen.findByRole(
       "heading",
-      { name: CONNECTION.provider },
+      { name: PROVIDER_NAME },
       { timeout: SETTLE_MS },
     );
     return fetch;
@@ -461,7 +464,7 @@ describe("ProviderCard write posture", () => {
   // malformed: a control that can never work, in the state a first-time admin
   // meets first.
   it(
-    "offers no purchase switch before a key exists, since there is nothing to patch",
+    "offers only the key before one exists: no purchase switch and no readings",
     async () => {
       const { version: _version, ...neverConnected } = CONNECTION;
       await renderAs(ME_OPERATOR, {
@@ -473,10 +476,13 @@ describe("ProviderCard write posture", () => {
       expect(
         screen.queryAllByRole("switch", { name: /^Allow buying / }),
       ).toHaveLength(0);
-      // The catalog IS present on this connection, so an empty catalog is not
-      // what made the switches absent — without this the case would pass over a
-      // card that simply had nothing to list.
-      expect(screen.getByRole("meter", { name: "email" })).toBeTruthy();
+      // The provider's one row offers the key, and nothing it would read
+      // through one: no balance and no spend before a key exists.
+      expect(
+        screen.getByRole("button", { name: en["provider.connect"] }),
+      ).toBeTruthy();
+      expect(screen.queryByRole("meter", { name: "email" })).toBeNull();
+      expect(screen.queryByText(en["provider.spend"])).toBeNull();
     },
     RENDER_TEST_MS,
   );
@@ -563,7 +569,7 @@ describe("ProviderCard write posture", () => {
       );
       await screen.findByRole(
         "heading",
-        { name: CONNECTION.provider },
+        { name: PROVIDER_NAME },
         { timeout: SETTLE_MS },
       );
 
@@ -659,9 +665,7 @@ describe("ProviderCard across connections and deletions", () => {
         { name: "second_provider" },
         { timeout: SETTLE_MS },
       );
-      expect(
-        screen.getByRole("heading", { name: CONNECTION.provider }),
-      ).toBeTruthy();
+      expect(screen.getByRole("heading", { name: PROVIDER_NAME })).toBeTruthy();
       expect(
         await screen.findAllByRole("switch", { name: AUTOMATIC_LOOKUP }),
       ).toHaveLength(1);
@@ -701,7 +705,7 @@ describe("ProviderCard across connections and deletions", () => {
       );
       await screen.findByRole(
         "heading",
-        { name: CONNECTION.provider },
+        { name: PROVIDER_NAME },
         { timeout: SETTLE_MS },
       );
       await user.click(screen.getByRole("button", { name: "More actions" }));
@@ -710,7 +714,7 @@ describe("ProviderCard across connections and deletions", () => {
       );
       await user.type(
         screen.getByLabelText(en["provider.deleteDataConfirm.typed"]),
-        CONNECTION.provider,
+        PROVIDER_NAME,
       );
       const confirms = screen.getAllByRole("button", {
         name: en["provider.deleteData"],

@@ -15,12 +15,10 @@ import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { FileDropzone } from "../design-system/filedropzone";
-import { KeyedName } from "../design-system/keyedname";
-import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
 import { QueryStates } from "../design-system/querystates";
 import { forReader } from "../format/collate";
-import { formatBytes, formatDate, formatNumber } from "../format/format";
+import { formatBytes, formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -43,7 +41,7 @@ import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];
 
-export const SETS_KEY = ["knowledge-corpora"];
+export const SETS_KEY = ["knowledge-corpora"] as const;
 
 // Slow enough not to hammer the API, fast enough that a dropped file visibly
 // changes state.
@@ -171,12 +169,24 @@ function documentName(doc: CorpusDocument): string {
   return doc.title ?? doc.filename;
 }
 
+// "approvals.md" names "Approvals": a caption repeating the title says nothing.
+function sameName(title: string, filename: string): boolean {
+  const words = (text: string) =>
+    text
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_\s]+/g, " ")
+      .trim()
+      .toLowerCase();
+  return words(title) === words(filename);
+}
+
 function documentColumns({
   t,
   plural,
   locale,
   zone,
   setSpeaksForAll,
+  anyBadge,
   canManage,
   onDelete,
 }: Readonly<{
@@ -185,6 +195,8 @@ function documentColumns({
   locale: Locale;
   zone: string;
   setSpeaksForAll: boolean;
+  // A status column every row leaves empty is a heading over nothing.
+  anyBadge: boolean;
   canManage: boolean;
   onDelete: (doc: CorpusDocument) => void;
 }>): DataTableColumn<CorpusDocument>[] {
@@ -194,10 +206,13 @@ function documentColumns({
       header: t("knowledge.col.name"),
       grow: true,
       render: (doc) =>
-        doc.title === null ? (
-          doc.filename
+        doc.title === null || sameName(doc.title, doc.filename) ? (
+          documentName(doc)
         ) : (
-          <KeyedName name={doc.title} code={doc.filename} />
+          <CellStack>
+            <span>{doc.title}</span>
+            <span className="t-caption">{doc.filename}</span>
+          </CellStack>
         ),
     },
     {
@@ -224,13 +239,15 @@ function documentColumns({
     {
       key: "added",
       header: t("knowledge.col.added"),
-      render: (doc) => formatDate(doc.created_at, locale, zone),
+      render: (doc) => formatDateAbbrev(doc.created_at, locale, zone),
       folded: (doc) =>
         t("knowledge.addedOn", {
-          date: formatDate(doc.created_at, locale, zone),
+          date: formatDateAbbrev(doc.created_at, locale, zone),
         }),
     },
-    {
+  ];
+  if (anyBadge) {
+    columns.push({
       key: "status",
       header: t("knowledge.col.status"),
       fold: "end",
@@ -247,8 +264,8 @@ function documentColumns({
           )
         );
       },
-    },
-  ];
+    });
+  }
   if (!canManage) {
     return columns;
   }
@@ -276,7 +293,7 @@ function documentColumns({
   ];
 }
 
-/** One set's documents, A to Z, standing straight in the panel so they bleed. */
+/** One set's documents, A to Z, in the set's open detail. */
 export function DocumentList({
   corpusId,
   setName,
@@ -311,11 +328,13 @@ export function DocumentList({
   const setSpeaksForAll =
     setState !== "complete" &&
     documents.every((doc) => doc.embed_state === setState);
+  const anyBadge = documents.some(
+    (doc) => documentBadge(doc, setSpeaksForAll) !== null,
+  );
   return (
     <>
       {documents.length > 0 ? (
         <DataTable
-          bleed
           fold
           label={label}
           columns={documentColumns({
@@ -324,6 +343,7 @@ export function DocumentList({
             locale,
             zone: viewerZone(),
             setSpeaksForAll,
+            anyBadge,
             canManage,
             onDelete: (doc) => {
               remove.reset();
@@ -335,16 +355,12 @@ export function DocumentList({
           rowKey={(doc) => doc.id}
         />
       ) : (
-        <PanelBody>
-          <QueryStates query={query} pendingLabel={label}>
-            <EmptyState>{t("knowledge.noDocuments")}</EmptyState>
-          </QueryStates>
-        </PanelBody>
+        <QueryStates query={query} pendingLabel={label}>
+          <EmptyState>{t("knowledge.noDocuments")}</EmptyState>
+        </QueryStates>
       )}
       {canManage && !shipped && query.isSuccess && (
-        <PanelBody>
-          <UploadDocument corpusId={corpusId} />
-        </PanelBody>
+        <UploadDocument corpusId={corpusId} />
       )}
       <ConfirmModal
         open={deleting !== null}

@@ -6,29 +6,19 @@ import {
   Badge,
   Button,
   EmptyState,
-  Field,
   OverflowMenu,
-  SectionHeader,
-  Textarea,
-  TextInput,
 } from "../design-system/atoms";
-import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { ExpanderChevron } from "../design-system/disclosure";
-import { IconAction } from "../design-system/iconaction";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-  PanelRow,
-} from "../design-system/panel";
-import { QueryGate, WriteRefused } from "../design-system/querystates";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
+import { QueryGate } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan, useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
+import { CreateAction } from "./create";
 import {
   DocumentList,
   INGEST_POLL_MS,
@@ -73,20 +63,6 @@ function useDocumentSets(enabled: boolean) {
       }
       return data;
     },
-  });
-}
-
-function useCreateDocumentSet() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: { name: string; topicStatement: string }) => {
-      unwrap(
-        await api.POST("/knowledge/corpora", {
-          body: { name: vars.name, topic_statement: vars.topicStatement },
-        }),
-      );
-    },
-    onSuccess: () => client.invalidateQueries({ queryKey: SETS_KEY }),
   });
 }
 
@@ -140,62 +116,59 @@ export function KnowledgeCard() {
           {t("knowledge.title")}
         </span>
       }
+      titleAction={canManage ? <NewDocumentSet /> : undefined}
     >
       <PanelBody>
         <PanelIntro>{t("knowledge.sub")}</PanelIntro>
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("knowledge.title")}>
-        {(data) =>
-          data.items.map((set) => (
-            <DocumentSet
-              key={set.id}
-              set={set}
-              canManage={canManage}
-              afterArchive={() => document.getElementById(titleId)}
-            />
-          ))
-        }
+        {(data) => (
+          <DocumentSets
+            sets={data.items}
+            canManage={canManage}
+            afterArchive={() => document.getElementById(titleId)}
+          />
+        )}
       </QueryGate>
-      {canManage ? <NewDocumentSet /> : null}
     </Panel>
   );
 }
 
-function Passages({ set }: Readonly<{ set: Corpus }>) {
+function setRowTestId(set: Corpus): string {
+  return `knowledge-set-${set.id}`;
+}
+
+// The row's chevron, its last control: a deleted document's menu leaves with it.
+function setToggle(set: Corpus): HTMLElement | null {
+  const toggles = document.querySelectorAll<HTMLElement>(
+    `[data-testid="${setRowTestId(set)}"] [aria-expanded]`,
+  );
+  return toggles.item(toggles.length - 1);
+}
+
+// The set's searchability as one badge; the figures and the reason are in its detail.
+function SearchableBadge({ set }: Readonly<{ set: Corpus }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const { coverage } = set;
-  // A set being re-read says so in its own notice, so it takes no second badge.
-  const state =
-    coverage.embed_state === "complete" || set.reindexing
-      ? null
-      : NOT_SEARCHABLE[coverage.embed_state];
+  if (set.reindexing) {
+    return <Badge tone="info">{t("knowledge.reindexingBadge")}</Badge>;
+  }
+  const state = set.coverage.embed_state;
+  if (state === "complete") {
+    return <Badge tone="success">{t("knowledge.searchable")}</Badge>;
+  }
   return (
-    <CellStack>
-      <span className="t-num">
-        {plural("knowledge.passages", coverage.chunks_total, {
-          embedded: formatNumber(coverage.chunks_embedded, locale),
-          count: formatNumber(coverage.chunks_total, locale),
-        })}
-      </span>
-      {state && (
-        <>
-          <Badge tone={state.tone}>{t(state.label)}</Badge>
-          <span className="t-caption">{t(state.reason)}</span>
-        </>
-      )}
-    </CellStack>
+    <Badge tone={NOT_SEARCHABLE[state].tone}>
+      {t(NOT_SEARCHABLE[state].label)}
+    </Badge>
   );
 }
 
-// One set as one record row: it opens its documents in place, under it.
-function DocumentSet({
-  set,
+function DocumentSets({
+  sets,
   canManage,
   afterArchive,
 }: Readonly<{
-  set: Corpus;
+  sets: readonly Corpus[];
   canManage: boolean;
   // The archived row and its menu leave with the refetch; focus lands here.
   afterArchive: () => HTMLElement | null;
@@ -203,89 +176,88 @@ function DocumentSet({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<Corpus | null>(null);
+  const asked = useLastSubject(confirming);
   const archived = useRef(false);
   const archive = useArchiveDocumentSet(() => {
     archived.current = true;
   });
-  const documentsId = useId();
-  const toggleId = useId();
-  const toggle = () => setOpen((was) => !was);
-  return (
-    <>
-      <PanelRow record onOpen={toggle} className="knowledge-set">
-        <span className="knowledge-set-name">
-          <CellStack>
-            <span className="t-name">{set.name}</span>
-            <span className="t-caption">{set.topic_statement}</span>
-          </CellStack>
-        </span>
-        <span className="knowledge-set-documents t-num">
-          {plural("knowledge.documentCount", set.coverage.documents_total, {
-            count: formatNumber(set.coverage.documents_total, locale),
-          })}
-        </span>
-        <span className="knowledge-set-passages">
-          <Passages set={set} />
-        </span>
-        {/* A shipped set is filed again by the next update, so archiving it undoes nothing. */}
-        {canManage && !set.shipped && (
-          <span className="knowledge-set-menu cell-actions">
+  const columns: DataTableColumn<Corpus>[] = [
+    {
+      key: "name",
+      header: t("knowledge.col.name"),
+      grow: true,
+      render: (set) => <span className="t-name">{set.name}</span>,
+    },
+    {
+      key: "documents",
+      header: t("knowledge.col.documents"),
+      align: "end",
+      render: (set) => formatNumber(set.coverage.documents_total, locale),
+      folded: (set) =>
+        plural("knowledge.documentCount", set.coverage.documents_total, {
+          count: formatNumber(set.coverage.documents_total, locale),
+        }),
+    },
+    {
+      key: "searchable",
+      header: t("knowledge.col.searchable"),
+      fold: "end",
+      render: (set) => <SearchableBadge set={set} />,
+    },
+  ];
+  if (canManage) {
+    columns.push({
+      key: "actions",
+      header: t("knowledge.col.actions"),
+      headerHidden: true,
+      fold: "end",
+      // A shipped set is filed again by the next update, so archiving it undoes nothing.
+      render: (set) =>
+        set.shipped ? null : (
+          <span className="cell-actions">
             <OverflowMenu label={t("table.rowActions", { name: set.name })}>
               <Button
                 aria-haspopup="dialog"
                 onClick={() => {
                   archive.reset();
                   archived.current = false;
-                  setConfirming(true);
+                  setConfirming(set);
                 }}
               >
                 {t("knowledge.archive")}
               </Button>
             </OverflowMenu>
           </span>
-        )}
-        <span className="knowledge-set-open" id={toggleId}>
-          <IconAction
-            label={t("knowledge.documentsIn", { set: set.name })}
-            icon={<ExpanderChevron />}
-            disclosure={{ expanded: open, controls: documentsId }}
-            onClick={toggle}
-          />
-        </span>
-      </PanelRow>
-      {set.reindexing && (
-        <PanelBody>
-          <ReindexingNotice />
-        </PanelBody>
-      )}
-      {/* No wrapper around the open list: its table bleeds only as a child of
-          the panel. The empty stand-in keeps the chevron's target resolvable. */}
-      {open ? (
-        <>
-          <PanelGroupHead
-            id={documentsId}
-            level="h3"
-            title={t("knowledge.documentsIn", { set: set.name })}
-          />
-          <DocumentList
-            corpusId={set.id}
-            setName={set.name}
-            setState={set.coverage.embed_state}
-            shipped={set.shipped}
-            canManage={canManage}
-            afterDelete={() =>
-              document.getElementById(toggleId)?.querySelector("button") ?? null
-            }
-          />
-        </>
-      ) : (
-        <div id={documentsId} hidden />
-      )}
+        ),
+    });
+  }
+  return (
+    <>
+      <DataTable
+        bleed
+        fold
+        label={t("knowledge.title")}
+        columns={columns}
+        rows={[...sets]}
+        rowKey={(set) => set.id}
+        rowTestId={setRowTestId}
+        detail={{
+          header: t("knowledge.col.detail"),
+          toggleLabel: (set) => t("knowledge.documentsIn", { set: set.name }),
+          single: true,
+          render: (set) => (
+            <SetDetail
+              set={set}
+              canManage={canManage}
+              afterDelete={() => setToggle(set)}
+            />
+          ),
+        }}
+      />
       <ConfirmModal
-        open={confirming}
-        title={t("knowledge.archiveConfirm.title", { name: set.name })}
+        open={confirming !== null}
+        title={t("knowledge.archiveConfirm.title", { name: asked?.name ?? "" })}
         confirmLabel={t("knowledge.archive")}
         pending={archive.isPending}
         error={
@@ -293,14 +265,16 @@ function DocumentSet({
             ? shippedRefusal(archive.error, t, ARCHIVE_SHIPPED)
             : null
         }
-        onClose={() => setConfirming(false)}
+        onClose={() => setConfirming(null)}
         returnFocusTo={() => (archived.current ? afterArchive() : null)}
-        onConfirm={() =>
-          archive.mutate(
-            { id: set.id },
-            { onSuccess: () => setConfirming(false) },
-          )
-        }
+        onConfirm={() => {
+          if (confirming) {
+            archive.mutate(
+              { id: confirming.id },
+              { onSuccess: () => setConfirming(null) },
+            );
+          }
+        }}
       >
         <p>{t("knowledge.archiveConfirm.body")}</p>
       </ConfirmModal>
@@ -308,60 +282,79 @@ function DocumentSet({
   );
 }
 
+// What the set covers, how much of it answers, then its documents.
+function SetDetail({
+  set,
+  canManage,
+  afterDelete,
+}: Readonly<{
+  set: Corpus;
+  canManage: boolean;
+  afterDelete: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const { coverage } = set;
+  const state =
+    coverage.embed_state === "complete" || set.reindexing
+      ? null
+      : NOT_SEARCHABLE[coverage.embed_state];
+  return (
+    <div className="knowledge-detail">
+      <div className="knowledge-detail-head">
+        <p>{set.topic_statement}</p>
+        <p className="t-caption">
+          {plural("knowledge.passages", coverage.chunks_total, {
+            embedded: formatNumber(coverage.chunks_embedded, locale),
+            count: formatNumber(coverage.chunks_total, locale),
+          })}
+          {state && <>. {t(state.reason)}</>}
+        </p>
+      </div>
+      {set.reindexing && <ReindexingNotice />}
+      <DocumentList
+        corpusId={set.id}
+        setName={set.name}
+        setState={coverage.embed_state}
+        shipped={set.shipped}
+        canManage={canManage}
+        afterDelete={afterDelete}
+      />
+    </div>
+  );
+}
+
 function NewDocumentSet() {
   const t = useT();
-  const [name, setName] = useState("");
-  const [topic, setTopic] = useState("");
-  const create = useCreateDocumentSet();
-  const ready = name.trim() !== "" && topic.trim() !== "";
-
   return (
-    <PanelBody className="form-stack">
-      <SectionHeader level={3} title={t("knowledge.new.title")} />
-      <Field label={t("knowledge.new.name")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        )}
-      </Field>
-      {/* The topic statement is quoted back verbatim in a refusal, so it is
-          read by a contact at their least patient moment. The hint says to write
-          a sentence rather than a label, because "Handbook" tells a reader who
-          just got a refusal nothing at all. */}
-      <Field
-        label={t("knowledge.new.topic")}
-        hint={t("knowledge.new.topicHint")}
-      >
-        {(control) => (
-          <Textarea
-            {...control}
-            value={topic}
-            onChange={(event) => setTopic(event.target.value)}
-          />
-        )}
-      </Field>
-      <div className="form-actions">
-        <Button
-          disabled={!ready || create.isPending}
-          onClick={() =>
-            create.mutate(
-              { name: name.trim(), topicStatement: topic.trim() },
-              {
-                onSuccess: () => {
-                  setName("");
-                  setTopic("");
-                },
-              },
-            )
-          }
-        >
-          {t("knowledge.new.submit")}
-        </Button>
-      </div>
-      <WriteRefused titleKey="knowledge.new.failed" error={create.error} />
-    </PanelBody>
+    <CreateAction
+      label={t("knowledge.new.title")}
+      invalidate={SETS_KEY[0]}
+      screen="settings"
+      stay
+      testId="new-document-set"
+      fields={[
+        { key: "name", label: "knowledge.new.name", required: true },
+        {
+          key: "topic_statement",
+          label: "knowledge.new.topic",
+          type: "textarea",
+          required: true,
+          // Quoted back verbatim in a refusal, so it asks for a sentence, not a label.
+          hint: t("knowledge.new.topicHint"),
+        },
+      ]}
+      create={async (values) =>
+        unwrap(
+          await api.POST("/knowledge/corpora", {
+            body: {
+              name: (values.name ?? "").trim(),
+              topic_statement: (values.topic_statement ?? "").trim(),
+            },
+          }),
+        )
+      }
+    />
   );
 }

@@ -59,6 +59,7 @@ const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 export function ListSurface({
   title,
+  bare = false,
   views = [],
   activeView = 0,
   onViewChange,
@@ -92,6 +93,11 @@ export function ListSurface({
    * change, or the page is named twice at heading level.
    */
   title?: ReactNode;
+  /**
+   * No count and no toolbar, for a list with nothing to narrow. The header row
+   * stays only for a title, views or a verb.
+   */
+  bare?: boolean;
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
@@ -159,49 +165,53 @@ export function ListSurface({
 
   return (
     <div className="lt">
-      <div className="lt-head">
-        {title && (
-          <Heading size="xlarge" className="lt-title t-display">
-            {title}
-          </Heading>
-        )}
-        {views.length > 0 && (
-          <div className="lt-views">
-            {views.map((view, index) => (
-              <button
-                type="button"
-                key={view.id ?? view.label}
-                className={`lt-vtab${index === activeView ? " on" : ""}`}
-                aria-pressed={index === activeView}
-                onClick={() => onViewChange?.(index)}
-              >
-                {view.label}
-              </button>
-            ))}
+      {(!bare || title || views.length > 0 || action) && (
+        <div className="lt-head">
+          {title && (
+            <Heading size="xlarge" className="lt-title t-display">
+              {title}
+            </Heading>
+          )}
+          {views.length > 0 && (
+            <div className="lt-views">
+              {views.map((view, index) => (
+                <button
+                  type="button"
+                  key={view.id ?? view.label}
+                  className={`lt-vtab${index === activeView ? " on" : ""}`}
+                  aria-pressed={index === activeView}
+                  onClick={() => onViewChange?.(index)}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="lt-head-end">
+            {!bare && <HeadCount>{count}</HeadCount>}
+            <HeadActions>{action}</HeadActions>
           </div>
-        )}
-        <div className="lt-head-end">
-          <HeadCount>{count}</HeadCount>
-          <HeadActions>{action}</HeadActions>
         </div>
-      </div>
+      )}
 
       {caption && <p className="lt-caption">{caption}</p>}
 
-      <Toolbar
-        search={search}
-        sort={sort}
-        sortOptions={sortOptions}
-        chips={chips}
-        chosen={chosen}
-        onChipChange={onChipChange}
-        archived={archived}
-        tools={tools}
-        displayMenu={displayMenu}
-        saveView={saveView}
-        openMenu={openMenu}
-        setOpenMenu={setOpenMenu}
-      />
+      {!bare && (
+        <Toolbar
+          search={search}
+          sort={sort}
+          sortOptions={sortOptions}
+          chips={chips}
+          chosen={chosen}
+          onChipChange={onChipChange}
+          archived={archived}
+          tools={tools}
+          displayMenu={displayMenu}
+          saveView={saveView}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
+        />
+      )}
 
       {children}
 

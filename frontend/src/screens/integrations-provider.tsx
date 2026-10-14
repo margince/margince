@@ -20,8 +20,11 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
-import { ProviderMark } from "../design-system/provider-mark";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  ProviderMark,
+  providerBrandName,
+} from "../design-system/provider-mark";
 import { QueryGate } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -45,12 +48,9 @@ import { recordWriteKeys } from "./recordwritekeys";
 // decide whether new contacts are enriched automatically, and read what the
 // provider says is left against what this installation has spent.
 //
-// Five settings ROWS, in the order a reader needs them: the key that makes any
-// of this possible, the two judgements that spend it, then the two readings
-// those produce. The readings take the full width because a table IS the
-// subject rather than an answer to a question; the key and the switches are
-// answers, so they sit in the right column at the same x as every other card on
-// the page.
+// Rows in the order a reader needs them: the provider with its key verb, then
+// the judgements that spend it. Once a key is stored, the two readings follow,
+// full width, because a reading's table is the subject and not an answer.
 //
 // Disconnect and delete-data are two verbs because they are two decisions.
 // Disconnecting stops new lookups and destroys the key; the data already paid
@@ -86,49 +86,36 @@ export function ProviderCard() {
   const readOnly = me.isSuccess && !canConnect && !canDestroy && !canEdit;
   return (
     <Panel title={t("provider.title")}>
-      {/* The intro pays no bottom padding: whatever the gate renders under it —
-          a skeleton, a refusal, the no-provider state — brings the body's own
-          top padding with it, and two stacked bodies would space them twice. */}
-      <PanelBody className="provider-intro">
+      <PanelBody>
         <PanelIntro>{t("provider.sub")}</PanelIntro>
-        {/* Hoisted OUT of QueryGate, the way the neighbouring webhooks card
-            already does it: the gate's empty and error branches replace their
-            children wholesale, so a posture line nested inside would go quiet
-            in exactly the states — loading, failed, not configured — where a
-            reader is most likely to read the missing controls as a bug. The
-            card keeps its place and says ONCE what a reader without any of the
-            three writes is looking at; the controls below are then simply
-            absent (design-system README, "Absent, disabled, or withheld"). */}
+        {/* Outside the gate: its empty and error branches replace their
+            children, and those are the states where an unexplained absence of
+            controls reads as a bug. */}
         {readOnly && <PanelIntro>{t("provider.readOnly")}</PanelIntro>}
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("provider.title")}>
         {(result) =>
-          // An empty list means the same thing a 501 does: no adapter is
-          // compiled in. The server returns a row for every REGISTERED
-          // provider — including one nobody has connected yet, which is how
-          // the key field appears at all — so "no rows" cannot mean "not
-          // connected", and both cases read as the honest no-provider state.
+          // The server lists every registered provider, connected or not, so
+          // an empty list means no adapter is compiled in, as a 501 does.
           result.notConfigured || result.connections.length === 0 ? (
             <PanelBody>
               <EmptyState>{t("provider.notConfigured")}</EmptyState>
             </PanelBody>
           ) : (
-            <>
-              <PanelBody>
-                <SettingList>
-                  <LookupPostureRow canEdit={canEdit} />
-                </SettingList>
-              </PanelBody>
-              {result.connections.map((connection) => (
-                <ProviderConnectionRow
-                  key={connection.provider}
-                  connection={connection}
-                  canConnect={canConnect}
-                  canDestroy={canDestroy}
-                  canEdit={canEdit}
-                />
-              ))}
-            </>
+            <PanelBody>
+              <SettingList>
+                <LookupPostureRow canEdit={canEdit} />
+                {result.connections.map((connection) => (
+                  <ProviderConnectionRows
+                    key={connection.provider}
+                    connection={connection}
+                    canConnect={canConnect}
+                    canDestroy={canDestroy}
+                    canEdit={canEdit}
+                  />
+                ))}
+              </SettingList>
+            </PanelBody>
           )
         }
       </QueryGate>
@@ -136,7 +123,7 @@ export function ProviderCard() {
   );
 }
 
-function ProviderConnectionRow({
+function ProviderConnectionRows({
   connection,
   canConnect,
   canDestroy,
@@ -150,33 +137,17 @@ function ProviderConnectionRow({
   const t = useT();
   return (
     <>
-      {/* The provider is what this block is ABOUT, so it names it as a
-          heading: the panel's own h2 is "Contact data", and heading navigation
-          that lands there has to be able to step into one provider at a time.
-          The rows under it are named by their own labels rather than by
-          headings — a settings row's naming is the label, which is what puts
-          every answer on this page at one x. */}
-      <PanelRow>
-        <div className="provider-head">
-          <span className="provider-mark">
-            <ProviderMark providerKey={connection.provider} />
-          </span>
-          <Heading size="small" as="h3" className="provider-name">
-            {connection.provider}
-          </Heading>
-          <Badge tone={connectionTone(connection.status)}>
-            {t(connectionLabel(connection.status))}
-          </Badge>
-        </div>
-      </PanelRow>
-      <PanelBody>
-        <SettingList>
-          <CredentialRow
-            connection={connection}
-            canConnect={canConnect}
-            canDestroy={canDestroy}
-          />
-          <PolicyRow connection={connection} canEdit={canEdit} />
+      <CredentialRow
+        connection={connection}
+        canConnect={canConnect}
+        canDestroy={canDestroy}
+      />
+      <LookupBacklogRow connection={connection} />
+      <PricedCategoryRows connection={connection} canEdit={canEdit} />
+      {/* Both readings need a key: without one there is no balance to ask
+          for and nothing has been spent. */}
+      {connection.credential_present && (
+        <>
           <SettingRow
             label={t("provider.credits")}
             layout="stack"
@@ -188,9 +159,41 @@ function ProviderConnectionRow({
             layout="stack"
             control={<SpendReading connection={connection} />}
           />
-        </SettingList>
-      </PanelBody>
+        </>
+      )}
     </>
+  );
+}
+
+/** The provider's display name: its brand where this frontend knows one. */
+function providerName(connection: ProviderConnection): string {
+  return providerBrandName(connection.provider) ?? connection.provider;
+}
+
+// A heading, so heading navigation steps from one provider to the next. A row's
+// label is a span, so the role says what the element cannot.
+function ProviderIdentity({
+  connection,
+}: Readonly<{ connection: ProviderConnection }>) {
+  const t = useT();
+  return (
+    <span className="provider-head">
+      <span className="provider-mark">
+        <ProviderMark providerKey={connection.provider} />
+      </span>
+      <Heading
+        as="span"
+        size="xsmall"
+        role="heading"
+        aria-level={3}
+        className="provider-name"
+      >
+        {providerName(connection)}
+      </Heading>
+      <Badge tone={connectionTone(connection.status)}>
+        {t(connectionLabel(connection.status))}
+      </Badge>
+    </span>
   );
 }
 
@@ -304,21 +307,6 @@ function CreditsReading({
         </p>
       )}
     </div>
-  );
-}
-
-// What each connection adds under the installation's lookup switch: what its
-// free tier covers, what is still waiting to be looked up, and what may be bought.
-function PolicyRow({
-  connection,
-  canEdit,
-}: Readonly<{ connection: ProviderConnection; canEdit: boolean }>) {
-  return (
-    <>
-      <FreeTierNote catalog={connection.catalog ?? []} />
-      <LookupBacklogRow connection={connection} />
-      <PricedCategoryRows connection={connection} canEdit={canEdit} />
-    </>
   );
 }
 
@@ -720,7 +708,7 @@ function CredentialRow({
   return (
     <>
       <SettingRow
-        label={t("provider.apiKey")}
+        label={<ProviderIdentity connection={connection} />}
         description={
           connected ? t("provider.apiKeyReplaceHint") : t("provider.apiKeyHint")
         }
@@ -794,7 +782,9 @@ function CredentialRow({
         confirmVariant="danger"
         title={t("provider.deleteDataConfirm.title")}
         confirmLabel={t("provider.deleteData")}
-        confirmDisabled={typed !== connection.provider}
+        confirmDisabled={
+          typed.trim().toLowerCase() !== providerName(connection).toLowerCase()
+        }
         onConfirm={() => deleteData.mutate()}
         pending={deleteData.isPending}
         error={
@@ -817,34 +807,5 @@ function CredentialRow({
         </Field>
       </ConfirmModal>
     </>
-  );
-}
-
-/** What automatic enrichment actually buys, said where an admin decides
- *  whether to switch it on.
- *
- *  The two toggles below spend nothing: an automatic run takes only the
- *  categories this provider gives away, and every priced one waits for a
- *  human to press a button on one named contact. An admin who does not know
- *  that reads "enrich automatically" as "spend automatically" and leaves the
- *  switch off, which costs them the free half of the product.
- */
-function FreeTierNote({
-  catalog,
-}: Readonly<{ catalog: components["schemas"]["ProviderCategoryCost"][] }>) {
-  const t = useT();
-  const free = catalog.filter((entry) => entry.free);
-  const priced = catalog.filter((entry) => !entry.free);
-  if (free.length === 0) {
-    return null;
-  }
-  return (
-    // Instructional prose, not a notice: it is true on every visit and says
-    // nothing about the surface, so it reads as the list's own lead caption. A
-    // band that never changes teaches a reader to skip it.
-    <div className="provider-free-note">
-      <p>{t("provider.freeTier.hint")}</p>
-      {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
-    </div>
   );
 }
