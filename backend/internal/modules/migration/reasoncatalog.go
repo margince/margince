@@ -356,7 +356,7 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 	}},
 	ReasonAuthorTooLong: {params: []string{"max"}, text: map[textlang.Lang]string{
 		textlang.English:    "author is longer than {max} characters",
-		textlang.German:     "Der Autor ist länger als {max} Zeichen.",
+		textlang.German:     "Der Verfasser ist länger als {max} Zeichen.",
 		textlang.Vietnamese: "Tác giả dài hơn {max} ký tự.",
 	}},
 }

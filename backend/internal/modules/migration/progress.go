@@ -5,6 +5,7 @@ package migration
 
 import (
 	"math"
+	"slices"
 	"time"
 )
 
@@ -68,7 +69,7 @@ func (p *Progress) foldWindow(prior Progress, at time.Time) {
 	if n := len(window); n > 0 && (window[n-1].Done > done || prior.Attempt != p.Attempt) {
 		window = nil
 	}
-	window = append(window[:len(window):len(window)], Sample{At: at, Done: done})
+	window = append(slices.Clip(window), Sample{At: at, Done: done})
 	for len(window) > 2 && at.Sub(window[0].At) > windowSpan {
 		window = window[1:]
 	}
