@@ -164,9 +164,9 @@ check:
 ## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
 ## carries `//go:build integration`, so the lane's packages compile into nothing.
 ##
-## Optional, not the shipping loop: CI runs the whole lane on every backend PR,
-## sharded, and a contributor runs `make test-it DIR=<pkg>` for the packages a
-## change touches. This target is for wanting the whole lane locally anyway.
+## Optional, not the shipping loop: CI runs the whole lane, sharded, on every
+## non-draft backend PR, and a contributor runs `make test-it DIR=<pkg>` for the
+## packages a change touches. This target is for wanting the whole lane locally.
 check-all:
 	@bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "craft static (strict)"

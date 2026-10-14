@@ -165,8 +165,8 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
 2. Run `make check` before you push, `frontend/` and `craft static --strict` included. `check` does
    not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
-   each integration package it touches. CI runs the whole lane on every PR that changes `backend/`;
-   `make check-all` runs it locally.
+   each integration package it touches. CI runs the whole lane on every non-draft PR that changes
+   `backend/`; `make check-all` runs it locally.
 3. Push and open a PR.
 4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
 5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.

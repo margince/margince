@@ -75,7 +75,8 @@ Code, docs and settings all go through the same checks.
 - `make test-integration` is a separate run against a real Postgres, and needs `make db-up`. It tests
   that a workspace sees only its own data, GDPR erase requests, and an audit log no one can change. With
   no database it fails and does not skip, because a skipped security check looks the same as a passed one.
-  CI runs it on every PR that changes backend code. Locally, `make test-it DIR=<pkg>` runs the packages your change touches.
+  CI runs it on every PR that changes backend code, once the PR is ready for review. Locally,
+  `make test-it DIR=<pkg>` runs the packages your change touches.
 - The craftsmanship gate blocks each `BLOCKER` and `MAJOR` finding in the Go code and in the comments
   you add to Go or TypeScript. A `MINOR` finding does not block.
 - Every check in CI must be green before a merge: the same checks, plus review bots and SonarCloud. Fix
