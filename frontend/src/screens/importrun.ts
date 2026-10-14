@@ -97,8 +97,8 @@ export function useUndoImport() {
   });
 }
 
-// Stops a validating run's test. The run returns to its draft with its choices
-// and file kept, and the read above follows it there.
+// Stops a validating run's test, which returns to its draft with its choices
+// and file kept, or cancels a draft. The reads above follow it there.
 export function useStopImportTest() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -112,7 +112,7 @@ export function useStopImportTest() {
 
 // One run's report: the test run's prediction, then what the run did. Keyed by
 // the run's status and version, so a retest never shows the report it replaced.
-// A test still being read has no report to ask for.
+// A draft and a test still being read have no report to ask for.
 export function useImportReport(
   id: string | null,
   status: ImportRun["status"] | undefined,
@@ -121,7 +121,10 @@ export function useImportReport(
   return useQuery({
     queryKey: [IMPORTS_KEY, "report", id, status, version],
     queryFn:
-      id === null || status === undefined || status === "validating"
+      id === null ||
+      status === undefined ||
+      status === "validating" ||
+      status === "pending"
         ? skipToken
         : async () =>
             unwrap(

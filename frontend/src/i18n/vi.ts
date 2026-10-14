@@ -5737,6 +5737,12 @@ export const vi = {
   "import.closed.stopped":
     "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
   "import.closed.upload": "Tải tệp lên",
+  "import.conflictOtherTab":
+    "Lần nhập này đã được đổi ở một tab khác. Màn hình giờ hiện các lựa chọn đã lưu.",
+  "import.superseded": "Một lần chạy thử mới hơn đã thay thế lần nhập này",
+  "import.supersededOpen": "Mở lần chạy thử mới hơn",
+  "import.draft.continue": "Tiếp tục",
+  "import.draft.cancel": "Hủy",
   "import.sourceBusy":
     "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi chạy thử lại.",
   "import.sourceBusyOpen": "Mở lần nhập đó",

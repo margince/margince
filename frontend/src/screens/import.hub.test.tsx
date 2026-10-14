@@ -67,23 +67,41 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
-  it("the hub lists no draft or cancelled run", async () => {
-    stubRoutes({
+  it("lists a draft to continue or cancel, and a canceled run with its replacement", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
       "GET /imports": () =>
         jsonResponse({
           data: [
             { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
-            { ...run, id: "r2", file_name: "gone.csv", status: "cancelled" },
+            {
+              ...run,
+              id: "r2",
+              file_name: "gone.csv",
+              status: "cancelled",
+              superseded_by: "r9",
+            },
             { ...run, id: "r1", file_name: "leads.csv", status: "complete" },
           ],
         }),
     });
     render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    expect(within(rows[1]).getByText("Draft")).toBeVisible();
     expect(
-      await screen.findByRole("link", { name: "leads.csv" }),
-    ).toBeVisible();
-    expect(screen.queryByText("draft.csv")).toBeNull();
-    expect(screen.queryByText("gone.csv")).toBeNull();
+      within(rows[1]).getByRole("link", { name: "Continue" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r3"));
+    expect(within(rows[2]).getByText("Canceled")).toBeVisible();
+    expect(
+      within(rows[2]).getByRole("link", {
+        name: "A newer test run replaced this import",
+      }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r9"));
+
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r3/cancel"),
+    );
   });
 
   it("names who ran an import and how many files and rows it took", async () => {

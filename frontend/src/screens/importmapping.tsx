@@ -197,8 +197,8 @@ export function MapStep({
   const mapping = wizard.mapping[name] ?? {};
   const targets =
     format.files.find((file) => file.object === current.object)?.columns ?? [];
-  const stage = wizard.stage;
-  const refused = stage.error ?? wizard.retest.error;
+  const test = wizard.test;
+  const refused = test.error ?? wizard.saveFailure;
   // A test run that stopped left the run a draft, with the reason on it.
   const stopped =
     wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
@@ -238,7 +238,7 @@ export function MapStep({
         targets={targets}
         file={name}
         mapping={mapping}
-        locked={stage.isPending}
+        locked={test.isPending}
         onChange={(column, target) =>
           wizard.setColumnTarget(name, column, target)
         }
@@ -249,11 +249,9 @@ export function MapStep({
         </Button>
         <Button
           variant="primary"
-          pending={stage.isPending}
+          pending={test.isPending}
           busyLabel={t("import.map.running")}
-          onClick={() => {
-            if (wizard.profile) stage.mutate(wizard.stageInput(wizard.profile));
-          }}
+          onClick={wizard.runTest}
         >
           {t("import.map.run")}
         </Button>

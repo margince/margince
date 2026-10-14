@@ -103,7 +103,7 @@ function TestingBody({ runId }: Readonly<{ runId: string }>) {
   const t = useT();
   const stop = useStopImportTest();
   return (
-    <>
+    <div className="import">
       <PendingBody visible label={t("import.test.testing")} />
       <div className="import__actions">
         <Button pending={stop.isPending} onClick={() => stop.mutate(runId)}>
@@ -113,7 +113,7 @@ function TestingBody({ runId }: Readonly<{ runId: string }>) {
       {stop.error ? (
         <ImportRefusal title={t("import.test.stopFailed")} error={stop.error} />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -133,7 +133,7 @@ function TestRunBody({
   const { locale } = useLocale();
   const invalid = countOf(report.issues, "invalid_value");
   const linkless = countOf(report.issues, "broken_link", "dropped_link");
-  const restaging = wizard.retest.isPending;
+  const restaging = wizard.test.isPending;
   const landing = report.disposition.created + report.disposition.updated;
   return (
     <div className="import">
@@ -162,7 +162,7 @@ function TestRunBody({
         </Callout>
       ) : null}
       <ProblemTable issues={report.issues} />
-      {wizard.profile && linkless > 0 ? (
+      {linkless > 0 ? (
         <Checkbox
           checked={wizard.anyway}
           disabled={restaging}
@@ -203,10 +203,10 @@ function TestRunBody({
           {problemMessageOf(wizard.approve.error, t)}
         </Callout>
       ) : null}
-      {wizard.retest.error ? (
+      {wizard.test.error ? (
         <ImportRefusal
           title={t("import.map.stageFailed")}
-          error={wizard.retest.error}
+          error={wizard.test.error}
         />
       ) : null}
     </div>

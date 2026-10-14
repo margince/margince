@@ -153,7 +153,11 @@ export function FilesStep({
         onChange={wizard.setContextTagID}
       />
       <div className="import__actions">
-        <Button variant="ghost" onClick={wizard.reset}>
+        <Button
+          variant="ghost"
+          pending={wizard.cancelling.isPending}
+          onClick={wizard.cancel}
+        >
           {t("import.wizard.cancel")}
         </Button>
         <Button

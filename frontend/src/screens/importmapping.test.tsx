@@ -11,6 +11,7 @@ import {
   formatFixture,
   jsonResponse,
   render,
+  run,
   stubRoutes,
   zipProfile,
 } from "./import.testkit";
@@ -62,11 +63,10 @@ describe("the map step", () => {
     await user.click(screen.getByRole("option", { name: "Tier" }));
     await user.click(screen.getByRole("button", { name: "Run test" }));
     await waitFor(() =>
-      expect(sent.some((s) => s.path === "POST /imports")).toBe(true),
+      expect(sent.some((s) => s.path.endsWith("/validate"))).toBe(true),
     );
-    expect(sent.find((s) => s.path === "POST /imports")?.body).toEqual({
-      connector: "csv",
-      source_ref: "ws/import/zip",
+    expect(sent.filter((s) => s.method === "PATCH").at(-1)?.body).toEqual({
+      version: run.version,
       parts: [
         {
           file: "companies.csv",
@@ -84,8 +84,7 @@ describe("the map step", () => {
         },
       ],
       source_name: "pipedrive-export",
-      on_broken_link: "skip_row",
-      file_name: "pipedrive-export.zip",
+      draft_step: "map",
     });
   });
 

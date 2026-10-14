@@ -2,28 +2,34 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
+import { useSettledValue } from "../design-system/debouncedsearch";
 import { postMultipart } from "../lib/multipart";
 import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useAddressedRun } from "./importaddress";
 import {
-  defaultSourceName,
-  filesOf,
-  mappedOnly,
-  stepOfRun,
-} from "./importflow";
+  choicesOf,
+  type DraftPatch,
+  type Edits,
+  editsPatch,
+  fullPatch,
+  NO_EDITS,
+  useDraftWrites,
+} from "./importdraft";
+import { defaultSourceName, filesOf, stepOfRun } from "./importflow";
 import { asProfile } from "./importprofile";
 import {
   IMPORTS_KEY,
   useImportReport,
   useImportRun,
   useLandedRecords,
+  useStopImportTest,
   useUndoImport,
 } from "./importrun";
 import type { ImportObject, ImportProfile, ImportRun } from "./importtypes";
-
-type Mapping = Readonly<Record<string, string>>;
+import { settingsHref } from "./settingsrouting";
 
 type UploadInput = Readonly<{
   file: File;
@@ -42,137 +48,93 @@ async function postSource(input: UploadInput): Promise<ImportProfile> {
   return asProfile(payload);
 }
 
-type StageInput = Readonly<{
-  profile: ImportProfile;
-  objects: Readonly<Record<string, ImportObject | null>>;
-  mapping: Readonly<Record<string, Mapping>>;
-  sourceName: string;
-  onBrokenLink: "skip_row" | "drop_link";
-  contextTagID: string;
-}>;
+type Test = Readonly<{ id: string; patch: DraftPatch }>;
 
-// The create request for the files the reader typed: parts for a ZIP, the
-// object and mapping for one CSV. Empty choices are left out, not sent empty.
-function stageBody(input: StageInput) {
-  const typed = filesOf(input.profile).flatMap((file) => {
-    const object = input.objects[file.file];
-    return object
-      ? [
-          {
-            file: file.file,
-            object,
-            mapping: mappedOnly(input.mapping[file.file] ?? {}),
-          },
-        ]
-      : [];
-  });
-  const single = input.profile.parts ? undefined : typed[0];
-  return {
-    connector: "csv" as const,
-    source_ref: input.profile.source_ref,
-    ...(single
-      ? { object: single.object, mapping: single.mapping }
-      : { parts: typed }),
-    ...(input.sourceName.trim() === ""
-      ? {}
-      : { source_name: input.sourceName.trim() }),
-    on_broken_link: input.onBrokenLink,
-    ...(input.profile.file_name ? { file_name: input.profile.file_name } : {}),
-    ...(input.contextTagID === ""
-      ? {}
-      : { context_tag_id: input.contextTagID }),
-  };
-}
-
-type Retest = Readonly<{
-  id: string;
-  version: number;
-  onBrokenLink: "skip_row" | "drop_link";
-}>;
-
-// The run flow: upload, check the files, map their columns, stage a test run,
-// import it and read the result. Every answer carries the generation it was
-// asked in, and an answer from a generation the reader has since left is
-// dropped. The run itself lives in the address, so a reader who leaves comes
-// back to it.
+// The run flow: upload, check the files, map their columns, test, import and
+// read the result. The run is the state: the step, the profile and the choices
+// are read from it, so a reload or a deep link lands where the reader was. Only
+// the upload in flight and the edits not yet answered live here.
 export function useImportWizard() {
   const queryClient = useQueryClient();
   const generation = useRef(0);
-  const [phase, setPhase] = useState<"upload" | "files" | "map">("upload");
   const [source, setSource] = useState<File | null>(null);
-  const [profile, setProfile] = useState<ImportProfile | null>(null);
-  const [objects, setObjects] = useState<
-    Readonly<Record<string, ImportObject | null>>
-  >({});
-  const [mapping, setMapping] = useState<Readonly<Record<string, Mapping>>>({});
-  const [sourceName, setSourceName] = useState("");
-  const [contextTagID, setContextTagID] = useState("");
-  const [anyway, setAnyway] = useState(false);
-  // Whether any run was staged from this upload. It outlives a failed retest,
-  // which leaves the run on the server.
-  const [staged, setStaged] = useState(false);
+  const [edits, setEditsState] = useState<Edits>(NO_EDITS);
+  const latest = useRef(edits);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
   const status = run.data?.status;
   const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
+  const cancelRun = useStopImportTest();
+  const writes = useDraftWrites();
   useLandedRecords([status]);
+
+  // An edit reads the latest edits, not the render's, so two edits in one
+  // tick both land.
+  const edit = (change: (current: Edits) => Edits) => {
+    latest.current = change(latest.current);
+    setEditsState(latest.current);
+  };
 
   const upload = useMutation({
     mutationFn: async (input: UploadInput) => {
       const at = generation.current;
-      return { at, input, profile: await postSource(input) };
+      const profile = await postSource(input);
+      return {
+        at,
+        input,
+        profile,
+        name: defaultSourceName(profile, input.recent),
+      };
     },
-    onSuccess: ({ at, input, profile: next }) => {
+    onSuccess: ({ at, input, profile }) => {
       if (at !== generation.current) return;
-      const files = filesOf(next);
       setSource(input.file);
-      setProfile(next);
-      setObjects(Object.fromEntries(files.map((f) => [f.file, f.detected])));
-      setMapping(
-        Object.fromEntries(
-          files.map((f) => [
-            f.file,
-            f.detected ? (f.suggested[f.detected] ?? {}) : {},
-          ]),
-        ),
-      );
-      if (!input.retype) setSourceName(defaultSourceName(next, input.recent));
-      setPhase("files");
+      edit((current) => ({
+        ...NO_EDITS,
+        step: "files",
+        ...(input.retype
+          ? {
+              sourceName: current.sourceName,
+              contextTagID: current.contextTagID,
+            }
+          : null),
+      }));
+      setRunId(profile.run_id);
     },
   });
 
-  const stage = useMutation({
-    mutationFn: async (input: StageInput) => {
-      const at = generation.current;
-      const run = unwrap(
-        await api.POST("/imports", { body: stageBody(input) }),
-      );
-      return { at, run };
-    },
-    onSuccess: ({ at, run }) => {
-      if (at !== generation.current) return;
-      setStaged(true);
-      retest.reset();
-      setRunId(run.id);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
-  });
+  const profile = run.data?.profile ?? upload.data?.profile ?? null;
+  const zip = profile?.parts !== undefined;
+  const files = profile ? filesOf(profile) : [];
+  const proposedName =
+    upload.data?.name ?? profile?.suggested_source_name ?? "";
+  const choices = choicesOf(files, zip, run.data, edits, proposedName);
+  const draftOpen =
+    profile !== null && (status === undefined || status === "pending");
 
-  // The same run tested again with the one choice changed. The version comes
-  // from the save's answer, so the test reads the save it follows.
-  const retest = useMutation({
-    mutationFn: async ({ id, version, onBrokenLink }: Retest) => {
-      const path = { params: { path: { id } } };
-      const saved = unwrap(
-        await api.PATCH("/imports/{id}", {
-          ...path,
-          body: { version, on_broken_link: onBrokenLink },
-        }),
-      );
+  // Edits settle for a moment, then go to the server as one save.
+  const settled = useSettledValue(edits);
+  const sent = useRef(NO_EDITS);
+  const toSave = editsPatch(
+    files,
+    zip,
+    choicesOf(files, zip, run.data, settled, proposedName),
+    settled,
+  );
+  const { save } = writes;
+  useEffect(() => {
+    if (settled === sent.current || runId === null || !draftOpen) return;
+    sent.current = settled;
+    if (toSave) save(runId, toSave);
+  }, [settled, runId, draftOpen, toSave, save]);
+
+  const test = useMutation({
+    mutationFn: async ({ id, patch }: Test) => {
+      const saved = await writes.patch(id, patch);
       return unwrap(
         await api.POST("/imports/{id}/validate", {
-          ...path,
+          params: { path: { id } },
           body: { version: saved.version },
         }),
       );
@@ -181,8 +143,7 @@ export function useImportWizard() {
   });
 
   // The version is the one the reader's report was read at, so a run that
-  // changed since is refused rather than imported unread. Every write re-reads
-  // on refusal too, so the next attempt carries the version the server holds.
+  // changed since is refused rather than imported unread.
   const approve = useMutation({
     mutationFn: async ({ id, version }: Pick<ImportRun, "id" | "version">) =>
       unwrap(
@@ -194,32 +155,38 @@ export function useImportWizard() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
 
-  const files = profile ? filesOf(profile) : [];
+  const effective = status ?? (profile ? "pending" : undefined);
   const draftStep =
-    phase === "upload" ? (run.data?.draft_step ?? "map") : phase;
-  const step = runId === null ? phase : stepOfRun(status, draftStep);
-  const stageInput = (
-    staged: ImportProfile,
-    dropLinks: boolean = anyway,
-  ): StageInput => ({
-    profile: staged,
-    objects,
-    mapping,
-    sourceName,
-    onBrokenLink: dropLinks ? "drop_link" : "skip_row",
-    contextTagID,
-  });
+    edits.step ?? run.data?.draft_step ?? (run.data ? "map" : "files");
+  const step = runId === null ? "upload" : stepOfRun(effective, draftStep);
+  const anyway = test.isPending
+    ? test.variables?.patch.on_broken_link === "drop_link"
+    : run.data?.on_broken_link === "drop_link";
+
+  const reset = () => {
+    generation.current += 1;
+    upload.reset();
+    test.reset();
+    approve.reset();
+    undo.reset();
+    writes.clearConflict();
+    latest.current = NO_EDITS;
+    sent.current = NO_EDITS;
+    setEditsState(NO_EDITS);
+    setSource(null);
+    setRunId(null);
+  };
 
   return {
     step,
     profile,
     files,
-    objects,
+    objects: choices.objects,
     // A ZIP part's type changes in place, and its mapping starts again from
     // that type's proposal. A single CSV is profiled for one type, so a new
     // type uploads the same file again.
     setFileObject: (file: string, object: ImportObject | null) => {
-      if (profile && !profile.parts && source && object) {
+      if (profile && !zip && source && object) {
         upload.mutate({
           file: source,
           object,
@@ -228,68 +195,82 @@ export function useImportWizard() {
         });
         return;
       }
-      setObjects((current) => ({ ...current, [file]: object }));
       const suggested = files.find((one) => one.file === file)?.suggested;
-      setMapping((current) => ({
+      edit((current) => ({
         ...current,
-        [file]: object ? (suggested?.[object] ?? {}) : {},
+        objects: { ...current.objects, [file]: object },
+        mapping: {
+          ...current.mapping,
+          [file]: object ? (suggested?.[object] ?? {}) : {},
+        },
       }));
     },
-    mapping,
+    mapping: choices.mapping,
     setColumnTarget: (file: string, column: string, target: string) =>
-      setMapping((current) => ({
+      edit((current) => ({
         ...current,
-        [file]: { ...current[file], [column]: target },
+        mapping: {
+          ...current.mapping,
+          [file]: {
+            ...(current.mapping[file] ?? choices.mapping[file]),
+            [column]: target,
+          },
+        },
       })),
-    sourceName,
-    setSourceName,
-    contextTagID,
-    setContextTagID,
+    sourceName: choices.sourceName,
+    setSourceName: (sourceName: string) =>
+      edit((current) => ({ ...current, sourceName })),
+    contextTagID: choices.contextTagID,
+    setContextTagID: (contextTagID: string) =>
+      edit((current) => ({ ...current, contextTagID })),
     runId,
     run,
     report,
     upload,
-    stage,
-    staged,
-    retest,
-    // The files and the map open again while the run is a draft whose upload
-    // this page holds. A staged run was made from them as they were.
-    editable: runId === null || (status === "pending" && profile !== null),
+    test,
+    // Saves the whole draft, then tests it: the test reads what is on screen.
+    runTest: () => {
+      if (runId) {
+        sent.current = latest.current;
+        test.mutate({
+          id: runId,
+          patch: fullPatch(files, zip, choices, run.data),
+        });
+      }
+    },
+    saveFailure: writes.failure,
+    conflict: writes.conflict,
     approve,
     undo,
-    stageInput,
+    // The files and the map open again while the run is a draft whose file
+    // the server still keeps.
+    editable: runId === null || (effective === "pending" && profile !== null),
     anyway,
     // Rows with broken links come in without the link, or stay out. The
     // choice tests the run again, so the report approved is the one shown.
     setAnyway: (next: boolean) => {
-      const current = run.data;
-      if (!current) return;
-      setAnyway(next);
-      retest.mutate({
-        id: current.id,
-        version: current.version,
-        onBrokenLink: next ? "drop_link" : "skip_row",
+      if (runId) {
+        test.mutate({
+          id: runId,
+          patch: { on_broken_link: next ? "drop_link" : "skip_row" },
+        });
+      }
+    },
+    goTo: (next: "files" | "map") =>
+      edit((current) => ({ ...current, step: next })),
+    // Closes the draft on the server and returns to the hub, where it shows
+    // as canceled.
+    cancel: () => {
+      if (runId === null) return;
+      cancelRun.mutate(runId, {
+        onSuccess: () => {
+          reset();
+          navigate(settingsHref("import"));
+        },
       });
     },
-    goTo: (next: "files" | "map") => setPhase(next),
-    reset: () => {
-      generation.current += 1;
-      upload.reset();
-      stage.reset();
-      retest.reset();
-      approve.reset();
-      undo.reset();
-      setAnyway(false);
-      setStaged(false);
-      setPhase("upload");
-      setSource(null);
-      setProfile(null);
-      setObjects({});
-      setMapping({});
-      setSourceName("");
-      setContextTagID("");
-      setRunId(null);
-    },
+    cancelling: cancelRun,
+    reset,
   };
 }
 

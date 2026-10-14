@@ -5863,6 +5863,12 @@ export const de = {
   "import.closed.stopped":
     "Dieser Import wurde angehalten, bevor etwas importiert wurde.",
   "import.closed.upload": "Datei hochladen",
+  "import.conflictOtherTab":
+    "Dieser Import wurde in einem anderen Tab geändert. Der Bildschirm zeigt jetzt die gespeicherten Auswahlen.",
+  "import.superseded": "Ein neuerer Testlauf hat diesen Import ersetzt",
+  "import.supersededOpen": "Neueren Testlauf öffnen",
+  "import.draft.continue": "Fortsetzen",
+  "import.draft.cancel": "Abbrechen",
   "import.sourceBusy":
     "Ein anderer Import mit diesem Quellnamen schreibt noch. Warte, bis er fertig ist, und teste dann erneut.",
   "import.sourceBusyOpen": "Diesen Import öffnen",

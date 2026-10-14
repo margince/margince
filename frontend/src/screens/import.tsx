@@ -27,8 +27,8 @@ import {
   useImportFormat,
   useLandedRecords,
   useRecentImports,
+  useStopImportTest,
   useUndoImport,
-  wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import {
@@ -191,8 +191,9 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const recent = useRecentImports();
-  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
+  const runs = recent.data ?? [];
   useLandedRecords(runs.map((one) => one.status));
+  const cancel = useStopImportTest();
   const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);
@@ -240,6 +241,14 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                             ? t("import.recent.filesBy", { files, name: by })
                             : files}
                         </div>
+                        {one.superseded_by ? (
+                          <a
+                            className="t-caption"
+                            href={runHref(one.superseded_by)}
+                          >
+                            {t("import.superseded")}
+                          </a>
+                        ) : null}
                       </>
                     );
                   },
@@ -263,8 +272,26 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                   key: "actions",
                   header: t("import.recent.col.actions"),
                   headerHidden: true,
-                  render: (one) =>
-                    one.status === "complete" ? (
+                  render: (one) => {
+                    if (one.status === "pending") {
+                      return (
+                        <div className="cell-actions">
+                          <a className="link-button" href={runHref(one.id)}>
+                            {t("import.draft.continue")}
+                          </a>
+                          <Button
+                            variant="ghost"
+                            pending={
+                              cancel.isPending && cancel.variables === one.id
+                            }
+                            onClick={() => cancel.mutate(one.id)}
+                          >
+                            {t("import.draft.cancel")}
+                          </Button>
+                        </div>
+                      );
+                    }
+                    return one.status === "complete" ? (
                       <div className="cell-actions">
                         <Button
                           variant="ghost"
@@ -273,7 +300,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                           {t("import.recent.undo")}
                         </Button>
                       </div>
-                    ) : null,
+                    ) : null;
+                  },
                 },
               ]}
             />
