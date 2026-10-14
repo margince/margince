@@ -245,6 +245,9 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
 	}
 	if err == nil {
+		err = deleteTagInterestReadsFor(ctx, tx, id)
+	}
+	if err == nil {
 		err = deleteConversationClaimsFor(ctx, tx, id)
 	}
 	if err == nil {

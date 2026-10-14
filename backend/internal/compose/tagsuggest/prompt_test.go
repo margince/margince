@@ -51,6 +51,9 @@ func TestAMailIsShownWithoutItsQuotedHistory(t *testing.T) {
 	if strings.Contains(prompt, "newsletter") {
 		t.Errorf("the quoted history reached the prompt:\n%s", prompt)
 	}
+	if !strings.Contains(prompt, "Yes, send the quote.") {
+		t.Errorf("the sender's own line is missing from the prompt:\n%s", prompt)
+	}
 }
 
 func TestTheVocabularyDigestMovesWithATagAndNotWithTheirOrder(t *testing.T) {

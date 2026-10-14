@@ -3,12 +3,8 @@
 
 package compose
 
-// The tag scout proposes a suggestible tag on the contact or company that a
-// captured mail, meeting, note or call is filed under. With a model bound, the
-// model reads each item against the tag descriptions (tagsuggestpass.go).
-// Without one, a phrase from the description (split on commas, semicolons and
-// line breaks) fires it. Private mail counts, because collections shows each
-// suggestion only to a reader who may read every activity it cites.
+// Private mail counts, because collections shows each suggestion only to a
+// reader who may read every activity it cites.
 
 import (
 	"context"
@@ -108,9 +104,6 @@ func tagScoutDrafts(found []tagScoutRow) []collections.TagSuggestionDraft {
 	return out
 }
 
-// tagScoutCitable is an activity the scout may read and cite: captured
-// correspondence that is live, unrestricted and not labelled noise. a names the
-// activity table.
 func tagScoutCitable(a string) string {
 	return a + `.kind IN ('email', 'meeting', 'note', 'call')
 	     AND ` + a + `.archived_at IS NULL AND ` + auth.ActivityAvailableClause(a) + `
@@ -138,10 +131,7 @@ func tagScoutSQL(since, now time.Time) (string, []any) {
 	return query, args
 }
 
-// tagScoutRankedSQL closes a query whose ev CTE pairs tags with cited
-// activities. It keeps records the tag may be proposed on and evidence newer
-// than the last decision, at most tagScoutItemCap per tag and record, newest
-// first.
+// tagScoutRankedSQL closes a query whose ev CTE pairs tags with cited activities.
 func tagScoutRankedSQL() string {
 	candidate := func(entityType string) string {
 		return `(ev.entity_type = '` + entityType + `' AND ` +

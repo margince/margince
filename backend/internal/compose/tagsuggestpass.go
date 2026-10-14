@@ -3,18 +3,13 @@
 
 package compose
 
-// The tag scout's model path. A pass asks the model about the captured items
-// whose answer is missing or stale, and stores each answer in the read ledger.
-// It then raises suggestions from every current answer in the window, as the
-// phrase pass raises them from phrase matches. No transaction is open while
-// the model is asked.
+// No transaction is open while the model is asked.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"time"
 
@@ -32,7 +27,6 @@ import (
 // pass reaches the rest, newest first.
 const tagSuggestItemCap = 200
 
-// tagSuggestBodySQL is the bounded body the prompt reads. a names the activity.
 func tagSuggestBodySQL(a string) string {
 	return `left(coalesce(` + a + `.body, ''), ` + strconv.Itoa(tagSuggestBodyLimit) + `)`
 }
@@ -55,12 +49,28 @@ func NewTagSuggester(pool *pgxpool.Pool, brain completer, log *slog.Logger) *Tag
 	return &TagSuggester{pool: pool, brain: brain, log: log}
 }
 
-// tagSuggestCandidate is one item to ask about, with the digest of the text the
-// prompt shows. shared is true when every workspace reader may read it.
+// tagSuggestReadersSQL keys an item by what auth.ActivityContentClause reads of
+// it: its links and the seats its attendance arm admits. A task's arm also reads
+// its source, but no task is citable. A limited audience is NULL.
+func tagSuggestReadersSQL(a string) string {
+	return `CASE WHEN ` + a + `.audience = 'workspace' THEN
+	  coalesce((SELECT string_agg(DISTINCT link, ',' ORDER BY link) FROM (
+	    SELECT l.entity_type || ':' || coalesce(l.contact_id, l.company_id, l.deal_id, l.lead_id, l.project_id)::text
+	      FROM activity_link l WHERE l.activity_id = ` + a + `.id) AS links(link)), '')
+	  || ';' ||
+	  coalesce((SELECT string_agg(DISTINCT seat::text, ',' ORDER BY seat::text) FROM (
+	    SELECT ci.user_id FROM capture_import ci WHERE ci.activity_id = ` + a + `.id
+	    UNION SELECT ap.user_id FROM activity_participant ap
+	     WHERE ap.activity_id = ` + a + `.id AND ap.user_id IS NOT NULL AND ap.address IS NOT NULL) AS attendance(seat)), '')
+	END`
+}
+
+// tagSuggestCandidate is one item to ask about. readers is nil when the item
+// is asked alone; items with equal readers have one reader set.
 type tagSuggestCandidate struct {
 	item          tagsuggest.Item
 	contentDigest string
-	shared        bool
+	readers       *string
 }
 
 // tagSuggestBacklog is what a pass reads before it asks the model anything.
@@ -125,20 +135,24 @@ func (s *TagSuggester) askBacklog(ctx context.Context, backlog tagSuggestBacklog
 	return read, nil
 }
 
-// tagSuggestBatches groups candidates for the model. A batch's answer for one
-// item can borrow from another, so an item not every reader may read is asked
-// alone.
+// tagSuggestBatches batches items that share one reader set. An answer for one
+// item can borrow from another, and it shows to that item's readers.
 func tagSuggestBatches(candidates []tagSuggestCandidate) [][]tagSuggestCandidate {
-	var solo [][]tagSuggestCandidate
-	var open []tagSuggestCandidate
+	var batches [][]tagSuggestCandidate
+	filling := map[string]int{}
 	for _, c := range candidates {
-		if !c.shared {
-			solo = append(solo, []tagSuggestCandidate{c})
+		if c.readers == nil {
+			batches = append(batches, []tagSuggestCandidate{c})
 			continue
 		}
-		open = append(open, c)
+		if i, ok := filling[*c.readers]; ok && len(batches[i]) < tagSuggestBatchSize {
+			batches[i] = append(batches[i], c)
+			continue
+		}
+		filling[*c.readers] = len(batches)
+		batches = append(batches, []tagSuggestCandidate{c})
 	}
-	return append(slices.Collect(slices.Chunk(open, tagSuggestBatchSize)), solo...)
+	return batches
 }
 
 // phrasePass runs the phrase scout in its own transaction, adding to so far.
@@ -173,7 +187,7 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 		}
 		query := `
 			SELECT a.id, a.kind, coalesce(a.subject, ''), ` + tagSuggestBodySQL("a") + `, a.occurred_at,
-			       ` + tagSuggestContentDigestSQL("a") + `, a.audience = 'workspace'
+			       ` + tagSuggestContentDigestSQL("a") + `, ` + tagSuggestReadersSQL("a") + `
 			  FROM activity a
 			 WHERE ` + tagScoutCitable("a") + `
 			   AND a.occurred_at > ` + arg(now.Add(-tagScoutWindow)) + ` AND a.occurred_at <= ` + arg(now) + `
@@ -189,7 +203,7 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 		backlog.candidates, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (tagSuggestCandidate, error) {
 			var c tagSuggestCandidate
 			err := row.Scan(&c.item.ID, &c.item.Kind, &c.item.Subject, &c.item.Body, &c.item.OccurredAt,
-				&c.contentDigest, &c.shared)
+				&c.contentDigest, &c.readers)
 			return c, err
 		})
 		if err != nil {
@@ -246,8 +260,8 @@ func (s *TagSuggester) judgeBatch(ctx context.Context, backlog tagSuggestBacklog
 }
 
 // judgeEach asks about each item in its own call. An item every rung declines
-// is stored with no tag, so it is not asked about again until its text or the
-// vocabulary changes.
+// is stored with no tag until its text or the vocabulary changes. The owed and
+// capture sweeps record a decline alike: asking again each pass buys no answer.
 func (s *TagSuggester) judgeEach(ctx context.Context, backlog tagSuggestBacklog, batch []tagSuggestCandidate, calls *sweepCalls) (int, error) {
 	read := 0
 	for _, c := range batch {
@@ -308,6 +322,6 @@ func (s *TagSuggester) storeTagSuggestAnswers(ctx context.Context, vocabulary st
 		}
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return collections.RecordTagInterestAnswersTx(ctx, tx, vocabulary, stored)
+		return collections.RecordTagInterestAnswersTx(ctx, tx, vocabulary, tagSuggestContentDigestSQL, stored)
 	})
 }

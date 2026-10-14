@@ -83,8 +83,8 @@ var mirroredTasks = gatekit.Waive(map[string]string{
 	"rate_extract":                    "an FX rate read from a source",
 })
 
-// divergentTasks are declared HERE and known to be absent upstream — the four
-// #1277 names, minus the one #1254 added deliberately.
+// divergentTasks are declared here and known to be absent upstream: three of the
+// four #1277 names, #1254 having added the fourth, and tag_suggest after them.
 //
 // Each entry names the issue that will reconcile it. They are ratified rather
 // than removed because the binary is built from this copy and is complete: the
@@ -94,7 +94,7 @@ var divergentTasks = gatekit.Waive(map[string]string{
 	"growth_fit":     "shipped with the growth-fit feature and never reconciled upstream. #1277 half one",
 	"signal_extract": "shipped with material-event extraction and never reconciled upstream. #1277 half one",
 	"site_triage":    "shipped with the site-triage feature and never reconciled upstream. #1277 half one",
-	"tag_suggest":    "shipped with model tag suggestions and never reconciled upstream. #1277 half one",
+	"tag_suggest":    "added with the model path of the tag scout, after #1277 was filed. The upstream contract has not been edited to carry it, and that edit is made outside this repository, so it waits on the editorial pass of #1277 half one with the three above",
 })
 
 // mirroredTiers and divergentTiers are the same pair for the tier vocabulary,

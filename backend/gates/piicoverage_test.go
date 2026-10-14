@@ -281,6 +281,11 @@ var piiTables = map[string]piiHandling{
 	// a subject asking what we concluded about their mail is asking for exactly
 	// this.
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
+	// Which tags the model read as the subject's interests in one message, and a
+	// digest of its text. Deleted by statement, since erasure never deletes the
+	// activity. Not exported, like transcript_read: a machine reading whose
+	// visible result is the tag suggestion.
+	"tag_interest_read": {erasureWrite: true, sarRead: false},
 	// A claim carries a VERBATIM quotation of the activity it was read from —
 	// the writer refuses one that does not — so the row is a copy of the
 	// subject's own words held outside the message. It goes when the body goes,

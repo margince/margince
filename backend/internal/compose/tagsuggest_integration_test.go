@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -66,6 +67,22 @@ func (b *tagBrainStub) Complete(_ context.Context, req model.Request) (model.Res
 	}
 	payload, err := json.Marshal(tagSuggestPayload{Items: answers})
 	return model.Response{Text: string(payload)}, err
+}
+
+// CompleteValidated is the router's structured pipeline in small: three
+// attempts, then ErrOutputRejected.
+func (b *tagBrainStub) CompleteValidated(ctx context.Context, req model.Request, validate ai.Validator) (model.Response, error) {
+	var refused error
+	for range 3 {
+		resp, err := b.Complete(ctx, req)
+		if err != nil {
+			return resp, err
+		}
+		if refused = validate(resp.Text); refused == nil {
+			return resp, nil
+		}
+	}
+	return model.Response{}, fmt.Errorf("%w: %w", ai.ErrOutputRejected, refused)
 }
 
 // askedAbout lists the item ids the stub was asked about, across calls.
@@ -182,7 +199,7 @@ func TestEditingASuggestibleTagReadsTheWindowAgain(t *testing.T) {
 	}
 }
 
-func TestAReplyNamingAnUnsentItemOrAnUnlistedTagWritesNothing(t *testing.T) {
+func TestAReplyNamingAnUnsentItemOrAnUnlistedTagIsStoredTagless(t *testing.T) {
 	for name, reply := range map[string]func(items []string) string{
 		"an unlisted tag": func(items []string) string {
 			return `{"items":[{"id":"` + items[0] + `","tags":["` + ids.NewV7().String() + `"]}]}`
@@ -195,14 +212,17 @@ func TestAReplyNamingAnUnsentItemOrAnUnlistedTagWritesNothing(t *testing.T) {
 			e := setupTagScout(t)
 			e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 			dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
-			e.note(e.Admin(), t, "note", "We close the month in Excel.", dana, clocktest.Now(t).Add(-time.Hour))
+			note := e.note(e.Admin(), t, "note", "We close the month in Excel.", dana, clocktest.Now(t).Add(-time.Hour))
 			brain := &tagBrainStub{reply: func(items []string) (string, error) { return reply(items), nil }}
 
-			if _, err := e.suggest(t, brain); err == nil {
-				t.Fatal("the pass accepted a reply outside what it asked")
+			if pass := e.mustSuggest(t, brain); pass.Raised != 0 {
+				t.Fatalf("a refused reply raised %d suggestions, want 0", pass.Raised)
 			}
-			if n := e.WsCount(t, `SELECT (SELECT count(*) FROM tag_suggestion) + (SELECT count(*) FROM tag_interest_read)`); n != 0 {
-				t.Fatalf("%d rows written from a refused reply, want 0", n)
+			if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion`); n != 0 {
+				t.Fatalf("%d suggestions written from a refused reply, want 0", n)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM tag_interest_read WHERE activity_id = $1 AND tag_ids = '{}'`, note); n != 1 {
+				t.Fatalf("the refused item has %d tagless ledger rows, want 1", n)
 			}
 		})
 	}
@@ -364,25 +384,29 @@ func TestARefiledItemIsSuggestedOnItsNewRecordWithoutAskingAgain(t *testing.T) {
 
 func TestAnswersPastThePassBudgetAreRaisedOnLaterPasses(t *testing.T) {
 	e := setupTagScout(t)
-	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
-	support := e.tag(t, "Premium support", "wants a named contact when something breaks", true)
-	// Each item answers for both tags on its own record: two pairs an item.
-	items := tagSuggestItemCap/2 + 10
+	// Each item sits on its own record, so it is asked alone and answers for
+	// every tag: one pair per tag an item.
+	cues := map[string]ids.TagID{}
+	for _, cue := range []string{"Excel", "outage", "pricing", "training", "renewal", "audit"} {
+		cues[cue] = e.tag(t, "Interest in "+cue, "talks about "+cue, true)
+	}
+	items := tagScoutSuggestionCap/len(cues) + 1
 	e.WsExec(t, `WITH pairs AS (SELECT uuidv7() AS contact, uuidv7() AS activity FROM generate_series(1, $1::int)),
 		  c AS (INSERT INTO contact (id, full_name, source, captured_by) SELECT contact, 'Buyer', 'seed', 'system' FROM pairs),
 		  a AS (INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
-		        SELECT activity, 'note', 'Call', 'Excel, and a named contact please.', $2, 'seed', 'system' FROM pairs)
+		        SELECT activity, 'note', 'Call', 'Excel, outage, pricing, training, renewal, audit.', $2, 'seed', 'system' FROM pairs)
 		INSERT INTO activity_link (activity_id, entity_type, contact_id) SELECT activity, 'contact', contact FROM pairs`,
 		items, clocktest.Now(t).Add(-time.Hour))
-	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration, "named contact": support}}
+	brain := &tagBrainStub{cues: cues}
 
 	if pass := e.mustSuggest(t, brain); pass.Raised != tagScoutSuggestionCap {
 		t.Fatalf("the first pass raised %d, want the budget of %d", pass.Raised, tagScoutSuggestionCap)
 	}
 	calls := len(brain.prompts)
-	if pass := e.mustSuggest(t, brain); pass.Raised != 2*items-tagScoutSuggestionCap || len(brain.prompts) != calls {
+	left := len(cues)*items - tagScoutSuggestionCap
+	if pass := e.mustSuggest(t, brain); pass.Raised != left || len(brain.prompts) != calls {
 		t.Fatalf("the next pass raised %d with %d new calls, want the %d left over and no call",
-			pass.Raised, len(brain.prompts)-calls, 2*items-tagScoutSuggestionCap)
+			pass.Raised, len(brain.prompts)-calls, left)
 	}
 }
 
@@ -419,10 +443,9 @@ func TestADeclinedItemIsStoredWithNoTagAndItsSiblingRaises(t *testing.T) {
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
-	bea := e.SeedContact(t, "Bea Buyer", &e.Rep1)
 	at := clocktest.Now(t).Add(-time.Hour)
 	hostile := e.note(e.Admin(), t, "note", "Excel "+hostileMarker, dana, at)
-	e.note(e.Admin(), t, "note", "Excel at month-end.", bea, at)
+	e.note(e.Admin(), t, "note", "Excel at month-end.", dana, at)
 	brain := &withholdingWhere{inner: &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}}
 
 	if pass := e.mustSuggest(t, brain); pass.Raised != 1 {
@@ -431,7 +454,101 @@ func TestADeclinedItemIsStoredWithNoTagAndItsSiblingRaises(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM tag_interest_read WHERE activity_id = $1 AND tag_ids = '{}'`, hostile); n != 1 {
 		t.Fatalf("the declined item has %d tagless ledger rows, want 1", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion WHERE contact_id = $1`, dana); n != 0 {
-		t.Fatalf("the declined item raised %d suggestions, want 0", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion_evidence WHERE activity_id = $1`, hostile); n != 0 {
+		t.Fatalf("the declined item is cited by %d suggestions, want 0", n)
+	}
+}
+
+// batchedWith maps each item id to the ids asked beside it in one call.
+func batchedWith(brain *tagBrainStub) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for _, req := range brain.prompts {
+		spans := fencedSpans(req.System, req.Messages[0].Content)
+		for _, a := range spans {
+			if out[a.id] == nil {
+				out[a.id] = map[string]bool{}
+			}
+			for _, b := range spans {
+				out[a.id][b.id] = a.id != b.id
+			}
+		}
+	}
+	return out
+}
+
+func TestItemsShareACallWhenTheyShareTheirReaders(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	carl := e.SeedContact(t, "Carl Buyer", &e.Rep3)
+	at := clocktest.Now(t).Add(-time.Hour)
+	first := e.note(e.Admin(), t, "note", "Excel at month-end.", dana, at)
+	second := e.note(e.Admin(), t, "note", "Thanks for lunch.", dana, at)
+	elsewhere := e.note(e.Admin(), t, "note", "Agenda attached.", carl, at)
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
+
+	e.mustSuggest(t, brain)
+	together := batchedWith(brain)
+	if together[elsewhere.String()][first.String()] || together[elsewhere.String()][second.String()] {
+		t.Fatal("an item on another rep's contact was asked beside items on Dana")
+	}
+	if !together[first.String()][second.String()] {
+		t.Fatal("two items on the same record were asked apart, want one call")
+	}
+}
+
+func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	bea := e.SeedContact(t, "Bea Buyer", &e.Rep1)
+	at := clocktest.Now(t).Add(-time.Hour)
+	purged := e.note(e.Admin(), t, "note", "Excel at month-end.", dana, at)
+	subjects := e.note(e.Admin(), t, "note", "Excel, still.", bea, at)
+	e.mustSuggest(t, &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}})
+
+	retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default())
+	if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{purged}, privacy.PurgeOwnerRule); err != nil {
+		t.Fatalf("purging the note: %v", err)
+	}
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), bea, "subject request"); err != nil {
+		t.Fatalf("erasing Bea: %v", err)
+	}
+	for name, id := range map[string]ids.UUID{"the purged note": purged, "the erased subject's note": subjects} {
+		if n := e.WsCount(t, `SELECT count(*) FROM tag_interest_read WHERE activity_id = $1`, id); n != 0 {
+			t.Errorf("%s keeps %d ledger rows, want 0", name, n)
+		}
+	}
+}
+
+func TestAnItemErasedOrEditedWhileTheModelReadsItStoresNothing(t *testing.T) {
+	for name, change := range map[string]func(e *tagScoutEnv, t *testing.T, id ids.UUID){
+		"erased": func(e *tagScoutEnv, t *testing.T, id ids.UUID) {
+			retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default())
+			if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{id}, privacy.PurgeOwnerRule); err != nil {
+				t.Fatalf("purging the note: %v", err)
+			}
+		},
+		"edited": func(e *tagScoutEnv, t *testing.T, id ids.UUID) {
+			e.WsExec(t, `UPDATE activity SET body = 'Excel is gone, all on the new ledger.' WHERE id = $1`, id)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupTagScout(t)
+			migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+			dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+			note := e.note(e.Admin(), t, "note", "We close the month in Excel.", dana, clocktest.Now(t).Add(-time.Hour))
+			brain := &tagBrainStub{
+				cues:   map[string]ids.TagID{"Excel": migration},
+				during: func() { change(e, t, note) },
+			}
+
+			if pass := e.mustSuggest(t, brain); pass.Raised != 0 {
+				t.Fatalf("the pass raised %d from text that changed under it, want 0", pass.Raised)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM tag_interest_read WHERE activity_id = $1`, note); n != 0 {
+				t.Fatalf("%d ledger rows stored for text that changed under the model, want 0", n)
+			}
+		})
 	}
 }
