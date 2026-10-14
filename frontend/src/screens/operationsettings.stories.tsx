@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentType } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { defaultOperations } from "./operationsettings.fixtures";
 import {
@@ -62,4 +63,20 @@ export const SendPacingCannotChangeDark: Story = {
 export const SchedulesAtPhoneWidth: Story = {
   ...Schedules,
   tags: ["uat-phone"],
+};
+
+// Opened, with a value under the row's floor typed in: the range shows only
+// now, in the row's own unit.
+export const SchedulesOpenRefused: Story = {
+  render: story(BackgroundSchedulesCard, MANAGER),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("All schedules"));
+    const box = await canvas.findByTestId(
+      "operation-close_date_sweep_interval_seconds",
+    );
+    await userEvent.clear(box);
+    await userEvent.type(box, "59{Enter}");
+    await expect(box).toHaveAttribute("aria-invalid", "true");
+  },
 };

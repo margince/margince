@@ -52,6 +52,20 @@ export function useEmbedReindexAvailable(): boolean {
 }
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
 
+export function useEmbedReindexStatus(enabled: boolean) {
+  return useQuery({
+    queryKey: embedReindexStatusQueryKey,
+    enabled,
+    queryFn: async (): Promise<ReindexStatus> => {
+      const data = unwrap(await api.GET("/embeddings/reindex/status"));
+      if (!data) {
+        throw new Error("malformed reindex status response");
+      }
+      return data;
+    },
+  });
+}
+
 // impactLabel names the HYPOTHETICAL post-reindex band the estimator
 // disclosed (utilization_impact) — distinct copy from aiusage's bandLabel,
 // which names the workspace's CURRENT band ("economy mode" reads wrong for
@@ -241,17 +255,7 @@ export function EmbedReindexCard() {
     setPreviewedIdentity(null);
   };
 
-  const status = useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled: canRead && bound,
-    queryFn: async (): Promise<ReindexStatus> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
+  const status = useEmbedReindexStatus(canRead && bound);
 
   // Fetched only once the dialog is open (ADR-0020 preview-before-spend):
   // the estimate is what the operator is about to consent to, not a figure

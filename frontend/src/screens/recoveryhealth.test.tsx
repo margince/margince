@@ -97,9 +97,12 @@ it("says outright that no drill was ever recorded", async () => {
 
   render(<RecoveryHealthCard />);
 
-  expect(
-    await screen.findByText(/No restore drill has been recorded/),
-  ).toBeInTheDocument();
+  const never = await screen.findByText(/No restore drill has been recorded/);
+  // One line in the intro's own band, not a drill row holding an empty plate.
+  expect(never.closest(".panel-body")).toBe(
+    screen.getByText(/When the restore from backup/).closest(".panel-body"),
+  );
+  expect(screen.queryByText("Last restore drill")).not.toBeInTheDocument();
   // Backups are not something Margince can see, and the card says so rather
   // than inventing a time.
   expect(screen.getByText("Not observed by Margince")).toBeInTheDocument();

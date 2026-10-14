@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { TableScroll } from "./atoms";
 
 const meta: Meta<typeof TableScroll> = {
@@ -75,5 +75,72 @@ export const ScrollsSideways: Story = {
       name: "Recent invoices",
     });
     await expect(region).toHaveAttribute("tabindex", "0");
+  },
+};
+
+const USAGE_COLUMNS = ["Calls", "Input", "Output", "Cached", "Estimated cost"];
+
+function ModelUsage() {
+  return (
+    <table className="table">
+      <thead>
+        <tr>
+          <th scope="col">Model</th>
+          {USAGE_COLUMNS.map((column) => (
+            <th key={column} scope="col" className="t-num">
+              {column}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {["claude-sonnet", "claude-haiku"].map((model) => (
+          <tr key={model}>
+            <th scope="row">{model}</th>
+            {USAGE_COLUMNS.map((column) => (
+              <td key={column} className="t-num">
+                1,204,310
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+const endShade = (region: HTMLElement) =>
+  getComputedStyle(region).backgroundSize.split(" ")[0];
+
+// On a phone the end edge shades while columns lie past it, so a reader knows
+// the table scrolls.
+export const EndEdgeOnPhone: Story = {
+  render: () => (
+    <div style={{ padding: "var(--padCard)" }}>
+      <TableScroll label="Usage by model" stickyFirst>
+        <ModelUsage />
+      </TableScroll>
+    </div>
+  ),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const region = await within(canvasElement).findByRole("region", {
+      name: "Usage by model",
+    });
+    await waitFor(() => expect(endShade(region)).not.toBe("0px"));
+  },
+};
+
+// Scrolled to the end, nothing lies past the edge, so the shade is gone.
+export const ScrolledToTheEnd: Story = {
+  ...EndEdgeOnPhone,
+  play: async ({ canvasElement }) => {
+    const region = await within(canvasElement).findByRole("region", {
+      name: "Usage by model",
+    });
+    region.scrollLeft = region.scrollWidth;
+    await waitFor(() => expect(endShade(region)).toBe("0px"));
   },
 };

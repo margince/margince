@@ -2,19 +2,33 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
+import { formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
+type Words = Readonly<{
+  t: Translator;
+  plural: PluralTranslator;
+  locale: Locale;
+}>;
 
 // The bounds the API refuses past, mirrored so a value out of range is refused
 // in the box before the request. Keyed by the wire property, which is how
@@ -92,26 +106,60 @@ const PACING_ROWS: readonly OperationRow[] = [
   { property: "send_max_age_hours", copy: "sendMaxAge" },
 ];
 
-// The wire property names its unit, so the reading follows the property.
+type Unit = "seconds" | "hours";
+
+// The wire property names its unit; a count such as the send limit has none.
+function unitOf(row: OperationRow): Unit | undefined {
+  if (row.property.endsWith("_hours")) return "hours";
+  if (row.property.endsWith("_seconds")) return "seconds";
+  return undefined;
+}
+
+const UNIT_SECONDS: Record<Unit, number> = { seconds: 1, hours: 3_600 };
+
+// The box holds the wire's unit. The line under it names that unit and, where
+// it differs, the span in words ("86,400 seconds = 1 day").
 function inWords(
   row: OperationRow,
-  t: Translator,
-  locale: Locale,
+  { t, plural, locale }: Words,
 ): ((typed: number) => string) | undefined {
-  const per = row.property.endsWith("_hours")
-    ? 3_600
-    : row.property.endsWith("_seconds")
-      ? 1
-      : undefined;
-  if (per === undefined) {
+  const unit = unitOf(row);
+  if (unit === undefined) {
     return undefined;
   }
-  return (typed) =>
-    typed === 0 && row.lowestOn !== undefined
-      ? t("operations.off")
-      : t("operations.inWords", {
-          interval: formatInterval(typed * per, locale),
-        });
+  return (typed) => {
+    if (typed === 0 && row.lowestOn !== undefined) {
+      return t("operations.off");
+    }
+    const count = formatNumber(typed, locale);
+    const amount =
+      unit === "hours"
+        ? plural("operations.unit.hours", typed, { count })
+        : plural("operations.unit.seconds", typed, { count });
+    const interval = formatInterval(typed * UNIT_SECONDS[unit], locale);
+    return amount === interval
+      ? interval
+      : t("operations.reading", { amount, interval });
+  };
+}
+
+// The range is said only once a typed value breaks it, in the row's own unit.
+function refusalOf(row: OperationRow, { t, locale }: Words): string {
+  const bounds = OPERATION_BOUNDS[row.property];
+  const range = {
+    min: formatNumber(row.lowestOn ?? bounds.min, locale),
+    max: formatNumber(bounds.max, locale),
+  };
+  const unit = unitOf(row);
+  if (unit === "hours") {
+    return t("operations.refusal.hours", range);
+  }
+  if (unit === undefined) {
+    return t("operations.refusal.count", range);
+  }
+  return row.lowestOn === undefined
+    ? t("operations.refusal.seconds", range)
+    : t("operations.refusal.secondsOrOff", range);
 }
 
 // One card over a slice of the installation's operating values. The page opens
@@ -122,9 +170,18 @@ function OperationsCard({
   title,
   sub,
   rows,
-}: Readonly<{ title: string; sub: string; rows: readonly OperationRow[] }>) {
+  fold,
+}: Readonly<{
+  title: string;
+  sub: string;
+  rows: readonly OperationRow[];
+  /** Folds the rows behind this summary, for values seldom changed. */
+  fold?: string;
+}>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const words = { t, plural, locale };
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
@@ -132,33 +189,37 @@ function OperationsCard({
   if (!canRead) {
     return null;
   }
+  const list = (
+    <QueryGate query={query} pendingLabel={title}>
+      {(settings) => (
+        <SettingList bleed={fold ? undefined : "settings"}>
+          {rows.map((row) => (
+            <NumberSettingRow
+              key={row.property}
+              label={t(`operations.${row.copy}.label`)}
+              description={t(`operations.${row.copy}.help`)}
+              testId={`operation-${row.property}`}
+              value={settings.operations[row.property]}
+              {...OPERATION_BOUNDS[row.property]}
+              lowestOn={row.lowestOn}
+              refusal={refusalOf(row, words)}
+              reading={inWords(row, words)}
+              disabled={!canManage || update.isPending}
+              onCommit={(next) => update.mutate({ [row.property]: next })}
+            />
+          ))}
+        </SettingList>
+      )}
+    </QueryGate>
+  );
   return (
     <Panel title={title}>
       <PanelBody className="form-stack">
         <PanelIntro>{sub}</PanelIntro>
         {!canManage && <PanelIntro>{t("operations.adminOnly")}</PanelIntro>}
+        {fold && <Disclosure summary={fold}>{list}</Disclosure>}
       </PanelBody>
-      <QueryGate query={query} pendingLabel={title}>
-        {(settings) => (
-          <SettingList bleed="settings">
-            {rows.map((row) => (
-              <NumberSettingRow
-                key={row.property}
-                label={t(`operations.${row.copy}.label`)}
-                description={t(`operations.${row.copy}.help`)}
-                testId={`operation-${row.property}`}
-                value={settings.operations[row.property]}
-                {...OPERATION_BOUNDS[row.property]}
-                lowestOn={row.lowestOn}
-                refusal={t("operations.refusal")}
-                reading={inWords(row, t, locale)}
-                disabled={!canManage || update.isPending}
-                onCommit={(next) => update.mutate({ [row.property]: next })}
-              />
-            ))}
-          </SettingList>
-        )}
-      </QueryGate>
+      {!fold && list}
       {update.isError && (
         <PanelBody>
           <Callout
@@ -175,7 +236,8 @@ function OperationsCard({
 }
 
 // How often each background pass runs, and how far ahead a mail subscription
-// is renewed.
+// is renewed. Folded: an operator sets these once, and twelve open boxes made
+// the page read as a form when it is a report.
 export function BackgroundSchedulesCard() {
   const t = useT();
   return (
@@ -183,10 +245,10 @@ export function BackgroundSchedulesCard() {
       title={t("operations.schedules.title")}
       sub={t("operations.schedules.sub")}
       rows={SCHEDULE_ROWS}
+      fold={t("operations.schedules.fold")}
     />
   );
 }
-
 // How fast one mailbox may send. Beside the schedules because it is the same
 // kind of answer: how hard the worker leans on somebody else's service.
 export function SendPacingCard() {

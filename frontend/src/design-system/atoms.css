@@ -1534,6 +1534,52 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
+/* The end edge shades while columns lie past it and clears at the end. A
+   background, so it sits under the cells and never clips the focus ring. */
+@property --table-scroll-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes table-scroll-end {
+  from {
+    --table-scroll-end: var(--space-8);
+  }
+  to {
+    --table-scroll-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  .table-scroll {
+    background-image: linear-gradient(
+      to left,
+      var(--borderStrong) 1px,
+      color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
+      transparent
+    );
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: var(--table-scroll-end) 100%;
+    /* A box that fits has no scroll timeline, so the shade stays at zero. */
+    animation: table-scroll-end linear both;
+    animation-timeline: scroll(self inline);
+    animation-range: calc(100% - var(--space-8)) 100%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .table-scroll {
+      animation-timing-function: step-end;
+    }
+  }
+  @media (forced-colors: active) {
+    .table-scroll {
+      background-image: linear-gradient(
+        to left,
+        CanvasText 1px,
+        transparent 1px
+      );
+    }
+  }
+}
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open
