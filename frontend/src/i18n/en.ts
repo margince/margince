@@ -10662,10 +10662,10 @@ export const en = {
     "What one passport or MCP connection may do in each window before it stops. A change to a count applies within a minute, in the window that is running. A passport can never change its own allowance.",
   "agentAllowances.reads.label": "Records read",
   "agentAllowances.reads.help":
-    "Records handed to an agent before its next read waits for its owner to release more, 100 to 20,000.",
+    "Records an agent may read per window, 100 to 20,000. Past it, reads wait for its owner to release more.",
   "agentAllowances.writes.label": "Changes",
   "agentAllowances.writes.help":
-    "Creates, updates and deletes before the next one waits for its owner to confirm, 10 to 5,000.",
+    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to release more.",
   "agentAllowances.egress.label": "Sends",
   "agentAllowances.egress.help":
     "Emails and other calls that leave Margince. Sends stop until the window resets, 1 to 200.",

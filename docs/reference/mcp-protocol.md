@@ -105,10 +105,13 @@ of the AI budget of the workspace.
 
 The four limits and the window length are installation settings (`agent_allowances` on `/installation/settings`),
 read through a cache of one minute (`agentvolume.PolicyRefresh`). The defaults are 2,000 `reads`, 200 `writes`, 20
-`egress` and 1,000 `calls` in a 24-hour window. A changed limit binds in the running window. A changed length waits for
-the next reset, since the bucket number comes from the moment and the length. The passports of one OAuth grant share their
-counters (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of
-the transport stay in the build (`compose/agentallowances.go`).
+`egress` and 1,000 `calls` in a 24-hour window. A changed limit binds in the running window.
+
+A changed length waits for a reset. It takes the first reset that is a minute or more later, so a save in the last
+minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that
+changed mid-window would restart every count. The passports of one OAuth grant share their counters
+(`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
+transport stay in the build (`compose/mcpedge.go`).
 
 **How a client gets a `client_id`.** There are two ways, and a client that reads the priority order of the profile
 picks the first:

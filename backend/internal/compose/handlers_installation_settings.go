@@ -25,6 +25,9 @@ type installationSettingsHandlers struct {
 	// afterSave runs once a patch has committed. The meter's ForgetPolicy, so
 	// this process binds a saved allowance on the next agent call.
 	afterSave func()
+	// now reads the window plan in the answer; it is the store's clock in a test
+	// that pins one, and the wall clock otherwise.
+	now func() time.Time
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
@@ -236,7 +239,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
-		AgentAllowances:            toAgentAllowances(s.AgentAllowances, time.Now()),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
@@ -281,4 +284,11 @@ func (h installationSettingsHandlers) signInProviders(chosen []string) []crmcont
 		})
 	}
 	return out
+}
+
+func (h installationSettingsHandlers) clock() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
 }

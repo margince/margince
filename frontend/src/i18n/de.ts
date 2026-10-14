@@ -10552,10 +10552,10 @@ export const de = {
     "Was ein Passport oder eine MCP-Verbindung in jedem Zeitfenster tun darf, bevor er stoppt. Eine geänderte Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Passport kann sein eigenes Kontingent nie ändern.",
   "agentAllowances.reads.label": "Gelesene Datensätze",
   "agentAllowances.reads.help":
-    "Datensätze, die ein Agent erhält, bevor sein nächster Lesezugriff auf eine Freigabe wartet, 100 bis 20.000.",
+    "Datensätze, die ein Agent pro Zeitfenster lesen darf, 100 bis 20.000. Danach wartet das Lesen auf eine Freigabe.",
   "agentAllowances.writes.label": "Änderungen",
   "agentAllowances.writes.help":
-    "Anlegen, Ändern und Löschen, bevor die nächste Änderung auf eine Bestätigung wartet, 10 bis 5.000.",
+    "Änderungen, die ein Agent pro Zeitfenster machen darf, 10 bis 5.000. Danach warten Änderungen auf eine Freigabe.",
   "agentAllowances.egress.label": "Sendungen",
   "agentAllowances.egress.help":
     "E-Mails und andere Aufrufe, die Margince verlassen. Sendungen stoppen bis zum Ende des Zeitfensters, 1 bis 200.",

@@ -51,7 +51,7 @@ const defaultAgentAllowances = `{"agent_reads_per_window":2000,"agent_writes_per
 func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) installationSettingsHandlers {
 	t.Helper()
 	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool)).WithClock(now)
-	h := installationSettingsHandlers{store: store}
+	h := installationSettingsHandlers{store: store, now: now}
 	t.Cleanup(func() {
 		if code, _ := patchAllowances(installationAdminCtx(e), t, h, defaultAgentAllowances); code != http.StatusOK {
 			t.Errorf("restoring the defaults → %d", code)

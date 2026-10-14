@@ -10328,10 +10328,10 @@ export const vi = {
     "Những gì một passport hoặc kết nối MCP được làm trong mỗi khung thời gian trước khi dừng. Thay đổi một con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Một passport không bao giờ tự đổi được hạn mức của chính nó.",
   "agentAllowances.reads.label": "Bản ghi đã đọc",
   "agentAllowances.reads.help":
-    "Số bản ghi giao cho agent trước khi lần đọc tiếp theo phải chờ chủ sở hữu cho phép thêm, từ 100 đến 20.000.",
+    "Số bản ghi agent được đọc mỗi khung, từ 100 đến 20.000. Quá mức đó, việc đọc chờ chủ sở hữu cho phép thêm.",
   "agentAllowances.writes.label": "Thay đổi",
   "agentAllowances.writes.help":
-    "Số lần tạo, sửa và xóa trước khi lần tiếp theo phải chờ chủ sở hữu xác nhận, từ 10 đến 5.000.",
+    "Số thay đổi agent được làm mỗi khung, từ 10 đến 5.000. Quá mức đó, thay đổi chờ chủ sở hữu cho phép thêm.",
   "agentAllowances.egress.label": "Lượt gửi",
   "agentAllowances.egress.help":
     "Email và các lệnh gọi khác ra khỏi Margince. Việc gửi dừng cho đến khi khung thời gian đặt lại, từ 1 đến 200.",
