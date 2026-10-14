@@ -333,7 +333,7 @@ func TestDryRunClassifiesWithoutWriting(t *testing.T) {
 	if contact.WillCreate != 1 || contact.WillUpdate != 1 {
 		t.Errorf("contact report = %+v, want 1 create + 1 update", contact)
 	}
-	if len(contact.Skipped) != 1 || contact.Skipped[0].Reason != "empty_payload" || contact.Skipped[0].ExternalID != "p-2" {
+	if len(contact.Skipped) != 1 || contact.Skipped[0].Code != ReasonEmptyPayload || contact.Skipped[0].ExternalID != "p-2" {
 		t.Errorf("contact skips = %+v, want p-2 skipped as empty_payload", contact.Skipped)
 	}
 	if rep.Associations != 2 {
@@ -382,7 +382,7 @@ func TestRunImportsInOrderWithSkipsDisclosed(t *testing.T) {
 			contactRep = or
 		}
 	}
-	if len(contactRep.Skipped) != 1 || contactRep.Skipped[0].Reason != "empty_payload" {
+	if len(contactRep.Skipped) != 1 || contactRep.Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("contact skips = %+v, want the payload-less row disclosed", contactRep.Skipped)
 	}
 }
@@ -562,7 +562,7 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 		t.Fatalf("dry-run report = %+v, want one object", dry.Objects)
 	}
 	if got := dry.Objects[0]; got.WillCreate != 1 || len(got.Skipped) != 1 ||
-		got.Skipped[0].ExternalID != "p-blank" || got.Skipped[0].Reason != "empty_payload" {
+		got.Skipped[0].ExternalID != "p-blank" || got.Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("dry-run contact = %+v, want p-blank skipped and only p-real counted", got)
 	}
 
@@ -578,7 +578,7 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 		t.Errorf("imported = %d, want 1; a nameless row counted as imported overstates the cutover", rep.Imported)
 	}
 	if len(rep.Objects) != 1 || len(rep.Objects[0].Skipped) != 1 ||
-		rep.Objects[0].Skipped[0].Reason != "empty_payload" {
+		rep.Objects[0].Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("import report = %+v, want the owned blank row disclosed as empty_payload", rep.Objects)
 	}
 }

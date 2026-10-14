@@ -46,10 +46,10 @@ func TestReversalRefusalReasonNamesEachSentinelAndFallsBackHonestly(t *testing.T
 		code ReasonCode
 		want string
 	}{
-		{"permission denied", apperrors.ErrPermissionDenied, ReasonUndoGrantLost, "the caller's grant no longer covers this record"},
-		{"not found", apperrors.ErrNotFound, ReasonUndoNotVisible, "the record is no longer visible to this caller"},
-		{"conflict", apperrors.ErrConflict, ReasonUndoRuleProtects, "the record refused the reversal (a business rule protects it)"},
-		{"unclassified", errors.New("boom"), ReasonUndoFailed, "the record could not be reversed"},
+		{"permission denied", apperrors.ErrPermissionDenied, ReasonUndoGrantLost, "Your permissions no longer cover this record."},
+		{"not found", apperrors.ErrNotFound, ReasonUndoNotVisible, "This record is no longer visible to you."},
+		{"conflict", apperrors.ErrConflict, ReasonUndoRuleProtects, "The record refused the undo because a business rule protects it."},
+		{"unclassified", errors.New("boom"), ReasonUndoFailed, "The record could not be undone."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := reversalRefusalReason(tc.err)

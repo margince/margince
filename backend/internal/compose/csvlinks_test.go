@@ -130,7 +130,7 @@ func TestABrokenCompanyRefSkipsOrWarnsByPolicy(t *testing.T) {
 		if got.skip != want.skip || got.problem.Kind != want.kind || got.problem.Value != "CO-404" || got.problem.Column != "company" {
 			t.Fatalf("%q: got skip=%v %+v, want skip=%v kind %s naming CO-404 in column company", policy, got.skip, *got.problem, want.skip, want.kind)
 		}
-		if !strings.Contains(got.problem.Reason, `"CO-404"`) {
+		if !strings.Contains(got.problem.Reason, `“CO-404”`) {
 			t.Fatalf("%q: reason %q does not name the value", policy, got.problem.Reason)
 		}
 	}

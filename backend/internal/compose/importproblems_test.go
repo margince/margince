@@ -29,3 +29,20 @@ func TestProblemsCSVDefusesAFormulaInAValue(t *testing.T) {
 		t.Fatalf("csv = %q, want %q", buf.String(), want)
 	}
 }
+
+func TestProblemsCSVWritesTheCatalogEnglishForACodedIssue(t *testing.T) {
+	code := crmcontracts.ImportReasonCode("link_not_found")
+	params := map[string]string{"ref": "CO-7"}
+	rep := crmcontracts.ImportRunReport{Issues: []crmcontracts.ImportRowIssue{
+		{Line: new(2), Reason: "no company with \"CO-7\" in this upload", ReasonCode: &code, Params: &params},
+	}}
+	var buf bytes.Buffer
+	if err := writeImportProblems(&buf, rep, textlang.English); err != nil {
+		t.Fatal(err)
+	}
+	want := "file,row,column,problem,value\n" +
+		",2,,\"No company with “CO-7” in this upload, in an earlier import, or in Margince.\",\n"
+	if buf.String() != want {
+		t.Fatalf("csv = %q, want %q", buf.String(), want)
+	}
+}

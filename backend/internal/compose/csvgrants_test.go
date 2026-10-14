@@ -42,7 +42,7 @@ func TestGrantsForNewTagsAloneIsTagCreate(t *testing.T) {
 
 func TestGrantReasonsNameTheFileInWords(t *testing.T) {
 	needs := grantsFor([]migration.PartMapping{{Object: migration.ObjectCompany}}, tagGrants{})
-	if len(needs) != 2 || needs[0].Why.English() != "You cannot create companies, so the companies file is skipped" {
+	if len(needs) != 2 || needs[0].Why.English() != "You cannot create companies, so the companies file is skipped." {
 		t.Fatalf("needs = %+v, want the create reason in words first", needs)
 	}
 	if strings.Contains(needs[1].Why.English(), "tag") {

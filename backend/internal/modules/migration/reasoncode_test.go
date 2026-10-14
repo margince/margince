@@ -49,10 +49,10 @@ func TestEveryReasonCodeHasAnEnglishRendering(t *testing.T) {
 
 func TestAReasonRendersItsValuesAndFallsBackToEnglish(t *testing.T) {
 	why := Why(ReasonLinkNotFound, "ref", ` CO-7 `)
-	if got, want := why.In(textlang.English), `no company with " CO-7 " in this upload, in an earlier import, or in Margince`; got != want {
+	if got, want := why.In(textlang.English), `No company with “ CO-7 ” in this upload, in an earlier import, or in Margince.`; got != want {
 		t.Errorf("english = %q, want %q", got, want)
 	}
-	if got := why.In(textlang.German); !strings.Contains(got, `" CO-7 "`) {
+	if got := why.In(textlang.German); !strings.Contains(got, `CO-7`) {
 		t.Errorf("german = %q, want the quoted ref", got)
 	}
 	if got := why.In("fr"); got != why.English() {
@@ -66,7 +66,7 @@ func TestAReasonRendersItsValuesAndFallsBackToEnglish(t *testing.T) {
 func TestADroppedLinkCarriesItsOwnCode(t *testing.T) {
 	for from, twin := range droppedTwin {
 		got := Why(from, "ref", "X", "name", "X").WithoutTheLink()
-		if got.Code != twin || !strings.HasSuffix(got.English(), "; the row was imported without the link") {
+		if got.Code != twin || !strings.HasSuffix(got.English(), " The row was imported without the link.") {
 			t.Errorf("%s dropped = %s %q", from, got.Code, got.English())
 		}
 	}
