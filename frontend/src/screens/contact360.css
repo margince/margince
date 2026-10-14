@@ -377,29 +377,6 @@
   gap: var(--space-4);
 }
 
-.pe-rail .pe-sect {
-  border-top: 1px solid var(--borderSubtle);
-  padding-top: 0;
-  margin-bottom: 0;
-}
-.pe-rail .pe-sect > summary {
-  padding: var(--space-3) var(--space-5);
-  transition: background 0.15s;
-}
-.pe-rail .pe-sect > summary:hover {
-  background: var(--bgHover);
-}
-/* The rail's own sections carry the padding their summaries do, so a section
-   verb lines up with the name beside it rather than with the panel's edge. */
-.pe-rail .disclosure-action {
-  top: var(--space-2);
-  right: var(--space-5);
-}
-.pe-rail .pe-sect > .disclosure-body {
-  margin-top: 0;
-  padding: 0 var(--padPanel) var(--padPanel);
-}
-
 /* A rail row is one action or one reading: label left, value right. */
 /* The reading is a few words and holds one line; the label takes the rest and
    wraps when it is long. The other way round — label on a floor, reading on

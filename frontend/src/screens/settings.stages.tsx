@@ -233,13 +233,10 @@ export function StageLadderEditor({
   );
   const [adding, setAdding] = useState<Stage | null>(null);
   const added = useLastSubject(adding);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [openStage, setOpenStage] = useState<string | null>(null);
   const toggle = (key: string, keep = false) =>
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (!next.delete(key) || keep) next.add(key);
-      return next;
-    });
+    setOpenStage((current) => (current === key && !keep ? null : key));
+  const expanded = new Set(openStage === null ? [] : [openStage]);
   const verbs: StageVerbs = {
     writable,
     canRemove,
