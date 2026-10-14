@@ -34,6 +34,12 @@ variable "VERSION" {
   default = "dev"
 }
 
+# The core release an instance pins, set only by an instance's package script.
+# Empty marks a core-only build, so its SPA shows one release line.
+variable "CORE_VERSION" {
+  default = ""
+}
+
 variable "MARGINCE_BUILD_REVISION" {
   default = ""
 }
@@ -81,6 +87,7 @@ target "role" {
   args = {
     MARGINCE_BUILD_REVISION  = MARGINCE_BUILD_REVISION
     MARGINCE_RELEASE_VERSION = VERSION
+    MARGINCE_CORE_VERSION    = CORE_VERSION
   }
   # The canonical OCI annotation, so `docker inspect` / `crane config` answers
   # the release without running the image — which is the only way to read it

@@ -16,9 +16,9 @@ import (
 func stageBundle(t *testing.T, e *apptest.AppEnv, sourceRef, sourceName string, parts []AnyMap) importRunDTO {
 	t.Helper()
 	var run importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": sourceRef, "source_name": sourceName, "parts": parts,
-	}, nil, &run); status != http.StatusAccepted {
+	}, &run); status != http.StatusAccepted {
 		t.Fatalf("stage → %d", status)
 	}
 	return run

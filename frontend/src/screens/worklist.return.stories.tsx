@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { expect, within } from "storybook/test";
 import { en } from "../i18n/en";
 import { announceAddressChanged } from "../lib/router";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { WorklistReturnLink } from "./worklist.return";
 
 // A record opened from the expanded Worklist drawer, as its address carries it.

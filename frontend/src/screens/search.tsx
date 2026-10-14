@@ -19,7 +19,6 @@ import {
 import { Badge, Button, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   LoadMoreButton,
@@ -30,12 +29,13 @@ import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
+import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate, routeHash } from "../lib/router";
 import { useUrlParams } from "../lib/urlstate";
 import { companyTabRoute } from "./companytab";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];

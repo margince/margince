@@ -121,4 +121,8 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	"place_legal_hold": "put under legal hold",
 	"lift_legal_hold":  "released from legal hold",
 	"pin":              "pinned for statutory retention",
+	// A deal's side asking legal to review the deal, and taking it back. Each
+	// reads "<who> <phrase> the record".
+	"request_legal_review":  "asked legal to review",
+	"withdraw_legal_review": "withdrew the legal review request for",
 }

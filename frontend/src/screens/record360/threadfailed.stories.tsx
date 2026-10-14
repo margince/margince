@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 import { Panel } from "../../design-system/panel";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { ThreadFailed } from "./threadfailed";
 
 // A THREAD THAT COULD NOT BE READ, in the place the thread would have been.

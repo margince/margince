@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { OnboardingScreen } from "./onboarding";
-import { configuredAiProfile } from "./onboarding.stories.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OnboardingScreen } from "./onboarding";
+import { configuredAiProfile } from "./onboarding.stories.fixtures";
 
 const meta: Meta = {
   title: "Onboarding/Onboarding screen",

@@ -19,7 +19,6 @@ import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { ListChip } from "../design-system/listsurface";
 import { CellStrip } from "../design-system/listtable";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
 import { QueryGate } from "../design-system/querystates";
@@ -32,15 +31,17 @@ import { RecordView } from "../design-system/recordview";
 import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { groupChronology } from "../design-system/timelinegroups";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { taskWriteKeys } from "../lib/activitykeys";
+import { useOpenEmail } from "../lib/openemail";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { scrollPageToTop } from "../lib/reveal";
 import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
-import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
 import { BillingContactsPanel } from "./billingcontacts";
 import { useBulkSelection } from "./bulkverbs";
@@ -117,7 +118,7 @@ import {
   useTagChips,
 } from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
 import { type OpenReceipt, openCitation } from "./record360";
@@ -145,7 +146,6 @@ import {
   useTaskUpdate,
 } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

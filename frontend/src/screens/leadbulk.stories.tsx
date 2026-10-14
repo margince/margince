@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LeadBulkBar } from "./leadbulk";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The bulk bar over selected leads: the count, the owner picker, the reason
 // picker, the two verbs. It renders inside ListTable's bulk-bar slot on the

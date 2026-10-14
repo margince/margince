@@ -68,13 +68,6 @@ func (w *importCommitWorker) commit(ctx context.Context, slice importSlice) (boo
 	if err != nil {
 		return false, err
 	}
-	// The ref of a company the file names lives in memory, so a slice past the
-	// first binds again the companies earlier slices landed.
-	if run.Checkpoint > 0 {
-		if err := writers.bindNamedCompanies(ctx, source); err != nil {
-			return false, err
-		}
-	}
 	if err := createImportTags(ctx, slice, writers.tags); err != nil {
 		return false, err
 	}

@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { WriteRefused } from "../design-system/querystates";
 import { ProblemError } from "../lib/problem";
+import { StoryProviders } from "../testing/story-utils";
 import { AiBindRefused } from "./installation-setup.notices";
-import { StoryProviders } from "./story-utils";
 
 // The cold start's refusals. Worth their own frames because the whole point of
 // each heading is to name WHICH write failed, and a story is the only place the

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MailSharingCard } from "./mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSharingCard } from "./mail-sharing";
 
 // The workspace mail-sharing posture. ON is the quiet default; OFF is loud on
 // purpose — the danger callout under the switch is the state worth a picture,

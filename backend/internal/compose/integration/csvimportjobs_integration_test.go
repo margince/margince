@@ -11,6 +11,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -43,6 +44,35 @@ func importCall(t *testing.T, e *apptest.AppEnv, id, verb string, body, out any)
 	if out != nil {
 		if got := e.Call(t, http.MethodGet, "/v1/imports/"+id, nil, nil, out); got != http.StatusOK {
 			t.Fatalf("GET the run after its %s → %d, want 200", verb, got)
+		}
+	}
+	return status
+}
+
+// testCall posts a request that starts a test run, then works the job it
+// queued. out then holds the run as the worker left it, or the refusal.
+//
+//craft:ignore naked-any out is whichever shape the caller reads the run or the refusal into, as e.Call takes it
+func testCall(t *testing.T, e *apptest.AppEnv, path string, body, out any) int {
+	t.Helper()
+	var answer json.RawMessage
+	status := e.Call(t, http.MethodPost, path, body, nil, &answer)
+	if status == http.StatusAccepted {
+		var queued struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(answer, &queued); err != nil || queued.Status != "validating" {
+			t.Fatalf("POST %s → 202 %s (%v), want the run at validating", path, answer, err)
+		}
+		importjobtest.Drain(t, e)
+		if got := e.Call(t, http.MethodGet, "/v1/imports/"+queued.ID, nil, nil, &answer); got != http.StatusOK {
+			t.Fatalf("GET the run after its test → %d, want 200", got)
+		}
+	}
+	if out != nil && len(answer) > 0 {
+		if err := json.Unmarshal(answer, out); err != nil {
+			t.Fatalf("decoding the answer to POST %s: %v", path, err)
 		}
 	}
 	return status

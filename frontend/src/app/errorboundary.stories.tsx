@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { AppErrorBoundary } from "./errorboundary";
 
 // What a reader meets when a screen throws mid-render. Without the boundary the

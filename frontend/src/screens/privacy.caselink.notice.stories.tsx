@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { StoryProviders } from "../testing/story-utils";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
-import { StoryProviders } from "./story-utils";
 
 // What the privacy queue says when the link an officer followed names a case
 // the page cannot show.

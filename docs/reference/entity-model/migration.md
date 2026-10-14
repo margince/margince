@@ -6,7 +6,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_record_map
 
-6 columns · primary key `(source_system, object, external_id)` · referenced by 0 foreign keys
+7 columns · primary key `(source_system, object, external_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,6 +14,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `import_run_id` | `uuid` | yes | Points at `import_run.id`. |
 | `native_id` | `uuid` | yes |  |
 | `object` | `text` | yes |  |
+| `origin` | `text`, default `'created'::text` | yes | One of `created`, `bound`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
 
@@ -22,6 +23,10 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `import_run_id` | `import_run` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `import_record_map_origin_check`: `CHECK ((origin = ANY (ARRAY['created', 'bound'])))`
 
 **Indexes**
 
@@ -81,4 +86,5 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 - `idx_import_run_status`: `btree (status)`
 - `import_run_one_active_per_source_name`: `unique, btree (source_name) WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
 - `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
+- `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`

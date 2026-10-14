@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { Evidence } from "../../design-system/trust";
+import { StoryProviders } from "../../testing/story-utils";
 import type { CompanyFieldName } from "../onboarding";
-import { StoryProviders } from "../story-utils";
 import type { ReviewRow, RowState } from "./company-review-state";
 import { ProfileDigest, type ProfileDigestRead } from "./profile-digest";
 // `.ob-scene` is a container (`conversation.css`), and the document's

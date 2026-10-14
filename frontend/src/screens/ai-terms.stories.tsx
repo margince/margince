@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import {
   ModelRef,
   PanelTitle,
@@ -10,7 +11,6 @@ import {
   TermLegend,
   TierChips,
 } from "./ai-terms";
-import { StoryProviders } from "./story-utils";
 
 // The three words of the AI settings area, each with one icon wherever it
 // appears: provider, tier, task. Told apart by icon and not by colour, because

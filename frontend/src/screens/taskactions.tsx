@@ -24,14 +24,14 @@ import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { CLAIM_SETTLED_KEYS } from "./activitykeys";
 import { EntityRef } from "./entityref";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
-import { useActivity } from "./activityread";
+import { useActivity } from "../lib/activityread";
 import { useCompleteTask } from "./taskcomplete";
 import { refetchAfterWrite } from "./taskwritefollowup";
 

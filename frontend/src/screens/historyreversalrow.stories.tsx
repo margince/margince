@@ -5,9 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
+import {
+  expectNameAndValueApart,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { PairRow } from "./historyreversal";
 import { ReversalPairRow } from "./historyreversalrow";
-import { expectNameAndValueApart, StoryProviders } from "./story-utils";
 
 // A reversal and the change it reverses, drawn as ONE line the reader can
 // open. history.stories.tsx exercises this shape through the whole panel;

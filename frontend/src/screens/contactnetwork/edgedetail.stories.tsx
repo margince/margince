@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { EdgeDetail } from "./edgedetail";
 import "../contactnetwork.css";
 

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PartnersScreen, PartnerTab } from "./partners";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PartnersScreen, PartnerTab } from "./partners";
 
 // PartnerTab treats GET /companies/{id}/partner's 404 as "not a partner
 // yet" (an honest empty state + setup form), never as an error — the

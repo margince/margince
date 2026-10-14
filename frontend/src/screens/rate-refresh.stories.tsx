@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { RefreshFromSources } from "./rate-refresh";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ASKING THE PRODUCT TO RE-READ A PRICE SHEET, on its own.
 //

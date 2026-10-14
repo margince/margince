@@ -15,7 +15,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
@@ -25,15 +24,12 @@ func approvedLeadRun(t *testing.T, e *integration.Env) (importHandlers, ImportCo
 	t.Helper()
 	// The job acts under the authority the approver holds when it runs.
 	e.GrantRole(t, e.AdminUser, "admin")
-	h, profile := leadSourceHandlers(t, e, 0)
-	object := crmcontracts.ImportObject(migration.ObjectLead)
-	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
-	if _, err := h.stageRun(importAdmin(e), crmcontracts.CreateImportRunRequest{
-		Connector: crmcontracts.CreateImportRunRequestConnectorCsv, Object: &object, SourceRef: profile.SourceRef, Mapping: &mapping,
-	}); err != nil {
+	h, profile := leadSourceHandlers(t, e)
+	test := queuedLeadTest(t, e, h, profile)
+	if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: test}); err != nil {
 		t.Fatalf("testing the run: %v", err)
 	}
-	approved, err := migration.NewRunStore(e.DB()).Approve(importAdmin(e), migration.RunID(profile.RunId), 0, workedByHand)
+	approved, err := migration.NewRunStore(e.DB()).Approve(importAdmin(e), test.RunID, 0, workedByHand)
 	if err != nil {
 		t.Fatalf("approving the run: %v", err)
 	}

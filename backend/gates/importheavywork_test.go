@@ -41,9 +41,11 @@ type importEntryPoint struct{ pkg, recv, name string }
 // importEngineEntryPoints are the engine's walks over a source or a run's rows.
 // A Work method reaches them through the slice function it hands its slicer.
 // Engine.Run, the unsliced flip, has no caller a Work method could name.
+// DryRun is the test run's walk, which holds a snapshot for the whole file.
 // createMissing writes the tags a file names before its rows, through no seam.
 var importEngineEntryPoints = []importEntryPoint{
 	{"migration", "Engine", "Run"},
+	{"migration", "Engine", "DryRun"},
 	{"migration", "Engine", "RunSlice"},
 	{"migration", "RunStore", "UndoSlice"},
 	{"compose", "tagResolver", "createMissing"},
@@ -76,7 +78,7 @@ func TestImportRowsAreWrittenOnlyByTheImportJobs(t *testing.T) {
 	}
 	// Every other import stands in empty, and what that leaves unresolved is
 	// dropped. A slice with no caller here means the check resolved nothing.
-	for _, entry := range []string{"RunSlice", "UndoSlice"} {
+	for _, entry := range []string{"RunSlice", "UndoSlice", "DryRun"} {
 		for fn, obj := range g.owner {
 			if g.pkgOf[fn] == "migration" && fn.Name.Name == entry && len(g.sites[obj]) == 0 {
 				t.Errorf("the census found no caller of %s: it has stopped resolving calls into migration", g.name(fn))
@@ -395,7 +397,7 @@ func (g *importCallGraph) finding(obj *types.Func, site callSite) string {
 		where = g.name(site.in)
 	}
 	return g.fset.Position(site.pos).String() + ": " + where + " reaches " + g.name(g.decls[obj]) +
-		", which writes an import's rows. Only an import job's Work method, or work nothing but " +
+		", which writes an import's rows or tests its whole file. Only an import job's Work method, or work nothing but " +
 		"one reaches, may reach it: a request queues the job and answers"
 }
 
@@ -487,6 +489,7 @@ type CommitArgs struct{}
 type Engine struct{}
 func (e *Engine) Run() {}
 func (e *Engine) RunSlice() {}
+func (e *Engine) DryRun() {}
 type RunStore struct{}
 func (s *RunStore) UndoSlice(rows int) {}
 type worker struct{ e *Engine }
@@ -504,6 +507,7 @@ func (*tagResolver) createMissing() {}
 `
 	entries := []importEntryPoint{
 		{"migration", "Engine", "Run"},
+		{"migration", "Engine", "DryRun"},
 		{"migration", "Engine", "RunSlice"},
 		{"migration", "RunStore", "UndoSlice"},
 		{"migration", "tagResolver", "createMissing"},
@@ -514,6 +518,7 @@ func (*tagResolver) createMissing() {}
 	}{
 		"a slice reached only through the job": {``, nil},
 		"a handler that walks the engine":      {`func approve(e *Engine) { e.RunSlice() }`, []string{"migration.approve"}},
+		"a handler that dry-runs the file":     {`func validate(e *Engine) { e.DryRun() }`, []string{"migration.validate"}},
 		"a goroutine a handler spawns":         {`func approve(e *Engine) { go func() { e.Run() }() }`, []string{"migration.approve"}},
 		"a handler that calls the job's slice": {`func approve(w *worker) { _ = slice(w.commit) }`, []string{"migration.approve", "migration.approve"}},
 		"a helper the job and a handler share": {`func approve(w *worker) { w.commit() }`, []string{"migration.approve"}},

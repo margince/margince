@@ -22,11 +22,11 @@ import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
+import { dealRecordKeys } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { dealRecordKeys } from "../activitykeys";
 import { ArchiveAction } from "../archive";
 import { LogActivityAction } from "../logactivity";
 import { RecordEmailVerb } from "../recordemail";
@@ -35,6 +35,7 @@ import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../addtoshortlist";
+import { RequestLegalReviewAction } from "./deallegaltab";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -241,6 +242,7 @@ export function DealActions({
           disabledReasonId={refusedReasonId}
         />
         <AddToShortlistAction entityType="deal" entityId={deal.id} />
+        <RequestLegalReviewAction deal={deal} />
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}

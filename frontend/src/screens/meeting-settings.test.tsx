@@ -5,18 +5,18 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import {
-  bookingConnection,
-  bookingHours,
-  bookingProfile,
-} from "./book.testkit";
-import { MeetingSettings } from "./meeting-settings";
-import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import {
+  bookingConnection,
+  bookingHours,
+  bookingProfile,
+} from "./book.testkit";
+import { MeetingSettings } from "./meeting-settings";
 
 const calendars = [
   { id: "work", name: "Work calendar", primary: true, writable: true },

@@ -73,7 +73,7 @@ func completeCSVRun(ctx context.Context, t *testing.T, s *RunStore) Run {
 func landLead(ctx context.Context, t *testing.T, s *RunStore, runID RunID, externalID string) ids.UUID {
 	t.Helper()
 	native := ids.NewV7()
-	if err := s.RecordIdentity(ctx, runID, "import:csv", ObjectLead, externalID, native); err != nil {
+	if err := recordCreated(ctx, s, runID, "import:csv", ObjectLead, externalID, native); err != nil {
 		t.Fatalf("RecordIdentity: %v", err)
 	}
 	return native
@@ -323,7 +323,7 @@ func TestUndoRefusesAnythingButComplete(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "")
-	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version); err != nil {
+	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, RunMapping{}, queueNothing); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
 	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, apperrors.ErrConflict) {

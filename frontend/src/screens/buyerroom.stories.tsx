@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BuyerRoomScreen } from "./buyerroom";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BuyerRoomScreen } from "./buyerroom";
 
 // The buyer's Deal Room, one story per access state, so the five screens an
 // outside contact can land on are exercised without a backend in any state.

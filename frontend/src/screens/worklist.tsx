@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -9,9 +8,10 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useMemberNames } from "../lib/membernames";
+import { useOpenEmail } from "../lib/openemail";
 import { problemCodeOf } from "../lib/problem";
 import { rosterOwnerNaming } from "./entityref";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useWorklistAddress } from "./worklist.address";
 import {
   bandSections,

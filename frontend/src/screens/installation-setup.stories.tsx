@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, waitFor, within } from "storybook/test";
-import { InstallationSetup } from "./installation-setup";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { InstallationSetup } from "./installation-setup";
 
 // First run, both questions, in the room they are asked in. What the catalog is
 // for here is the thing no unit test can check: the AI step's stage carries no

@@ -10,7 +10,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { CLAIM_SETTLED_KEYS } from "./activitykeys";
+import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
 import { OwnerName } from "./entityref";
 

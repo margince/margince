@@ -83,6 +83,8 @@ func (s *scenario) previewImport(t *testing.T, csv string) agents.ImportPreviewR
 	})
 	var preview agents.ImportPreviewResult
 	got.JSON(t, &preview)
+	// The worker tests the file; the preview answers once it has queued that.
+	importjobtest.Drain(t, s.AppEnv)
 	return preview
 }
 

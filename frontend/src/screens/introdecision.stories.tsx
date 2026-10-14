@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { IntroDecisionDrawer } from "./introdecision";
 import type { IntroRequest } from "./introrequests";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 // The colleague's side of an introduction ask.
 //

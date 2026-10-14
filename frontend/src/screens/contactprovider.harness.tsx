@@ -1,16 +1,16 @@
 import { render } from "@testing-library/react";
 import type { components } from "../api/schema";
-import { ContactProviderSection } from "./contactprovider";
-import {
-  completedProviderRun,
-  providerCompletedProfile,
-} from "./contactprovider.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactProviderSection } from "./contactprovider";
+import {
+  completedProviderRun,
+  providerCompletedProfile,
+} from "./contactprovider.fixtures";
 
 // The fixtures and the mount every case of this panel starts from. They live
 // beside the cases rather than inside one file because two test files ask

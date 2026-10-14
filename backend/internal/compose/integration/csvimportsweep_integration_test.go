@@ -14,7 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // backdateImportRun makes a run look as if its process stopped writing to it
@@ -88,24 +88,35 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 	}
 }
 
-func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
+func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
 	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	// The run's test already ran; put it back as a test whose job was queued and
+	// then lost before any worker claimed it.
+	if _, err := e.Owner.Exec(t.Context(), `
+		UPDATE import_run SET status = 'validating', job_status = 'validating', claimed_attempt = NULL,
+		       report = NULL, updated_at = now() WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("queueing the test again: %v", err)
+	}
+	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM river_job WHERE kind = $1`,
+		compose.ImportValidateArgs{}.Kind()); err != nil {
+		t.Fatalf("losing the queued job: %v", err)
+	}
+
+	sweepImportRuns(t, e)
+	if worked := importjobtest.WorkQueued(t, e, compose.ImportValidateArgs{}.Kind()); len(worked) != 0 {
+		t.Fatalf("the sweep queued a job for a run that was queued moments ago: %d", len(worked))
+	}
+
 	if _, err := e.Owner.Exec(t.Context(),
-		`UPDATE import_run SET status = 'validating', updated_at = now() WHERE id = $1`, run.ID); err != nil {
-		t.Fatalf("putting the run back in validating: %v", err)
+		`UPDATE import_run SET updated_at = now() - interval '3 minutes' WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("backdating the run: %v", err)
 	}
-
 	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "validating" {
-		t.Fatalf("a test run its request may still be working was swept: %q", polled.Status)
-	}
-
-	backdateImportRun(t, e, run.ID)
-	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "pending" || polled.Error != migration.CauseTestRunStopped {
-		t.Fatalf("after the sweep: %q %q, want a draft saying the test run stopped", polled.Status, polled.Error)
+	importjobtest.Drain(t, e)
+	if got := readRun(t, e, run.ID); got.Status != "awaiting_approval" {
+		t.Fatalf("after the sweep and a worker: %q, want awaiting_approval", got.Status)
 	}
 }
 

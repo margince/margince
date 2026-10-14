@@ -7,13 +7,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { CompanyDetails } from "./companydetails";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyDetails } from "./companydetails";
 
 // CompanyDetails routes its address group through the same `groups` config
 // and the same `postalLines` reader as the contact's own Details card

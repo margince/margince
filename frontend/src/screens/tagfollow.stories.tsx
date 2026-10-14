@@ -9,7 +9,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 
 // The offers that follow an applied tag: to the contact's company, and to the

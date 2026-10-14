@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SearchScreen } from "./search";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const hits = () =>
   jsonResponse({

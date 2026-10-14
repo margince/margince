@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 
 // Mail from a consumer domain still creates the contact; what it never creates is
 // a company. The shipped baseline is ~8 700 domains, so this card is where an

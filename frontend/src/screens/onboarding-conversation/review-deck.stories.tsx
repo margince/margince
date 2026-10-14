@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../../testing/story-utils";
 import type { CompanyFieldName } from "../onboarding";
-import { StoryProviders } from "../story-utils";
 import { type DeckCard, ReviewDeck } from "./review-deck";
 // `.staging-card` is the panel-ai family's staged member and lives in the
 // design system's own sheet; nothing in this surface's import graph pulls it,

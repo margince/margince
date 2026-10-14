@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../design-system/panel";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { BriefChanges } from "./brief.changes";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import {
   automaticDateReceipt,
   automaticStageReceipt,

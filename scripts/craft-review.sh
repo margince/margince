@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # craft-review.sh — the OPT-IN, model-driven half of the craftsmanship gate.
 #
-# `craft static` is the half that is ENFORCED: the pre-push hook runs it
-# diff-scoped and CI runs it as a required job. This is the other half. It sends
+# `craft static` is the half that is ENFORCED: `make check` runs it and CI
+# runs it as a required job. This is the other half. It sends
 # the diff to an external model API, judges what a syntax tree cannot see, and
 # blocks nothing: no hook calls it and no CI job calls it. Somebody runs it
 # because they want a second reading before review.

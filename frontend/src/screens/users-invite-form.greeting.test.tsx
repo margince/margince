@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
 // The invite form's optional greeting name: sent when the admin typed one, and

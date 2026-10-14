@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AutomationDialog } from "./automations.form";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The dialog both automation verbs open, drawn open. Create and edit differ only
 // in what they seed it with and what their submit verb is called; the count of

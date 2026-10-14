@@ -11,7 +11,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { TagVocabularyCard } from "./tagadmin";
 
 // Settings › Data model. The one door that coins a word: applying an existing

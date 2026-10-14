@@ -4,17 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 import { EmailEntry } from "./emailentry";
 import { EmailReference } from "./emailreference";
-import { OpenEmailDrawer } from "./openemaildrawer";
 import { Panel, PanelBody } from "./panel";
 
 // The one email row, and the citation that opens the same drawer.
@@ -44,11 +42,6 @@ const BASE: EmailSummary = {
   direction: "inbound",
   counterparty: "Ana Sommer",
 };
-
-// The contact the sender resolves to and the account the message is filed
-// against, named by the record reads the drawer's filing line makes.
-const ANA = "22222222-2222-4222-8222-222222222222";
-const BRANDT = "33333333-3333-4333-8333-333333333333";
 
 function Row({ summary }: Readonly<{ summary: EmailSummary }>) {
   return (
@@ -209,139 +202,6 @@ export const Detail: StoryObj = {
           activityId={BASE.activity_id}
           onClose={() => {}}
           formatWhen={() => "1 Sep 09:12"}
-        />
-      </StoryProviders>
-    );
-  },
-};
-
-/**
- * The record page's drawer, which draws nothing when no message is open. The
- * story shows the open state; the closed one is an empty canvas by design.
- *
- * It is also the shot of the whole envelope: the sender NAMED as the contact
- * they resolve to, the records the message is filed against under the date,
- * and the verb that answers it beside the way out. All three open beside the
- * message rather than over it — a reader part-way through a mail who follows a
- * contact must not lose the mail to reach the record.
- */
-export const RecordDrawer: StoryObj = {
-  render: () => {
-    installFetchStub({
-      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
-        () =>
-          jsonResponse({
-            id: BASE.activity_id,
-            lifecycle: "delivered",
-            occurred_at: BASE.occurred_at,
-            summary: BASE,
-            body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
-            from: [
-              {
-                address: "ana@brandt.example",
-                display_name: "Ana Sommer",
-                contact_id: ANA,
-              },
-            ],
-            to: [],
-            cc: [],
-            bcc: [],
-            bcc_withheld: false,
-            attachments: [],
-            links: [
-              { entity_type: "contact", entity_id: ANA },
-              { entity_type: "company", entity_id: BRANDT },
-            ],
-            access: {
-              content_state: "available",
-              display_status: "team",
-              can_change: false,
-              change_mode: "none",
-            },
-            can_reply: true,
-            can_relink: false,
-            version: 3,
-          }),
-      // The reads that put a NAME to each filed record. `EntityRef` resolves
-      // one record per link, so a story with links and no records draws the
-      // line as ids rather than as the names a reader would meet.
-      [`GET /contacts/${ANA}`]: () =>
-        jsonResponse({ id: ANA, full_name: "Ana Sommer" }),
-      [`GET /companies/${BRANDT}`]: () =>
-        jsonResponse({ id: BRANDT, display_name: "Brandt Automotive" }),
-    });
-    return (
-      <StoryProviders>
-        {/* The reader's own zone, as every record page passes its own: a
-            story that pinned one would be the only place in the tree naming a
-            timezone, which is what format/zone-by-purpose holds. */}
-        <OpenEmailDrawer
-          activityId={BASE.activity_id}
-          zone={viewerZone()}
-          onClose={() => {}}
-        />
-      </StoryProviders>
-    );
-  },
-};
-
-/**
- * The drawer for a message something HELD, which is the state the access line
- * exists for.
- *
- * One line under the subject: the mark, the reason that decided it, and the
- * verb at the far end. The reason is the picture worth having, because a line
- * carrying only "Participants" tells a reader they cannot widen the message
- * and not why — and a reader who cannot see the verdict cannot tell a correct
- * one from a wrong one.
- *
- * `can_change` is true here and the write reaches the thread, so the verb and
- * its scope caption are drawn too: this is the whole arrangement in one shot.
- */
-export const RecordDrawerHeld: StoryObj = {
-  render: () => {
-    installFetchStub({
-      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
-        () =>
-          jsonResponse({
-            id: BASE.activity_id,
-            lifecycle: "delivered",
-            occurred_at: BASE.occurred_at,
-            summary: { ...BASE, display_status: "participants" },
-            // The thread the verb writes against: without one the server
-            // would not have offered `thread_contribution`, and the control
-            // draws nothing rather than a button that would 404.
-            thread_key: "brandt-angebot-q4",
-            body: "Können wir Dienstag kurz sprechen?\n\nViele Grüße\nAna",
-            from: [
-              { address: "ana@brandt.example", display_name: "Ana Sommer" },
-            ],
-            to: [],
-            cc: [],
-            bcc: [],
-            bcc_withheld: false,
-            attachments: [],
-            links: [],
-            access: {
-              content_state: "available",
-              display_status: "participants",
-              audience: "participants",
-              explanation: "explicitly_confidential",
-              can_change: true,
-              change_mode: "thread_contribution",
-              change_scope: "thread",
-            },
-            can_reply: true,
-            can_relink: false,
-            version: 3,
-          }),
-    });
-    return (
-      <StoryProviders>
-        <OpenEmailDrawer
-          activityId={BASE.activity_id}
-          zone={viewerZone()}
-          onClose={() => {}}
         />
       </StoryProviders>
     );

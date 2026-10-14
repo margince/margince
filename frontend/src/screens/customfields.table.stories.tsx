@@ -6,12 +6,16 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   AuditRail,
   type CustomField,
   FieldTable,
   STAGED_ID,
 } from "./customfields.table";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The field table stands straight in its Panel, as the card mounts it, so the
 // row hairlines and the hover run to the pane's edge.

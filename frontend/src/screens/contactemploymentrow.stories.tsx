@@ -4,13 +4,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 // The row's verbs are the LIST's mutations — ending an employment and removing
 // one are writes the list owns — so the row is drawn through its own list
 // rather than through a hand-built stand-in for them. What is under review is
 // still the row: the company it names, the inline role, the dates, and the
 // verbs folded behind its overflow.
 import { Employers } from "./contactemployers";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];

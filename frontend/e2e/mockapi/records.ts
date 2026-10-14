@@ -89,6 +89,25 @@ export const newCompany = {
   display_name: "Neue Firma GmbH",
 };
 
+// A company and a contact the CSV importer created from an upload named
+// "pipedrive-export". The administrator who ran it holds captured_by, and the
+// source is the importer's stamp.
+export const importedCompany = {
+  ...brandt,
+  id: "o-imported",
+  display_name: "Hafenwerk Logistik GmbH",
+  source: "mirror:csv:pipedrive-export:company:co-12",
+};
+
+export const importedContact = {
+  ...anna,
+  id: "p-imported",
+  full_name: "Mara Lindqvist",
+  emails: [],
+  captured_by: "human:u1",
+  source: "mirror:csv:pipedrive-export:contact:p-9",
+};
+
 function newLead(fields: {
   full_name: string | null;
   email: string | null;
@@ -192,6 +211,8 @@ export const contactBrief = {
   sentences: [],
 };
 
+export const importedContact360 = { ...contact360, contact: importedContact };
+
 // The company side of the contact 360. `company` and `as_of` are required,
 // and every section is readable and empty, as on a fresh account.
 export const company360 = {
@@ -199,6 +220,8 @@ export const company360 = {
   company: brandt,
   sections_omitted: [],
 };
+
+export const importedCompany360 = { ...company360, company: importedCompany };
 
 const vocabularyRow = {
   sort_order: 0,

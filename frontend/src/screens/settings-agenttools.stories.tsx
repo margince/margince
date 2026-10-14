@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
-import { AgentToolsCard } from "./settings-agenttools";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AgentToolsCard } from "./settings-agenttools";
 
 // Served descriptions end with the governance clause the server appends, so the
 // fixtures carry it. The clamped line and the opened one both have to hold it.

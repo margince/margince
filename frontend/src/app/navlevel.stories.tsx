@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { House, UserRound } from "lucide-react";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { type NavSection, railTrail } from "./nav";
 import { NavLevelView } from "./navlevel";
 

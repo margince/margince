@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Button } from "../design-system/atoms";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { usePassportRevoke } from "./passport-revoke";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 function RevokeHarness() {
   const revoke = usePassportRevoke({

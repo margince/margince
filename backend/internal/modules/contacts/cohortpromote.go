@@ -28,6 +28,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -35,6 +36,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -76,9 +78,19 @@ func (s *Store) PromoteContactCohortTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 ) (CohortPromotion, error) {
 	var canonical ids.ContactID
-	if err := tx.QueryRow(ctx,
+	err := tx.QueryRow(ctx,
 		`SELECT coalesce(merged_into_id, id) FROM contact WHERE id = $1 FOR UPDATE`,
-		contactID).Scan(&canonical); err != nil {
+		contactID).Scan(&canonical)
+	// A row the event named and the table no longer holds: erased, or deleted
+	// since.
+	//
+	// Reported as the sentinel rather than as a raw driver error. The caller's
+	// answer to "gone" differs from its answer to a failed read, and only the
+	// sentinel tells the two apart.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return CohortPromotion{}, fmt.Errorf("contacts: the contact a cohort belongs to is gone: %w", apperrors.ErrNotFound)
+	}
+	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: resolving the contact a cohort belongs to: %w", err)
 	}
 	batch := cohortRepairBatch

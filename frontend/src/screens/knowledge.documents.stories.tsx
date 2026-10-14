@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
-import { DocumentList } from "./knowledge.documents";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DocumentList } from "./knowledge.documents";
 
 // One set's documents as its row opens them, A to Z. A document still waiting
 // or one that failed carries a badge. So does each one not yet searchable,

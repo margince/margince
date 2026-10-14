@@ -6,11 +6,15 @@ import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   SubscriptionConfirm,
   SubscriptionConfirmBody,
 } from "./confirmsubscription";
 import { explainPublicError, RateLimitedError } from "./preferences";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import "./preferences.css";
 import "./confirm.css";
 

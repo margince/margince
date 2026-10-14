@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { momentFallbackVerb } from "./companytodayverbs";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The leading card's fallback verb column — what the account offers when the
 // moment above it named no destination of its own.

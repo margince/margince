@@ -5,50 +5,114 @@
 
 package gates
 
-// The routine the rulebook tells a contributor to run reaches the integration
-// lane.
-//
-// It did not, and nothing said so. The shipping loop's step 2 named `make check`
-// and added "with nothing to add on top" — while `check`'s test target is
-// `go test ./...` and every integration file carries `//go:build integration`,
-// so those packages compile into nothing. A contributor followed the documented
-// routine exactly and pushed backend changes no local run had exercised. The
-// lane's own security cases are in there.
-//
-// Two claims, and either alone rots into the same silence: the rulebook must
-// name a target that reaches the lane, and that target must still reach it. A
-// gate on the prose alone passes over a target that stopped running the lane;
-// one on the Makefile alone passes over a rulebook that stopped naming it.
+// A backend change cannot land without the integration lane. CI's required
+// `ci` check runs it on every PR that touches backend/. `make check` cannot:
+// every integration file carries `//go:build integration`. Each claim below is
+// one link from a backend diff to the lane, read from the file that holds it.
 
 import (
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
-const integrationRoutine = "check-all"
+const (
+	integrationJob     = "integration"
+	integrationScope   = "backend_db"
+	integrationRoutine = "check-all"
+	packageRoutine     = "test-it"
+	scopeJob           = "changes"
+	scopeStep          = "filter"
+	backendPaths       = "backend/**"
+)
 
-func TestTheShippingLoopNamesARoutineThatReachesTheIntegrationLane(t *testing.T) {
+type scopedWorkflow struct {
+	Jobs map[string]struct {
+		Needs []string `yaml:"needs"`
+		If    string   `yaml:"if"`
+		Steps []struct {
+			ID   string         `yaml:"id"`
+			With map[string]any `yaml:"with"`
+		} `yaml:"steps"`
+	} `yaml:"jobs"`
+}
+
+func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 	t.Parallel()
+	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	if err != nil {
+		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
+	}
+	var wf scopedWorkflow
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", aggregateWorkflow, err)
+	}
+	agg, ok := wf.Jobs[aggregateJob]
+	if !ok {
+		t.Fatalf("%s declares no %q job, so nothing requires the integration lane", aggregateWorkflow, aggregateJob)
+	}
+	lane, ok := wf.Jobs[integrationJob]
+	if !ok {
+		t.Fatalf("%s declares no %q job, so no PR runs the integration lane", aggregateWorkflow, integrationJob)
+	}
+	if !slices.Contains(agg.Needs, integrationJob) {
+		t.Errorf("the required %q check no longer needs %q, so a red integration lane merges",
+			aggregateJob, integrationJob)
+	}
+	trigger := "needs." + scopeJob + ".outputs." + integrationScope + " == 'true'"
+	if !strings.Contains(normalizeCondition(lane.If), trigger) {
+		t.Errorf("job %q no longer runs on `%s`, so this gate cannot say which changes reach it",
+			integrationJob, trigger)
+	}
+	if !slices.Contains(scopeFilters(t, wf)[integrationScope], any(backendPaths)) {
+		t.Errorf("the %s scope no longer lists %q, so a backend Go change can skip the integration lane",
+			integrationScope, backendPaths)
+	}
+}
 
+// scopeFilters parses the paths-filter step's `filters` block, so a path is
+// judged by the scope that holds it and the YAML anchors resolve as CI's do.
+func scopeFilters(t *testing.T, wf scopedWorkflow) map[string][]any {
+	t.Helper()
+	for _, step := range wf.Jobs[scopeJob].Steps {
+		if step.ID != scopeStep {
+			continue
+		}
+		block, ok := step.With["filters"].(string)
+		if !ok {
+			t.Fatalf("the %s step of job %q carries no `filters` block", scopeStep, scopeJob)
+		}
+		var filters map[string][]any
+		if err := yaml.Unmarshal([]byte(block), &filters); err != nil {
+			t.Fatalf("the %s step's filters: %v", scopeStep, err)
+		}
+		if _, ok := filters[integrationScope]; !ok {
+			t.Fatalf("the %s step declares no %q scope", scopeStep, integrationScope)
+		}
+		return filters
+	}
+	t.Fatalf("job %q has no step with id %q, so no scope decides which PRs run the lane", scopeJob, scopeStep)
+	return nil
+}
+
+func TestTheShippingLoopNamesTheIntegrationRoutines(t *testing.T) {
+	t.Parallel()
 	rules := readRepoFile(t, filepath.Join(repoRoot, "AGENTS.md"))
 	shipping := section(t, rules, "## Shipping a change")
-	// The COMMAND, not the word: a step that mentions check-all while telling a
-	// contributor to run something else reads to this gate exactly like one that
-	// tells them to run it.
-	if !strings.Contains(shipping, "`make "+integrationRoutine+"`") {
-		t.Errorf("the shipping loop does not name `make %s`, so the routine a contributor is told "+
-			"to run stops at `check` — which reaches the integration lane not at all, because its "+
-			"test target is `go test ./...` and every integration file is behind a build tag",
-			integrationRoutine)
+	for _, routine := range []string{packageRoutine, integrationRoutine} {
+		if !strings.Contains(shipping, "`make "+routine) {
+			t.Errorf("the shipping loop does not name `make %s`", routine)
+		}
 	}
 
 	root := readRepoFile(t, filepath.Join(repoRoot, "Makefile"))
-	recipe := section(t, root, "\n"+integrationRoutine+":")
-	if !invokes(recipe, "test-integration") {
-		t.Errorf("`make %s` no longer runs test-integration, so the rulebook now points at a "+
-			"routine as blind as the one it replaced — and blind in the way that reports success",
-			integrationRoutine)
+	if !invokes(section(t, root, "\n"+integrationRoutine+":"), "test-integration") {
+		t.Errorf("`make %s` no longer runs test-integration, so the rulebook points at a "+
+			"routine that reports success without running the lane", integrationRoutine)
 	}
 }
 

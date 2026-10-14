@@ -16,7 +16,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 
 // The ladder inside one pipeline, as the pipelines page draws it. One table
 // holds the open stages a reader drags into order, then the closing pair.

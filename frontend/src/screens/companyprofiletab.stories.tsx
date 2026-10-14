@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { CompanyProfileForm } from "./companyprofiletab";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyProfileForm } from "./companyprofiletab";
 
 type Company = components["schemas"]["Company"];
 

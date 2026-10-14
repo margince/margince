@@ -4,16 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import {
-  ContractCancelModal,
-  ContractRenewModal,
-  ContractStatusModal,
-} from "./contractlifecycle";
-import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import {
+  ContractCancelModal,
+  ContractRenewModal,
+  ContractStatusModal,
+} from "./contractlifecycle";
 
 // margince#3286: the three transitions a signed agreement goes through after
 // it is first recorded. The backend chain (Store.Renew / ChangeStatus /

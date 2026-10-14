@@ -210,6 +210,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				Args: ImportCommitArgs{RunID: ids.NewV7(), Attempt: 1},
 			})
 		},
+		ImportValidateArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importValidateWorker{}).Work(ctx, &river.Job[ImportValidateArgs]{
+				Args: ImportValidateArgs{RunID: ids.NewV7(), Attempt: 1},
+			})
+		},
 		ImportUndoArgs{}.Kind(): func(ctx context.Context) error {
 			return (&importUndoWorker{}).Work(ctx, &river.Job[ImportUndoArgs]{
 				Args: ImportUndoArgs{RunID: ids.NewV7(), Attempt: 1},

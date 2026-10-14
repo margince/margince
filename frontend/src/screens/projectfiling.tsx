@@ -8,9 +8,9 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { entityTimelineKeys } from "../lib/activitykeys";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { entityTimelineKeys } from "./activitykeys";
 
 type ProjectFiling = components["schemas"]["ProjectFiling"];
 type RefusalCode = components["schemas"]["ProjectFilingRefusal"]["code"];

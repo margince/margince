@@ -25,7 +25,7 @@
 1133 frontend/src/screens/companyrail.test.tsx
 1136 frontend/src/screens/record360/spine.test.tsx
 1106 frontend/src/design-system/conformance.test.ts
-1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
+1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
 904 frontend/src/screens/contactpage.tsx
 1182 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx

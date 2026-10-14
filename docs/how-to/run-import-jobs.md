@@ -1,20 +1,37 @@
 # Run import jobs in the worker
 
 This page is for an operator who deploys Margince or finds an import that has stopped. An import's
-commit and its undo run in the worker, not in the API. The API only moves the run and queues the
-job. To use the import, read [import-a-company-spreadsheet.md](import-a-company-spreadsheet.md) or the
+test run, its commit and its undo run in the worker, not in the API. The API only moves the run and
+queues the job. To use the import, read [import-a-company-spreadsheet.md](import-a-company-spreadsheet.md) or the
 [Settings](../handbook/settings.md) page.
 
 ## What runs where
 
 | Part | Where | Does |
 |---|---|---|
-| Approve, undo | API | Moves the run to `running` or `undoing` and queues one job in the same transaction. Writes no record. |
+| Test, approve, undo | API | Moves the run to `validating`, `running` or `undoing` and queues one job in the same transaction. Reads no row of the file and writes no record. |
+| `import_validate` | Worker, queue `import_check` | Tests the whole file in one read, then moves the run to `awaiting_approval` with its report, or back to `pending` with the reason in `error`. |
 | `import_commit`, `import_undo` | Worker, queue `import_write` | Write or reverse one slice of the run, then queue the next slice. |
 | `import_run_sweep` | Worker, queue `default` | Runs every minute. Re-queues a run whose process died, and releases the files of finished runs. |
 
-The queue `import_write` has one worker in each worker process. It keeps import slices apart from the
-jobs a user waits on. The test run of a draft still runs inside the API request, so it has no queue yet.
+The queue `import_check` has two workers in each worker process, one for each open wizard tab. It keeps
+a test run, which a user watches, from waiting behind a commit. The queue `import_write` has one worker
+in each worker process. It keeps import slices apart from the jobs a user waits on. In each process the
+two queues hold at most eight database connections at once:
+
+- a test run holds one for its read, and up to two short ones, for its progress and its heartbeat;
+- a slice holds one for the run's lock and one for its rows.
+
+## What a test run is
+
+A test run is one job, not slices. It reads every file of the run in one snapshot of the database, so
+its report describes one moment of your records. It writes no record, so it takes no run lock. Every 10
+seconds it writes a heartbeat, and every 2 seconds or 500 rows it writes its `phase` and `progress`, on
+a connection of its own. A reader polling the run sees them while the read goes on.
+
+A test run has 10 minutes. Past that it returns the run to `pending` with a reason that asks for
+smaller files. A stopped worker leaves the run `validating`, and the next worker tests the file again
+from the top, because a test writes nothing to resume from.
 
 ## What a slice is
 
@@ -36,22 +53,23 @@ the same attempt cannot queue a second job.
 
 Deploy in this order: migrate, then every worker, then the API and the web app.
 
-1. **Migrate.** The migration adds the lease columns to `import_run`. Old API pods keep working: the
-   rows they write take the defaults, and the sweep treats them as old rows (see below).
-2. **Every worker.** A worker must know the `import_write` queue before an API queues a job on it.
+1. **Migrate.** Old API pods keep working on the new schema, and the sweep settles a run they leave
+   behind (see below).
+2. **Every worker.** A worker must know the `import_check` and `import_write` queues before an API
+   queues a job on them.
    A new API with an old worker leaves jobs waiting, with nothing failed, until a new worker starts.
 3. **The API and the web app.**
 
-A worker needs the object store, because a slice reads the uploaded file. A worker with no object
-store fails the run at once with a cause that names the missing storage, and the run can be approved
-again after the fix.
+A worker needs the object store, because a test run and a slice read the uploaded file. A worker with
+no object store stops the run at once with a cause that names the missing storage. A test run goes
+back to `pending` and can be tested again after the fix; a commit can be approved again.
 
 ## Recovery bounds
 
 | Event | What happens | Time to continue |
 |---|---|---|
 | Clean stop (rollout, `SIGTERM`) | The slice in flight flushes its progress within 2 seconds and queues itself again. The worker drains for `--job-drain-window` (20 s by default), and a slice ends well inside it. | Within one slice, after the next worker starts |
-| Process killed | The run stops heartbeating. After 2 minutes of silence the sweep starts a new attempt. | About 3 minutes: the 2 minutes of silence, up to 1 minute for the next sweep, and the queue wait |
+| Process killed | The run stops heartbeating. After 2 minutes of silence the sweep starts a new attempt. A test run starts its read again from the top. | About 3 minutes: the 2 minutes of silence, up to 1 minute for the next sweep, and the queue wait |
 | Node lost | The advisory lock of the run belongs to a Postgres session. It stays held until Postgres drops that session. | Set by the TCP keepalive settings of your Postgres server and its network path |
 
 Rows a killed slice wrote after its last checkpoint are written again by the next attempt. The write
@@ -59,9 +77,9 @@ is idempotent on the source key, so no record is doubled. A created row replayed
 counts as created. An updated row replayed this way can count as unchanged, so after a crash the
 updated count can be short by up to 500 rows, one flush.
 
-A run is re-queued at most 3 times for each approval or undo request. After that a commit is `failed`
-with a cause, and a user can approve it again to continue from the checkpoint. That approval counts
-its own 3 from zero.
+A run is re-queued at most 3 times for each test, approval or undo request. After that a commit is
+`failed` with a cause, and a user can approve it again to continue from the checkpoint. That approval
+counts its own 3 from zero. A test run goes back to `pending` with a reason, and a user tests it again.
 
 A job that was queued and never started is queued again after 2 minutes under the same attempt. If
 the job is still alive, the insert finds it and does nothing.
@@ -70,7 +88,10 @@ the job is still alive, the insert finds it and does nothing.
 
 While old and new API pods answer together, a request can reach either one.
 
-- A test run started on an old pod may be refused once. Start it again.
+- A test run started on an old pod runs inside that pod's request and ends within 22.5 seconds. It may
+  be refused once; start it again. The old pod queues no job for it, so a run that pod leaves
+  `validating` reads as a job waiting in the queue. After 2 minutes the sweep queues the job of its
+  attempt, and a worker tests the file.
 - A run approved on an old pod commits inside that pod's process. It carries no job, so the sweep
   never queues it again. It is failed after 30 minutes with no change, and a user can approve it
   again, which queues a job on the new API.
@@ -87,7 +108,7 @@ Read the run first: `GET /v1/imports/{id}` gives `status`, `checkpoint` and `err
 `failed`, `error` says why, in words for the uploader. Approving the run again continues from the
 checkpoint.
 
-A run that stays `running` or `undoing` is read in the `import_run` table. These columns decide it:
+A run that stays `validating`, `running` or `undoing` is read in the `import_run` table. These columns decide it:
 
 | Column | Reads as |
 |---|---|
@@ -95,14 +116,16 @@ A run that stays `running` or `undoing` is read in the `import_run` table. These
 | `claimed_attempt` | The attempt whose slice works the run now. Empty, or less than `job_attempt`, means the job waits in the queue, before its first slice or between two. |
 | `heartbeat_at` | The last time a slice wrote. It moves at least every 2 seconds while rows are written. |
 | `progress_at` | The last time the checkpoint moved |
-| `phase` | `creating_tags`, `importing`, `linking`, `undoing` or `finishing` |
+| `phase` | `reading` or `checking` for a test run; `creating_tags`, `importing`, `linking`, `undoing` or `finishing` for the rest |
 | `resume_count` | How many times the sweep started a new attempt since the last approval or undo request |
 
 Then read the answer from the table:
 
 - `claimed_attempt` is empty or behind `job_attempt`. The job waits in the queue, behind the slices
   of other runs. A silent heartbeat means nothing here. If no slice starts, check that a worker with
-  the `import_write` queue is running, and that it is a new release.
+  the run's queue (`import_check` for a test run, `import_write` for the rest) is running, and that it
+  is a new release. A run that stays this way for 2 minutes has lost its job, for example a test run
+  an old pod started, and the sweep queues its job again.
 - `heartbeat_at` moves. The run is working. A large file takes many slices. Compare `checkpoint`
   to its length.
 - `claimed_attempt` equals `job_attempt`, and `heartbeat_at` is older than 2 minutes and does not

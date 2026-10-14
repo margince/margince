@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { RecordCustomFields } from "./recordcustomfields";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordCustomFields } from "./recordcustomfields";
 export const customFieldFixture: components["schemas"]["CustomField"] = {
   id: "field1",
   object: "contact",

@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { ImportedEmploymentHistory } from "./employmentimport";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ImportedEmploymentHistory } from "./employmentimport";
 
 const view: components["schemas"]["Contact360"] = {
   as_of: "2026-09-01T00:00:00Z",

@@ -35,18 +35,6 @@ type sweepRule struct {
 	unreleased bool
 }
 
-// ReturnStaleTestRuns returns to draft every test run that has not moved for
-// idle: its process is gone, and the choices it tested are still good.
-func (s *RunStore) ReturnStaleTestRuns(ctx context.Context, idle time.Duration) (int, error) {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return 0, err
-	}
-	rule := sweepRule{statuses: sessionMoves[moveRefuse].from, idle: idle}
-	return s.sweepEach(ctx, rule, func(tx pgx.Tx, id RunID) error {
-		return stageTransition(ctx, tx, id, moveRefuse, runChange{values: []runValue{{errorColumn, CauseTestRunStopped}}})
-	})
-}
-
 // CancelStoppedTestRuns closes every test run that old code recorded as
 // failed. It wrote nothing, so no resume can need its file.
 func (s *RunStore) CancelStoppedTestRuns(ctx context.Context) (int, error) {
@@ -97,18 +85,23 @@ func (s *RunStore) ReleaseFinishedSources(ctx context.Context) (int, error) {
 // sweepEach settles up to sweepBatch runs the rule selects, in one transaction.
 // A run another writer holds is skipped, and the next pass meets it again.
 func (s *RunStore) sweepEach(ctx context.Context, rule sweepRule, settle func(pgx.Tx, RunID) error) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	errorIs := arg(rule.errorIs)
+	query := storekit.SQLf(`
+		SELECT id FROM import_run
+		 WHERE connector = $%d AND status = ANY($%d)
+		   AND updated_at < now() - make_interval(secs => $%d)
+		   AND ($%d::text = '' OR error = $%d::text)
+		   AND (NOT $%d::bool OR source_released_at IS NULL)
+		 ORDER BY updated_at, id
+		 LIMIT $%d
+		   FOR UPDATE SKIP LOCKED`,
+		arg(ConnectorCSV), arg(rule.statuses), arg(rule.idle.Seconds()), errorIs, errorIs,
+		arg(rule.unreleased), arg(sweepBatch))
 	settled := 0
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM import_run
-			 WHERE connector = $1 AND status = ANY($2)
-			   AND updated_at < now() - make_interval(secs => $3)
-			   AND ($4::text = '' OR error = $4::text)
-			   AND (NOT $5::bool OR source_released_at IS NULL)
-			 ORDER BY updated_at, id
-			 LIMIT $6
-			   FOR UPDATE SKIP LOCKED`,
-			ConnectorCSV, rule.statuses, rule.idle.Seconds(), rule.errorIs, rule.unreleased, sweepBatch)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("selecting %v import runs to sweep: %w", rule.statuses, err)
 		}
@@ -141,6 +134,9 @@ type Requeue func(ctx context.Context, tx pgx.Tx, run Run) (inserted bool, err e
 // no job. The sweep never re-queues such a run.
 const legacyRow = `(job_attempt = 0 OR job_status IS DISTINCT FROM status)`
 
+// queuedStatuses are the statuses a queued job works.
+var queuedStatuses = []string{StatusValidating, StatusRunning, StatusUndoing}
+
 // queuedWork selects the runs of the given statuses a queued job works.
 const queuedWork = `connector = $1 AND status = ANY($2) AND NOT ` + legacyRow
 
@@ -157,10 +153,10 @@ type dueAttempt struct {
 	resumes int
 }
 
-// ResumeStaleAttempts opens a new attempt of every commit or undo whose claimed
-// attempt has not beaten for staleAfter, and queues its job. A run the sweep
-// already resumed maxResumes times stops instead: a commit fails, and an undo
-// keeps undoing with the cause.
+// ResumeStaleAttempts opens a new attempt of every test run, commit or undo
+// whose claimed attempt has not beaten for staleAfter, and queues its job. A
+// run already resumed maxResumes times stops instead. A test run returns to its
+// draft, a commit fails, and an undo keeps undoing with the cause.
 func (s *RunStore) ResumeStaleAttempts(ctx context.Context, staleAfter time.Duration, maxResumes int, requeue Requeue) (int, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return 0, err
@@ -188,7 +184,7 @@ func (s *RunStore) settleStale(ctx context.Context, d dueAttempt, staleAfter tim
 	})
 }
 
-// RequeueLostJobs inserts once more the job of every commit or undo still
+// RequeueLostJobs inserts once more the job of every test run, commit or undo still
 // queued after queuedAfter. A job that is still alive dedupes; one lost before
 // its claim is inserted, and only that counts as a resume.
 func (s *RunStore) RequeueLostJobs(ctx context.Context, queuedAfter time.Duration, requeue Requeue) (int, error) {
@@ -216,10 +212,14 @@ func (s *RunStore) RequeueLostJobs(ctx context.Context, queuedAfter time.Duratio
 }
 
 func staleCause(status string) string {
-	if status == StatusUndoing {
+	switch status {
+	case StatusUndoing:
 		return CauseUndoStale
+	case StatusValidating:
+		return CauseTestRunStopped
+	default:
+		return CauseStale
 	}
-	return CauseStale
 }
 
 // dueAttempts reads up to sweepBatch attempts the predicate selects. Each is
@@ -231,7 +231,7 @@ func (s *RunStore) dueAttempts(ctx context.Context, predicate string, age time.D
 			SELECT id, status, job_attempt, resume_count FROM import_run
 			 WHERE `+queuedWork+predicate+`
 			 ORDER BY updated_at, id
-			 LIMIT $3`, ConnectorCSV, []string{StatusRunning, StatusUndoing}, sweepBatch, age.Seconds())
+			 LIMIT $3`, ConnectorCSV, queuedStatuses, sweepBatch, age.Seconds())
 		if err != nil {
 			return fmt.Errorf("selecting import attempts to resume: %w", err)
 		}
@@ -283,8 +283,8 @@ func lockGuarded(ctx context.Context, tx pgx.Tx, l Lease, guard string, age time
 // reopenStale fences off the stale attempt the caller locked, opens the next
 // one with its own trace, and queues it.
 func reopenStale(ctx context.Context, tx pgx.Tx, l Lease, requeue Requeue) error {
-	if err := execFenced(ctx, tx, l, `job_attempt = job_attempt + 1, attempt_correlation_id = $4,
-		resume_count = resume_count + 1, updated_at = now()`, ids.NewV7()); err != nil {
+	if err := execFenced(ctx, tx, l, restartingTest(l, `job_attempt = job_attempt + 1, attempt_correlation_id = $4,
+		resume_count = resume_count + 1, updated_at = now()`), ids.NewV7()); err != nil {
 		return err
 	}
 	run, err := readStaged(ctx, tx, l.Run)

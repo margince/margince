@@ -9,7 +9,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import {
   DealRoomTab,
   RoomFacts,

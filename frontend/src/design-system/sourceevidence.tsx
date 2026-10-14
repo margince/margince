@@ -4,8 +4,8 @@
 import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useActivity } from "../lib/activityread";
 import { useRecordZone } from "../lib/recordzone";
-import { useActivity } from "../screens/activityread";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
 import { SurfaceState } from "./surfacestate";

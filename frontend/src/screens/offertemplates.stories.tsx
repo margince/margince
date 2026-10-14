@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { OfferTemplatesAdmin } from "./offertemplates";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OfferTemplatesAdmin } from "./offertemplates";
 
 const meta: Meta = {
   title: "Settings/Sales/Products and offers/Offer templates",

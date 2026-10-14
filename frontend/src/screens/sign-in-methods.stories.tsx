@@ -5,9 +5,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // Password is present in every state and flippable in none: there is no value
 // of the setting that removes it, so the row shows a control that exists and

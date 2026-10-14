@@ -8,18 +8,21 @@ package compose
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // ImportJobWorkers are the import kinds' workers as River runs them, each
 // under the timeout its declaration gives.
 type ImportJobWorkers struct {
-	Commit river.Worker[ImportCommitArgs]
-	Undo   river.Worker[ImportUndoArgs]
+	Validate river.Worker[ImportValidateArgs]
+	Commit   river.Worker[ImportCommitArgs]
+	Undo     river.Worker[ImportUndoArgs]
 }
 
 // ImportJobWorkersForTest builds the import workers through addImportJobs, the
@@ -29,6 +32,9 @@ func ImportJobWorkersForTest(pool *pgxpool.Pool, cfg JobRunnerConfig) (ImportJob
 	reg := newJobRegistry()
 	addImportJobs(reg, pool, cfg, slog.New(slog.DiscardHandler))
 	var workers ImportJobWorkers
+	if err := governedInto(reg, &workers.Validate); err != nil {
+		return ImportJobWorkers{}, err
+	}
 	if err := governedInto(reg, &workers.Commit); err != nil {
 		return ImportJobWorkers{}, err
 	}
@@ -46,6 +52,16 @@ func WithImportJobWorkersForTest(into *ImportJobWorkers, failed *error) Option {
 		*into, *failed = ImportJobWorkersForTest(pool, JobRunnerConfig{
 			Blobstore: s.blobs, ImportUploadCap: s.uploadLimit,
 		})
+	}
+}
+
+// WithImportPreviewWaitForTest sets how long, and on what clock, preview_import
+// waits for its test's report. The harness works jobs by hand, so a real wait
+// would only spend the bound.
+func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.previewWait = agents.WithImportWait(clock, within)
+		s.rebuildToolRegistry(pool)
 	}
 }
 

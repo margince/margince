@@ -318,6 +318,11 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 		if err := ai.SeedWorkspaceDefaultsTx(ctx, tx, time.Now().UTC()); err != nil {
 			return err
 		}
+		if seeds.LegalReview != nil && !*seeds.LegalReview {
+			if _, err := settings.SeedValue(ctx, tx, deals.LegalReviewEnabled, false); err != nil {
+				return err
+			}
+		}
 		if seeds.StarterAutomations == nil || *seeds.StarterAutomations {
 			if err := automation.SeedStarterAutomationsTx(ctx, tx); err != nil {
 				return err

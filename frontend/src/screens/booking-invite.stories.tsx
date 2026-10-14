@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { jsonResponse } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import {
   bookingConnection,
@@ -6,7 +7,6 @@ import {
   bookingProfile,
 } from "./book.testkit";
 import { BookingInviteScreen } from "./booking-invite";
-import { jsonResponse } from "./story-utils";
 
 import "./book.css";
 

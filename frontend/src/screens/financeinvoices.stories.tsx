@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { RecentInvoices } from "./financeinvoices";
-import { StoryProviders } from "./story-utils";
 import "./company360.css";
 
 // The finance card's invoice table on its own, one row per status family, so

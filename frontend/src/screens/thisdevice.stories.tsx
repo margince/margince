@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
 import type { InstallState } from "../lib/pwa";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { InstallPanel } from "./thisdevice";
 
 const AVAILABLE: InstallState = {

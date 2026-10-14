@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { PreferenceCenterScreen } from "./preferences";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PreferenceCenterScreen } from "./preferences";
 
 // The public, anonymous preference center (G-6/G-7): no session, no
 // workspace header — the token in the URL is the whole capability.

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders, stubWithSession } from "./story-utils";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { automaticDateReceipt } from "./worklist.receiptreview.fixtures";
 import { ReceiptUndo } from "./worklist.receiptundo";
 

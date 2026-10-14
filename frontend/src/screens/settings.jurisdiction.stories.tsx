@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { JurisdictionReading } from "./settings.jurisdiction";
-import { StoryProviders, stubWithSession } from "./story-utils";
 
 // Settings → Governance → Jurisdiction. The reading is rendered directly. Every
 // state worth looking at is a state of the jurisdiction, and a stubbed query

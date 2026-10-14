@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ThemeToggle } from "../design-system/theme-toggle";
 import { LocaleProvider, translate } from "../i18n";
 import { STORAGE_KEYS } from "../lib/storage";
 import {
@@ -16,7 +17,6 @@ import {
   type ThemeChoice,
 } from "../lib/theme";
 import { resetTheme } from "./theme-reset";
-import { ThemeToggle } from "./theme-toggle";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 

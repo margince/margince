@@ -5,16 +5,16 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { AnalyticsScreen } from "./analytics";
-import { render } from "./analytics.testkit";
-import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
-import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AnalyticsScreen } from "./analytics";
+import { render } from "./analytics.testkit";
+import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
+import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 afterEach(() => {
   cleanup();

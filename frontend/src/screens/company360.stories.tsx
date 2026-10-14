@@ -3,6 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { company360 } from "./company.fixtures";
 import {
   DealsCard,
@@ -10,12 +16,6 @@ import {
   ProposedNextSteps,
   StateStrip,
 } from "./company360";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 // The company view's Panel-shaped cards, rendered straight from a payload
 // rather than through the screen — so the three answers a card can give are

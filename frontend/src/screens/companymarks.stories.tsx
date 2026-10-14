@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { CompanyMarks } from "./companymarks";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyMarks } from "./companymarks";
 
 // The pills under an account's name: archived, lifecycle, what it is to us,
 // and who may read it — one line of one height, nothing revealed on hover but

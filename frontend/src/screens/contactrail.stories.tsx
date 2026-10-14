@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 
 // The contact rail, and specifically the states a permission produces — which
 // the live stack cannot show at all: every seeded demo contact carries full

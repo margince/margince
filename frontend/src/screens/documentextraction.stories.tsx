@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DocumentExtractionPanel } from "./documentextraction";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What a reading of one attachment offers a human, and what it refuses to
 // offer. Every state below is a different answer and the differences are the

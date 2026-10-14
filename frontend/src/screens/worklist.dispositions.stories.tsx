@@ -6,7 +6,11 @@ import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
 import { en } from "../i18n/en";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { RowActs } from "./worklist.rowverbs";
 // The screen's sheet, imported as worklist.tsx and brief.feed.tsx import it.
 import "./worklist.css";
