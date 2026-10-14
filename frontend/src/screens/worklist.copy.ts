@@ -33,7 +33,7 @@ import type {
   WorklistReason,
   WorklistValue,
 } from "./worklist.queries";
-import { known } from "./worklist.reasoncensus";
+import { daysValued, known } from "./worklist.reasoncensus";
 
 type T = ReturnType<typeof useT>;
 
@@ -166,9 +166,9 @@ function valueText(
   }
 }
 
-// Reasons that read with an amount or a moment, needing no plural rule (counts
-// are DAYS_VALUED_REASONS). A set, since a key composed for a reason whose
-// sentence has nowhere to put an arrived value would not exist.
+// Reasons that read with an amount or a moment, needing no plural rule (day
+// counts are the census's DAYS_VALUED_REASONS). A set, since a key composed for
+// a reason whose sentence has nowhere to put an arrived value would not exist.
 const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
@@ -182,21 +182,6 @@ type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
-}
-
-// The valued reasons whose figure is a DAY COUNT rather than a currency
-// amount. "1 days" is a different kind of wrong from "1 day" — a count needs
-// the reader's own plural rule, which a money figure never does.
-const DAYS_VALUED_REASONS = {
-  waiting_days: true,
-  quiet_days: true,
-  earlier_requests: true,
-} as const;
-
-function daysValued(
-  kind: WorklistReason["kind"],
-): kind is keyof typeof DAYS_VALUED_REASONS {
-  return kind in DAYS_VALUED_REASONS;
 }
 
 // The comparators this build can name, for the same reason.

@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
+import { StoryProviders } from "../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
 import { moneyText } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
@@ -20,7 +21,6 @@ import {
   newGroup,
   newLeaf,
 } from "./segmentpredicate";
-import { StoryProviders } from "./story-utils";
 
 afterEach(cleanup);
 

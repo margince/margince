@@ -224,15 +224,31 @@
 }
 /* In a body it bleeds too, so its line is as wide as the seams. First in the
  * body it gives that line up to the seam above the body, or to the head's. */
-.panel > .panel-body > .disclosure {
+.panel > .panel-body > .disclosure,
+.panel > .panel-body > .disclosure-wrap {
   margin-inline: calc(-1 * var(--padPanel));
   padding-inline: var(--padPanel);
 }
-.panel > .panel-body > .disclosure:first-child {
+/* With an `action` the wrap draws the line, so it runs over the action too. */
+.panel > .panel-body > .disclosure-wrap {
+  border-top: 1px solid var(--borderSubtle);
+  margin-bottom: var(--space-4);
+}
+.panel > .panel-body > .disclosure-wrap > .disclosure {
   border-top: 0;
+  margin-bottom: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child {
+  border-top: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure-action {
   padding-top: 0;
 }
-.panel > .panel-body > .disclosure:last-child {
+.panel > .panel-body > .disclosure:last-child,
+.panel > .panel-body > .disclosure-wrap:last-child {
   margin-bottom: 0;
 }
 

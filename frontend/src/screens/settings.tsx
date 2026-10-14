@@ -21,6 +21,8 @@ import { useLogout, useMe } from "../lib/session";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
+import { AgentAllowancesCard } from "./agentallowances";
+import { AgentUsageByUserCard } from "./agentusage";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -280,9 +282,12 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "usage":
       return (
         <>
-          {/* The allowance with the month's spend in it, then where it went, then
-              the prices the estimate is drawn from. */}
+          {/* The allowance with the month's spend in it, then what each agent
+              may do and has done, then where the spend went, then the prices
+              the estimate is drawn from. */}
           <AiBudgetCard />
+          <AgentAllowancesCard />
+          <AgentUsageByUserCard />
           <AiUsageCard />
           <ModelPriceDetails />
         </>

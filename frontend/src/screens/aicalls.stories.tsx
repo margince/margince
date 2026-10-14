@@ -4,9 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiCallsCard } from "./aicalls";
 import { CallDetailPanel } from "./aicalls-detail";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card is gated on ai_diagnostics:read, so /me decides which of its two
 // branches renders. Left unrouted, the fetch stub answers with an empty list

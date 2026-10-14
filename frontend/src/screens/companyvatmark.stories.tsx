@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { VatMark } from "./companyvatmark";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { VatMark } from "./companyvatmark";
 
 // The states worth reviewing are the answers a reader can get, and they differ
 // in what a business may CLAIM rather than in how they look: a valid number

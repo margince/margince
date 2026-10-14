@@ -1,17 +1,17 @@
-# Empfangsbestätigung: Mitarbeiterinformation und IT-Nutzungsrichtlinie
+# Empfangsbestätigung: Beschäftigteninformation und IT-Nutzungsrichtlinie
 
 > Vorlage. Auszufüllen, **bevor** das Postfach verbunden wird, zusammen mit der
-> Aushändigung der [Mitarbeiterinformation](mitarbeiterinformation.md). Dieses
+> Aushändigung der [Beschäftigteninformation](mitarbeiterinformation.md). Dieses
 > Blatt ersetzt keine Einwilligung: Es belegt nur, dass informiert wurde. Die
 > [Einwilligung](einwilligung-email-erfassung.md) ist ein eigenes Dokument und
 > nur bei erlaubter Privatnutzung erforderlich.
 
-**Verantwortlicher:** [Firma, Anschrift]
-**Beschäftigte:r:** [Name] · **Postfach:** [E-Mail-Adresse]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
+**Beschäftigte Person:** [Name] · **Postfach:** [E-Mail-Adresse]
 
 ## Ich bestätige
 
-1. **Die Mitarbeiterinformation** in der Version [Version] am [Datum] erhalten
+1. **Die Beschäftigteninformation** in der Version [Version] am [Datum] erhalten
    zu haben.
 2. **Die IT-Nutzungsrichtlinie** in der Version [Version] zur Kenntnis genommen
    zu haben, einschließlich der darin getroffenen Regelung zur privaten Nutzung
@@ -26,7 +26,7 @@ Ort, Datum: ________________  Unterschrift: ________________
   zum Zeitpunkt der Erhebung. Ein Blatt, das nach dem ersten Abruf
   unterschrieben wird, belegt eine Information, die zu spät kam.
 - **Je Person und je Version.** Ändert sich, was das System tut, wird die
-  Mitarbeiterinformation neu ausgehändigt und neu bestätigt, denn eine Bestätigung
+  Beschäftigteninformation neu ausgehändigt und neu bestätigt, denn eine Bestätigung
   deckt nur die Fassung, die sie benennt.
 - **Österreich:** Dieses Blatt trägt dort mehr als den Nachweis. Besteht kein
   Betriebsrat, ist eine Betriebsvereinbarung nicht möglich, und die Einführung

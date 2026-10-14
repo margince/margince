@@ -66,10 +66,10 @@ describe("the row's two groups", () => {
   // The half `Children.toArray` cannot answer.
   //
   // A child that is PRESENT and renders nothing counts as one element, so the
-  // group is drawn — and `<DispositionVerbs/>` is exactly that on a row the
-  // server offers no judgements for. What takes the line back then is
-  // `.action-row-lead:empty` in the row's own sheet, which is asked after the
-  // render; this holds the state that rule keys on.
+  // group is drawn. `<DoneVerb/>` is that child on a row the server offers no
+  // judgements for. The rule that takes the line back is
+  // `.action-row-lead:empty` in the row's own sheet, asked after the render.
+  // This holds the state that rule keys on.
   it("leaves the leading group empty when every secondary renders nothing", () => {
     function NoVerbsHere() {
       return null;

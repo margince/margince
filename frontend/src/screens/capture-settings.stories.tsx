@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CaptureSettingsCard } from "./capture-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CaptureSettingsCard } from "./capture-settings";
 
 // The enrichment switches and the website reader's limits. The denied fixture
 // holds `capture_settings` read without update. `meRoute({})` would be an admin

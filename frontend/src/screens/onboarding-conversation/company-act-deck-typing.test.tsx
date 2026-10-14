@@ -6,7 +6,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse, type RouteMap, stubWithSession } from "../story-utils";
+import {
+  jsonResponse,
+  type RouteMap,
+  stubWithSession,
+} from "../../testing/story-utils";
 import { CompanyAct } from "./company-act";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";

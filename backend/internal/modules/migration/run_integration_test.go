@@ -211,21 +211,21 @@ func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 	native := ids.NewV7()
-	if err := s.RecordIdentity(ctxA, run.ID, "legacy_crm", "contact", "p-1", native); err != nil {
+	if err := recordCreated(ctxA, s, run.ID, "legacy_crm", "contact", "p-1", native); err != nil {
 		t.Fatalf("RecordIdentity: %v", err)
 	}
 	// A resumed run replays its last page: re-recording the same tuple
 	// converges instead of failing.
-	if err := s.RecordIdentity(ctxA, run.ID, "legacy_crm", "contact", "p-1", native); err != nil {
+	if err := recordCreated(ctxA, s, run.ID, "legacy_crm", "contact", "p-1", native); err != nil {
 		t.Fatalf("re-recording the same identity: %v", err)
 	}
-	got, found, err := s.LookupIdentity(ctxA, "legacy_crm", "contact", "p-1")
+	got, found, err := lookupNative(ctxA, s, "legacy_crm", "contact", "p-1")
 	if err != nil || !found || got != native {
 		t.Fatalf("LookupIdentity = (%v, %v, %v), want the recorded native id", got, found, err)
 	}
 	// The identity is namespaced by source system and object: a
 	// same-id record of another class is a different row.
-	if _, found, err := s.LookupIdentity(ctxA, "legacy_crm", "deal", "p-1"); err != nil || found {
+	if _, found, err := lookupNative(ctxA, s, "legacy_crm", "deal", "p-1"); err != nil || found {
 		t.Fatalf("a same-id DEAL resolved to the contact's identity (found=%v, err=%v)", found, err)
 	}
 
@@ -234,7 +234,7 @@ func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 	// the path a caller with a stale or invented id takes — and it must not come
 	// back as a foreign-key error, which would answer with the name of a table
 	// the caller has no business hearing about.
-	err = s.RecordIdentity(ctxA, RunID(ids.NewV7()), "legacy_crm", "contact", "p-9", ids.NewV7())
+	err = recordCreated(ctxA, s, RunID(ids.NewV7()), "legacy_crm", "contact", "p-9", ids.NewV7())
 	if err == nil {
 		t.Fatal("recording an identity against a run that does not exist must be refused")
 	}

@@ -6,7 +6,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_record_map
 
-6 columns · primary key `(source_system, object, external_id)` · referenced by 0 foreign keys
+7 columns · primary key `(source_system, object, external_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,6 +14,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `import_run_id` | `uuid` | yes | Points at `import_run.id`. |
 | `native_id` | `uuid` | yes |  |
 | `object` | `text` | yes |  |
+| `origin` | `text`, default `'created'::text` | yes | One of `created`, `bound`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
 
@@ -22,6 +23,10 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `import_run_id` | `import_run` | the parent cannot be deleted while this row points at it |
+
+**Rules**
+
+- `import_record_map_origin_check`: `CHECK ((origin = ANY (ARRAY['created', 'bound'])))`
 
 **Indexes**
 
@@ -44,13 +49,13 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `connector` | `text` | yes | One of `csv`, `salesforce`. |
 | `draft_step` | `text` |  | One of `files`, `map`. |
 | `error` | `text` |  | Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. |
-| `finished_at` | `timestamp with time zone` |  |  |
+| `finished_at` | `timestamp with time zone` |  | When the run reached a final status: complete, undone or cancelled. |
 | `heartbeat_at` | `timestamp with time zone` |  |  |
 | `job_attempt` | `integer`, default `0` | yes |  |
 | `job_status` | `text` |  |  |
 | `mapping` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `phase` | `text` |  | One of `reading`, `checking`, `creating_tags`, `importing`, `linking`, `undoing` and 1 more. |
-| `phase_object` | `text` |  |  |
+| `phase_object` | `text` |  | The object the run is working on in `phase`, when it is working on one. |
 | `profile` | `jsonb` |  | What the upload read of the file. |
 | `progress` | `jsonb` |  |  |
 | `progress_at` | `timestamp with time zone` |  |  |
@@ -59,7 +64,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `source_name` | `text`, generated as `COALESCE((mapping ->> 'source_name'::text), ''::text)` |  | Computed by the database. It cannot be written directly. |
 | `source_ref` | `text` | yes |  |
 | `source_released_at` | `timestamp with time zone` |  |  |
-| `started_at` | `timestamp with time zone` |  |  |
+| `started_at` | `timestamp with time zone` |  | When a worker took up the run's current job: its test, its commit or its undo. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 3 more. |
 | `superseded_by` | `uuid` |  | The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back. |
 | `undo_report` | `jsonb` |  |  |

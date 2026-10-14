@@ -3,7 +3,11 @@ import { screen, userEvent, within } from "storybook/test";
 import { Badge } from "../design-system/atoms";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { WebhooksCard, webhookStatusBadge } from "./webhooks";
 
 // WebhooksCard stories for the fe-uat render gate: an active subscription, a

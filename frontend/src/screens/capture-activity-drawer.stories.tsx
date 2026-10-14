@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import "./capture-activity.css";
 
 // One message's journey, drilled into from the row it was opened on.

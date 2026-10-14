@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { CoverageBand } from "./summary";
 
 // The reading a rep takes before picking anybody: who is the way in, which

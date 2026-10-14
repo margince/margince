@@ -13,13 +13,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OwnerIdentitiesCard } from "./capture-owner-identities";
 
 // Where a claim came from is only worth saying when the seat did not make it.
 //

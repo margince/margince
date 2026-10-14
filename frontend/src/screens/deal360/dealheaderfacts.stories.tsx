@@ -7,7 +7,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { DealIdentityFacts } from "./dealheaderfacts";
 
 // The facts beside the deal's name: what it is worth, where it sits on the

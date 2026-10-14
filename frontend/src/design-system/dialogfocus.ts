@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  createContext,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -167,6 +168,12 @@ export function liveDialogs(): HTMLElement[] {
     ),
   ].filter((layer) => layer.closest("[inert]") === null);
 }
+
+/**
+ * True inside a `Modal`, so a surface portalled out of it, such as a menu's
+ * panel, can stand above the dialog its trigger is in.
+ */
+export const InsideDialog = createContext(false);
 
 /**
  * Whether a live dialog the element is not inside sits on top. A layer under

@@ -7,16 +7,16 @@ import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { EmailReference } from "../design-system/emailreference";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useToast } from "../design-system/toast";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useOpenEmail } from "../lib/openemail";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useThreadAudience } from "./audienceservice";
 import { EntityRef } from "./entityref";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { VerdictPassNote } from "./verdictpass";
 import "./held-threads.css";
 

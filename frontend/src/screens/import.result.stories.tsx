@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { formatFixture } from "./import.fixtures";
-import { PartProgressList } from "./import.result";
-import { ImportWizardPage } from "./import.wizard";
-import type { ImportRun, ImportRunPart } from "./importtypes";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { formatFixture } from "./import.fixtures";
+import { PartProgressList } from "./import.result";
+import { ImportWizardPage } from "./import.wizard";
+import type { ImportRun, ImportRunPart } from "./importtypes";
 
 // The import while it runs and what it did. One bar per file, the stop and its
 // resume, the counts with Undo, and what an undo kept.

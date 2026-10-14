@@ -11,7 +11,7 @@ import {
 } from "react";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
-import { type FoldEnds, useFold } from "./fold";
+import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
 import { IconAction } from "./iconaction";
 import { type SortableRows, useSortableRows } from "./sortablelist";
 import "./atoms.css";
@@ -164,17 +164,20 @@ export type DataTableDetail<Row> = Readonly<
     toggleLabel: (row: Row) => string;
     /** A row with nothing to open draws no chevron and ignores a press. */
     has?: (row: Row) => boolean;
-    /** Opening a row closes the open one. A caller's own `expanded` still shows as given. */
-    single?: boolean;
   } & (
     | { render: (row: Row) => ReactNode; controls?: never }
     /** The id of what the chevron opens inside the row. */
     | { controls: (row: Row) => string; render?: never }
   ) &
+    /** `single`: opening a row closes the open one, in a table that holds its own rows. */
     (
-      | { expanded?: never; onToggle?: never }
+      | { expanded?: never; onToggle?: never; single?: boolean }
       /** The open rows' keys, held by the caller. */
-      | { expanded: ReadonlySet<string>; onToggle: (key: string) => void }
+      | {
+          expanded: ReadonlySet<string>;
+          onToggle: (key: string) => void;
+          single?: never;
+        }
     )
 >;
 
@@ -190,20 +193,17 @@ function useDisclosure<Row>(
   }
   const place = new Map(rows.map((row, index) => [rowKey(row), index]));
   const expanded = detail.expanded ?? own;
-  const flip =
+  const toggleKey =
     detail.onToggle ??
     ((key: string) =>
       setOwn((current) => {
-        const next = new Set(current);
-        if (!next.delete(key)) next.add(key);
-        return next;
+        if (current.has(key)) {
+          const next = new Set(current);
+          next.delete(key);
+          return next;
+        }
+        return new Set(detail.single ? [key] : [...current, key]);
       }));
-  const toggleKey = (key: string) => {
-    if (detail.single && !expanded.has(key)) {
-      for (const other of expanded) flip(other);
-    }
-    flip(key);
-  };
   const has = (row: Row) => detail.has?.(row) ?? true;
   const isOpen = (row: Row) => has(row) && expanded.has(rowKey(row));
   const id = (row: Row) =>
@@ -246,12 +246,15 @@ function DetailRow({
   render: () => ReactNode;
 }>) {
   const box = useRef<HTMLDivElement>(null);
+  useFocusHandBack(id, open);
   const shown = useFold(box, open, detailEnds);
   return (
     <tr className="datatable-detail" role={role("row")} hidden={!shown}>
       <td colSpan={span} id={id} role={role("cell")}>
         <div ref={box} className="datatable-detail-fold">
-          <div className="datatable-detail-body">{shown && render()}</div>
+          <div className="datatable-detail-body" inert={shown && !open}>
+            {shown && render()}
+          </div>
         </div>
       </td>
     </tr>

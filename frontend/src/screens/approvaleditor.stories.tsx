@@ -6,13 +6,17 @@ import { useState } from "react";
 import { screen, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   ApprovalDetailModal,
   DecideOutcome,
   editableSeed,
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The two slots a decision row hands out: the dialog that reads the WHOLE
 // proposal, and the inline editor that rewrites the part of it this

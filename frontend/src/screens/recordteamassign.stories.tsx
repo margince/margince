@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { RecordAssignment, RecordRole } from "./recordassignments.queries";
 import { RecordTeamAssign } from "./recordteamassign";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Naming who is responsible for a record, and moving that responsibility.
 //

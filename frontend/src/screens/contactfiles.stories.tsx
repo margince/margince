@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ContactFilesTab } from "./contactfiles";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactFilesTab } from "./contactfiles";
 
 // The contact's own file library — its own fetch, distinct from the 360's
 // composite read, so its own set of stories: rows present, an unfiltered

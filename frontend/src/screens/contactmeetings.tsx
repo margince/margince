@@ -22,10 +22,10 @@ import {
 } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useActivity } from "../lib/activityread";
 import { useCanWrite } from "../lib/capability";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
-import { useActivity } from "./activityread";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,

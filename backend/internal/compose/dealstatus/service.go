@@ -175,7 +175,7 @@ func (s *Service) readCard(ctx context.Context, dealID ids.DealID, policy cardRe
 	if err := briefevidence.Attach(ctx, briefevidence.FromActivities(timeline), cardEvidence(&card)); err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	return card, nil
+	return s.withSetAside(ctx, dealID, card)
 }
 
 // cardEvidence collects the card's citations that could name a message: the

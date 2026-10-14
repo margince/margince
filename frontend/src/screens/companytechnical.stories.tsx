@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { TechnicalProfilePanel } from "./companytechnical";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TechnicalProfilePanel } from "./companytechnical";
 
 // What a company publicly runs, on its record.
 //

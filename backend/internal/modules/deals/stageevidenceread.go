@@ -94,6 +94,13 @@ func refuseUnsettleableCriterion(ctx context.Context, tx pgx.Tx, in EvidenceInpu
 	if err != nil {
 		return err
 	}
+	// Legal's answer is the only word on this kind, met or not.
+	if CriterionKind(kind) == CriterionLegalReviewed {
+		return &values.ParseError{
+			Field: evidenceField, Code: "legal_review_settles_this",
+			Message: "a legal review criterion is settled by legal's approval of a review, not by evidence",
+		}
+	}
 	if !in.Met {
 		return nil
 	}

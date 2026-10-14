@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ChosenRecords, SearchedRecordValue } from "./filtervalue.records";
 import type { LeafValue } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The record half of a filter value: a company found by search, and the
 // records a list clause already holds.

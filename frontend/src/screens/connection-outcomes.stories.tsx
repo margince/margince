@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { ConnectionOutcomesCard } from "./connection-outcomes";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // One row per list the reader's connections produced: a count, and a verb
 // that opens the list only when there is something in it. The drawers have

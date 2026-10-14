@@ -12,6 +12,9 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **Core release in the account menu.** An image built with `CORE_VERSION`
+  set shows two lines at the foot of the account menu: the instance release and
+  the core release. A build without it keeps the single version line.
 - **One jurisdiction per installation.** An admin chooses the law the
   installation follows at first setup, in `workspace.country` in
   `margince.yaml`, or on **Settings → Governance → Jurisdiction**. It sets how

@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Panel, PanelGroupHead } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import {
   GrantMatrix,
   type GrantMatrixGroup,
   type GrantMatrixRow,
 } from "./grantmatrix";
-import { StoryProviders } from "./story-utils";
 
 const NONE = { read: false, create: false, update: false, delete: false };
 

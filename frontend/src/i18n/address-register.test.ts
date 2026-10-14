@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { entries, LETTER } from "../../scripts/lib/german-catalogs";
+import {
+  entries,
+  LETTER,
+  READ_BY_AN_OUTSIDER,
+  readByAnOutsider,
+} from "../../scripts/lib/german-catalogs";
 
 // German copy speaks to its reader as du, and two rules hold that.
 //
@@ -36,29 +41,6 @@ const SENTENCE_OPENS = /(?:[.!?:]\s|\n|[„"(]|\}\s)$/;
 
 function startsASentence(value: string, at: number): boolean {
   return at === 0 || SENTENCE_OPENS.test(value.slice(0, at));
-}
-
-// The key families a reader OUTSIDE this installation opens: a contact
-// confirming consent, a stranger reading the privacy notice, a buyer in a deal
-// room, a visitor choosing what may still be sent. They keep the formal
-// address, because outbound mail to a contact is written in Sie by design
-// (`confirmLines` in backend/internal/platform/mailcopy/catalog.go) and the
-// consent question is published from the server in that wording, held by
-// backend/gates/marketingquestion_test.go — a screen in du would ask one
-// question and record another. Rule 2 still binds these values.
-const READ_BY_AN_OUTSIDER: Readonly<Record<string, string>> = {
-  "buyer.": "ein Käufer im Deal Room, der hier keinen Sitzplatz hat",
-  "confirm.":
-    "ein Kontakt, der die serverseitig gestellte Einwilligungsfrage beantwortet",
-  "prefs.":
-    "ein Besucher, der entscheidet, was diese Installation ihm senden darf",
-  "privacynotice.": "ein Fremder, der liest, was über ihn gespeichert ist",
-};
-
-function readByAnOutsider(key: string): boolean {
-  return Object.keys(READ_BY_AN_OUTSIDER).some((prefix) =>
-    key.startsWith(prefix),
-  );
 }
 
 describe("German copy speaks to its reader as du", () => {

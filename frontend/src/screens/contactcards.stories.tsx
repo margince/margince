@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactBriefCard } from "./contactbrief";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The relationship brief.
 //

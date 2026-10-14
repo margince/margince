@@ -8,6 +8,7 @@ import type { components } from "../api/schema";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { entityTimelineKeys } from "../lib/activitykeys";
 import {
   isConsentNotGranted,
   ProblemError,
@@ -16,7 +17,6 @@ import {
   throwProblem,
 } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { entityTimelineKeys } from "./activitykeys";
 import {
   asksWhy,
   type CommunicationContext,

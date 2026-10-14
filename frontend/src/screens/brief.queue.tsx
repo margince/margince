@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import type { DrawerSpan } from "../design-system/modal";
 import { useT } from "../i18n";
 import { navigateReplacing, useHash } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useUrlParams } from "../lib/urlstate";
 import { WorklistScreen } from "./worklist";
 import { drawerScope } from "./worklist.address";
@@ -51,12 +53,23 @@ export function BriefQueue() {
     next.delete("queue");
     setParams(next);
   };
+  // Kept by this browser, so every way into the drawer opens it as wide as the
+  // reader left it. A shared link carries no one's layout.
+  const [span, setSpan] = useState<DrawerSpan>(() =>
+    readStored(STORAGE_KEYS.worklistDrawerWide) === "1" ? "window" : "intent",
+  );
+  const changeSpan = (next: DrawerSpan) => {
+    setSpan(next);
+    writeStored(STORAGE_KEYS.worklistDrawerWide, next === "window" ? "1" : "0");
+  };
   return (
     <Modal
       open={params.get("queue") === "1"}
       onClose={close}
       labelledBy={titleId}
       intent="drawer-reading"
+      span={span}
+      onSpanChange={changeSpan}
     >
       {/* The BANDED head, not the composer's one scrolling column: the queue is
           a list a reader pages through, so its title and the dialog's own close

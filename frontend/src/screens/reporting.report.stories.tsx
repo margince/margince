@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingReportDetail } from "./reporting.report";
 import {
   reportingEditions,
@@ -7,7 +12,6 @@ import {
   reportingSchedule,
 } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Saved report detail" };
 export default meta;
@@ -94,6 +98,34 @@ export const CapturingAndFailures: Story = {
         <ReportingReportDetail reportId="report" />
       </StoryProviders>
     );
+  },
+};
+
+// A failed history read opens the section once, and the reader may close it.
+export const HistoryReadFailed: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/reports/report/editions": () =>
+        jsonResponse({ title: "Server error", status: 500 }, 500),
+    });
+    return (
+      <StoryProviders>
+        <ReportingReportDetail reportId="report" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const name = await within(canvasElement).findByText(
+      "History and schedules",
+    );
+    const summary = name.closest("summary");
+    if (summary === null) throw new Error("the history has no summary");
+    await waitFor(() =>
+      expect(summary).toHaveAttribute("aria-expanded", "true"),
+    );
+    await userEvent.click(summary);
+    await expect(summary).toHaveAttribute("aria-expanded", "false");
   },
 };
 

@@ -6,6 +6,7 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
 import { QueryStates } from "../design-system/querystates";
 import { RecordBack } from "../design-system/recordview";
 import { formatDate, formatNumber } from "../format/format";
@@ -17,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { navigate, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
-import { UndoConfirm } from "./import.notices";
+import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
@@ -26,8 +27,8 @@ import {
   useImportFormat,
   useLandedRecords,
   useRecentImports,
+  useStopImportTest,
   useUndoImport,
-  wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import {
@@ -176,16 +177,25 @@ function rowsOf(run: ImportRun): number {
   return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
 }
 
+// The seat that started a run. `captured_by` is the principal, `human:<uuid>`,
+// and the names endpoint takes the uuid alone; an agent holds no seat to name.
+function starterOf(run: ImportRun): string | undefined {
+  const by = provenanceOf(run.captured_by);
+  return by.kind === "human" ? by.userId : undefined;
+}
+
 // The runs made so far, newest first. Undo is offered on a complete run only:
 // every other state either is still moving or has nothing left to reverse.
 function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recent = useRecentImports();
-  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
+  const recent = useRecentImports("history");
+  const drafts = useRecentImports("drafts");
+  const runs = [...(drafts.data ?? []), ...(recent.data ?? [])];
   useLandedRecords(runs.map((one) => one.status));
-  const names = useMemberNames(runs.map((one) => one.captured_by));
+  const cancel = useStopImportTest();
+  const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);
   const close = () => {
@@ -195,6 +205,12 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   return (
     <Panel title={t("import.recent.title")}>
       <PanelBody>
+        {cancel.error ? (
+          <ImportRefusal
+            title={t("import.cancelFailed")}
+            error={cancel.error}
+          />
+        ) : null}
         <QueryStates query={recent} pendingLabel={t("common.loading")}>
           {runs.length === 0 ? (
             <EmptyState>{t("import.recent.empty")}</EmptyState>
@@ -220,7 +236,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                       one.parts?.length ?? 0,
                       { count: formatNumber(one.parts?.length ?? 0, locale) },
                     );
-                    const by = names.get(one.captured_by);
+                    const starter = starterOf(one);
+                    const by = starter && names.get(starter);
                     return (
                       <>
                         <a className="cell-link" href={runHref(one.id)}>
@@ -231,6 +248,14 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                             ? t("import.recent.filesBy", { files, name: by })
                             : files}
                         </div>
+                        {one.superseded_by ? (
+                          <a
+                            className="t-caption"
+                            href={runHref(one.superseded_by)}
+                          >
+                            {t("import.superseded")}
+                          </a>
+                        ) : null}
                       </>
                     );
                   },
@@ -254,8 +279,26 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                   key: "actions",
                   header: t("import.recent.col.actions"),
                   headerHidden: true,
-                  render: (one) =>
-                    one.status === "complete" ? (
+                  render: (one) => {
+                    if (one.status === "pending") {
+                      return (
+                        <div className="cell-actions">
+                          <a className="link-button" href={runHref(one.id)}>
+                            {t("import.draft.continue")}
+                          </a>
+                          <Button
+                            variant="ghost"
+                            pending={
+                              cancel.isPending && cancel.variables === one.id
+                            }
+                            onClick={() => cancel.mutate(one.id)}
+                          >
+                            {t("import.draft.cancel")}
+                          </Button>
+                        </div>
+                      );
+                    }
+                    return one.status === "complete" ? (
                       <div className="cell-actions">
                         <Button
                           variant="ghost"
@@ -264,7 +307,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                           {t("import.recent.undo")}
                         </Button>
                       </div>
-                    ) : null,
+                    ) : null;
+                  },
                 },
               ]}
             />

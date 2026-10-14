@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { installFetchStub, StoryProviders } from "../story-utils";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { briefModelPlan, briefWithPlan } from "./fixtures";
 import {
   AdvancePanel,

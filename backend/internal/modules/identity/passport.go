@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -118,9 +117,6 @@ func admitCallerChosenFields(in IssuePassportInput) error {
 	}
 	if in.TTL != nil && (*in.TTL <= 0 || *in.TTL > maxPassportTTL) {
 		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range", Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
-	}
-	if len(slices.Compact(slices.Sorted(slices.Values(in.Scopes)))) != len(in.Scopes) {
-		return &InvalidPassportFieldError{Field: fieldScopes, Code: "duplicate_scope", Message: "must not repeat a scope"}
 	}
 	return nil
 }

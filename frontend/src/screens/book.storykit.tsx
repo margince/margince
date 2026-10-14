@@ -1,4 +1,10 @@
 import type { ReactNode } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BookingScreen } from "./book";
 import {
   bookingConnection,
@@ -8,12 +14,6 @@ import {
   bookingProfile,
   bookingSlots,
 } from "./book.testkit";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 export function bookingFrame(view: () => ReactNode, overrides: RouteMap = {}) {
   return () => {
     installFetchStub({

@@ -3,16 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { PassportCard } from "./settings-passports";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { busyUsage } from "./agentallowances.fixtures";
+import { PassportCard } from "./settings-passports";
 
-// Three passports: one in use, one never used with every permission, and one
-// revoked, which stays listed and struck with no verb left to offer.
+// Three passports: one in use and stopped on a used-up allowance, and one
+// never used with every permission. The third is revoked: it waits behind the
+// toggle and shows struck, with no verb left to offer.
 const PASSPORTS = [
   {
     id: "pp-1",
@@ -22,6 +24,7 @@ const PASSPORTS = [
     last_used_at: "2026-09-28T14:10:00Z",
     expires_at: "2026-10-31T08:00:00Z",
     revoked_at: null,
+    usage: busyUsage,
   },
   {
     id: "pp-2",
@@ -102,5 +105,30 @@ export const RevokeConfirm: Story = {
       }),
     );
     await body.findByRole("dialog");
+  },
+};
+
+export const RevokedShown: Story = {
+  render: story(PASSPORTS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Show 1 revoked passport" }),
+    );
+    await canvas.findByText("Old runner");
+  },
+};
+
+// A row opened onto all four allowances of this window.
+export const UsageOpen: Story = {
+  render: story(PASSPORTS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Show this window’s usage for Claude Code on my laptop",
+      }),
+    );
+    await canvas.findByRole("meter", { name: "Records read" });
   },
 };

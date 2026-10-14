@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CompanyTable } from "./analytics.company";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The company report's table on its own. Each count opens that company's open
 // deals only on a complete answer; a capped one draws every count plainly.

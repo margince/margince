@@ -262,8 +262,12 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     );
     expect(seams.length).toBeGreaterThanOrEqual(4);
     for (const seam of seams) {
-      const inset = declaredValue(seam.block, "inset");
-      expect([undefined, "0 0 auto"], seam.selector).toContain(inset);
+      const content = declaredValue(seam.block, "content");
+      if (content === "none") continue;
+      expect(content, seam.selector).toBe('""');
+      expect(declaredValue(seam.block, "inset"), seam.selector).toBe(
+        "0 0 auto",
+      );
     }
   });
 

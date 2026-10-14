@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ConnectionOutcomesCard } from "./connection-outcomes";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What the classifier decided about a mailbox's senders, in the drawer the
 // outcomes card opens. A reader tells three states apart at a glance: a machine

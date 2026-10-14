@@ -10,6 +10,9 @@ package deals
 // maintenance sweep may write to one.
 
 import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -76,7 +79,33 @@ var MaintenanceWritesEnabled = settings.Define[bool](
 // a deal is the one that lets them say whether the machine may.
 const maintenanceObject = "deal"
 
+// LegalReviewEnabled is the installation's answer to whether a deal can be
+// sent to legal for review, and whether a legal_reviewed criterion blocks an
+// advance.
+//
+// DEFAULT TRUE, so teams find the feature without looking for it. Off hides
+// the request, the queue and the criterion kind, and keeps every review
+// already recorded. It is read inside the advance transaction, so switching it
+// off releases a gated stage on the next move.
+var LegalReviewEnabled = settings.Define[bool](
+	"deals.legal_review_enabled",
+	"installation_settings",
+	"update",
+	true,
+	nil, // a bool has two values and both mean something; nothing to validate
+).MachineryApplied() // the advance gate reads it for whoever moves the deal
+
+// SetLegalReviewEnabled switches legal review for the installation. An admin's
+// act alone: ops holds installation_settings.update for the wiring it runs,
+// and whether deals wait for legal is not wiring.
+func SetLegalReviewEnabled(ctx context.Context, store *settings.Store, on bool) error {
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return settings.Set(ctx, store, LegalReviewEnabled, on)
+}
+
 // Definitions is the deals module's contribution to the settings catalog.
 func Definitions() []settings.Definition {
-	return []settings.Definition{StageAutopilotEnabled, MaintenanceWritesEnabled}
+	return []settings.Definition{StageAutopilotEnabled, MaintenanceWritesEnabled, LegalReviewEnabled}
 }

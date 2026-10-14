@@ -41,6 +41,12 @@ Nothing is applied. The card shows **Expired**, and the agent has to propose aga
 A pending card shows "expires in {countdown}". One kind never expires: a stopped scheduled message waits until somebody answers.
 Also called: approval timed out, missed an approval, stale approval.
 
+### What if an approved change did not run?
+If Margince could not carry out a change you approved, a row on your own Worklist says the work did not run.
+Press **Run again**, where the row offers it, to run the approved work again.
+Press **Acknowledge** to take the row off your list. If the same change fails again later, it comes back.
+Also called: approval failed, approved but nothing happened, retry an approval.
+
 ### Who approves agent actions?
 An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
 Also called: approver, who signs off, permission to approve.

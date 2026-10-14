@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ConnectorsCard } from "./connectors";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectorsCard } from "./connectors";
 
 // Every story draws both panels, mail and the workspace's Telegram bot,
 // because the card does.

@@ -3,7 +3,7 @@
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline
 reports, sales performance, time in stage, your own outcomes, delivery and data
-coverage. It is in the sidebar under **Intelligence**. It answers two different
+coverage. It is in the sidebar under **Insights**. It answers two different
 kinds of question and keeps them apart: what the records say, and what somebody
 expects will happen.
 
@@ -13,7 +13,7 @@ open it rather than guessing.
 ## Common reporting tasks
 
 ### Where can I see my forecast?
-To see your forecast in Margince, click **Analytics** in the sidebar (under **Intelligence**) and open the **Forecast** section.
+To see your forecast in Margince, click **Analytics** in the sidebar (under **Insights**) and open the **Forecast** section.
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Committed · confirmed dates** and **Best-case addition**.

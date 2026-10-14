@@ -3,17 +3,17 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { AutomationsAdmin } from "./automations";
-import {
-  AUTOMATION_CATALOG,
-  configuredAutomations,
-} from "./automations.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AutomationsAdmin } from "./automations";
+import {
+  AUTOMATION_CATALOG,
+  configuredAutomations,
+} from "./automations.fixtures";
 
 // The whole automations card: the configured rules as one table, then the
 // starter library, each a group of the one pane.

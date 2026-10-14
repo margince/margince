@@ -186,45 +186,6 @@
   grid-column: 2;
 }
 
-/* The bar draws the fraction the line under it states in words. Its fill is
-   the AI hue outright — the bar exists only while the machine is reading. */
-.capture-bar {
-  block-size: 6px;
-  margin-top: var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-  overflow: hidden;
-}
-.capture-bar-fill {
-  position: relative;
-  display: block;
-  block-size: 100%;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--ai);
-  overflow: hidden;
-  transition: inline-size var(--dur-move) var(--ease-out);
-}
-/* The sheen travelling along the fill is the only thing on the card that says
-   "now" rather than "so far": a poll every few seconds moves the edge in
-   steps, and between two steps a still bar and a stalled one look the same.
-   Mixed from the hue and the card's own ground so it lightens the fill in the
-   light theme and deepens it in the dark one — a sheen either way, with no
-   literal of its own. */
-.capture-bar-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--ai) 40%, var(--bgElevated)) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: capture-sheen 1.8s var(--ease-in-out) infinite;
-}
 .capture-scanned {
   display: flex;
   justify-content: space-between;
@@ -238,25 +199,18 @@
 .spin-slow {
   animation: capture-spin 1.6s linear infinite;
 }
-@keyframes capture-sheen {
-  to {
-    transform: translateX(100%);
-  }
-}
 @keyframes capture-spin {
   to {
     transform: rotate(360deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .capture-bar-fill::after,
   .spin-slow {
     animation: none;
   }
   .capture-hero,
   .capture-mark,
-  .capture-stat-glyph,
-  .capture-bar-fill {
+  .capture-stat-glyph {
     transition: none;
   }
 }

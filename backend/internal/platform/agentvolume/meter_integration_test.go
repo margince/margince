@@ -157,7 +157,7 @@ func TestAReleaseLetsARefusedAgentReadAgainInTheSameWindow(t *testing.T) {
 		t.Fatal("120 records did not cross a threshold of 100")
 	}
 
-	applied, err := meter.Release(t.Context(), ws, passport, Reads, refused.Bucket)
+	applied, err := releaseIn(t, meter, ws, passport, Reads, refused.Bucket)
 	if err != nil || !applied {
 		t.Fatalf("releasing the window the agent was refused in: applied=%v err=%v", applied, err)
 	}
@@ -185,7 +185,7 @@ func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 	if err := meter.Consume(ctx, Reads, 120); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := meter.Release(t.Context(), ws, passport, Reads, meter.Bucket()); err != nil {
+	if _, err := releaseIn(t, meter, ws, passport, Reads, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -212,7 +212,7 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 		}
 	}
 
-	if _, err := meter.Release(t.Context(), ws, passport, Reads, meter.Bucket()); err != nil {
+	if _, err := releaseIn(t, meter, ws, passport, Reads, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,5 +286,99 @@ func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	}
 	if reach := meter.Answerable(); !reach.Reachable {
 		t.Error("the bound still reports itself unanswerable after a read succeeded; the alert would never clear")
+	}
+}
+
+// A renewal retires a connection's passport and mints another under the same
+// grant. Both passports draw on one allowance, so a renewal never resets it.
+func TestAConnectionsRenewedPassportKeepsItsCount(t *testing.T) {
+	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10}, time.Hour, frozen(&at))
+	ws, connection := aWorkspace(), ids.NewV7()
+	call := func(passport ids.UUID) context.Context {
+		ctx := principal.WithWorkspaceID(t.Context(), ws)
+		return principal.WithActor(ctx, principal.Principal{
+			Type: principal.PrincipalAgent, ID: "agent:connector", PassportID: passport, ConnectionID: connection,
+		})
+	}
+
+	if err := meter.Consume(call(aPassport()), Writes, 10); err != nil {
+		t.Fatal(err)
+	}
+
+	if reading := meter.Read(call(aPassport()), Writes); !reading.Exceeded || reading.Observed != 10 {
+		t.Errorf("the renewed passport reads %+v, want the connection's 10 of 10", reading)
+	}
+}
+
+// An admin's lowered allowance binds in the running window: a passport already
+// past it is refused on its next call.
+func TestALoweredAllowanceRefusesTheNextCall(t *testing.T) {
+	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
+	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 200}, Window: WindowPlan{Length: time.Hour}}}
+	meter := NewWithClock(redistest.Client(t), Limits{}, time.Hour, frozen(&at)).WithPolicySource(src)
+	ctx := meteredCall(t, aWorkspace(), aPassport())
+	for range 15 {
+		if _, ok, err := meter.Reserve(ctx, Writes, 1); err != nil || !ok {
+			t.Fatalf("a write under 200 was refused (err %v)", err)
+		}
+	}
+
+	src.policy.Limits.Writes = 10
+	at = at.Add(PolicyRefresh)
+
+	if _, ok, err := meter.Reserve(ctx, Writes, 1); err != nil || ok {
+		t.Errorf("after the allowance fell to 10, the 16th write → admitted=%v err=%v, want refused", ok, err)
+	}
+}
+
+// A saved length takes over at the reset; until then the count keeps running.
+func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
+	at := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC)
+	plan := WindowPlan{Length: 24 * time.Hour}.Reschedule(at, 12*time.Hour)
+	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 10}, Window: plan}}
+	meter := NewWithClock(redistest.Client(t), Limits{}, 24*time.Hour, frozen(&at)).WithPolicySource(src)
+	ctx := meteredCall(t, aWorkspace(), aPassport())
+	if err := meter.Consume(ctx, Writes, 10); err != nil {
+		t.Fatal(err)
+	}
+
+	at = plan.NextFrom.Add(-time.Second)
+	if reading := meter.Read(ctx, Writes); !reading.Exceeded || reading.Window != 24*time.Hour {
+		t.Errorf("before the reset the passport reads %+v, want still spent under 24h", reading)
+	}
+
+	at = plan.NextFrom
+	if reading := meter.Read(ctx, Writes); reading.Exceeded || reading.Observed != 0 || reading.Window != 12*time.Hour {
+		t.Errorf("at the reset the passport reads %+v, want a fresh 12h window", reading)
+	}
+}
+
+// One usage read answers every subject's counts and releases at once.
+func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
+	at := time.Date(2026, 8, 8, 9, 30, 0, 0, time.UTC)
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100, Writes: 10}, time.Hour, frozen(&at))
+	ws, busy, idle := aWorkspace(), aPassport(), aPassport()
+	if err := meter.Consume(meteredCall(t, ws, busy), Reads, 120); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := releaseIn(t, meter, ws, busy, Reads, meter.Bucket(t.Context())); err != nil {
+		t.Fatal(err)
+	}
+
+	usage, err := meter.Usage(t.Context(), ws, []string{busy.String(), idle.String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := usage[busy.String()]
+	if got.Reads != (CounterUsage{Used: 120, Limit: 200, Released: 1}) || got.Writes != (CounterUsage{Limit: 10}) {
+		t.Errorf("the busy passport reads %+v", got)
+	}
+	if want := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC); !got.ResetsAt.Equal(want) {
+		t.Errorf("resets at %v, want %v", got.ResetsAt, want)
+	}
+	if usage[idle.String()].Reads.Used != 0 {
+		t.Errorf("the idle passport reads %+v", usage[idle.String()])
 	}
 }

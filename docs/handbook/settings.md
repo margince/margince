@@ -198,7 +198,7 @@ When someone sets a higher allowance, three kinds of waiting work run on the nex
 
 Look at a preview of an allowance or model change before you save it. Margince refuses a save if the stored setting has changed after your preview, so you never save against an answer you did not see.
 
-**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
+**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". **AI usage** also holds the agent passport allowances, and how much each user's agents used. [Agents and passports](agents-and-passports.md#allowances-per-window) says how they work. Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
 
 ## Knowledge
 

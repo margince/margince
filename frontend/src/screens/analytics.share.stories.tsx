@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { ShareViewButton } from "./analytics.share";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ShareViewButton } from "./analytics.share";
 
 // The share dialog, in both states a reader meets it in. The kind picker is
 // the first: two promises, told apart in words rather than by a label. The

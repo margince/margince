@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { en } from "../i18n/en";
-import { WorkAsLeadAction } from "./contactleadaction";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { WorkAsLeadAction } from "./contactleadaction";
 
 // The contact page's "Work as a lead" row, as it sits in the More menu: one
 // press creates the reader's lead from the contact and opens it.

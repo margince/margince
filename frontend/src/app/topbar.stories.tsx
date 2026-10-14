@@ -14,7 +14,7 @@ import {
   meRoute,
   StoryProviders,
   WithInstallationBrand,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import type { NavCounts, NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
 import { PageTitle, WorkspaceRail } from "./shell";

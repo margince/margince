@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
 // The invite form's role: it starts on the ordinary seat when the reader may

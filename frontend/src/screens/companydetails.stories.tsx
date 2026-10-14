@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { CompanyDetails } from "./companydetails";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyDetails } from "./companydetails";
 
 const meta: Meta<typeof CompanyDetails> = {
   title: "Records/Company 360/Rail/Editable details",

@@ -804,7 +804,7 @@ tools: ## Install every gate binary at its pinned version (fresh-machine bootstr
 
 # `git rev-parse --git-path hooks` honors core.hooksPath, so this works
 # both on a plain clone (.git/hooks) and after the root `make hooks`
-# switched the repo to .githooks/ for the pre-push craft gate.
+# switched the repo to .githooks/.
 hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 	install -m 0755 ../scripts/pre-commit "$$(git rev-parse --git-path hooks)/pre-commit"
 

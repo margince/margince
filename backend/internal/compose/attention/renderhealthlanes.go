@@ -47,6 +47,11 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		started := *concern.FailingSince
 		item.OccurredAt = &started
 	}
+	// A good sync after a Done means the concern cleared and came back.
+	if concern.LastSyncedAt != nil {
+		synced := *concern.LastSyncedAt
+		item.SubjectMovedAt = &synced
+	}
 	return item
 }
 

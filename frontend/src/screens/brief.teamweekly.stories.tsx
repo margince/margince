@@ -3,6 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
+import {
   beforeHistoryWeeklyNumbers,
   partlyRecordedWeeklyNumbers,
   team,
@@ -10,12 +16,6 @@ import {
   unavailableWeeklyNumbers,
 } from "./brief.fixtures";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
-import {
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-  stubWithSession,
-} from "./story-utils";
 
 // A team's frozen week, with the picker that chooses which team it is about.
 //

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { TelegramConnectorsPanel } from "./connectors.telegram";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TelegramConnectorsPanel } from "./connectors.telegram";
 import "./connectors.css";
 
 // The workspace's bot: none yet, and live bots with a row each. A deployment

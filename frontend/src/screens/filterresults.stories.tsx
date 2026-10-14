@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { en } from "../i18n/en";
+import { StoryProviders } from "../testing/story-utils";
 import type { FilterPreview, VocabularyField } from "./filterdata";
 import { FilterResults } from "./filterresults";
-import { StoryProviders } from "./story-utils";
 
 // FilterResults takes everything as props — the preview response, the vocabulary
 // it heads its columns from — so it needs no fetch and no query client of its

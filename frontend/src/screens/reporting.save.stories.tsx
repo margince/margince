@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { SaveReportingDialog } from "./reporting.save";
 import {
   reportingStoryEvaluation,
   reportingStoryRoutes,
 } from "./reporting.story-fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Save report" };
 export default meta;

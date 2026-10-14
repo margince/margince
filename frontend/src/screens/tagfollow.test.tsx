@@ -25,7 +25,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { TagsPanel } from "./tagspanel";
 
 // Applying a tag on a contact offers it to their company; applying one on a

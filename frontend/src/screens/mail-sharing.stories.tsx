@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MailSharingCard } from "./mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSharingCard } from "./mail-sharing";
 
 // The workspace mail-sharing posture and the sync interval beside it. On is the
 // quiet default. Off draws the danger callout, the one place that states what

@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BulkChangeDialog, type BulkChangeRequest } from "./bulkchange";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The preview a bulk verb opens before anything is written, in each state the
 // server can answer with.

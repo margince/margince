@@ -203,7 +203,7 @@ func TestARecordNounFallsBackToTheWireType(t *testing.T) {
 		want       string
 	}{
 		{textlang.English, "deal_room", "deal room"},
-		{textlang.German, "deal_room", "Deal-Room"},
+		{textlang.German, "deal_room", "Deal Room"},
 		{textlang.German, "app_user", "app_user"},
 		{textlang.Lang("kl"), "saved_view", "saved view"},
 	} {
@@ -242,7 +242,7 @@ func TestTheToolDoorDescribesInTheComposedLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging a served create answered %v", err)
 	}
-	if want := "Kontakt anlegen, Felder: full_name, title"; info.Summary != want {
+	if want := "Kontakt erstellen, Felder: full_name, title"; info.Summary != want {
 		t.Errorf("summary = %q, want %q", info.Summary, want)
 	}
 }

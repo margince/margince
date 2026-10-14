@@ -528,5 +528,9 @@ const (
 	// the timeline predicate's arms as a set that starts from the accounts. Its
 	// one caller, company360.LastTouchFor, bounds the company with ScopeClauseFor
 	// and the activity with ActivityDiscoverClause around it.
-	modulesTierUnscopedCeiling = 119
+	//
+	// 121: deals.readReviewTerms and deals.readOfferTerms read the deal's
+	// company and each offer's buyer company into the legal review terms. The
+	// ids feed a SHA-256 the stage gate compares and never leave the server.
+	modulesTierUnscopedCeiling = 121
 )

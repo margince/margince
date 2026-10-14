@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { EmailAccessEditor } from "./emailaccesseditor";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { EmailAccessEditor } from "./emailaccesseditor";
 
 // Who reads this message, under its subject, and the verb that changes it.
 //

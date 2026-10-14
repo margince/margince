@@ -34,6 +34,7 @@ export {
 export { basisAddsARecord, momentIsARow, momentKicker } from "./moment";
 export { MomentEvidence } from "./momentevidence";
 export { CallCard, RecordReading, RecordReadingPair } from "./reading";
+export { useSetAside } from "./setaside";
 export {
   RecordSpine,
   type SpineCommercial,

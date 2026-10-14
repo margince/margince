@@ -123,6 +123,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			AmountMinor:          deal.AmountMinor,
 			Currency:             deal.Currency,
 			QuietDays:            idleDaysOf(deal, now),
+			LastTouchedAt:        idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
 			CloseOverdue:         deal.CloseOverdue,
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
 			CloseDateProvisional: deal.CloseDateProvisional,

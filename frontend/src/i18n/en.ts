@@ -823,6 +823,8 @@ export const en = {
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
   "trust.sourceUnknown": "Source not recorded",
+  "trust.imported": "Imported",
+  "trust.importedFrom": "Imported from {uploadName}",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to
   // a name, so the tag says the kind and stops rather than printing an
@@ -1132,7 +1134,7 @@ export const en = {
   "nav.automations": "Automations",
   "nav.group.records": "Records",
   "nav.group.work": "Work",
-  "nav.group.intelligence": "Intelligence",
+  "nav.group.intelligence": "Insights",
   "nav.offers": "Offer",
   "nav.share": "Sharing",
   "nav.search": "Search results",
@@ -1152,6 +1154,8 @@ export const en = {
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
   "shell.version": "Version {version}",
+  "shell.instanceVersion": "Instance {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
@@ -1251,6 +1255,8 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
   // The one sentence every copy failure opens with. It is a fact about the
   // BROWSER rather than about the link, the secret or the agenda, so the
   // screens differ only in the way out they offer after it.
@@ -2374,7 +2380,7 @@ export const en = {
   "co.growthFit.dim.access": "Access",
   "co.growthFit.band.moderate": "Moderate fit",
   "co.growthFit.band.weak": "Weak fit",
-  "co.growthFit.band.unknown": "Not enough to judge",
+  "co.growthFit.band.unknown": "Not enough data",
   "co.growthFit.completeness": "{present} of {expected} inputs recorded",
   "co.growthFit.missing": "Still missing",
   "co.growthFit.capped": "Held back: {reason}.",
@@ -2535,6 +2541,8 @@ export const en = {
   "co.suggest.basedOn": "Based on",
   "co.cite.open": "Open record",
   "co.suggest.dismiss": "Not now",
+  "record.setAside.done": "Set aside. It comes back when something changes.",
+  "record.setAside.restored": "Back on the card.",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed": "Suggestion was not dismissed. Retry.",
   // Said plainly, because the reader's next move depends on it: a step they
@@ -3481,6 +3489,9 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
+  "deals.lostReasonNeeded": "Enter why the deal was lost.",
+  "deals.winReasonNeeded": "Pick how the deal was won.",
+  "deals.winDetailNeeded": "Describe how the deal was won.",
   "deals.closeTasks.legend_one":
     "What happens to the {count} open task on this deal?",
   "deals.closeTasks.legend_other":
@@ -3852,6 +3863,8 @@ export const en = {
   "worklist.bulk.selectAll_other": "Select all {count} items shown",
   "worklist.bulk.clear": "Clear selection",
   "worklist.bulk.markDone": "Mark done",
+  "worklist.bulk.doneCount_one": "Marked {count} item done for you.",
+  "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -6007,6 +6020,14 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.cancelFailed": "The import was not canceled",
+  "import.conflictDismiss": "Dismiss",
+  "import.conflictOtherTab":
+    "This import was changed in another tab. Your screen now shows the saved choices.",
+  "import.superseded": "A newer test run replaced this import",
+  "import.supersededOpen": "Open the newer test run",
+  "import.draft.continue": "Continue",
+  "import.draft.cancel": "Cancel",
   "import.sourceBusy":
     "Another import of this source name is still writing. Wait for it to finish, then test again.",
   "import.sourceBusyOpen": "Open that import",
@@ -6088,6 +6109,33 @@ export const en = {
   "import.progress.running": "In progress",
   "import.progress.done": "Done",
   "import.progress.rows": "{type}: {done} of {total} rows",
+  "import.progress.working": "Working…",
+  "import.progress.queued": "Waiting to start",
+  "import.progress.records": "your records",
+  "import.progress.links": "Links",
+  "import.progress.overall": "All files",
+  "import.progress.total": "{done} of {total} rows",
+  "import.progress.rate": "{rate} rows/s",
+  "import.progress.elapsed": "{span} elapsed",
+  "import.progress.etaObject": "about {minutes} min left in {type}",
+  "import.progress.etaRun": "about {minutes} min left",
+  "import.progress.counts": "Rows so far",
+  "import.progress.count.created": "New",
+  "import.progress.count.updated": "Updated",
+  "import.progress.count.unchanged": "Same",
+  "import.progress.count.skipped": "Skipped",
+  "import.progress.count.problems": "Problems",
+  "import.progress.stalled.working": "Still working on it",
+  "import.progress.stalled.server": "Waiting for the server",
+  "import.progress.stalled.body":
+    "No progress for {span}. This page keeps checking and tells you when it moves.",
+  "import.phase.reading": "Reading the file",
+  "import.phase.checking": "Checking {type}",
+  "import.phase.creating_tags": "Creating tags",
+  "import.phase.importing": "Importing {type}",
+  "import.phase.linking": "Linking records",
+  "import.phase.undoing": "Undoing {type}",
+  "import.phase.finishing": "Finishing up",
   "import.progress.leave":
     "You can leave this page. The import keeps going, and Recent imports shows when it is done.",
   "import.result.detail": "{created} created · {updated} updated",
@@ -6125,6 +6173,121 @@ export const en = {
   "import.test.row": "Row {line}",
   "import.test.rowColumn": "Row {line} · {column}",
   "import.test.wholeFile": "Whole file",
+  "import.reason.link_row_not_imported":
+    "This row will not be imported, so there is nobody to link to {name}.",
+  "import.reason.link_contact_not_imported":
+    "The contact “{from}” was not imported, so there was nobody to link to “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "A CSV import has no {from} → {to} link, so it was not applied.",
+  "import.reason.undo_grant_lost":
+    "Your permissions no longer cover this record.",
+  "import.reason.undo_not_visible": "This record is no longer visible to you.",
+  "import.reason.undo_rule_protects":
+    "The record refused the undo because a business rule protects it.",
+  "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.author_too_long": "Author is longer than {max} characters.",
+  "import.reason.cannot_create":
+    "You cannot create {plural}, so the {plural} file is skipped.",
+  "import.reason.cannot_create_tags":
+    "You cannot create tags, so a tag new to the CRM is not added.",
+  "import.reason.cannot_edit":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped.",
+  "import.reason.cannot_edit_and_tag":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped and no tag is added to one.",
+  "import.reason.cannot_read_tags":
+    "You cannot read tags, so the tags column is not imported.",
+  "import.reason.cannot_write_type":
+    "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_duplicate_found":
+    "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
+  "import.reason.company_duplicate_skipped":
+    "A company of this name is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.company_name_empty":
+    "The mapped display_name is empty, so the row names no company.",
+  "import.reason.contact_duplicate_found":
+    "Someone matching this row is already in the CRM. A row naming an address already held is refused, and a near match creates and files the pair for review.",
+  "import.reason.contact_duplicate_skipped":
+    "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.contact_email_held":
+    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+  "import.reason.contact_unnamed":
+    "The row carries neither a name nor an email, so it names no contact.",
+  "import.reason.currency_unset":
+    "“{value}” cannot be read: this currency field has no currency set.",
+  "import.reason.description_too_long":
+    "The description is {length} characters. A company description holds at most {max}.",
+  "import.reason.domain_held":
+    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
+  "import.reason.duplicate_email":
+    "This email address already belongs to another contact.",
+  "import.reason.employer_column_empty":
+    "The company column is empty, so the row names no employer.",
+  "import.reason.employer_column_empty_dropped":
+    "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_not_found":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+  "import.reason.employer_not_found_dropped":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+  "import.reason.empty_payload": "The row has no fields.",
+  "import.reason.field_inactive":
+    "“{value}” cannot be written: this field is no longer active.",
+  "import.reason.id_not_a_company_id":
+    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_visible":
+    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.id_on_non_company":
+    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+  "import.reason.link_ambiguous":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
+  "import.reason.link_ambiguous_dropped":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_not_found":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.link_not_found_dropped":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.linkedin_held":
+    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
+  "import.reason.natural_key_taken": "A record with this key already exists.",
+  "import.reason.not_a_date":
+    "“{value}” is not a date. Write it as YYYY-MM-DD.",
+  "import.reason.not_a_domain":
+    "“{value}” is not a domain that can be written.",
+  "import.reason.not_a_number": "“{value}” is not a number.",
+  "import.reason.not_an_amount":
+    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+  "import.reason.not_an_email":
+    "“{value}” is not an email address that can be written.",
+  "import.reason.not_yes_no": "“{value}” is not yes or no.",
+  "import.reason.option_not_allowed":
+    "“{value}” is not one of this field’s allowed values.",
+  "import.reason.option_not_in_list":
+    "“{value}” is not one of the allowed values: {options}.",
+  "import.reason.options_need_semicolons":
+    "“{value}”: separate several values with semicolons.",
+  "import.reason.owner_refused":
+    "You cannot make this user an owner, so you become the owner of their rows.",
+  "import.reason.owner_unknown":
+    "No user has this email, so you become the owner.",
+  "import.reason.phone_needs_country":
+    "“{value}” needs its country code, like +49 30 1234567.",
+  "import.reason.record_archived":
+    "This row’s record was archived, so it is not updated. Restore the record to update it.",
+  "import.reason.ref_taken_by_another_company":
+    "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
+  "import.reason.row_key_empty":
+    "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
+  "import.reason.row_key_repeated":
+    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+  "import.reason.size_band_invalid":
+    "Size_band “{value}” is not one of {allowed}.",
+  "import.reason.tag_created":
+    "No tag had this name, so the import created it.",
+  "import.reason.tag_name_invalid":
+    "The tag “{name}” cannot be created: its name {detail}.",
+  "import.reason.tag_new":
+    "No tag has this name yet, so the import creates it.",
+  "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
   "import.problem.invalid_value": "Invalid value",
@@ -10656,6 +10819,51 @@ export const en = {
   "agentConnections.ttl.refusal":
     "Enter a whole number of minutes from 5 to 129,600.",
   "agentConnections.updateFailed": "Setting not changed",
+  "agentAllowances.title": "Agent passport allowances",
+  "agentAllowances.sub":
+    "What one passport or MCP connection may do in each window before it stops. A change to a count applies within a minute, in the window that is running. A passport can never change its own allowance.",
+  "agentAllowances.reads.label": "Records read",
+  "agentAllowances.reads.help":
+    "Records an agent may read per window, 100 to 20,000. Past it, reads wait for its owner to release more.",
+  "agentAllowances.writes.label": "Changes",
+  "agentAllowances.writes.help":
+    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to release more.",
+  "agentAllowances.egress.label": "Sends",
+  "agentAllowances.egress.help":
+    "Emails and other calls that leave Margince. Sends stop until the window resets, 1 to 200.",
+  "agentAllowances.calls.label": "Calls in total",
+  "agentAllowances.calls.help":
+    "Every tool or API call. The passport pauses until the window resets, 50 to 20,000.",
+  "agentAllowances.window.label": "Window (hours)",
+  "agentAllowances.window.help":
+    "How long one allowance lasts, 1 to 168. A new length starts at the next reset.",
+  "agentAllowances.burst":
+    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport.",
+  "agentAllowances.pending.title": "Window change waiting",
+  "agentAllowances.pending.body":
+    "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
+  "agentUsage.title": "Agent usage by user",
+  "agentUsage.sub":
+    "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
+  "agentUsage.withheld":
+    "Only an administrator, a Management user or an operations user can see agent usage.",
+  "agentUsage.empty": "No user has a live passport or connection.",
+  "agentUsage.resets": "Every allowance resets {date} UTC.",
+  "agentUsage.ofLimit": "{used} of {limit}",
+  "agentUsage.counter.reads": "Records read",
+  "agentUsage.counter.writes": "Changes",
+  "agentUsage.counter.egress": "Sends",
+  "agentUsage.counter.calls": "Calls",
+  "agentUsage.col.user": "User",
+  "agentUsage.col.passports": "Passports",
+  "agentUsage.state.ok": "Working",
+  "agentUsage.state.near": "Near a limit",
+  "agentUsage.state.stopped": "Stopped",
+  "settings.passportColWindow": "This window",
+  "settings.passportUsageToggle": "Show this window’s usage for {name}",
+  "settings.passportsShowRevoked_one": "Show {count} revoked passport",
+  "settings.passportsShowRevoked_other": "Show {count} revoked passports",
+  "settings.passportsHideRevoked": "Hide revoked",
   "operations.schedules.title": "Background schedules",
   "operations.schedules.sub":
     "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
@@ -12444,7 +12652,6 @@ export const en = {
   "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
-  "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",
@@ -12457,11 +12664,12 @@ export const en = {
     "Back on your list when they reply.",
   "worklist.disposition.done.handled":
     "Marked done for you. It comes back if they write again.",
+  "worklist.disposition.done.handledRow":
+    "Marked done for you. It comes back if something new happens on it.",
   "worklist.disposition.done.not_mine":
     "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
   "worklist.disposition.swipeCancel": "Keep",
-  "worklist.disposition.menu": "Remove from list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
@@ -12575,6 +12783,7 @@ export const en = {
   "worklist.board.promises": "Commitments due",
   "worklist.board.truncated":
     "Counts are incomplete. Each figure is a minimum.",
+  "worklist.rowMenu": "More actions for {title}",
   "worklist.readings.label": "Today’s figures",
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Deals drifting today",
@@ -12707,6 +12916,7 @@ export const en = {
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
+  "worklist.because.read_only": "you can read this but not change it",
   "worklist.above.pin": "Ranked above the next item because you pinned it.",
   "worklist.above.level":
     "Ranked above the next item because it is more urgent.",
@@ -12852,6 +13062,9 @@ export const en = {
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
+  "worklist.verb.approvalRetried": "Approved change completed",
+  "worklist.verb.approvalRetryFailed":
+    "The approved change still did not run. Retry later, or acknowledge it.",
   "worklist.verb.completeFailed": "Task was not completed. Retry.",
   "worklist.verb.completeStale":
     "This task changed since you opened it, so it was not completed here. The list was refreshed.",
@@ -13774,6 +13987,89 @@ export const en = {
     "A legal hold sits on a record this activity is linked to, so its retention mark stays until the hold is lifted.",
   "projectFiling.refusal.hidden_project":
     "A project you cannot see still holds this activity. Ask someone who can see it to undo the filing.",
+  "legalReview.tab": "Legal review",
+  "legalReview.request": "Request legal review",
+  "legalReview.requestAgain": "Request again",
+  "legalReview.requestConfirm": "Send request",
+  "legalReview.packIntro":
+    "Legal reads a pack built from this deal: company, value, stage, close date, current offer, stage history, and the contract, legal and offer documents.",
+  "legalReview.noteLabel": "Note for legal",
+  "legalReview.noteHint": "What legal should look at. Optional.",
+  "legalReview.empty": "No legal review yet.",
+  "legalReview.requestedBy": "Requested by {name}",
+  "legalReview.decidedBy": "Answered by {name}",
+  "legalReview.someone": "a former colleague",
+  "legalReview.noteShown": "Note: {note}",
+  "legalReview.commentsShown": "Legal: {comments}",
+  "legalReview.openPack": "Open review pack",
+  "legalReview.withdraw": "Withdraw request",
+  "legalReview.withdrawTitle": "Withdraw request?",
+  "legalReview.withdrawText":
+    "The request leaves the legal queue. The deal can be sent again later.",
+  "legalReview.status.requested": "Waiting for legal",
+  "legalReview.status.approved": "Approved",
+  "legalReview.status.changes_needed": "Changes needed",
+  "legalReview.status.withdrawn": "Withdrawn",
+  "legalReview.queueTitle": "Legal reviews",
+  "legalReview.queueOpen": "Waiting",
+  "legalReview.queueDecided": "Answered",
+  "legalReview.queueEmptyOpen": "No request waits for legal.",
+  "legalReview.queueEmptyDecided": "No review answered yet.",
+  "legalReview.closesOn": "Closes {date}",
+  "legalReview.back": "All legal reviews",
+  "legalReview.packTitle": "Review pack",
+  "legalReview.decideTitle": "Answer",
+  "legalReview.ownRequest":
+    "You asked for this review, so a colleague answers it.",
+  "legalReview.outcome": "Outcome",
+  "legalReview.outcomeApproved": "Approve",
+  "legalReview.outcomeApprovedHint":
+    "The deal can pass a stage that needs legal’s approval.",
+  "legalReview.outcomeChanges": "Changes needed",
+  "legalReview.outcomeChangesHint":
+    "The deal stays at its stage until it is sent again and approved.",
+  "legalReview.commentsLabel": "Comments",
+  "legalReview.commentsHint": "Required when changes are needed.",
+  "legalReview.decide": "Record answer",
+  "legalReview.earlier": "Earlier reviews",
+  "legalReview.packCompany": "Company",
+  "legalReview.packValue": "Value",
+  "legalReview.packStage": "Stage",
+  "legalReview.packClose": "Close date",
+  "legalReview.packOwner": "Owner",
+  "legalReview.packOffer": "Current offer",
+  "legalReview.offerNumber": "Offer",
+  "legalReview.offerRevision": "{number}, revision {revision}",
+  "legalReview.offerTotal": "Total",
+  "legalReview.offerValidUntil": "Valid until",
+  "legalReview.offerTerms": "Terms",
+  "legalReview.packNoOffer": "No offer on this deal.",
+  "legalReview.packDocuments": "Documents",
+  "legalReview.packNoDocuments":
+    "No contract, legal or offer document you can open.",
+  "legalReview.docCategory.contract": "Contract",
+  "legalReview.docCategory.offer": "Offer",
+  "legalReview.docCategory.legal": "Legal",
+  "legalReview.docState.draft": "Draft",
+  "legalReview.docState.current": "Current",
+  "legalReview.docState.final": "Final",
+  "legalReview.packHistory": "Stage history",
+  "legalReview.enteredStage": "{stage}, entered {date}",
+  "legalReview.settingsTitle": "Legal review",
+  "legalReview.settingsSwitch": "Legal review on deals",
+  "legalReview.settingsHint":
+    "Deal owners can ask legal to review a deal, and a stage can require legal’s approval. Off hides both and keeps every review already recorded.",
+  "legalReview.settingsReadOnly": "An admin changes this setting.",
+  "legalReview.notSaved": "Setting was not saved.",
+  "stage.criteria.kindLegalReviewed": "Legal approved",
+  "legalReview.docUnavailable":
+    "You cannot open this file. Ask the colleague who requested the review.",
+  "legalReview.offerLine": "Line {number}",
+  "legalReview.offerLineText": "{quantity} × {description} at {price}",
+  "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
+  "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
+  "legalReview.offerLineStaged": "Proposed, not yet in the total",
+  "legalReview.packBinding": "Other offers sent to the buyer",
 } as const;
 
 export type MessageKey = keyof typeof en;

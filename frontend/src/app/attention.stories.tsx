@@ -9,7 +9,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import {
   AttentionProvider,
   useAttention,

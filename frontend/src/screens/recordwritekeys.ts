@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
-import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import { leadWriteKeys } from "./leadkeys";
 
 // Which cached reads a write to ONE record makes stale, by record kind.

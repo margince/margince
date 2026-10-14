@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -19,7 +20,7 @@ func newTestLinkResolver(t *testing.T) *linkResolver {
 	t.Helper()
 	r := &linkResolver{
 		pending: map[linkKey]bool{}, landed: map[linkKey]ids.UUID{}, cache: map[linkKey]linkAnswer{},
-		names: map[string]pendingName{}, named: map[linkKey]func(context.Context) (ids.UUID, bool){},
+		names: map[string]pendingName{},
 	}
 	none := func(context.Context, string, string) (linkAnswer, error) { return linkAnswer{}, nil }
 	r.byBinding, r.byNaturalKey, r.byID = none, none, none
@@ -62,28 +63,6 @@ func TestARowNamedByIDAnswersItsRef(t *testing.T) {
 	}
 }
 
-// A company an earlier slice landed by id is checked once, when a link first
-// asks for its ref. A resumed slice pays only for the links it writes.
-func TestANamedCompanyIsCheckedOnlyWhenALinkAsksForIt(t *testing.T) {
-	r := newTestLinkResolver(t)
-	id := ids.NewV7()
-	checked := map[string]int{}
-	for _, ref := range []string{"CO-1", "CO-2"} {
-		r.markNamed("company", ref, func(context.Context) (ids.UUID, bool) {
-			checked[ref]++
-			return id, true
-		})
-	}
-	for range 2 {
-		if got, err := r.resolveCompany(context.Background(), "CO-1"); err != nil || !got.Found || got.ID != id {
-			t.Fatalf("got %+v err %v, want the record the row named", got, err)
-		}
-	}
-	if len(checked) != 1 || checked["CO-1"] != 1 {
-		t.Errorf("checked %v, want CO-1 once and nothing no link asked for", checked)
-	}
-}
-
 // Only a value that parses as an id is looked up as one. A miss on all three
 // steps answers one sentence naming the value.
 func TestOnlyAnIDIsLookedUpByIDAndAMissNamesTheValue(t *testing.T) {
@@ -99,8 +78,8 @@ func TestOnlyAnIDIsLookedUpByIDAndAMissNamesTheValue(t *testing.T) {
 		if err != nil || got.Found || got.Pending {
 			t.Fatalf("resolve(%q) = %+v err %v, want not found", raw, got, err)
 		}
-		if got.Reason != linkNotFoundReason(raw) {
-			t.Fatalf("reason = %q, want the one not-found sentence naming %q", got.Reason, raw)
+		if !reflect.DeepEqual(got.Why, linkNotFoundWhy(raw)) {
+			t.Fatalf("reason = %q, want the one not-found sentence naming %q", got.Why.English(), raw)
 		}
 	}
 	if len(byID) != 1 || byID[0] != id {
@@ -151,7 +130,7 @@ func TestABrokenCompanyRefSkipsOrWarnsByPolicy(t *testing.T) {
 		if got.skip != want.skip || got.problem.Kind != want.kind || got.problem.Value != "CO-404" || got.problem.Column != "company" {
 			t.Fatalf("%q: got skip=%v %+v, want skip=%v kind %s naming CO-404 in column company", policy, got.skip, *got.problem, want.skip, want.kind)
 		}
-		if !strings.Contains(got.problem.Reason, `"CO-404"`) {
+		if !strings.Contains(got.problem.Reason, `“CO-404”`) {
 			t.Fatalf("%q: reason %q does not name the value", policy, got.problem.Reason)
 		}
 	}
@@ -183,11 +162,11 @@ func TestACompanyNameOfThisUploadCountsAsOneMoreHolder(t *testing.T) {
 		want linkAnswer
 	}{
 		{"new co", employerCandidate{}, linkAnswer{Pending: true}},
-		{"twin ag", estate, linkAnswer{Reason: ambiguousEmployerReason("twin ag")}},
+		{"twin ag", estate, linkAnswer{Why: ambiguousEmployerWhy("twin ag")}},
 		{"kept ltd", estate, linkAnswer{Pending: true}},
 		{"elsewhere", estate, linkAnswer{ID: estate.id.UUID, Found: true}},
 	} {
-		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); got != tc.want {
+		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); !reflect.DeepEqual(got, tc.want) {
 			t.Fatalf("%s: got %+v, want %+v", tc.name, got, tc.want)
 		}
 	}
