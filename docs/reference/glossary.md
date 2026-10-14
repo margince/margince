@@ -14,6 +14,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
 | backend | The Go server code under `backend/`. |
+| Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
@@ -100,7 +101,7 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Laya`, `lcov`, `Levenshtein`, `libpq`, `Linux`,
 `LiteLLM`, `LLM`, `LOC`, `localhost`, `lockfile`, `London`, `Mac`, `Mach-O`, `MAJOR`, `Makefile`, `Markdown`,
 `markdown`, `MB`, `Meet`, `MFA`, `MiB`, `micro-USD`, `middleware`, `MIME`, `Minh`, `MinIO`, `Ministral`,
-`MINOR`, `Mistral`, `MIT`, `Mitarbeiterinformation`, `MLX`, `MoE`, `MRL`, `ms`, `MSVC`, `mtime`, `MX`, `NAT`,
+`MINOR`, `Mistral`, `MIT`, `MLX`, `MoE`, `MRL`, `ms`, `MSVC`, `mtime`, `MX`, `NAT`,
 `Nebius`, `Nemo`, `NFC`, `NL`, `non-match`, `nonce`, `NormalizedRecord`, `notarization`, `Novita`, `npm`, `Nr`,
 `NULL`, `null`, `OA`, `oapi-codegen`, `oasdiff`, `OAuth`, `Office`, `OIDC`, `OpenAI`, `OpenAI-compatible`,
 `OpenAPI`, `Ops`, `ops`, `OS`, `Outfit`, `Outlook`, `Parasail`, `PATCH`, `PDF`, `PERF`, `pgvector`, `pids`,

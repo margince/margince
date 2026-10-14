@@ -1,10 +1,10 @@
-# Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz
+# Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz
 
 > Vorlage. Platzhalter in `[eckigen Klammern]` ausfüllen. Diese Information ist
 > **vor** der ersten Verbindung eines Postfachs auszuhändigen.
 
-**Verantwortlicher:** [Firma, Anschrift]
-**Datenschutzbeauftragte:r:** [Name, Kontakt]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Firma, Anschrift]
+**Datenschutzbeauftragte Person:** [Name, Kontakt]
 **Stand:** [Datum] · **Version:** [z. B. 1.0]
 
 ## Worum es geht
@@ -19,7 +19,7 @@ E-Mail-Anbieter greift das System auf nichts zu.
 
 ## Welche Daten verarbeitet werden
 
-- Absender, Empfänger, Kopieempfänger, Betreff, Datum und Text Ihrer
+- Absendende, Empfangende (auch in Kopie), Betreff, Datum und Text Ihrer
   geschäftlichen E-Mails sowie deren Anhänge
 - daraus abgeleitete Kontakt- und Firmendatensätze
 - technische Protokolle über den Abruf
@@ -45,29 +45,29 @@ Wer die Inhalte lesen kann, hängt an einer Einstellung Ihres Postfachs:
   prüft anschließend jeden Thread und gibt nur die gewöhnlichen geschäftlichen
   Konversationen für das Team frei. Alles andere bleibt privat.
 - **`held`:** Nichts wird jemals freigegeben.
-- **`shared`:** Nachrichten sind ab Eingang für Kolleginnen und Kollegen lesbar.
+- **`shared`:** Nachrichten sind ab Eingang für das Team lesbar.
   Diese Einstellung ist nur verfügbar, wenn die Geschäftsführung sie ausdrücklich
   freischaltet.
 
-Eine Administratorin kann eine zurückgehaltene Nachricht nicht lesen. Die
-Zugriffsprüfung kennt keine Administratorausnahme.
+Auch mit Adminrechten lässt sich eine zurückgehaltene Nachricht nicht lesen.
+Die Zugriffsprüfung kennt keine Ausnahme für Adminrechte.
 
 Fällt der Klassifikator aus, bleibt alles zurückgehalten. Das System entscheidet
 im Zweifel gegen die Sichtbarkeit.
 
 ## Was Sie selbst steuern
 
-- **Absender ausschließen:** Post von einer Adresse oder Domain gar nicht erst
+- **Absendeadressen ausschließen:** Post von einer Adresse oder Domain gar nicht erst
   erfassen: Einstellungen → Erfassungsaktivität, Karte „Erfassungsausschlüsse“.
 - **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
   abgeleiteter Daten. Löschen Sie eine erfasste Nachricht in Ihrem Postfach,
-  wird die Kopie hier mitgelöscht. Ausgenommen ist eine Nachricht, die eine Kollegin
-  ebenfalls erfasst hat, und ein Handelsbrief innerhalb seiner
-  Aufbewahrungsfrist. Post, die auch eine Kollegin empfangen hat, bleibt ihr
-  erhalten; Ihr Zugriff darauf endet.
-- **Absenderentscheidungen einsehen und korrigieren:** Die Seite „Absendeadressen“ zeigt
-  jede automatische Entscheidung über Ihre Korrespondenten. Ihre Korrektur ist
-  endgültig; die Maschine überschreibt sie nicht.
+  wird die Kopie hier mitgelöscht. Ausgenommen ist eine Nachricht, die ein anderes
+  Teammitglied ebenfalls erfasst hat, und ein Handelsbrief innerhalb seiner
+  Aufbewahrungsfrist. Post, die auch ein anderes Teammitglied empfangen hat,
+  bleibt diesem erhalten; Ihr Zugriff darauf endet.
+- **Entscheidungen über Absendeadressen einsehen und korrigieren:** Die Seite
+  „Absendeadressen“ zeigt jede automatische Entscheidung über die Adressen, mit
+  denen Sie korrespondieren. Ihre Korrektur ist endgültig; die Maschine überschreibt sie nicht.
 - **Einzelne Threads freigeben oder privat halten:** unabhängig davon, was der
   Klassifikator entschieden hat.
 - **Postfach trennen:** jederzeit. Bereits Erfasstes bleibt, bis Sie es löschen.
@@ -78,7 +78,7 @@ Handelsbriefe: [z. B. sechs Jahre] nach § 257 HGB, § 147 AO. Übrige
 Korrespondenz: [Frist].
 
 Als privat eingestufte Post wird vernichtet. Wie lange das dauert, hängt
-davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie den Absender
+davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie die Absendeadresse
 selbst als privat gekennzeichnet haben, und dreißig Tage, wenn der Klassifikator
 es war. Die längere Frist gilt der unbestätigten Entscheidung; bis dahin können
 Sie sie auf der Seite „Absendeadressen“ korrigieren.

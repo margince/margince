@@ -920,7 +920,7 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
     documents: [
       {
         id: "mitarbeiterinformation",
-        title: "Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz",
+        title: "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz",
         language: "de",
         audience: "employee",
         kind: "template",
