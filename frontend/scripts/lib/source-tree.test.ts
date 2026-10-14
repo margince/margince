@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   extensionLayers,
+  extensionPackageLayers,
   filesUnder,
   moduleSpecifiers,
   parseSource,
@@ -102,6 +103,18 @@ describe("the walk the source-wide gates share", () => {
       "flat/frontend",
       "unit/panel/frontend",
     ]);
+  });
+
+  it("counts only a layer with a package.json as a screen layer", () => {
+    mkdirSync(join(dir, "screen", "frontend"), { recursive: true });
+    writeFileSync(join(dir, "screen", "frontend", "package.json"), "{}");
+    mkdirSync(join(dir, "copy", "frontend", "i18n"), { recursive: true });
+    writeFileSync(join(dir, "copy", "frontend", "i18n", "en.json"), "{}");
+    expect(rel(extensionLayers(dir))).toEqual([
+      "copy/frontend",
+      "screen/frontend",
+    ]);
+    expect(rel(extensionPackageLayers(dir))).toEqual(["screen/frontend"]);
   });
 
   it("does not take a directory merely NAMED like a layer", () => {

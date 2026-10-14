@@ -119,6 +119,16 @@ export function extensionLayers(
   });
 }
 
+// extensionPackageLayers is the layers gen-composition mounts: a `frontend/`
+// folder counts as a screen layer only with a package.json. A unit shipping
+// copy alone (frontend/i18n) holds no source, so a gate asking "was every layer
+// read" must not name it.
+export function extensionPackageLayers(root: string): string[] {
+  return extensionLayers(root).filter((layer) =>
+    existsSync(join(layer, "package.json")),
+  );
+}
+
 // scriptKindFor picks the dialect to parse a file as. ONE answer, because there
 // were two: the native-control gate read a `.js` as TypeScript and the
 // extension-import gate read it as JavaScript, neither stating why, in the pair

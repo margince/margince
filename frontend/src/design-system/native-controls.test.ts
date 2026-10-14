@@ -59,12 +59,13 @@
 // parser drops for free, and that is where select.tsx and its neighbours cite
 // the thing they exist to remove.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
+  extensionPackageLayers,
   filesUnder,
   parseSource,
   scriptKindFor,
@@ -291,12 +292,7 @@ describe("no product surface renders a browser-drawn dropdown", () => {
     ).toBeGreaterThan(0);
     // Every unit that HAS a frontend layer contributes to it, so a walk that
     // silently stopped at one of them is a failure rather than a smaller number.
-    // A layer is its package.json, as gen-composition reads it: a unit may ship
-    // only its copy (frontend/i18n), which holds no source to walk.
-    const unitsWithLayers = readdirSync(extensionsDir, { withFileTypes: true })
-      .filter((e) => e.isDirectory())
-      .map((e) => join(extensionsDir, e.name, "frontend"))
-      .filter((layer) => existsSync(join(layer, "package.json")));
+    const unitsWithLayers = extensionPackageLayers(extensionsDir);
     for (const layer of unitsWithLayers) {
       expect(
         layers.some((f) => f.startsWith(`${layer}/`)),

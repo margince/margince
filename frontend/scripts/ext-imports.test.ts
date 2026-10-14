@@ -82,7 +82,12 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder, parseSource } from "./lib/source-tree";
+import {
+  extensionLayers,
+  extensionPackageLayers,
+  filesUnder,
+  parseSource,
+} from "./lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "..");
 const repoRoot = resolve(frontendRoot, "..");
@@ -467,7 +472,10 @@ describe("a unit reaches the core only through the published surface", () => {
     ).toBeGreaterThan(0);
     // And a FILE floor, PER LAYER — see layersThatReadNothing.
     expect(
-      layersThatReadNothing(layers, files).map((l) => relative(repoRoot, l)),
+      layersThatReadNothing(
+        layers.filter((l) => extensionPackageLayers(extensionsDir).includes(l)),
+        files,
+      ).map((l) => relative(repoRoot, l)),
       "these layers were found but no file inside them was read",
     ).toEqual([]);
     expect(violations).toEqual([]);
