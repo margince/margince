@@ -5,7 +5,14 @@ import { useState } from "react";
 import { Disclosure, Radio } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Switch } from "../design-system/switch";
 import { stable } from "../format/collate";
+import {
+  CORE_OBJECTS,
+  GRANT_AREA_NAME,
+  GRANT_AREAS,
+  objectLabel,
+} from "../format/rbacobjects";
 import { useT } from "../i18n";
 import type { ExtensionUnit } from "./extensions.queries";
 import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
@@ -23,16 +30,30 @@ import { AccessPreviewPanel } from "./users-access";
 
 const SCOPES: readonly RowScope[] = ["own", "team", "all"];
 
+/** One named run of the grid: an area of the product, or an extension unit. */
+export type GrantGroup = Readonly<{
+  key: string;
+  title: string;
+  objects: readonly GrantObject[];
+}>;
+
+/** An object a row is drawn for. `known` is false where the key is its only name. */
+export type GrantObject = Readonly<{
+  object: string;
+  name: string;
+  known: boolean;
+}>;
+
 /**
- * The objects a grid row is drawn for, core first and extension objects apart.
- * Read off the directory rather than a list compiled into the client: a seeded
- * role names every core object, and an object a removed unit left behind still
- * shows, so an operator can find and clear its grant.
+ * The grid's rows, by area, read off the directory and not off the client's
+ * table. So an object a newer server added still shows, under "Other". So does
+ * one a removed unit left behind, for an operator to find and clear.
  */
-export function grantObjects(
+export function grantGroups(
   directory: readonly Role[],
   units: readonly ExtensionUnit[],
-): { core: string[]; extensions: string[] } {
+  t: ReturnType<typeof useT>,
+): GrantGroup[] {
   const all = new Set<string>();
   for (const role of directory) {
     for (const object of Object.keys(role.objects)) {
@@ -44,11 +65,43 @@ export function grantObjects(
       all.add(object);
     }
   }
-  const sorted = [...all].sort(stable);
-  return {
-    core: sorted.filter((object) => !object.startsWith("ext_")),
-    extensions: sorted.filter((object) => object.startsWith("ext_")),
+  const core = GRANT_AREAS.map((area) => ({
+    key: area,
+    title: t(GRANT_AREA_NAME[area]),
+    objects: Object.entries(CORE_OBJECTS)
+      .filter(([object, named]) => named.area === area && all.has(object))
+      .map(([object, named]) => ({
+        object,
+        name: t(named.label),
+        known: true,
+      })),
+  }));
+  const claimed = new Set([
+    ...core.flatMap((group) => group.objects.map((row) => row.object)),
+    ...units.flatMap((unit) => unit.rbac_objects),
+  ]);
+  const extensions = [...units]
+    .sort((a, b) => stable(a.name, b.name))
+    .map((unit) => ({
+      key: `ext:${unit.name}`,
+      title: t("roles.group.extension", { name: unit.name }),
+      objects: unit.rbac_objects.map((object) => ({
+        object,
+        name: objectLabel(unit.name, object),
+        known: true,
+      })),
+    }));
+  const other = {
+    key: "other",
+    title: t("roles.group.other"),
+    objects: [...all]
+      .filter((object) => !claimed.has(object))
+      .sort(stable)
+      .map((object) => ({ object, name: object, known: false })),
   };
+  return [...core, ...extensions, other].filter(
+    (group) => group.objects.length > 0,
+  );
 }
 
 /** The three writes a role takes, and whether one of them is out. */
@@ -93,7 +146,6 @@ export function RoleDetail({
   // it is restored, so its controls are read-only here.
   const editable = canUpdate && !archived;
   const { update, setGrant, busy } = writes;
-  const objects = grantObjects(directory, units);
   // The preview is a server read, asked for once the reader opens it.
   const [previewAsked, setPreviewAsked] = useState(false);
 
@@ -136,8 +188,7 @@ export function RoleDetail({
           }
         />
         <GrantSection
-          title={t("roles.grantsCore")}
-          objects={objects.core}
+          groups={grantGroups(directory, units, t)}
           role={role}
           name={name}
           editable={editable}
@@ -145,18 +196,6 @@ export function RoleDetail({
           busy={busy}
           setGrant={setGrant}
         />
-        {objects.extensions.length > 0 && (
-          <GrantSection
-            title={t("roles.grantsExtensions")}
-            objects={objects.extensions}
-            role={role}
-            name={name}
-            editable={editable}
-            canWiden={canWiden}
-            busy={busy}
-            setGrant={setGrant}
-          />
-        )}
         {!archived && (
           <Disclosure
             summary={t("roles.preview")}
@@ -174,10 +213,9 @@ export function RoleDetail({
   );
 }
 
-// One block of the grid: a row per object over this one role.
+// Not a hover tip on each name for the raw keys: touch and keyboard never raise it.
 function GrantSection({
-  title,
-  objects,
+  groups,
   role,
   name,
   editable,
@@ -185,8 +223,7 @@ function GrantSection({
   busy,
   setGrant,
 }: Readonly<{
-  title: string;
-  objects: readonly string[];
+  groups: readonly GrantGroup[];
   role: Role;
   name: string;
   editable: boolean;
@@ -195,17 +232,19 @@ function GrantSection({
   setGrant: ReturnType<typeof useSetRoleGrant>;
 }>) {
   const t = useT();
-  const rows = objects.map((object): GrantMatrixRow => {
+  const [showKeys, setShowKeys] = useState(false);
+  const row = ({ object, name: label, known }: GrantObject): GrantMatrixRow => {
     const grant = grantOf(role, object);
     return {
       key: object,
-      name: object,
+      name: label,
+      code: showKeys || !known ? object : undefined,
       grant,
       cellLabel: (action) =>
         t("extAccess.cell", {
           role: name,
           action: t(`extAccess.action.${action}`),
-          object,
+          object: label,
         }),
       pending:
         setGrant.isPending &&
@@ -219,21 +258,30 @@ function GrantSection({
           version: role.version,
         }),
     };
-  });
+  };
   return (
     <SettingRow
       layout="stack"
-      label={title}
+      label={t("roles.grants")}
       description={
         editable
           ? t(canWiden ? "roles.grantsSub" : "roles.grantsNarrowOnly")
           : undefined
       }
       control={(control) => (
-        <div className="settingrow-measure">
+        <div className="settingrow-measure roles-grants">
+          <Switch
+            label={t("roles.showKeys")}
+            checked={showKeys}
+            onChange={setShowKeys}
+          />
           <GrantMatrix
             rowHeader={t("roles.objectColumn")}
-            rows={rows}
+            sections={groups.map((group) => ({
+              key: group.key,
+              title: group.title,
+              rows: group.objects.map(row),
+            }))}
             canManage={editable}
             readOnlyReason={t("roles.readOnly")}
             turnOnReason={canWiden ? undefined : t("roles.turnOnAdminOnly")}

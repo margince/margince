@@ -31,7 +31,7 @@
 1171 frontend/src/screens/contactprovider.test.tsx
 959 frontend/src/screens/worklist.row.tsx
 1125 frontend/src/screens/analytics.test.tsx
-1289 frontend/src/screens/company-context.tsx
+1031 frontend/src/screens/company-context.tsx
 1278 frontend/src/screens/listquery.test.tsx
 1384 frontend/src/screens/listquery.tsx
 1279 frontend/src/screens/offers.tsx
@@ -78,7 +78,7 @@
 651 frontend/src/format/format.ts
 734 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
-531 frontend/src/screens/extension-access.tsx
+519 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 737 frontend/src/screens/worklist.tsx
 781 frontend/src/screens/companycontacts/summary.tsx

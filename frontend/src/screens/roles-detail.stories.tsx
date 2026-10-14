@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { Role } from "./roles.queries";
 import { RoleDetail, useRoleWrites } from "./roles-detail";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -17,7 +18,7 @@ const FIELD_SALES: Role = {
   is_system: false,
   version: 7,
   row_scope: "team",
-  objects: { contact: READ, deal: ALL },
+  objects: { contact: READ, deal: ALL, audit_log: READ, ext_gone_note: READ },
 };
 
 function Body({
@@ -74,3 +75,16 @@ export const Archived: Story = {
 };
 
 export const ReadOnly: Story = { args: { canUpdate: false } };
+
+/** Each row with its raw key under the name, for an operator who asked. */
+export const WithKeys: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("switch", { name: "Show API names" }),
+    );
+    await expect(
+      canvas.getByRole("rowheader", { name: /Audit log/ }).textContent,
+    ).toContain("audit_log");
+  },
+};

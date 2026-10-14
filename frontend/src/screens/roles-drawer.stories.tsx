@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import type { ExtensionUnit } from "./extensions.queries";
 import type { Role } from "./roles.queries";
 import { RoleDrawer } from "./roles-drawer";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -29,8 +30,23 @@ const FIELD_SALES: Role = {
     product: READ,
     project: NONE,
     role_admin: NONE,
+    ai_budget: READ,
+    audit_log: NONE,
+    capture_settings: READ,
+    communication_exception: NONE,
+    report_definition: ALL,
+    team_lead: NONE,
     ext_notes_note: NONE,
   },
+};
+
+const NOTES: ExtensionUnit = {
+  name: "notes",
+  description: "Notes on records.",
+  version: "1.0.0",
+  rbac_objects: ["ext_notes_note"],
+  routes: [],
+  jobs: [],
 };
 
 const ADMIN: Role = {
@@ -68,7 +84,7 @@ const meta = {
     onClose: () => undefined,
     returnFocusTo: () => null,
     directory: [FIELD_SALES, ADMIN],
-    units: [],
+    units: [NOTES],
     canUpdate: true,
     canMove: true,
     canRestore: true,
@@ -86,8 +102,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A custom role: Archive in the head, every control live. */
+/** A custom role: Archive in the head, every control live, the grid by area. */
 export const Custom: Story = {};
+
+/** An object this client has no name for stands under Other, by its key. */
+export const UnknownObject: Story = {
+  args: {
+    role: {
+      ...FIELD_SALES,
+      objects: { ...FIELD_SALES.objects, pricing_rule: READ },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await body.findByRole("rowheader", { name: "Other" });
+    await expect(
+      body.getByRole("switch", {
+        name: /allow field sales to read pricing_rule/i,
+      }),
+    ).toBeTruthy();
+  },
+};
 
 /** An archived role: Restore in the head, the editor read-only. */
 export const Archived: Story = {
