@@ -556,11 +556,12 @@ type fakeTasks struct {
 	quota     *fakeQuota
 }
 
-// fakeQuota is a meter a test can push past a ceiling. It records nothing:
-// what these cases turn on is whether a reading REFUSES, not what it counts.
+// fakeQuota is a meter a test can push past a ceiling. It counts only calls:
+// what most cases turn on is whether a reading REFUSES.
 type fakeQuota struct {
 	mu       sync.Mutex
 	exceeded bool
+	calls    int
 }
 
 func (q *fakeQuota) exceed() {
@@ -575,7 +576,14 @@ func (q *fakeQuota) Read(_ context.Context, c agentvolume.Counter) agentvolume.R
 	return agentvolume.Reading{Counter: c, Exceeded: q.exceeded}
 }
 
-func (q *fakeQuota) Consume(context.Context, agentvolume.Counter, int) error { return nil }
+func (q *fakeQuota) Consume(_ context.Context, c agentvolume.Counter, n int) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if c == agentvolume.Calls {
+		q.calls += n
+	}
+	return nil
+}
 
 // recordReader is the live re-read a recorded answer is proven against. Taking
 // a record out of `visible` is how a test narrows the caller's access after the
@@ -795,5 +803,25 @@ func TestAWrappedStagedRefusalStillMintsAHandle(t *testing.T) {
 	}
 	if len(store.created) != 1 || store.created[0].ApprovalID != staged {
 		t.Errorf("the handle points at %v, want the wrapped refusal's own approval %s", store.created, staged)
+	}
+}
+
+// A finished task's result may be polled for the life of its handle. Every poll
+// spends one call, whether or not the answer named records.
+func TestEveryPollOfAFinishedTaskSpendsOneCall(t *testing.T) {
+	s, store := stagingDispatcher(t)
+	named := json.RawMessage(fmt.Sprintf(
+		`{"schema_version":"1.0.0","evidence":[{"record_type":"deal","record_id":"%s"}],"data":{}}`, store.tool.target))
+	none := json.RawMessage(`{"schema_version":"1.0.0","evidence":[],"data":{}}`)
+	for name, tc := range map[string]struct {
+		result  json.RawMessage
+		records int
+	}{"an answer naming a record": {named, 1}, "an answer naming none": {none, 0}} {
+		before := store.quota.calls
+		records := tc.records
+		s.serveRecorded(agentCtx(), Task{ID: ids.NewV7(), Tool: "send_it", Result: tc.result, ServedRecords: &records})
+		if spent := store.quota.calls - before; spent != 1 {
+			t.Errorf("%s: a poll spent %d calls, want 1", name, spent)
+		}
 	}
 }

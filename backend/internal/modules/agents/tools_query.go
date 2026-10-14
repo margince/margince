@@ -14,15 +14,10 @@ package agents
 // catalog and the live column catalog, so there is nothing about it this
 // package could usefully hold.
 //
-// WHAT THIS TOOL OWNS is the half the executor cannot: turning the refs it
-// answers into records, through the same seam every other read on this surface
-// uses. That is where the trust tier is stamped, where the result envelope's
-// freshness and evidence are collected, where the caller's object RBAC and row
-// scope are applied to the record itself, and where the read is COUNTED against
-// MCP-SESS-READS — so a query answering twenty-five rows spends twenty-five of
-// the caller's records, not one. A densely-joined answer is the cheapest bulk
-// read on a surface that charges per call (A139), and this is the densest read
-// the surface has.
+// This tool owns the half the executor cannot: turning the refs it answers into
+// records through the seam every read on this surface uses. The seam stamps the
+// trust tier, collects freshness and evidence, applies the caller's object RBAC
+// and row scope, and takes the answer's served count.
 
 import (
 	"bytes"
@@ -195,12 +190,10 @@ func (t queryWorkspace) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 
 // hydrate turns the executor's refs into records through the datasource seam.
 //
-// Every record on the way out goes through newWireRecord, which is the ONE
-// place a record becomes output on this surface: the overlay trust tier is
-// stamped there, the envelope's freshness and evidence are collected there, and
-// the record is counted against the caller's read bound there. A tool that
-// assembled rows itself would answer with an envelope claiming nothing had been
-// read, and would serve every one of those records for free.
+// Every record on the way out goes through newWireRecord, the one place a record
+// becomes output on this surface. It stamps the trust tier, collects freshness
+// and evidence, and counts the record as served. A tool that assembled rows
+// itself would answer with an envelope claiming nothing had been read.
 //
 // THE HOP IS A RECORD TOO. Its id and title come out of the executor's own
 // statement, so passing them straight through would put a record on the wire

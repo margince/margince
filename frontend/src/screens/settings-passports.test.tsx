@@ -644,10 +644,10 @@ describe("PassportCard: this window", () => {
       }),
     );
 
-    for (const label of ["Records read", "Sends", "Calls"]) {
+    for (const label of ["Sends", "Calls"]) {
       expect(screen.getByRole("meter", { name: label })).toBeTruthy();
     }
-    // Once in the row, once among the four it opens onto.
+    // Once in the row, once among the three it opens onto.
     expect(screen.getAllByRole("meter", { name: "Changes" })).toHaveLength(2);
   });
 

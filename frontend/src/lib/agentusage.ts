@@ -7,8 +7,8 @@ export type AgentUsage = components["schemas"]["AgentUsage"];
 export type AgentCounterUsage = components["schemas"]["AgentCounterUsage"];
 export type AgentUsageState = components["schemas"]["AgentUsageState"];
 
-// The four allowances, in the order every usage view lists them.
-export const AGENT_COUNTERS = ["reads", "writes", "egress", "calls"] as const;
+// The three allowances, in the order every usage view lists them.
+export const AGENT_COUNTERS = ["writes", "egress", "calls"] as const;
 export type AgentCounter = (typeof AGENT_COUNTERS)[number];
 
 type CounterSet = Readonly<Record<AgentCounter, AgentCounterUsage>>;

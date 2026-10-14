@@ -23124,22 +23124,28 @@ type AdvanceProjectPhaseRequest struct {
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
 
+// AgentAllowanceDefaults What each agent allowance is before an admin changes it, so a screen never restates them.
+type AgentAllowanceDefaults struct {
+	AgentCallsPerWindow  int `json:"agent_calls_per_window"`
+	AgentEgressPerWindow int `json:"agent_egress_per_window"`
+	AgentWindowHours     int `json:"agent_window_hours"`
+	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+}
+
 // AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
 // a connected MCP client has one allowance for all its passports, so a renewed credential
 // keeps counting where the last one stopped. An agent that reaches a count is refused on
-// its next call until the window resets or the user who lent it releases more. A change to
+// its next call until the window resets or, for changing calls, the user who lent it releases
+// more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
 // a count applies within a minute, in the window that is running: a raised count gives
 // headroom within that minute, and a lowered one refuses an agent already past it on its
 // next call. The per-minute limits are fixed by the build and shown here read-only.
 type AgentAllowanceSettings struct {
-	// AgentCallsPerWindow How many tool calls of any kind one passport or connection may make per window. Default 1000.
+	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window"`
 
 	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
-
-	// AgentReadsPerWindow How many records one passport or connection may read per window. Default 2000.
-	AgentReadsPerWindow int `json:"agent_reads_per_window"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
 	// resets at the same moment, a whole number of windows since 1970-01-01 UTC.
@@ -23159,6 +23165,9 @@ type AgentAllowanceSettings struct {
 
 	// AgentWritesPerWindow How many changing calls one passport or connection may make per window. Default 200.
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+
+	// Defaults What each agent allowance is before an admin changes it, so a screen never restates them.
+	Defaults AgentAllowanceDefaults `json:"defaults"`
 
 	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
 	McpCallsPerMinute int `json:"mcp_calls_per_minute"`
@@ -23384,7 +23393,7 @@ type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
 }
 
-// AgentUsage One window's use of the four agent allowances, and when they reset.
+// AgentUsage One window's use of the three agent allowances, and when they reset.
 type AgentUsage struct {
 	// Calls One allowance in the running window.
 	Calls AgentCounterUsage `json:"calls"`
@@ -23392,13 +23401,10 @@ type AgentUsage struct {
 	// Egress One allowance in the running window.
 	Egress AgentCounterUsage `json:"egress"`
 
-	// Reads One allowance in the running window.
-	Reads AgentCounterUsage `json:"reads"`
-
 	// ResetsAt When the window resets and every count starts again from zero.
 	ResetsAt time.Time `json:"resets_at"`
 
-	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 	State AgentUsageState `json:"state"`
 
@@ -23415,7 +23421,7 @@ type AgentUsageByUser struct {
 	ResetsAt time.Time `json:"resets_at"`
 }
 
-// AgentUsageState The worst of the four allowances. `stopped` when one is used up, so the next call of
+// AgentUsageState The worst of the three allowances. `stopped` when one is used up, so the next call of
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
 
@@ -23433,10 +23439,7 @@ type AgentUserUsage struct {
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count"`
 
-	// Reads One allowance in the running window.
-	Reads AgentCounterUsage `json:"reads"`
-
-	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 	State  AgentUsageState    `json:"state"`
 	UserId openapi_types.UUID `json:"user_id"`
@@ -37862,7 +37865,8 @@ type InstallationSettings struct {
 	// AgentAllowances How much one agent may do in one window. A passport a user minted has its own allowance;
 	// a connected MCP client has one allowance for all its passports, so a renewed credential
 	// keeps counting where the last one stopped. An agent that reaches a count is refused on
-	// its next call until the window resets or the user who lent it releases more. A change to
+	// its next call until the window resets or, for changing calls, the user who lent it releases
+	// more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
 	// a count applies within a minute, in the window that is running: a raised count gives
 	// headroom within that minute, and a lowered one refuses an agent already past it on its
 	// next call. The per-minute limits are fixed by the build and shown here read-only.
@@ -48205,9 +48209,6 @@ type UpdateInstallationSettingsRequest struct {
 
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty"`
-
-	// AgentReadsPerWindow Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.
-	AgentReadsPerWindow *int `json:"agent_reads_per_window,omitempty"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`

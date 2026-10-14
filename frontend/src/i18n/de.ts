@@ -10742,9 +10742,6 @@ export const de = {
   "agentAllowances.title": "Kontingente für Agenten-Passports",
   "agentAllowances.sub":
     "Was ein Passport oder eine MCP-Verbindung in jedem Zeitfenster bis zum Stopp tun darf. Eine geänderte Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Passport kann sein eigenes Kontingent nie ändern.",
-  "agentAllowances.reads.label": "Gelesene Datensätze",
-  "agentAllowances.reads.help":
-    "Datensätze, die ein Agent pro Zeitfenster lesen darf, 100 bis 20.000. Danach wartet das Lesen, bis das zuständige Mitglied mehr freigibt.",
   "agentAllowances.writes.label": "Änderungen",
   "agentAllowances.writes.help":
     "Änderungen, die ein Agent pro Zeitfenster machen darf, 10 bis 5.000. Danach warten Änderungen, bis das zuständige Mitglied mehr freigibt.",
@@ -10753,15 +10750,33 @@ export const de = {
     "E-Mails und andere Aufrufe, die Margince verlassen. Sendungen stoppen bis zum Ende des Zeitfensters, 1 bis 200.",
   "agentAllowances.calls.label": "Aufrufe insgesamt",
   "agentAllowances.calls.help":
-    "Jeder Tool- oder API-Aufruf. Der Passport pausiert bis zum Ende des Zeitfensters, 50 bis 20.000.",
-  "agentAllowances.window.label": "Zeitfenster (Stunden)",
+    "Jeder Aufruf, ob Tool-Aufruf oder API-Anfrage, auch lesende. Der Passport pausiert bis zum Ende des Zeitfensters, 50 bis 20.000.",
+  "agentAllowances.window.label": "Zeitfenster",
   "agentAllowances.window.help":
-    "Wie lange ein Kontingent gilt, 1 bis 168. Eine neue Länge beginnt beim nächsten Zurücksetzen.",
+    "Wie lange ein Kontingent gilt. Eine neue Länge beginnt beim nächsten Zurücksetzen, damit kein Passport zu früh ein frisches Kontingent bekommt.",
   "agentAllowances.burst":
     "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport.",
   "agentAllowances.pending.title": "Änderung des Zeitfensters steht aus",
   "agentAllowances.pending.body":
     "Ab {date} UTC dauert jedes Zeitfenster {interval}. Bis dahin zählt das laufende Zeitfenster weiter.",
+  "agentAllowances.windowLine": "Zeitfenster: {interval}",
+  "agentAllowances.note.release": "Das zuständige Mitglied kann mehr freigeben",
+  "agentAllowances.note.stop": "Stoppt bis zum Ende des Zeitfensters",
+  "agentAllowances.default": "Standard {value}",
+  "agentAllowances.state.defaults": "Standardwerte",
+  "agentAllowances.state.changed": "Von den Standardwerten abweichend",
+  "agentAllowances.state.body":
+    "Eine geänderte Anzahl gilt für alle Passports innerhalb einer Minute, im laufenden Zeitfenster.",
+  "agentAllowances.edit": "Kontingente bearbeiten",
+  "agentAllowances.save": "Speichern",
+  "agentAllowances.cancel": "Abbrechen",
+  "agentAllowances.useDefaults": "Standardwerte verwenden",
+  "agentAllowances.diff.title": "Gilt nach dem Speichern",
+  "agentAllowances.diff.count": "{label} {from} → {to}",
+  "agentAllowances.diff.counts":
+    "Eine Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Agent, der bereits über einer gesenkten Anzahl liegt, wird bei seinem nächsten Aufruf abgelehnt.",
+  "agentAllowances.diff.window":
+    "Zeitfenster {from} → {to}, ab dem nächsten Zurücksetzen.",
   "agentUsage.title": "Agenten-Nutzung nach Mitglied",
   "agentUsage.sub":
     "Dieses Zeitfenster, summiert über die Passports und Verbindungen jedes Mitglieds. Die Summe zeigt, wie viel genutzt wurde, nie welche Passports es waren oder was sie gelesen haben.",
@@ -10771,12 +10786,11 @@ export const de = {
     "Kein Mitglied hat einen gültigen Passport oder eine Verbindung.",
   "agentUsage.resets": "Alle Kontingente werden am {date} UTC zurückgesetzt.",
   "agentUsage.ofLimit": "{used} von {limit}",
-  "agentUsage.counter.reads": "Gelesene Datensätze",
   "agentUsage.counter.writes": "Änderungen",
   "agentUsage.counter.egress": "Sendungen",
   "agentUsage.counter.calls": "Aufrufe",
   "agentUsage.col.user": "Mitglied",
-  "agentUsage.col.passports": "Passports",
+  "agentUsage.col.passports": "Passports und Apps",
   "agentUsage.state.ok": "Aktiv",
   "agentUsage.state.near": "Nahe an einer Grenze",
   "agentUsage.state.stopped": "Gestoppt",

@@ -48,7 +48,7 @@ func TestAgentUsageNamesNoPassport(t *testing.T) {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	want := []string{"calls", "display_name", "egress", "passport_count", "reads", "state", "user_id", "writes"}
+	want := []string{"calls", "display_name", "egress", "passport_count", "state", "user_id", "writes"}
 	if !slices.Equal(keys, want) {
 		t.Errorf("a user's row carries %v, want exactly %v", keys, want)
 	}

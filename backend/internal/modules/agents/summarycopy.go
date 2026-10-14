@@ -52,7 +52,7 @@ type summaryCopy struct {
 	// step-up.
 	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, bulkChange,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
-	stepUpRecords, stepUpChanges string
+	stepUpChanges string
 
 	// lang is the language this set is written in, which names its record
 	// types (recordnouns.go). It is not a sentence, so the census skips it.
@@ -138,7 +138,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Write a summary of the night onto your morning brief",
 		annotateBoth:        "Write a summary of the night and %d finding(s) onto your morning brief",
 		annotateFindings:    "Write %d finding(s) onto your morning brief",
-		stepUpRecords:       "This agent has been handed %d records against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 		stepUpChanges:       "This agent has made %d changes against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 	},
 	textlang.German: {
@@ -215,7 +214,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Eine Zusammenfassung der Nacht in deinen Morgenbericht schreiben",
 		annotateBoth:        "Eine Zusammenfassung der Nacht und %d Erkenntnis(se) in deinen Morgenbericht schreiben",
 		annotateFindings:    "%d Erkenntnis(se) in deinen Morgenbericht schreiben",
-		stepUpRecords:       "Dieser Agent hat %d Datensätze erhalten, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 		stepUpChanges:       "Dieser Agent hat %d Änderungen vorgenommen, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 	},
 	textlang.Vietnamese: {
@@ -292,7 +290,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Viết bản tóm tắt đêm qua vào bản tin buổi sáng của bạn",
 		annotateBoth:        "Viết bản tóm tắt đêm qua và %d phát hiện vào bản tin buổi sáng của bạn",
 		annotateFindings:    "Viết %d phát hiện vào bản tin buổi sáng của bạn",
-		stepUpRecords:       "Agent này đã nhận %d bản ghi so với giới hạn %d cho khung thời gian này (gần nhất qua %s). Phê duyệt để cho phép tiếp tục thêm %d.",
 		stepUpChanges:       "Agent này đã thực hiện %d thay đổi so với giới hạn %d cho khung thời gian này (gần nhất qua %s). Phê duyệt để cho phép tiếp tục thêm %d.",
 	},
 }

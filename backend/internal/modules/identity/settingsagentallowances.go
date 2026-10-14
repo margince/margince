@@ -14,10 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
-// AgentReadsPerWindow is the records one passport may be handed per window.
-var AgentReadsPerWindow = settings.Define[int]("installation.agent_reads_per_window", installationSettingsObject, "update",
-	agentvolume.DefaultReads, settings.Between("records", 100, 20000)).MachineryApplied()
-
 // AgentWritesPerWindow is the changing calls one passport may make per window.
 var AgentWritesPerWindow = settings.Define[int]("installation.agent_writes_per_window", installationSettingsObject, "update",
 	agentvolume.DefaultWrites, settings.Between("calls", 10, 5000)).MachineryApplied()
@@ -26,7 +22,7 @@ var AgentWritesPerWindow = settings.Define[int]("installation.agent_writes_per_w
 var AgentEgressPerWindow = settings.Define[int]("installation.agent_egress_per_window", installationSettingsObject, "update",
 	agentvolume.DefaultEgress, settings.Between("calls", 1, 200)).MachineryApplied()
 
-// AgentCallsPerWindow is the tool calls of any kind one passport may make per window.
+// AgentCallsPerWindow is the calls of any kind, tool or API, one passport may make per window.
 var AgentCallsPerWindow = settings.Define[int]("installation.agent_calls_per_window", installationSettingsObject, "update",
 	agentvolume.DefaultCalls, settings.Between("calls", 50, 20000)).MachineryApplied()
 
@@ -46,7 +42,7 @@ var AgentWindowNextFrom = settings.Define[int]("installation.agent_window_next_f
 
 func agentAllowanceDefinitions() []settings.Definition {
 	return []settings.Definition{
-		AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
+		AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
 		AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
 	}
 }

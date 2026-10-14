@@ -24,7 +24,7 @@ import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
-export type Words = Readonly<{
+type Words = Readonly<{
   t: Translator;
   plural: PluralTranslator;
   locale: Locale;
@@ -106,7 +106,7 @@ const PACING_ROWS: readonly OperationRow[] = [
   { property: "send_max_age_hours", copy: "sendMaxAge" },
 ];
 
-export type Unit = "seconds" | "hours";
+type Unit = "seconds" | "hours";
 
 // The wire property names its unit; a count such as the send limit has none.
 function unitOf(row: OperationRow): Unit | undefined {
@@ -119,7 +119,7 @@ const UNIT_SECONDS: Record<Unit, number> = { seconds: 1, hours: 3_600 };
 
 // The box holds the wire's unit. The line under it names that unit and, where
 // it differs, the span in words ("86,400 seconds = 1 day").
-export function unitReading(
+function unitReading(
   unit: Unit,
   typed: number,
   { t, plural, locale }: Words,

@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -438,57 +437,11 @@ func (p *queryProbeProvider) Read(_ context.Context, ref datasource.EntityRef) (
 	return record, nil
 }
 
-// A query is charged PER RECORD, not per call — including the hop records its
-// evidence rests on.
-//
-// This is the property A139 calls the load-bearing half: a densely-joined
-// answer is the cheapest bulk read on a surface that charges per call, and
-// query_workspace is the densest read this surface has. It comes out of routing
-// every record through newWireRecord rather than out of anything this tool
-// does, which is exactly why it is asserted here — a future rewrite that
-// assembled rows itself would serve them for free.
-func TestAQueryIsChargedPerRecordIncludingItsHops(t *testing.T) {
-	company := ids.NewV7()
-	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		company: recordAt(datasource.EntityCompany, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), true),
-	}}
-	answer := QueryAnswer{Coverage: CoverageCompleteExact, Limit: 25}
-	for range 3 {
-		id := ids.NewV7()
-		provider.records[id] = recordAt(datasource.EntityDeal, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
-		answer.Refs = append(answer.Refs, QueryRef{Type: "deal", ID: id, Evidence: []QueryEvidence{{
-			Relation: "company_id", RecordType: "company", ID: company, Title: "Kärcher",
-		}}})
-	}
-	tool := queryWorkspace{p: provider, run: func(context.Context, json.RawMessage) (QueryAnswer, error) {
-		return answer, nil
-	}}
-	registry, charger, ctx := chargingRegistry(t, tool)
-
-	if _, err := registry.Invoke(ctx, "query_workspace", json.RawMessage(`{"plan":{"version":"v1","target":"deal"}}`)); err != nil {
-		t.Fatalf("invoking query_workspace: %v", err)
-	}
-
-	// Three rows and the one company they were all admitted through: the
-	// hop is served content too, so it is counted once, not three times and
-	// not zero.
-	if charger.reads() != 4 {
-		t.Errorf("charged %d records for 3 rows sharing 1 hop, want 4", charger.reads())
-	}
-	if charger.times[agentvolume.Reads] != 1 {
-		t.Errorf("the read bound was consulted %d times, want one charge for the whole answer",
-			charger.times[agentvolume.Reads])
-	}
-}
-
-// A row dropped because its hop became unreadable is neither CHARGED nor NAMED.
-//
-// The read bound counts records the agent was actually given, so charging for a
-// row it never received bills the caller for a withheld record. And the
-// envelope names what the answer rests on, so naming a record absent from
-// `rows` describes an answer that does not exist — while disclosing the id of
-// something the caller was denied.
-func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
+// A row dropped because its hop became unreadable is not named. The envelope
+// names what the answer rests on. Naming a record absent from `rows` would
+// describe an answer that does not exist and disclose a record the caller was
+// denied.
+func TestADroppedRowIsNotNamed(t *testing.T) {
 	kept, keptCompany := ids.NewV7(), ids.NewV7()
 	dropped, goneCompany := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
@@ -511,7 +464,7 @@ func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
 			Coverage: CoverageCompleteExact, Limit: 25,
 		}, nil
 	}}
-	registry, charger, ctx := chargingRegistry(t, tool)
+	registry, _, ctx := chargingRegistry(t, tool)
 
 	out, err := registry.Invoke(ctx, "query_workspace", json.RawMessage(`{"plan":{"version":"v1","target":"deal"}}`))
 	if err != nil {
@@ -521,10 +474,6 @@ func TestADroppedRowIsNeitherChargedNorNamed(t *testing.T) {
 
 	// The served row and its company, and nothing for the row that was
 	// dropped — not the deal that WAS readable, and not the hop that was not.
-	if charger.reads() != 2 {
-		t.Errorf("charged %d records, want 2 — the served row and its hop, and nothing for the dropped row",
-			charger.reads())
-	}
 	for _, ref := range env.Evidence {
 		if ref.RecordID == dropped || ref.RecordID == goneCompany {
 			t.Errorf("the envelope names %s, which is not in the answer", ref.RecordID)

@@ -118,24 +118,20 @@ func servedByTheRegistry(r *http.Request) bool {
 	return agentPolicies[r.Method+" "+pattern].ServedBy == servedByRegistry
 }
 
-// refuseAgentRead answers a NON-mutating agent call: its governance class
+// refuseAgentRead answers a non-mutating agent call: its governance class
 // first, then its volume.
 //
-// The order is deliberate. `x-agent-access: human-only` says this route is not
-// an agent's to read AT ALL, and that answer must not depend on how much the
-// agent happens to have read today — a caller told "you are over your read
-// budget" would reasonably retry tomorrow against a route that will never be
-// theirs.
+// The order matters. `x-agent-access: human-only` says this route is never an
+// agent's to read, and that answer must not depend on how much the agent has
+// called today. A caller told it is over its ceiling would retry tomorrow
+// against a route that will never be theirs.
 //
-// The bound itself binds BOTH doors: a Passport that spent its window through
-// the MCP surface must not keep reading the same records over /v1. One
-// credential governed two ways is the hole ADR-0055 exists to close.
+// The ceiling binds both doors. A Passport that spent its window through the MCP
+// surface must not keep reading the same records over /v1.
 //
-// And the door that refuses on the bound PAYS INTO it: the handler answers
-// through a servedMeter, so the records this read hands over are charged where
-// they leave. Consulting a counter nothing increments bounds nobody — a
-// credential reading only over /v1 would sit at zero forever, however much it
-// read.
+// The door that refuses on the ceiling also pays into it: an admitted read spends
+// one call before the handler runs. A counter nothing increments bounds nobody,
+// and a credential that only reads over /v1 would sit at zero.
 func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, gate *auth.Gate, reg *agents.Registry) {
 	if refusedAsHumanOnly(w, r) {
 		return
@@ -144,7 +140,11 @@ func refuseAgentRead(w http.ResponseWriter, r *http.Request, next http.Handler, 
 		httperr.Write(w, r, err)
 		return
 	}
-	next.ServeHTTP(&servedMeter{ResponseWriter: w, r: r, reg: reg, mayRefuse: nothingHasHappenedYet}, r)
+	if err := reg.ChargeAdmittedRead(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	next.ServeHTTP(w, r)
 }
 
 // refusedAsHumanOnly applies x-agent-access to a NON-mutating agent call, and
@@ -271,8 +271,7 @@ func admitAgentCall(w http.ResponseWriter, r *http.Request, next http.Handler, o
 		// the effect for both would bill a refusal, so this arm charges only
 		// where redeemIfPresented actually forwarded.
 		performed := &effectRecorder{ResponseWriter: w}
-		metered := &servedMeter{ResponseWriter: performed, r: r, reg: outcome.registry, mayRefuse: theEffectAlreadyLanded}
-		ran := stageOrRedeem(metered, r, next, outcome.staging, outcome.commands, outcome.pol, outcome.body)
+		ran := stageOrRedeem(performed, r, next, outcome.staging, outcome.commands, outcome.pol, outcome.body)
 		if !ran {
 			return
 		}

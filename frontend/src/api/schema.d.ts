@@ -20598,8 +20598,6 @@ export interface components {
             send_rate_window_seconds?: number;
             /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
             send_max_age_hours?: number;
-            /** @description Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window. */
-            agent_reads_per_window?: number;
             /** @description Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window. */
             agent_writes_per_window?: number;
             /** @description Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window. */
@@ -21599,23 +21597,29 @@ export interface components {
             /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
             send_max_age_hours: number;
         };
+        /** @description What each agent allowance is before an admin changes it, so a screen never restates them. */
+        AgentAllowanceDefaults: {
+            agent_writes_per_window: number;
+            agent_egress_per_window: number;
+            agent_calls_per_window: number;
+            agent_window_hours: number;
+        };
         /**
          * @description How much one agent may do in one window. A passport a user minted has its own allowance;
          *     a connected MCP client has one allowance for all its passports, so a renewed credential
          *     keeps counting where the last one stopped. An agent that reaches a count is refused on
-         *     its next call until the window resets or the user who lent it releases more. A change to
+         *     its next call until the window resets or, for changing calls, the user who lent it releases
+         *     more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
          *     a count applies within a minute, in the window that is running: a raised count gives
          *     headroom within that minute, and a lowered one refuses an agent already past it on its
          *     next call. The per-minute limits are fixed by the build and shown here read-only.
          */
         AgentAllowanceSettings: {
-            /** @description How many records one passport or connection may read per window. Default 2000. */
-            agent_reads_per_window: number;
             /** @description How many changing calls one passport or connection may make per window. Default 200. */
             agent_writes_per_window: number;
             /** @description How many calls that send something out of the workspace one passport or connection may make per window. Default 20. */
             agent_egress_per_window: number;
-            /** @description How many tool calls of any kind one passport or connection may make per window. Default 1000. */
+            /** @description How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000. */
             agent_calls_per_window: number;
             /**
              * @description How long the window in force lasts, in hours. Default 24. Every passport's window
@@ -21639,6 +21643,7 @@ export interface components {
              *     new length may be shorter than that length, never longer.
              */
             agent_window_next_starts_at?: string | null;
+            defaults: components["schemas"]["AgentAllowanceDefaults"];
             /** @description How many tool calls one passport may make per minute. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
@@ -42183,9 +42188,8 @@ export interface components {
              */
             usage?: components["schemas"]["AgentUsage"];
         };
-        /** @description One window's use of the four agent allowances, and when they reset. */
+        /** @description One window's use of the three agent allowances, and when they reset. */
         AgentUsage: {
-            reads: components["schemas"]["AgentCounterUsage"];
             writes: components["schemas"]["AgentCounterUsage"];
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
@@ -42216,7 +42220,6 @@ export interface components {
             display_name: string;
             /** @description Live passports and connections. A connection counts once. */
             passport_count: number;
-            reads: components["schemas"]["AgentCounterUsage"];
             writes: components["schemas"]["AgentCounterUsage"];
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
@@ -42235,7 +42238,7 @@ export interface components {
             released: number;
         };
         /**
-         * @description The worst of the four allowances. `stopped` when one is used up, so the next call of
+         * @description The worst of the three allowances. `stopped` when one is used up, so the next call of
          *     that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
          * @enum {string}
          */

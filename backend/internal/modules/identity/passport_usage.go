@@ -54,7 +54,7 @@ func toAgentUsage(u agentvolume.Usage) crmcontracts.AgentUsage {
 		return crmcontracts.AgentCounterUsage{Used: c.Used, Limit: c.Limit, Released: c.Released}
 	}
 	return crmcontracts.AgentUsage{
-		Reads: counter(u.Reads), Writes: counter(u.Writes), Egress: counter(u.Egress), Calls: counter(u.Calls),
+		Writes: counter(u.Writes), Egress: counter(u.Egress), Calls: counter(u.Calls),
 		ResetsAt: u.ResetsAt, State: crmcontracts.AgentUsageState(u.State()),
 	}
 }
