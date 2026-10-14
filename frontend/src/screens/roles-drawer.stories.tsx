@@ -105,19 +105,25 @@ type Story = StoryObj<typeof meta>;
 /** A custom role: Archive in the head, every control live, the grid by area. */
 export const Custom: Story = {};
 
+const UNKNOWN_OBJECT_ROLE: Role = {
+  ...FIELD_SALES,
+  objects: { ...FIELD_SALES.objects, pricing_rule: READ },
+};
+
 /** An object this client has no name for stands under Other, by its key. */
 export const UnknownObject: Story = {
   args: {
-    role: {
-      ...FIELD_SALES,
-      objects: { ...FIELD_SALES.objects, pricing_rule: READ },
-    },
+    role: UNKNOWN_OBJECT_ROLE,
+    directory: [UNKNOWN_OBJECT_ROLE, ADMIN],
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await body.findByRole("rowheader", { name: "Other" });
+    const group = (await body.findByRole("heading", { name: "Other" })).closest(
+      "tbody",
+    );
+    if (!group) throw new Error("the Other heading sits in no group");
     await expect(
-      body.getByRole("switch", {
+      within(group).getByRole("switch", {
         name: /allow field sales to read pricing_rule/i,
       }),
     ).toBeTruthy();
