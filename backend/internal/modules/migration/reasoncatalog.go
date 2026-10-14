@@ -34,9 +34,9 @@ const (
 	ReasonLinkNotFoundDropped        ReasonCode = "link_not_found_dropped"
 	ReasonLinkAmbiguous              ReasonCode = "link_ambiguous"
 	ReasonLinkAmbiguousDropped       ReasonCode = "link_ambiguous_dropped"
-	ReasonIdOnNonCompany             ReasonCode = "id_on_non_company"
-	ReasonIdNotACompanyId            ReasonCode = "id_not_a_company_id"
-	ReasonIdNotVisible               ReasonCode = "id_not_visible"
+	ReasonIDOnNonCompany             ReasonCode = "id_on_non_company"
+	ReasonIDNotACompanyID            ReasonCode = "id_not_a_company_id"
+	ReasonIDNotVisible               ReasonCode = "id_not_visible"
 	ReasonRefTakenByAnotherCompany   ReasonCode = "ref_taken_by_another_company"
 	ReasonRowKeyRepeated             ReasonCode = "row_key_repeated"
 	ReasonRowKeyEmpty                ReasonCode = "row_key_empty"
@@ -82,6 +82,17 @@ var droppedTwin = map[ReasonCode]ReasonCode{
 	ReasonEmployerColumnEmpty: ReasonEmployerColumnEmptyDropped,
 	ReasonEmployerNotFound:    ReasonEmployerNotFoundDropped,
 }
+
+// Parameter names and a text three reasons share.
+const (
+	paramPlural = "plural"
+	paramRef    = "ref"
+	paramName   = "name"
+	paramColumn = "column"
+	paramValue  = "value"
+
+	textValueDetail = "{value:q}: {detail}"
+)
 
 var reasonCatalog = map[ReasonCode]reasonEntry{
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
@@ -129,12 +140,12 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stellen Sie ihn wieder her, um ihn zu aktualisieren.",
 		textlang.Vietnamese: "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
 	}},
-	ReasonCannotCreate: {params: []string{"plural"}, text: map[textlang.Lang]string{
+	ReasonCannotCreate: {params: []string{paramPlural}, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot create {plural}, so the {plural} file is skipped",
 		textlang.German:     "Sie dürfen keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
 		textlang.Vietnamese: "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
 	}},
-	ReasonCannotEdit: {params: []string{"plural"}, text: map[textlang.Lang]string{
+	ReasonCannotEdit: {params: []string{paramPlural}, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped",
 		textlang.German:     "Sie dürfen {plural} nicht bearbeiten, daher wird eine Zeile übersprungen, die einen vorhandenen Datensatz ändern würde.",
 		textlang.Vietnamese: "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua.",
@@ -179,127 +190,127 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Jemand, der zu dieser Zeile passt, ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
 		textlang.Vietnamese: "Đã có người khớp với hàng này trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
 	}},
-	ReasonLinkNotFound: {params: []string{"ref"}, text: map[textlang.Lang]string{
+	ReasonLinkNotFound: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "no company with {ref:q} in this upload, in an earlier import, or in Margince",
 		textlang.German:     "Kein Unternehmen mit {ref:q} in diesem Upload, in einem früheren Import oder in Margince.",
 		textlang.Vietnamese: "Không có công ty nào với {ref:q} trong tệp này, trong lần nhập trước hoặc trong Margince.",
 	}},
-	ReasonLinkNotFoundDropped: {params: []string{"ref"}, text: map[textlang.Lang]string{
+	ReasonLinkNotFoundDropped: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "no company with {ref:q} in this upload, in an earlier import, or in Margince; the row was imported without the link",
 		textlang.German:     "Kein Unternehmen mit {ref:q} in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Không có công ty nào với {ref:q} trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
 	}},
-	ReasonLinkAmbiguous: {params: []string{"name"}, text: map[textlang.Lang]string{
+	ReasonLinkAmbiguous: {params: []string{paramName}, text: map[textlang.Lang]string{
 		textlang.English:    "more than one company is named {name:q}, so which one employs this contact is a question only a human can answer",
 		textlang.German:     "Mehr als ein Unternehmen heißt {name:q}, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt.",
 		textlang.Vietnamese: "Có nhiều hơn một công ty tên {name:q} nên chỉ con người mới quyết định được công ty nào thuê liên hệ này.",
 	}},
-	ReasonLinkAmbiguousDropped: {params: []string{"name"}, text: map[textlang.Lang]string{
+	ReasonLinkAmbiguousDropped: {params: []string{paramName}, text: map[textlang.Lang]string{
 		textlang.English:    "more than one company is named {name:q}, so which one employs this contact is a question only a human can answer; the row was imported without the link",
 		textlang.German:     "Mehr als ein Unternehmen heißt {name:q}, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Có nhiều hơn một công ty tên {name:q} nên chỉ con người mới quyết định được công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
 	}},
-	ReasonIdOnNonCompany: {params: []string{"column", "object"}, text: map[textlang.Lang]string{
+	ReasonIDOnNonCompany: {params: []string{paramColumn, "object"}, text: map[textlang.Lang]string{
 		textlang.English:    "only a company row can name an {column:q}; a {object} row is identified by its own key",
 		textlang.German:     "Nur eine Unternehmenszeile kann {column:q} angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
 		textlang.Vietnamese: "Chỉ hàng công ty mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
 	}},
-	ReasonIdNotACompanyId: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonIDNotACompanyID: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not a company id; export the companies to get theirs, or leave the column empty to import this row as a new company",
 		textlang.German:     "{value:q} ist keine Unternehmens-ID. Exportieren Sie die Unternehmen, um ihre IDs zu erhalten, oder lassen Sie die Spalte leer, um die Zeile als neues Unternehmen zu importieren.",
 		textlang.Vietnamese: "{value:q} không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
 	}},
-	ReasonIdNotVisible: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonIDNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "no company you can see has the id {value:q}; it may have been archived, merged away, or belong to a workspace this file did not come from",
 		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
 		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
 	}},
-	ReasonRefTakenByAnotherCompany: {params: []string{"ref"}, text: map[textlang.Lang]string{
+	ReasonRefTakenByAnotherCompany: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "the reference {ref:q} already stands for another company from an earlier import, so this row is not applied; use a new reference for this company or fix the id column",
 		textlang.German:     "Die Referenz {ref:q} steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwenden Sie eine neue Referenz für dieses Unternehmen oder korrigieren Sie die ID-Spalte.",
 		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
 	}},
-	ReasonRowKeyRepeated: {params: []string{"column", "value", "line"}, text: map[textlang.Lang]string{
+	ReasonRowKeyRepeated: {params: []string{paramColumn, paramValue, "line"}, text: map[textlang.Lang]string{
 		textlang.English:    "the {column:q} value {value:q} is already used by line {line}; each row needs its own, because it is what a re-import matches on and what an undo finds this row by",
 		textlang.German:     "Der Wert {value:q} der Spalte {column:q} wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
 		textlang.Vietnamese: "Giá trị {value:q} của cột {column:q} đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
 	}},
-	ReasonRowKeyEmpty: {params: []string{"column"}, text: map[textlang.Lang]string{
+	ReasonRowKeyEmpty: {params: []string{paramColumn}, text: map[textlang.Lang]string{
 		textlang.English:    "the {column:q} column is empty, so this row cannot be identified for re-import or undo",
 		textlang.German:     "Die Spalte {column:q} ist leer, daher kann diese Zeile für einen erneuten Import oder das Rückgängigmachen nicht erkannt werden.",
 		textlang.Vietnamese: "Cột {column:q} để trống nên không nhận diện được hàng này khi nhập lại hoặc hoàn tác.",
 	}},
-	ReasonFieldInactive: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonFieldInactive: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} cannot be written: this field is no longer active",
 		textlang.German:     "{value:q} kann nicht geschrieben werden: Dieses Feld ist nicht mehr aktiv.",
 		textlang.Vietnamese: "Không thể ghi {value:q}: trường này không còn hoạt động.",
 	}},
-	ReasonValueUnreadable: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonValueUnreadable: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} cannot be read",
 		textlang.German:     "{value:q} kann nicht gelesen werden.",
 		textlang.Vietnamese: "Không đọc được {value:q}.",
 	}},
-	ReasonPhoneNeedsCountry: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonPhoneNeedsCountry: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} needs its country code, like +49 30 1234567",
 		textlang.German:     "{value:q} braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
 		textlang.Vietnamese: "{value:q} cần mã quốc gia, ví dụ +49 30 1234567.",
 	}},
-	ReasonValueRefused: {params: []string{"value", "detail"}, text: map[textlang.Lang]string{
-		textlang.English:    "{value:q}: {detail}",
-		textlang.German:     "{value:q}: {detail}",
-		textlang.Vietnamese: "{value:q}: {detail}",
+	ReasonValueRefused: {params: []string{paramValue, "detail"}, text: map[textlang.Lang]string{
+		textlang.English:    textValueDetail,
+		textlang.German:     textValueDetail,
+		textlang.Vietnamese: textValueDetail,
 	}},
-	ReasonOptionNotAllowed: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonOptionNotAllowed: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not one of this field's allowed values",
 		textlang.German:     "{value:q} gehört nicht zu den erlaubten Werten dieses Feldes.",
 		textlang.Vietnamese: "{value:q} không thuộc các giá trị được phép của trường này.",
 	}},
-	ReasonOptionNotInList: {params: []string{"value", "options"}, text: map[textlang.Lang]string{
+	ReasonOptionNotInList: {params: []string{paramValue, "options"}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not one of the allowed values: {options}",
 		textlang.German:     "{value:q} gehört nicht zu den erlaubten Werten: {options}",
 		textlang.Vietnamese: "{value:q} không thuộc các giá trị được phép: {options}",
 	}},
-	ReasonOptionsNeedSemicolons: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonOptionsNeedSemicolons: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q}: separate several values with semicolons",
 		textlang.German:     "{value:q}: Trennen Sie mehrere Werte mit Semikolons.",
 		textlang.Vietnamese: "{value:q}: hãy phân tách nhiều giá trị bằng dấu chấm phẩy.",
 	}},
-	ReasonCurrencyUnset: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonCurrencyUnset: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} cannot be read: this currency field has no currency set",
 		textlang.German:     "{value:q} kann nicht gelesen werden: Für dieses Währungsfeld ist keine Währung eingestellt.",
 		textlang.Vietnamese: "Không đọc được {value:q}: trường tiền tệ này chưa đặt đơn vị tiền.",
 	}},
-	ReasonNotAnAmount: {params: []string{"value", "currency"}, text: map[textlang.Lang]string{
+	ReasonNotAnAmount: {params: []string{paramValue, "currency"}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not an amount in {currency}; write it like 12000.50",
 		textlang.German:     "{value:q} ist kein Betrag in {currency}. Schreiben Sie ihn so: 12000.50",
 		textlang.Vietnamese: "{value:q} không phải số tiền bằng {currency}. Hãy viết như 12000.50.",
 	}},
-	ReasonNotYesNo: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonNotYesNo: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not yes or no",
 		textlang.German:     "{value:q} ist weder Ja noch Nein.",
 		textlang.Vietnamese: "{value:q} không phải có hoặc không.",
 	}},
-	ReasonNotANumber: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonNotANumber: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not a number",
 		textlang.German:     "{value:q} ist keine Zahl.",
 		textlang.Vietnamese: "{value:q} không phải là số.",
 	}},
-	ReasonNotADate: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonNotADate: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not a date; write it as YYYY-MM-DD",
 		textlang.German:     "{value:q} ist kein Datum. Schreiben Sie es als JJJJ-MM-TT.",
 		textlang.Vietnamese: "{value:q} không phải ngày. Hãy viết dạng YYYY-MM-DD.",
 	}},
-	ReasonCannotWriteType: {params: []string{"value", "type"}, text: map[textlang.Lang]string{
+	ReasonCannotWriteType: {params: []string{paramValue, "type"}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} cannot be written to a {type} field",
 		textlang.German:     "{value:q} kann nicht in ein Feld vom Typ {type} geschrieben werden.",
 		textlang.Vietnamese: "Không thể ghi {value:q} vào trường kiểu {type}.",
 	}},
-	ReasonNotAnEmail: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonNotAnEmail: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not an email address that can be written",
 		textlang.German:     "{value:q} ist keine E-Mail-Adresse, die gespeichert werden kann.",
 		textlang.Vietnamese: "{value:q} không phải địa chỉ email có thể ghi.",
 	}},
-	ReasonNotADomain: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonNotADomain: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "{value:q} is not a domain that can be written",
 		textlang.German:     "{value:q} ist keine Domain, die gespeichert werden kann.",
 		textlang.Vietnamese: "{value:q} không phải tên miền có thể ghi.",
@@ -309,12 +320,12 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Die Beschreibung hat {length} Zeichen; eine Unternehmensbeschreibung fasst höchstens {max}.",
 		textlang.Vietnamese: "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
 	}},
-	ReasonSizeBandInvalid: {params: []string{"value", "allowed"}, text: map[textlang.Lang]string{
+	ReasonSizeBandInvalid: {params: []string{paramValue, "allowed"}, text: map[textlang.Lang]string{
 		textlang.English:    "size_band {value:q} is not one of {allowed}",
 		textlang.German:     "Die Größenklasse {value:q} gehört nicht zu: {allowed}",
 		textlang.Vietnamese: "Nhóm quy mô {value:q} không thuộc: {allowed}",
 	}},
-	ReasonTagNameInvalid: {params: []string{"name", "detail"}, text: map[textlang.Lang]string{
+	ReasonTagNameInvalid: {params: []string{paramName, "detail"}, text: map[textlang.Lang]string{
 		textlang.English:    "the tag {name:q} cannot be created: its name {detail}",
 		textlang.German:     "Der Tag {name:q} kann nicht angelegt werden: Sein Name {detail}",
 		textlang.Vietnamese: "Không thể tạo thẻ {name:q}: tên của nó {detail}",
@@ -324,12 +335,12 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
 		textlang.Vietnamese: "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
 	}},
-	ReasonEmployerNotFound: {params: []string{"name"}, text: map[textlang.Lang]string{
+	ReasonEmployerNotFound: {params: []string{paramName}, text: map[textlang.Lang]string{
 		textlang.English:    "no company named {name:q} is in the CRM, so there was nothing to link this contact to",
 		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte.",
 		textlang.Vietnamese: "Không có công ty nào tên {name:q} trong CRM nên không có gì để liên kết liên hệ này.",
 	}},
-	ReasonCannotEditAndTag: {params: []string{"plural"}, text: map[textlang.Lang]string{
+	ReasonCannotEditAndTag: {params: []string{paramPlural}, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped and no tag is added to one",
 		textlang.German:     "Sie dürfen {plural} nicht bearbeiten, daher wird eine Zeile übersprungen, die einen vorhandenen Datensatz ändern würde, und es wird kein Tag hinzugefügt.",
 		textlang.Vietnamese: "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua và không thẻ nào được thêm vào.",
@@ -349,7 +360,7 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.German:     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng đã được nhập mà không có liên kết.",
 	}},
-	ReasonEmployerNotFoundDropped: {params: []string{"name"}, text: map[textlang.Lang]string{
+	ReasonEmployerNotFoundDropped: {params: []string{paramName}, text: map[textlang.Lang]string{
 		textlang.English:    "no company named {name:q} is in the CRM, so there was nothing to link this contact to; the row was imported without the link",
 		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Không có công ty nào tên {name:q} trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",

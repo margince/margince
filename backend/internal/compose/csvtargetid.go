@@ -53,20 +53,20 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 		return targetID{}
 	}
 	if w.object != migration.ObjectCompany {
-		return targetID{named: true, why: migration.Why(migration.ReasonIdOnNonCompany,
+		return targetID{named: true, why: migration.Why(migration.ReasonIDOnNonCompany,
 			"column", csvTargetID, "object", w.object)}
 	}
 	parsed, err := ids.Parse(raw)
 	if err != nil {
 		// A bad cell is a line to fix in the file, not a fault of the run.
-		return targetID{named: true, why: migration.Why(migration.ReasonIdNotACompanyId, "value", raw)}
+		return targetID{named: true, why: migration.Why(migration.ReasonIDNotACompanyID, "value", raw)}
 	}
 	// GetCompany runs under the caller's own row scope, so a company they may not
 	// read answers not-found, as it would anywhere else. "Gone" and "not yours"
 	// share one sentence so the answer is no oracle.
 	if _, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](parsed),
 		storekit.LiveOnly); err != nil {
-		return targetID{named: true, why: migration.Why(migration.ReasonIdNotVisible, "value", raw)}
+		return targetID{named: true, why: migration.Why(migration.ReasonIDNotVisible, "value", raw)}
 	}
 	if why := w.refTakenBy(ctx, row.ExternalID, parsed); why.Code != "" {
 		return targetID{named: true, why: why}
