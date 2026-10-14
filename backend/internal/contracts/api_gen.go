@@ -22815,20 +22815,21 @@ type AdvanceProjectPhaseRequest struct {
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
 
-// AgentAllowanceSettings How much one agent passport may do in one window, for every passport in the installation.
-// A passport that reaches a count is refused on its next call until the window resets or
-// the user who lent it releases more. A change to a count applies within a minute, in the
-// window that is running: a raised count gives headroom at once, and a lowered one refuses
-// a passport already past it on its next call. The per-minute limits are fixed by the
-// build and shown here read-only.
+// AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
+// a connected MCP client has one allowance for all its passports, so a renewed credential
+// keeps counting where the last one stopped. An agent that reaches a count is refused on
+// its next call until the window resets or the user who lent it releases more. A change to
+// a count applies within a minute, in the window that is running: a raised count gives
+// headroom within that minute, and a lowered one refuses an agent already past it on its
+// next call. The per-minute limits are fixed by the build and shown here read-only.
 type AgentAllowanceSettings struct {
-	// AgentCallsPerWindow How many tool calls of any kind one passport may make per window. Default 1000.
+	// AgentCallsPerWindow How many tool calls of any kind one passport or connection may make per window. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window"`
 
-	// AgentEgressPerWindow How many calls that send something out of the workspace one passport may make per window. Default 20.
+	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
 
-	// AgentReadsPerWindow How many records one passport may read per window. Default 2000.
+	// AgentReadsPerWindow How many records one passport or connection may read per window. Default 2000.
 	AgentReadsPerWindow int `json:"agent_reads_per_window"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
@@ -22847,7 +22848,7 @@ type AgentAllowanceSettings struct {
 	// AgentWindowResetsAt When the window in force resets and every count starts again from zero.
 	AgentWindowResetsAt time.Time `json:"agent_window_resets_at"`
 
-	// AgentWritesPerWindow How many changing calls one passport may make per window. Default 200.
+	// AgentWritesPerWindow How many changing calls one passport or connection may make per window. Default 200.
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
 
 	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
@@ -37451,12 +37452,13 @@ type InstallationJurisdiction struct {
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
-	// AgentAllowances How much one agent passport may do in one window, for every passport in the installation.
-	// A passport that reaches a count is refused on its next call until the window resets or
-	// the user who lent it releases more. A change to a count applies within a minute, in the
-	// window that is running: a raised count gives headroom at once, and a lowered one refuses
-	// a passport already past it on its next call. The per-minute limits are fixed by the
-	// build and shown here read-only.
+	// AgentAllowances How much one agent may do in one window. A passport a user minted has its own allowance;
+	// a connected MCP client has one allowance for all its passports, so a renewed credential
+	// keeps counting where the last one stopped. An agent that reaches a count is refused on
+	// its next call until the window resets or the user who lent it releases more. A change to
+	// a count applies within a minute, in the window that is running: a raised count gives
+	// headroom within that minute, and a lowered one refuses an agent already past it on its
+	// next call. The per-minute limits are fixed by the build and shown here read-only.
 	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
 
 	// BaseCurrency ISO-4217 code every money roll-up converts to.

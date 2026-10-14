@@ -4,9 +4,11 @@
 package identity
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,5 +63,19 @@ func TestAConnectionIsOneSubjectHoweverManyPassportsItHas(t *testing.T) {
 
 	if len(holders) != 2 || !slices.Equal(holders[0].Subjects, []string{"grant", "minted"}) {
 		t.Errorf("holders are %+v, want Minh with grant and minted, then Anna", holders)
+	}
+}
+
+// The reset comes from the window the counts were read in. A second look at
+// the meter could land in the next window.
+func TestTheResetIsTheOneTheCountsWereReadIn(t *testing.T) {
+	counted := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)
+	reader := &recordedUsage{}
+	h := Handlers{}.WithPassportUsage(reader)
+
+	got := h.resetsAt(context.Background(), map[string]agentvolume.Usage{"a": {ResetsAt: counted}})
+
+	if !got.Equal(counted) {
+		t.Errorf("the reset is %v, want %v from the counted window", got, counted)
 	}
 }

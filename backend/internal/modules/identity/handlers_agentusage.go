@@ -4,9 +4,11 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -53,7 +55,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 		data = append(data, userUsage(holder, usage))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AgentUsageByUser{
-		Data: data, ResetsAt: h.passportUsage.ResetsAt(r.Context()),
+		Data: data, ResetsAt: h.resetsAt(r.Context(), usage),
 	})
 }
 
@@ -73,4 +75,13 @@ func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage) crmc
 		Reads:         wire.Reads, Writes: wire.Writes, Egress: wire.Egress, Calls: wire.Calls,
 		State: crmcontracts.AgentUsageState(state),
 	}
+}
+
+// resetsAt takes the reset from the window the counts were read in. Only a read
+// with no subjects asks the meter again, since it counted nothing.
+func (h Handlers) resetsAt(ctx context.Context, usage map[string]agentvolume.Usage) time.Time {
+	for _, u := range usage {
+		return u.ResetsAt
+	}
+	return h.passportUsage.ResetsAt(ctx)
 }

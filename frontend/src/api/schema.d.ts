@@ -21452,21 +21452,22 @@ export interface components {
             send_max_age_hours: number;
         };
         /**
-         * @description How much one agent passport may do in one window, for every passport in the installation.
-         *     A passport that reaches a count is refused on its next call until the window resets or
-         *     the user who lent it releases more. A change to a count applies within a minute, in the
-         *     window that is running: a raised count gives headroom at once, and a lowered one refuses
-         *     a passport already past it on its next call. The per-minute limits are fixed by the
-         *     build and shown here read-only.
+         * @description How much one agent may do in one window. A passport a user minted has its own allowance;
+         *     a connected MCP client has one allowance for all its passports, so a renewed credential
+         *     keeps counting where the last one stopped. An agent that reaches a count is refused on
+         *     its next call until the window resets or the user who lent it releases more. A change to
+         *     a count applies within a minute, in the window that is running: a raised count gives
+         *     headroom within that minute, and a lowered one refuses an agent already past it on its
+         *     next call. The per-minute limits are fixed by the build and shown here read-only.
          */
         AgentAllowanceSettings: {
-            /** @description How many records one passport may read per window. Default 2000. */
+            /** @description How many records one passport or connection may read per window. Default 2000. */
             agent_reads_per_window: number;
-            /** @description How many changing calls one passport may make per window. Default 200. */
+            /** @description How many changing calls one passport or connection may make per window. Default 200. */
             agent_writes_per_window: number;
-            /** @description How many calls that send something out of the workspace one passport may make per window. Default 20. */
+            /** @description How many calls that send something out of the workspace one passport or connection may make per window. Default 20. */
             agent_egress_per_window: number;
-            /** @description How many tool calls of any kind one passport may make per window. Default 1000. */
+            /** @description How many tool calls of any kind one passport or connection may make per window. Default 1000. */
             agent_calls_per_window: number;
             /**
              * @description How long the window in force lasts, in hours. Default 24. Every passport's window
