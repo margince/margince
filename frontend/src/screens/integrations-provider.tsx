@@ -44,21 +44,8 @@ import {
 } from "./provider-status";
 import { recordWriteKeys } from "./recordwritekeys";
 
-// The licensed-data-provider card (ADR-0101, PI-WIRE-1..5): connect a key,
-// decide whether new contacts are enriched automatically, and read what the
-// provider says is left against what this installation has spent.
-//
-// Rows in the order a reader needs them: the provider with its key verb, then
-// the judgements that spend it. Once a key is stored, the two readings follow,
-// full width, because a reading's table is the subject and not an answer.
-//
-// Disconnect and delete-data are two verbs because they are two decisions.
-// Disconnecting stops new lookups and destroys the key; the data already paid
-// for stays on the records. A customer may want either without the other, and a
-// single button would make one of them a surprise. Neither is the same WEIGHT as
-// connecting, which is why both live behind the overflow beside it: three
-// buttons eight pixels apart, one of which irreversibly destroys purchased
-// contact data, made a misclick the same size as a decision.
+// Disconnect and delete-data are separate decisions, so both sit behind the
+// overflow: beside the connect button, a misclick would destroy paid-for data.
 
 type ProviderConnection = components["schemas"]["ProviderConnection"];
 

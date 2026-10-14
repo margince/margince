@@ -1311,18 +1311,8 @@ export function OverflowMenu({
     trigger.current?.focus();
   }, [chosen]);
 
-  // FOCUS GOES IN. The panel is portalled into its dialog, or the body when
-  // there is none. It sits at the end of its layer, not after its trigger.
-  // Without this a reader who opens a menu Tabs to the NEXT row's trigger, then
-  // through every control, and reaches its items last. On a list drawing one
-  // menu per row that is dozens of stops, which is a menu no keyboard reaches.
-  //
-  // The same hook the dialogs use, and for the same reason its own header
-  // gives: a surface that keeps its chrome private still owes the keyboard one
-  // answer to "where is focus now". Escape and the click-outside stay below,
-  // because this menu closes on a third thing a dialog does not have — an item
-  // being chosen — and that path has to leave the dialog it may have opened
-  // holding focus.
+  // The panel is portalled to the end of its layer, so without moving focus in,
+  // Tab reaches the next row's trigger before this menu's items.
   useDialogFocus({
     open,
     onClose: () => setOpen(false),

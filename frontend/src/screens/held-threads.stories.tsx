@@ -147,8 +147,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The drawer is narrower than the fold width, so who a thread is with is a
-// line of its own under line one, not a column.
+// The drawer is narrower than the fold width, so who a thread is with sits
+// on its own line under line one.
 export const Mixed: Story = {
   render: story(MIXED),
   play: async ({ canvasElement }) => {
