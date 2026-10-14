@@ -57,7 +57,7 @@ type ComposedSubscription struct {
 // subscription starts a fresh group, which re-reads the stream's retained
 // history from the beginning, and Subscription.Name says so.
 func (c ComposedSubscription) GroupName() string {
-	return "cg:ext-" + string(c.Unit) + "-" + c.Sub.Name
+	return kevents.ExtensionGroupPrefix + string(c.Unit) + "-" + c.Sub.Name
 }
 
 // Group is the consumer group to run this listener on: its name, and the
