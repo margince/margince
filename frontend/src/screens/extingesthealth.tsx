@@ -160,12 +160,8 @@ export function useExtensionIngestHealth() {
     enabled: canSee,
     queryFn: async () => {
       const data = unwrap(await api.GET("/admin/extension-ingest-health"));
-      // Rejected rather than defaulted. `?? []` would draw the clean state,
-      // which claims every record this installation's connectors sent was
-      // representable — a statement about the installation that this response
-      // never made, and exactly the reassurance an operator opens the card to
-      // trust. A malformed payload is a condition to report, so it becomes the
-      // card's error state.
+      // Rejected, not defaulted: `?? []` would draw the clean state, a claim about
+      // the installation this response never made.
       if (
         !data ||
         typeof data.generated_at !== "string" ||

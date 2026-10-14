@@ -52,10 +52,11 @@ export function useEmbedReindexAvailable(): boolean {
 }
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
 
-export function useEmbedReindexStatus(enabled: boolean) {
+export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
   return useQuery({
     queryKey: embedReindexStatusQueryKey,
     enabled,
+    staleTime,
     queryFn: async (): Promise<ReindexStatus> => {
       const data = unwrap(await api.GET("/embeddings/reindex/status"));
       if (!data) {

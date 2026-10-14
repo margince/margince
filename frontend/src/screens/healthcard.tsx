@@ -11,15 +11,8 @@ import { useT } from "../i18n";
 import { useMe } from "../lib/session";
 import type { HealthReading } from "./systemhealthreadings";
 
-// The shell every Settings → System health card wears.
-//
-// Every report card makes the same three decisions. It probes /me before it
-// calls the grant absent. It withholds rather than disappears. It keeps its own
-// throw inside itself.
-//
-// Withheld rather than absent: a missing card reads as "nothing is queued", a
-// claim about the installation nobody made. The probe: every grant reads false
-// while /me is in flight, so the answer alone would deny every administrator.
+// Withheld, not absent: a missing card reads as "nothing is queued". The /me
+// probe comes first because every grant reads false while /me is in flight.
 export function HealthCard<Data>({
   title,
   sub,

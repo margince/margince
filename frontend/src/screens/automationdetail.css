@@ -4,13 +4,11 @@
    these panes cannot drift a step away from the settings surface holding
    them. */
 
-/* Not a card: blocks on the opened row's ground. Zero intrinsic width, so
-   opening a row never re-divides the table's columns. */
+/* Not a card: blocks on the opened row's ground. */
 .auto-inspector {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  contain: inline-size;
 }
 .auto-inspector + .auto-inspector {
   margin-top: var(--space-4);
