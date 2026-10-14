@@ -3,8 +3,8 @@ import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { jsonResponse } from "../testing/story-utils";
 import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
-import { jsonResponse } from "./story-utils";
 import {
   teamWeekFigures,
   tobiasFunnel,

@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
+import { StoryProviders } from "../testing/story-utils";
 import {
   type CompanyFieldName,
   type CompanyForm,
   EMPTY_DRAFT,
 } from "./onboarding";
 import { ManualCompanyInterview } from "./onboarding-manual-interview";
-import { StoryProviders } from "./story-utils";
 
 // The manual path through the company interview: one question at a time, its
 // chapter and its position above it, and a hint under the prompt. It is the

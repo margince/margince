@@ -2367,54 +2367,56 @@ func (e AuditHistoryEntryActorType) Valid() bool {
 
 // Defines values for AuditLogEntryAction.
 const (
-	AuditLogEntryActionAccrue             AuditLogEntryAction = "accrue"
-	AuditLogEntryActionActivityRelink     AuditLogEntryAction = "activity_relink"
-	AuditLogEntryActionAdvancePhase       AuditLogEntryAction = "advance_phase"
-	AuditLogEntryActionAdvanceStage       AuditLogEntryAction = "advance_stage"
-	AuditLogEntryActionAnonymize          AuditLogEntryAction = "anonymize"
-	AuditLogEntryActionApprove            AuditLogEntryAction = "approve"
-	AuditLogEntryActionArchive            AuditLogEntryAction = "archive"
-	AuditLogEntryActionAssign             AuditLogEntryAction = "assign"
-	AuditLogEntryActionCancel             AuditLogEntryAction = "cancel"
-	AuditLogEntryActionClose              AuditLogEntryAction = "close"
-	AuditLogEntryActionConnect            AuditLogEntryAction = "connect"
-	AuditLogEntryActionConsentGrant       AuditLogEntryAction = "consent_grant"
-	AuditLogEntryActionConsentWithdraw    AuditLogEntryAction = "consent_withdraw"
-	AuditLogEntryActionCreate             AuditLogEntryAction = "create"
-	AuditLogEntryActionDelete             AuditLogEntryAction = "delete"
-	AuditLogEntryActionDemote             AuditLogEntryAction = "demote"
-	AuditLogEntryActionDisconnect         AuditLogEntryAction = "disconnect"
-	AuditLogEntryActionDisqualify         AuditLogEntryAction = "disqualify"
-	AuditLogEntryActionErase              AuditLogEntryAction = "erase"
-	AuditLogEntryActionExpire             AuditLogEntryAction = "expire"
-	AuditLogEntryActionExport             AuditLogEntryAction = "export"
-	AuditLogEntryActionHold               AuditLogEntryAction = "hold"
-	AuditLogEntryActionImport             AuditLogEntryAction = "import"
-	AuditLogEntryActionImportUndo         AuditLogEntryAction = "import_undo"
-	AuditLogEntryActionInvite             AuditLogEntryAction = "invite"
-	AuditLogEntryActionLiftLegalHold      AuditLogEntryAction = "lift_legal_hold"
-	AuditLogEntryActionMerge              AuditLogEntryAction = "merge"
-	AuditLogEntryActionPasswordLinkIssued AuditLogEntryAction = "password_link_issued"
-	AuditLogEntryActionPause              AuditLogEntryAction = "pause"
-	AuditLogEntryActionPay                AuditLogEntryAction = "pay"
-	AuditLogEntryActionPin                AuditLogEntryAction = "pin"
-	AuditLogEntryActionPlaceLegalHold     AuditLogEntryAction = "place_legal_hold"
-	AuditLogEntryActionPromote            AuditLogEntryAction = "promote"
-	AuditLogEntryActionPublish            AuditLogEntryAction = "publish"
-	AuditLogEntryActionRecordShare        AuditLogEntryAction = "record_share"
-	AuditLogEntryActionRecordUnshare      AuditLogEntryAction = "record_unshare"
-	AuditLogEntryActionReject             AuditLogEntryAction = "reject"
-	AuditLogEntryActionRelease            AuditLogEntryAction = "release"
-	AuditLogEntryActionReschedule         AuditLogEntryAction = "reschedule"
-	AuditLogEntryActionResetData          AuditLogEntryAction = "reset_data"
-	AuditLogEntryActionResolve            AuditLogEntryAction = "resolve"
-	AuditLogEntryActionRestore            AuditLogEntryAction = "restore"
-	AuditLogEntryActionRestrict           AuditLogEntryAction = "restrict"
-	AuditLogEntryActionResume             AuditLogEntryAction = "resume"
-	AuditLogEntryActionRevoke             AuditLogEntryAction = "revoke"
-	AuditLogEntryActionSchedule           AuditLogEntryAction = "schedule"
-	AuditLogEntryActionSendEmail          AuditLogEntryAction = "send_email"
-	AuditLogEntryActionUpdate             AuditLogEntryAction = "update"
+	AuditLogEntryActionAccrue              AuditLogEntryAction = "accrue"
+	AuditLogEntryActionActivityRelink      AuditLogEntryAction = "activity_relink"
+	AuditLogEntryActionAdvancePhase        AuditLogEntryAction = "advance_phase"
+	AuditLogEntryActionAdvanceStage        AuditLogEntryAction = "advance_stage"
+	AuditLogEntryActionAnonymize           AuditLogEntryAction = "anonymize"
+	AuditLogEntryActionApprove             AuditLogEntryAction = "approve"
+	AuditLogEntryActionArchive             AuditLogEntryAction = "archive"
+	AuditLogEntryActionAssign              AuditLogEntryAction = "assign"
+	AuditLogEntryActionCancel              AuditLogEntryAction = "cancel"
+	AuditLogEntryActionClose               AuditLogEntryAction = "close"
+	AuditLogEntryActionConnect             AuditLogEntryAction = "connect"
+	AuditLogEntryActionConsentGrant        AuditLogEntryAction = "consent_grant"
+	AuditLogEntryActionConsentWithdraw     AuditLogEntryAction = "consent_withdraw"
+	AuditLogEntryActionCreate              AuditLogEntryAction = "create"
+	AuditLogEntryActionDelete              AuditLogEntryAction = "delete"
+	AuditLogEntryActionDemote              AuditLogEntryAction = "demote"
+	AuditLogEntryActionDisconnect          AuditLogEntryAction = "disconnect"
+	AuditLogEntryActionDisqualify          AuditLogEntryAction = "disqualify"
+	AuditLogEntryActionErase               AuditLogEntryAction = "erase"
+	AuditLogEntryActionExpire              AuditLogEntryAction = "expire"
+	AuditLogEntryActionExport              AuditLogEntryAction = "export"
+	AuditLogEntryActionHold                AuditLogEntryAction = "hold"
+	AuditLogEntryActionImport              AuditLogEntryAction = "import"
+	AuditLogEntryActionImportUndo          AuditLogEntryAction = "import_undo"
+	AuditLogEntryActionInvite              AuditLogEntryAction = "invite"
+	AuditLogEntryActionLiftLegalHold       AuditLogEntryAction = "lift_legal_hold"
+	AuditLogEntryActionMerge               AuditLogEntryAction = "merge"
+	AuditLogEntryActionPasswordLinkIssued  AuditLogEntryAction = "password_link_issued"
+	AuditLogEntryActionPause               AuditLogEntryAction = "pause"
+	AuditLogEntryActionPay                 AuditLogEntryAction = "pay"
+	AuditLogEntryActionPin                 AuditLogEntryAction = "pin"
+	AuditLogEntryActionPlaceLegalHold      AuditLogEntryAction = "place_legal_hold"
+	AuditLogEntryActionPromote             AuditLogEntryAction = "promote"
+	AuditLogEntryActionPublish             AuditLogEntryAction = "publish"
+	AuditLogEntryActionRecordShare         AuditLogEntryAction = "record_share"
+	AuditLogEntryActionRecordUnshare       AuditLogEntryAction = "record_unshare"
+	AuditLogEntryActionReject              AuditLogEntryAction = "reject"
+	AuditLogEntryActionRelease             AuditLogEntryAction = "release"
+	AuditLogEntryActionRequestLegalReview  AuditLogEntryAction = "request_legal_review"
+	AuditLogEntryActionReschedule          AuditLogEntryAction = "reschedule"
+	AuditLogEntryActionResetData           AuditLogEntryAction = "reset_data"
+	AuditLogEntryActionResolve             AuditLogEntryAction = "resolve"
+	AuditLogEntryActionRestore             AuditLogEntryAction = "restore"
+	AuditLogEntryActionRestrict            AuditLogEntryAction = "restrict"
+	AuditLogEntryActionResume              AuditLogEntryAction = "resume"
+	AuditLogEntryActionRevoke              AuditLogEntryAction = "revoke"
+	AuditLogEntryActionSchedule            AuditLogEntryAction = "schedule"
+	AuditLogEntryActionSendEmail           AuditLogEntryAction = "send_email"
+	AuditLogEntryActionUpdate              AuditLogEntryAction = "update"
+	AuditLogEntryActionWithdrawLegalReview AuditLogEntryAction = "withdraw_legal_review"
 )
 
 // Valid indicates whether the value is a known member of the AuditLogEntryAction enum.
@@ -2496,6 +2498,8 @@ func (e AuditLogEntryAction) Valid() bool {
 		return true
 	case AuditLogEntryActionRelease:
 		return true
+	case AuditLogEntryActionRequestLegalReview:
+		return true
 	case AuditLogEntryActionReschedule:
 		return true
 	case AuditLogEntryActionResetData:
@@ -2515,6 +2519,8 @@ func (e AuditLogEntryAction) Valid() bool {
 	case AuditLogEntryActionSendEmail:
 		return true
 	case AuditLogEntryActionUpdate:
+		return true
+	case AuditLogEntryActionWithdrawLegalReview:
 		return true
 	default:
 		return false
@@ -11242,6 +11248,90 @@ func (e LeadSourceIntent) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewOutcome.
+const (
+	LegalReviewOutcomeApproved      LegalReviewOutcome = "approved"
+	LegalReviewOutcomeChangesNeeded LegalReviewOutcome = "changes_needed"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewOutcome enum.
+func (e LegalReviewOutcome) Valid() bool {
+	switch e {
+	case LegalReviewOutcomeApproved:
+		return true
+	case LegalReviewOutcomeChangesNeeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketDocumentCategory.
+const (
+	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
+	LegalReviewPacketDocumentCategoryLegal    LegalReviewPacketDocumentCategory = "legal"
+	LegalReviewPacketDocumentCategoryOffer    LegalReviewPacketDocumentCategory = "offer"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketDocumentCategory enum.
+func (e LegalReviewPacketDocumentCategory) Valid() bool {
+	switch e {
+	case LegalReviewPacketDocumentCategoryContract:
+		return true
+	case LegalReviewPacketDocumentCategoryLegal:
+		return true
+	case LegalReviewPacketDocumentCategoryOffer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketDocumentDocState.
+const (
+	LegalReviewPacketDocumentDocStateCurrent LegalReviewPacketDocumentDocState = "current"
+	LegalReviewPacketDocumentDocStateDraft   LegalReviewPacketDocumentDocState = "draft"
+	LegalReviewPacketDocumentDocStateFinal   LegalReviewPacketDocumentDocState = "final"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketDocumentDocState enum.
+func (e LegalReviewPacketDocumentDocState) Valid() bool {
+	switch e {
+	case LegalReviewPacketDocumentDocStateCurrent:
+		return true
+	case LegalReviewPacketDocumentDocStateDraft:
+		return true
+	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewStatus.
+const (
+	LegalReviewStatusApproved      LegalReviewStatus = "approved"
+	LegalReviewStatusChangesNeeded LegalReviewStatus = "changes_needed"
+	LegalReviewStatusRequested     LegalReviewStatus = "requested"
+	LegalReviewStatusWithdrawn     LegalReviewStatus = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewStatus enum.
+func (e LegalReviewStatus) Valid() bool {
+	switch e {
+	case LegalReviewStatusApproved:
+		return true
+	case LegalReviewStatusChangesNeeded:
+		return true
+	case LegalReviewStatusRequested:
+		return true
+	case LegalReviewStatusWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LicenseEntitlementState.
 const (
 	LicenseEntitlementStateAbsent   LicenseEntitlementState = "absent"
@@ -15946,6 +16036,7 @@ const (
 	StageCriterionKindCustom         StageCriterionKind = "custom"
 	StageCriterionKindDocumentSigned StageCriterionKind = "document_signed"
 	StageCriterionKindEventHeld      StageCriterionKind = "event_held"
+	StageCriterionKindLegalReviewed  StageCriterionKind = "legal_reviewed"
 	StageCriterionKindRoleIdentified StageCriterionKind = "role_identified"
 	StageCriterionKindTermsAccepted  StageCriterionKind = "terms_accepted"
 )
@@ -15960,6 +16051,8 @@ func (e StageCriterionKind) Valid() bool {
 	case StageCriterionKindDocumentSigned:
 		return true
 	case StageCriterionKindEventHeld:
+		return true
+	case StageCriterionKindLegalReviewed:
 		return true
 	case StageCriterionKindRoleIdentified:
 		return true
@@ -16014,8 +16107,9 @@ func (e StageEvidenceCommitment) Valid() bool {
 
 // Defines values for StageEvidenceSource.
 const (
-	StageEvidenceSourceActivity StageEvidenceSource = "activity"
-	StageEvidenceSourceContract StageEvidenceSource = "contract"
+	StageEvidenceSourceActivity    StageEvidenceSource = "activity"
+	StageEvidenceSourceContract    StageEvidenceSource = "contract"
+	StageEvidenceSourceLegalReview StageEvidenceSource = "legal_review"
 )
 
 // Valid indicates whether the value is a known member of the StageEvidenceSource enum.
@@ -16024,6 +16118,8 @@ func (e StageEvidenceSource) Valid() bool {
 	case StageEvidenceSourceActivity:
 		return true
 	case StageEvidenceSourceContract:
+		return true
+	case StageEvidenceSourceLegalReview:
 		return true
 	default:
 		return false
@@ -21391,6 +21487,24 @@ func (e ListLeadsParamsTagMode) Valid() bool {
 	case ListLeadsParamsTagModeAny:
 		return true
 	case ListLeadsParamsTagModeNone:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListLegalReviewsParamsStatus.
+const (
+	ListLegalReviewsParamsStatusDecided ListLegalReviewsParamsStatus = "decided"
+	ListLegalReviewsParamsStatusOpen    ListLegalReviewsParamsStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListLegalReviewsParamsStatus enum.
+func (e ListLegalReviewsParamsStatus) Valid() bool {
+	switch e {
+	case ListLegalReviewsParamsStatusDecided:
+		return true
+	case ListLegalReviewsParamsStatusOpen:
 		return true
 	default:
 		return false
@@ -28204,6 +28318,10 @@ type CommunicationReviewState string
 type CommunicationReviewList struct {
 	Data []CommunicationReview `json:"data"`
 
+	// Page Where this page was cut. `total` beside it is the same count this object may carry, kept
+	// at the top level because it shipped there: a client reading it keeps working.
+	Page PageInfo `json:"page"`
+
 	// Total How many are waiting in total. A page at its limit has more behind it, and this is how
 	// the caller knows rather than by discovering it.
 	Total int `json:"total"`
@@ -33855,6 +33973,11 @@ type DealLastEmail struct {
 // DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 type DealLastEmailDirection string
 
+// DealLegalReviewListResponse defines model for DealLegalReviewListResponse.
+type DealLegalReviewListResponse struct {
+	Data []LegalReviewSummary `json:"data"`
+}
+
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
 	Data []Deal   `json:"data"`
@@ -34428,6 +34551,13 @@ type DecideCommissionRequest struct {
 // DecideCommissionRequestDecision `approve` moves an accrued entry to approved; `pay` moves an approved one to paid.
 // `void` cancels an entry in any live state and writes the reversal beside it.
 type DecideCommissionRequestDecision string
+
+// DecideLegalReviewRequest defines model for DecideLegalReviewRequest.
+type DecideLegalReviewRequest struct {
+	// Comments Required for changes_needed.
+	Comments *string            `json:"comments,omitempty"`
+	Outcome  LegalReviewOutcome `json:"outcome"`
+}
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
@@ -38354,6 +38484,195 @@ type LeadSourceIntent string
 type LeadSourceListResponse struct {
 	Data       []LeadSource           `json:"data"`
 	Discovered []DiscoveredLeadSource `json:"discovered"`
+}
+
+// LegalReview A review as the reviewer reads it.
+type LegalReview struct {
+	// Earlier The deal's other reviews, newest first, so a repeated request reads with its history.
+	Earlier []LegalReviewSummary `json:"earlier"`
+
+	// Packet The deal as it stood when the review was asked for, as this reader may
+	// see it now. The deal, company and owner names are read now. Without `deal.read` the deal reads as its name alone. The
+	// amount follows the reader's field masks, the company their sight of it,
+	// the offer their `offer.read`, and each document its own read gate.
+	Packet LegalReviewPacket `json:"packet"`
+
+	// Review One legal review of a deal, without its pack.
+	Review LegalReviewSummary `json:"review"`
+}
+
+// LegalReviewListResponse defines model for LegalReviewListResponse.
+type LegalReviewListResponse struct {
+	Data []LegalReviewQueueItem `json:"data"`
+	Page PageInfo               `json:"page"`
+}
+
+// LegalReviewOutcome defines model for LegalReviewOutcome.
+type LegalReviewOutcome string
+
+// LegalReviewPacket The deal as it stood when the review was asked for, as this reader may
+// see it now. The deal, company and owner names are read now. Without `deal.read` the deal reads as its name alone. The
+// amount follows the reader's field masks, the company their sight of it,
+// the offer their `offer.read`, and each document its own read gate.
+type LegalReviewPacket struct {
+	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
+	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
+	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Documents The deal's contract, legal and offer documents, newest first.
+	Documents []LegalReviewPacketDocument `json:"documents"`
+
+	// History Each stage the deal entered, oldest first.
+	History []LegalReviewPacketStage `json:"history"`
+
+	// Offer The current offer, or null when the deal has none.
+	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
+	ValueCurrency *string                 `json:"value_currency,omitempty"`
+	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+}
+
+// LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
+type LegalReviewPacketDeal struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	CompanyId         *openapi_types.UUID `json:"company_id,omitempty"`
+	CompanyName       *string             `json:"company_name,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+	Name              string              `json:"name"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerName         *string             `json:"owner_name,omitempty"`
+	StageId           *openapi_types.UUID `json:"stage_id,omitempty"`
+	StageName         *string             `json:"stage_name,omitempty"`
+}
+
+// LegalReviewPacketDocument One document as it stood at the request, read now for this reader. A
+// file this reader may open carries its name, type and size. A file
+// that came with a message outside this reader's audience, or any file
+// for a reader without `deal.read`, is not listed at all. A file
+// uploaded on the deal and archived or removed since reads as
+// unavailable, with no name, type or size.
+type LegalReviewPacketDocument struct {
+	AddedAt      time.Time                         `json:"added_at"`
+	AttachmentId openapi_types.UUID                `json:"attachment_id"`
+	Available    bool                              `json:"available"`
+	ByteSize     *int64                            `json:"byte_size,omitempty"`
+	Category     LegalReviewPacketDocumentCategory `json:"category"`
+	ContentType  *string                           `json:"content_type,omitempty"`
+	DocState     LegalReviewPacketDocumentDocState `json:"doc_state"`
+	Filename     *string                           `json:"filename,omitempty"`
+	Title        *string                           `json:"title,omitempty"`
+}
+
+// LegalReviewPacketDocumentCategory defines model for LegalReviewPacketDocument.Category.
+type LegalReviewPacketDocumentCategory string
+
+// LegalReviewPacketDocumentDocState defines model for LegalReviewPacketDocument.DocState.
+type LegalReviewPacketDocumentDocState string
+
+// LegalReviewPacketOffer Shown only to a reader holding `offer.read`. Its money is null for a
+// reader whose field masks withhold the deal's amount.
+type LegalReviewPacketOffer struct {
+	Currency   string             `json:"currency"`
+	GrossMinor *int64             `json:"gross_minor,omitempty"`
+	HasPdf     bool               `json:"has_pdf"`
+	Id         openapi_types.UUID `json:"id"`
+	IntroText  *string            `json:"intro_text,omitempty"`
+
+	// Lines The offer's lines in their order, as legal read them.
+	Lines       []LegalReviewPacketOfferLine `json:"lines"`
+	NetMinor    *int64                       `json:"net_minor,omitempty"`
+	OfferNumber string                       `json:"offer_number"`
+	Revision    int                          `json:"revision"`
+	Status      string                       `json:"status"`
+	TaxMinor    *int64                       `json:"tax_minor,omitempty"`
+	TermsText   *string                      `json:"terms_text,omitempty"`
+	ValidUntil  *openapi_types.Date          `json:"valid_until,omitempty"`
+}
+
+// LegalReviewPacketOfferLine defines model for LegalReviewPacketOfferLine.
+type LegalReviewPacketOfferLine struct {
+	// BillingIntervalMonths How many months one billing period spans.
+	BillingIntervalMonths *int `json:"billing_interval_months,omitempty"`
+
+	// BillingModel one_time or recurring. Null means nobody has classified it.
+	BillingModel *string `json:"billing_model,omitempty"`
+	Description  string  `json:"description"`
+
+	// DiscountPct The discount in percent, as a decimal string.
+	DiscountPct *string `json:"discount_pct,omitempty"`
+
+	// IntervalCount How many billing periods the buyer commits to.
+	IntervalCount *int `json:"interval_count,omitempty"`
+
+	// Position The line's place in the offer.
+	Position int `json:"position"`
+
+	// Quantity The quantity as a decimal string.
+	Quantity string `json:"quantity"`
+
+	// Staged A proposed line nobody has accepted yet. It is not in the totals.
+	Staged *bool `json:"staged,omitempty"`
+
+	// TaxRate The tax rate in percent, as a decimal string.
+	TaxRate        *string `json:"tax_rate,omitempty"`
+	Unit           *string `json:"unit,omitempty"`
+	UnitPriceMinor *int64  `json:"unit_price_minor,omitempty"`
+}
+
+// LegalReviewPacketStage defines model for LegalReviewPacketStage.
+type LegalReviewPacketStage struct {
+	EnteredAt time.Time `json:"entered_at"`
+	StageName string    `json:"stage_name"`
+}
+
+// LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
+type LegalReviewQueueItem struct {
+	CompanyName       *string             `json:"company_name,omitempty"`
+	DealName          string              `json:"deal_name"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+
+	// Review One legal review of a deal, without its pack.
+	Review        LegalReviewSummary `json:"review"`
+	StageName     *string            `json:"stage_name,omitempty"`
+	ValueCurrency *string            `json:"value_currency,omitempty"`
+
+	// ValueMinor The deal's amount in the base currency, priced on the request day.
+	ValueMinor *int64 `json:"value_minor,omitempty"`
+}
+
+// LegalReviewSettings defines model for LegalReviewSettings.
+type LegalReviewSettings struct {
+	Enabled bool `json:"enabled"`
+}
+
+// LegalReviewStatus `requested` waits for legal. `approved` and `changes_needed` are legal's
+// answers. `withdrawn` is a request the deal's side took back.
+type LegalReviewStatus string
+
+// LegalReviewSummary One legal review of a deal, without its pack.
+type LegalReviewSummary struct {
+	// Comments What legal answered.
+	Comments      *string             `json:"comments,omitempty"`
+	CreatedAt     time.Time           `json:"created_at"`
+	DealId        openapi_types.UUID  `json:"deal_id"`
+	DecidedAt     *time.Time          `json:"decided_at,omitempty"`
+	DecidedBy     *openapi_types.UUID `json:"decided_by,omitempty"`
+	DecidedByName *string             `json:"decided_by_name,omitempty"`
+	Id            openapi_types.UUID  `json:"id"`
+
+	// Note What the requester asked legal to look at.
+	Note *string `json:"note,omitempty"`
+
+	// PreviousReviewId The changes_needed review this request asks again after.
+	PreviousReviewId *openapi_types.UUID `json:"previous_review_id,omitempty"`
+	RequestedBy      *openapi_types.UUID `json:"requested_by,omitempty"`
+	RequestedByName  *string             `json:"requested_by_name,omitempty"`
+
+	// Status `requested` waits for legal. `approved` and `changes_needed` are legal's
+	// answers. `withdrawn` is a request the deal's side took back.
+	Status  LegalReviewStatus `json:"status"`
+	Version int64             `json:"version"`
 }
 
 // LicenseEntitlement What the license grants and how much of it is used, as this process last resolved it.
@@ -43776,6 +44095,12 @@ type RequestDeadline struct {
 
 	// Rule `gdpr`, or `<jurisdiction> v<version>` for a pack's own deadline.
 	Rule string `json:"rule"`
+}
+
+// RequestLegalReviewRequest defines model for RequestLegalReviewRequest.
+type RequestLegalReviewRequest struct {
+	Note             *string             `json:"note,omitempty"`
+	PreviousReviewId *openapi_types.UUID `json:"previous_review_id,omitempty"`
 }
 
 // RescheduleSendRequest A new moment for a message already scheduled. TIME ONLY — the content is what the
@@ -51784,6 +52109,16 @@ type ListOpenCommitmentsParams struct {
 // ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
 type ListCommunicationReviewsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListCompaniesParams defines parameters for ListCompanies.
@@ -54400,6 +54735,18 @@ type ExplainLeadScoreParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
+
+// ListLegalReviewsParams defines parameters for ListLegalReviews.
+type ListLegalReviewsParams struct {
+	Status *ListLegalReviewsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Cursor Opaque keyset cursor.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListLegalReviewsParamsStatus defines parameters for ListLegalReviews.
+type ListLegalReviewsParamsStatus string
 
 // ListListsParams defines parameters for ListLists.
 type ListListsParams struct {
@@ -57334,6 +57681,9 @@ type UpdateDealJSONRequestBody = UpdateDealRequest
 // AdvanceDealJSONRequestBody defines body for AdvanceDeal for application/json ContentType.
 type AdvanceDealJSONRequestBody = AdvanceDealRequest
 
+// RequestLegalReviewJSONRequestBody defines body for RequestLegalReview for application/json ContentType.
+type RequestLegalReviewJSONRequestBody = RequestLegalReviewRequest
+
 // CreateOfferJSONRequestBody defines body for CreateOffer for application/json ContentType.
 type CreateOfferJSONRequestBody = CreateOfferRequest
 
@@ -57474,6 +57824,12 @@ type PromoteLeadJSONRequestBody = PromoteLeadRequest
 
 // QualifyLeadJSONRequestBody defines body for QualifyLead for application/json ContentType.
 type QualifyLeadJSONRequestBody = QualifyLeadRequest
+
+// UpdateLegalReviewSettingsJSONRequestBody defines body for UpdateLegalReviewSettings for application/json ContentType.
+type UpdateLegalReviewSettingsJSONRequestBody = LegalReviewSettings
+
+// DecideLegalReviewJSONRequestBody defines body for DecideLegalReview for application/json ContentType.
+type DecideLegalReviewJSONRequestBody = DecideLegalReviewRequest
 
 // CreateListJSONRequestBody defines body for CreateList for application/json ContentType.
 type CreateListJSONRequestBody = CreateListRequest
@@ -69586,6 +69942,12 @@ type ServerInterface interface {
 	// Stop listing a captured file on this deal without touching the file.
 	// (PUT /deals/{id}/documents/{attachmentId}/hide)
 	HideDealDocument(w http.ResponseWriter, r *http.Request, id Id, attachmentId openapi_types.UUID)
+	// The legal reviews asked for on this deal, newest first.
+	// (GET /deals/{id}/legal-reviews)
+	ListDealLegalReviews(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask legal to review this deal.
+	// (POST /deals/{id}/legal-reviews)
+	RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's offers, newest revision first.
 	// (GET /deals/{id}/offers)
 	ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams)
@@ -69928,6 +70290,24 @@ type ServerInterface interface {
 	// Explain This Score — the weighted-factor decomposition behind a lead's score.
 	// (GET /leads/{id}/score)
 	ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams)
+	// The reviewer's queue.
+	// (GET /legal-reviews)
+	ListLegalReviews(w http.ResponseWriter, r *http.Request, params ListLegalReviewsParams)
+	// Whether legal review is switched on for this installation.
+	// (GET /legal-reviews/settings)
+	GetLegalReviewSettings(w http.ResponseWriter, r *http.Request)
+	// Switch legal review on or off for this installation.
+	// (PUT /legal-reviews/settings)
+	UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request)
+	// One review with its pack and the deal's earlier reviews.
+	// (GET /legal-reviews/{id})
+	GetLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Record legal's answer on a request.
+	// (POST /legal-reviews/{id}/decide)
+	DecideLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back an open request.
+	// (POST /legal-reviews/{id}/withdraw)
+	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
 	// Find the lists this caller may see, by name.
 	// (GET /lists)
 	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
@@ -73291,6 +73671,18 @@ func (_ Unimplemented) HideDealDocument(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The legal reviews asked for on this deal, newest first.
+// (GET /deals/{id}/legal-reviews)
+func (_ Unimplemented) ListDealLegalReviews(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask legal to review this deal.
+// (POST /deals/{id}/legal-reviews)
+func (_ Unimplemented) RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List a deal's offers, newest revision first.
 // (GET /deals/{id}/offers)
 func (_ Unimplemented) ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams) {
@@ -73972,6 +74364,42 @@ func (_ Unimplemented) ReopenLead(w http.ResponseWriter, r *http.Request, id Id,
 // Explain This Score — the weighted-factor decomposition behind a lead's score.
 // (GET /leads/{id}/score)
 func (_ Unimplemented) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id Id, params ExplainLeadScoreParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The reviewer's queue.
+// (GET /legal-reviews)
+func (_ Unimplemented) ListLegalReviews(w http.ResponseWriter, r *http.Request, params ListLegalReviewsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether legal review is switched on for this installation.
+// (GET /legal-reviews/settings)
+func (_ Unimplemented) GetLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch legal review on or off for this installation.
+// (PUT /legal-reviews/settings)
+func (_ Unimplemented) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One review with its pack and the deal's earlier reviews.
+// (GET /legal-reviews/{id})
+func (_ Unimplemented) GetLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record legal's answer on a request.
+// (POST /legal-reviews/{id}/decide)
+func (_ Unimplemented) DecideLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back an open request.
+// (POST /legal-reviews/{id}/withdraw)
+func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -84346,6 +84774,19 @@ func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWrite
 		return
 	}
 
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCommunicationReviews(w, r, params)
 	}))
@@ -93687,6 +94128,70 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListDealLegalReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListDealLegalReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealLegalReviews(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestLegalReview operation middleware
+func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealOffers operation middleware
 func (siw *ServerInterfaceWrapper) ListDealOffers(w http.ResponseWriter, r *http.Request) {
 
@@ -97937,6 +98442,207 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExplainLeadScore(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLegalReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLegalReviewsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegalReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLegalReviewSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLegalReviewSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateLegalReviewSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateLegalReviewSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLegalReview operation middleware
+func (siw *ServerInterfaceWrapper) GetLegalReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DecideLegalReview operation middleware
+func (siw *ServerInterfaceWrapper) DecideLegalReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DecideLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawLegalReview operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawLegalReview(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -112362,6 +113068,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/deals/{id}/documents/{attachmentId}/hide", wrapper.HideDealDocument)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.ListDealLegalReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.RequestLegalReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/offers", wrapper.ListDealOffers)
 	})
 	r.Group(func(r chi.Router) {
@@ -112702,6 +113414,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/score", wrapper.ExplainLeadScore)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-reviews", wrapper.ListLegalReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-reviews/settings", wrapper.GetLegalReviewSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/legal-reviews/settings", wrapper.UpdateLegalReviewSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/legal-reviews/{id}", wrapper.GetLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/legal-reviews/{id}/decide", wrapper.DecideLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/legal-reviews/{id}/withdraw", wrapper.WithdrawLegalReview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists", wrapper.ListLists)

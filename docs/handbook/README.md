@@ -44,6 +44,7 @@ Records, deals and mail in Margince, by page:
 - How do I make a Live List or a Shortlist, share it, or see who joined and left? → [Lists, filters and views](lists-filters-and-views.md)
 - How do I move a deal, or close it won or lost? → [The pipeline](the-pipeline.md)
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
+- How do I ask legal to review a deal, or make a stage wait for legal? → [Legal review](legal-review.md)
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
@@ -134,6 +135,9 @@ Records, deals and mail in Margince, by page:
 - [Deal Rooms](deal-rooms.md): the page for one deal that the buyer sees. What
   a room holds, the five states, and why Close is not a freeze. Personal
   one-time links, what a buyer never sees, and what an agent may not touch.
+- [Legal review](legal-review.md): asking legal to read a deal, what the summary
+  holds, the two answers and asking again. A stage that waits for legal's
+  approval, who answers, and how to switch it off.
 - [Documents and files](documents-and-files.md): documents on a company,
   contact or deal, and files a deal picks up from its email. Having a file read
   for deal fields, and document sets you can ask questions of. Every size limit,

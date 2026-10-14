@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import { RedirectUriGroup, RedirectUris } from "./oauth-redirects";
-import { StoryProviders } from "./story-utils";
 
 // The callback addresses on their own, two ways. In a section of a vendor's
 // panel the table runs edge to edge. Bare, they render as the first-run step

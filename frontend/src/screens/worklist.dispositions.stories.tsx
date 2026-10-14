@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DispositionVerbs } from "./worklist.dispositions";
 // The verbs' own layout: `.worklist-snooze-spans` draws the caret's panel as a
 // list of choices rather than a grid of pills, and `.worklist-row-acts` is the

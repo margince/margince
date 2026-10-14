@@ -214,7 +214,7 @@ of them, and what fails each:
 | `rlsclaims_test.go` | a comment says row level security makes a promise that no schema in this tree holds |
 
 Unit gates run in `make check`, with no cache, walking the module tree. Integration gates run against the
-real Postgres of `make test-integration`. The full merge loop (gates, the `craft` `pre-push` hook) is in
+real Postgres of `make test-integration`. The full merge loop (gates, `craft static`) is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md); every target is in
 [make-targets.md](../reference/make-targets.md).
 

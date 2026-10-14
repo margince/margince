@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { CompanyTriageSection } from "./companytriage";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyTriageSection } from "./companytriage";
 
 // Why this company record exists: the mail domains the pipeline checked into
 // it, each with the rung that settled it.

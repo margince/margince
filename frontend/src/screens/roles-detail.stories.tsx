@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { Role } from "./roles.queries";
 import { RoleDetail } from "./roles-detail";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const ALL = { read: true, create: true, update: true, delete: true };
 const READ = { read: true, create: false, update: false, delete: false };

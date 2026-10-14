@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
+import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
 import { TeamAct } from "./team-act";

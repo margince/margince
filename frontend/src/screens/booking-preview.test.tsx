@@ -15,6 +15,12 @@ import { createQueryClient } from "../app/queryclient";
 import { formatTimeOfDay, fullDayName } from "../format/format";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { dayInZone, viewerZone } from "../format/timezone";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BookingScreen } from "./book";
 import {
   bookingConnection,
@@ -23,12 +29,6 @@ import {
   bookingSlots,
 } from "./book.testkit";
 import { MeetingSettings } from "./meeting-settings";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 afterEach(() => {
   cleanup();

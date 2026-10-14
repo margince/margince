@@ -3,10 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useT } from "../i18n";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BillingContactModal } from "./billingcontactmodal";
 import type { BillingContact } from "./billingcontacts";
 import { useBillingContactActions } from "./billingcontacts.queries";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // One dialog answering two questions, and the difference between them is the
 // whole reason to read these side by side: naming somebody SEARCHES for the

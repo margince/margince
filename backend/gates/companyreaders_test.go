@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/legalreviewview.go:readPacketNames":                      "names the company of a stored review pack at each open, so no copy outlives an erasure or rename. packetWire shows it only when readReviewerSight says the reader may see that company now",
 	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":        "whether a tag suggestion still stands: the company appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
 	"internal/modules/activities/awaitingreply.go":                                   "the follow-up reminder's customer test: EXISTS arms asking whether the reader's own sent message went to a prospect or customer company, or to someone employed at one. No company column is selected; the company id it returns comes off the gated link join",
 	"internal/modules/deals/dealunarchive.go":                                        "the relationship restore of a deal un-archive: `company` appears only in a NOT EXISTS that keeps a link to an archived company archived. Nothing is selected",

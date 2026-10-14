@@ -22,14 +22,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { ComposeModal } from "./compose";
 import { ContactMeetingBrief } from "./meetingbrief";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.

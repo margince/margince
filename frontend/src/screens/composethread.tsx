@@ -15,12 +15,12 @@ import { Heading } from "../design-system/heading";
 import type { NameOf } from "../design-system/participants";
 import { Popover } from "../design-system/popover";
 import { SurfaceState } from "../design-system/surfacestate";
+import { groupChronology } from "../design-system/timelinegroups";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import type { RelinkKind } from "./compose";
-import { groupChronology } from "./timelinegroups";
 import "./composethread.css";
 
 type Activity = components["schemas"]["Activity"];

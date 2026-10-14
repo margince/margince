@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { RelationshipRows } from "./relationshiprows";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // The rows without their panel, the shape the deal's committee card mounts.
 // The remove dialog portals to document.body, so it is reached via `screen`.

@@ -4,6 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ListHistoryPanel } from "./listhistory";
 import {
   history,
@@ -14,7 +19,6 @@ import {
   shortlist,
 } from "./lists.fixtures";
 import type { List, ListHistoryEntry } from "./lists.queries";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What changed on a list, newest first. A Live List says above its rows when
 // its checks last ran, with how they work one press away. A Shortlist's rows

@@ -16,14 +16,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import type { GrantSpec } from "../testing/mefixture";
-import { openRowMenu } from "../testing/tablerow.testkit";
-import { BlockedDomainsCard } from "./blocked-domains";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { openRowMenu } from "../testing/tablerow.testkit";
+import { BlockedDomainsCard } from "./blocked-domains";
 
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CounterpartyHoldRow } from "./counterparty-hold";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CounterpartyHoldRow } from "./counterparty-hold";
 
 // The hold control has two states worth a picture, and they are not the same
 // control with a flag: one OFFERS two verbs, the other reports a standing

@@ -126,6 +126,33 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/design-system/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/app",
+                      "**/app/**",
+                      "**/screens",
+                      "**/screens/**",
+                      "**/App",
+                      "!@composition/**"
+                    ],
+                    "message": "The design system draws what the screens and the shell compose, so it never imports them. A piece that needs a screen's data or a feature belongs in screens/; a shared helper belongs in lib/."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

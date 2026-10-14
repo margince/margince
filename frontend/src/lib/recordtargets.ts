@@ -4,7 +4,7 @@
 import { useCallback, useRef } from "react";
 import { api } from "../api/client";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { unwrap } from "../lib/problem";
+import { unwrap } from "./problem";
 
 export const RELINK_KINDS = [
   "contact",

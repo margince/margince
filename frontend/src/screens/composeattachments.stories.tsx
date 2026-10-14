@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import type { CarriageViolation } from "./carriage";
 import { CarriageNotice } from "./composeattachments";
-import { StoryProviders } from "./story-utils";
 
 // The attachment shelf's standing refusal, rendered off the same violation
 // shapes carriage.test.ts asserts rather than a sentence typed here — so the

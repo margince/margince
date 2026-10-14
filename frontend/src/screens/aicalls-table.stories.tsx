@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CallTable } from "./aicalls-table";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type CallSummary = components["schemas"]["AiCallSummary"];
 

@@ -4,10 +4,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { bookingProfile } from "./book.testkit";
 import { BookingGuestScreen } from "./booking-guest";
 import { BookingReschedule } from "./booking-reschedule";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 afterEach(() => {
   cleanup();

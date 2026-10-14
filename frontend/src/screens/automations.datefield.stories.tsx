@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Field } from "../design-system/atoms";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DateFieldSelect } from "./automations.datefield";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The picker that names a workspace's own date column, drawn on its own.
 //

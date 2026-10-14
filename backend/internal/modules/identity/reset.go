@@ -97,6 +97,8 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	// disclose whether the address maps to an account. Failures on the
 	// async path are operator incidents, logged — never a different
 	// answer to the caller.
+	// NOSONAR: releaseSend is deferred in the goroutine, which outlives this
+	// handler. Releasing it here would cancel the send it bounds.
 	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), resetSendTimeout)
 	done := h.resetSendStarted // test seam; nil in production
 	go func() {

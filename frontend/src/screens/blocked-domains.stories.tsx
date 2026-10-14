@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { BlockedDomainsCard } from "./blocked-domains";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BlockedDomainsCard } from "./blocked-domains";
 
 // The three sources side by side, because telling them apart is the card's whole
 // job: a model verdict, a heuristic, and a contact who deliberately let a domain

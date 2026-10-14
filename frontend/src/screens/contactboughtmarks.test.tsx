@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { ContactRail } from "./contactrail";
-import { ContactSubtitle } from "./contactsubtitle";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactRail } from "./contactrail";
+import { ContactSubtitle } from "./contactsubtitle";
 
 type Contact360 = components["schemas"]["Contact360"];
 

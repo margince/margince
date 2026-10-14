@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
 import { Panel, PanelBody } from "../design-system/panel";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import type { FilterVocabulary } from "./filterdata";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import { type UnusedPhrase, usePlainWords } from "./filterpropose";
 import { type Group, newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 // The editing panel's body. It grows with the filter: two ways in while
 // there is no condition, then the rows with the description folded above

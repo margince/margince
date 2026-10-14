@@ -11,9 +11,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, useT } from "../i18n";
+import { withEmailOpener } from "../lib/openemail";
 import { RecordZoneProvider } from "../lib/recordzone";
-import { withEmailOpener } from "../screens/openemail";
-import { groupChronology } from "../screens/timelinegroups";
 import { activityTimeline } from "./activitytimeline";
 import { GroupedTimelineList } from "./composed";
 import { LoadMoreButton } from "./querystates";
@@ -25,6 +24,7 @@ import {
 } from "./recordtimeline";
 import { pickOption } from "./select-testing";
 import { TimelineFilterBar } from "./timelinefilterbar";
+import { groupChronology } from "./timelinegroups";
 
 // The record timeline is exercised the way a record page composes it — the
 // hook, the filter bar, the grouped list and the Load more button together —

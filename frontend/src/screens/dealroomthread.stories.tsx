@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import type { DealRoomThread, ThreadVerbs } from "./dealroomthread";
 import { ThreadComposer, ThreadList } from "./dealroomthread";
-import { StoryProviders } from "./story-utils";
 // The board's own sheet: `.thread`, `.thread-comment` and their siblings are
 // reached BY CLASS from this file, and a story that imports only the thread
 // module never reaches dealroomthreads.tsx, which loads it.

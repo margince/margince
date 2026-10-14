@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { CoverageCard } from "./onboarding-live-panel";
-import { StoryProviders } from "./story-utils";
 import "./onboarding-live-panel.css";
 
 // The coverage card, which is the one card in the dossier stack whose whole job

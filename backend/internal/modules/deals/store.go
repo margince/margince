@@ -65,6 +65,8 @@ type Store struct {
 
 	// suggestionEffects are an accepted suggestion's writes outside this module.
 	suggestionEffects SuggestionEffects
+	// reviewDocs lists the documents a legal review pack carries.
+	reviewDocs LegalReviewDocuments
 }
 
 // InstallationValue resolves ONE installation-identity value inside a

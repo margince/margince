@@ -19,15 +19,15 @@ import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, translate } from "../i18n";
 import { RecordZoneProvider } from "../lib/recordzone";
-import { bookingProfile, bookingProposals, bookingSlots } from "./book.testkit";
-import { proposalEmailBody } from "./booking-proposal-message";
-import { ContactMeetingsTab } from "./contactmeetings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { bookingProfile, bookingProposals, bookingSlots } from "./book.testkit";
+import { proposalEmailBody } from "./booking-proposal-message";
+import { ContactMeetingsTab } from "./contactmeetings";
 
 type Proposal = components["schemas"]["MeetingProposal"];
 

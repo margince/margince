@@ -11,7 +11,7 @@ import { CompaniesScreen, CompanyScreen } from "./companies";
 import { company, company360, jsonResponse } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
 import { mount, view } from "./contactpage.testkit";
-import { WriteToHost } from "./writeto";
+import { WriteToHost } from "./writetohost";
 
 // One record, one mark: the list a reader found it in, the card another record
 // lists it on, its own page and a message it sent all key the chip on the

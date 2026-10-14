@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { LicenseReading } from "./license";
-import { StoryProviders } from "./story-utils";
 
 // Settings → License. The reading is rendered directly rather than through the
 // fetching card: every state worth looking at is a state of the ENTITLEMENT, and

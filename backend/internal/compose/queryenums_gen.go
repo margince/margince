@@ -151,6 +151,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "status", Values: []string{"new", "contacted", "engaged", "promoted", "disqualified"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
+	"GET /v1/legal-reviews": {
+		{Name: "status", Values: []string{"open", "decided"}, Array: false, Explode: true},
+	},
 	"GET /v1/lists": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "list_type", Values: []string{"static", "dynamic"}, Array: false, Explode: true},

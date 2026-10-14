@@ -50,7 +50,7 @@ const namespaces = [
   { prefix: "repeatablerowsfield-", home: "screens/repeatablerowsfield.css" },
   { prefix: "scheduledsends-", home: "screens/scheduledsends.css" },
   { prefix: "storyhost-", home: "mcp-apps/story-hosts.css" },
-  { prefix: "transcript-", home: "screens/transcriptread.css" },
+  { prefix: "transcript-", home: "design-system/transcriptread.css" },
 ];
 
 const homeSheet = (home: string) => `src/${home}`;

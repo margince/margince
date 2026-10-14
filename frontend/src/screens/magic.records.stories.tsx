@@ -6,9 +6,13 @@ import type { ComponentProps } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type MagicLineRecords = components["schemas"]["MagicLineRecords"];
 

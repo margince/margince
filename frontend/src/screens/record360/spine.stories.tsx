@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { StoryProviders } from "../../testing/story-utils";
 import { company360 } from "../company.fixtures";
-import { StoryProviders } from "../story-utils";
 import { RecordSpine } from "./spine";
 
 // The account's story as a thread. The stories are the shapes a real account

@@ -42,7 +42,7 @@ func (r *leasedRecords) open(ctx context.Context, id RunID) (Run, error) {
 	return run, err
 }
 
-// replayed reads the rows bound to this run after its last flush: an attempt
+// replayed reads the rows this run created after its last flush: an attempt
 // landed them and died before it counted them.
 func (r *leasedRecords) replayed(ctx context.Context) (map[string]bool, error) {
 	landed := map[string]bool{}
@@ -51,7 +51,8 @@ func (r *leasedRecords) replayed(ctx context.Context) (map[string]bool, error) {
 			SELECT m.object || '/' || m.external_id
 			  FROM import_record_map m
 			  JOIN import_run r ON r.id = m.import_run_id
-			 WHERE r.id = $1 AND m.created_at > coalesce(r.progress_at, '-infinity')`, r.lease.Run)
+			 WHERE r.id = $1 AND m.origin = 'created'
+			   AND m.created_at > coalesce(r.progress_at, '-infinity')`, r.lease.Run)
 		if err != nil {
 			return fmt.Errorf("reading the rows import run %s landed since its last flush: %w", r.lease.Run, err)
 		}

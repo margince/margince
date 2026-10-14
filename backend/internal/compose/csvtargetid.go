@@ -83,5 +83,23 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 			"no company you can see has the id %q; it may have been archived, merged away, or belong "+
 				"to a workspace this file did not come from", raw)}
 	}
+	if reason := w.refTakenBy(ctx, row.ExternalID, parsed); reason != "" {
+		return targetID{named: true, reason: reason}
+	}
 	return targetID{id: parsed, named: true}
+}
+
+// refTakenBy says why a ref cannot be bound to the named company: an earlier
+// import already maps it to another one. Every slice and resume must resolve
+// one ref to one record. An undone run's key is free, and the bind takes it over.
+func (w *csvWriters) refTakenBy(ctx context.Context, ref string, named ids.UUID) string {
+	if ref == "" {
+		return ""
+	}
+	binding, found, err := w.bindingOf(ctx, ref)
+	if err != nil || !found || binding.RunStatus == migration.StatusUndone || binding.NativeID == named {
+		return ""
+	}
+	return fmt.Sprintf("the reference %q already stands for another company from an earlier import, "+
+		"so this row is not applied; use a new reference for this company or fix the id column", ref)
 }

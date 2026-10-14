@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { PassportCard } from "./settings-passports";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PassportCard } from "./settings-passports";
 
 // Three passports: one in use, one never used with every permission, and one
 // revoked, which stays listed and struck with no verb left to offer.

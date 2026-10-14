@@ -7,21 +7,15 @@ import {
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  Skeleton,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { ErrorLine } from "../design-system/errorline";
-import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
+import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
+import { Callout } from "./callout";
+import { ErrorLine } from "./errorline";
+import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
 
 type Activity = components["schemas"]["Activity"];
