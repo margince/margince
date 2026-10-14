@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // AgentAllowancePatch is a sparse write of the agent allowances: a nil field is
@@ -133,4 +134,17 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 		}
 	}
 	return nil
+}
+
+// PassportConnectionTx answers the connection a passport was minted under, or
+// the zero id for a passport a person minted.
+func PassportConnectionTx(ctx context.Context, tx pgx.Tx, passport ids.UUID) (ids.UUID, error) {
+	var connection *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT oauth_grant_id FROM passport WHERE id = $1`, passport).Scan(&connection); err != nil {
+		return ids.Nil, fmt.Errorf("identity: reading passport %s: %w", passport, err)
+	}
+	if connection == nil {
+		return ids.Nil, nil
+	}
+	return *connection, nil
 }

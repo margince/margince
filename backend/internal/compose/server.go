@@ -327,7 +327,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, connectionReleaser{meter: srv.volumeMeter, pool: pool}, log)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//

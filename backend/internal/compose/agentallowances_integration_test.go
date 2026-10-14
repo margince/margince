@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -152,4 +153,87 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 		return err
 	})
 	return policy, err
+}
+
+// The meter judges an agent by what an admin saved, read through the same
+// source the API composes.
+func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
+	e := integration.Setup(t)
+	h := allowanceHandlers(t, e, time.Now)
+	at := time.Now()
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
+		func() time.Time { return at }).WithPolicySource(agentAllowanceSource{pool: e.Pool})
+	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:importer", PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
+	})
+
+	if code, _ := patchAllowances(t, installationAdminCtx(e), h, `{"agent_writes_per_window":10}`); code != http.StatusOK {
+		t.Fatalf("saving a write allowance of 10 → %d", code)
+	}
+	for i := range 10 {
+		if _, ok, err := meter.Reserve(agent, agentvolume.Writes, 1); err != nil || !ok {
+			t.Fatalf("write %d of 10 was refused (err %v)", i+1, err)
+		}
+	}
+	if _, ok, err := meter.Reserve(agent, agentvolume.Writes, 1); err != nil || ok {
+		t.Fatalf("the 11th write → admitted=%v err=%v, want refused", ok, err)
+	}
+
+	if code, _ := patchAllowances(t, installationAdminCtx(e), h, `{"agent_writes_per_window":20}`); code != http.StatusOK {
+		t.Fatalf("raising the allowance to 20 → %d", code)
+	}
+	at = at.Add(agentvolume.PolicyRefresh)
+	if _, ok, err := meter.Reserve(agent, agentvolume.Writes, 1); err != nil || !ok {
+		t.Errorf("after the raise the 11th write → admitted=%v err=%v, want admitted", ok, err)
+	}
+}
+
+// A step-up on a connection's passport releases the connection's counter: the
+// passport the agent was refused on may have been renewed since.
+func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	passport, grant := seedConnectionPassport(t, e)
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, time.Now)
+	renewed := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:connector", PassportID: ids.NewV7(), ConnectionID: grant,
+	})
+	if err := meter.Consume(renewed, agentvolume.Writes, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, e.WS, passport, agentvolume.Writes,
+		meter.Bucket(ctx), time.Hour)
+	if err != nil || !applied {
+		t.Fatalf("releasing the connection → applied=%v err=%v", applied, err)
+	}
+
+	if reading := meter.Read(renewed, agentvolume.Writes); reading.Exceeded {
+		t.Errorf("the renewed passport still reads %+v after its connection was released", reading)
+	}
+}
+
+// seedConnectionPassport mints a connection for Rep1 and the passport the
+// token exchange would issue under it, and returns both ids.
+func seedConnectionPassport(t *testing.T, e *integration.Env) (passport, grant ids.UUID) {
+	t.Helper()
+	ctx := context.Background()
+	client, grant, passport := "client-"+ids.NewV7().String(), ids.NewV7(), ids.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO oauth_client (client_id, client_name, redirect_uris) VALUES ($1, 'Claude', ARRAY['https://client.example/cb'])`,
+			[]any{client}},
+		{`INSERT INTO oauth_grant (id, client_id, user_id, scopes, refresh_allowed) VALUES ($1, $2, $3, ARRAY['read']::text[], true)`,
+			[]any{grant, client, e.Rep1}},
+		{`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
+		  VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
+			[]any{passport, e.Rep1, "hash-" + passport.String(), grant}},
+	} {
+		if _, err := e.Pool.Exec(ctx, stmt.sql, stmt.args...); err != nil {
+			t.Fatalf("seeding the connection: %v", err)
+		}
+	}
+	return passport, grant
 }

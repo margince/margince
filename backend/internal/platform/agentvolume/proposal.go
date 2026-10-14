@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,6 +44,10 @@ type ReleaseProposal struct {
 	// refused at staging and — worse, if it were ever accepted on one side only
 	// — would stop matching the identity it is supposed to deduplicate on.
 	Bucket string `json:"bucket"`
+	// WindowSeconds is the length Bucket was counted under, decimal, as a
+	// string for the reason Bucket is. Empty on a proposal staged before
+	// window lengths could change, which was counted under DefaultWindow.
+	WindowSeconds string `json:"window_seconds,omitempty"`
 	// Passport names WHOSE window this is, and it is part of the identity below
 	// rather than decoration. Two agents lent by two different humans in one
 	// workspace cross the same counter in the same window constantly; without
@@ -64,7 +69,9 @@ func NewReleaseProposal(reading Reading, passport ids.UUID, tool string) Release
 	return ReleaseProposal{
 		Counter: reading.Counter, Observed: reading.Observed,
 		Limit: reading.Limit, Allowance: reading.Allowance,
-		Bucket: strconv.FormatInt(reading.Bucket, 10), Passport: passport.String(), Tool: tool,
+		Bucket:        strconv.FormatInt(reading.Bucket, 10),
+		WindowSeconds: strconv.FormatInt(int64(reading.Window/time.Second), 10),
+		Passport:      passport.String(), Tool: tool,
 	}
 }
 
@@ -98,6 +105,18 @@ func (p ReleaseProposal) Window() (int64, error) {
 		return 0, fmt.Errorf("agentvolume: a staged release names window %q, which is not a window: %w", p.Bucket, err)
 	}
 	return bucket, nil
+}
+
+// Length is the window length the proposal's bucket was counted under.
+func (p ReleaseProposal) Length() (time.Duration, error) {
+	if p.WindowSeconds == "" {
+		return DefaultWindow, nil
+	}
+	seconds, err := strconv.ParseInt(p.WindowSeconds, 10, 64)
+	if err != nil || seconds <= 0 {
+		return 0, fmt.Errorf("agentvolume: a staged release names window length %q, which is not a length", p.WindowSeconds)
+	}
+	return time.Duration(seconds) * time.Second, nil
 }
 
 // Identity is the proposal's logical identity for the approvals engine: one

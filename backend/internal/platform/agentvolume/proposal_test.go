@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -183,7 +184,7 @@ func TestASoftCounterWithNoCeilingReportsNoCeilingRatherThanNoHeadroom(t *testin
 // fixedCeiling is a workspace share that is already decided.
 type fixedCeiling int
 
-func (c fixedCeiling) TokensPerPassport(context.Context) int { return int(c) }
+func (c fixedCeiling) TokensPerPassport(context.Context, time.Duration) int { return int(c) }
 
 // And with a ceiling but no reachable counter it still says nothing. Cost is
 // the ONE counter that does not fail closed, because failing closed on a
@@ -198,5 +199,22 @@ func TestASoftCounterDoesNotFailClosed(t *testing.T) {
 	}
 	if reading.Limit != 40_000 {
 		t.Errorf("the share reads %d, want the composed 40000", reading.Limit)
+	}
+}
+
+func TestAProposalCarriesTheLengthItsBucketWasCountedUnder(t *testing.T) {
+	p := NewReleaseProposal(Reading{Counter: Writes, Bucket: 7, Window: 12 * time.Hour}, ids.New[ids.PassportKind]().UUID, "update_record")
+
+	if length, err := p.Length(); err != nil || length != 12*time.Hour {
+		t.Errorf("the proposal names %v (err %v), want 12h", length, err)
+	}
+}
+
+func TestAProposalWithoutALengthWasCountedUnderTheDefaultWindow(t *testing.T) {
+	if length, err := (ReleaseProposal{Counter: Reads, Bucket: "7"}).Length(); err != nil || length != DefaultWindow {
+		t.Errorf("a proposal staged without a length names %v (err %v), want %v", length, err, DefaultWindow)
+	}
+	if _, err := (ReleaseProposal{Counter: Reads, Bucket: "7", WindowSeconds: "soon"}).Length(); err == nil {
+		t.Error("a length that is not a number was accepted")
 	}
 }
