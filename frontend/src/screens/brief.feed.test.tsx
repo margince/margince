@@ -17,6 +17,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Whether a control's name is a row's menu, whatever the row is called. */
+const MENU_LEAD = en["worklist.rowMenu"].slice(
+  0,
+  en["worklist.rowMenu"].indexOf("{title}"),
+);
+const rowMenu = (name: string) => name.startsWith(MENU_LEAD);
+
+/** The queue beside the row in hand, one control per queued row. */
+function inQueue(container: HTMLElement) {
+  const queue = container.querySelector(".brief-triage-queue");
+  if (!(queue instanceof HTMLElement)) throw new Error("no queue is drawn");
+  return within(queue);
+}
+
 /** The row in hand, drawn whole on the panel's left. */
 function inHand(container: HTMLElement) {
   const lead = container.querySelector(".brief-triage-lead");
@@ -72,7 +86,9 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
   const { container } = render(
     <BriefFeed day={readingsDay({}, rows)} state="ready" />,
   );
-  await user.click(screen.getByRole("button", { name: /Call buyer 2/ }));
+  await user.click(
+    inQueue(container).getByRole("button", { name: /Call buyer 2/ }),
+  );
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
@@ -84,7 +100,7 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
   ).toBe("3");
   expect(screen.getByText("3 of 3")).toBeTruthy();
   expect(
-    screen
+    inQueue(container)
       .getByRole("button", { name: /Call buyer 2/ })
       .getAttribute("aria-pressed"),
   ).toBe("true");
@@ -174,7 +190,7 @@ it("keeps approvals in the agenda and offers their review action", () => {
 
 it.each([false, true])(
   "Focus omits personal pin controls (previously pinned: %s)",
-  (pinned) => {
+  async (pinned) => {
     stubApi({});
     const row: ReturnType<typeof taskRow> = {
       ...taskRow("task", "Call the buyer"),
@@ -183,6 +199,10 @@ it.each([false, true])(
     };
     const { container } = render(
       <BriefFeed day={readingsDay({}, [row])} state="ready" />,
+    );
+    // The pin would be a line of the row's menu, so the menu is opened first.
+    await userEvent.click(
+      inHand(container).getByRole("button", { name: rowMenu }),
     );
     expect(
       screen.queryByRole("button", {
@@ -199,7 +219,7 @@ it.each([false, true])(
   },
 );
 
-it("ends the row in hand's one line with the agent's move, every option beside it", () => {
+it("ends the row in hand's one line with its menu, the agent's move before it", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed
@@ -214,15 +234,18 @@ it("ends the row in hand's one line with the agent's move, every option beside i
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The way into what the row is about opens the line. The set-asides are one
-  // menu with Done beside it, and the agent's move closes the line.
+  // The way into what the row is about opens the line. Done stands before the
+  // agent's move, and the row's menu, holding the other set-asides, closes it.
   expect(line.at(0)).toBe(
     lead.getByRole("button", { name: en["brief.focus.context"] }),
   );
-  const menu = lead.getByRole("button", {
-    name: en["worklist.disposition.menu"],
+  expect(line.at(-1)).toBe(lead.getByRole("button", { name: rowMenu }));
+  const draft = lead.getByRole("link", {
+    name: en["worklist.verb.draft_reply_now"],
   });
-  expect(line.at(line.indexOf(menu) + 1)).toBe(
+  expect(draft.className).toContain("btn-ai");
+  expect(line.at(-2)).toBe(draft);
+  expect(line.at(-3)).toBe(
     lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
   );
   expect(
@@ -230,11 +253,6 @@ it("ends the row in hand's one line with the agent's move, every option beside i
       name: en["worklist.disposition.verb.not_mine"],
     }),
   ).toBeNull();
-  const draft = lead.getByRole("link", {
-    name: en["worklist.verb.draft_reply_now"],
-  });
-  expect(draft.className).toContain("btn-ai");
-  expect(line.at(-1)).toBe(draft);
   // The verb that only reaches the record is withheld: the record is named
   // and linked over the row.
   expect(

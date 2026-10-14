@@ -145,7 +145,7 @@ export const AFullDayInDark: Story = {
 /**
  * The same day with the drawer expanded to the window (`wide=1`). What to
  * check: each row's verbs are one line beside the work, and Collapse sits
- * beside the X. The first row's Remove from list menu opens above the drawer.
+ * beside the X. The first row's menu opens above the drawer.
  */
 export const AFullDayExpanded: Story = {
   render: () => (
@@ -159,10 +159,12 @@ export const AFullDayExpanded: Story = {
     await expect(
       within(drawer).getByRole("button", { name: en["common.collapse"] }),
     ).toBeInTheDocument();
+    const named = en["worklist.rowMenu"];
+    const lead = named.slice(0, named.indexOf("{title}"));
     const [menu] = await within(drawer).findAllByRole("button", {
-      name: en["worklist.disposition.menu"],
+      name: (name) => name.startsWith(lead),
     });
-    if (!menu) throw new Error("the queue shows no Remove from list menu");
+    if (!menu) throw new Error("the queue shows no row menu");
     await userEvent.click(menu);
     // The panel is portalled out of the drawer, so the layer on top at its
     // centre decides whether a reader can press it.

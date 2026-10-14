@@ -12334,7 +12334,6 @@ export const de = {
     "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
-  "worklist.disposition.menu": "Aus der Liste entfernen",
   "worklist.disposition.undo": "Rückgängig machen",
   "worklist.disposition.undoFailed":
     "Rückgängig machen fehlgeschlagen. Die Nachricht ist weiterhin nicht auf deiner Liste.",
@@ -12450,6 +12449,7 @@ export const de = {
   "worklist.board.promises": "Fällige Zusagen",
   "worklist.board.truncated":
     "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
+  "worklist.rowMenu": "Weitere Aktionen für {title}",
   "worklist.readings.label": "Zahlen von heute",
   "worklist.readings.revenue": "Gefährdeter Umsatz",
   "worklist.readings.revenue.detail": "Heute stockende Deals",

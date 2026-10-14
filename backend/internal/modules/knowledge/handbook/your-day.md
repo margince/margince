@@ -33,10 +33,10 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
-To snooze a Worklist item in Margince, open the **Remove from list** menu on its row and choose
+To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
 **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
-2. On the row, open the **Remove from list** menu, the button with three dots.
+2. At the end of the row, press **More actions**, the button with three dots.
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they
    reply**.
 4. The note that follows offers **Undo**.
@@ -45,21 +45,32 @@ A snooze changes your list only. A reply that came in before you snoozed does no
 called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
-To pin a Worklist item in Margince, press **Pin** on its row. It moves to the top of your Worklist.
+To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
+the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
-2. Press **Pin** on the row. Press **Unpin** to put it back in its ranked place.
+2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
+   it back in its ranked place.
 
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is
 stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails:
 "Item was not pinned. Retry." Also called: star, flag, keep on top.
 
+### How do I hand a task on to a colleague?
+To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
+1. Open **Home** → **Show Worklist** and find the task.
+2. Press **More actions** at the end of the row and choose **Reassign**.
+3. Pick a colleague under **Reassign to** and press **Reassign**. **Cancel** keeps the task yours.
+
+The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on. If
+it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+
 ### How do I remove something from my worklist?
 To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not
-a customer**, open the **Remove from list** menu.
+a customer**, press **More actions** at the end of the row.
 1. Open **Home** → **Show Worklist** and find the row.
-2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in the
-   **Remove from list** menu.
-3. Or open **Remove from list** and choose **Not mine** if someone else should answer, or **Not a
+2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in
+   **More actions**.
+3. Or press **More actions** and choose **Not mine** if someone else should answer, or **Not a
    customer**.
 4. Press **Undo** in the note if you picked wrong.
 

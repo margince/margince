@@ -730,13 +730,13 @@ it("draws a menu opened inside a dialog on the layer above that dialog", async (
       <Heading size="large" id="q">
         Worklist
       </Heading>
-      <OverflowMenu label="Remove from list">
+      <OverflowMenu label="More actions">
         <button type="button">Snooze</button>
       </OverflowMenu>
     </Modal>,
   );
 
-  await user.click(screen.getByRole("button", { name: "Remove from list" }));
+  await user.click(screen.getByRole("button", { name: "More actions" }));
 
   const panel = screen.getByRole("button", { name: "Snooze" }).parentElement;
   expect(panel?.getAttribute("data-layer")).toBe("dialog");

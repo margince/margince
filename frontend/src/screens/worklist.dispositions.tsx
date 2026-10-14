@@ -15,7 +15,7 @@
 // Finding it again afterwards means knowing which judgement you made.
 
 import { createContext, useContext, useRef, useState } from "react";
-import { Button, OverflowMenu } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -199,9 +199,8 @@ export function usePutDown(item: WorklistItem) {
 // an empty box on a row whose only judgements are the ones the chip does not
 // carry. What this box costs the row's layout is stated in worklist.row.css.
 //
-// Above the fold it draws the row and nothing else. The buttons are still the
-// row's own, drawn beside the work by DispositionVerbs, and this adds nothing
-// they do not already offer.
+// Above the fold it draws the row and nothing else. The row's own verbs carry
+// the judgements there, and this adds nothing they do not already offer.
 export function PutDownByThumb({
   item,
   children,
@@ -256,65 +255,62 @@ function PutDown({
   );
 }
 
-type PutDown = ReturnType<typeof usePutDown>;
+export type PutDown = ReturnType<typeof usePutDown>;
 
-// The same judgements, reachable without a pointer.
-//
-// A swipe is not a control a keyboard, a switch or a screen reader can operate.
-// Below the fold the judgements had one route, and it needed a finger. The staged bar the gesture opens carries real buttons, but only a
-// drag opens it.
-//
-// A MENU rather than the buttons back. Restoring them is the 44px band that was
-// removed to bring the row under its ceiling, so the fix would undo the change
-// it is fixing; a menu is one tab stop and one line of text, and it is what the
-// design system already offers for "the verbs a record offers but a reader
-// rarely wants". The swipe stays the fast path for a thumb and this is the one
-// that answers to a key.
-//
-// Its children mount on first open, which is the default and matters here: a
-// queue draws one of these per row.
-//
-// It takes the WRITE rather than opening its own. A second usePutDown on the
-// same row is a second mutation with its own `pending`, so a press here and a
-// swipe confirm beside it both fire: two writes for one judgement, and two
-// toasts each offering an Undo for a state the other already cleared.
-function PutDownMenu({
-  offered,
-  put,
-  writing,
-  t,
-  locale,
-}: Readonly<{
-  offered: readonly WorklistDisposition[];
-  // The SPAN reaches the write, not only the judgement: the menu's longer
-  // lines are the answers the default day cannot give.
-  put: (
-    disposition: WorklistDisposition,
-    until?: SnoozeSpan | SnoozeEvent,
-  ) => void;
-  writing: PutDownAnswer | undefined;
-  t: T;
-  locale: Locale;
-}>) {
+// The row's one write, the one PutDownByThumb holds, so a press in the menu and
+// a swipe confirm cannot write twice. Verbs drawn outside a row get their own.
+// Both hooks run either way, because a hook cannot be called conditionally.
+export function useRowPutDown(item: WorklistItem): PutDown {
+  const shared = useContext(PutDownContext);
+  const own = usePutDown(item);
+  return shared ?? own;
+}
+
+// Done, beside the row's answer: the one judgement that finishes the row. Below
+// the fold it is a line of the row's menu instead, for the width arithmetic in
+// design-system/swiperow.tsx's header.
+export function DoneVerb({ write }: Readonly<{ write: PutDown }>) {
+  const folded = useFoldedViewport();
+  const { offered, put, writing, t } = write;
+  if (folded || !offered.includes("handled")) {
+    return null;
+  }
   return (
-    <OverflowMenu label={t("worklist.disposition.menu")}>
-      {offered.map((disposition) => (
-        <DispositionButton
-          key={disposition}
-          disposition={disposition}
-          writing={writing}
-          onPress={() => put(disposition)}
-          t={t}
-        />
-      ))}
+    <DispositionButton
+      disposition="handled"
+      writing={writing}
+      onPress={() => put("handled")}
+      t={t}
+    />
+  );
+}
+
+// The judgements that put the row down for now, first in the row's menu: Done
+// below the fold, then the snooze and its longer answers. A swipe carries the
+// same judgements for a thumb. These lines are the route a keyboard, a switch
+// or a screen reader takes, and they mount on the menu's first open.
+export function PutDownLines({ write }: Readonly<{ write: PutDown }>) {
+  const folded = useFoldedViewport();
+  const { offered, put, writing, t, locale } = write;
+  const line = (disposition: WorklistDisposition) => (
+    <DispositionButton
+      disposition={disposition}
+      writing={writing}
+      onPress={() => put(disposition)}
+      t={t}
+    />
+  );
+  const snoozes = offered.includes("snooze");
+  return (
+    <>
+      {folded && offered.includes("handled") && line("handled")}
+      {snoozes && line("snooze")}
       {/* The LONGER SPANS, as lines of their own rather than behind a second
           control: a popover inside a menu is a second layer over a surface
-          already floating, and a keyboard reader would open two things to say
-          "next week". The verb above still sends the default day. Each line
-          carries its own sentence — "Snooze for 3 days" — because a bare
-          "3 days" beside "Snooze" is a fragment whose subject a reader has to
-          guess. */}
-      {offered.includes("snooze") &&
+          already floating. The plain Snooze above still sends the default
+          day. Each line carries its own sentence, "Snooze for 3 days", because
+          a bare "3 days" is a fragment whose subject a reader has to guess. */}
+      {snoozes &&
         SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS).map((days) => (
           <Button
             key={days}
@@ -330,10 +326,10 @@ function PutDownMenu({
             )}
           </Button>
         ))}
-      {/* The event answers, as lines of the same list. They sit after the spans
-          because a rep reaching for this menu most often still means a
-          duration; what these add is the case a duration cannot state. */}
-      {offered.includes("snooze") &&
+      {/* The event answers after the spans: a rep reaching for a snooze most
+          often still means a duration, and these add the case a duration
+          cannot state. */}
+      {snoozes &&
         SNOOZE_EVENTS.map((event) => (
           <Button
             key={event}
@@ -344,57 +340,30 @@ function PutDownMenu({
             {t(`worklist.disposition.snoozeUntil.${event}` as const)}
           </Button>
         ))}
-    </OverflowMenu>
+    </>
   );
 }
 
-// The set-aside verbs: Done beside the work, the rest in one menu.
-//
-// Done is the one judgement that finishes the row, so it stays a button. The
-// others only move the row off the list; drawn as buttons, they wrap the row's
-// verbs onto a second line. Below the fold Done joins the menu, and
-// PutDownByThumb carries every judgement on the row itself.
-
-export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
-  const folded = useFoldedViewport();
-  // The row's own write, from the wrapper that holds it — one mutation per row,
-  // so a press here and a swipe confirm beside it cannot write twice.
-  //
-  // The fallback is for a caller that draws these verbs outside a row: it gets
-  // its own write rather than throwing on a missing provider. Every caller
-  // today goes through WorklistRow, the Brief's feed included, so nothing
-  // reaches it — it is what keeps a future caller from a crash it cannot read.
-  // Both hooks run either way, because a hook cannot be called conditionally;
-  // the unused one registers a mutation nobody fires, which costs a
-  // registration and never a request.
-  const shared = useContext(PutDownContext);
-  const own = usePutDown(item);
-  const { offered, put, writing, t, locale } = shared ?? own;
-  const finishes = !folded && offered.includes("handled");
-  const moves = finishes
-    ? offered.filter((disposition) => disposition !== "handled")
-    : offered;
-  // A FRAGMENT, not a box. These verbs stand in the row's own one line of
-  // verbs, and a wrapper of their own would be a group inside it.
+// The judgements that say the row is not the reader's work. They come last in
+// the menu, since they take the row off the list.
+export function HandBackLines({ write }: Readonly<{ write: PutDown }>) {
+  const { offered, put, writing, t } = write;
   return (
     <>
-      {moves.length > 0 && (
-        <PutDownMenu
-          offered={moves}
-          put={put}
-          writing={writing}
-          t={t}
-          locale={locale}
-        />
-      )}
-      {finishes && (
-        <DispositionButton
-          disposition="handled"
-          writing={writing}
-          onPress={() => put("handled")}
-          t={t}
-        />
-      )}
+      {offered
+        .filter(
+          (disposition) =>
+            disposition !== "handled" && disposition !== "snooze",
+        )
+        .map((disposition) => (
+          <DispositionButton
+            key={disposition}
+            disposition={disposition}
+            writing={writing}
+            onPress={() => put(disposition)}
+            t={t}
+          />
+        ))}
     </>
   );
 }

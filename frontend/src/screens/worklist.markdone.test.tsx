@@ -9,13 +9,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { DispositionVerbs, swipeActions } from "./worklist.dispositions";
+import { swipeActions } from "./worklist.dispositions";
 import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
+import { RowActs } from "./worklist.rowverbs";
+import { rowMenuName } from "./worklist.testkit";
 import { knownDispositions } from "./worklist.verbbutton";
 
 // Done and Not mine on a waiting row: what each says it does, before and after
 // the press. The server decides which of them a row offers; these draw the
 // row a colleague's message gets, which carries both.
+
+const TITLE = "Anna Weber is waiting";
 
 function colleaguesRow(): WorklistItem {
   return {
@@ -24,7 +28,7 @@ function colleaguesRow(): WorklistItem {
     category: "customer_waiting",
     level: 1,
     consequence: "buyer_waits",
-    title: "Anna Weber is waiting",
+    title: TITLE,
     because: [],
     actions: [],
     dispositions: ["handled", "snooze", "not_mine", "not_sales"],
@@ -58,7 +62,12 @@ function draw() {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <DispositionVerbs item={colleaguesRow()} />
+          <RowActs
+            item={colleaguesRow()}
+            title={TITLE}
+            href={undefined}
+            owner=""
+          />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -72,12 +81,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const MENU = en["worklist.disposition.menu"];
+const MENU = rowMenuName(TITLE);
 
 describe("Done on a waiting row", () => {
-  // Done finishes the row, so it stays beside the work. The judgements that
-  // only move the row off the list are lines of the menu.
-  it("stands beside the menu of the others and sends handled", async () => {
+  // Done finishes the row, so it stays on the line ahead of the row's menu.
+  // The judgements that only move the row off the list are lines of it.
+  it("stands before the row's menu and sends handled", async () => {
     const user = userEvent.setup();
     const fetch = draw();
 
@@ -90,7 +99,7 @@ describe("Done on a waiting row", () => {
         .map(
           (button) => button.textContent || button.getAttribute("aria-label"),
         ),
-    ).toEqual([MENU, en["worklist.disposition.verb.handled"]]);
+    ).toEqual([en["worklist.disposition.verb.handled"], MENU]);
 
     await user.click(done);
 
@@ -135,6 +144,7 @@ describe("Not mine on a colleague's row", () => {
   it("explains itself to a reader who reaches it by keyboard", async () => {
     const user = userEvent.setup();
     draw();
+    await user.tab();
     await user.tab();
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: MENU }),

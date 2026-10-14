@@ -9,12 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import {
-  DispositionVerbs,
-  SNOOZE_DAYS,
-  SNOOZE_SPANS,
-} from "./worklist.dispositions";
+import { SNOOZE_DAYS, SNOOZE_SPANS } from "./worklist.dispositions";
 import type { WorklistItem } from "./worklist.queries";
+import { RowActs } from "./worklist.rowverbs";
+import { rowMenuName } from "./worklist.testkit";
 
 // How long a row is put down for.
 //
@@ -28,6 +26,7 @@ import type { WorklistItem } from "./worklist.queries";
 // change: the button already existed and already worked.
 
 const NOW = new Date("2026-08-31T09:00:00Z");
+const TITLE = "Anna Weber is waiting";
 
 function row(): WorklistItem {
   return {
@@ -36,15 +35,15 @@ function row(): WorklistItem {
     category: "customer_waiting",
     level: 1,
     consequence: "buyer_waits",
-    title: "Anna Weber is waiting",
+    title: TITLE,
     because: [],
     actions: [],
     dispositions: ["handled", "snooze", "not_mine"],
   };
 }
 
-// The snooze and its spans are lines in the row's one menu of set-asides.
-const MENU = en["worklist.disposition.menu"];
+// The snooze and its spans are lines of the row's menu.
+const MENU = rowMenuName(TITLE);
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: MENU }));
 }
@@ -95,7 +94,7 @@ function draw(respond: () => Promise<Response> = settled) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <DispositionVerbs item={row()} />
+          <RowActs item={row()} title={TITLE} href={undefined} owner="" />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -242,7 +241,12 @@ describe("how long a row is put down for", () => {
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
           <ToastProvider>
-            <DispositionVerbs item={unsnoozable} />
+            <RowActs
+              item={unsnoozable}
+              title={TITLE}
+              href={undefined}
+              owner=""
+            />
             <ToastRegion />
           </ToastProvider>
         </LocaleProvider>

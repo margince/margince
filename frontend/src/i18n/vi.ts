@@ -12083,7 +12083,6 @@ export const vi = {
     "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
   "worklist.disposition.swipeCancel": "Giữ lại",
-  "worklist.disposition.menu": "Gỡ khỏi danh sách",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách.",
@@ -12198,6 +12197,7 @@ export const vi = {
   "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
+  "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
   "worklist.readings.revenue": "Doanh thu có rủi ro",
   "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",

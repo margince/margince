@@ -3,24 +3,18 @@
 
 /** @vitest-environment happy-dom */
 
-// One right-aligned row of verbs, with the lane's answer LAST.
-//
-// A reader runs a row left to right — the rank, the kind, the work — and the
-// verb the lane is asking for is the end of that sentence. Held on the trailing
-// edge it also lands at one x down the whole queue however many quiet verbs the
-// row ahead of it carries, so a rep answering row after row presses in the same
-// place every time.
-//
-// These assert the ORDER, because order is the whole of what says which verb is
-// the answer on a lane whose answer is a ghost — a filled Done and a ghost
-// Reply are both their lane's call to action, and a screenshot of either looks
-// like a row of verbs. Nothing else on this page reads it.
+// One right-aligned line of verbs: Done, the lane's answer, then the row's menu.
+// The menu closes every row's line, so the answer lands at one x down the queue.
+// These assert the order, because on a lane whose answer is a ghost button the
+// order alone says which verb is the answer.
 
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
   day,
+  findRowMenu,
   renderWorklist,
   row,
   stub,
@@ -43,8 +37,8 @@ function oneRow(item: WorklistItem) {
 }
 
 // A buyer waiting on an answer: the lane with the most verbs on it. The reply is
-// the answer, the record link, Done and the menu of set-asides are the quieter
-// half, and the pin is a glyph.
+// the answer, Done stands before it, and the rest are lines of the menu.
+const WAITING = "Re: pricing for the retrofit";
 function waitingRow(): WorklistItem {
   return row({
     id: "01a05500-0000-7000-8000-0000000000a1",
@@ -52,7 +46,7 @@ function waitingRow(): WorklistItem {
     category: "customer_waiting",
     level: 1,
     consequence: "buyer_waits",
-    title: "Re: pricing for the retrofit",
+    title: WAITING,
     actions: ["open", "reply"],
     dispositions: ["handled", "snooze", "not_mine"],
     subject: {
@@ -80,45 +74,69 @@ function filled(verbs: readonly HTMLElement[]): HTMLElement[] {
   return verbs.filter((verb) => verb.classList.contains("btn-primary"));
 }
 
-describe("a row's verbs are one line with the lane's answer last", () => {
-  it("ends the line with the lane's answer", async () => {
+// The lines of the row's menu, in order, read off the panel the trigger opens.
+// The panel is portalled to the body, so it is reached through the trigger.
+async function menuLines(): Promise<string[]> {
+  const trigger = await findRowMenu();
+  await userEvent.setup().click(trigger);
+  const panel = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  expect(panel, "the menu opened no panel").not.toBeNull();
+  return [...(panel?.querySelectorAll("button, a") ?? [])].map(
+    (line) => line.textContent ?? "",
+  );
+}
+
+describe("a row's verbs are one line with the row's menu last", () => {
+  it("ends the line with the menu, the lane's answer just before it", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
-    expect(verbsInOrder().at(-1)).toBe(reply);
+    const drawn = verbsInOrder();
+    expect(drawn.at(-1)).toBe(await findRowMenu());
+    expect(drawn.at(-2)).toBe(reply);
   });
 
-  // The whole line in order, every verb named, because the order is the
-  // layout. A test naming two of five would let a verb pass the answer with
-  // nothing failing. The Brief's card reads in the same order, so a row's
-  // answer is at one place on both surfaces.
-  it("draws the way in, the glyphs with the menu, Done, then the answer", async () => {
+  // The whole line in order, every control named, because the order is the
+  // layout. A test naming two of three would let a verb pass the answer with
+  // nothing failing. The Brief's card reads in the same order.
+  it("draws Done, then the answer, then the menu", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
-    const inOrder = [
-      screen.getByRole("link", { name: en["worklist.verb.open"] }),
-      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
-      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+    expect(verbsInOrder()).toEqual([
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.handled"],
       }),
       reply,
-    ];
-
-    expect(verbsInOrder()).toEqual(inOrder);
+      await findRowMenu(),
+    ]);
   });
 
-  // The hand-off, on the one lane that carries one. Separate from the case above
-  // because it is a task's verb and a waiting message has no assignee to move.
-  //
-  // It is a glyph too, so it stands between the pin and the menu. The square
-  // controls stay together, with a labelled verb on either side.
-  it("draws the hand-off between the pin and the menu", async () => {
+  // The menu reads most often first: the snooze, then the reader's own mark,
+  // then the judgement that takes the row off the list. The row's title links
+  // its record, so the menu offers no second way there.
+  it("puts the snooze first in the menu and the hand-backs last", async () => {
+    oneRow(waitingRow());
+    await screen.findByRole("button", { name: en["compose.reply"] });
+
+    const lines = await menuLines();
+
+    expect(lines[0]).toBe(en["worklist.disposition.verb.snooze"]);
+    expect(lines.at(-1)).toBe(en["worklist.disposition.verb.not_mine"]);
+    expect(lines.at(-2)).toBe(en["worklist.verb.pin"]);
+    expect(lines).not.toContain(en["worklist.verb.open"]);
+  });
+
+  // The hand-off, on the one lane that carries one: a task's verb, since a
+  // waiting message has no assignee to move. It follows the pin, the other
+  // mark a reader puts on the row, and precedes the hand-backs.
+  it("puts the hand-off between the pin and the hand-backs", async () => {
     oneRow(
       row({
         id: "task-1",
@@ -127,24 +145,18 @@ describe("a row's verbs are one line with the lane's answer last", () => {
         dispositions: ["not_mine"],
       }),
     );
+    await screen.findByText("Send the quote");
 
-    const reassign = await screen.findByRole("button", {
-      name: en["worklist.manager.reassign"],
-    });
-    const drawn = verbsInOrder();
-    const at = drawn.indexOf(reassign);
-    expect(drawn[at - 1]).toBe(
-      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
-    );
-    expect(drawn[at + 1]).toBe(
-      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
-    );
+    expect(await menuLines()).toEqual([
+      en["worklist.verb.pin"],
+      en["worklist.manager.reassign"],
+      en["worklist.disposition.verb.not_mine"],
+    ]);
   });
 
-  // The lane whose answer is FILLED as well as last: finishing a task is the
-  // day's next move, so it wears the fill and every quiet verb beside it does
-  // not. Asserted as the WHOLE set of filled controls, because a second fill on
-  // the line is two calls to action, which is none.
+  // Finishing a task is the day's next move, so its answer wears the fill and
+  // no other verb on the line does. Asserted over every filled control, since a
+  // second fill would be two calls to action.
   it("fills the answer and nothing else on the line", async () => {
     oneRow(
       row({
@@ -159,7 +171,7 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       name: en["tasks.complete"],
     });
     const drawn = verbsInOrder();
-    expect(drawn.at(-1)).toBe(done);
+    expect(drawn.at(-2)).toBe(done);
     expect(filled(drawn)).toEqual([done]);
   });
 
@@ -171,9 +183,9 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   // because the two verbs are different words, a rule that told controls apart
   // by their label would offer both.
   //
-  // Asserted over the ADDRESSES on the line rather than by naming the survivor:
-  // what has to hold is that no address is offered twice, which stays true when
-  // a verb joins the ask or its wording changes.
+  // Asserted over the addresses on the line and in its menu, so it holds when a
+  // verb joins the ask or its wording changes. The ask has no answer of its
+  // own, so the one link left stands on the line.
   it("offers one control per destination, whatever the words", async () => {
     oneRow(
       row({
@@ -201,6 +213,7 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       )
       .map((link) => link.getAttribute("href"));
     expect(addresses).toEqual([decide.getAttribute("href")]);
+    expect(await menuLines()).not.toContain(en["worklist.verb.open"]);
   });
 
   // A lane whose verbs are EQUAL has no call to action, and drawing one would
@@ -239,5 +252,83 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       cancelled,
       "cancelled is out of the lane's own order",
     ).toBeGreaterThan(at);
+  });
+
+  it("draws one control per destination, not one per verb", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            title: "Send the proposal",
+            subject: {
+              type: "contact",
+              id: "01a05500-0000-7000-8000-000000000009",
+              label: "Anna Weber",
+            },
+            // Both verbs open the same record.
+            actions: ["complete", "snooze"],
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    // The title links the record, so neither verb draws a second control to
+    // it, on the line or in the row's menu.
+    await screen.findByText(/Send the proposal/);
+    await userEvent.setup().click(await findRowMenu());
+    const verbsToRecord = [
+      ...document.querySelectorAll(
+        ".worklist-row-acts a, .overflow-menu-items a",
+      ),
+    ].filter((link) =>
+      link
+        .getAttribute("href")
+        ?.includes("01a05500-0000-7000-8000-000000000009"),
+    );
+    expect(verbsToRecord).toEqual([]);
+  });
+
+  it("offers a verb that goes somewhere, and none that does not", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "with-record",
+            title: "Anna Weber",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            consequence: "buyer_waits",
+            subject: {
+              type: "contact",
+              id: "01a05500-0000-7000-8000-000000000001",
+            },
+            actions: ["open"],
+          }),
+          row({
+            id: "no-destination",
+            title: "Add contact from mail",
+            source: "approval",
+            category: "decisions",
+            consequence: "data_drifts",
+            // `decide` is answered on this page, so it has nowhere to link.
+            actions: ["decide"],
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 1, total: 2 },
+      }),
+    );
+    renderWorklist();
+
+    // The row that names a record links it, from its title. The row whose
+    // verb has nowhere to go links nothing.
+    const record = await screen.findByRole("link", { name: /Anna Weber/ });
+    expect(record.getAttribute("href")).toContain(
+      "01a05500-0000-7000-8000-000000000001",
+    );
+    expect(
+      screen.queryByRole("link", { name: /Add contact from mail/ }),
+    ).toBeNull();
   });
 });
