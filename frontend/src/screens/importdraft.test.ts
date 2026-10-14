@@ -18,7 +18,7 @@ function runWith(object: string, mapping?: Record<string, string>): ImportRun {
   return {
     id: "r1",
     parts: [{ file: "contacts.csv", object, row_count: 0, mapping }],
-  } as unknown as ImportRun;
+  } as unknown as ImportRun; // contract:cast only parts carry the mapping under test
 }
 
 describe("choicesOf saved mapping", () => {

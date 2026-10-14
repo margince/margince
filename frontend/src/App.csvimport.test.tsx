@@ -182,7 +182,7 @@ describe("the CSV import page in the shell", () => {
       expect(screen.getByText("Draft")).toBeInTheDocument();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     },
-    SETTLE_MS * 2,
+    LEAVE_AFTER_COMMIT_TEST_MS,
   );
 
   it(
