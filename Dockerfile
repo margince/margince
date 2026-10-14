@@ -296,6 +296,10 @@ ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION
 # environment is the build's and the browser only ever sees the bundle.
 ARG MARGINCE_RELEASE_VERSION=dev
 ENV MARGINCE_RELEASE_VERSION=$MARGINCE_RELEASE_VERSION
+# The core release an instance pins, compiled into the bundle for the account
+# menu. Empty on a core-only build.
+ARG MARGINCE_CORE_VERSION=""
+ENV MARGINCE_CORE_VERSION=$MARGINCE_CORE_VERSION
 RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
     pnpm gen:composed-types && pnpm gen:events:composed && pnpm build:composed
 
