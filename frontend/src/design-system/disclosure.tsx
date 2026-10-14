@@ -15,7 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { type FoldEnds, useFold } from "./fold";
+import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
 import "./atoms.css";
 
 /** A section the reader opens when they want it: a one-off tool, configuration or a deep read, kept to one line until asked for. */
@@ -43,6 +43,7 @@ export function Disclosure({
   const bodyId = useId();
   const root = useRef<HTMLDetailsElement>(null);
   const expanded = useExpanded(bodyId, open, onToggle);
+  useFocusHandBack(bodyId, expanded.value);
   const shown = useFold(root, expanded.value, disclosureEnds);
   // Not uncontrolled `<details>`: it hides the body the instant it closes, so
   // the close could not move. It stays `open` until the fold has ended.
@@ -100,7 +101,8 @@ export function Disclosure({
 }
 
 type Group = Readonly<{
-  open: string | null;
+  /** Whether a section mounted open may open: the first in a render wins. */
+  hint: (id: string) => boolean;
   /** False when `hint` is set and another section already holds the group. */
   claim: (id: string, shut: () => void, hint: boolean) => boolean;
   release: (id: string) => void;
@@ -116,31 +118,43 @@ const GroupContext = createContext<Group | null>(null);
 export function DisclosureGroup({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [open, setOpen] = useState<string | null>(null);
   const holder = useRef<Readonly<{ id: string; shut: () => void }> | null>(
     null,
   );
-  const claim = useCallback((id: string, shut: () => void, hint: boolean) => {
-    const held = holder.current;
-    if (held !== null && held.id !== id) {
-      if (hint) {
-        return false;
-      }
-      held.shut();
+  // Siblings render before any of them commits a claim, so the first hint is
+  // held here until it does.
+  const hinted = useRef<string | null>(null);
+  const hint = useCallback((id: string) => {
+    const held = holder.current?.id ?? hinted.current;
+    if (held !== null && held !== id) {
+      return false;
     }
-    holder.current = { id, shut };
-    setOpen(id);
+    hinted.current = id;
     return true;
   }, []);
+  const claim = useCallback(
+    (id: string, shut: () => void, hinting: boolean) => {
+      const held = holder.current;
+      if (held !== null && held.id !== id) {
+        if (hinting) {
+          return false;
+        }
+        held.shut();
+      }
+      holder.current = { id, shut };
+      hinted.current = null;
+      return true;
+    },
+    [],
+  );
   const release = useCallback((id: string) => {
     if (holder.current?.id === id) {
       holder.current = null;
-      setOpen(null);
     }
   }, []);
   const group = useMemo(
-    () => ({ open, claim, release }),
-    [open, claim, release],
+    () => ({ hint, claim, release }),
+    [hint, claim, release],
   );
   return (
     <GroupContext.Provider value={group}>{children}</GroupContext.Provider>
@@ -161,7 +175,7 @@ function useExpanded(
   const controlled = open !== undefined && onToggle !== undefined;
   // In a group, `open` at mount is a hint: a section already open keeps it.
   const [own, setOwn] = useState(
-    () => (open ?? false) && (group?.open ?? null) === null,
+    () => (open ?? false) && (group?.hint(id) ?? true),
   );
   const [given, setGiven] = useState(open);
   if (given !== open) {
@@ -175,17 +189,19 @@ function useExpanded(
   }, [open, onToggle]);
   const [initial] = useState(value);
   const moved = useRef(false);
+  const claim = group?.claim;
+  const release = group?.release;
   useLayoutEffect(() => {
     moved.current ||= value !== initial;
-    if (group === null || !value) {
+    if (claim === undefined || release === undefined || !value) {
       return;
     }
     const shut = () => ask.current(false);
-    if (!group.claim(id, shut, !moved.current)) {
+    if (!claim(id, shut, !moved.current)) {
       shut();
     }
-    return () => group.release(id);
-  }, [group, id, initial, value]);
+    return () => release(id);
+  }, [claim, release, id, initial, value]);
   const told = useRef(value);
   useEffect(() => {
     if (told.current === value) {
@@ -199,11 +215,12 @@ function useExpanded(
   return { value, ask: (wanted: boolean) => ask.current(wanted) };
 }
 
-// A control with its own activation keeps the press. A field takes none, as a
-// summary toggling under a caret would.
-const ACTIVATES =
-  'a[href], button, label, input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"], [role="button"]';
-const FIELD = "input, select, textarea";
+// A control the browser activates keeps the press, a picker input included. Text
+// entry and a scripted button take none: the browser would toggle past our state.
+const ACTIVATES = "a[href], button, label, input";
+const FIELD =
+  'input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="tel"], input[type="password"], input[type="number"], select, textarea';
+const SCRIPTED = '[role="button"]';
 
 function pressOn(
   event: MouseEvent<HTMLElement>,
@@ -213,12 +230,14 @@ function pressOn(
     return "summary";
   }
   const summary = event.currentTarget;
-  const within = (found: Element | null) =>
-    found !== null && found !== summary && summary.contains(found);
-  if (within(target.closest(ACTIVATES))) {
-    return "control";
+  const near = target.closest(`${ACTIVATES}, ${FIELD}, ${SCRIPTED}`);
+  if (near === null || near === summary || !summary.contains(near)) {
+    return "summary";
   }
-  return within(target.closest(FIELD)) ? "field" : "summary";
+  if (near.matches(FIELD) || !near.matches(ACTIVATES)) {
+    return "field";
+  }
+  return "control";
 }
 
 const disclosureEnds: FoldEnds = (box) => {

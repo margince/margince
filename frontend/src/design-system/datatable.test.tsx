@@ -619,6 +619,77 @@ it("keeps a closing detail on screen until its fold has ended", async () => {
   expect(fold?.closest("tr")?.hidden).toBe(true);
 });
 
+function HeldCalls({ open }: Readonly<{ open: string[] }>) {
+  return (
+    <CallLog
+      detail={{
+        ...TRACE,
+        render: (call) => <button type="button">Retry {call.task}</button>,
+        expanded: new Set(open),
+        onToggle: () => {},
+      }}
+    />
+  );
+}
+
+it("hands focus to the row's toggle when code closes the detail that holds it", () => {
+  const { rerender } = render(<HeldCalls open={["a"]} />);
+  screen.getByRole("button", { name: "Retry Triage" }).focus();
+  rerender(<HeldCalls open={[]} />);
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Show Triage" }),
+  );
+});
+
+// A late read lands as a new height, and may bring a page scrollbar's new width
+// in the same observer tick.
+it("moves an open detail to its new height, with or without a new width", () => {
+  const size = { width: 300, height: 40 };
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    DOMRect.fromRect(size),
+  );
+  const ticks: (() => void)[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(tick: () => void) {
+        ticks.push(tick);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished: new Promise(() => {}),
+    transitionProperty: "height",
+  };
+  Object.defineProperty(HTMLDivElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [motion],
+  });
+  try {
+    render(<HeldCalls open={["a"]} />);
+    const fold = screen
+      .getByRole("button", { name: "Retry Triage" })
+      .closest<HTMLElement>(".datatable-detail-fold");
+    const tick = () => {
+      for (const each of ticks) each();
+    };
+    size.width = 280;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(false);
+    size.width = 260;
+    size.height = 80;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(true);
+    expect(fold?.style.height).toBe("80px");
+  } finally {
+    Reflect.deleteProperty(HTMLDivElement.prototype, "getAnimations");
+    vi.unstubAllGlobals();
+  }
+});
+
 it("takes single only in a table that holds its own open rows", () => {
   const held: DataTableDetail<Call> = {
     header: "Detail",

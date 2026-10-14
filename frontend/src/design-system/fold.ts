@@ -60,19 +60,40 @@ export function useFold(
   return mounted;
 }
 
-// While open the box tracks its content: through the open motion, and from one
-// resting height to the next when a late read lands. A new width only re-measures.
+/** When code closes a body that holds focus, focus goes to the control naming it in
+ * `aria-controls`; `inert` would drop it to the page. */
+export function useFocusHandBack(body: string, open: boolean) {
+  const was = useRef(open);
+  useLayoutEffect(() => {
+    const closed = was.current && !open;
+    was.current = open;
+    const region = document.getElementById(body);
+    if (
+      !closed ||
+      region === null ||
+      !region.contains(document.activeElement)
+    ) {
+      return;
+    }
+    const control = [...document.querySelectorAll("[aria-controls]")].find(
+      (each) => each.getAttribute("aria-controls") === body,
+    );
+    if (control instanceof HTMLElement) {
+      control.focus();
+    }
+  }, [body, open]);
+}
+
+// While open the box follows its content: through the open motion, and to each
+// new height a late read brings. A new width alone only re-measures.
 function follow(
   element: HTMLElement,
   ends: FoldEnds,
   current: () => boolean,
 ): () => void {
-  let rest = { width: 0, height: 0 };
+  let rest = 0;
   const measure = () => {
-    rest = {
-      width: element.getBoundingClientRect().width,
-      height: ends(element).open,
-    };
+    rest = ends(element).open;
   };
   const settle = () => {
     if (!current() || !element.hasAttribute(FOLDING)) {
@@ -97,11 +118,10 @@ function follow(
     }
     const before = rest;
     measure();
-    const same = Math.abs(rest.height - before.height) < 0.5;
-    if (same || rest.width !== before.width) {
+    if (Math.abs(rest - before) < 0.5) {
       return;
     }
-    moveTo(element, before.height, rest.height);
+    moveTo(element, before, rest);
     settle();
   };
   measure();

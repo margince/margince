@@ -11,7 +11,7 @@ import {
 } from "react";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
-import { type FoldEnds, useFold } from "./fold";
+import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
 import { IconAction } from "./iconaction";
 import { type SortableRows, useSortableRows } from "./sortablelist";
 import "./atoms.css";
@@ -246,6 +246,7 @@ function DetailRow({
   render: () => ReactNode;
 }>) {
   const box = useRef<HTMLDivElement>(null);
+  useFocusHandBack(id, open);
   const shown = useFold(box, open, detailEnds);
   return (
     <tr className="datatable-detail" role={role("row")} hidden={!shown}>

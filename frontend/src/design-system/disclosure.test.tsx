@@ -11,14 +11,13 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, StrictMode, useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Disclosure, DisclosureGroup } from "./disclosure";
 
 // happy-dom toggles a `<details>` while a click passes it, before React's root
 // listener can cancel it. A browser toggles after the dispatch: so does this.
-const ACTIVATION =
-  'a[href], button, label, input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"], summary';
+const ACTIVATION = "a[href], button, label, input, select, textarea, summary";
 
 function activate(event: Event) {
   if (event.defaultPrevented || !(event.target instanceof Element)) return;
@@ -381,19 +380,98 @@ it("opens a section mounted open when its group has none open", async () => {
   expect(detailsOf("Team").open).toBe(false);
 });
 
-it("leaves the group to the first of two sections mounted open", () => {
+it("leaves the group to the first of two sections mounted open, the second shut from the start", () => {
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished: new Promise(() => {}),
+    transitionProperty: "height",
+  };
+  Object.defineProperty(HTMLDetailsElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [motion],
+  });
+  try {
+    render(
+      <StrictMode>
+        <DisclosureGroup>
+          <Disclosure summary="First" open>
+            <p>One</p>
+          </Disclosure>
+          <Disclosure summary="Second" open>
+            <p>Two</p>
+          </Disclosure>
+        </DisclosureGroup>
+      </StrictMode>,
+    );
+  } finally {
+    Reflect.deleteProperty(HTMLDetailsElement.prototype, "getAnimations");
+  }
+  expect(detailsOf("First").open).toBe(true);
+  expect(detailsOf("Second").open).toBe(false);
+  expect(detailsOf("Second").hasAttribute("data-folding")).toBe(false);
+});
+
+function PinnedAfterFree() {
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  return (
+    <DisclosureGroup>
+      <Section name="Free" />
+      <Disclosure
+        summary="Pinned"
+        open={open}
+        onToggle={(wanted) => pinned || setOpen(wanted)}
+      >
+        <p>Pinned body</p>
+      </Disclosure>
+      <button type="button" onClick={() => setPinned(true)}>
+        Pin
+      </button>
+    </DisclosureGroup>
+  );
+}
+
+it("keeps the section the reader opened beside a held one that refuses to close", async () => {
+  const user = userEvent.setup();
+  render(
+    <StrictMode>
+      <PinnedAfterFree />
+    </StrictMode>,
+  );
+  await user.click(summaryOf("Pinned"));
+  await user.click(screen.getByRole("button", { name: "Pin" }));
+  await user.click(summaryOf("Free"));
+  expect(detailsOf("Free").open).toBe(true);
+  expect(detailsOf("Pinned").open).toBe(true);
+});
+
+function HeldWithAction({ open }: Readonly<{ open: boolean }>) {
+  return (
+    <Disclosure summary="Words" open={open} onToggle={() => {}}>
+      <button type="button">Send</button>
+    </Disclosure>
+  );
+}
+
+it("hands focus to the summary when code closes the section that holds it", () => {
+  const { rerender } = render(<HeldWithAction open />);
+  screen.getByRole("button", { name: "Send" }).focus();
+  rerender(<HeldWithAction open={false} />);
+  expect(document.activeElement).toBe(summaryOf("Words"));
+});
+
+it("hands focus to the summary of a group's section another one closes", () => {
   render(
     <DisclosureGroup>
       <Disclosure summary="First" open>
-        <p>One</p>
+        <button type="button">Call</button>
       </Disclosure>
-      <Disclosure summary="Second" open>
-        <p>Two</p>
-      </Disclosure>
+      <Section name="Second" />
     </DisclosureGroup>,
   );
-  expect(detailsOf("First").open).toBe(true);
-  expect(detailsOf("Second").open).toBe(false);
+  screen.getByRole("button", { name: "Call" }).focus();
+  fireEvent.click(summaryOf("Second"));
+  expect(document.activeElement).toBe(summaryOf("First"));
 });
 
 it("leaves a press on a link in the summary to the link", async () => {
@@ -429,6 +507,43 @@ it("never toggles on a press into a field in the summary", async () => {
   expect(summary?.getAttribute("aria-expanded")).toBe("false");
   expect(summary?.closest("details")?.open).toBe(false);
 });
+
+it("refuses the native toggle on a scripted button in the summary", () => {
+  render(
+    <Disclosure
+      summary={
+        // biome-ignore lint/a11y/useSemanticElements: the case is a button with no native activation
+        <span role="button" tabIndex={0}>
+          Chip
+        </span>
+      }
+    >
+      <p>Chip body</p>
+    </Disclosure>,
+  );
+  const press = new MouseEvent("click", { bubbles: true, cancelable: true });
+  screen.getByRole("button", { name: "Chip" }).dispatchEvent(press);
+  expect(press.defaultPrevented).toBe(true);
+  expect(summaryOf("Chip").getAttribute("aria-expanded")).toBe("false");
+  expect(detailsOf("Chip").open).toBe(false);
+});
+
+it.each(["file", "color", "date"])(
+  "leaves a press on a %s input in the summary to its picker",
+  (type) => {
+    render(
+      <Disclosure summary={<input type={type} aria-label="Pick" />}>
+        <p>Picked</p>
+      </Disclosure>,
+    );
+    const press = new MouseEvent("click", { bubbles: true, cancelable: true });
+    screen.getByLabelText("Pick").dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(false);
+    const summary = screen.getByLabelText("Pick").closest("summary");
+    expect(summary?.getAttribute("aria-expanded")).toBe("false");
+    expect(summary?.closest("details")?.open).toBe(false);
+  },
+);
 
 it("shows a held section as its caller passes it, even when its group asks it shut", async () => {
   const user = userEvent.setup();
