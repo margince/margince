@@ -6021,6 +6021,108 @@ export const de = {
   "import.test.row": "Zeile {line}",
   "import.test.rowColumn": "Zeile {line} · {column}",
   "import.test.wholeFile": "Ganze Datei",
+  "import.reason.author_too_long": "Der Autor ist länger als {max} Zeichen.",
+  "import.reason.cannot_create":
+    "Du darfst keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
+  "import.reason.cannot_create_tags":
+    "Du darfst keine Tags anlegen, daher wird ein im CRM neuer Tag nicht hinzugefügt.",
+  "import.reason.cannot_edit":
+    "Du darfst {plural} nicht bearbeiten, daher wird eine Zeile übersprungen, die einen vorhandenen Datensatz ändern würde.",
+  "import.reason.cannot_edit_and_tag":
+    "Du darfst {plural} nicht bearbeiten, daher wird eine Zeile übersprungen, die einen vorhandenen Datensatz ändern würde, und es wird kein Tag hinzugefügt.",
+  "import.reason.cannot_read_tags":
+    "Du darfst Tags nicht lesen, daher wird die Tag-Spalte nicht importiert.",
+  "import.reason.cannot_write_type":
+    "„{value}“ kann nicht in ein Feld vom Typ {type} geschrieben werden.",
+  "import.reason.company_duplicate_found":
+    "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile legt ein zweites an und stellt das Paar zur Prüfung bereit.",
+  "import.reason.company_duplicate_skipped":
+    "Ein Unternehmen mit diesem Namen ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
+  "import.reason.company_name_empty":
+    "Der zugeordnete Anzeigename ist leer, daher benennt die Zeile kein Unternehmen.",
+  "import.reason.contact_duplicate_found":
+    "Jemand, der zu dieser Zeile passt, ist bereits im CRM. Eine Zeile mit einer bereits vergebenen Adresse wird abgelehnt, ein ähnlicher Treffer legt an und stellt das Paar zur Prüfung bereit.",
+  "import.reason.contact_duplicate_skipped":
+    "Jemand, der zu dieser Zeile passt, ist bereits im CRM, und dieser Lauf soll Duplikate überspringen.",
+  "import.reason.contact_email_held":
+    "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
+  "import.reason.contact_unnamed":
+    "Die Zeile enthält weder einen Namen noch eine E-Mail-Adresse und benennt daher keinen Kontakt.",
+  "import.reason.currency_unset":
+    "„{value}“ kann nicht gelesen werden: Für dieses Währungsfeld ist keine Währung eingestellt.",
+  "import.reason.description_too_long":
+    "Die Beschreibung hat {length} Zeichen; eine Unternehmensbeschreibung fasst höchstens {max}.",
+  "import.reason.domain_held":
+    "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
+  "import.reason.duplicate_email":
+    "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
+  "import.reason.employer_column_empty":
+    "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
+  "import.reason.employer_column_empty_dropped":
+    "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.employer_not_found":
+    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte.",
+  "import.reason.employer_not_found_dropped":
+    "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.empty_payload": "Die Zeile enthält keine Felder.",
+  "import.reason.field_inactive":
+    "„{value}“ kann nicht geschrieben werden: Dieses Feld ist nicht mehr aktiv.",
+  "import.reason.id_not_a_company_id":
+    "„{value}“ ist keine Unternehmens-ID. Exportiere die Unternehmen, um ihre IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neues Unternehmen zu importieren.",
+  "import.reason.id_not_visible":
+    "Kein Unternehmen, das du sehen kannst, hat die ID „{value}“. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
+  "import.reason.id_on_non_company":
+    "Nur eine Unternehmenszeile kann „{column}“ angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
+  "import.reason.link_ambiguous":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt.",
+  "import.reason.link_ambiguous_dropped":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.link_not_found":
+    "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.link_not_found_dropped":
+    "Kein Unternehmen mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.linkedin_held":
+    "Diese LinkedIn-URL gehört im CRM bereits einem anderen Datensatz, daher kann die Zeile sie nicht beanspruchen.",
+  "import.reason.natural_key_taken":
+    "Ein Datensatz mit diesem Schlüssel existiert bereits.",
+  "import.reason.not_a_date":
+    "„{value}“ ist kein Datum. Schreibe es als JJJJ-MM-TT.",
+  "import.reason.not_a_domain":
+    "„{value}“ ist keine Domain, die gespeichert werden kann.",
+  "import.reason.not_a_number": "„{value}“ ist keine Zahl.",
+  "import.reason.not_an_amount":
+    "„{value}“ ist kein Betrag in {currency}. Schreibe ihn so: 12000.50.",
+  "import.reason.not_an_email":
+    "„{value}“ ist keine E-Mail-Adresse, die gespeichert werden kann.",
+  "import.reason.not_yes_no": "„{value}“ ist weder Ja noch Nein.",
+  "import.reason.option_not_allowed":
+    "„{value}“ gehört nicht zu den erlaubten Werten dieses Feldes.",
+  "import.reason.option_not_in_list":
+    "„{value}“ gehört nicht zu den erlaubten Werten: {options}.",
+  "import.reason.options_need_semicolons":
+    "„{value}“: Trenne mehrere Werte mit Semikolons.",
+  "import.reason.owner_refused":
+    "Du darfst dieses Teammitglied nicht als Eigentümer eintragen, daher wirst du Eigentümer seiner Zeilen.",
+  "import.reason.owner_unknown":
+    "Kein Teammitglied hat diese E-Mail-Adresse, daher wirst du Eigentümer.",
+  "import.reason.phone_needs_country":
+    "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
+  "import.reason.record_archived":
+    "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stelle ihn wieder her, um ihn zu aktualisieren.",
+  "import.reason.row_key_empty":
+    "Die Spalte „{column}“ ist leer, daher kann diese Zeile für einen erneuten Import oder das Rückgängigmachen nicht erkannt werden.",
+  "import.reason.row_key_repeated":
+    "Der Wert „{value}“ der Spalte „{column}“ wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
+  "import.reason.size_band_invalid":
+    "Die Größenklasse „{value}“ gehört nicht zu: {allowed}.",
+  "import.reason.tag_created":
+    "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
+  "import.reason.tag_name_invalid":
+    "Der Tag „{name}“ kann nicht angelegt werden: Sein Name {detail}.",
+  "import.reason.tag_new":
+    "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
+  "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
+  "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
   "import.problem.invalid_value": "Ungültiger Wert",

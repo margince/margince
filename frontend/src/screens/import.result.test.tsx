@@ -192,7 +192,7 @@ describe("the import and its result", () => {
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "problems.csv" })).toHaveAttribute(
       "href",
-      "/v1/imports/r1/problems.csv",
+      "/v1/imports/r1/problems.csv?lang=en",
     );
   });
 });

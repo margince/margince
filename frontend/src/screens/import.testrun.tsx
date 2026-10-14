@@ -25,9 +25,23 @@ import type {
 } from "./importtypes";
 import type { ImportWizardState } from "./importwizard";
 
-/** Where the server builds one run's problems as a spreadsheet. */
-export function problemsHref(id: string): string {
-  return `/v1/imports/${encodeURIComponent(id)}/problems.csv`;
+/**
+ * Where the server builds one run's problems as a spreadsheet, with its header
+ * and its reasons in the reader's language.
+ */
+export function problemsHref(id: string, lang: Locale): string {
+  return `/v1/imports/${encodeURIComponent(id)}/problems.csv?lang=${lang}`;
+}
+
+// A problem in the reader's language: the sentence of its code, filled with the
+// values the server names. A report written before codes existed, a code this
+// bundle does not know, or a value the server did not send reads as the
+// English sentence the server wrote.
+function reasonOf(issue: ImportRowIssue, t: ReturnType<typeof useT>): string {
+  const { reason_code: code, params } = issue;
+  if (code === undefined) return issue.reason;
+  const sentence = t(`import.reason.${code}`, params ?? {});
+  return /\{\w+\}/.test(sentence) ? issue.reason : sentence;
 }
 
 const PROBLEM_TONE = {
@@ -179,7 +193,11 @@ function TestRunBody({
       ) : null}
       <div className="import__actions">
         {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(runId)} download>
+          <a
+            className="link-button"
+            href={problemsHref(runId, locale)}
+            download
+          >
             {t("import.result.problemsFile")}
           </a>
         ) : null}
@@ -297,7 +315,7 @@ export function ProblemTable({
                   {t(`import.problem.${issue.kind}`)}
                 </Badge>
               ) : null}
-              <div className="t-sub">{issue.reason}</div>
+              <div className="t-sub">{reasonOf(issue, t)}</div>
             </>
           ),
         },

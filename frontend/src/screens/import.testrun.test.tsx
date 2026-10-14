@@ -90,7 +90,7 @@ describe("the test run", () => {
     expect(screen.getByText("Broken link")).toBeVisible();
     expect(screen.getByRole("link", { name: "problems.csv" })).toHaveAttribute(
       "href",
-      `/v1/imports/${run.id}/problems.csv`,
+      `/v1/imports/${run.id}/problems.csv?lang=en`,
     );
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
     await waitFor(() =>

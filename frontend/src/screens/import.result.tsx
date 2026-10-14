@@ -236,7 +236,11 @@ function ResultBody({
       {run.status === "undone" ? <UndoOutcome undo={report.undo} /> : null}
       <div className="import__actions">
         {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(run.id)} download>
+          <a
+            className="link-button"
+            href={problemsHref(run.id, locale)}
+            download
+          >
             {t("import.result.problemsFile")}
           </a>
         ) : null}
