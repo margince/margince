@@ -6061,7 +6061,7 @@ export const de = {
     "Der Datensatz hat die Rücknahme abgelehnt, weil eine Geschäftsregel ihn schützt.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
-  "import.reason.author_too_long": "Der Autor ist länger als {max} Zeichen.",
+  "import.reason.author_too_long": "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":
     "Du darfst keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
   "import.reason.cannot_create_tags":
@@ -6142,9 +6142,9 @@ export const de = {
   "import.reason.options_need_semicolons":
     "„{value}“: Trenne mehrere Werte mit Semikolons.",
   "import.reason.owner_refused":
-    "Du darfst dieses Teammitglied nicht als Eigentümer eintragen, daher wirst du Eigentümer seiner Zeilen.",
+    "Du darfst dieses Mitglied nicht als zuständig eintragen, daher bist du für seine Zeilen zuständig.",
   "import.reason.owner_unknown":
-    "Kein Teammitglied hat diese E-Mail-Adresse, daher wirst du Eigentümer.",
+    "Kein Mitglied hat diese E-Mail-Adresse, daher bist du zuständig.",
   "import.reason.phone_needs_country":
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":

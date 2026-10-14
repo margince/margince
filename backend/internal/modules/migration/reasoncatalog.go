@@ -159,12 +159,12 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 	}},
 	ReasonOwnerRefused: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot make this user an owner, so you become the owner of their rows.",
-		textlang.German:     "Sie dürfen diesen Benutzer nicht als Eigentümer eintragen, daher werden Sie Eigentümer ihrer Zeilen.",
+		textlang.German:     "Sie dürfen dieses Mitglied nicht als zuständig eintragen, daher sind Sie für dessen Zeilen zuständig.",
 		textlang.Vietnamese: "Bạn không thể đặt người dùng này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
 	}},
 	ReasonOwnerUnknown: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No user has this email, so you become the owner.",
-		textlang.German:     "Kein Benutzer hat diese E-Mail-Adresse, daher werden Sie Eigentümer.",
+		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig.",
 		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu.",
 	}},
 	ReasonTagNew: {params: nil, text: map[textlang.Lang]string{
