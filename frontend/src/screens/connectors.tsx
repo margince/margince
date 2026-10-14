@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -115,47 +115,59 @@ function PublicOriginRow({
     return null;
   }
   return (
-    <SettingList bleed="settings">
-      <SettingRow
-        testId="public-origin"
-        label={t("connectors.originLabel")}
-        description={status.origin}
-        control={
-          status.reachable === false && (
-            <Badge tone="warning">{t("connectors.originUnreachable")}</Badge>
-          )
-        }
-      />
-    </SettingList>
+    <SettingRow
+      testId="public-origin"
+      label={t("connectors.originLabel")}
+      description={status.origin}
+      control={
+        status.reachable === false && (
+          <Badge tone="warning">{t("connectors.originUnreachable")}</Badge>
+        )
+      }
+    />
   );
 }
 
 function MailRoster({
   rows,
+  origin,
   pendingProvider,
   connectFailure,
+  onAdd,
   onReconnect,
   onDisconnect,
 }: Readonly<{
-  rows: readonly CaptureConnection[];
+  /** Absent until the roster is known. */
+  rows: readonly CaptureConnection[] | undefined;
+  origin: ConnectorsResult["publicOrigin"];
   pendingProvider: Provider | null;
   connectFailure: ConnectFailure;
+  /** Absent when every provider is already on the roster. */
+  onAdd: (() => void) | undefined;
   onReconnect: (provider: Provider) => void;
   onDisconnect: (provider: Provider) => void;
 }>) {
   const t = useT();
-  if (rows.length === 0) {
-    return (
-      <PanelBody>
-        <EmptyState>
-          <p data-testid="connector-roster-empty">{t("connectors.empty")}</p>
-        </EmptyState>
-      </PanelBody>
-    );
+  if (rows === undefined && origin === undefined) {
+    return null;
   }
+  const listed = rows !== undefined && rows.length > 0;
   return (
-    <SettingList bleed="records" testId="connector-roster">
-      {rows.map((conn) => (
+    <SettingList
+      bleed={listed ? "records" : "settings"}
+      testId={listed ? "connector-roster" : undefined}
+    >
+      {rows?.length === 0 && (
+        <SettingRow
+          testId="connector-roster-empty"
+          label={t("connectors.emptyLabel")}
+          description={t("connectors.emptyHint")}
+          control={
+            onAdd && <Button onClick={onAdd}>{t("connectors.addOpen")}</Button>
+          }
+        />
+      )}
+      {rows?.map((conn) => (
         <ConnectorRow
           key={conn.id}
           conn={conn}
@@ -165,6 +177,7 @@ function MailRoster({
           onDisconnect={() => onDisconnect(conn.provider)}
         />
       ))}
+      <PublicOriginRow status={origin} />
     </SettingList>
   );
 }
@@ -215,6 +228,31 @@ function useDisconnect(onDone: () => void) {
   });
 }
 
+function RosterState({
+  connectors,
+}: Readonly<{ connectors: ReturnType<typeof useConnectors> }>) {
+  const t = useT();
+  return (
+    <PanelBody>
+      {connectors.isPending && <p>{t("connectors.loading")}</p>}
+      {connectors.isError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("connectors.loadFailed")}
+        >
+          {problemMessageOf(connectors.error, t)}
+        </Callout>
+      )}
+      {connectors.isSuccess && connectors.data.notConfigured && (
+        <EmptyState>
+          <p>{t("connectors.notConfigured")}</p>
+        </EmptyState>
+      )}
+    </PanelBody>
+  );
+}
+
 // The mail half: the roster of mailboxes this member captures from, and the
 // header verb that adds another.
 function MailConnectorsPanel() {
@@ -255,47 +293,30 @@ function MailConnectorsPanel() {
   return (
     <Panel
       title={t("connectors.title")}
+      // On an empty roster the verb rides the one row that says so.
       titleAction={
-        offerAdd ? (
+        offerAdd && rows.length > 0 ? (
           <Button onClick={() => setAddOpen(true)}>
             {t("connectors.addOpen")}
           </Button>
         ) : undefined
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("connectors.sub")}</PanelIntro>
-        <OAuthOutcomeNote />
-        {connectors.isPending && <p>{t("connectors.loading")}</p>}
-        {connectors.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("connectors.loadFailed")}
-          >
-            {problemMessageOf(connectors.error, t)}
-          </Callout>
-        )}
-        {connectors.isSuccess && notConfigured && (
-          <EmptyState>
-            <p>{t("connectors.notConfigured")}</p>
-          </EmptyState>
-        )}
-      </PanelBody>
-      {rosterKnown && (
-        <MailRoster
-          rows={rows}
-          pendingProvider={pendingProvider}
-          connectFailure={connectFailure}
-          onReconnect={(provider) =>
-            OAUTH_PROVIDERS.has(provider)
-              ? connect.mutate(provider)
-              : setImapConnectOpen(true)
-          }
-          onDisconnect={setPendingDisconnect}
-        />
-      )}
-      <PublicOriginRow status={connectors.data?.publicOrigin} />
+      {!rosterKnown && <RosterState connectors={connectors} />}
+      <OAuthOutcomeNote />
+      <MailRoster
+        rows={rosterKnown ? rows : undefined}
+        origin={connectors.data?.publicOrigin}
+        pendingProvider={pendingProvider}
+        connectFailure={connectFailure}
+        onAdd={offerAdd ? () => setAddOpen(true) : undefined}
+        onReconnect={(provider) =>
+          OAUTH_PROVIDERS.has(provider)
+            ? connect.mutate(provider)
+            : setImapConnectOpen(true)
+        }
+        onDisconnect={setPendingDisconnect}
+      />
       <AddConnectionDialog
         open={addOpen && offerAdd}
         onClose={() => setAddOpen(false)}

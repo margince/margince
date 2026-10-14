@@ -2529,7 +2529,7 @@ export const de = {
   "linkedinImport.notConnectedNote":
     "Wenn du deine Profil-URL speicherst, werden importierte Verbindungen dir namentlich zugeordnet.",
   "linkedinImport.whichFile":
-    "LinkedIn stellt die Datei Connections.csv unter „Einstellungen“, dann „Datenschutz“ bereit, wo sich eine Kopie der eigenen Daten anfordern lässt. Lade diese Datei aus dem Archiv hoch. Hochgeladene Verbindungen werden nie zu Kontakten: Suche, Listen und Kontaktseiten zeigen sie nicht, und niemand kann ihnen schreiben oder E-Mails senden.",
+    "Connections.csv aus der LinkedIn-Datenkopie unter „Datenschutz“. Importierte Verbindungen werden nie zu Kontakten, und niemand kann ihnen E-Mails senden.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
   "linkedinImport.importLabel": "Export der Verbindungen",
   "linkedinImport.noMatchesYet":
@@ -2543,10 +2543,6 @@ export const de = {
   "linkedinReach.title": "Reichweite im Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
-  "linkedinReach.readFailed":
-    "Die Reichweite im Netzwerk konnte nicht geladen werden.",
-  "linkedinReach.empty":
-    "Noch keine deiner Verbindungen arbeitet bei einem erfassten Unternehmen.",
   "linkedinReach.allUnresolved":
     "Alle deine Verbindungen arbeiten bei Unternehmen, die noch nicht erfasst sind. Verbindungen: {unresolved}.",
   "linkedinReach.accountsLabel": "Unternehmen in deiner Reichweite",
@@ -7109,12 +7105,10 @@ export const de = {
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
-  "overnightGrant.sub":
-    "Margince arbeitet über Nacht deine Deals durch, und der Morgenbericht liegt bereit, wenn du anfängst. Margince handelt in deinem Namen, sieht nur, was du sehen kannst, und du kannst es jederzeit stoppen.",
   "overnightGrant.label":
     "Margince den Morgenbericht über Nacht vorbereiten lassen",
   "overnightGrant.help":
-    "Margince liest deine Deals und E-Mails, um die Prioritäten des Tages zu ordnen, und schreibt Notizen zurück. Senden kann es nicht: Die hier erteilte Berechtigung umfasst nur Lesen und Schreiben, niemals Senden.",
+    "Margince ordnet die Deals und E-Mails des Tages und schreibt Notizen für deinen Morgenbericht. Dabei handelt Margince in deinem Namen, sieht nur, was du sehen kannst, und sendet nie.",
   "overnightGrant.dangerTitle": "Vorbereitung über Nacht läuft nicht",
   "overnightGrant.danger":
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
@@ -7214,12 +7208,25 @@ export const de = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
+  "connectionOutcomes.view": "Ansehen",
+  "connectionOutcomes.viewNamed": "{name} ansehen",
+  "connectionOutcomes.none": "Noch keine",
+  "connectionOutcomes.unread": "Laden fehlgeschlagen",
+  "connectionOutcomes.waitingEmpty":
+    "Keine Kontakte warten auf eine Entscheidung.",
+  "connectionOutcomes.senders_one": "{count} Adresse",
+  "connectionOutcomes.senders_other": "{count} Adressen",
+  "connectionOutcomes.threads_one": "{count} Thread",
+  "connectionOutcomes.threads_other": "{count} Threads",
+  "connectionOutcomes.contacts_one": "{count} Kontakt",
+  "connectionOutcomes.contacts_other": "{count} Kontakte",
+  "connectionOutcomes.companies_one": "{count} Unternehmen",
+  "connectionOutcomes.companies_other": "{count} Unternehmen",
   "mailSharing.title": "Teilen von E-Mails",
-  "mailSharing.sub":
-    "Erfasste E-Mails sind für alle Teammitglieder lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet, damit die Arbeit an Deals geteilt werden kann.",
   "mailSharing.label": "Erfasste E-Mails mit dem Team teilen",
   "mailSharing.help":
-    "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen oder Domains vorab ausschließen.",
+    "Alle Teammitglieder, die einen Kontakt sehen können, lesen seine erfassten E-Mails. Einzelne Nachrichten lassen sich nachträglich einschränken.",
   "mailSharing.danger":
     "Ohne das Teilen von E-Mails ist das CRM schwer zu nutzen. Neue E-Mails sind dann nur für die Beteiligten der jeweiligen Nachricht sichtbar.",
   "mailSharing.posture.shared":
@@ -7238,14 +7245,12 @@ export const de = {
     "Damit wird eine Rechtsgrundlage erklärt",
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
   "mailSharing.save": "Speichern",
+  "mailSharing.cardTitle": "Teilen und Abgleich von E-Mails",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originUnreachable": "Nicht erreichbar",
-  "connectors.sub":
-    "Postfächer und Kalender, aus denen das CRM Daten erfasst. Beim Trennen bleiben die bereits erfassten Datensätze erhalten.",
   "connectors.loading": "Connectors werden geladen…",
   "connectors.loadFailed":
     "Connectors konnten nicht geladen werden. Lade die Seite neu.",
-  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -7422,7 +7427,6 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Nachrichtenkanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
-  "connectors.telegramEmpty": "Kein Bot verbunden.",
   "connectors.telegramReadOnly":
     "Nur Admins und Operations können den Bot verbinden oder ändern.",
   "connectors.telegramEditToken": "Token ersetzen",
@@ -7439,11 +7443,15 @@ export const de = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
   "connectors.openNamed": "{name} öffnen",
+  "connectors.emptyLabel": "Kein Postfach verbunden",
+  "connectors.emptyHint":
+    "Verbinde ein Postfach oder einen Kalender, um E-Mails und Termine zu erfassen.",
+  "connectors.telegramEmptyLabel": "Kein Bot verbunden",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails aus einem Freemail-Postfach legen den Kontakt an, aber nie ein Unternehmen. Margince liefert eine Liste dieser Anbieter mit; ergänze fehlende Domains oder übersteuere einen falschen Eintrag.",
+    "E-Mails von diesen Domains legen den Kontakt an, aber nie ein Unternehmen. Margince liefert eine Liste mit; ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
@@ -7474,7 +7482,7 @@ export const de = {
 
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
-    "Als Unternehmen abgelehnte Domains und was jeweils entschieden hat: ein Modellergebnis, eine Heuristik oder ein Mensch. Wird eine Domain zugelassen, ist die Frage wieder offen. Hier erscheinen nur offene Fragen ohne Zuständigkeit.",
+    "Als Unternehmen abgelehnte Domains und ob ein Modell, eine Heuristik oder ein Mensch entschieden hat. Wird eine Domain zugelassen, ist die Frage wieder offen.",
   "blockedDomains.listTitle": "Erfasste Entscheidungen",
   "blockedDomains.record": "Entscheidung erfassen",
   "blockedDomains.recordOpen": "Entscheidung erfassen",
@@ -9025,7 +9033,7 @@ export const de = {
   "captureActivity.scope.mine": "Meine",
   "captureActivity.scope.workspace": "Geteilte Kanäle",
   "captureActivity.scopeNote":
-    "Gezählt ab dem Zeitpunkt, an dem ein Connector eine Nachricht an dieses CRM übergibt. Was ein Connector auf seiner eigenen Seite gefiltert hat, etwa eine Chat-Reaktion oder eine E-Mail-Regel, ist nicht enthalten. Umfasst nur Nachrichten. Die Lead-Erfassung wird hier nicht angezeigt.",
+    "Nachrichten, die ein Connector an Margince übergeben hat. Lead-Erfassung und vom Connector selbst gefilterte Einträge zählen nicht mit.",
   "captureActivity.filtered":
     "Angezeigt: {shown} von {total} mit dem Ergebnis „{outcome}“ in diesem Zeitraum.",
   "captureActivity.openTraceFrom":
@@ -10496,20 +10504,16 @@ export const de = {
   "autonomy.kind.lifecycle_change.help":
     "Verschiebt ein Unternehmen anhand der Aktivität in eine andere Lebenszyklusphase. Schalte es aus, um diese Vorschläge selbst zu prüfen. Phasenwechsel können beeinflussen, wer das Unternehmen sieht und welche Automatisierungen laufen.",
   "captureSettings.title": "Anreicherung",
-  "captureSettings.sub":
-    "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",
   "captureSettings.autoEnrich.label":
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Jedes neue Unternehmen aus erfassten E-Mails erhält automatisch ein Webprofil, das aus seiner Website erstellt wird. Läuft innerhalb eines Tageslimits.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails lesen",
   "captureSettings.signatureEnrich.help":
-    "Wenn eingeschaltet, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Position, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen; eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens; ein Postfach mit eigener Einstellung behält diese.",
+    "Liest Position, Telefon, Adresse oder Unternehmen, die eine Person in ihrer eigenen Signatur oder Visitenkarte angibt. Nichts wird erschlossen. Die eigene Einstellung eines Postfachs hat Vorrang.",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
   "captureReading.title": "Website-Lesevorgänge",
-  "captureReading.sub":
-    "Wie viel Margince von Unternehmenswebsites liest. Eine Änderung gilt ab dem nächsten Lesevorgang.",
   "captureReading.dailyCap.label": "Automatische Lesevorgänge pro Tag",
   "captureReading.dailyCap.help":
     "Lesevorgänge, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
@@ -10595,9 +10599,6 @@ export const de = {
   "operations.sendMaxAge.label": "Längste Wartezeit (Stunden)",
   "operations.sendMaxAge.help":
     "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird, 1 bis 168.",
-  "captureMailSync.title": "E-Mail-Abgleich",
-  "captureMailSync.sub":
-    "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
   "captureMailSync.interval.label": "Abgleichsintervall (Sekunden)",
   "captureMailSync.interval.help":
     "Zeit zwischen zwei Abgleichen eines Postfachs, 30 bis 3.600. Eine Änderung gilt ab dem nächsten Abgleich jedes Postfachs.",
@@ -10611,7 +10612,6 @@ export const de = {
     "Adressen und Domains, deren Nachrichten nie ins CRM gelangen. Deine Regeln gelten nur für Postfächer, die du verbunden hast; Unternehmensregeln gelten für alle.",
   "captureExclusions.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben erhalten.",
-  "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
   "ownerIdentities.title": "Deine weiteren Adressen",
   "ownerIdentities.sub":
@@ -10620,10 +10620,8 @@ export const de = {
   "ownerIdentities.addLabel": "Eigene Adresse hinzufügen",
   "ownerIdentities.addDescription":
     "Nur für dich sichtbar. Teammitglieder sehen diese Liste nie.",
-  "ownerIdentities.current": "Angegeben",
   "ownerIdentities.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste E-Mails bleiben, und ein bereits aus einem Alias angelegter Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
-  "ownerIdentities.empty": "Keine weiteren Adressen hinzugefügt.",
   "ownerIdentities.remove": "{value} entfernen",
   "ownerIdentities.added": "Adresse hinzugefügt",
   "ownerIdentities.confirm": "Hinzufügen",
@@ -10648,6 +10646,8 @@ export const de = {
     "Diese Adresse wurde seitdem erneut entfernt. Mach stattdessen das neuere Entfernen rückgängig.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -10729,7 +10729,6 @@ export const de = {
   "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine hinzugefügte Domain gilt ab der nächsten Nachricht; wird sie entfernt, wird ab dann wieder erfasst. E-Mails, die während der Eintragung übersprungen wurden, bietet kein Postfach erneut an. Erfasste E-Mails bleiben erhalten.",
-  "ownDomains.fromCompany": "Aus dem Unternehmensprofil. Dort ändern:",
   "ownDomains.openCompany": "Unternehmensprofil öffnen",
   "ownDomains.empty":
     "Keine weiteren Domains eingetragen. Füge eine hinzu, wenn dein Unternehmen auch von einer anderen Domain sendet.",

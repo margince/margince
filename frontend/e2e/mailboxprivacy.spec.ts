@@ -98,6 +98,19 @@ test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async (
   await expect(page.getByText(/Margince prüft das nicht/)).toBeVisible();
 });
 
+// The senders list opens from its row on the outcomes card, in a drawer.
+async function openSenders(page: Page) {
+  await page
+    .getByRole("button", {
+      name: de["connectionOutcomes.viewNamed"].replace(
+        "{name}",
+        de["senders.title"],
+      ),
+    })
+    .click();
+  return page.getByRole("dialog", { name: de["senders.title"] });
+}
+
 // A sender's verbs sit in its row's menu, named by the address.
 async function openRowMenu(page: Page, address: string) {
   await page
@@ -111,8 +124,7 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
-  await expect(senders).toBeVisible();
+  const senders = await openSenders(page);
   await expect(senders).toContainText(de["senders.kind.contact"]);
   await expect(senders).toContainText(de["senders.kind.newsletter"]);
   await expect(senders).toContainText(de["senders.kind.personal"]);
@@ -135,14 +147,16 @@ test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  const senders = await openSenders(page);
   await expect(senders).toContainText("anne@hotmail.com");
   await openRowMenu(page, "anne@hotmail.com");
   await page
     .getByRole("button", { name: de["senders.keepOut"], exact: true })
     .click();
 
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", {
+    name: de["senders.keepOutTitle"],
+  });
   await expect(dialog).toContainText("dauerhaft ausschließen");
   await expect(dialog).toContainText("vernichtet");
   // What SURVIVES is the half a reader cannot guess: a colleague's own import

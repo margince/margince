@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { MailSharingCard } from "./mail-sharing";
 
@@ -36,6 +36,7 @@ function backendFor(
 ) {
   let sharingState = mailSharing;
   let sharedState = sharedAllowed;
+  let syncState = 120;
   let capturedPatch: unknown = null;
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -52,15 +53,18 @@ function backendFor(
           const body = capturedPatch as {
             mail_sharing?: boolean;
             shared_posture_allowed?: boolean;
+            mail_sync_interval_seconds?: number;
           };
           sharingState = body.mail_sharing ?? sharingState;
           sharedState = body.shared_posture_allowed ?? sharedState;
+          syncState = body.mail_sync_interval_seconds ?? syncState;
         }
         return jsonResponse({
           auto_enrich: true,
           mail_sharing: sharingState,
           shared_posture_allowed: sharedState,
           signature_enrich: true,
+          mail_sync_interval_seconds: syncState,
         });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
@@ -168,5 +172,35 @@ describe("MailSharingCard", () => {
     expect(
       screen.getAllByText(/Only an administrator or operations user/),
     ).toHaveLength(2);
+  });
+
+  // The sync row commits on its own: pacing the mailboxes withholds nothing,
+  // so it needs no Save beside the two switches that do.
+  it("saves a new sync interval on Enter and refuses one under 30 seconds", async () => {
+    const backend = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<MailSharingCard />);
+
+    const box =
+      await screen.findByTestId<HTMLInputElement>("capture-mail-sync");
+    expect(box.value).toBe("120");
+    await user.clear(box);
+    await user.type(box, "29{Enter}");
+    expect(
+      await screen.findByText(
+        translate("en", "captureMailSync.interval.refusal"),
+      ),
+    ).toBeTruthy();
+    expect(backend.getCapturedPatch()).toBeNull();
+
+    await user.clear(box);
+    await user.type(box, "60{Enter}");
+    await waitFor(() =>
+      expect(backend.getCapturedPatch()).toEqual({
+        mail_sync_interval_seconds: 60,
+      }),
+    );
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 });

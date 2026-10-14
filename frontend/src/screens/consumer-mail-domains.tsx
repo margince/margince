@@ -246,38 +246,43 @@ export function ConsumerMailDomainsCard() {
         </Button>
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("consumerMail.sub")}</PanelIntro>
-      </PanelBody>
-      <PanelGroupHead title={t("consumerMail.addedTitle")} level="h3" />
       <QueryGate query={query} pendingLabel={t("consumerMail.title")}>
         {(entries) =>
           entries.length === 0 ? (
             // `empty`, and only `empty`: nothing has been added, so the
             // shipped list decides every domain.
-            <EmptyState>{t("consumerMail.none")}</EmptyState>
+            <PanelBody>
+              <PanelIntro>{t("consumerMail.sub")}</PanelIntro>
+              <EmptyState>{t("consumerMail.none")}</EmptyState>
+            </PanelBody>
           ) : (
-            <SettingList bleed="records" testId="consumer-mail-domain-list">
-              {entries.map((entry) => (
-                <SettingRow
-                  key={entry.id}
-                  label={entry.domain}
-                  description={t(kindLabel[entry.kind])}
-                  control={
-                    <IconAction
-                      variant="ghost"
-                      label={t("consumerMail.remove", {
-                        domain: entry.domain,
-                      })}
-                      icon={<Trash2 aria-hidden />}
-                      disabled={remove.isPending}
-                      reasonId={canManage ? undefined : denialId}
-                      onClick={() => remove.mutate(entry.id)}
-                    />
-                  }
-                />
-              ))}
-            </SettingList>
+            <>
+              <PanelBody>
+                <PanelIntro>{t("consumerMail.sub")}</PanelIntro>
+              </PanelBody>
+              <PanelGroupHead title={t("consumerMail.addedTitle")} level="h3" />
+              <SettingList bleed="records" testId="consumer-mail-domain-list">
+                {entries.map((entry) => (
+                  <SettingRow
+                    key={entry.id}
+                    label={entry.domain}
+                    description={t(kindLabel[entry.kind])}
+                    control={
+                      <IconAction
+                        variant="ghost"
+                        label={t("consumerMail.remove", {
+                          domain: entry.domain,
+                        })}
+                        icon={<Trash2 aria-hidden />}
+                        disabled={remove.isPending}
+                        reasonId={canManage ? undefined : denialId}
+                        onClick={() => remove.mutate(entry.id)}
+                      />
+                    }
+                  />
+                ))}
+              </SettingList>
+            </>
           )
         }
       </QueryGate>

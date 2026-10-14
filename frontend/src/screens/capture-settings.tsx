@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelGroupHead } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { throwProblem, unwrap } from "../lib/problem";
 
 // The company capture-settings card (CAP-WIRE-7, ADR-0072): the
 // captured-company auto-enrich toggle. Every role reads it; only admin/ops
@@ -36,7 +36,7 @@ export function useCaptureSettings() {
 type CaptureSettingsPatch =
   components["schemas"]["UpdateCaptureSettingsRequest"];
 
-function useUpdateCaptureSettings() {
+export function useUpdateCaptureSettings() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const t = useT();
@@ -59,85 +59,6 @@ function useUpdateCaptureSettings() {
       toast.show(t("settings.saved"));
     },
   });
-}
-
-export function CaptureSettingsCard() {
-  const t = useT();
-  const canManage = useCanWrite("capture_settings", "update");
-  const query = useCaptureSettings();
-  const update = useUpdateCaptureSettings();
-
-  // Panel rather than Card, and the gap to the card below comes from the
-  // page's own stack (`.settings-stack`) rather than from a margin this card
-  // carries — a surface that spaces itself is a surface that spaces itself
-  // wrong the first time it is used anywhere else.
-  //
-  // Panel's header holds the title alone, so the card's one line of
-  // description leads the body instead of riding in the header.
-  return (
-    <Panel title={t("captureSettings.title")}>
-      <PanelBody>
-        <PanelIntro>{t("captureSettings.sub")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
-        {(settings) => (
-          <SettingList bleed="settings">
-            {/* The switch carries its own hidden label; pointing it at the
-                row's label too would name it twice. */}
-            <SettingRow
-              label={t("captureSettings.autoEnrich.label")}
-              description={t("captureSettings.autoEnrich.help")}
-              control={
-                <Switch
-                  testId="capture-auto-enrich-toggle"
-                  label={t("captureSettings.autoEnrich.label")}
-                  labelHidden
-                  // A write in flight explains itself by finishing; only a
-                  // caller who may never change this needs words.
-                  reason={
-                    canManage ? undefined : t("captureSettings.adminOnly")
-                  }
-                  checked={settings.auto_enrich}
-                  disabled={!canManage || update.isPending}
-                  onChange={(next) => update.mutate({ auto_enrich: next })}
-                />
-              }
-            />
-            {/* The workspace default: a mailbox that set its own switch
-                keeps it, which the description says. */}
-            <SettingRow
-              label={t("captureSettings.signatureEnrich.label")}
-              description={t("captureSettings.signatureEnrich.help")}
-              control={
-                <Switch
-                  testId="capture-signature-enrich-toggle"
-                  label={t("captureSettings.signatureEnrich.label")}
-                  labelHidden
-                  reason={
-                    canManage ? undefined : t("captureSettings.adminOnly")
-                  }
-                  checked={settings.signature_enrich}
-                  disabled={!canManage || update.isPending}
-                  onChange={(next) => update.mutate({ signature_enrich: next })}
-                />
-              }
-            />
-          </SettingList>
-        )}
-      </QueryGate>
-      {update.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("captureSettings.updateFailed")}
-          >
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
-    </Panel>
-  );
 }
 
 // The limits the API refuses past, mirrored so a value out of range is
@@ -184,106 +105,89 @@ const READ_ROWS: readonly Readonly<{
   },
 ];
 
-// How much the website reader may spend: the daily ceiling on reads nobody
-// asked for, and what any one read may fetch. Same gate and same save as the
-// switches above, because it is the same settings object.
-export function WebsiteReadingCard() {
+// The enrichment switches and the website reader's limits: one settings
+// object, so one card, one gate and one save.
+export function CaptureSettingsCard() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
   const query = useCaptureSettings();
   const update = useUpdateCaptureSettings();
   const locked = !canManage || update.isPending;
+  const reason = canManage ? undefined : t("captureSettings.adminOnly");
+
   return (
-    <Panel title={t("captureReading.title")}>
-      <PanelBody>
-        <PanelIntro>{t("captureReading.sub")}</PanelIntro>
-        {!canManage && (
-          <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
-        )}
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("captureReading.title")}>
+    <Panel title={t("captureSettings.title")}>
+      <QueryGate query={query} pendingLabel={t("captureSettings.title")}>
         {(settings) => (
-          <SettingList bleed="settings">
-            {READ_ROWS.map((row) => (
-              <NumberSettingRow
-                key={row.property}
-                label={t(`captureReading.${row.copy}.label`)}
-                description={t(`captureReading.${row.copy}.help`)}
-                testId={row.testId}
-                value={row.value(settings)}
-                {...READ_LIMITS[row.property]}
-                refusal={t(`captureReading.${row.copy}.refusal`)}
-                disabled={locked}
-                onCommit={(next) => update.mutate({ [row.property]: next })}
+          <>
+            <SettingList bleed="settings">
+              {/* The switch carries its own hidden label; pointing it at the
+                  row's label too would name it twice. */}
+              <SettingRow
+                label={t("captureSettings.autoEnrich.label")}
+                description={t("captureSettings.autoEnrich.help")}
+                control={
+                  <Switch
+                    testId="capture-auto-enrich-toggle"
+                    label={t("captureSettings.autoEnrich.label")}
+                    labelHidden
+                    reason={reason}
+                    checked={settings.auto_enrich}
+                    disabled={locked}
+                    onChange={(next) => update.mutate({ auto_enrich: next })}
+                  />
+                }
               />
-            ))}
-          </SettingList>
+              <SettingRow
+                label={t("captureSettings.signatureEnrich.label")}
+                description={t("captureSettings.signatureEnrich.help")}
+                control={
+                  <Switch
+                    testId="capture-signature-enrich-toggle"
+                    label={t("captureSettings.signatureEnrich.label")}
+                    labelHidden
+                    reason={reason}
+                    checked={settings.signature_enrich}
+                    disabled={locked}
+                    onChange={(next) =>
+                      update.mutate({ signature_enrich: next })
+                    }
+                  />
+                }
+              />
+            </SettingList>
+            <PanelGroupHead title={t("captureReading.title")} level="h3" />
+            <SettingList bleed="settings" testId="capture-website-reads">
+              {READ_ROWS.map((row) => (
+                <NumberSettingRow
+                  key={row.property}
+                  label={t(`captureReading.${row.copy}.label`)}
+                  description={t(`captureReading.${row.copy}.help`)}
+                  testId={row.testId}
+                  value={row.value(settings)}
+                  {...READ_LIMITS[row.property]}
+                  refusal={t(`captureReading.${row.copy}.refusal`)}
+                  disabled={locked}
+                  onCommit={(next) => update.mutate({ [row.property]: next })}
+                />
+              ))}
+            </SettingList>
+          </>
         )}
       </QueryGate>
-      {update.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("captureSettings.updateFailed")}
-          >
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
+      <PanelNotices
+        refused={
+          update.isError
+            ? { title: t("captureSettings.updateFailed"), error: update.error }
+            : undefined
+        }
+      />
     </Panel>
   );
 }
 
-// How often a connected mailbox is checked for new mail. Its own card rather
-// than a row under enrichment: it paces every mailbox's capture, not what is
-// done with a message once it arrives. Mirrored as READ_LIMITS is.
-const MAIL_SYNC_BOUNDS = {
+// How often a connected mailbox is checked for new mail, mirrored as
+// READ_LIMITS is.
+export const MAIL_SYNC_BOUNDS = {
   mail_sync_interval_seconds: { min: 30, max: 3_600 },
 } as const;
-
-export function MailSyncCard() {
-  const t = useT();
-  const canManage = useCanWrite("capture_settings", "update");
-  const query = useCaptureSettings();
-  const update = useUpdateCaptureSettings();
-  return (
-    <Panel title={t("captureMailSync.title")}>
-      <PanelBody>
-        <PanelIntro>{t("captureMailSync.sub")}</PanelIntro>
-        {!canManage && (
-          <PanelIntro>{t("captureSettings.adminOnly")}</PanelIntro>
-        )}
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("captureMailSync.title")}>
-        {(settings) => (
-          <SettingList bleed="settings">
-            <NumberSettingRow
-              label={t("captureMailSync.interval.label")}
-              description={t("captureMailSync.interval.help")}
-              testId="capture-mail-sync"
-              value={settings.mail_sync_interval_seconds}
-              {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
-              refusal={t("captureMailSync.interval.refusal")}
-              disabled={!canManage || update.isPending}
-              onCommit={(next) =>
-                update.mutate({ mail_sync_interval_seconds: next })
-              }
-            />
-          </SettingList>
-        )}
-      </QueryGate>
-      {update.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("captureSettings.updateFailed")}
-          >
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
-    </Panel>
-  );
-}

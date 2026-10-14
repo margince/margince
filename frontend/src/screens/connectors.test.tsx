@@ -319,14 +319,18 @@ describe("the connected-inboxes card", () => {
     expect(drawer.getByTestId("connector-gcal-context-tag")).toBeTruthy();
   });
 
-  it("states an empty roster, with the connect verb in the header", async () => {
+  it("states an empty roster as one row that carries the connect verb", async () => {
     stubApi([]);
     render(<ConnectorsCard />);
     const empty = await screen.findByTestId("connector-roster-empty");
-    expect(empty.textContent).toMatch(
-      /No mailbox or calendar is connected yet/,
-    );
-    expect(screen.getByRole("button", { name: "Add connector" })).toBeTruthy();
+    expect(empty.textContent).toMatch(/No mailbox connected/);
+    // One verb, on the row that says there is nothing yet.
+    expect(
+      within(empty).getByRole("button", { name: "Add connector" }),
+    ).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "Add connector" }),
+    ).toHaveLength(1);
   });
 
   it("offers every provider from the dialog when nothing is connected", async () => {

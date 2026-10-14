@@ -2479,7 +2479,7 @@ export const vi = {
   "linkedinImport.notConnectedNote":
     "Khi lưu URL hồ sơ, các kết nối đã nhập sẽ được gắn với tên của bạn.",
   "linkedinImport.whichFile":
-    "LinkedIn cung cấp tệp Connections.csv trong “Settings”, rồi “Data privacy”, rồi “Get a copy of your data”. Tải lên tệp đó từ tệp nén. Kết nối đã tải lên không bao giờ trở thành liên hệ: các kết nối này nằm ngoài tìm kiếm, danh sách và trang liên hệ, và không ai có thể nhắn tin hay gửi email cho họ.",
+    "Tệp Connections.csv từ mục “Get a copy of your data” của LinkedIn. Kết nối đã nhập không bao giờ trở thành liên hệ, và không ai gửi email cho họ được.",
   "linkedinImport.choose": "Chọn tệp Connections.csv",
   "linkedinImport.importLabel": "Tệp xuất danh sách kết nối",
   "linkedinImport.noMatchesYet":
@@ -2493,9 +2493,6 @@ export const vi = {
   "linkedinReach.title": "Phạm vi mạng lưới",
   "linkedinReach.sub":
     "Các công ty đã có trong CRM mà bạn có người quen, công ty nhiều kết nối nhất xếp trước.",
-  "linkedinReach.readFailed": "Không thể tải phạm vi mạng lưới.",
-  "linkedinReach.empty":
-    "Chưa có kết nối nào làm việc tại công ty đã có trong CRM.",
   "linkedinReach.allUnresolved":
     "Mọi kết nối đều làm việc tại công ty chưa có trong CRM. Số kết nối: {unresolved}.",
   "linkedinReach.accountsLabel": "Công ty bạn tiếp cận được",
@@ -6957,11 +6954,9 @@ export const vi = {
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
-  "overnightGrant.sub":
-    "Margince xử lý deal của bạn qua đêm và chuẩn bị sẵn Bản tin sáng khi bạn bắt đầu làm việc. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
   "overnightGrant.label": "Cho phép Margince chuẩn bị Bản tin sáng qua đêm",
   "overnightGrant.help":
-    "Margince đọc deal và thư của bạn để xếp hạng ưu tiên hôm nay, và ghi lại ghi chú. Margince không thể gửi: quyền cấp ở đây chỉ gồm đọc và ghi, không bao giờ gồm quyền gửi.",
+    "Xếp hạng deal và thư hôm nay, rồi ghi chú cho Bản tin sáng của bạn. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy và không bao giờ gửi thư.",
   "overnightGrant.dangerTitle": "Trợ lý AI qua đêm sẽ không chạy",
   "overnightGrant.danger":
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
@@ -7061,12 +7056,25 @@ export const vi = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
+  "connectionOutcomes.view": "Xem",
+  "connectionOutcomes.viewNamed": "Xem {name}",
+  "connectionOutcomes.none": "Chưa có",
+  "connectionOutcomes.unread": "Không tải được",
+  "connectionOutcomes.waitingEmpty":
+    "Không có liên hệ nào đang chờ quyết định.",
+  "connectionOutcomes.senders_one": "{count} địa chỉ",
+  "connectionOutcomes.senders_other": "{count} địa chỉ",
+  "connectionOutcomes.threads_one": "{count} chuỗi thư",
+  "connectionOutcomes.threads_other": "{count} chuỗi thư",
+  "connectionOutcomes.contacts_one": "{count} liên hệ",
+  "connectionOutcomes.contacts_other": "{count} liên hệ",
+  "connectionOutcomes.companies_one": "{count} công ty",
+  "connectionOutcomes.companies_other": "{count} công ty",
   "mailSharing.title": "Chia sẻ email",
-  "mailSharing.sub":
-    "Mọi đồng nghiệp xem được liên hệ đều đọc được email đã thu thập. Mặc định bật, để công việc về deal được chia sẻ.",
   "mailSharing.label": "Chia sẻ email đã thu thập với nhóm",
   "mailSharing.help":
-    "Có thể giới hạn từng email sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
+    "Mọi đồng nghiệp xem được liên hệ đều đọc được thư đã thu thập của liên hệ đó. Có thể giới hạn từng thư sau đó.",
   "mailSharing.danger":
     "Khi tắt chia sẻ email, CRM khó sử dụng. Email mới chỉ hiển thị với những người có trong từng email.",
   "mailSharing.posture.shared":
@@ -7084,14 +7092,12 @@ export const vi = {
     "Mục này khẳng định có cơ sở pháp lý",
   "mailSharing.saveFailed": "Không thể lưu cài đặt",
   "mailSharing.save": "Lưu",
+  "mailSharing.cardTitle": "Chia sẻ và đồng bộ thư",
   "connectors.originLabel":
     "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
   "connectors.originUnreachable": "Không thể truy cập",
-  "connectors.sub":
-    "Hộp thư và lịch đang thu thập dữ liệu vào CRM. Khi ngắt kết nối một mục, các hồ sơ đã thu thập vẫn được giữ nguyên.",
   "connectors.loading": "Đang tải trình kết nối…",
   "connectors.loadFailed": "Không thể tải trình kết nối. Tải lại trang.",
-  "connectors.empty": "Chưa kết nối hộp thư hay lịch nào.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7263,7 +7269,6 @@ export const vi = {
   "connectors.telegramNotConfigured":
     "Bản cài đặt này chưa cấu hình kênh nhắn tin.",
   "connectors.telegramConnectCta": "Kết nối bot Telegram",
-  "connectors.telegramEmpty": "Chưa kết nối bot nào.",
   "connectors.telegramReadOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể kết nối hoặc đổi bot.",
   "connectors.telegramEditToken": "Thay token",
@@ -7280,13 +7285,17 @@ export const vi = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
   "connectors.openNamed": "Mở {name}",
+  "connectors.emptyLabel": "Chưa kết nối hộp thư",
+  "connectors.emptyHint":
+    "Kết nối hộp thư hoặc lịch để thu thập thư và cuộc họp.",
+  "connectors.telegramEmptyLabel": "Chưa kết nối bot",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Tên miền thư cá nhân",
   "consumerMail.sub":
-    "Thư gửi từ hộp thư cá nhân tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách các nhà cung cấp này; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
+    "Thư từ các tên miền này tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
   "consumerMail.addedTitle": "Đã thêm tại đây",
   "consumerMail.addTitle": "Thêm tên miền",
   "consumerMail.domainLabel": "Tên miền",
@@ -7315,7 +7324,7 @@ export const vi = {
 
   "blockedDomains.title": "Tên miền bị từ chối",
   "blockedDomains.sub":
-    "Tên miền bị từ chối làm công ty, và điều đã quyết định từng trường hợp: kết quả của mô hình, quy tắc suy đoán hoặc một thành viên. Cho phép một tên miền sẽ mở lại câu hỏi. Chỉ câu hỏi đang mở chưa có ai phụ trách mới hiển thị ở đây.",
+    "Tên miền bị từ chối làm công ty, và việc quyết định do mô hình, quy tắc suy đoán hay một thành viên đưa ra. Cho phép một tên miền sẽ mở lại câu hỏi.",
   "blockedDomains.listTitle": "Quyết định đã ghi nhận",
   "blockedDomains.record": "Ghi nhận quyết định",
   "blockedDomains.recordOpen": "Ghi nhận quyết định",
@@ -8828,7 +8837,7 @@ export const vi = {
   "captureActivity.scope.mine": "Của tôi",
   "captureActivity.scope.workspace": "Kênh dùng chung",
   "captureActivity.scopeNote":
-    "Tính từ lúc trình kết nối chuyển tin nhắn cho CRM này. Không tính các mục đã bị lọc ngay tại trình kết nối, ví dụ một biểu tượng cảm xúc trong chat hay một quy tắc thư. Chỉ gồm tin nhắn; thu thập lead không hiển thị ở đây.",
+    "Tin nhắn do trình kết nối chuyển cho Margince. Không tính thu thập lead và các mục trình kết nối tự lọc.",
   "captureActivity.filtered":
     "Đang hiển thị {shown} trên {total} {outcome} trong khoảng thời gian này.",
   "captureActivity.openTraceFrom":
@@ -10276,19 +10285,15 @@ export const vi = {
   "autonomy.kind.lifecycle_change.help":
     "Chuyển công ty sang giai đoạn vòng đời khác dựa trên hoạt động. Tắt để tự xem lại các đề xuất này. Thay đổi giai đoạn có thể ảnh hưởng đến ai thấy công ty và tự động hóa nào chạy.",
   "captureSettings.title": "Bổ sung dữ liệu",
-  "captureSettings.sub":
-    "Cách bổ sung dữ liệu cho công ty và liên hệ đã thu thập sau khi tạo.",
   "captureSettings.autoEnrich.label": "Tự bổ sung dữ liệu công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Mỗi công ty mới tạo từ thư đã thu thập sẽ có hồ sơ web tự động, lập từ trang web của công ty. Chạy trong giới hạn hằng ngày.",
   "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
   "captureSettings.signatureEnrich.help":
-    "Khi bật, Margince đọc những gì một người tự ghi dưới tên của họ trong thư họ gửi cho bạn: chữ ký, hoặc danh thiếp đính kèm, gồm chức danh, số điện thoại, địa chỉ hoặc công ty. Việc này diễn ra trong vài phút sau khi thư đến. Không suy đoán gì; thông tin thư không nêu thì không được ghi. Đây là mặc định của công ty; hộp thư có cài đặt riêng thì giữ cài đặt đó.",
+    "Đọc chức danh, số điện thoại, địa chỉ hoặc công ty mà một người tự ghi trong chữ ký hoặc danh thiếp của họ. Không suy đoán gì. Cài đặt riêng của hộp thư được ưu tiên.",
   "captureSettings.addFailed": "Không thể thêm mục loại trừ",
   "captureSettings.updateFailed": "Không thể thay đổi cài đặt",
   "captureReading.title": "Đọc trang web",
-  "captureReading.sub":
-    "Lượng nội dung Margince đọc từ trang web công ty. Thay đổi áp dụng cho lần đọc tiếp theo.",
   "captureReading.dailyCap.label": "Số lượt đọc tự động mỗi ngày",
   "captureReading.dailyCap.help":
     "Số lượt đọc không do ai yêu cầu, trên mọi công ty, từ 1 đến 20.000 mỗi ngày.",
@@ -10372,9 +10377,6 @@ export const vi = {
   "operations.sendMaxAge.label": "Thời gian chờ tối đa (giờ)",
   "operations.sendMaxAge.help":
     "Thời gian tối đa một thư bị giữ lại có thể chờ trước khi dừng kèm lý do, 1 đến 168.",
-  "captureMailSync.title": "Đồng bộ thư",
-  "captureMailSync.sub":
-    "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
   "captureMailSync.interval.label": "Khoảng đồng bộ (giây)",
   "captureMailSync.interval.help":
     "Khoảng thời gian giữa hai lần đồng bộ của một hộp thư, từ 30 đến 3.600. Áp dụng từ lần đồng bộ tiếp theo của mỗi hộp thư.",
@@ -10389,7 +10391,6 @@ export const vi = {
     "Địa chỉ và tên miền có tin nhắn không bao giờ vào CRM. Quy tắc của bạn chỉ áp dụng cho hộp thư bạn đã kết nối; quy tắc của công ty áp dụng cho mọi thành viên.",
   "captureExclusions.notRetroactive":
     "Có hiệu lực từ tin nhắn tiếp theo. Tin nhắn đã thu thập vẫn giữ nguyên.",
-  "captureExclusions.current": "Quy tắc đang áp dụng",
   "captureExclusions.empty": "Chưa có loại trừ nào.",
   "ownerIdentities.title": "Địa chỉ khác của bạn",
   "ownerIdentities.sub":
@@ -10398,10 +10399,8 @@ export const vi = {
   "ownerIdentities.addLabel": "Thêm địa chỉ của bạn",
   "ownerIdentities.addDescription":
     "Chỉ riêng bạn thấy. Đồng nghiệp không bao giờ thấy danh sách này.",
-  "ownerIdentities.current": "Đã khai báo",
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư tiếp theo. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ bí danh vẫn còn cho đến khi bạn gộp hoặc gỡ liên hệ đó.",
-  "ownerIdentities.empty": "Chưa thêm địa chỉ nào khác.",
   "ownerIdentities.remove": "Gỡ {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ",
   "ownerIdentities.confirm": "Thêm",
@@ -10426,6 +10425,8 @@ export const vi = {
     "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Chưa thêm địa chỉ nào. Đồng nghiệp không bao giờ thấy danh sách này.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -10505,7 +10506,6 @@ export const vi = {
   "ownDomains.curatedTitle": "Quản lý tại đây",
   "ownDomains.irreversible":
     "Thêm tên miền có hiệu lực từ thư tiếp theo; gỡ tên miền thì thu thập tiếp tục từ lúc đó. Thư đã bỏ qua trong thời gian tên miền được đăng ký sẽ không bao giờ được hộp thư nào đưa lại. Thư đã thu thập vẫn giữ nguyên.",
-  "ownDomains.fromCompany": "Từ hồ sơ công ty. Sửa tại đó:",
   "ownDomains.openCompany": "Mở hồ sơ công ty",
   "ownDomains.empty":
     "Chưa đăng ký thêm tên miền nào. Thêm tên miền nếu công ty còn gửi thư từ tên miền khác.",

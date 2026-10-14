@@ -14,12 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { KeyedName } from "../design-system/keyedname";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -168,14 +163,7 @@ export function CaptureExclusionsCard() {
         </Button>
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
-      </PanelBody>
-      <PanelGroupHead title={t("captureExclusions.current")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("captureExclusions.notRetroactive")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("captureExclusions.current")}>
+      <QueryGate query={query} pendingLabel={t("captureExclusions.title")}>
         {(list) => (
           <ExclusionRows
             list={list.data}
@@ -228,27 +216,35 @@ function ExclusionRows({
     // `empty`, and only `empty`: nothing is excluded, which is a fact about the
     // installation rather than a read that failed.
     return (
-      <EmptyState>
-        <p data-testid="capture-exclusions-empty">
-          {t("captureExclusions.empty")}
-        </p>
-      </EmptyState>
+      <PanelBody>
+        <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
+        <EmptyState>
+          <p data-testid="capture-exclusions-empty">
+            {t("captureExclusions.empty")}
+          </p>
+        </EmptyState>
+      </PanelBody>
     );
   }
   return (
-    <SettingList bleed="records" testId="capture-exclusions-list">
-      {list.map((rule) => (
-        <ExclusionRow
-          key={rule.id}
-          rule={rule}
-          refusal={
-            bindsEveryone(rule) && !canManageWorkspace ? denialId : undefined
-          }
-          landing={landing}
-          onPurge={() => onPurge(rule.id, rule.value)}
-        />
-      ))}
-    </SettingList>
+    <>
+      <PanelBody>
+        <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
+      </PanelBody>
+      <SettingList bleed="records" testId="capture-exclusions-list">
+        {list.map((rule) => (
+          <ExclusionRow
+            key={rule.id}
+            rule={rule}
+            refusal={
+              bindsEveryone(rule) && !canManageWorkspace ? denialId : undefined
+            }
+            landing={landing}
+            onPurge={() => onPurge(rule.id, rule.value)}
+          />
+        ))}
+      </SettingList>
+    </>
   );
 }
 
@@ -410,6 +406,7 @@ function ExcludeDialog({
             onChange={(event) => setDraft(event.target.value)}
           />
         )}
+        <p className="t-caption">{t("captureExclusions.notRetroactive")}</p>
         {picking && !folders.isPending && folders.isError && (
           <Callout
             tone="danger"

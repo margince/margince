@@ -2,37 +2,53 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { LinkedInReachCard } from "./linkedin-reach";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// LinkedInReachCard stories for the fe-uat render gate. The three cases that
-// read differently are the three the card exists to keep apart: accounts the
-// network reaches, a fresh workspace where nothing resolved yet (which still
-// has to report the unresolved count), and a read that failed — which is NOT
-// an empty network.
+// The network-reach row of the outcomes card, and the drawer it opens. Three
+// cases read differently: accounts reached, nothing resolved yet (which still
+// reports the unresolved count), and a failed read, which is not an empty one.
 
 function reachStory(body: unknown, status = 200) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture()),
       "GET /me/linkedin-reach": () => jsonResponse(body, status),
+      "GET /capture/senders": () => jsonResponse({ data: [] }),
+      "GET /capture/contacts-awaiting-decision": () =>
+        jsonResponse({ data: [] }),
+      "GET /capture/held-threads": () => jsonResponse({ data: [] }),
     });
     return (
       <StoryProviders>
-        <LinkedInReachCard />
+        <ConnectionOutcomesCard />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof LinkedInReachCard> = {
+// The reach opens from its row, in a drawer portalled to the body.
+async function openReach({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "View Network reach",
+    }),
+  );
+  await within(canvasElement.ownerDocument.body).findByRole("table", {
+    name: "Companies you reach",
+  });
+}
+
+const meta = {
   title: "Settings/You/Connections/LinkedIn reach",
-  component: LinkedInReachCard,
-};
+  component: ConnectionOutcomesCard,
+} satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
-type Story = StoryObj<typeof LinkedInReachCard>;
+type Story = StoryObj<typeof meta>;
 
 const REACHED = {
   accounts: [
@@ -53,19 +69,24 @@ const REACHED = {
   unresolved_connections: 1420,
 };
 
-export const Reaches: Story = { render: reachStory(REACHED) };
+export const Reaches: Story = { render: reachStory(REACHED), play: openReach };
 
-// Nothing resolved yet, and the unresolved count matters most here: five
-// thousand imported connections that matched no account is not "none yet".
+// Nothing resolved yet, so the unresolved count matters most. Five thousand
+// connections that matched no account is not "none yet": the row says so.
 export const NothingResolvedYet: Story = {
   render: reachStory({
     accounts: [],
     accounts_total: 0,
     unresolved_connections: 5210,
   }),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(/Connections: 5,210/),
+    ).toBeVisible();
+  },
 };
 
-// Nothing imported yet: no caveat to state, so the empty sentence stands alone.
+// Nothing imported yet: no caveat to state, and no list to open.
 export const NothingImportedYet: Story = {
   render: reachStory({
     accounts: [],
@@ -84,6 +105,7 @@ export const ReadFailed: Story = {
 export const ReachesDark: Story = {
   globals: { theme: "dark" },
   render: reachStory(REACHED),
+  play: openReach,
 };
 
 // At 390 the table folds each account onto two lines: the name and its open
@@ -92,9 +114,5 @@ export const ReachesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: reachStory(REACHED),
-  play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("table", {
-      name: "Companies you reach",
-    });
-  },
+  play: openReach,
 };

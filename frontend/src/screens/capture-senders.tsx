@@ -2,23 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  OverflowMenu,
-} from "../design-system/atoms";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
 import { RowOpen } from "../design-system/rowopen";
 import { useToast } from "../design-system/toast";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
@@ -63,7 +51,7 @@ const kindLabel: Record<string, MessageKey> = {
 // colour is never the only signal.
 const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
-function useSenders() {
+export function useSenders() {
   return useQuery({
     queryKey: ["capture-senders"],
     queryFn: async () => {
@@ -80,7 +68,7 @@ function useSenders() {
 // a sender decision is reached — the set the admin capture-health card counts
 // for this mailbox. Its own read: a contact whose address never reached the
 // senders list above is waiting too, and that list cannot show it.
-function useAwaitingDecision() {
+export function useAwaitingDecision() {
   return useQuery({
     queryKey: ["capture-contacts-awaiting-decision"],
     queryFn: async () => {
@@ -141,9 +129,10 @@ function useWithdrawDecision() {
   });
 }
 
-export function CaptureSendersCard() {
+export function SenderDecisions({
+  rows,
+}: Readonly<{ rows: SenderDecision[] }>) {
   const t = useT();
-  const query = useSenders();
   const setDecision = useSetDecision();
   const withdraw = useWithdrawDecision();
   // Keeping a sender out destroys the mail they already brought in, so it asks
@@ -151,29 +140,18 @@ export function CaptureSendersCard() {
   const [keepingOut, setKeepingOut] = useState<string | null>(null);
 
   return (
-    <Panel title={t("senders.title")}>
-      <PanelBody>
-        <PanelIntro>{t("senders.sub")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("senders.title")}>
-        {(list) =>
-          list.data.length === 0 ? (
-            <PanelBody>
-              <EmptyState>{t("senders.emptyBody")}</EmptyState>
-            </PanelBody>
-          ) : (
-            <SenderTable
-              rows={list.data}
-              verbs={{ setDecision, withdraw, keepOut: setKeepingOut }}
-            />
-          )
+    <>
+      <SenderTable
+        rows={rows}
+        verbs={{ setDecision, withdraw, keepOut: setKeepingOut }}
+      />
+      <ErrorLine
+        error={
+          setDecision.isError || withdraw.isError
+            ? (setDecision.error ?? withdraw.error)
+            : undefined
         }
-      </QueryGate>
-      {(setDecision.isError || withdraw.isError) && (
-        <PanelBody>
-          <ErrorLine error={setDecision.error ?? withdraw.error} />
-        </PanelBody>
-      )}
+      />
       <ConfirmModal
         open={keepingOut !== null}
         onClose={() => setKeepingOut(null)}
@@ -192,8 +170,7 @@ export function CaptureSendersCard() {
       >
         {t("senders.keepOutBody")}
       </ConfirmModal>
-      <AwaitingDecision />
-    </Panel>
+    </>
   );
 }
 
@@ -274,7 +251,6 @@ function SenderTable({
   ];
   return (
     <DataTable<SenderDecision>
-      bleed
       fold
       label={t("senders.title")}
       rows={rows}
@@ -328,18 +304,14 @@ function SenderMenu({
   );
 }
 
-// Drawn only when something waits, or when the read failed: an empty group
-// under the senders list would be a second empty state saying what the first
-// already said, and one flashed while loading would say it and take it back.
-function AwaitingDecision() {
+/** Contacts only the reader can see until their sender is decided. */
+export function AwaitingContacts({
+  rows,
+}: Readonly<{ rows: AwaitingContact[] }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const query = useAwaitingDecision();
-  if (query.isPending || (query.isSuccess && query.data.data.length === 0)) {
-    return null;
-  }
   const name = (row: AwaitingContact) =>
     row.display_name ?? row.emails[0] ?? null;
   const open = (row: AwaitingContact) =>
@@ -351,63 +323,52 @@ function AwaitingDecision() {
       : t("senders.waiting.openUnnamed");
   };
   return (
-    <>
-      <PanelGroupHead title={t("senders.waiting.title")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("senders.waiting.sub")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("senders.waiting.title")}>
-        {(list) => (
-          <DataTable<AwaitingContact>
-            bleed
-            fold
-            label={t("senders.waiting.title")}
-            rows={list.data}
-            rowKey={(row) => row.contact_id}
-            onRowClick={open}
-            columns={[
-              {
-                key: "contact",
-                header: t("senders.waiting.colContact"),
-                render: (row) => (
-                  <CellStack>
-                    <EntityRef
-                      kind="contact"
-                      id={row.contact_id}
-                      name={name(row)}
-                      asText
-                    />
-                    {row.emails.length > 0 && (
-                      <span className="t-caption capture-senders-address">
-                        {row.emails[0]}
-                        {row.emails.length > 1 &&
-                          ` ${plural("senders.waiting.moreAddresses", row.emails.length - 1, { count: formatNumber(row.emails.length - 1, locale) })}`}
-                      </span>
-                    )}
-                  </CellStack>
-                ),
-              },
-              {
-                key: "since",
-                header: t("senders.waiting.colSince"),
-                align: "end",
-                render: (row) => formatDate(row.captured_at, locale, zone),
-              },
-              {
-                key: "open",
-                header: t("table.actions"),
-                headerHidden: true,
-                align: "end",
-                fold: "end",
-                render: (row) => (
-                  <RowOpen label={openLabel(row)} onOpen={() => open(row)} />
-                ),
-              },
-            ]}
-          />
-        )}
-      </QueryGate>
-    </>
+    <DataTable<AwaitingContact>
+      fold
+      label={t("senders.waiting.title")}
+      rows={rows}
+      rowKey={(row) => row.contact_id}
+      onRowClick={open}
+      columns={[
+        {
+          key: "contact",
+          header: t("senders.waiting.colContact"),
+          render: (row) => (
+            <CellStack>
+              <EntityRef
+                kind="contact"
+                id={row.contact_id}
+                name={name(row)}
+                asText
+              />
+              {row.emails.length > 0 && (
+                <span className="t-caption capture-senders-address">
+                  {row.emails[0]}
+                  {row.emails.length > 1 &&
+                    ` ${plural("senders.waiting.moreAddresses", row.emails.length - 1, { count: formatNumber(row.emails.length - 1, locale) })}`}
+                </span>
+              )}
+            </CellStack>
+          ),
+        },
+        {
+          key: "since",
+          header: t("senders.waiting.colSince"),
+          align: "end",
+          render: (row) => formatDate(row.captured_at, locale, zone),
+        },
+        {
+          key: "open",
+          header: t("table.actions"),
+          headerHidden: true,
+          align: "end",
+          fold: "end",
+          render: (row) => (
+            <RowOpen label={openLabel(row)} onOpen={() => open(row)} />
+          ),
+        },
+      ]}
+    />
   );
 }
 

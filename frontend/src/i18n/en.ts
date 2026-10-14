@@ -2584,7 +2584,7 @@ export const en = {
   "linkedinImport.notConnectedNote":
     "Saving your profile URL attributes imported connections to you by name.",
   "linkedinImport.whichFile":
-    "LinkedIn provides Connections.csv under “Settings”, then “Data privacy”, then “Get a copy of your data”. Upload that file from the archive. Uploaded connections never become contacts: they stay out of search, lists and contact pages, and no one can write to or email them.",
+    "Connections.csv from LinkedIn’s “Get a copy of your data”. Imported connections never become contacts, and no one can email them.",
   "linkedinImport.choose": "Choose Connections.csv",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
@@ -2598,9 +2598,6 @@ export const en = {
   "linkedinReach.title": "Network reach",
   "linkedinReach.sub":
     "Companies on file where you know someone, most connections first.",
-  "linkedinReach.readFailed": "Network reach could not be loaded.",
-  "linkedinReach.empty":
-    "None of your connections work at a company on file yet.",
   "linkedinReach.allUnresolved":
     "All your connections work at companies not on file yet. Connections: {unresolved}.",
   "linkedinReach.accountsLabel": "Companies you reach",
@@ -7239,11 +7236,9 @@ export const en = {
   // the features that go empty, because "some things stop working" is not
   // something a rep can weigh.
   "overnightGrant.title": "Overnight preparation",
-  "overnightGrant.sub":
-    "Margince works through your deals overnight and has your Morning brief ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
   "overnightGrant.label": "Let Margince prepare the Morning brief overnight",
   "overnightGrant.help":
-    "It reads your deals and mail to rank today’s priorities, and writes notes back. It cannot send: the permission given here covers reading and writing only, never sending.",
+    "Ranks today’s deals and mail and writes notes for your Morning brief. It acts as you, sees only what you can see and never sends.",
   "overnightGrant.dangerTitle": "Overnight agent will not run",
   "overnightGrant.danger":
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
@@ -7343,12 +7338,24 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "connectionOutcomes.title": "What your connections found",
+  "connectionOutcomes.view": "View",
+  "connectionOutcomes.viewNamed": "View {name}",
+  "connectionOutcomes.none": "None yet",
+  "connectionOutcomes.unread": "Could not load",
+  "connectionOutcomes.waitingEmpty": "No contacts are waiting on a decision.",
+  "connectionOutcomes.senders_one": "{count} sender",
+  "connectionOutcomes.senders_other": "{count} senders",
+  "connectionOutcomes.threads_one": "{count} thread",
+  "connectionOutcomes.threads_other": "{count} threads",
+  "connectionOutcomes.contacts_one": "{count} contact",
+  "connectionOutcomes.contacts_other": "{count} contacts",
+  "connectionOutcomes.companies_one": "{count} company",
+  "connectionOutcomes.companies_other": "{count} companies",
   "mailSharing.title": "Email sharing",
-  "mailSharing.sub":
-    "Captured mail is readable by every colleague who can see the contact. On by default, so deal work can be shared.",
   "mailSharing.label": "Share captured mail with the team",
   "mailSharing.help":
-    "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
+    "Every colleague who can see a contact can read its captured mail. Single messages can be limited afterwards.",
   "mailSharing.danger":
     "With email sharing off, the CRM is hard to use. New mail is visible only to the people on each message.",
   "mailSharing.posture.shared":
@@ -7365,13 +7372,11 @@ export const en = {
   "mailSharing.sharedPosture.warningTitle": "This asserts a legal basis",
   "mailSharing.saveFailed": "Setting not saved",
   "mailSharing.save": "Save",
+  "mailSharing.cardTitle": "Mail sharing and sync",
   "connectors.originLabel": "Address used in emailed links",
   "connectors.originUnreachable": "Unreachable",
-  "connectors.sub":
-    "Mailboxes and calendars capturing into the CRM. Disconnecting one keeps the records already captured.",
   "connectors.loading": "Loading connectors…",
   "connectors.loadFailed": "Could not load connectors. Reload the page.",
-  "connectors.empty": "No mailbox or calendar is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7550,7 +7555,6 @@ export const en = {
   "connectors.telegramNotConfigured":
     "Messaging channels are not configured on this installation.",
   "connectors.telegramConnectCta": "Connect Telegram bot",
-  "connectors.telegramEmpty": "No bot connected.",
   "connectors.telegramReadOnly":
     "Only an administrator or operations user can connect or change the bot.",
   "connectors.telegramEditToken": "Replace token",
@@ -7567,13 +7571,17 @@ export const en = {
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
   "connectors.openNamed": "Open {name}",
+  "connectors.emptyLabel": "No mailbox connected",
+  "connectors.emptyHint":
+    "Connect a mailbox or calendar to capture its mail and meetings.",
+  "connectors.telegramEmptyLabel": "No bot connected",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Consumer mail domains",
   "consumerMail.sub":
-    "Mail from a consumer mailbox creates the contact but never a company. Margince ships a list of these providers; add missing domains or override a wrong entry.",
+    "Mail from these domains creates the contact but never a company. Margince ships a list; add a missing domain or override a wrong one.",
   "consumerMail.addedTitle": "Added here",
   "consumerMail.addTitle": "Add domain",
   "consumerMail.domainLabel": "Domain",
@@ -7604,7 +7612,7 @@ export const en = {
 
   "blockedDomains.title": "Refused domains",
   "blockedDomains.sub":
-    "Domains refused as companies, and what decided each: a model result, a heuristic or a person. Allowing a domain reopens the question. Only unowned open questions appear here.",
+    "Domains refused as companies, and whether a model, a heuristic or a person decided. Allowing a domain reopens the question.",
   "blockedDomains.listTitle": "Recorded decisions",
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
@@ -9171,7 +9179,7 @@ export const en = {
   "captureActivity.scope.mine": "Mine",
   "captureActivity.scope.workspace": "Shared channels",
   "captureActivity.scopeNote":
-    "Counted from when a connector hands a message to this CRM. Items a connector filtered on its own side, such as a chat reaction or a mail rule, are not included. Covers messages only; lead capture is not shown here.",
+    "Messages a connector handed to Margince. Lead capture and items a connector filtered itself are not counted.",
   "captureActivity.filtered":
     "Showing {shown} of {total} {outcome} in this window.",
   "captureActivity.openTraceFrom":
@@ -10605,21 +10613,17 @@ export const en = {
   "autonomy.kind.lifecycle_change.help":
     "Moves a company to another lifecycle stage based on activity. Turn off to review these proposals yourself. Stage changes can affect who sees the company and which automations run.",
   "captureSettings.title": "Enrichment",
-  "captureSettings.sub":
-    "How captured companies and contacts are enriched after they are created.",
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "Each new company created from captured mail gets an automatic web profile built from its site. Runs within a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a person states under their own name in mail they sent you: a signature, or a business card attached to it, with title, phone number, address or company. This happens within minutes of arrival. Nothing is inferred; a detail the mail does not state is not written. This is the company default; a mailbox with its own setting keeps it.",
+    "Reads the title, phone, address or company a person states in their own signature or business card. Nothing is inferred. A mailbox’s own setting wins.",
   "captureSettings.addFailed": "Exclusion not added",
   "captureSettings.adminOnly":
     "Only an administrator or operations user can change this.",
   "captureSettings.updateFailed": "Setting not changed",
   "captureReading.title": "Website reads",
-  "captureReading.sub":
-    "How much Margince reads from company websites. A change applies to the next read.",
   "captureReading.dailyCap.label": "Daily automatic reads",
   "captureReading.dailyCap.help":
     "Reads nobody asked for, across all companies, 1 to 20,000 a day.",
@@ -10705,9 +10709,6 @@ export const en = {
   "operations.sendMaxAge.label": "Longest wait (hours)",
   "operations.sendMaxAge.help":
     "How long a held-back message may wait before it stops with a reason, 1 to 168.",
-  "captureMailSync.title": "Mail sync",
-  "captureMailSync.sub":
-    "How often each connected mailbox is checked for new mail.",
   "captureMailSync.interval.label": "Sync interval (seconds)",
   "captureMailSync.interval.help":
     "Time between one mailbox’s syncs, 30 to 3,600. Applies from each mailbox’s next sync.",
@@ -10720,7 +10721,6 @@ export const en = {
     "Addresses and domains whose messages never enter the CRM. Your rules apply only to mailboxes you connected; company rules apply to everyone.",
   "captureExclusions.notRetroactive":
     "Applies from the next message. Messages already captured stay.",
-  "captureExclusions.current": "Rules in effect",
   "captureExclusions.empty": "No exclusions.",
   "ownerIdentities.title": "Your other addresses",
   "ownerIdentities.sub":
@@ -10729,10 +10729,8 @@ export const en = {
   "ownerIdentities.addLabel": "Add your own address",
   "ownerIdentities.addDescription":
     "Private to you. Colleagues never see this list.",
-  "ownerIdentities.current": "Declared",
   "ownerIdentities.notRetroactive":
     "Applies from the next message. Mail already captured stays, and a contact already created from an alias stays until you merge or remove it.",
-  "ownerIdentities.empty": "No other addresses added.",
   "ownerIdentities.remove": "Remove {value}",
   "ownerIdentities.added": "Address added",
   "ownerIdentities.confirm": "Add",
@@ -10757,6 +10755,8 @@ export const en = {
     "This address was removed again since. Undo the newer removal instead.",
   "ownerIdentities.restoreDeclaredAgain":
     "This address is already back in your list.",
+  "ownerIdentities.addDescriptionEmpty":
+    "None added yet. Colleagues never see this list.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -10836,7 +10836,6 @@ export const en = {
   "ownDomains.curatedTitle": "Managed here",
   "ownDomains.irreversible":
     "Adding a domain applies from the next message; removing it resumes capture from then on. Mail skipped while registered is never offered again by any mailbox. Captured mail stays.",
-  "ownDomains.fromCompany": "From the company profile. Change them there:",
   "ownDomains.openCompany": "Open the company profile",
   "ownDomains.empty":
     "No additional domains registered. Add one if your company also sends from another domain.",

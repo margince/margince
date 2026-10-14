@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CaptureSendersCard } from "./capture-senders";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,10 +12,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// What the classifier decided about a mailbox's senders. The states worth a
-// picture are the ones a reader has to tell apart at a glance: a machine
-// verdict, a verdict the seat OVERRULED, and a mailbox that has decided
-// nothing yet.
+// What the classifier decided about a mailbox's senders, in the drawer the
+// outcomes card opens. A reader tells three states apart at a glance: a machine
+// verdict, a verdict the seat overruled, and a mailbox with nothing decided.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
@@ -131,30 +130,61 @@ function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
       "GET /capture/senders": () => jsonResponse({ data: rows }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: waiting }),
+      "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+      "GET /me/linkedin-reach": () =>
+        jsonResponse({ accounts: [], accounts_total: 0 }),
     });
     return (
       <StoryProviders>
-        <CaptureSendersCard />
+        <ConnectionOutcomesCard />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof CaptureSendersCard> = {
-  title: "Settings/You/Connections/Senders",
-  component: CaptureSendersCard,
+// The list opens from its row; the drawer is portalled to the body.
+async function openList(canvasElement: HTMLElement, name: string) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: `View ${name}` }),
+  );
+  return within(
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name,
+    }),
+  );
+}
+
+const openSenders = async ({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) => {
+  await openList(canvasElement, "Senders");
 };
+
+const meta = {
+  title: "Settings/You/Connections/Senders",
+  component: ConnectionOutcomesCard,
+} satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
-type Story = StoryObj<typeof CaptureSendersCard>;
+type Story = StoryObj<typeof meta>;
 
-export const EveryKind: Story = { render: story(EVERY_KIND) };
+export const EveryKind: Story = {
+  render: story(EVERY_KIND),
+  play: openSenders,
+};
 
-export const Overruled: Story = { render: story(OVERRULED) };
+export const Overruled: Story = { render: story(OVERRULED), play: openSenders };
 
-// A mailbox that has brought in nothing, or brought in only mail whose senders
-// were all already known. The card still stands, because its absence would read
-// as the feature being off.
-export const NothingDecided: Story = { render: story([]) };
+// A mailbox that has brought in nothing: the row says so and offers no list.
+export const NothingDecided: Story = {
+  render: story([]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByText("None yet");
+    await expect(
+      canvas.queryByRole("button", { name: "View Senders" }),
+    ).toBeNull();
+  },
+};
 
 // Contacts still visible to this seat alone because nothing has decided their
 // sender. The second one's address never reached the senders list above it,
@@ -175,17 +205,19 @@ const WAITING: AwaitingContact[] = [
 
 export const WaitingOnDecision: Story = {
   render: story(EVERY_KIND.slice(0, 2), WAITING),
+  play: async ({ canvasElement }) => {
+    const drawer = await openList(canvasElement, "Waiting on a decision");
+    await expect(drawer.getByText("Jana Keller")).toBeVisible();
+  },
 };
 
 // The row's verbs sit behind one menu at a fixed place.
 export const RowMenu: Story = {
   render: story(OVERRULED),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const drawer = await openList(canvasElement, "Senders");
     await userEvent.click(
-      await canvas.findByRole("button", {
-        name: "Actions for news@substack.com",
-      }),
+      drawer.getByRole("button", { name: "Actions for news@substack.com" }),
     );
     await expect(
       await within(canvasElement.ownerDocument.body).findByRole("button", {
@@ -195,9 +227,10 @@ export const RowMenu: Story = {
   },
 };
 
-// Both tables fold to two lines at 390px.
+// The drawer is a full sheet at 390px, and the table folds to two lines.
 export const EveryKindPhone: Story = {
   render: story(EVERY_KIND, WAITING),
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: openSenders,
 };
