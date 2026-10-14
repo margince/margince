@@ -14,9 +14,8 @@ import (
 
 var frontendReason = regexp.MustCompile(`"import\.reason\.([a-z_0-9]+)":\s*("(?:[^"\\]|\\.)*")`)
 
-// The English the screen shows for a code and the English a downloaded
-// problems file writes are one sentence: the file is read where the screen is
-// not, so a second wording would disagree with what the reader saw.
+// A downloaded problems file is read where the screen is not. Its English is
+// the sentence the screen shows, so the two never disagree.
 func TestEveryReasonCodesEnglishIsTheSentenceTheScreenShows(t *testing.T) {
 	source, err := os.ReadFile("../../../../frontend/src/i18n/en.ts")
 	if err != nil {
