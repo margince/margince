@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { feature, status } from "./ai-admin.testkit";
 import { AiTasksCard } from "./ai-tasks";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";

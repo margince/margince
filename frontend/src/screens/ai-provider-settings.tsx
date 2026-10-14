@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   draftOf,
   type OpenRouterDraft,
@@ -19,7 +20,6 @@ import {
 import { invalidateProviderHealth } from "./ai-provider-health";
 import { isOpenRouter } from "./ai-provider-links";
 import { ROUTING_KEY } from "./ai-routing-query";
-import { problemMessageOf, unwrap } from "./common";
 import { VERTEX_PROVIDER, VertexLocationField } from "./vertex-location";
 
 // Where a provider is reached. Set once here; every lane that binds the

@@ -68,7 +68,7 @@ func (t whoKnowsTool) Spec() mcp.ToolSpec {
 		Name: "who_knows", Title: "Who knows this contact", Version: toolVersionV1,
 		Description:   whoKnowsCopy.render(),
 		Instead:       whoKnowsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getContactNetwork",
 		InputSchema: schema(`{"type":"object","properties":{
 			"contact_id":{"type":"string","format":"uuid","description":"The contact to ask about"}},

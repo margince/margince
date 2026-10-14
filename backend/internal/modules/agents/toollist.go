@@ -83,25 +83,16 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	return p.Scopes.Has(spec.RequiredScope)
 }
 
-// DescribeForClient is the description one tool is advertised with: what the
-// tool is FOR, written on its spec, followed by how this server will govern the
-// call. It is exported because tools/list is not the only surface that serves
-// it — the operator console reads the same text through GET /v1/agent-tools,
-// and a second rendering there would be a second answer to what a client is
-// told.
+// DescribeForClient is one tool's advertised description: what the tool is for,
+// then how this server governs the call. tools/list and GET /v1/agent-tools both
+// serve it, so a client and the operator console read the same text.
 //
-// The order is the point. The written text answers the question a model is
-// actually asking — which of thirty tools serves this goal — and the governance
-// clause answers what happens once it has chosen. A description carrying only
-// the second tells a model the passport scope of every tool and the purpose of
-// none.
-//
-// The tier and scope are re-stated from the spec the admission gate enforces,
-// so they cannot disagree with it. The crm.yaml operation family is NOT here:
-// it is developer documentation, and a model has no use for the name of an
-// endpoint it has no way to call. It stays on ToolSpec.OpenAPIOp, which is what
-// the contract-parity gate reads.
+// The written text comes first, because it answers which tool serves a goal.
+// Running at once under the read scope is the default the surface instructions
+// state, so such a tool says nothing more. Every other tier and every scope past
+// read is named, read off the spec the admission gate enforces.
 func DescribeForClient(spec mcp.ToolSpec) string {
+	scope := fmt.Sprintf("requires passport scope %q", spec.RequiredScope)
 	// Every arm is named, and the fallthrough is the CONSERVATIVE reading, not
 	// the convenient one: the admission gate treats anything that is not
 	// TierAutoExecute as confirm-first, so a tier added without updating this
@@ -110,13 +101,16 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	tier := "a human approves every call before it runs"
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
-		tier = "runs immediately"
+		if spec.RequiredScope == principal.ScopeRead {
+			return spec.Description
+		}
+		return fmt.Sprintf("%s (Runs immediately; %s.)", spec.Description, scope)
 	case mcp.TierConfirmationRequired:
 		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
 		tier = "some calls run immediately and others a human approves first, decided per call from its arguments"
 	}
-	return fmt.Sprintf("%s (Governance: %s; requires passport scope %q.)", spec.Description, tier, spec.RequiredScope)
+	return fmt.Sprintf("%s (Governance: %s; %s.)", spec.Description, tier, scope)
 }
 
 // toolList reads Registry.Offered rather than filtering Specs itself, so the

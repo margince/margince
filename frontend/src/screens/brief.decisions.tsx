@@ -3,8 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { navigate } from "../app/router";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
@@ -17,6 +15,7 @@ import {
 } from "../design-system/decisiondeck";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
 import type { SectionState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
@@ -32,15 +31,13 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { isVersionSkewOf, problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
-import {
-  isVersionSkewOf,
-  problemMessageOf,
-  provenanceOf,
-  useViewerId,
-} from "./common";
 import { worklistLaneHref } from "./worklist.header";
 import { worklistKey } from "./worklist.queries";
 

@@ -3,7 +3,7 @@
 
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { NOTICE_STATES, UNRESOLVED_NOTICE_STATES } from "./noticecases.logic";
 import type { ExcuseState } from "./noticeexcuse";
 

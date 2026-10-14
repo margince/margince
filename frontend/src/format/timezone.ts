@@ -11,7 +11,7 @@
 // wrong:
 //
 //   useRecordZone() — the company's own clock, as the installation
-//   configured it (`installation.timezone`, served by app/recordzone.tsx). Its
+//   configured it (`installation.timezone`, served by lib/recordzone.tsx). Its
 //   dates belong to the record, not to whoever is looking at it. Following the
 //   reader here MISSTATES the record: a close date, a renewal, an invoice's
 //   issue day and a timeline's day headings have to read the same for every
@@ -50,10 +50,10 @@
 // about that was a preference to respect.
 
 // The zone a record's dates are read in when the installation's own answer is
-// not on hand. It is the LAST resort, not the value: `useRecordZone` in
-// app/recordzone.tsx serves `installation.timezone`, and the authenticated
-// shell holds its first paint until that read lands, so no signed-in surface
-// renders a record date against this constant.
+// missing. It is only the last resort. `useRecordZone` in
+// lib/recordzone.tsx serves `installation.timezone`. The authenticated shell
+// holds its first paint until that read lands, so no signed-in surface renders
+// a record date against this constant.
 //
 // It stays a real zone rather than UTC because the surfaces that can still
 // reach it are the ones outside the settings read — a story, a test that mounts

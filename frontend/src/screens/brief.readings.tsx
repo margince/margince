@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
@@ -14,6 +13,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { calendarDay } from "./brief.facts";
 import {
   DECISIONS,

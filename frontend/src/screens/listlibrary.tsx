@@ -7,7 +7,6 @@
 // view and a list read alike wherever they sit.
 
 import { type ReactNode, useState } from "react";
-import { navigate, routeHash } from "../app/router";
 import {
   Badge,
   Button,
@@ -23,7 +22,8 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { RECORDS_COUNT_LABEL } from "./filtersaddress";
 import {

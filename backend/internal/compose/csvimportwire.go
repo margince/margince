@@ -386,6 +386,7 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		message := run.Error
 		out.Error = &message
 	}
+	applySession(&out, run)
 	return out
 }
 

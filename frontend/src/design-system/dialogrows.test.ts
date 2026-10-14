@@ -64,8 +64,8 @@ import { Stack } from "./stack";`;
 const HELPERS = `function Rows() { return <><Field /><Field /></>; }
 function Body() { return <div><p /><Field /></div>; }
 function Inline() { return <Field labelHidden />; }
+function Bare() { const cite = () => <Field className="m" />; return cite(); }
 function Cited() { const cite = () => <i className="m" />; return <p>{cite()}</p>; }
-function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
 function Wrapped() { return <div className="s"><p /><div className="m" /></div>; }
 function Nest() { return <div className="s"><p /><div className="m"><Nest /></div></div>; }
@@ -150,6 +150,8 @@ const DRAWER_BLOCK = `${STACK} .modal-drawer .s { display: block }`;
 const HOSTED = inModal('<div className="f"><Wrapped /></div>');
 const HOSTED_STACK = `.f ${STACK} ${MARGIN}`;
 const HOSTED_MARGIN = `${STACK} .f ${MARGIN}`;
+const UNSELECTED = 'cx(a && "q1", b && "q2", c && "q3", d && "q4")';
+const BRANCHED = `<div className={${UNSELECTED}}><div className={cx("o", ${UNSELECTED})}>`;
 type RowCase = { jsx: string; verdict: string; sheet: string };
 const tempDirs: string[] = [];
 const tempDir = (prefix: string) => {
@@ -296,9 +298,8 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /><S2 /><S3 /
         text.split("\n").findIndex((l) => l.startsWith(`function ${name}(`)) +
         1;
       const source = parseSource(AT, text);
-      expect(() =>
-        rowsAcross([source], ownersIn([STACK]), keysOf(source)),
-      ).toThrow(
+      const boxed = ownersIn([`.a ${STACK} .b ${STACK}`]);
+      expect(() => rowsAcross([source], boxed, keysOf(source))).toThrow(
         new RegExp(
           `planted.tsx:${lineOf("L0")}: more than \\d+ guest scopes to judge in the components this one calls, last at design-system/planted.tsx:${lineOf(`L${levels - 1}`)}; call them`,
         ),
@@ -451,6 +452,8 @@ export const Named = Pick;`,
     ${"lets a later two-class rule beat that zero"}                     | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .modal .s > * { margin-block: 0 } .modal .m { margin-top: var(--space-2) }`}
     ${"reads a gap shorthand after its longhand"}                       | ${'<Modal intent="form"><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"spaced spaced"}        | ${".s { display: flex; flex-direction: column; row-gap: 0; gap: var(--space-3) }"}
     ${"reads a context's ancestors in order"}                           | ${'<Modal intent="form"><div className="o"><div className="b"><p /><Field /></div></div></Modal>'}                        | ${"flush"}                | ${".o .modal .b { display: flex; flex-direction: column; gap: var(--space-3) }"}
+    ${"reads only the ancestor classes some rule selects"}              | ${inModal(`${BRANCHED}${PARAGRAPH_STACK}</div></div>`)}                                                                   | ${"spaced"}               | ${`.o ${STACK}`}
+    ${"keeps an unselected box between a child rule's parent and row"}  | ${inModal(`<div className="o"><div className="q1">${PARAGRAPH_STACK}</div></div>`)}                                       | ${"flush"}                | ${`.o > ${STACK}`}
     ${"weighs :last-child above a later bare class"}                    | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .m:last-child { margin-top: var(--space-2) } .m { margin-top: 0 }`}
     ${"weighs :is() by its heaviest argument"}                          | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} :is(.s, .q .r) > * { margin-block: 0 } .s .m { margin-top: var(--space-2) }`}
     ${"reads a component that wraps Modal as a dialog"}                 | ${"<Sheet><p /><Field /></Sheet>"}                                                                                        | ${"flush"}                | ${""}

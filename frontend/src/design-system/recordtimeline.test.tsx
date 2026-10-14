@@ -10,13 +10,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider, useT } from "../i18n";
-import { LoadMoreButton } from "../screens/common";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { withEmailOpener } from "../screens/openemail";
 import { groupChronology } from "../screens/timelinegroups";
 import { activityTimeline } from "./activitytimeline";
 import { GroupedTimelineList } from "./composed";
+import { LoadMoreButton } from "./querystates";
 import {
   dayStartIso,
   TIMELINE_PAGE_SIZE,

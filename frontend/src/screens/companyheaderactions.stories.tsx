@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { CompanyHeaderActions } from "./companyheaderactions";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 

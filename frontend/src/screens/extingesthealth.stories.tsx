@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

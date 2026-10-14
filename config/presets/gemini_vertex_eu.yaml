@@ -2,6 +2,17 @@
 # config/presets/gemini_vertex_eu.yaml — every lane on Gemini served by Vertex AI
 # at an EU location, under eu_hosted.
 #
+# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
+# certification records do not grade every one of those bindings as certified.
+# Which tasks, and how badly, is in docs/reference/ai-certification.md under
+# this file's name. Read it before binding this preset to a workspace whose
+# confidentiality decisions matter: a task graded `supported_degraded` or
+# `not_supported` answers wrongly often enough to have been measured doing so.
+#
+# No task list here on purpose. The bands move when a prompt is fixed or the
+# corpus grows, and a list in this comment would read as true long after it
+# stopped being.
+#
 # What it guarantees: Google processes every prompt, and every text embedded,
 # in EU member states. The chat tiers use the `eu` multi-region; the embeddings
 # lane uses europe-west4, because `eu` serves no embedding model. eu_hosted
@@ -26,8 +37,8 @@ seeds:
     tiers:
       local_small: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
-      premium:     { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
-      frontier:    { provider: gemini_vertex, model: gemini-3.5-flash, thinking_level: low }
+      premium:     { provider: gemini_vertex, model: gemini-3.6-flash, thinking_level: low }
+      frontier:    { provider: gemini_vertex, model: gemini-3.6-flash, thinking_level: low }
     # The width is asked of the model as outputDimensionality, as on gemini.
     # The embedder keeps a location of its own, which overrides the provider's
     # for this lane alone.

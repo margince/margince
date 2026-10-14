@@ -7,8 +7,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../screens/story-utils";
+import { meFixture } from "../testing/mefixture";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { meFixture } from "./mefixture";
 
 function admin(overrides: Record<string, unknown> = {}) {
   return () =>

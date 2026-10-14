@@ -1,7 +1,7 @@
-import { useAuthCapabilities } from "../app/capabilities";
-import { releaseSkew } from "../app/release";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { useAuthCapabilities } from "../lib/capabilities";
+import { releaseSkew } from "../lib/release";
 import { usePageTitle, Wordmark } from "./auth";
 import { AuthCardTitle, AuthExperience } from "./auth-core";
 

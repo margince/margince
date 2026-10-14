@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Disclosure,
@@ -15,6 +14,7 @@ import { EvidenceReceipt } from "../design-system/evidencereceipt";
 import { FilterBar } from "../design-system/filterbar";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import {
@@ -26,10 +26,11 @@ import {
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
-import { QueryGate, unwrap } from "./common";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,

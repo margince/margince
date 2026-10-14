@@ -17,7 +17,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { ReportingFilters } from "./reporting.filters";
 import {
   blockLabel,

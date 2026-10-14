@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
+import { useCanWriteRecord } from "../lib/capability";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { TagsPanel } from "./tagspanel";
 

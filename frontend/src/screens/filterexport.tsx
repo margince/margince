@@ -21,8 +21,8 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import { downloadBytes, filenameFromDisposition } from "./download";
+import { downloadBytes, filenameFromDisposition } from "../lib/download";
+import { throwProblem } from "../lib/problem";
 import type { FilterResource } from "./filterdata";
 import { encode, isComplete, type Node } from "./segmentpredicate";
 

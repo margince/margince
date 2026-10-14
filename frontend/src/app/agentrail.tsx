@@ -32,6 +32,11 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useAgentTierMap } from "../lib/autonomy";
+import type { LicensePosture } from "../lib/license-posture";
+import type { Route } from "../lib/router";
+import { routeHash } from "../lib/router";
+import { usePhoneViewport } from "../lib/viewport";
 import { settingsHref } from "../screens/settingsrouting";
 import {
   type AgentEdgeRegister,
@@ -64,12 +69,7 @@ import { type AiActivity, useAiActivity } from "./ai-activity";
 import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
-import { useAgentTierMap } from "./autonomy";
-import type { LicensePosture } from "./license-posture";
 import { usePopoverDismiss } from "./popover";
-import type { Route } from "./router";
-import { routeHash } from "./router";
-import { usePhoneViewport } from "./viewport";
 import "./agentrail.css";
 
 // The agent's place in the app: the foot of the workspace rail, under the

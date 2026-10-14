@@ -396,3 +396,71 @@ func TestCSVSourceServesAnEarlierOffsetAfterALaterOne(t *testing.T) {
 		t.Fatalf("skipped = %+v, want line 4 once", skipped)
 	}
 }
+
+func TestCountRecordsCountsWhatARunReads(t *testing.T) {
+	const file = "\xEF\xBB\xBFEmail;Full Name\n" +
+		"ada@lovelace.example;\"Ada\nLovelace\"\n" +
+		"grace@hopper.example;Grace Hopper\n" +
+		"katherine@johnson.example;Katherine Johnson\n"
+	counted, err := CountRecords(strings.NewReader(file))
+	if err != nil {
+		t.Fatalf("CountRecords: %v", err)
+	}
+	fields, key := leadMapping()
+	read, err := NewCSVSource(seedCSV(t, file), testCSVKey, ObjectLead, fields, key).Counts(context.Background())
+	if err != nil {
+		t.Fatalf("Counts: %v", err)
+	}
+	if counted != 3 || read[ObjectLead] != counted {
+		t.Errorf("CountRecords = %d and the walk read %d, want 3 both: a quoted line break is one row", counted, read[ObjectLead])
+	}
+	if n, err := CountRecords(strings.NewReader("")); err != nil || n != 0 {
+		t.Errorf("an empty file counts (%d, %v), want (0, nil)", n, err)
+	}
+	if _, err := CountRecords(strings.NewReader("Email\na@x.test,\"unterminated\n")); !errors.Is(err, ErrSourceUnreadable) {
+		t.Errorf("a broken row = %v, want ErrSourceUnreadable", err)
+	}
+}
+
+func TestAnObserverHearsWhereEachPageEndedAndCanEndTheRead(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,A\nb@x.test,B\nc@x.test,C\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+	var heard []int
+	stop := errors.New("the reader has gone")
+	src.ObserveRows(func(_ context.Context, object string, delivered int) error {
+		if object != ObjectLead {
+			t.Errorf("observed object %q, want %q", object, ObjectLead)
+		}
+		heard = append(heard, delivered)
+		if delivered >= 3 {
+			return stop
+		}
+		return nil
+	})
+	if _, err := src.Rows(context.Background(), ObjectLead, 0, 2); err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if _, err := src.Rows(context.Background(), ObjectLead, 2, 2); !errors.Is(err, stop) {
+		t.Fatalf("second page err = %v, want the observer's own error", err)
+	}
+	if len(heard) != 2 || heard[0] != 2 || heard[1] != 3 {
+		t.Fatalf("observer heard %v, want [2 3]", heard)
+	}
+}
+
+// A test run asks a source for its counts before its read and again inside it.
+// The stored file never changes, so the file is counted once.
+func TestASourceCountsItsFileOnce(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	src := NewCSVSource(seedCSV(t, "Email,First Name\na@x.test,A\nb@x.test,B\n"), testCSVKey, ObjectLead, mapping, sourceKey)
+	first, err := src.Counts(t.Context())
+	if err != nil || first[ObjectLead] != 2 {
+		t.Fatalf("Counts = (%v, %v), want 2 leads", first, err)
+	}
+	src.body = []byte("Email,First Name\n")
+	again, err := src.Counts(t.Context())
+	if err != nil || again[ObjectLead] != 2 {
+		t.Fatalf("a second Counts = (%v, %v), want the 2 leads already counted, not a second walk", again, err)
+	}
+}

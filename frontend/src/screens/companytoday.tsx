@@ -3,7 +3,6 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { AiPending } from "../design-system/aipending";
 import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -12,6 +11,7 @@ import { Popover } from "../design-system/popover";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import { type AccountScan, scanHasSettled, scanIsLive } from "./accountscan";
 import {
   ENGAGEMENT_LABELS,

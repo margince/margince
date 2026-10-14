@@ -21,7 +21,16 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// baseCurrencyKey names the currency the headline converted to.
+//
+// Pinned for the reason asOfKey is. The installation's base currency can change
+// while no frozen conversion holds it. A handle resolving at whatever it says
+// now converts a shared figure to a currency the report never answered in. The
+// reader sees those numbers beside the report's own label.
+const baseCurrencyKey = "base"
 
 // derivationURL mints the handle for one aggregate row (or, with a nil
 // row, for the whole filtered result). parseDerivationQuery is its exact
@@ -29,11 +38,14 @@ import (
 // resolves.
 func derivationURL(
 	report string, filters map[string]any, groupBy []string,
-	aggregates []reportAggregate, row map[string]any, asOf time.Time,
+	aggregates []reportAggregate, row map[string]any, asOf time.Time, baseCurrency string,
 ) string {
 	values := url.Values{}
 	if !asOf.IsZero() {
 		values.Set(asOfKey, asOf.UTC().Format(time.RFC3339Nano))
+	}
+	if baseCurrency != "" {
+		values.Set(baseCurrencyKey, baseCurrency)
 	}
 	for _, agg := range aggregates {
 		values.Add("agg", agg.Fn+":"+agg.Field+":"+agg.As)
@@ -128,6 +140,12 @@ func parseDerivationQuery(values url.Values) (derivationQuery, error) {
 				return derivationQuery{}, err
 			}
 			q.AsOf = at
+		case baseCurrencyKey:
+			code, err := parseHandleBaseCurrency(vals)
+			if err != nil {
+				return derivationQuery{}, err
+			}
+			q.BaseCurrency = code
 		case "agg":
 			aggregates, err := parseHandleAggregates(vals)
 			if err != nil {
@@ -167,6 +185,18 @@ func parseHandleAsOf(vals []string) (time.Time, error) {
 	return at, nil
 }
 
+// parseHandleBaseCurrency reads the currency the headline converted to.
+//
+// Validated rather than trusted, because the value reaches the frame the
+// drill-through converts under. values.ValidCurrency owns the shape, so a
+// handle and a column agree on what a currency code is.
+func parseHandleBaseCurrency(vals []string) (string, error) {
+	if len(vals) != 1 || !values.ValidCurrency(vals[0]) {
+		return "", &FieldNotAllowedError{Field: baseCurrencyKey}
+	}
+	return vals[0], nil
+}
+
 // parseHandleAggregates reads the `fn:field:as` triples. The field may be empty
 // (count takes none); the function may not, or the handle names no aggregate.
 func parseHandleAggregates(vals []string) ([]reportAggregate, error) {
@@ -181,8 +211,8 @@ func parseHandleAggregates(vals []string) ([]reportAggregate, error) {
 	return out, nil
 }
 
-func scopedDerivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any, asOf time.Time, scope *RequestedScope) string {
-	base := derivationURL(report, filters, groupBy, aggregates, row, asOf)
+func scopedDerivationURL(report string, filters map[string]any, groupBy []string, aggregates []reportAggregate, row map[string]any, asOf time.Time, baseCurrency string, scope *RequestedScope) string {
+	base := derivationURL(report, filters, groupBy, aggregates, row, asOf, baseCurrency)
 	if scope == nil {
 		return base
 	}

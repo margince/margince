@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
-import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
 import {
   DrawerBody,
@@ -13,7 +12,11 @@ import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { ACCEPTED_ATTACHMENT_ATTR, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  uploadAttachment,
+} from "../lib/attachmentupload";
+import { useInstallationSettings } from "../lib/uploadlimit";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";

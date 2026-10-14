@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { useRecordZone } from "../app/recordzone";
 import { Heading } from "../design-system/heading";
 import { middayInstant } from "../format/calendarday";
 import { formatDate, formatDayLong, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import type { WeeklyReview } from "./brief.queries";
 import {
   type BriefSentence,

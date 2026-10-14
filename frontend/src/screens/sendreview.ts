@@ -15,8 +15,8 @@
 // and a button that fails when pressed is worse than one that is absent,
 // because the rep has been told they may do something they may not.
 
-import { ProblemError } from "./common";
-import { problemDetails } from "./problembody";
+import { ProblemError } from "../lib/problem";
+import { problemDetails } from "../lib/problembody";
 
 // SendReview is the work a refusal left behind, as a surface needs it.
 export type SendReview = Readonly<{

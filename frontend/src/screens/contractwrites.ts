@@ -1,6 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { type ContractDraft, contractBody } from "./contractform";
 
 // The two writes the contract form makes. Extracted from contractform.tsx so

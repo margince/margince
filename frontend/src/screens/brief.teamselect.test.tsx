@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { BriefTeamSelect, morningTeams, weekTeams } from "./brief.teamselect";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 

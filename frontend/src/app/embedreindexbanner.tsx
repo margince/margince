@@ -5,12 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { unwrap } from "../screens/common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import {
   embedReindexStatusQueryKey,
   useEmbedReindexAvailable,
 } from "../screens/embedreindex";
-import { useCan } from "./capability";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
 // on an identity mismatch (configured_identity ≠ populated_identity) — the

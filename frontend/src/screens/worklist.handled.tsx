@@ -21,13 +21,13 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
-import { useRecordZone } from "../app/recordzone";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { subjectHref } from "./worklist.copy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";

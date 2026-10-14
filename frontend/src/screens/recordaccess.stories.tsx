@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { Badge } from "../design-system/atoms";
 import { IdentityLine } from "../design-system/identityline";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { RecordAccess } from "./recordaccess";
 import {
   installFetchStub,

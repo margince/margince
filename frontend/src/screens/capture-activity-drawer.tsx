@@ -12,8 +12,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { useProviderLabel } from "./channelproviders";
-import { unwrap } from "./common";
 
 type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 

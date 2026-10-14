@@ -119,6 +119,10 @@ type ImportPreviewResult struct {
 	Columns  []string            `json:"columns,omitempty"`
 	Unmapped []string            `json:"unmapped,omitempty"`
 	Files    []ImportPreviewFile `json:"files,omitempty"`
+	// Report is the test's report, present once the run reached awaiting_approval.
+	Report *crmcontracts.ImportRunReport `json:"report,omitempty"`
+	// Next says what to do when the answer carries no report.
+	Next string `json:"next,omitempty"`
 }
 
 // ImportPreviewFile is what the dry run decided about one file of a `files`

@@ -42,11 +42,8 @@ const company: Company = {
 function Marks({ record = company }: Readonly<{ record?: Company }>) {
   installFetchStub({
     "GET /me": meRoute({ company: ["read", "update"] }),
-    "GET /users": () =>
-      jsonResponse({
-        data: [{ id: "u-1", display_name: "Mira Voss" }],
-        page: { has_more: false, next_cursor: null },
-      }),
+    "GET /users/names": () =>
+      jsonResponse({ data: [{ id: "u-1", display_name: "Mira Voss" }] }),
   });
   return (
     <StoryProviders>

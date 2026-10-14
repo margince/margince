@@ -8,9 +8,9 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf } from "./common";
+import { useMemberNames } from "../lib/membernames";
+import { problemCodeOf } from "../lib/problem";
 import { rosterOwnerNaming } from "./entityref";
-import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { useWorklistAddress } from "./worklist.address";
 import {

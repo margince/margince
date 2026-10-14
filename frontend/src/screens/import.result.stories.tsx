@@ -39,6 +39,8 @@ function run(
     file_name: "crm.zip",
     status,
     checkpoint: 0,
+    version: 2,
+    source_released: false,
     source: "import_api",
     captured_by: "u-ada",
     parts: PARTS,

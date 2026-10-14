@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
-import type { GrantSpec } from "../../src/app/mefixture";
+import type { GrantSpec } from "../../src/testing/mefixture";
 import type { MockProject } from "../projectmock";
 
 // The booked meeting the contact record offers a brief for. Its id is the one

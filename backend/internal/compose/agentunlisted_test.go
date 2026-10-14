@@ -56,6 +56,7 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 // unlisted tool and names something else: a staged action's kind, or a verb.
 var namesAnApprovalKind = gatekit.Waive(map[string]string{
 	"list_approvals:advance_deal":    "the kind filter's example is an approval kind, and a deal move stages under advance_deal",
+	"list_approvals:send_email":      "the kind filter's example is an approval kind, and a reply stages under send_email",
 	"bulk_update_records:remove_tag": "one of its own bulk verbs, spelled like the tool and not naming it",
 })
 

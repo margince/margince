@@ -6,8 +6,6 @@
 // — its head, its states, its foot — is brief.feed.tsx; this is what stands
 // in its body.
 
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { openingCase } from "../format/collate";
@@ -18,6 +16,8 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import {
   itemTitle,
   phrasedReasons,

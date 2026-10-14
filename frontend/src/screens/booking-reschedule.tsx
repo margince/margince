@@ -3,12 +3,12 @@ import { useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { MeetingSlots } from "../design-system/meetingslots";
+import { QueryGate } from "../design-system/querystates";
 import { formatDateTime } from "../format/format";
 import { dayInZone, startOfDayInZone, viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { BookingZone } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
-import { QueryGate } from "./common";
 
 export function BookingReschedule({
   id,

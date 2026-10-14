@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { ProblemError } from "../common";
+import { ProblemError } from "../../lib/problem";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 

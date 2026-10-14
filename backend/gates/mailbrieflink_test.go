@@ -42,7 +42,7 @@ import (
 
 const (
 	frontendBriefView = "../frontend/src/screens/brief.view.ts"
-	frontendRouter    = "../frontend/src/app/router.tsx"
+	frontendRouter    = "../frontend/src/lib/router.tsx"
 	backendMailLink   = "internal/platform/mailcopy/link.go"
 )
 

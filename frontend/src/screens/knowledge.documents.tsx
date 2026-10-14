@@ -18,6 +18,7 @@ import { FileDropzone } from "../design-system/filedropzone";
 import { KeyedName } from "../design-system/keyedname";
 import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
+import { QueryStates } from "../design-system/querystates";
 import { forReader } from "../format/collate";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -30,15 +31,14 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { postMultipart } from "../lib/multipart";
 import {
   problemCodeOf,
   problemMessageOf,
-  QueryStates,
   throwProblem,
   unwrap,
-} from "./common";
+} from "../lib/problem";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
-import { postMultipart } from "./multipart";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];

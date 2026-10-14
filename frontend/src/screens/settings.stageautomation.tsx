@@ -21,7 +21,7 @@ import {
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { criterionKindLabel } from "./criterionkinds";
 import { usePipelines } from "./pipelines.queries";
 import { StageRulesCard } from "./settings.stagerules";

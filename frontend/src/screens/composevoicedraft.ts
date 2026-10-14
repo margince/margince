@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, problemMessageOf, throwProblem } from "../lib/problem";
 import type { ComposeThread } from "./composeanchor";
 import type { DraftAsk, FollowUp } from "./composedraftcall";
 

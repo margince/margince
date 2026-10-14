@@ -15,6 +15,7 @@ import {
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
 import { TierRecentCalls } from "./ai-call-figures";
 import { type ModelCatalogue, useAvailableModels } from "./ai-models";
@@ -38,7 +39,6 @@ import {
   ServingSection,
   servingBlocked,
 } from "./ai-serving-editor";
-import { problemMessageOf } from "./common";
 import { savedVertexLocation, VERTEX_PROVIDER } from "./vertex-location";
 
 // One binding's editor: provider, model, and whatever else only that lane has.

@@ -4,6 +4,14 @@
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
+import {
+  ProblemError,
+  problemCode,
+  problemFieldErrorsOf,
+  problemMessageOf,
+} from "../lib/problem";
+import { isRecord } from "../lib/problembody";
+import { runHref } from "./importaddress";
 import type { ImportObject, ImportReport } from "./importtypes";
 
 // What an UNDO says about itself: that it stopped part-way, and which rows it
@@ -87,5 +95,48 @@ export function UndoConfirm({
         <li>{t("import.undoConfirm.tags")}</li>
       </ul>
     </ConfirmModal>
+  );
+}
+
+// The run that holds a busy source name, when the reader may read it.
+function busyRunOf(error: unknown): string | null {
+  if (!(error instanceof ProblemError)) return null;
+  const { problem } = error;
+  if (problemCode(problem) !== "import_source_busy" || !isRecord(problem)) {
+    return null;
+  }
+  const runId = isRecord(problem.details) ? problem.details.run_id : null;
+  return typeof runId === "string" ? runId : null;
+}
+
+/**
+ * Why the server refused an upload or a test run. A file too long for one
+ * test run is named as such and says to split it. A busy source name links to
+ * the run holding it.
+ */
+export function ImportRefusal({
+  title,
+  error,
+}: Readonly<{ title: string; error: unknown }>) {
+  const t = useT();
+  const tooLong = problemFieldErrorsOf(error).some(
+    (field) => field.code === "too_many_rows",
+  );
+  const busyRun = busyRunOf(error);
+  return (
+    <Callout
+      tone="danger"
+      kind="outcome"
+      title={tooLong ? t("import.upload.tooManyRowsTitle") : title}
+      actions={
+        busyRun ? (
+          <a className="link-button" href={runHref(busyRun)}>
+            {t("import.sourceBusyOpen")}
+          </a>
+        ) : undefined
+      }
+    >
+      {tooLong ? t("import.upload.tooManyRows") : problemMessageOf(error, t)}
+    </Callout>
   );
 }

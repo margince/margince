@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
@@ -68,7 +68,7 @@ const tools = () =>
         name: "search_records",
         title: "Search records",
         description:
-          'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+          "Find contacts, companies, deals, leads and projects by name.",
         required_scope: "read",
         tier: "auto_execute",
         egress: false,

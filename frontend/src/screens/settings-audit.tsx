@@ -5,10 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Box, Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
-import { useCan } from "../app/capability";
-import { ENTITY, isEntityKind } from "../app/entity";
 import { NAV } from "../app/nav";
-import { useRecordZone } from "../app/recordzone";
 import {
   Avatar,
   Badge,
@@ -22,14 +19,19 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { useSettledValue } from "../design-system/debouncedsearch";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
+import { ENTITY, isEntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useMe } from "../lib/session";
 import { ACTOR_ICON, actorAttribution, humanizeToken } from "./audit";
-import { LoadMoreButton, QueryStates, unwrap, useMe } from "./common";
 import { EntityRef } from "./entityref";
 import { AuditDetail } from "./settings-audit.detail";
 import {

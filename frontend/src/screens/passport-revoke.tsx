@@ -7,7 +7,7 @@ import { api } from "../api/client";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { usePassports } from "./passports.queries";
 
 /**

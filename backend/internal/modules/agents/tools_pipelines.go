@@ -64,6 +64,10 @@ type listPipelinesAnswer struct {
 // surface.
 type PipelineLister func(ctx context.Context) ([]Pipeline, error)
 
+// pipelinesSource names where a pipeline or stage id comes from, for every tool
+// that takes one.
+const pipelinesSource = "read_directory (list: pipelines)"
+
 // RegisterPipelineTool wires the config read behind the deal write verbs. A nil
 // seam registers nothing: a surface that cannot ground its answer does not
 // pretend to.
@@ -83,7 +87,7 @@ func (t listPipelinesTool) Spec() mcp.ToolSpec {
 		Name: "list_pipelines", Title: "List pipelines and their stages", Version: toolVersionV1,
 		Description:   listPipelinesCopy.render(),
 		Instead:       listPipelinesCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listPipelines",
 		// No arguments. The whole config is small, bounded by how many pipelines
 		// a workspace configures, and a filter would only let a caller ask for

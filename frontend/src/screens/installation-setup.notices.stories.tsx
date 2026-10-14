@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { ProblemError, WriteRefused } from "./common";
+import { WriteRefused } from "../design-system/querystates";
+import { ProblemError } from "../lib/problem";
 import { AiBindRefused } from "./installation-setup.notices";
 import { StoryProviders } from "./story-utils";
 

@@ -119,12 +119,11 @@ func (i importSeam) ProfileSource(
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	return i.door().profileAndStore(ctx, object, []byte(csv))
+	return i.door().profileAndStore(ctx, object, "", []byte(csv))
 }
 
-// DiscardSource removes a stored source no run will reference. Same grant as
-// storing it: a caller who may create an import run may drop the file they just
-// uploaded for one, and nobody else may reach into the store at all.
+// DiscardSource ends the draft a stored source opened, releasing its file.
+// Storing it took this grant, and nobody without it may reach into the store.
 func (i importSeam) DiscardSource(ctx context.Context, ref string) error {
 	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return err
@@ -231,17 +230,26 @@ func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.Impor
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	return i.door().commitRun(ctx, openapi_types.UUID(id))
+	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
 
-// ready refuses the three verbs that need the source bytes when this role
-// stores no objects.
+// errNoImportQueue refuses a test or a commit on a role that cannot queue the
+// worker's job, which is where both run.
+var errNoImportQueue = fmt.Errorf("this role queues no import work, so it cannot test or commit an import: %w", apperrors.ErrConflict)
+
+// ready refuses the verbs that need the source bytes or the worker when this
+// role stores no objects or queues no import work. It is checked before a file
+// is stored, so a role that could never test it keeps no orphan.
 //
 // The reads do not call it. They touch only the database, and refusing them
 // for want of a blobstore would hide a run that exists.
 func (i importSeam) ready() error {
-	if i.door().blobs == nil {
+	door := i.door()
+	if door.blobs == nil {
 		return errNoObjectStore
+	}
+	if door.queue == nil {
+		return errNoImportQueue
 	}
 	return nil
 }

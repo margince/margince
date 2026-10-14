@@ -22,12 +22,12 @@
 // project that has none.
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { sectionState } from "../design-system/surfacestate";
 import { calendarDaysUntil } from "../format/daysuntil";
 import { formatDate, formatNumber } from "../format/format";
 import { type Locale, translatePlural, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { EntityRef, OwnerName } from "./entityref";
 
 type Project360 = components["schemas"]["Project360"];

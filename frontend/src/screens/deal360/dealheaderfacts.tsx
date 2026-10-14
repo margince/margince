@@ -11,9 +11,8 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
-import { useInstallationSettings } from "../../app/uploadlimit";
 import { Popover } from "../../design-system/popover";
+import { provenanceOf } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
@@ -21,14 +20,16 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { provenanceOf, useViewerId } from "../common";
+import { useMemberName } from "../../lib/membernames";
+import { useRecordZone } from "../../lib/recordzone";
+import { useViewerId } from "../../lib/session";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import {
   LostReasonFact,
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
 import { EntityRef, rosterOwnerName } from "../entityref";
-import { useMemberName } from "../membernames";
 import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];

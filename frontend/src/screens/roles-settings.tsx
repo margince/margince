@@ -3,7 +3,6 @@
 
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
-import { useCan, useCanWrite, useHoldsAdminRole } from "../app/capability";
 import {
   Badge,
   Button,
@@ -16,12 +15,14 @@ import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, useMe } from "./common";
+import { useCan, useCanWrite, useHoldsAdminRole } from "../lib/capability";
+import { useMe } from "../lib/session";
 import { useExtensions } from "./extensions.queries";
 import {
   type Role,

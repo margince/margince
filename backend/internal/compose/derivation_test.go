@@ -98,7 +98,7 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 		[]string{"owner_id", "forecast_category"},
 		aggs,
 		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)},
-		time.Time{})
+		time.Time{}, "")
 
 	parsed, err := url.Parse(minted)
 	if err != nil {
@@ -243,7 +243,7 @@ func TestADerivationHandleCarriesTheInstantItWasComputedAt(t *testing.T) {
 
 	minted := derivationURL("pipeline-current", nil, []string{"stage_id"},
 		[]reportAggregate{{Fn: "sum", Field: "amount_base_minor", As: "base"}},
-		map[string]any{"stage_id": "s1", "base": int64(5000)}, lateThursday)
+		map[string]any{"stage_id": "s1", "base": int64(5000)}, lateThursday, "")
 
 	parsed, err := url.Parse(minted)
 	if err != nil {

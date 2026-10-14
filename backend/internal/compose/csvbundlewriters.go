@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -172,7 +173,7 @@ func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy ma
 
 // bindNamedCompanies refills the ref of every company row the file names by id.
 // The binding lives in memory, so a resumed commit has none for the rows its
-// checkpoint passed. A contact linking to one would then find nothing.
+// checkpoint passed. Each is checked when a link first asks for it.
 func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration.Source) error {
 	w, ok := b.parts[migration.ObjectCompany]
 	if !ok {
@@ -188,9 +189,13 @@ func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration
 			return err
 		}
 		for _, row := range rows {
-			if target, lands := w.namedTarget(ctx, row); lands && target.named {
-				b.links.markLanded(migration.ObjectCompany, row.ExternalID, target.id)
+			if strings.TrimSpace(textFields(row.Fields)[csvTargetID]) == "" {
+				continue
 			}
+			b.links.markNamed(migration.ObjectCompany, row.ExternalID, func(ctx context.Context) (ids.UUID, bool) {
+				target, lands := w.namedTarget(ctx, row)
+				return target.id, lands && target.named
+			})
 		}
 		if len(rows) < importPredictPage {
 			return nil

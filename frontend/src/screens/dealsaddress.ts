@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { routeHash } from "../app/router";
+import { routeHash } from "../lib/router";
 
 /**
  * The deals list, narrowed to one value of one dial.

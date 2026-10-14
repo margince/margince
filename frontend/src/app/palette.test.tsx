@@ -14,8 +14,8 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
-import { type GrantSpec, meFixture } from "./mefixture";
 import { CREATE_ID } from "./nav";
 import {
   type Command,

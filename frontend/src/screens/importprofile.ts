@@ -10,16 +10,20 @@ import { isImportObject } from "./importtypes";
 // be kept, so each member the screen reads is checked and rebuilt.
 export function asProfile(payload: unknown): ImportProfile {
   const read = reader(payload);
+  const run_id = read("run_id");
   const source_ref = read("source_ref");
   const object = read("object");
   const rows_profiled = read("rows_profiled");
+  const row_count = read("row_count");
   const columns = read("columns");
   const targets = read("targets");
   const suggested_mapping = read("suggested_mapping");
   const parts = read("parts");
   if (
+    typeof run_id !== "string" ||
     typeof source_ref !== "string" ||
     typeof rows_profiled !== "number" ||
+    typeof row_count !== "number" ||
     !Array.isArray(columns) ||
     !Array.isArray(targets) ||
     !(object === undefined || isImportObject(object)) ||
@@ -29,9 +33,11 @@ export function asProfile(payload: unknown): ImportProfile {
     throw new Error(unreadableUpload);
   }
   return {
+    run_id,
     source_ref,
     object,
     rows_profiled,
+    row_count,
     columns,
     targets,
     suggested_mapping,
@@ -61,11 +67,13 @@ function asPart(payload: unknown): ImportPartProfile {
   const object = read("object");
   const columns = read("columns");
   const rows_profiled = read("rows_profiled");
+  const row_count = read("row_count");
   if (
     typeof file !== "string" ||
     !isImportObject(object) ||
     !Array.isArray(columns) ||
-    typeof rows_profiled !== "number"
+    typeof rows_profiled !== "number" ||
+    typeof row_count !== "number"
   ) {
     throw new Error(unreadableUpload);
   }
@@ -74,6 +82,7 @@ function asPart(payload: unknown): ImportPartProfile {
     object,
     columns,
     rows_profiled,
+    row_count,
     suggested_mappings: asMappings(read("suggested_mappings")),
   };
 }

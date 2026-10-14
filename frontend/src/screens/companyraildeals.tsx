@@ -1,6 +1,4 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
@@ -10,6 +8,8 @@ import {
   formatNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
+import { routeHash } from "../lib/router";
 import { NewDealAction } from "./companyactions";
 // The row and card shapes this file draws — co-row-meta, co-deal-card — live
 // in company360.css, and the card face itself is the design system's

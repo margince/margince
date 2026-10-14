@@ -5,8 +5,8 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { usePurgeExclusion } from "./capture-exclusions.queries";
-import { problemCodeOf, problemMessageOf } from "./common";
 
 // Destroying the mail a rule already matched, and saying what that did.
 //

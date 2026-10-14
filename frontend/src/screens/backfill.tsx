@@ -1,19 +1,19 @@
 import { History } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useDrawsImportRun } from "../lib/import-onscreen";
+import { ProblemError, problemCode, problemMessageOf } from "../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
   ImportWindowPicker,
 } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { RunView } from "./backfillrunview";
-import { ProblemError, problemCode, problemMessageOf } from "./common";
 import "./backfill.css";
 
 // The bounded connect-time backfill (ADR-0063): pick a window, see the scope

@@ -55,7 +55,7 @@
   margin-inline-start: auto;
 }
 
-/* FOLD_MAX_WIDTH (app/viewport.ts): folded, the verbs take a row of their own
+/* FOLD_MAX_WIDTH (lib/viewport.ts): folded, the verbs take a row of their own
    at the leading edge, held open while Export CSV waits on the members. */
 @media (max-width: 720px) {
   .lists-head-actions {

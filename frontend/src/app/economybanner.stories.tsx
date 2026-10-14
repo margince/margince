@@ -7,8 +7,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../screens/story-utils";
+import { meFixture } from "../testing/mefixture";
 import { EconomyBanner } from "./economybanner";
-import { meFixture } from "./mefixture";
 
 function story(band: string) {
   return () => {

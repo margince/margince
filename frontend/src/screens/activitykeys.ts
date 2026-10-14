@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { EntityKind } from "../app/entity";
+import type { EntityKind } from "../lib/entity";
 
 // Which cached reads render a record's timeline. Writing an activity has to
 // invalidate ALL of them, and they are not the same set for every record kind:
@@ -278,6 +278,9 @@ export function isRecordRead(key: QueryKey): boolean {
   // every minute, and a reviews list that did not would leave the two halves of
   // one comparison on different clocks.
   shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
+  // The row is what says a contact or company was archived. The 360 then only
+  // answers 404, so a page re-reading the 360 alone could never learn why.
+  shapes.push(["contact", SHAPE_ID], ["company", SHAPE_ID]);
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 

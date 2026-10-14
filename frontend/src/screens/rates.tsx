@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, Fragment, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanUpsert } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -18,21 +17,21 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import {
+  QueryGate,
+  QueryStates,
+  WriteRefused,
+} from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { today } from "../format/calendarday";
 import { forReader } from "../format/collate";
 import { formatDate, formatUsdPerMTok } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCan, useCanUpsert } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { providerName } from "./ai-provider-names";
-import {
-  problemMessageOf,
-  QueryGate,
-  QueryStates,
-  unwrap,
-  useMe,
-  WriteRefused,
-} from "./common";
 import {
   RefreshModelPricesButton,
   RefreshSummary,

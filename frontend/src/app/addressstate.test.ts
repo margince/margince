@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from "vitest";
-import { navigateReplacing } from "./router";
-import { replaceParams } from "./urlstate";
+import { navigateReplacing } from "../lib/router";
+import { replaceParams } from "../lib/urlstate";
 
 /**
  * Every in-app write that REPLACES the reader's history entry has to leave that
@@ -9,7 +9,7 @@ import { replaceParams } from "./urlstate";
  *
  * Nothing in the router keeps state there — the hash is the router's state — so
  * `location.replace` read as the obvious spelling for years. It is not: it
- * discards the state object, and app/scrollmemory.ts stamps the entry's identity
+ * discards the state object, and lib/scrollmemory.ts stamps the entry's identity
  * in it. Every dial a reader turned, and every screen that normalised its own
  * address on arrival, therefore threw away the name of the place they were
  * standing in, and the offset filed under that name could never be found again.

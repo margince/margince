@@ -12,7 +12,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { type CreateField, CreateRecordModal } from "./create";
 import {
   CRITERION_KIND_LABEL,

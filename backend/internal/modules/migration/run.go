@@ -63,6 +63,8 @@ type Run struct {
 	CapturedBy string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// Session is read only by the staged reads; the flip's runs carry none.
+	Session
 }
 
 // RunStore owns the import_run table; every status transition rides the
@@ -393,10 +395,14 @@ func (s *RunStore) advanceCheckpoint(ctx context.Context, id RunID, checkpoint i
 	})
 }
 
-// complete records the finished run with its report, audited.
+// complete records the finished run with its report, audited, and releases
+// its uploaded file: undo reads the identity map, never the file.
 func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 	return s.transition(ctx, id, StatusComplete, func(tx pgx.Tx) error {
-		return storeReport(ctx, tx, id, rep)
+		if err := storeReport(ctx, tx, id, rep); err != nil {
+			return err
+		}
+		return releaseSource(ctx, tx, id)
 	})
 }
 
@@ -407,7 +413,7 @@ func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 // record, understating a one-way cutover to the operator reading it.
 func (s *RunStore) failRun(ctx context.Context, id RunID, rep Report, cause error) error {
 	return s.transition(ctx, id, StatusFailed, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, stopCause(cause)); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, StopCause(StatusRunning, cause)); err != nil {
 			return err
 		}
 		return storeReport(ctx, tx, id, rep)

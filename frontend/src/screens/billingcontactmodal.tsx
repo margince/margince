@@ -12,7 +12,7 @@ import type { MessageKey } from "../i18n/en";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
 import type { BillingContactActions } from "./billingcontacts.queries";
 import { searchByEntity } from "./relationshipcandidates";
-import "./common.css";
+import "../design-system/querystates.css";
 
 // The three capacities, in the order an invoice moves through them: it is
 // addressed to somebody, approved by somebody, then paid by somebody. Spelled

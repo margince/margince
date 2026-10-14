@@ -6,11 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!src/api/schema.d.ts",
-      "!src/api/public-events.ts"
-    ]
+    "includes": ["**", "!src/api/schema.d.ts", "!src/api/public-events.ts"]
   },
   "formatter": {
     "enabled": true,
@@ -59,10 +55,7 @@
         "noConsole": {
           "level": "error",
           "options": {
-            "allow": [
-              "error",
-              "warn"
-            ]
+            "allow": ["error", "warn"]
           }
         }
       },
@@ -94,11 +87,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "e2e/**"
-      ],
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "e2e/**"],
       "linter": {
         "rules": {
           "complexity": {
@@ -107,6 +96,33 @@
           },
           "suspicious": {
             "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/lib/**", "src/api/**", "src/i18n/**", "src/format/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/app",
+                      "**/app/**",
+                      "**/screens",
+                      "**/screens/**",
+                      "**/App",
+                      "!@composition/**"
+                    ],
+                    "message": "A base layer (lib, api, i18n, format) is imported by the screens and the shell, so it never imports them back. Move the shared code down into lib/ instead."
+                  }
+                ]
+              }
+            }
           }
         }
       }

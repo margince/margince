@@ -2,10 +2,10 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as router from "../app/router";
 import { PageTitle } from "../app/shell";
 import { navGroupNames } from "../app/testing/shellharness";
 import { translate } from "../i18n";
+import * as router from "../lib/router";
 import { SettingsScreen } from "./settings";
 import {
   labelOf,

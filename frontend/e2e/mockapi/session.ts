@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { meFixture } from "../../src/app/mefixture";
+import { meFixture } from "../../src/testing/mefixture";
 import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
 import { type Handler, notFound } from "./server";

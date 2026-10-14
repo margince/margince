@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { unwrap } from "../lib/problem";
 import { isImportWindow } from "../mail-history/window-picker";
-import { unwrap } from "./common";
 
 // The connect-time import, as both of its surfaces need it: the run row, the
 // four operations on it, and the window pick that ties them together.

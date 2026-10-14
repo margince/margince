@@ -10,7 +10,7 @@ import {
   waitFor,
   within,
 } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
   jsonResponse,
@@ -126,9 +126,18 @@ const SEATS: RouteMap = {
     }),
 };
 
+// After 2026-08-01, the day the erasure play picks: a pick past this is refused.
+const DEADLINE: RouteMap = {
+  "GET /data-subject-requests/deadline": () =>
+    jsonResponse({ due_at: "2026-08-15T14:00:00Z", rule: "gdpr" }),
+};
+
 function inbox(routes: RouteMap) {
   return () => {
-    stubWithSession({ ...SEATS, ...routes }, WORKS_SUBJECT_REQUESTS);
+    stubWithSession(
+      { ...SEATS, ...DEADLINE, ...routes },
+      WORKS_SUBJECT_REQUESTS,
+    );
     return (
       <StoryProviders>
         <PrivacyInboxCard />
@@ -282,7 +291,7 @@ export const ErasureSearchEnter: Story = {
     const search = await screen.findByRole("searchbox", { name: "Contact" });
     await user.type(search, "anna");
     await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
-    fireEvent.change(screen.getByLabelText(/^Due/), {
+    fireEvent.change(screen.getByLabelText(/^Earlier deadline/), {
       target: { value: "2026-08-01" },
     });
     await user.type(search, "ben");

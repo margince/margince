@@ -39,7 +39,7 @@ prompt: |
   Margince on WhatsApp, or does that have to happen on my phone?
 
 must_call:
-  - list_channel_providers
+  - read_directory
   - log_activity
 may_call:
   - resolve_entities
@@ -59,6 +59,7 @@ may_call:
 # hold: the value has to be the one the directory carries, verbatim, or the
 # write dies on a foreign key.
 must_call_with:
+  - read_directory.list=channel_providers
   - log_activity.kind=message
   - log_activity.channel_provider=whatsapp
 

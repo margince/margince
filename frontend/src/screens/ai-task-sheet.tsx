@@ -18,6 +18,7 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemCodeOf, throwProblem, unwrap } from "../lib/problem";
 import {
   useCallStats,
   useTaskFlow,
@@ -29,7 +30,6 @@ import { tierLabel } from "./ai-decision-labels";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
-import { problemCodeOf, throwProblem, unwrap } from "./common";
 import "./ai-settings.css";
 
 // One task's request settings, and what its calls did under them. The figures
