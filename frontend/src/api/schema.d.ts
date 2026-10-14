@@ -12760,6 +12760,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/{id}/failure-acknowledgement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say you have seen that an approved change did not run, so it leaves your Worklist.
+         * @description An approval whose released work failed is carried back to the contact who approved it
+         *     on the Worklist. This takes that row off their list. The approval and its failure stay
+         *     on the record, and the Approval still reports `effect_failed_at`.
+         *
+         *     The acknowledgement is held against the failure it saw. If the same approval fails
+         *     again later, for example after the decider approves it once more to retry the work,
+         *     the new failure shows again.
+         *
+         *     Only the contact who decided the approval may acknowledge its failure. Any other
+         *     caller, and an approval with no failure, answers `404`.
+         *
+         *     The request names the failure the reader saw, by its `effect_failed_at`. If the
+         *     approval has failed again since, the newer failure is not acknowledged: the call
+         *     answers `409` and the row stays on the list.
+         */
+        post: operations["acknowledgeApprovalFailure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approval-bundles/{bundle_id}/approve": {
         parameters: {
             query?: never;
@@ -65740,6 +65776,50 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    acknowledgeApprovalFailure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `effect_failed_at` of the failure the reader saw, as the Worklist row's `occurred_at` carries it.
+                     */
+                    failed_at: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Acknowledged. Acknowledging the same failure again is the same success. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The approval failed again after the failure named in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     approveApprovalBundle: {

@@ -253,6 +253,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// already locked by the patch that changed the address.
 	"internal/modules/contacts:recordGeocodeAfter": "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
 	"internal/modules/automation:Archive":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/approvals:recordEffectRan":   "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.

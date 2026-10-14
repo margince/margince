@@ -540,6 +540,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/approval-bundles/{bundle_id}/approve":                         {Op: "approveApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approval-bundles/{bundle_id}/reject":                          {Op: "rejectApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approvals/{id}/approve":                                       {Op: "approveApproval", Access: "tool", Tool: "decide_approval", RecordType: "", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/approvals/{id}/failure-acknowledgement":                       {Op: "acknowledgeApprovalFailure", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/approvals/{id}/reject":                                        {Op: "rejectApproval", Access: "tool", Tool: "decide_approval", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/attachments":                                                  {Op: "uploadAttachment", Access: "tool", Tool: "attach_document", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/attachments/{id}/extraction":                                  {Op: "readAttachmentForFields", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

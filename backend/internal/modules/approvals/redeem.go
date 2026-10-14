@@ -117,7 +117,7 @@ func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, 
 		return 0, false, err
 	}
 	if tag.RowsAffected() != 1 {
-		return 0, false, fmt.Errorf("approval already redeemed: %w", apperrors.ErrApprovalTokenInvalid)
+		return 0, false, &alreadyRedeemedError{}
 	}
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
 		map[string]any{approvalKeyRedeemed: false},
@@ -129,6 +129,20 @@ func (s *Service) RedeemInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, 
 		return 0, false, nil
 	}
 	return *a.TargetVersion, true, nil
+}
+
+// alreadyRedeemedError is a redemption refused because another call spent the
+// approval first. It answers as an invalid token, and recordEffectFailure tells
+// it apart: the work belongs to the call that redeemed.
+type alreadyRedeemedError struct{}
+
+func (*alreadyRedeemedError) Error() string { return "approval already redeemed" }
+func (*alreadyRedeemedError) Unwrap() error { return apperrors.ErrApprovalTokenInvalid }
+
+// redemptionLapsed reports whether the window to redeem a decided approval has
+// closed. Both a redemption and the offer to re-run an effect ask it.
+func redemptionLapsed(a row, now time.Time) bool {
+	return a.DecidedAt != nil && now.Sub(*a.DecidedAt) > redemptionTTL
 }
 
 func validateRedemption(a row, p principal.Principal, tool, diffHash string, now time.Time) error {
@@ -162,8 +176,8 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 	case a.Status != approvalStatusApproved:
 		return fmt.Errorf("approval is %s: %w", a.effectiveStatus(now), apperrors.ErrApprovalTokenInvalid)
 	case a.ConsumedAt != nil:
-		return fmt.Errorf("approval already redeemed: %w", apperrors.ErrApprovalTokenInvalid)
-	case a.DecidedAt != nil && now.Sub(*a.DecidedAt) > redemptionTTL:
+		return &alreadyRedeemedError{}
+	case redemptionLapsed(a, now):
 		return fmt.Errorf("approval expired %s after decision: %w", redemptionTTL, apperrors.ErrApprovalTokenInvalid)
 	default:
 		return nil

@@ -15,11 +15,14 @@ import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
 import { useCompleteTask } from "./taskcomplete";
 import { completeFailureKey } from "./taskwritefollowup";
+import {
+  FailedApprovalAnswer,
+  NoticeAcknowledge,
+} from "./worklist.acknowledge";
 import {
   BriefAct,
   type BriefAnswer,
@@ -502,6 +505,10 @@ const ANSWER_BY_SOURCE: Partial<
     verb: "acknowledge",
     draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
   },
+  failed_approval: {
+    verb: "acknowledge",
+    draw: (item) => ({ primary: <FailedApprovalAnswer item={item} /> }),
+  },
   automation_run: {
     verb: "retry",
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
@@ -792,35 +799,6 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         returnFocusTo={() => opener.current}
       />
     </div>
-  );
-}
-
-// A notice's one verb: the reader has seen it, and it leaves the lane.
-// Settled here rather than routed as a link — the mutation this calls is
-// the notice's own read endpoint, and there is no separate surface to send
-// the reader to for "I've seen this".
-function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const toast = useToast();
-  const acknowledge = useNoticeRead([worklistKey]);
-  return (
-    <Button
-      pending={acknowledge.isPending}
-      onClick={() =>
-        acknowledge.mutate(id, {
-          // A rejected read leaves the button idle with nothing else on
-          // screen to say so — the same rendering a click that did nothing
-          // would leave. Without this the notice stays in the lane and the
-          // reader has no reason to try again.
-          onError: () =>
-            toast.show(t("worklist.verb.acknowledgeFailed"), {
-              tone: "danger",
-            }),
-        })
-      }
-    >
-      {t("worklist.verb.acknowledge")}
-    </Button>
   );
 }
 

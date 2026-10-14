@@ -13065,6 +13065,9 @@ export const en = {
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
+  "worklist.verb.approvalRetried": "Approved change completed",
+  "worklist.verb.approvalRetryFailed":
+    "The approved change still did not run. Retry later, or acknowledge it.",
   "worklist.verb.completeFailed": "Task was not completed. Retry.",
   "worklist.verb.completeStale":
     "This task changed since you opened it, so it was not completed here. The list was refreshed.",
