@@ -13,9 +13,10 @@ import (
 // folded into the progress at every flush. A read computes the estimate from the
 // row alone, and nothing in the worker is asked.
 const (
-	// windowSamples and windowSpan bound the samples one run keeps: the speed
-	// of the last minute, not of the whole run.
-	windowSamples = 16
+	// windowSpan bounds the samples one run keeps to the speed of the last
+	// minute, not of the whole run. windowSamples only caps the stored size: a
+	// flush comes at least once a second at the fastest rate, so a minute fits.
+	windowSamples = 60
 	windowSpan    = 60 * time.Second
 	// estimateMinSpan and estimateMinRows are the evidence below which no
 	// estimate is given: a rate over two seconds of a cold start is a guess.
@@ -62,11 +63,14 @@ func (p Progress) rowsDone() int {
 
 // foldWindow carries the previous window forward with one more sample, taken
 // at `at` on the database clock. A window that ran backwards is another pass
-// over the rows, so it starts over and a rate never spans two passes.
+// over the rows, so it starts over and a rate never spans two passes. It also
+// starts over when the run moves to the next item: a file of another type is
+// walked at another speed, and the estimate quotes the current item's rate.
 func (p *Progress) foldWindow(prior Progress, at time.Time) {
 	done := p.rowsDone()
 	window := prior.Window
-	if n := len(window); n > 0 && (window[n-1].Done > done || prior.Attempt != p.Attempt) {
+	if n := len(window); n > 0 && (window[n-1].Done > done || prior.Attempt != p.Attempt ||
+		currentItem(prior) != currentItem(*p)) {
 		window = nil
 	}
 	window = append(slices.Clip(window), Sample{At: at, Done: done})
@@ -115,6 +119,17 @@ func EstimateOf(p Progress, progressAt, readAt time.Time) (Estimate, bool) {
 	return est, true
 }
 
+// currentItem is the index of the first item not yet done, or the item count
+// when every one is.
+func currentItem(p Progress) int {
+	for i, o := range p.Objects {
+		if o.RowsDone < o.RowsTotal {
+			return i
+		}
+	}
+	return len(p.Objects)
+}
+
 func rateOf(from, to Sample) float64 {
 	span := to.At.Sub(from.At).Seconds()
 	if span <= 0 || to.Done <= from.Done {
@@ -126,16 +141,15 @@ func rateOf(from, to Sample) float64 {
 // remainingOfCurrentItem is the rows left in the first item not yet done, and
 // whether that item is the last one.
 func remainingOfCurrentItem(p Progress) (int, string) {
-	for i, o := range p.Objects {
-		if o.RowsDone < o.RowsTotal {
-			scope := EstimateScopeObject
-			if i == len(p.Objects)-1 {
-				scope = EstimateScopeRun
-			}
-			return o.RowsTotal - o.RowsDone, scope
-		}
+	i := currentItem(p)
+	if i >= len(p.Objects) {
+		return 0, ""
 	}
-	return 0, ""
+	scope := EstimateScopeObject
+	if i == len(p.Objects)-1 {
+		scope = EstimateScopeRun
+	}
+	return p.Objects[i].RowsTotal - p.Objects[i].RowsDone, scope
 }
 
 // Phases answers the phases a run reports, in a new slice. The contract's

@@ -141,3 +141,36 @@ func TestWindowKeepsAMinuteAndStartsOverOnANewPass(t *testing.T) {
 		t.Fatalf("window after the rows went backwards = %+v, want it to start over", again.Window)
 	}
 }
+
+// Companies walk at 500 rows/s and contacts at 30. Once the run is on the
+// contacts, the estimate quotes the contacts' speed and not a blend with the
+// companies that came before.
+func TestTheEstimateAcrossAnObjectBoundaryQuotesTheNewObjectsRate(t *testing.T) {
+	const companies, contacts = 20000, 6000
+	var prior Progress
+	var last Progress
+	fold := func(seconds, companyDone, contactDone int) {
+		last = Progress{Objects: []ObjectProgress{
+			{Object: "company", RowsDone: companyDone, RowsTotal: companies},
+			{Object: "contact", RowsDone: contactDone, RowsTotal: contacts},
+		}}
+		last.foldWindow(prior, at(float64(seconds)))
+		prior = last
+	}
+	for s := 0; s <= 40; s += 2 {
+		fold(s, min(s*500, companies), 0)
+	}
+	for s := 42; s <= 56; s += 2 {
+		fold(s, companies, (s-40)*30)
+	}
+	est, ok := EstimateOf(last, at(56), at(56))
+	if !ok {
+		t.Fatal("no estimate 16 s into the contacts, want one from the contacts' own samples")
+	}
+	if math.Abs(est.RowsPerSecond-30) > 1 {
+		t.Fatalf("rate = %.1f rows/s, want the contacts' 30 and not a blend with the companies' 500", est.RowsPerSecond)
+	}
+	if want := (contacts - 16*30) / 30; est.HighSeconds < want {
+		t.Fatalf("high end %d s, want at least the %d s the contacts need", est.HighSeconds, want)
+	}
+}
