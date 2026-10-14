@@ -210,6 +210,18 @@ function answer(routes: Routes, key: string, server: Server): Response {
   return byPrefix ? byPrefix() : jsonResponse({});
 }
 
+// What the server does with `?view=`: the one list, cut to drafts or to the
+// runs that are history, so a test stubs the list once.
+async function viewOf(response: Response, view: string): Promise<Response> {
+  const body: { data?: { status: string }[] } = await response.json();
+  const data = (body.data ?? []).filter((one) => {
+    const draft = one.status === "pending";
+    if (view === "drafts") return draft;
+    return !draft && one.status !== "cancelled";
+  });
+  return jsonResponse({ ...body, data });
+}
+
 // Every request the screens make, recorded, so a test can assert what went to
 // the server. The mapping and the parts are what the screen composes.
 export function stubRoutes(routes: Routes = {}): Sent[] {
@@ -229,6 +241,10 @@ export function stubRoutes(routes: Routes = {}): Sent[] {
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       sent.push({ method, path: key, body: await bodyOf(request, init) });
       const response = answer(routes, key, server);
+      const view = url.searchParams.get("view");
+      if (key === "GET /imports" && view) {
+        return viewOf(response, view);
+      }
       if (key === "POST /imports/sources" && response.ok) {
         server.draft = await response.clone().json();
       }

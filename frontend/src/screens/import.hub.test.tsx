@@ -67,7 +67,7 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
-  it("lists a draft to continue or cancel, and a canceled run with its replacement", async () => {
+  it("lists a draft to continue or cancel, and leaves a replaced test out of the history", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes({
       "GET /imports": () =>
@@ -87,17 +87,16 @@ describe("the data import hub", () => {
     });
     render(<ImportCard />);
     const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(3);
     expect(within(rows[1]).getByText("Draft")).toBeVisible();
     expect(
       within(rows[1]).getByRole("link", { name: "Continue" }),
     ).toHaveAttribute("href", expect.stringContaining("run=r3"));
-    expect(within(rows[2]).getByText("Canceled")).toBeVisible();
-    expect(
-      within(rows[2]).getByRole("link", {
-        name: "A newer test run replaced this import",
-      }),
-    ).toHaveAttribute("href", expect.stringContaining("run=r9"));
-
+    expect(screen.queryByText("gone.csv")).toBeNull();
+    // Each list is asked for on its own, so a draft or a replaced test cannot
+    // push a finished import out of the one page of history.
+    const asked = sent.filter((s) => s.path === "GET /imports").length;
+    expect(asked).toBeGreaterThanOrEqual(2);
     await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain("POST /imports/r3/cancel"),

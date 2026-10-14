@@ -190,8 +190,9 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recent = useRecentImports();
-  const runs = recent.data ?? [];
+  const recent = useRecentImports("history");
+  const drafts = useRecentImports("drafts");
+  const runs = [...(drafts.data ?? []), ...(recent.data ?? [])];
   useLandedRecords(runs.map((one) => one.status));
   const cancel = useStopImportTest();
   const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));

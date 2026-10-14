@@ -194,10 +194,24 @@ func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
 	return run, nil
 }
 
+// RunView narrows a run list to one of the two things the Data import page
+// shows, so drafts and abandoned runs cannot push a finished import out of
+// one page.
+type RunView string
+
+const (
+	// ViewAll lists every run.
+	ViewAll RunView = ""
+	// ViewHistory lists the runs that wrote, are writing or failed.
+	ViewHistory RunView = "history"
+	// ViewDrafts lists the runs still waiting for a test.
+	ViewDrafts RunView = "drafts"
+)
+
 // ListStaged reads one page of CSV runs, newest first, each as GetStaged reads
 // one. The flip's own runs are left out: they carry no mapping this surface
 // describes. An empty cursor starts at the newest run.
-func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]Run, storekit.Page, error) {
+func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, view RunView) ([]Run, storekit.Page, error) {
 	// The exported name, not the alias: the grant-reachability census resolves
 	// only a literal-valued constant.
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
@@ -206,6 +220,12 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV))
+	switch view {
+	case ViewHistory:
+		where += storekit.SQLf(` AND status NOT IN ($%d, $%d)`, arg(StatusPending), arg(StatusCancelled))
+	case ViewDrafts:
+		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
+	}
 	if cursor != "" {
 		after, err := storekit.DecodeCursor(cursor)
 		if err != nil {

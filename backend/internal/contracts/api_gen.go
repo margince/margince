@@ -21604,6 +21604,24 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	}
 }
 
+// Defines values for ListImportRunsParamsView.
+const (
+	ListImportRunsParamsViewDrafts  ListImportRunsParamsView = "drafts"
+	ListImportRunsParamsViewHistory ListImportRunsParamsView = "history"
+)
+
+// Valid indicates whether the value is a known member of the ListImportRunsParamsView enum.
+func (e ListImportRunsParamsView) Valid() bool {
+	switch e {
+	case ListImportRunsParamsViewDrafts:
+		return true
+	case ListImportRunsParamsViewHistory:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetImportFormatParamsLang.
 const (
 	GetImportFormatParamsLangDe GetImportFormatParamsLang = "de"
@@ -54596,7 +54614,8 @@ type ListFxRatesParams struct {
 
 // ListImportRunsParams defines parameters for ListImportRuns.
 type ListImportRunsParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	View  *ListImportRunsParamsView `form:"view,omitempty" json:"view,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -54608,6 +54627,9 @@ type ListImportRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
+
+// ListImportRunsParamsView defines parameters for ListImportRuns.
+type ListImportRunsParamsView string
 
 // GetImportFormatParams defines parameters for GetImportFormat.
 type GetImportFormatParams struct {
@@ -96341,6 +96363,19 @@ func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
 		}
 		return
 	}

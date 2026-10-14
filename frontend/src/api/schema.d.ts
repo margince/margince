@@ -19140,6 +19140,11 @@ export interface paths {
          *
          *     Gated on reading `import_run`, the same grant that reads one run. A
          *     `limit` outside 1..50 is clamped to the nearest bound, not refused.
+         *
+         *     `view` narrows the list so that drafts and abandoned runs cannot push
+         *     a finished import out of one page: `history` is every run that wrote,
+         *     is writing or failed (not drafts, not cancelled runs), and `drafts` is
+         *     the runs still waiting for a test. Left out, every run is listed.
          */
         get: operations["listImportRuns"];
         put?: never;
@@ -74417,6 +74422,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                view?: "history" | "drafts";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

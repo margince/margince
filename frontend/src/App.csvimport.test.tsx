@@ -57,7 +57,7 @@ const profile = {
   targets: ["full_name", "email"],
 };
 
-function answers(): Readonly<Record<string, unknown>> {
+function answers(view: string | null): Readonly<Record<string, unknown>> {
   return {
     "GET /v1/me": meFixture({
       allow: { import_run: ["create", "update", "read"] },
@@ -71,7 +71,11 @@ function answers(): Readonly<Record<string, unknown>> {
       draft_step: "files",
       profile,
     },
-    "GET /v1/imports": { data: [{ ...run, status, profile }] },
+    "GET /v1/imports": {
+      data: [{ ...run, status, profile }].filter(
+        (one) => (one.status === "pending") === (view === "drafts"),
+      ),
+    },
     "PATCH /v1/imports/019ff-run": { ...run, status },
     "GET /v1/imports/019ff-run/report": {
       run_id: run.id,
@@ -99,7 +103,7 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
   const body =
     lands || key === "POST /v1/imports/019ff-run/validate"
       ? { ...run, status }
-      : answers()[key];
+      : answers(url.searchParams.get("view"))[key];
   return body === undefined
     ? new Response(JSON.stringify({ code: "unavailable" }), {
         status: 503,

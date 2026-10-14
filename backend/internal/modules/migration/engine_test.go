@@ -68,7 +68,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0, queueNothing); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0, queueNothing); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
-		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
+		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20, ViewAll); return err }},
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
