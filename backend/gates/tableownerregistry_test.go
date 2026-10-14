@@ -543,7 +543,8 @@ var tableOwners = map[string]string{
 	// two above, and the same ruling: derived content, regenerable from the
 	// records at any time, readable by nobody but the user it was written
 	// for.
-	"deal_status_card": "internal/compose/dealstatus",
+	"deal_status_card":    "internal/compose/dealstatus",
+	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other

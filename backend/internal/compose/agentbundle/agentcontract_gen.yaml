@@ -12625,6 +12625,14 @@ components:
         evidence:
           type: array
           items: {$ref: '#/components/schemas/DealNextBestActionEvidence'}
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |-
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object

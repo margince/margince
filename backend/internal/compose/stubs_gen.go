@@ -1099,6 +1099,10 @@ func (stubs) GetCompanyStrength(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "GetCompanyStrength")
 }
 
+func (stubs) RestoreCompanySuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreCompanySuggestionParams) {
+	httperr.NotImplemented(w, r, "RestoreCompanySuggestion")
+}
+
 func (stubs) DismissCompanySuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DismissCompanySuggestion")
 }
@@ -1369,6 +1373,10 @@ func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id
 
 func (stubs) MergeContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeContactParams) {
 	httperr.NotImplemented(w, r, "MergeContact")
+}
+
+func (stubs) RestoreContactMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreContactMomentParams) {
+	httperr.NotImplemented(w, r, "RestoreContactMoment")
 }
 
 func (stubs) DismissContactMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1661,6 +1669,14 @@ func (stubs) ListDealLegalReviews(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) RequestLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RequestLegalReview")
+}
+
+func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {
+	httperr.NotImplemented(w, r, "RestoreDealMove")
+}
+
+func (stubs) DismissDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissDealMove")
 }
 
 func (stubs) ListDealOffers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealOffersParams) {

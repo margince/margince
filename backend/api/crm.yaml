@@ -2004,6 +2004,34 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Contacts]
+      operationId: restoreContactMoment
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of the moment with this `claim_key`, only while it is
+        still held against this `evidence_fingerprint`. An Undo from an older toast therefore
+        leaves a newer dismissal of changed evidence standing. Idempotent: a moment nobody
+        dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: claim_key
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `claim_key` of the moment that was dismissed, unchanged.
+        - name: evidence_fingerprint
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `evidence_fingerprint` the moment carried when it was dismissed.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/intro-note-draft:
     parameters:
@@ -3798,6 +3826,9 @@ paths:
         there is nothing to silence. So the stored set grows by one row per suggestion a
         human actually dismissed, and no dismissal is ever dropped to make room.
 
+        The account's moment (`Company360.moment`) is set aside the same way: its
+        `evidence_fingerprint` is accepted here while that promise is open on the account.
+
         Human-only: an agent has no opinion to record.
       requestBody:
         required: true
@@ -3837,6 +3868,27 @@ paths:
                     a reader sees as the card refusing to go away.
       responses:
         '204': { description: "Dismissed, or nothing matched and nothing was stored." }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Companies]
+      operationId: restoreCompanySuggestion
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed suggestion or moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of this fingerprint on this account. Idempotent: a
+        fingerprint nobody dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` that was dismissed, unchanged.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -26366,6 +26418,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /deals/{id}/move/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: dismissDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Set the deal card's move aside for me until it changes.
+      description: |
+        The deal page's "Not now", by the rule the contact and company pages use: per reader,
+        and held against the move's `fingerprint`, so it lifts by itself when the card names a
+        different move. It feeds no formula, no brief and no other reader's page.
+
+        One set-aside per reader and deal: a second one replaces the first, because the card
+        shows one move. Reading the deal is the licence to set its move aside; an id the
+        caller cannot read answers 404, the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissDealMoveRequest' }
+      responses:
+        '204': { description: Set aside. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Deals]
+      operationId: restoreDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put a set-aside move back on the deal card, the undo behind "Not now".
+      description: |
+        Clears this reader's set-aside of the move with this fingerprint. Idempotent: a
+        move nobody set aside answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` of the move that was set aside, unchanged.
+      responses:
+        '204': { description: 'Back on the card, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -38400,6 +38501,14 @@ components:
         claim_key: { type: string }
         evidence_fingerprint: { type: string }
 
+    DismissDealMoveRequest:
+      type: object
+      description: The move to set aside, named by the fingerprint the card served it with.
+      required: [fingerprint]
+      properties:
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+      additionalProperties: false
+
     MeetingBrief:
       type: object
       description: |
@@ -39783,6 +39892,14 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
 
     DealNextBestActionEvidence:

@@ -1166,7 +1166,14 @@ export interface paths {
          *     shared truth, a dismissal is a preference.
          */
         post: operations["dismissContactMoment"];
-        delete?: never;
+        /**
+         * Show a dismissed moment again, the undo behind "Not now".
+         * @description Clears this reader's dismissal of the moment with this `claim_key`, only while it is
+         *     still held against this `evidence_fingerprint`. An Undo from an older toast therefore
+         *     leaves a newer dismissal of changed evidence standing. Idempotent: a moment nobody
+         *     dismissed answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreContactMoment"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2496,10 +2503,18 @@ export interface paths {
          *     there is nothing to silence. So the stored set grows by one row per suggestion a
          *     human actually dismissed, and no dismissal is ever dropped to make room.
          *
+         *     The account's moment (`Company360.moment`) is set aside the same way: its
+         *     `evidence_fingerprint` is accepted here while that promise is open on the account.
+         *
          *     Human-only: an agent has no opinion to record.
          */
         post: operations["dismissCompanySuggestion"];
-        delete?: never;
+        /**
+         * Show a dismissed suggestion or moment again, the undo behind "Not now".
+         * @description Clears this reader's dismissal of this fingerprint on this account. Idempotent: a
+         *     fingerprint nobody dismissed answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreCompanySuggestion"];
         options?: never;
         head?: never;
         patch?: never;
@@ -18094,6 +18109,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/move/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the deal card's move aside for me until it changes.
+         * @description The deal page's "Not now", by the rule the contact and company pages use: per reader,
+         *     and held against the move's `fingerprint`, so it lifts by itself when the card names a
+         *     different move. It feeds no formula, no brief and no other reader's page.
+         *
+         *     One set-aside per reader and deal: a second one replaces the first, because the card
+         *     shows one move. Reading the deal is the licence to set its move aside; an id the
+         *     caller cannot read answers 404, the same as one that does not exist.
+         */
+        post: operations["dismissDealMove"];
+        /**
+         * Put a set-aside move back on the deal card, the undo behind "Not now".
+         * @description Clears this reader's set-aside of the move with this fingerprint. Idempotent: a
+         *     move nobody set aside answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreDealMove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/coverage": {
         parameters: {
             query?: never;
@@ -27420,6 +27469,10 @@ export interface components {
             claim_key: string;
             evidence_fingerprint: string;
         };
+        /** @description The move to set aside, named by the fingerprint the card served it with. */
+        DismissDealMoveRequest: {
+            fingerprint: string;
+        };
         /**
          * @description The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
          *     read from what the CALLER can see.
@@ -28380,6 +28433,13 @@ export interface components {
                 [key: string]: unknown;
             };
             evidence: components["schemas"]["DealNextBestActionEvidence"][];
+            /**
+             * @description A digest of what the move names: its verb, operands and evidence, taken when the
+             *     rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+             *     the set-aside lifts when the card names a different move. Absent on a move with
+             *     nothing to do (`none`).
+             */
+            readonly fingerprint?: string;
         };
         DealNextBestActionEvidence: {
             text: string;
@@ -48002,6 +48062,36 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    restoreContactMoment: {
+        parameters: {
+            query: {
+                /** @description The `claim_key` of the moment that was dismissed, unchanged. */
+                claim_key: string;
+                /** @description The `evidence_fingerprint` the moment carried when it was dismissed. */
+                evidence_fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shown again, or was never hidden. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     draftIntroNote: {
         parameters: {
             query?: never;
@@ -49793,6 +49883,34 @@ export interface operations {
         };
         responses: {
             /** @description Dismissed, or nothing matched and nothing was stored. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCompanySuggestion: {
+        parameters: {
+            query: {
+                /** @description The `fingerprint` that was dismissed, unchanged. */
+                fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shown again, or was never hidden. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -73265,6 +73383,63 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    dismissDealMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissDealMoveRequest"];
+            };
+        };
+        responses: {
+            /** @description Set aside. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreDealMove: {
+        parameters: {
+            query: {
+                /** @description The `fingerprint` of the move that was set aside, unchanged. */
+                fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back on the card, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getDealCoverage: {

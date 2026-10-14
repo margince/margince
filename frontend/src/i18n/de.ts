@@ -2488,6 +2488,9 @@ export const de = {
   "co.suggest.basedOn": "Grundlage",
   "co.cite.open": "Datensatz öffnen",
   "co.suggest.dismiss": "Nicht jetzt",
+  "record.setAside.done":
+    "Zurückgestellt. Es kommt wieder, sobald sich etwas ändert.",
+  "record.setAside.restored": "Wieder auf der Karte.",
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
     "Der Vorschlag konnte nicht ausgeblendet werden. Bitte versuche es erneut.",

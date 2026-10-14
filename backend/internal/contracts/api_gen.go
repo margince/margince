@@ -34588,6 +34588,12 @@ type DealStatusCardMove struct {
 	Arguments *map[string]interface{}      `json:"arguments,omitempty"`
 	Evidence  []DealNextBestActionEvidence `json:"evidence"`
 
+	// Fingerprint A digest of what the move names: its verb, operands and evidence, taken when the
+	// rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+	// the set-aside lifts when the card names a different move. Absent on a move with
+	// nothing to do (`none`).
+	Fingerprint *string `json:"fingerprint,omitempty"`
+
 	// Reason One sentence saying why this move and not another.
 	Reason string `json:"reason"`
 }
@@ -34847,6 +34853,11 @@ type DiscoveredLeadSource struct {
 type DismissContactMomentRequest struct {
 	ClaimKey            string `json:"claim_key"`
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
+}
+
+// DismissDealMoveRequest The move to set aside, named by the fingerprint the card served it with.
+type DismissDealMoveRequest struct {
+	Fingerprint string `json:"fingerprint"`
 }
 
 // DismissRelationshipNudgeRequest defines model for DismissRelationshipNudgeRequest.
@@ -53000,6 +53011,12 @@ type RejectCompanyParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RestoreCompanySuggestionParams defines parameters for RestoreCompanySuggestion.
+type RestoreCompanySuggestionParams struct {
+	// Fingerprint The `fingerprint` that was dismissed, unchanged.
+	Fingerprint string `form:"fingerprint" json:"fingerprint"`
+}
+
 // DismissCompanySuggestionJSONBody defines parameters for DismissCompanySuggestion.
 type DismissCompanySuggestionJSONBody struct {
 	// Fingerprint The `fingerprint` from the suggestion being dismissed, unchanged — a
@@ -53514,6 +53531,15 @@ type MergeContactParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RestoreContactMomentParams defines parameters for RestoreContactMoment.
+type RestoreContactMomentParams struct {
+	// ClaimKey The `claim_key` of the moment that was dismissed, unchanged.
+	ClaimKey string `form:"claim_key" json:"claim_key"`
+
+	// EvidenceFingerprint The `evidence_fingerprint` the moment carried when it was dismissed.
+	EvidenceFingerprint string `form:"evidence_fingerprint" json:"evidence_fingerprint"`
 }
 
 // RestoreContactProfileFieldParams defines parameters for RestoreContactProfileField.
@@ -54234,6 +54260,12 @@ type ListDealDocumentsParams struct {
 
 // ListDealDocumentsParamsCategory defines parameters for ListDealDocuments.
 type ListDealDocumentsParamsCategory string
+
+// RestoreDealMoveParams defines parameters for RestoreDealMove.
+type RestoreDealMoveParams struct {
+	// Fingerprint The `fingerprint` of the move that was set aside, unchanged.
+	Fingerprint string `form:"fingerprint" json:"fingerprint"`
+}
 
 // ListDealOffersParams defines parameters for ListDealOffers.
 type ListDealOffersParams struct {
@@ -57882,6 +57914,9 @@ type AdvanceDealJSONRequestBody = AdvanceDealRequest
 
 // RequestLegalReviewJSONRequestBody defines body for RequestLegalReview for application/json ContentType.
 type RequestLegalReviewJSONRequestBody = RequestLegalReviewRequest
+
+// DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
+type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
 
 // CreateOfferJSONRequestBody defines body for CreateOffer for application/json ContentType.
 type CreateOfferJSONRequestBody = CreateOfferRequest
@@ -69727,6 +69762,9 @@ type ServerInterface interface {
 	// Relationship strength for a company (max over current employees).
 	// (GET /companies/{id}/strength)
 	GetCompanyStrength(w http.ResponseWriter, r *http.Request, id Id)
+	// Show a dismissed suggestion or moment again, the undo behind "Not now".
+	// (DELETE /companies/{id}/suggestions/dismiss)
+	RestoreCompanySuggestion(w http.ResponseWriter, r *http.Request, id Id, params RestoreCompanySuggestionParams)
 	// Dismiss one next-step suggestion for the calling human.
 	// (POST /companies/{id}/suggestions/dismiss)
 	DismissCompanySuggestion(w http.ResponseWriter, r *http.Request, id Id)
@@ -69931,6 +69969,9 @@ type ServerInterface interface {
 	// Merge this contact into a target (non-lossy).
 	// (POST /contacts/{id}/merge)
 	MergeContact(w http.ResponseWriter, r *http.Request, id Id, params MergeContactParams)
+	// Show a dismissed moment again, the undo behind "Not now".
+	// (DELETE /contacts/{id}/moment/dismiss)
+	RestoreContactMoment(w http.ResponseWriter, r *http.Request, id Id, params RestoreContactMomentParams)
 	// Hide this moment for me until its evidence changes.
 	// (POST /contacts/{id}/moment/dismiss)
 	DismissContactMoment(w http.ResponseWriter, r *http.Request, id Id)
@@ -70150,6 +70191,12 @@ type ServerInterface interface {
 	// Ask legal to review this deal.
 	// (POST /deals/{id}/legal-reviews)
 	RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Put a set-aside move back on the deal card, the undo behind "Not now".
+	// (DELETE /deals/{id}/move/dismiss)
+	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
+	// Set the deal card's move aside for me until it changes.
+	// (POST /deals/{id}/move/dismiss)
+	DismissDealMove(w http.ResponseWriter, r *http.Request, id Id)
 	// List a deal's offers, newest revision first.
 	// (GET /deals/{id}/offers)
 	ListDealOffers(w http.ResponseWriter, r *http.Request, id Id, params ListDealOffersParams)
@@ -73045,6 +73092,12 @@ func (_ Unimplemented) GetCompanyStrength(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Show a dismissed suggestion or moment again, the undo behind "Not now".
+// (DELETE /companies/{id}/suggestions/dismiss)
+func (_ Unimplemented) RestoreCompanySuggestion(w http.ResponseWriter, r *http.Request, id Id, params RestoreCompanySuggestionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Dismiss one next-step suggestion for the calling human.
 // (POST /companies/{id}/suggestions/dismiss)
 func (_ Unimplemented) DismissCompanySuggestion(w http.ResponseWriter, r *http.Request, id Id) {
@@ -73450,6 +73503,12 @@ func (_ Unimplemented) CreateIntroRequest(w http.ResponseWriter, r *http.Request
 // Merge this contact into a target (non-lossy).
 // (POST /contacts/{id}/merge)
 func (_ Unimplemented) MergeContact(w http.ResponseWriter, r *http.Request, id Id, params MergeContactParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show a dismissed moment again, the undo behind "Not now".
+// (DELETE /contacts/{id}/moment/dismiss)
+func (_ Unimplemented) RestoreContactMoment(w http.ResponseWriter, r *http.Request, id Id, params RestoreContactMomentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73888,6 +73947,18 @@ func (_ Unimplemented) ListDealLegalReviews(w http.ResponseWriter, r *http.Reque
 // Ask legal to review this deal.
 // (POST /deals/{id}/legal-reviews)
 func (_ Unimplemented) RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a set-aside move back on the deal card, the undo behind "Not now".
+// (DELETE /deals/{id}/move/dismiss)
+func (_ Unimplemented) RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the deal card's move aside for me until it changes.
+// (POST /deals/{id}/move/dismiss)
+func (_ Unimplemented) DismissDealMove(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87903,6 +87974,54 @@ func (siw *ServerInterfaceWrapper) GetCompanyStrength(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreCompanySuggestion operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCompanySuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreCompanySuggestionParams
+
+	// ------------- Required query parameter "fingerprint" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "fingerprint", r.URL.Query(), &params.Fingerprint, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "fingerprint"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "fingerprint", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCompanySuggestion(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DismissCompanySuggestion operation middleware
 func (siw *ServerInterfaceWrapper) DismissCompanySuggestion(w http.ResponseWriter, r *http.Request) {
 
@@ -90534,6 +90653,67 @@ func (siw *ServerInterfaceWrapper) MergeContact(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MergeContact(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreContactMoment operation middleware
+func (siw *ServerInterfaceWrapper) RestoreContactMoment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreContactMomentParams
+
+	// ------------- Required query parameter "claim_key" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "claim_key", r.URL.Query(), &params.ClaimKey, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "claim_key"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "claim_key", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "evidence_fingerprint" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "evidence_fingerprint", r.URL.Query(), &params.EvidenceFingerprint, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "evidence_fingerprint"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "evidence_fingerprint", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreContactMoment(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94411,6 +94591,86 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RequestLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreDealMove operation middleware
+func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreDealMoveParams
+
+	// ------------- Required query parameter "fingerprint" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "fingerprint", r.URL.Query(), &params.Fingerprint, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "fingerprint"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "fingerprint", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreDealMove(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissDealMove operation middleware
+func (siw *ServerInterfaceWrapper) DismissDealMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissDealMove(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -112882,6 +113142,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/companies/{id}/strength", wrapper.GetCompanyStrength)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/companies/{id}/suggestions/dismiss", wrapper.RestoreCompanySuggestion)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/suggestions/dismiss", wrapper.DismissCompanySuggestion)
 	})
 	r.Group(func(r chi.Router) {
@@ -113084,6 +113347,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/merge", wrapper.MergeContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/contacts/{id}/moment/dismiss", wrapper.RestoreContactMoment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/moment/dismiss", wrapper.DismissContactMoment)
@@ -113303,6 +113569,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.RequestLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.DismissDealMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/offers", wrapper.ListDealOffers)

@@ -3487,6 +3487,17 @@ public.deal_forecast_history.deal_forecast_history_pkey PRIMARY KEY (id)
 public.deal_forecast_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_forecast_history.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_forecast_history_pkey CREATE UNIQUE INDEX deal_forecast_history_pkey ON public.deal_forecast_history USING btree (id)
+public.deal_move_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_move_dismissal.deal_id uuid NOT NULL gen=- def=-
+public.deal_move_dismissal.deal_move_dismissal_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_move_dismissal.deal_move_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
+public.deal_move_dismissal.deal_move_dismissal_pkey PRIMARY KEY (user_id, deal_id)
+public.deal_move_dismissal.deal_move_dismissal_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.deal_move_dismissal.dismissed_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_move_dismissal.fingerprint text NOT NULL gen=- def=-
+public.deal_move_dismissal.user_id uuid NOT NULL gen=- def=-
+public.deal_move_dismissal_deal_ix CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id)
+public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON public.deal_move_dismissal USING btree (user_id, deal_id)
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_risk_day.captured_by text NOT NULL gen=- def=-

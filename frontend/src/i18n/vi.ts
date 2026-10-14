@@ -2438,6 +2438,8 @@ export const vi = {
   "co.suggest.basedOn": "Dựa trên",
   "co.cite.open": "Mở hồ sơ",
   "co.suggest.dismiss": "Để sau",
+  "record.setAside.done": "Đã để sau. Mục này sẽ quay lại khi có thay đổi.",
+  "record.setAside.restored": "Đã trở lại thẻ.",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed": "Không thể bỏ qua gợi ý. Thử lại.",
   "co.suggest.addTaskFailed": "Không thể lưu bước tiếp theo. Thử lại.",
