@@ -173,8 +173,18 @@ export const ThreeObjectsOneCustomRole: Story = {
   render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
 };
 
+// Every verb column in view on a phone: the grid fits its card, so no grant
+// waits behind a sideways scroll.
 export const ThreeObjectsOneCustomRolePhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
+  play: async ({ canvasElement }) => {
+    const matrix = await within(canvasElement).findByRole("table");
+    const scroller = matrix.closest<HTMLElement>(".table-scroll");
+    if (!scroller) throw new Error("the matrix rendered outside its scroller");
+    await expect(scroller.scrollWidth).toBeLessThanOrEqual(
+      scroller.clientWidth,
+    );
+  },
 };

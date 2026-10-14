@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Panel, PanelGroupHead } from "../design-system/panel";
-import { GrantMatrix, type GrantMatrixRow } from "./grantmatrix";
+import {
+  GrantMatrix,
+  type GrantMatrixGroup,
+  type GrantMatrixRow,
+} from "./grantmatrix";
 import { StoryProviders } from "./story-utils";
 
 const NONE = { read: false, create: false, update: false, delete: false };
@@ -56,6 +60,29 @@ function story(canManage: boolean) {
   );
 }
 
+const GROUPS: GrantMatrixGroup[] = ["Endpoint", "Inbound"].map((label) => ({
+  key: label,
+  label,
+  rows: ROWS,
+}));
+
+function grouped() {
+  return (
+    <StoryProviders>
+      <Panel title="Open channel">
+        <GrantMatrix
+          rowHeader="Role"
+          groups={GROUPS}
+          canManage
+          readOnlyReason="Your role can read this page. Changing a grant requires a full seat."
+          name="Role access to Open channel"
+          bleed
+        />
+      </Panel>
+    </StoryProviders>
+  );
+}
+
 const meta: Meta<typeof GrantMatrix> = {
   title: "Patterns/Grant matrix",
   component: GrantMatrix,
@@ -86,4 +113,14 @@ export const Phone: Story = {
       await expect(scroller.contains(hidden.offsetParent)).toBe(true);
     }
   },
+};
+
+// One grid for several objects: the verbs are headed once, each object's roles
+// run under a group row naming it.
+export const Grouped: Story = { render: grouped };
+
+export const GroupedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: grouped,
 };

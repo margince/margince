@@ -4,7 +4,6 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -16,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { RestrictedRecordsCard } from "./restrictedrecords";
+import { RequestsPanel } from "./settings.privacy";
 
 // Settings → Privacy → Restricted records: the controller sees what a
 // statutory obligation is holding, by transaction and deadline, and never the
@@ -89,6 +89,12 @@ function backend(
       if (key === "GET /me") {
         return jsonResponse(meFixture({ allow }));
       }
+      if (key === "GET /confirm-submissions") {
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
       if (key === "GET /retention/restrictions") {
         return jsonResponse({
           data: records,
@@ -116,6 +122,14 @@ function render(ui: ReactNode) {
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// The lane as the page shows it, verbs in the panel head: Requests, on Held.
+async function renderHeld() {
+  const user = userEvent.setup();
+  render(<RequestsPanel />);
+  await user.click(await screen.findByRole("button", { name: /^Held/ }));
+  return user;
 }
 
 afterEach(() => {
@@ -264,26 +278,28 @@ describe("RestrictedRecordsCard", () => {
     expect(screen.queryByText(/No records held/)).not.toBeInTheDocument();
   });
 
-  it("refuses to pin a malformed id even when the form is submitted", async () => {
+  it("pins a record by its id, and keeps the confirm shut on a malformed one", async () => {
     const sent = backend({ retention_policy: ["read", "update"] }, []);
-    const user = userEvent.setup();
-    render(<RestrictedRecordsCard />);
+    const user = await renderHeld();
 
-    const id = await screen.findByPlaceholderText("Record ID");
+    await user.click(screen.getByRole("button", { name: "Pin a record" }));
+    const dialog = screen.getByRole("dialog");
+    const confirm = within(dialog).getByRole("button", {
+      name: "Pin and hold",
+    });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /Why/ }),
+      "missed by the derivation",
+    );
+    const id = within(dialog).getByRole("textbox", { name: /Record ID/ });
     await user.type(id, "not-a-record");
-    const form = id.closest("form");
-    if (!(form instanceof HTMLFormElement)) throw new Error("no pin form");
-    fireEvent.submit(form);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(confirm).toBeDisabled();
+    expect(id).toHaveAccessibleDescription(/Not a valid record ID/);
 
     await user.clear(id);
     await user.type(id, HELD_ANGEBOT.activity_id);
-    fireEvent.submit(form);
-    await user.type(
-      await screen.findByRole("textbox", { name: /Why/ }),
-      "missed by the derivation",
-    );
-    await user.click(screen.getByRole("button", { name: "Pin and hold" }));
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
     await waitFor(() =>
       expect(sent.find((call) => call.key.endsWith("/pin"))).toEqual({
         key: `POST /retention/restrictions/${HELD_ANGEBOT.activity_id}/pin`,
@@ -292,9 +308,17 @@ describe("RestrictedRecordsCard", () => {
     );
   });
 
+  it("counts what is held on the lane's switch", async () => {
+    backend({ retention_policy: ["read"] }, [HELD_ANGEBOT]);
+    render(<RequestsPanel />);
+    expect(
+      await screen.findByRole("button", { name: /^Held\W+1$/ }),
+    ).toBeVisible();
+  });
+
   it("offers no decision to a role that may read the list but not decide", async () => {
     backend({ retention_policy: ["read"] }, [HELD_ANGEBOT]);
-    render(<RestrictedRecordsCard />);
+    await renderHeld();
     expect(await screen.findByText("Acme rollout, Acme renewal")).toBeVisible();
     expect(
       screen.queryByRole("button", { name: /^Release/ }),

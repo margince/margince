@@ -17,8 +17,8 @@ import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
-import { PrivacyInboxCard } from "./privacy";
 import { ConsentPurposesCard } from "./privacy.purposes";
+import { RequestsPanel } from "./settings.privacy";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -98,7 +98,7 @@ function stubRoutes(
       if (key === "GET /data-subject-requests") return jsonResponse(DSRS);
       if (key === "GET /data-subject-requests/deadline")
         return jsonResponse(COMPUTED_DEADLINE);
-      if (key === "GET /users")
+      if (key === "GET /users" || key === "GET /confirm-submissions")
         return jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -335,7 +335,7 @@ describe("PrivacyInboxCard", () => {
     const sent = stubRoutes({
       "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await screen.findByText(/subject requests needs a permission/i);
     expect(screen.queryByText(/anna@acme.test/)).not.toBeInTheDocument();
     // And it never issued the call the server would only refuse.
@@ -359,7 +359,7 @@ describe("PrivacyInboxCard", () => {
           }),
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
 
     // The OPEN request, not the fulfilled one: a terminal request offers no
     // transition to anybody, so asserting their absence on it would pass
@@ -388,7 +388,7 @@ describe("PrivacyInboxCard", () => {
           }),
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
 
     // The queue answered, so this is about the missing grant and not about a
     // card that never rendered.
@@ -403,7 +403,7 @@ describe("PrivacyInboxCard", () => {
   // is ever shown.
   it("offers the verbs to a reader holding every grant behind them", async () => {
     stubRoutes({ "GET /data-subject-requests": () => jsonResponse(DSRS) });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
 
     expect(
       await screen.findByRole("button", { name: /new request/i }),
@@ -419,7 +419,7 @@ describe("PrivacyInboxCard", () => {
     const sent = stubRoutes({
       "GET /data-subject-requests": () => jsonResponse(DSRS),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await screen.findByText(/anna@acme.test/);
     await userEvent.click(screen.getByRole("button", { name: /^open$/i }));
     await waitFor(() =>
@@ -436,7 +436,7 @@ describe("PrivacyInboxCard", () => {
   // loaded behind the drawer, so closing it returns the officer to their place.
   it("opens a request beside the queue rather than in place of it", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -459,7 +459,7 @@ describe("PrivacyInboxCard", () => {
       timeZone: "America/New_York",
     } as Intl.ResolvedDateTimeFormatOptions);
     stubRoutes({ "GET /data-subject-requests": () => jsonResponse(DSRS) });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await screen.findByText(/8f3a-contact-uuid/);
     // This codebase's locked locale convention (format.ts's INTL_LOCALE,
     // "A100: unconfigured English is en-GB, not en-US") renders numeric
@@ -471,7 +471,7 @@ describe("PrivacyInboxCard", () => {
 
   it("offers only the transitions the server would accept", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -486,7 +486,7 @@ describe("PrivacyInboxCard", () => {
 
   it("offers no transition on a closed request — a closed request never reopens", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /anna@acme.test/i }),
     );
@@ -508,7 +508,7 @@ describe("PrivacyInboxCard", () => {
 
   it("holds a close until a resolution is written — the server 422s without one", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -529,7 +529,7 @@ describe("PrivacyInboxCard", () => {
     // one row this clock genuinely makes overdue: d1, still open.
     vi.setSystemTime(new Date("2026-08-02T00:00:00Z"));
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     const row = await findDsrRow("8f3a-contact-uuid");
     expect(within(row).getByText(/overdue/i)).toBeInTheDocument();
     const closedRow = await findDsrRow("anna@acme.test");
@@ -566,7 +566,7 @@ describe("PrivacyInboxCard", () => {
           422,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -598,7 +598,7 @@ describe("PrivacyInboxCard", () => {
           403,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -637,7 +637,7 @@ describe("PrivacyInboxCard", () => {
       "PATCH /data-subject-requests/d1": () =>
         jsonResponse({ ...DSRS.data[0], assignee_id: "u1" }),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -693,7 +693,7 @@ describe("PrivacyInboxCard", () => {
           page: { next_cursor: null, has_more: false },
         }),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -738,7 +738,7 @@ describe("PrivacyInboxCard", () => {
           403,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -770,7 +770,7 @@ describe("PrivacyInboxCard", () => {
           403,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     expect(
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
@@ -786,7 +786,7 @@ describe("opening a DSR (G-2)", () => {
   // there means the server refuses (BE-2) — so the form must not offer it.
   it("requires a picked contact for an erasure", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -799,7 +799,7 @@ describe("opening a DSR (G-2)", () => {
 
   it("allows a free-text subject for an access request — the subject may not be in the CRM", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -809,7 +809,7 @@ describe("opening a DSR (G-2)", () => {
 
   it("says an access request is fulfilled by hand — nothing is exported", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -854,7 +854,7 @@ describe("opening a DSR (G-2)", () => {
           201,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -901,7 +901,7 @@ describe("opening a DSR (G-2)", () => {
           201,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -951,7 +951,7 @@ describe("opening a DSR (G-2)", () => {
           page: { next_cursor: null, has_more: false },
         }),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /new request/i }),
     );
@@ -988,7 +988,7 @@ describe("opening a DSR (G-2)", () => {
 describe("fulfilling an erasure", () => {
   it("holds the confirm until ERASE is typed", async () => {
     stubRoutes();
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -1026,7 +1026,7 @@ describe("fulfilling an erasure", () => {
           409,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -1068,7 +1068,7 @@ describe("fulfilling an erasure", () => {
           422,
         ),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -1109,7 +1109,7 @@ describe("fulfilling an erasure", () => {
           resolution: "verified",
         }),
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
@@ -1155,7 +1155,7 @@ describe("fulfilling an erasure", () => {
         return jsonResponse({ ...DSRS.data[0], ...closed });
       },
     });
-    render(<PrivacyInboxCard />);
+    render(<RequestsPanel />);
     const summary = await screen.findByRole("button", {
       name: /8f3a-contact-uuid/i,
     });

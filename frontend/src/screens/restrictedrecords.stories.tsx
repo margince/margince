@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { RestrictedRecordsCard } from "./restrictedrecords";
+import { RequestsPanel } from "./settings.privacy";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,9 +12,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Settings → Privacy → Restricted records. Two states worth reviewing: a
-// record held under the statutory floor, named by its transactions and its
-// deadline; and the empty card, which says every erasure completed in full.
+// Settings → Privacy → Requests → Held. A held record is named by its
+// transactions and its deadline. The empty lane says every erasure completed.
 
 const HELD = {
   activity_id: "00000000-0000-4000-8000-0000000000b1",
@@ -47,19 +46,27 @@ function restricted(records: unknown[], decide = false, extra: RouteMap = {}) {
     });
     return (
       <StoryProviders>
-        <RestrictedRecordsCard />
+        <RequestsPanel />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof RestrictedRecordsCard> = {
+// The lane lives in the Requests panel, behind its switch.
+async function openHeld({ canvasElement }: { canvasElement: HTMLElement }) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: /^Held/ }),
+  );
+}
+
+const meta = {
   title: "Settings/Governance/Privacy and retention/Restricted records",
-  component: RestrictedRecordsCard,
-};
+  component: RequestsPanel,
+  play: openHeld,
+} satisfies Meta<typeof RequestsPanel>;
 export default meta;
 
-type Story = StoryObj<typeof RestrictedRecordsCard>;
+type Story = StoryObj<typeof meta>;
 
 export const Held: Story = { render: restricted([HELD]) };
 export const NothingHeld: Story = { render: restricted([]) };
@@ -68,11 +75,28 @@ export const HeldDark: Story = {
   render: restricted([HELD]),
 };
 
-// The controller's own view: the release action on the row and the pin form
-// above it. Both are irreversible and both demand a typed reason, which is
-// what the confirm dialog behind them is for.
+// The controller's own view: Release on the row and Pin a record in the head.
+// Both are irreversible and both demand a typed reason in their dialog.
 export const WithTheRetentionAuthority: Story = {
   render: restricted([HELD], true),
+};
+
+// Pinning names a record by id; a malformed one keeps the confirm shut.
+export const PinDialog: Story = {
+  render: restricted([HELD], true),
+  play: async (context) => {
+    await openHeld(context);
+    await userEvent.click(
+      await within(context.canvasElement).findByRole("button", {
+        name: "Pin a record",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /Record ID/ }),
+      "not-a-record",
+    );
+  },
 };
 
 const HELD_LONG = {
@@ -151,8 +175,9 @@ export const ReleaseRefused: Story = {
         403,
       ),
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async (context) => {
+    await openHeld(context);
+    const canvas = within(context.canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: /^Release email of/i }),
     );
@@ -165,7 +190,7 @@ export const ReleaseRefused: Story = {
   },
 };
 
-// Without the retention authority the card keeps its place and says why.
+// Without the retention authority the lane keeps its place and says why.
 export const Withheld: Story = {
   render: () => {
     installFetchStub({
@@ -173,7 +198,7 @@ export const Withheld: Story = {
     });
     return (
       <StoryProviders>
-        <RestrictedRecordsCard />
+        <RequestsPanel />
       </StoryProviders>
     );
   },

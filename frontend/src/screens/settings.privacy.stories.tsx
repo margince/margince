@@ -11,8 +11,7 @@ import {
   stubWithSession,
 } from "./story-utils";
 
-// The whole Privacy and retention page, every lane populated, in the order an
-// officer works them.
+// The whole Privacy and retention page, in the order an officer works it.
 
 const PAGE = { next_cursor: null, has_more: false };
 const page = (data: unknown[]) => jsonResponse({ data, page: PAGE });
@@ -148,27 +147,48 @@ const OFFICER: GrantSpec = {
   contact: ["update"],
 };
 
-function lanes() {
-  stubWithSession(ROUTES, OFFICER);
-  return (
-    <StoryProviders>
-      <PrivacyLanes />
-    </StoryProviders>
-  );
+function lanes(routes: RouteMap = ROUTES) {
+  return () => {
+    stubWithSession(routes, OFFICER);
+    return (
+      <StoryProviders>
+        <PrivacyLanes />
+      </StoryProviders>
+    );
+  };
 }
 
-const meta: Meta<typeof PrivacyLanes> = {
+const meta = {
   title: "Settings/Governance/Privacy and retention/Page",
   component: PrivacyLanes,
-};
+} satisfies Meta<typeof PrivacyLanes>;
 export default meta;
 
-type Story = StoryObj<typeof PrivacyLanes>;
+type Story = StoryObj<typeof meta>;
 
-export const Populated: Story = { render: lanes };
+export const Populated: Story = { render: lanes() };
+
+export const PopulatedDark: Story = {
+  globals: { theme: "dark" },
+  render: lanes(),
+};
 
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: lanes,
+  render: lanes(),
+};
+
+// A new installation: every list says it is empty in one line, and the
+// requests lane offers no status filter over nothing.
+const EMPTY: RouteMap = {
+  "GET /retention/settings": () => jsonResponse({ retain_only: false }),
+};
+
+export const Empty: Story = { render: lanes(EMPTY) };
+
+export const EmptyPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: lanes(EMPTY),
 };

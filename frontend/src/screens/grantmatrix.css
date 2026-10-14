@@ -44,3 +44,10 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* The label over one group of rows: a small heading, not one more row. */
+.grant-matrix .grant-group > th {
+  padding-block: var(--space-4) var(--space-2);
+  font: var(--fontHeadingXSmall);
+  border-bottom-color: var(--borderSubtle);
+}

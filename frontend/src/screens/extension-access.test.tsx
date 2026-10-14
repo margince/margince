@@ -261,10 +261,30 @@ const render = (ui: ReactNode) =>
     ui,
   );
 
-// The matrix for one object, found by its accessible name: the only thing that
-// tells two tables of identical columns apart.
+// The unit's one grid, by the name the card gives it.
+function notesMatrix(): HTMLElement {
+  return screen.getByRole("table", {
+    name: en["extAccess.matrixName"].replace("{unit}", "Notes"),
+  });
+}
+
+// One object's run of rows, found by the group row that names it.
 function matrixFor(object: string): HTMLElement {
-  return screen.getByRole("table", { name: objectLabel("notes", object) });
+  const group = within(notesMatrix())
+    .getByRole("rowheader", { name: objectLabel("notes", object) })
+    .closest("tbody");
+  if (!(group instanceof HTMLElement)) {
+    throw new Error(`no group of rows for ${object}`);
+  }
+  return group;
+}
+
+// The role names heading a group's rows, without the group's own label.
+function roleHeads(object: string): string[] {
+  return within(matrixFor(object))
+    .getAllByRole("rowheader")
+    .filter((head) => head.getAttribute("scope") === "row")
+    .map((head) => head.textContent ?? "");
 }
 
 // One cell of the matrix. `role: "switch"` is load-bearing rather than
@@ -296,10 +316,18 @@ describe("ExtensionAccessCard", () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
 
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
     expect(screen.getByText("Version 0.3.1")).toBeTruthy();
-    // What the unit brings, each family named rather than lumped together.
-    expect(screen.getByText("ext_notes_note")).toBeTruthy();
+    // What the unit brings, each family named rather than lumped together, and
+    // its objects by the names the grid uses.
+    const objects = screen
+      .getByText("Permission objects")
+      .closest(".factlist-row");
+    expect(
+      [...(objects?.querySelectorAll("li") ?? [])].map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(["Note", "Signing key"]);
     expect(screen.getByText("ext_notes_digest")).toBeTruthy();
 
     // The grants, read straight off the fixture: admin reads and creates the
@@ -314,7 +342,7 @@ describe("ExtensionAccessCard", () => {
     // A unit that registers nothing says so instead of rendering an empty grid.
     // Scoped to the unit, because more than one composed unit registers none —
     // an unscoped query would pass on somebody else's sentence.
-    const quiet = screen.getByText("quiet").closest("section.panel");
+    const quiet = screen.getByText("Quiet").closest("section.panel");
     if (!(quiet instanceof HTMLElement)) {
       throw new Error("no unit block rendered for quiet");
     }
@@ -326,16 +354,16 @@ describe("ExtensionAccessCard", () => {
   it("gives every unit a card of its own, headed by the unit name", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
-    // The page's own heading stays on the lead card, which carries the seat and
-    // inventory states and never a unit's grants.
+    // No lead card over the units: the page's own subtitle says what it is.
     expect(
-      screen.getByRole("heading", { name: /Extensions and access/i }),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { name: /Extensions and access/i }),
+    ).toBeNull();
 
+    // Headed by the unit's readable name, never its key.
     const unit = screen
-      .getByRole("heading", { name: "notes" })
+      .getByRole("heading", { name: "Notes" })
       .closest("section.panel");
     if (!(unit instanceof HTMLElement)) {
       throw new Error("the notes unit is not a card of its own");
@@ -343,98 +371,83 @@ describe("ExtensionAccessCard", () => {
     // Version and page link ride the card's heading row rather than its body.
     expect(within(unit).getByText("Version 0.3.1")).toBeTruthy();
     expect(
-      within(unit).getByRole("link", { name: "Open notes page" }),
+      within(unit).getByRole("link", { name: "Go to Notes" }),
     ).toBeTruthy();
-    // The grants are the card's rows; the inventory of what the unit brought is
-    // its reference half, behind a disclosure that reads last and closed. So
-    // the two are still told apart — by a row label and a summary rather than
-    // by two section headings.
     expect(within(unit).getByText("What this unit adds")).toBeTruthy();
-    // … and each registered object keeps a matrix of its own within the card,
-    // NAMED by the row that holds it: the object is what a reader landing on a
-    // tick in the middle of one has to be able to trace back to.
-    expect(within(unit).getAllByRole("table").length).toBe(2);
-    const note = within(unit).getByRole("table", { name: "Note" });
-    expect(
-      within(unit).getByRole("table", { name: "Signing key" }),
-    ).toBeTruthy();
-    // Named by the group head itself, so the name is said once, not copied.
-    expect(note.hasAttribute("aria-label")).toBe(false);
-    expect(
-      document.getElementById(note.getAttribute("aria-labelledby") ?? ""),
-    ).toBe(within(unit).getByRole("heading", { name: "Note", level: 3 }));
+    // One grid for the unit, its column heads said once, and each registered
+    // object a run of rows under a group row naming it.
+    expect(within(unit).getAllByRole("table")).toEqual([notesMatrix()]);
+    expect(roleHeads("ext_notes_note")).toEqual(["Admin", "Rep"]);
+    expect(roleHeads("ext_notes_signing_key")).toEqual(["Admin", "Rep"]);
   });
 
   it("links to the page of a unit the SPA registry resolves, naming the unit in the link", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     // The accessible name carries the unit, not a bare "Open": several unit
     // blocks sit on this one page, so a link found by name alone has to be
     // unambiguous.
-    const link = screen.getByRole("link", { name: "Open notes page" });
+    const link = screen.getByRole("link", { name: "Go to Notes" });
     expect(link.getAttribute("href")).toBe("#/ext/notes");
   });
 
   it("says a unit is composed but unlinkable when this build's registry has never heard of it", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     // `stale` comes back from /extensions — the binary composed it — and is
     // absent from the mocked SPA registry, the exact shape of a bundle older
     // than the server. No link is rendered, because #/ext/stale would land on
     // the router's not-found card …
-    expect(screen.queryByRole("link", { name: /stale/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /stale/i })).toBeNull();
     // … and the reason is SAID, so "this unit has no page" cannot be confused
     // with "the page is missing because the bundle is stale". `quiet` is the
     // contrast: it has a descriptor and nothing to show, which is neither.
-    const unit = screen.getByText("stale").closest("section.panel");
+    const unit = screen.getByText("Stale").closest("section.panel");
     if (!(unit instanceof HTMLElement)) {
       throw new Error("no unit block rendered for stale");
     }
     expect(
       within(unit).getByText(
-        /stale is installed on the API, but this app build/,
+        /Stale is installed on the API, but this app build/,
       ),
     ).toBeTruthy();
-    expect(screen.queryByText(/quiet is installed on the API/)).toBeNull();
+    expect(screen.queryByText(/Quiet is installed on the API/)).toBeNull();
     // And the resolvable unit says nothing of the kind.
-    expect(screen.queryByText(/notes is installed on the API/)).toBeNull();
+    expect(screen.queryByText(/Notes is installed on the API/)).toBeNull();
   });
 
   it("shows every route operation with its method, so a DELETE cannot hide behind a GET on the same path", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     // Scoped to the unit: every unit block carries its own Routes row.
-    const unit = screen.getByText("notes").closest("section.panel");
+    const unit = screen.getByText("Notes").closest("section.panel");
     if (!(unit instanceof HTMLElement)) {
       throw new Error("no unit block rendered for notes");
     }
     const routes = within(unit)
       .getByText("Routes")
-      .closest(".ext-brings-row")
+      .closest(".factlist-row")
       ?.querySelectorAll("li");
+    // The pair that shares a path is two lines, and the destructive one is named.
     expect([...(routes ?? [])].map((item) => item.textContent)).toEqual([
-      "GET/ext/notes",
-      "POST/ext/notes",
-      "DELETE/ext/notes/{id}",
-      "GET/ext/notes/{id}",
+      "GET /ext/notes",
+      "POST /ext/notes",
+      "DELETE /ext/notes/{id}",
+      "GET /ext/notes/{id}",
     ]);
-    // The pair that shares a path is TWO chips, and the destructive one is
-    // named — the whole reason the inventory stopped deduplicating by path.
-    expect(screen.getAllByText("/ext/notes/{id}").length).toBe(2);
-    expect(screen.getByText("DELETE")).toBeTruthy();
   });
 
   it("PATCHes the whole grant for the toggled role and object", async () => {
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     await userEvent.click(cell("ext_notes_note", "Rep", "Read").control);
 
@@ -478,7 +491,7 @@ describe("ExtensionAccessCard", () => {
       req.method === "PATCH" ? new Promise<Response>(() => {}) : reads(req),
     );
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     await user.click(cell("ext_notes_note", "Rep", "Read").control);
 
@@ -491,6 +504,14 @@ describe("ExtensionAccessCard", () => {
     // Another role is not, and this is the assertion the defect fails: nothing
     // about Admin's grant ever left the browser.
     expect(busy("Admin", "Read")).toBeNull();
+    // Held still rather than busy: a second write on one role would race its version.
+    expect(cell("ext_notes_note", "Admin", "Read").disabled).toBe(true);
+    expect(busy("Rep", "Read")).toBe("true");
+    expect(
+      cell("ext_notes_signing_key", "Rep", "Read").control.getAttribute(
+        "aria-busy",
+      ),
+    ).toBeNull();
   });
 
   it("re-reads and says who changed it when a concurrent edit refuses the write", async () => {
@@ -532,7 +553,7 @@ describe("ExtensionAccessCard", () => {
       }),
     );
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     skewed = true;
     await userEvent.click(cell("ext_notes_note", "Rep", "Delete").control);
@@ -559,7 +580,7 @@ describe("ExtensionAccessCard", () => {
   it("says plainly when no role holds read on an object, and stops saying it once one does", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     // The signing key: granted to nobody, which is exactly the state that
     // renders the extension's own screens empty.
@@ -601,7 +622,7 @@ describe("ExtensionAccessCard", () => {
         ),
       ).toBeTruthy(),
     );
-    expect(screen.queryByText("notes")).toBeNull();
+    expect(screen.queryByText("Notes")).toBeNull();
   });
 
   // The inventory grant ALONE is not this card. `GET /v1/roles` asks for
@@ -689,8 +710,8 @@ describe("ExtensionAccessCard", () => {
         ),
       ).toBeTruthy(),
     );
-    expect(screen.queryByRole("heading", { name: "notes" })).toBeNull();
-    expect(screen.queryByText("ext_notes_note")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Notes" })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
     // And the cache itself is emptied, so a later render cannot resurrect it.
     expect(
       client.getQueryData(["extension-access", "extensions"]),
@@ -701,7 +722,7 @@ describe("ExtensionAccessCard", () => {
   it("disables every toggle for a read seat while still showing the grants", async () => {
     vi.stubGlobal("fetch", backend([], { seat: "read" }));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     // Once for the eye, in the block that holds the matrices — not on the card
     // above them, where a reader looking at dead toggles had to leave the card
@@ -791,26 +812,31 @@ describe("ExtensionAccessCard", () => {
   it("labels every cell by role, verb and object, and associates it with both headers", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
-    const table = matrixFor("ext_notes_note");
+    const table = notesMatrix();
     // The column headers are real scoped headers, so a cell can be traced to a
     // verb by assistive tech rather than by position.
     const columns = within(table)
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
     expect(columns).toEqual(["Role", "Read", "Create", "Update", "Delete"]);
-    expect(
-      within(table)
-        .getAllByRole("rowheader")
-        .map((header) => header.textContent),
-    ).toEqual(["Admin", "Rep"]);
     for (const header of within(table).getAllByRole("columnheader")) {
       expect(header.getAttribute("scope")).toBe("col");
     }
-    for (const header of within(table).getAllByRole("rowheader")) {
-      expect(header.getAttribute("scope")).toBe("row");
-    }
+    // Each group row heads its run; each role heads its own row.
+    expect(
+      within(table)
+        .getAllByRole("rowheader")
+        .map((header) => [header.textContent, header.getAttribute("scope")]),
+    ).toEqual([
+      ["Note", "rowgroup"],
+      ["Admin", "row"],
+      ["Rep", "row"],
+      ["Signing key", "rowgroup"],
+      ["Admin", "row"],
+      ["Rep", "row"],
+    ]);
 
     // And each tick still names itself in full — the name a user hears when
     // they tab straight onto it, with no surrounding context read out.
@@ -821,7 +847,7 @@ describe("ExtensionAccessCard", () => {
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     const { control } = cell("ext_notes_note", "Rep", "Read");
     control.focus();
@@ -859,7 +885,7 @@ describe("ExtensionAccessCard unit identity", () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
 
-    await screen.findByText("quiet");
+    await screen.findByText("Quiet");
     // The unit that DOES bring something keeps its section, so this asserts the
     // suppression rather than the absence of the feature.
     const sections = screen.getAllByText(en["extAccess.brings.heading"]);
@@ -870,10 +896,10 @@ describe("ExtensionAccessCard unit identity", () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
 
-    await screen.findByText("quiet");
+    await screen.findByText("Quiet");
     expect(
       screen.queryByRole("link", {
-        name: en["extAccess.openUnit"].replace("{name}", "quiet"),
+        name: en["extAccess.openUnit"].replace("{name}", "Quiet"),
       }),
     ).toBeNull();
   });
@@ -899,7 +925,7 @@ describe("ExtensionAccessCard object matrices", () => {
       }),
     );
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
     const warnings = screen.getAllByText(en["extAccess.nobodyReadsTitle"]);
     expect(warnings).toHaveLength(1);
@@ -921,22 +947,21 @@ describe("ExtensionAccessCard object matrices", () => {
       backend([], { rolesBody: { roles: [...ROLES.roles, custom] } }),
     );
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
-    const heads = within(matrixFor("ext_notes_note")).getAllByRole("rowheader");
-    expect(heads.map((head) => head.textContent)).toEqual([
+    expect(roleHeads("ext_notes_note")).toEqual([
       "Admin",
       "Rep",
       `${custom.name}${en["extAccess.customRole"]}`,
     ]);
   });
 
-  it("stands each matrix straight in the unit's pane with the role column pinned", async () => {
+  it("stands the unit's grid straight in its pane with the role column pinned", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<ExtensionAccessCard />);
-    await waitFor(() => expect(screen.getByText("notes")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
 
-    const scroller = matrixFor("ext_notes_note").parentElement;
+    const scroller = notesMatrix().parentElement;
     expect([...(scroller?.classList ?? [])]).toEqual(
       expect.arrayContaining(["table-scroll-bleed", "table-scroll-sticky"]),
     );
