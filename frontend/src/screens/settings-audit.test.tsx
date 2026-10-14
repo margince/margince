@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
@@ -85,19 +86,20 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("AuditLogCard", () => {
-  it("puts the filters inside the log's own card, in a disclosure closed on arrival", async () => {
+  // The page names the log, so its card carries no heading. The dials stand
+  // open on one bar above it, each applying on its own.
+  it("puts the filters on a bar above the log, and repeats no page heading", async () => {
     vi.stubGlobal("fetch", auditLogBackend());
     render(<AuditLogCard />);
     await screen.findByText("update");
 
-    const card = screen.getByLabelText("Actor").closest("section");
-    expect(card).toContainElement(
-      screen.getByRole("heading", { level: 2, name: "Audit log" }),
-    );
-    expect(card).toContainElement(screen.getByText("update"));
-    const disclosure = screen.getByLabelText("Actor").closest("details");
-    expect(disclosure).not.toHaveAttribute("open");
-    expect(disclosure?.querySelector("summary")).toHaveTextContent("Filters");
+    const bar = screen.getByLabelText("Actor").closest("fieldset");
+    expect(bar).not.toBeNull();
+    expect(bar).not.toContainElement(screen.getByText("update"));
+    expect(screen.getByLabelText("From")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("To")).toHaveAttribute("type", "date");
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(document.querySelector("details")).toBeNull();
   });
 
   it("narrows the request to the filters, keeping the page size and dropping the cursor", async () => {
@@ -128,7 +130,11 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Action"), "erase");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Action" }),
+      "erase",
+    );
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     expect(
       await screen.findByText("No recorded actions match these filters."),
@@ -316,13 +322,14 @@ describe("AuditLogCard", () => {
     await screen.findByText("Anna Weber");
     await openDetail(user);
 
-    const fields = screen.getByText("Value").closest("table");
+    const fields = screen.getByText("step").closest("dl");
     if (!fields) {
-      throw new Error("the change detail drew no field table");
+      throw new Error("the change detail drew no field list");
     }
     expect(within(fields).getByText("complete")).toBeInTheDocument();
     expect(within(fields).getByText('{"voice":false}').tagName).toBe("CODE");
     expect(within(fields).queryByText("(created)")).toBeNull();
+    expect(screen.queryByRole("table", { name: /changed fields/i })).toBeNull();
   });
 
   it("strikes the value an update replaced and keeps the one it wrote", async () => {
@@ -343,7 +350,7 @@ describe("AuditLogCard", () => {
     await screen.findByText("update");
     await openDetail(user);
 
-    expect(screen.getByText("Before and after")).toBeInTheDocument();
+    expect(screen.getByText("address").tagName).toBe("DT");
     expect(screen.getByText('{"city":"Berlin"}')).toHaveClass(
       "field-diff-from",
     );
@@ -369,8 +376,8 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     await screen.findByText("delete");
     await openDetail(user);
-    expect(screen.getByText("Removed value")).toBeInTheDocument();
-    expect(screen.getByText("Old list")).toBeInTheDocument();
+    expect(screen.getByText("Old list")).toHaveClass("field-diff-from");
+    expect(screen.getByText("(cleared)")).toBeInTheDocument();
   });
 
   it.each([

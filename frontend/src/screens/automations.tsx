@@ -1,22 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Zap } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { type QueryLike, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { RowOpen } from "../design-system/rowopen";
-import { useTruncationTooltip } from "../design-system/tooltip";
 import { type Translator, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
@@ -108,53 +102,52 @@ export function AutomationsAdmin() {
     catalog.data?.data.find((entry) => entry.key === key);
 
   return (
-    <div data-automations-admin>
-      <Panel title={t("nav.automations")}>
-        <PanelBody>
-          <PanelIntro>{t("auto.sub")}</PanelIntro>
-          {/* Bound to `update`, the grant the row's Switch asks for. */}
-          {me.isSuccess && !canEdit && (
-            <PanelIntro>{t("auto.readOnly")}</PanelIntro>
-          )}
-        </PanelBody>
-        <PanelGroupHead
-          title={t("auto.instances")}
-          level="h3"
-          id={instancesHeading}
-        />
+    <div data-automations-admin className="auto-admin">
+      <Panel title={<span id={instancesHeading}>{t("auto.instances")}</span>}>
         <InstancesSection
+          intro={
+            <>
+              <PanelIntro>{t("auto.sub")}</PanelIntro>
+              {/* Bound to `update`, the grant the row's Switch asks for. */}
+              {me.isSuccess && !canEdit && (
+                <PanelIntro>{t("auto.readOnly")}</PanelIntro>
+              )}
+            </>
+          }
           focusAfterDelete={() => focusable(instancesHeading)}
           instances={instances}
           me={me}
           entryFor={entryFor}
           canViewRuns={canViewRuns}
+          canCreate={canCreate}
           canEdit={canEdit}
           canDelete={canDelete}
         />
-        <PanelGroupHead title={t("auto.catalog")} level="h3" />
-        <StarterLibrary catalog={catalog} canCreate={canCreate} onUse={stage} />
-        {/* On the card: by the time it is true the dialog is gone. */}
+        {/* Under the list the new row lands in: by then the dialog is gone. */}
         {create.isSuccess && (
           <PanelBody>
             <p role="status">{t("auto.createdPaused")}</p>
           </PanelBody>
         )}
-        {staged && (
-          <AutomationDialog
-            key={staged.seq}
-            open={staged.open}
-            entry={staged.entry}
-            initialName={staged.entry.name}
-            submitLabel={t("auto.create")}
-            pending={create.isPending}
-            refusal={<ErrorLine error={create.error} />}
-            onSubmit={(name, params) =>
-              create.mutate({ key: staged.entry.key, name, params })
-            }
-            onClose={() => setStaged(shut)}
-          />
-        )}
       </Panel>
+      <Panel title={t("auto.catalog")}>
+        <StarterLibrary catalog={catalog} canCreate={canCreate} onUse={stage} />
+      </Panel>
+      {staged && (
+        <AutomationDialog
+          key={staged.seq}
+          open={staged.open}
+          entry={staged.entry}
+          initialName={staged.entry.name}
+          submitLabel={t("auto.create")}
+          pending={create.isPending}
+          refusal={<ErrorLine error={create.error} />}
+          onSubmit={(name, params) =>
+            create.mutate({ key: staged.entry.key, name, params })
+          }
+          onClose={() => setStaged(shut)}
+        />
+      )}
     </div>
   );
 }
@@ -162,19 +155,23 @@ export function AutomationsAdmin() {
 // Without the read grant the section says it is withheld: an empty list would
 // claim the workspace runs no automations. Behind /me, so it is a settled denial.
 function InstancesSection({
+  intro,
   focusAfterDelete,
   instances,
   me,
   entryFor,
   canViewRuns,
+  canCreate,
   canEdit,
   canDelete,
 }: Readonly<{
+  intro: ReactNode;
   focusAfterDelete: () => HTMLElement | null;
   instances: QueryLike<{ data: Automation[] }>;
   me: QueryLike<unknown>;
   entryFor: (key: string) => CatalogEntry | undefined;
   canViewRuns: boolean;
+  canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
 }>) {
@@ -182,25 +179,31 @@ function InstancesSection({
   const rows = instances.data?.data;
   if (canViewRuns && rows !== undefined && rows.length > 0) {
     return (
-      <ConfiguredAutomations
-        automations={rows}
-        entryFor={entryFor}
-        canViewRuns={canViewRuns}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        focusAfterDelete={focusAfterDelete}
-      />
+      <>
+        <PanelBody>{intro}</PanelBody>
+        <ConfiguredAutomations
+          automations={rows}
+          entryFor={entryFor}
+          canViewRuns={canViewRuns}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          focusAfterDelete={focusAfterDelete}
+        />
+      </>
     );
+  }
+  let empty = t("auto.withheld");
+  if (canViewRuns) {
+    empty = canCreate ? t("auto.instances.empty") : t("common.empty");
   }
   return (
     <PanelBody>
+      {intro}
       <QueryStates
         query={canViewRuns ? instances : me}
         pendingLabel={t("auto.instances")}
       >
-        <EmptyState>
-          {canViewRuns ? t("common.empty") : t("auto.withheld")}
-        </EmptyState>
+        <EmptyState>{empty}</EmptyState>
       </QueryStates>
     </PanelBody>
   );
@@ -254,7 +257,9 @@ function libraryColumns(
       render: (entry) => (
         <CellStack>
           <span>{entry.name}</span>
-          {entry.description && <OneLine text={entry.description} />}
+          {entry.description && (
+            <span className="t-caption">{leadSentence(entry.description)}</span>
+          )}
         </CellStack>
       ),
     },
@@ -292,14 +297,11 @@ function libraryColumns(
   ];
 }
 
-function OneLine({ text }: Readonly<{ text: string }>) {
-  const tip = useTruncationTooltip<HTMLSpanElement>(text);
-  return (
-    <span className="t-caption auto-oneline" ref={tip.ref} {...tip.trigger}>
-      {text}
-      {tip.tip}
-    </span>
-  );
+// The row says what a template does; the dialog it opens reads the rest.
+const FIRST_SENTENCE = /^.*?[.!?。](?=\s|$)/su;
+
+function leadSentence(text: string): string {
+  return FIRST_SENTENCE.exec(text)?.[0] ?? text;
 }
 
 // A deleted row takes its menu with it, so focus lands on the list's heading.

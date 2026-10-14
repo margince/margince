@@ -77,7 +77,8 @@ const catalog: CatalogEntry[] = [
   {
     key: "stalled_deal_nudge",
     name: "Stalled-deal nudge",
-    description: "Stages a follow-up when a deal stalls.",
+    description:
+      "Stages a follow-up when a deal stalls. It fires once per stalled deal.",
     trigger: "deal.stalled",
     action: "send_email",
     tier: "confirmation_required",
@@ -221,8 +222,8 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(container.querySelector(".wrap")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Automations" }),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { level: 2, name: "Automations" }),
+    ).toBeNull();
   });
 
   it("anti-DSL guard: form fields derive only from params_schema + name — no rule body, no trigger input", async () => {
@@ -295,7 +296,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(calls[1].ifMatch).toBe("1");
   });
 
-  it("each row names its catalog autonomy mode in a word", async () => {
+  // Running by itself is the normal mode and says nothing; only a rule whose
+  // actions wait for approval carries a badge, beside its name.
+  it("marks only a rule that needs approval, beside its name", async () => {
     const automations = [
       instance({
         id: "au-1",
@@ -316,14 +319,14 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     const confirmationRequired = screen.getByTestId("automation-au-1");
     const autoExecute = screen.getByTestId("automation-au-2");
+    const badge = within(confirmationRequired).getByText("Needs approval");
     expect(
-      within(confirmationRequired).getByText("Needs approval"),
-    ).toBeTruthy();
-    expect(within(autoExecute).getByText("Runs on its own").className).toBe(
-      "sr-only",
-    );
-    // A colour alone says nothing to a reader who cannot see it apart.
-    expect(within(autoExecute).queryByRole("img")).toBeNull();
+      within(confirmationRequired)
+        .getByText("Confirmation-required one")
+        .parentElement?.contains(badge),
+    ).toBe(true);
+    expect(within(autoExecute).queryByText("Needs approval")).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Mode" })).toBeNull();
   });
 
   it("renders an instance from the wire schema alone — authorship cannot change the row", async () => {
@@ -471,16 +474,21 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
-  // One pane, and each list is a group of it. An h3 under the panel's own h2
-  // names each, so neither reads as a second card.
-  it("names both lists as groups of one panel", async () => {
+  // Two lists, two panes, each named for what it holds; neither repeats the
+  // page's own title.
+  it("gives the configured rules and the starter library a pane each", async () => {
     vi.stubGlobal("fetch", automationsBackend([instance({})], []));
     render(<AutomationsAdmin />);
     await screen.findByText("Nudge stalled fleet deals");
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
     expect(
-      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
     ).toEqual(["Configured automations", "Starter library"]);
+    expect(
+      screen.getByRole("region", { name: "Configured automations" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: "Starter library" }),
+    ).toBeTruthy();
   });
 
   // Every template is one row: its name, what it does, and what sets it off in
@@ -495,9 +503,24 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
       within(stalled).getByText("Stages a follow-up when a deal stalls."),
     ).toBeTruthy();
     expect(stalled).not.toHaveTextContent(/send_email|->/);
+    // The row says what the template does; the dialog it opens reads the rest,
+    // so no description is ever cut off mid-sentence.
+    expect(stalled).not.toHaveTextContent(/fires once|…/);
     expect(
       within(screen.getByTestId("template-task_on_stage_entry")).getByText(
         "Deal stage changed",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("reads a template's whole description in the dialog its row opens", async () => {
+    vi.stubGlobal("fetch", automationsBackend([], []));
+    render(<AutomationsAdmin />);
+    await screen.findByTestId("template-stalled_deal_nudge");
+    const dialog = await openCreateDialog();
+    expect(
+      within(dialog).getByText(
+        "Stages a follow-up when a deal stalls. It fires once per stalled deal.",
       ),
     ).toBeTruthy();
   });
@@ -666,7 +689,9 @@ describe("ConfiguredAutomations — Runs/Preview toggles", () => {
     expect(screen.queryByRole("button", { name: "Preview" })).toBeNull();
   });
 
-  it("mounts the runs panel on click without mounting preview", async () => {
+  // Alone, the run history is the row's whole detail and needs no heading;
+  // the row's chevron already names it.
+  it("mounts the run history on click without mounting preview", async () => {
     vi.stubGlobal("fetch", panelBackend());
     render(
       <ConfiguredAutomations
@@ -677,13 +702,17 @@ describe("ConfiguredAutomations — Runs/Preview toggles", () => {
         canDelete
       />,
     );
-    expect(screen.queryByRole("heading", { name: "Run history" })).toBeNull();
+    expect(screen.queryByText("This automation has not fired yet.")).toBeNull();
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
-    expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: previewTitle })).toBeNull();
+    expect(
+      await screen.findByText("This automation has not fired yet."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByText(/estimate/i)).toBeNull();
   });
 
+  // Side by side, each inspector takes a heading so a reader tells them apart.
   it("keeps both panels open independently", async () => {
     vi.stubGlobal("fetch", panelBackend());
     render(

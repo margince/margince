@@ -88,7 +88,7 @@ function Calls() {
   installFetchStub({ "GET /ai/calls/call-1": () => jsonResponse(DETAIL) });
   return (
     <StoryProviders>
-      <Panel title="AI call trace" className="aicalls-card">
+      <Panel className="aicalls-card">
         <CallTable calls={CALLS} captureEnabled={false} />
       </Panel>
     </StoryProviders>

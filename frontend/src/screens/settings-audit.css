@@ -1,3 +1,18 @@
+/* Three dials a line, two in a narrow column, so a date keeps room for its
+   picker. Fixed tracks and a viewport query: these tracks set the bar's width. */
+.auditlog-dials {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+@media (width < 64rem) {
+  .auditlog-dials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .auditlog-time {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -66,11 +81,6 @@
   flex-direction: column;
   gap: var(--space-3);
   min-inline-size: 0;
-}
-/* Field names start at the facts' x and values near their value column. */
-.auditlog-detail-body .table :is(th, td):first-child {
-  padding-inline-start: 0;
-  inline-size: 38%;
 }
 .auditlog-value {
   overflow-wrap: anywhere;

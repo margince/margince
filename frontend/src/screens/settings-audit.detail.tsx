@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import type { ReactNode } from "react";
 import { type Fact, FactList } from "../design-system/factlist";
 import { EvidenceChip, FieldDiff, toEvidence } from "../design-system/trust";
 import {
@@ -16,7 +16,6 @@ import { roleLabel } from "./roles.queries";
 import {
   type AuditLogEntry,
   type AuthorizationRule,
-  type ChangeShape,
   changeShape,
   diffKeys,
   type FieldValue,
@@ -75,55 +74,41 @@ export function AuditDetail({ entry }: Readonly<{ entry: AuditLogEntry }>) {
   ];
   return (
     <div className="auditlog-detail-body">
-      {keys.length > 0 && <AuditFieldTable entry={entry} keys={keys} />}
+      {keys.length > 0 && <AuditFieldFacts entry={entry} keys={keys} />}
       <FactList facts={facts} />
     </div>
   );
 }
 
-const SHAPE_HEADER = {
-  created: "settings.auditColValue",
-  changed: "settings.auditColChange",
-  removed: "settings.auditColRemoved",
-} as const satisfies Record<ChangeShape, string>;
-
-function AuditFieldTable({
+// A change reads as before and after, a removal as a value cleared, and a
+// creation as the value alone.
+function AuditFieldFacts({
   entry,
   keys,
 }: Readonly<{ entry: AuditLogEntry; keys: string[] }>) {
-  const t = useT();
   const shape = changeShape(entry);
-  const columns: DataTableColumn<string>[] = [
-    {
-      key: "field",
-      header: t("settings.auditColField"),
-      render: (key) => humanizeToken(key),
-    },
-    {
-      key: "value",
-      header: t(SHAPE_HEADER[shape]),
-      render: (key) =>
-        shape === "changed" ? (
-          <FieldDiff
-            oldValue={fieldValue(entry.before, key)?.text ?? null}
-            newValue={fieldValue(entry.after, key)?.text ?? null}
-          />
-        ) : (
-          <AuditValue
-            value={fieldValue(
-              shape === "created" ? entry.after : entry.before,
-              key,
-            )}
-          />
-        ),
-    },
-  ];
+  const value = (key: string): ReactNode => {
+    const before = fieldValue(entry.before, key)?.text ?? null;
+    if (shape === "changed") {
+      return (
+        <FieldDiff
+          oldValue={before}
+          newValue={fieldValue(entry.after, key)?.text ?? null}
+        />
+      );
+    }
+    if (shape === "removed") {
+      return <FieldDiff oldValue={before} newValue={null} />;
+    }
+    return <AuditValue value={fieldValue(entry.after, key)} />;
+  };
   return (
-    <DataTable
-      label={t("settings.auditChanges")}
-      columns={columns}
-      rows={keys}
-      rowKey={(key) => key}
+    <FactList
+      facts={keys.map((key) => ({
+        key,
+        term: humanizeToken(key),
+        value: value(key),
+      }))}
     />
   );
 }

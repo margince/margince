@@ -3,17 +3,13 @@
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Ban, Check, Clock, type LucideIcon, Minus, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  SegmentedControl,
-} from "../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Badge, Field, SegmentedControl } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
+import { Select } from "../design-system/select";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -94,7 +90,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // region sees the firing in their local wall-clock.
   const zone = viewerZone();
   return (
-    <PanelRow>
+    <li className="auto-run">
       <div className="auto-run-head">
         <OutcomeBadge outcome={run.outcome} />
         <time
@@ -125,25 +121,22 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
           color={reasonColor(run.outcome)}
         />
       )}
-    </PanelRow>
+    </li>
   );
 }
 
-// The outcome filter chip row: `all` clears the filter, every other chip pins
-// one outcome. `all` is a distinct sentinel (not an Outcome) so the query key
-// carries `undefined` when unfiltered — changing it resets keyset paging.
+// The outcome dial: "" clears the filter, every other option pins one outcome,
+// so the query key carries `undefined` when unfiltered and paging restarts.
+const ALL_OUTCOMES = "";
 const FILTER_OPTIONS = [
-  "all",
   "fired",
   "failed",
   "blocked",
   "skipped",
   "queued_for_approval",
-] as const;
-type FilterOption = (typeof FILTER_OPTIONS)[number];
+] as const satisfies readonly Outcome[];
 
-const FILTER_LABELS: Record<FilterOption, MessageKey> = {
-  all: "auto.runs.filterAll",
+const FILTER_LABELS: Record<Outcome, MessageKey> = {
   fired: "auto.runs.filterFired",
   failed: "auto.runs.filterFailed",
   blocked: "auto.runs.filterBlocked",
@@ -156,7 +149,8 @@ const FILTER_LABELS: Record<FilterOption, MessageKey> = {
 // history.tsx useInfiniteQuery + LoadMoreButton + QueryStates shape exactly.
 export function AutomationRuns({
   automationId,
-}: Readonly<{ automationId: string }>) {
+  titled,
+}: Readonly<{ automationId: string; titled?: boolean }>) {
   const t = useT();
   const [outcome, setOutcome] = useState<Outcome | undefined>(undefined);
 
@@ -183,6 +177,9 @@ export function AutomationRuns({
   });
 
   const runs = query.data?.pages.flatMap((page) => page.data) ?? [];
+  // A filter stays on screen once chosen, so a narrowing that found nothing
+  // can be undone.
+  const filterable = runs.length > 0 || outcome !== undefined;
 
   let body: ReactNode;
   if (runs.length === 0) {
@@ -190,47 +187,70 @@ export function AutomationRuns({
     // never-fired — the operator should know whether the automation is idle
     // or just quiet for this outcome.
     body = (
-      <PanelBody>
-        <EmptyState>
-          {outcome ? t("auto.runs.emptyFiltered") : t("auto.runs.empty")}
-        </EmptyState>
-      </PanelBody>
+      <p>{outcome ? t("auto.runs.emptyFiltered") : t("auto.runs.empty")}</p>
     );
   } else {
     body = (
       <>
-        {runs.map((run) => (
-          <RunRow key={run.id} run={run} />
-        ))}
-        <PanelBody>
-          <LoadMoreButton query={query} />
-        </PanelBody>
+        <ul className="auto-run-list">
+          {runs.map((run) => (
+            <RunRow key={run.id} run={run} />
+          ))}
+        </ul>
+        <LoadMoreButton query={query} />
       </>
     );
   }
 
   return (
-    <Panel className="auto-inspector" title={t("auto.runs.title")}>
-      <PanelBody className="auto-run-filters">
-        {FILTER_OPTIONS.map((option) => {
-          const active =
-            option === "all" ? outcome === undefined : outcome === option;
-          return (
-            <Button
-              key={option}
-              variant={active ? "primary" : "ghost"}
-              aria-pressed={active}
-              onClick={() => setOutcome(option === "all" ? undefined : option)}
-            >
-              {t(FILTER_LABELS[option])}
-            </Button>
-          );
-        })}
-      </PanelBody>
+    <Inspector title={t("auto.runs.title")} titled={titled ?? false}>
+      {filterable && (
+        <Field label={t("auto.runs.outcome")} className="auto-run-filter">
+          {(field) => (
+            <Select
+              {...field}
+              value={outcome ?? ALL_OUTCOMES}
+              onChange={(next) =>
+                setOutcome(FILTER_OPTIONS.find((one) => one === next))
+              }
+              options={[
+                { value: ALL_OUTCOMES, label: t("auto.runs.filterAll") },
+                ...FILTER_OPTIONS.map((option) => ({
+                  value: option,
+                  label: t(FILTER_LABELS[option]),
+                })),
+              ]}
+            />
+          )}
+        </Field>
+      )}
       <QueryStates query={query} pendingLabel={t("auto.runs.title")}>
         {body}
       </QueryStates>
-    </Panel>
+    </Inspector>
+  );
+}
+
+// One inspector in an opened row. Its heading shows only beside a second one;
+// alone, the row's own chevron already names it.
+function Inspector({
+  title,
+  titled,
+  children,
+}: Readonly<{ title: string; titled: boolean; children: ReactNode }>) {
+  const headingId = useId();
+  return (
+    <section
+      className="auto-inspector"
+      aria-labelledby={titled ? headingId : undefined}
+    >
+      {titled && (
+        <Heading size="xsmall" as="h4" id={headingId}>
+          {title}
+        </Heading>
+      )}
+      {children}
+    </section>
   );
 }
 
@@ -254,7 +274,8 @@ const WINDOW_LABELS: Record<WindowOption, MessageKey> = {
 // see the useQuery note below for why it is modelled as a query, not a mutation.
 export function AutomationPreview({
   automationId,
-}: Readonly<{ automationId: string }>) {
+  titled,
+}: Readonly<{ automationId: string; titled?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const [windowDays, setWindowDays] = useState<WindowOption>("30");
@@ -288,8 +309,8 @@ export function AutomationPreview({
   };
 
   return (
-    <Panel className="auto-inspector" title={t("auto.preview.title")}>
-      <PanelBody className="auto-preview-window">
+    <Inspector title={t("auto.preview.title")} titled={titled ?? false}>
+      <div className="auto-preview-window">
         <span className="t-label">{t("auto.preview.window")}</span>
         <SegmentedControl
           options={WINDOWS}
@@ -298,43 +319,39 @@ export function AutomationPreview({
           labels={windowLabels}
           label={t("auto.preview.window")}
         />
-      </PanelBody>
-      <PanelBody>
-        {/* Polite live region: announce when the estimate resolves or the
-            window result changes, without stealing focus from the control. */}
-        <div aria-live="polite">
-          <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
-            {result && (
-              <div className="auto-preview-figures">
-                <p className="t-body">
-                  {t("auto.preview.matchesNow", {
-                    n: formatNumber(result.matches_now, locale),
+      </div>
+      {/* Polite live region: announce when the estimate resolves or the
+          window result changes, without stealing focus from the control. */}
+      <div aria-live="polite">
+        <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
+          {result && (
+            <div className="auto-preview-figures">
+              <p className="t-body">
+                {t("auto.preview.matchesNow", {
+                  n: formatNumber(result.matches_now, locale),
+                })}
+              </p>
+              <p className="t-caption">
+                {result.would_have_fired == null
+                  ? t("auto.preview.notComputable")
+                  : t("auto.preview.wouldFire", {
+                      n: formatNumber(result.would_have_fired, locale),
+                      days: formatNumber(result.window_days, locale),
+                    })}
+              </p>
+              {hidden > 0 && (
+                <p className="t-caption">
+                  {t("auto.preview.hidden", {
+                    n: formatNumber(hidden, locale),
                   })}
                 </p>
-                <p className="t-caption">
-                  {result.would_have_fired == null
-                    ? t("auto.preview.notComputable")
-                    : t("auto.preview.wouldFire", {
-                        n: formatNumber(result.would_have_fired, locale),
-                        days: formatNumber(result.window_days, locale),
-                      })}
-                </p>
-                {hidden > 0 && (
-                  <p className="t-caption">
-                    {t("auto.preview.hidden", {
-                      n: formatNumber(hidden, locale),
-                    })}
-                  </p>
-                )}
-              </div>
-            )}
-          </QueryStates>
-        </div>
-        <p className="t-caption auto-preview-explainer">
-          {t("auto.preview.explainer")}
-        </p>
-      </PanelBody>
-    </Panel>
+              )}
+            </div>
+          )}
+        </QueryStates>
+      </div>
+      <p className="t-caption">{t("auto.preview.explainer")}</p>
+    </Inspector>
   );
 }
 
@@ -362,8 +379,12 @@ export function AutomationInspectors({
   }
   return (
     <>
-      {runsOpen && <AutomationRuns automationId={automationId} />}
-      {previewOpen && <AutomationPreview automationId={automationId} />}
+      {runsOpen && (
+        <AutomationRuns automationId={automationId} titled={previewOpen} />
+      )}
+      {previewOpen && (
+        <AutomationPreview automationId={automationId} titled={runsOpen} />
+      )}
     </>
   );
 }

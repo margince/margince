@@ -192,10 +192,14 @@ export const MorePages: Story = {
   render: story(page(ENTRIES.slice(0, 3), "c-2")),
 };
 
-export const FiltersOpen: Story = {
+// The dials stand open above the trail; a narrowing that finds nothing says so.
+export const Filtered: Story = {
   render: story(page(ENTRIES)),
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByText("Filters"));
+    await userEvent.type(
+      await within(canvasElement).findByLabelText("Actor"),
+      "agent:sdr",
+    );
   },
 };
 

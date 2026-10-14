@@ -1,12 +1,9 @@
-/* One line cut with an ellipsis. A zero width with a full-width floor keeps the
-   description from widening its column: it fills the cell it is given. */
-.auto-oneline {
-  display: block;
-  inline-size: 0;
-  min-inline-size: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* Two panes of one page: the stack's own gap, which this wrapper would
+   otherwise swallow. */
+.auto-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 /* Folded, the column heading is out of sight, so the run count is read as a
@@ -21,4 +18,12 @@
   .auto-runs-sentence {
     display: inline;
   }
+}
+
+/* The approval badge reads with the name it qualifies and wraps under it as one. */
+.auto-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
 }

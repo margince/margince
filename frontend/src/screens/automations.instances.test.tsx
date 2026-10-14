@@ -206,11 +206,13 @@ describe("a rule's run history", () => {
       throw new Error("the toggle names no detail");
     }
     expect(detail.closest("tr")?.previousElementSibling).toBe(renewal);
+    // A plain body under the row, not a card: no heading and no dial while
+    // the history is empty.
     expect(
-      await within(detail).findByRole("heading", {
-        name: en["auto.runs.title"],
-      }),
+      await within(detail).findByText(en["auto.runs.empty"]),
     ).toBeInTheDocument();
+    expect(within(detail).queryByRole("heading")).toBeNull();
+    expect(within(detail).queryByRole("combobox")).toBeNull();
     await user.keyboard("{Enter}");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
   });

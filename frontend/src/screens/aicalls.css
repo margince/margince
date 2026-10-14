@@ -19,6 +19,10 @@
 .aicalls-model {
   overflow-wrap: anywhere;
 }
+.aicalls-task {
+  inline-size: min(100%, 20rem);
+}
+
 /* Seven columns share the settings column, so inner cells give up a third of
    their padding; the outer ones keep the pane's. */
 .aicalls-card > .table-scroll > .table > * > tr > :is(th, td) {
@@ -49,7 +53,7 @@
   .aicalls-model-line > .cell-stack > * {
     margin-inline-end: var(--space-2);
   }
-  .aicalls-card td:has(> .aicalls-figure) {
+  .aicalls-card td:has(.aicalls-figure) {
     order: 5;
   }
   .aicalls-card tr:not(.datatable-detail)::before {
