@@ -1691,9 +1691,10 @@ span.error-line {
 .overflow-menu-items[data-layer="dialog"] {
   z-index: 60;
 }
-/* Under a second dialog, which one of its items may open, it sinks under the
-   scrim as a menu outside any dialog does. */
-body:has(> .overlay ~ .overlay) .overflow-menu-items[data-layer="dialog"] {
+/* Under a dialog opened after its own, it sinks under the scrim as a menu
+   outside any dialog does. A panel follows its own dialog in the body, so a
+   later overlay is a dialog on top, and the top dialog's menu stays above. */
+.overflow-menu-items[data-layer="dialog"]:has(~ .overlay) {
   z-index: 35;
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,

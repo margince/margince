@@ -756,14 +756,12 @@ it("keeps a menu outside any dialog on the page's layer", async () => {
   expect(panel?.hasAttribute("data-layer")).toBe(false);
 });
 
-it("puts that layer above a dialog's overlay, and under a second dialog", () => {
+it("puts that layer above a dialog's overlay, and under a later dialog", () => {
   const css = readFileSync(join(here, "atoms.css"), "utf8");
   const overlay = zIndexOf(css, ".overlay");
 
   expect(zIndexOf(css, ".overflow-menu-items")).toBeLessThan(overlay);
   const inDialog = '.overflow-menu-items[data-layer="dialog"]';
   expect(zIndexOf(css, inDialog)).toBeGreaterThan(overlay);
-  expect(
-    zIndexOf(css, `body:has(> .overlay ~ .overlay) ${inDialog}`),
-  ).toBeLessThan(overlay);
+  expect(zIndexOf(css, `${inDialog}:has(~ .overlay)`)).toBeLessThan(overlay);
 });
