@@ -1151,7 +1151,7 @@ export interface components {
              */
             disposition: "not_sales" | "sales_again" | "snoozed" | "not_mine" | "picked_up";
         };
-        /** @description Payload for activity.marked_handled. One reader marked a waiting message done: they dealt with it another way, by phone, in a meeting, or with no reply owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`. */
+        /** @description Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`. */
         PublicEventActivityMarkedHandled: {
             /** Format: uuid */
             activity_id: string;

@@ -2004,6 +2004,34 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Contacts]
+      operationId: restoreContactMoment
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of the moment with this `claim_key`, only while it is
+        still held against this `evidence_fingerprint`. An Undo from an older toast therefore
+        leaves a newer dismissal of changed evidence standing. Idempotent: a moment nobody
+        dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: claim_key
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `claim_key` of the moment that was dismissed, unchanged.
+        - name: evidence_fingerprint
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `evidence_fingerprint` the moment carried when it was dismissed.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/intro-note-draft:
     parameters:
@@ -3798,6 +3826,9 @@ paths:
         there is nothing to silence. So the stored set grows by one row per suggestion a
         human actually dismissed, and no dismissal is ever dropped to make room.
 
+        The account's moment (`Company360.moment`) is set aside the same way: its
+        `evidence_fingerprint` is accepted here while that promise is open on the account.
+
         Human-only: an agent has no opinion to record.
       requestBody:
         required: true
@@ -3837,6 +3868,27 @@ paths:
                     a reader sees as the card refusing to go away.
       responses:
         '204': { description: "Dismissed, or nothing matched and nothing was stored." }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Companies]
+      operationId: restoreCompanySuggestion
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed suggestion or moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of this fingerprint on this account. Idempotent: a
+        fingerprint nobody dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` that was dismissed, unchanged.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -16145,6 +16197,66 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/done:
+    put:
+      tags: [Brief]
+      operationId: markWorklistRowsDone
+      x-agent-access: human-only
+      # Session cookie only: clearing your own list is a contact's judgement
+      # about their own day, and an agent has no list to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Take rows off your own Worklist, because there is nothing more to do there.
+      description: |
+        Done on any row that offers `handled` in its `dispositions`. One row, or every row a
+        reader ticked: the batch lands whole or not at all, and one call to
+        `/worklist/done/undo` with the same rows reverses it.
+
+        PER READER. A row the caller marks done leaves the caller's list and nobody else's.
+
+        A row comes back on its own when something new happens on its subject. A message,
+        an unanswered message of the caller's own and a meeting follow-up keep their Done
+        on the activity, so the next message or meeting is new work. Every other row
+        returns once it reports an event on its subject after the press: a new failure on
+        a health row, a connection that synced again, new activity or a passed close date
+        on a deal at risk.
+
+        Each row must be one the caller's Worklist draws now, under a scope they hold, with
+        every lane's own grant and row scope. Any other row answers 404, the same as one
+        that does not exist, and nothing in the batch is written. A source whose rows never
+        offer Done answers 422. A row named twice is written once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorklistDoneRequest' }
+      responses:
+        '204': { description: 'Off the list, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/done/undo:
+    post:
+      tags: [Brief]
+      operationId: reopenWorklistRows
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put rows back on your own Worklist — the undo behind Done.
+      description: |
+        Clears what THIS reader marked done. Idempotent: a row nobody marked done is the
+        same success, because the reader's goal state already holds. A POST rather than a
+        DELETE, because the batch travels in a body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorklistDoneRequest' }
+      responses:
+        '204': { description: 'Back on the list, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /worklist/team:
     get:
@@ -26366,6 +26478,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /deals/{id}/move/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: dismissDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Set the deal card's move aside for me until it changes.
+      description: |
+        The deal page's "Not now", by the rule the contact and company pages use: per reader,
+        and held against the move's `fingerprint`, so it lifts by itself when the card names a
+        different move. It feeds no formula, no brief and no other reader's page.
+
+        One set-aside per reader and deal: a second one replaces the first, because the card
+        shows one move. Reading the deal is the licence to set its move aside; an id the
+        caller cannot read answers 404, the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissDealMoveRequest' }
+      responses:
+        '204': { description: Set aside. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Deals]
+      operationId: restoreDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put a set-aside move back on the deal card, the undo behind "Not now".
+      description: |
+        Clears this reader's set-aside of the move with this fingerprint. Idempotent: a
+        move nobody set aside answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` of the move that was set aside, unchanged.
+      responses:
+        '204': { description: 'Back on the card, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -38475,6 +38636,14 @@ components:
         claim_key: { type: string }
         evidence_fingerprint: { type: string }
 
+    DismissDealMoveRequest:
+      type: object
+      description: The move to set aside, named by the fingerprint the card served it with.
+      required: [fingerprint]
+      properties:
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+      additionalProperties: false
+
     MeetingBrief:
       type: object
       description: |
@@ -39858,6 +40027,14 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
 
     DealNextBestActionEvidence:
@@ -44143,6 +44320,18 @@ components:
             carry a record id, but a folded group carries a synthetic key its lane mints,
             and a uuid-only field would leave those rows unpinnable for a reason no reader
             could see.
+
+    WorklistDoneRequest:
+      type: object
+      additionalProperties: false
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: The rows, each named by its lane and its id, as a pin names one.
+          items: { $ref: '#/components/schemas/WorklistPinRequest' }
 
     DismissRelationshipNudgeRequest:
       type: object
@@ -58135,6 +58324,13 @@ components:
             `complete` and `snooze` has to name the row those presses condition on, or two contacts
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
+        subject_moved_at:
+          type: string
+          format: date-time
+          description: |
+            When something last happened on the item's subject, where its lane knows and
+            `occurred_at` does not say it: a deal's last activity, a connection's last good
+            sync. A Worklist row marked done comes back once this passes the press.
         undo:
           allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
           description: >-
@@ -59721,8 +59917,12 @@ components:
             rule, and a client guessing it draws a verb that 404s or hides one the rep
             is entitled to.
 
-            Absent or empty means the row cannot be set aside — most sources answer
-            through the surface that owns them and leave nothing to dispose of here.
+            `handled` is Done: nothing more to do here, take it off my list. It posts to
+            `/worklist/done` on every row that carries it. Only a waiting message offers
+            the other three, which post to `/activities/{id}/disposition`.
+
+            Absent or empty means the row leaves through its own verb in `actions`, or,
+            where it has none, a reason in `because` says why.
         primary_action:
           type: string
           enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge]
@@ -60207,8 +60407,8 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file]
-          description: 'Which fact this is. The client writes the phrase.'
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
     WorklistComparison:

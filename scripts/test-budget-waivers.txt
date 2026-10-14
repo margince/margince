@@ -1,0 +1,8 @@
+# Packages allowed past the 120 s per-package budget of scripts/check-test-budget.sh,
+# each with its own ceiling in seconds on a CI runner. A ceiling may go down,
+# never up; make the package faster instead.
+#
+# Each ceiling is about 1.2x the slowest of four green CI runs, so runner noise
+# does not fail a PR that left the package alone.
+660 github.com/margince/margince/backend/gates
+360 github.com/margince/margince/backend/internal/compose

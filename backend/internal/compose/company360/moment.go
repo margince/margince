@@ -26,9 +26,11 @@ package company360
 // order the way the contact ladder is ordered.
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/momentaction"
@@ -57,11 +59,7 @@ const momentRuleVersion = "company-moment-owed-v1"
 // a question already answered — and one that could disagree with the list the
 // reader is looking at.
 func (a *assembly) readMoment() error {
-	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
-		return err
-	}
-	claims, complete, err := a.svc.contacts.OpenCommitmentsForCompany(
-		a.ctx, a.tx, a.companyID.UUID, companyMomentScanCap)
+	items, complete, err := a.svc.openPromises(a.ctx, a.tx, a.companyID, a.now, a.opts)
 	if err != nil {
 		return err
 	}
@@ -73,18 +71,40 @@ func (a *assembly) readMoment() error {
 		// about less than the whole account.
 		markAttentionWithheld(a.out)
 	}
-	// The card's OWN task read, not the section's rows. The section shows the
-	// twenty-five earliest deadlines; this ranks over the set and asks which
-	// promise slipped most recently, and on an account owing more than a page
-	// of tasks the row that answers it is exactly the one the page dropped.
-	tasks, filed, err := openTaskPromises(a.ctx, a.tx, a.companyID, a.now, a.opts, companyMomentScanCap)
+	// A promise this reader set aside is passed over, so the next one down
+	// still reaches the card.
+	items, err = a.svc.withoutSetAsidePromises(a.ctx, a.tx, a.companyID, a.now, items)
 	if err != nil {
 		return err
 	}
-	moment := accountMoment(a.now, tasks, filed, claims)
+	moment := momentOf(a.now, items)
 	momentaction.Withhold(a.ctx, &moment)
 	a.out.Moment = &moment
 	return nil
+}
+
+// openPromises reads the promises the account's card ranks over, from both
+// sources, under the caller's own grants.
+//
+// The card reads its own tasks rather than the next-steps section's rows. The
+// section shows the twenty-five earliest deadlines, while the card asks which
+// promise slipped most recently. On an account owing more than a page of
+// tasks, the row that answers that is the one the page dropped.
+func (s *Service) openPromises(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
+) ([]owedwork.Item, bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, false, err
+	}
+	claims, complete, err := s.contacts.OpenCommitmentsForCompany(ctx, tx, companyID.UUID, companyMomentScanCap)
+	if err != nil {
+		return nil, false, err
+	}
+	tasks, filed, err := openTaskPromises(ctx, tx, companyID, now, opts, companyMomentScanCap)
+	if err != nil {
+		return nil, false, err
+	}
+	return accountPromises(tasks, filed, claims), complete, nil
 }
 
 // markAttentionWithheld says the page is speaking about less than the account.
@@ -107,7 +127,11 @@ const companyMomentScanCap = 200
 // accountMoment is the card itself: the promise that most needs answering, or
 // the quiet state when there is none.
 func accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) crmcontracts.ContactMoment {
-	items := accountPromises(tasks, filed, claims)
+	return momentOf(now, accountPromises(tasks, filed, claims))
+}
+
+// momentOf ranks the promises still in play and draws the card for the winner.
+func momentOf(now time.Time, items []owedwork.Item) crmcontracts.ContactMoment {
 	if slipped, ok := owedwork.MostRecentlySlipped(items, now); ok {
 		return promiseCard(now, slipped, true)
 	}
@@ -181,7 +205,7 @@ func accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool
 		ClaimKey:            momentKey("moment:account_promise_claim", openapi_types.UUID(claim.ID)),
 		Rule:                ruleFor(late),
 		RuleVersion:         new(momentRuleVersion),
-		EvidenceFingerprint: accountFingerprint(evidence),
+		EvidenceFingerprint: accountFingerprint(evidence, owedwork.Mark{Kind: "claim", ID: claim.ID.String(), At: claim.DueAt}),
 		Headline:            owedHeadline(claim.ContactName, claim.Body),
 		WhyNow:              owedWhyNow(now, claim.DueAt),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
@@ -206,7 +230,7 @@ func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late b
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
 		Rule:                ruleFor(late),
 		RuleVersion:         new(momentRuleVersion),
-		EvidenceFingerprint: accountFingerprint(evidence),
+		EvidenceFingerprint: accountFingerprint(evidence, owedwork.Mark{Kind: "due", At: step.DueAt}),
 		Headline:            owedHeadline("", step.Subject),
 		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
@@ -299,8 +323,10 @@ func momentKey(rung string, id openapi_types.UUID) string {
 }
 
 // accountFingerprint digests what this card fired on, through the same hash
-// the contact page's cards use.
-func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence) string {
+// the contact page's cards use. Each card adds the promise itself. A claim adds
+// its own id, since one message can hold two promises. Both add the due date,
+// since a promise moved to today must return from a set-aside made earlier.
+func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence, promise owedwork.Mark) string {
 	marks := make([]owedwork.Mark, 0, len(evidence))
 	for _, e := range evidence {
 		mark := owedwork.Mark{Kind: string(e.Type), At: e.ObservedAt}
@@ -309,7 +335,7 @@ func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence) string {
 		}
 		marks = append(marks, mark)
 	}
-	return owedwork.Fingerprint(marks)
+	return owedwork.Fingerprint(append(marks, promise))
 }
 
 // openTheContact sends the reader to the record the promise lives on, which is

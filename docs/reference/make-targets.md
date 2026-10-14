@@ -143,7 +143,7 @@ A real model is asked for answers a good assistant would give to a scenario's pr
 
 ### Root script gates
 
-The root `make check` runs the backend gate above and these deterministic root script gates. Each is a small script, all block a merge, and `check-backend` fans them out:
+The root `make check` runs the backend gate above and these deterministic root script gates. Each is a small script, all block a merge, and `check-backend` fans them out. `test-budget` is the one exception: only the CI `deterministic-gates` job runs it:
 
 | Target | What it does |
 |---|---|
@@ -168,6 +168,8 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `slop-trend` | Record the tree's code scores (`craft slop`: `verbosity` and `erosion` for Go and TypeScript, per area) and comment numbers (`craft stats`) in `.tmp/slop-trend`, as JSON and a Markdown table. With `PREV=<dir>` holding an earlier run's JSON, the table shows the change. A report, never a gate: it fails only when it cannot measure. Needs the frontend packages. `slop-trend` in `scheduled.yml` runs it every Monday against the previous week's run |
 | `fe-file-length` | The same cap on `frontend/src` (500 for product code, 1000 for a test, story, testkit or fixture), ratcheted via `scripts/fe-file-length-waivers.txt`. Generated types and the `i18n` catalogs are exempt: one is generator output, the others are data read by lookup |
 | (script) | `scripts/seed-fe-file-length-waivers.sh` re-freezes that list at the tree's current sizes. Use it to establish the baseline, never to absorb a file that grew: on a failing gate it would freeze the growth |
+| `test-budget` | A unit-test package that takes over 120 seconds fails, read from the `ok <pkg> <secs>s` lines of a `go test` log: `make test-budget LOG=<file>`. A slower package keeps its own ceiling in `scripts/test-budget-waivers.txt`. The gate fails it past that ceiling, or once it is back under 120 seconds with its entry still there. Make the package faster rather than raising its ceiling. Only the CI `deterministic-gates` job runs it, on its own `check-backend` output: a laptop that runs other work counts the wait for the CPU as test time |
+| `test-test-budget` | The own test of `test-budget`, with fake logs: the cap, a coverage tail, a ceiling, a stale entry, a waiver for a package the log never ran, a cached package, and a log with no timed line. It runs under `check-backend` because the gate itself runs only on CI |
 | `rls-store-path` | No `internal/modules` statement addresses the superuser pool directly (RLS bypass); `// rls-exempt: <reason>` is the escape for a real cross-workspace query |
 | `no-jurisdiction` | No country-specific regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or `ISO-3166` code in core code, only in the jurisdiction seam (`internal/modules/de`, `internal/shared/ports/jurisdiction`); statute citations in comments are allowed |
 | `test-e2e-llm-check` | Points the `e2e-llm` checker at hand-written `stream-json` transcripts and asserts it tells a failed use case from a run that never happened. See [`test-e2e-llm-check`](#test-e2e-llm-check) |

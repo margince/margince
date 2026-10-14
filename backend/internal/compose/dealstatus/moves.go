@@ -110,6 +110,11 @@ func (s *Service) CachedMoves(
 		if err != nil {
 			return err
 		}
+		// A move this reader set aside on the deal page is off their queue too.
+		setAside, err := MovesSetAside(ctx, tx, found)
+		if err != nil {
+			return err
+		}
 		for dealID, move := range found {
 			named, ok := NamedActivity(move)
 			if ok && !readable[named] {
@@ -118,7 +123,7 @@ func (s *Service) CachedMoves(
 				// would still say a message exists and is unanswered.
 				continue
 			}
-			if !everyNamedContactStillFileable(move, contactsFileable) {
+			if !everyNamedContactStillFileable(move, contactsFileable) || setAside[dealID] {
 				continue
 			}
 			out[dealID] = move

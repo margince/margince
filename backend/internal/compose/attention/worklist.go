@@ -154,6 +154,9 @@ func (s *Service) worklistIn(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	if withPins, err = withPins.readingDone(ctx, day); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	withPins = withPins.readingWalk(walk, walking)
 	// The night's scores, on the same per-read copy the pins and the walk ride.
 	// They are read by the classifier, which runs inside the projection below,
@@ -255,6 +258,9 @@ func (s *Service) worklistFrom(
 	// took the brief's id. It runs after the scope, because the brief is the
 	// acting reader's. A named owner's page drops every brief row first.
 	rows = foldBriefIntoRisk(rows)
+	// Before anything is counted, so a row the reader marked done is gone from
+	// the figures as well as from the list.
+	rows = dropDone(rows, s.marked, day.AsOf)
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	// The same rule for the who-is-waiting source, and for the same reason it
@@ -285,7 +291,8 @@ func (s *Service) worklistFrom(
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
 	// Focus is independent of queue filters and pins, so it always folds routine work.
-	focusRows := foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
+		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
 	// eligibility, including when this reader has saved pins on the queue.
@@ -306,11 +313,16 @@ func (s *Service) worklistFrom(
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
 	if !opensTheDeck(filter) {
-		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+		rows = dropDone(s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth), s.marked, day.AsOf)
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
+	}
+	// A Done being checked asks which rows this day draws, not for a page.
+	if s.marked.probe != nil {
+		s.marked.probe(rows)
+		return crmcontracts.Worklist{}
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the
