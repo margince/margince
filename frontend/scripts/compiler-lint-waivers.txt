@@ -48,7 +48,6 @@
 1 react-hooks/set-state-in-effect src/screens/ai-routing-fields.tsx
 1 react-hooks/refs src/screens/analytics.forecast.review.tsx
 1 react-hooks/set-state-in-effect src/screens/automations.instances.tsx
-3 react-hooks/refs src/screens/automations.tsx
 1 react-hooks/set-state-in-effect src/screens/automations.tsx
 1 react-hooks/set-state-in-effect src/screens/backfill-run.ts
 1 react-hooks/set-state-in-effect src/screens/billingcontactmodal.tsx

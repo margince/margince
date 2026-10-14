@@ -136,6 +136,7 @@ export const EndEdgeOnPhone: Story = {
 // Scrolled to the end, nothing lies past the edge, so the shade is gone.
 export const ScrolledToTheEnd: Story = {
   ...EndEdgeOnPhone,
+  tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const region = await within(canvasElement).findByRole("region", {
       name: "Usage by model",

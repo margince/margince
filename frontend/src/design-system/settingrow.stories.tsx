@@ -172,7 +172,11 @@ export const SwitchBesideNameAtPhoneWidth: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const rect = (element: Element) => element.getBoundingClientRect();
-    const name = rect(canvas.getByText("Auto-enrich captured companies"));
+    const name = rect(
+      canvas.getByText("Auto-enrich captured companies", {
+        selector: ".t-name",
+      }),
+    );
     const track = rect(
       await canvas.findByRole("switch", {
         name: "Auto-enrich captured companies",
