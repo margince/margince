@@ -57,8 +57,8 @@ const authenticationPolicyObject = "authentication_policy"
 const SettingsObject = installationSettingsObject
 
 // Name is the company's display name. Seeded from margince.yaml at
-// bootstrap; the row is authoritative afterwards, so renaming the
-// company does not require a redeployment.
+// bootstrap; a human saving the anchor company's display name writes it from
+// then on (compose/installationname.go).
 //
 // The CEILING lives here because this entry is the only thing that governs the
 // value: without it the unauthenticated setup claim stores a name as large as

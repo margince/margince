@@ -183,7 +183,13 @@ func (s *Store) writeProfileField(
 	// human just corrected.
 	if column, canonical := canonicalCompanyColumn(field); canonical && in.Value != nil {
 		w.canonical = func(ctx context.Context, tx pgx.Tx) error {
-			return writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value)
+			if err := writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value); err != nil {
+				return err
+			}
+			if column != fieldDisplayName {
+				return nil
+			}
+			return s.followAnchorNameTx(ctx, tx, companyID)
 		}
 	}
 	// A VAT number that just changed has not been checked. The consultation is

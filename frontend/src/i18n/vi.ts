@@ -9880,9 +9880,6 @@ export const vi = {
   "installationSettings.timeFormat.locale": "Theo ngôn ngữ giao diện",
   "installationSettings.timeFormat.24h": "24 giờ · 17:30",
   "installationSettings.timeFormat.12h": "12 giờ · 05:30 CH",
-  "installationSettings.name": "Tên bản cài đặt",
-  "installationSettings.nameHint":
-    "Hiển thị trên trang tài khoản và được nhập để xác nhận đặt lại dữ liệu.",
   "installationSettings.timezone": "Múi giờ báo cáo",
   "installationSettings.timezoneHint":
     "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ dùng múi giờ này cho cả nhóm; mỗi người dùng vẫn giữ múi giờ hiển thị riêng.",

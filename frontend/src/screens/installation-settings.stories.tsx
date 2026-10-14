@@ -77,12 +77,12 @@ type Story = StoryObj<typeof InstallationSettingsCard>;
 // auditing the installation travels one column instead of parsing a form.
 export const Editable: Story = { render: story(SETTINGS, MANAGER) };
 
-// The form the rows lead to, opened from the name row, so focus is in the name
-// field. Three fields, one heading for the currency rule, one Save.
+// The form the rows lead to, opened from the timezone row, so focus is in the
+// timezone field. One heading for the currency rule, one Save.
 export const ProfileDialog: Story = {
   render: story(SETTINGS, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit installation name/i);
+    await openFrom(canvasElement, /edit reporting timezone/i);
   },
 };
 

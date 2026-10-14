@@ -8720,7 +8720,10 @@ components:
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |-
+            The company's display name. A human saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |-

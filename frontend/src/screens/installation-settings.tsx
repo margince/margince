@@ -56,7 +56,6 @@ type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 // field added to the form cannot be left out of one of the three — which is
 // how a value silently stops saving, or stops noticing another admin's change.
 const EDITABLE_FACTS = [
-  "name",
   "timezone",
   "base_currency",
   "base_language",
@@ -330,12 +329,6 @@ function InstallationSettingsForm({
       )}
       <SettingList bleed="settings">
         <SettingRow
-          label={t("installationSettings.name")}
-          description={t("installationSettings.nameHint")}
-          value={settings.name}
-          control={editVerb("name", t("installationSettings.name"))}
-        />
-        <SettingRow
           label={t("installationSettings.timezone")}
           description={t("installationSettings.timezoneHint")}
           value={settings.timezone}
@@ -485,24 +478,6 @@ function InstallationProfileDialog({
             onSubmit();
           }}
         >
-          <Field
-            label={t("installationSettings.name")}
-            hint={t("installationSettings.nameHint")}
-            error={refused.get("name")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                aria-describedby={describe(control)}
-                ref={focus === "name" ? asked : undefined}
-                value={draft.name}
-                disabled={!canManage}
-                onChange={(event) =>
-                  onChange({ ...draft, name: event.target.value })
-                }
-              />
-            )}
-          </Field>
           <Field
             label={t("installationSettings.timezone")}
             hint={t("installationSettings.timezoneHint")}

@@ -10093,9 +10093,6 @@ export const de = {
   "installationSettings.timeFormat.locale": "Sprache der Oberfläche verwenden",
   "installationSettings.timeFormat.24h": "24-Stunden-Format · 17:30",
   "installationSettings.timeFormat.12h": "12-Stunden-Format · 05:30 pm",
-  "installationSettings.name": "Installationsname",
-  "installationSettings.nameHint":
-    "Steht auf Kontoseiten und wird zur Bestätigung eines Datenresets eingegeben.",
   "installationSettings.timezone": "Berichtszeitzone",
   "installationSettings.timezoneHint":
     "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben gelten damit für das ganze Team; jedes Nutzerkonto behält seine eigene Anzeigezeitzone.",

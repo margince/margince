@@ -14082,7 +14082,8 @@ paths:
       summary: Save the installation's own company — the human's confirm-first write.
       description: |
         Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-        later one. This is a HUMAN write: every field is stamped
+        later one. Its `display_name` is the installation's name: the same transaction writes it to
+        `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
         `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
         from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
         theirs, and a later agent read-back will not overwrite it.
@@ -29429,7 +29430,10 @@ components:
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |
+            The company's display name. A human saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |
@@ -29560,7 +29564,14 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
-        name: { type: string, maxLength: 200, description: Rename the company. }
+        name:
+          type: string
+          maxLength: 200
+          deprecated: true
+          description: |
+            Accepted only when it equals the stored name, so an older client that resends the whole
+            form still saves. Any other value is refused with `422 set_on_company_profile`: the
+            installation's name is the anchor company's display name, changed through `PUT /company`.
         country:
           type: string
           description: |

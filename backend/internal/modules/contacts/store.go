@@ -79,6 +79,9 @@ type Store struct {
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
+	// renameInstallation keeps the installation's name on the anchor's display
+	// name (anchorname.go); nil refuses a human's anchor rename.
+	renameInstallation InstallationRenamer
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

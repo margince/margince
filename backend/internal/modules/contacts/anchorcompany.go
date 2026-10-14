@@ -314,6 +314,9 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
 		}
+		if err := s.followAnchorNameTx(ctx, tx, companyID); err != nil {
+			return err
+		}
 
 		out, err = readAnchorCompany(ctx, tx, companyID)
 		return err

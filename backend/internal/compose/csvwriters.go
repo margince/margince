@@ -121,7 +121,8 @@ func newCSVWriters(
 		contacts: contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithGrantCarrier(identity.NewServiceFor(db)),
+			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithInstallationRenamer(installationRenamer(db.Pool())),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,

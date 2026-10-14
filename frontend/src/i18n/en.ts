@@ -10210,9 +10210,6 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.name": "Installation name",
-  "installationSettings.nameHint":
-    "Shown on account pages, and typed to confirm a data reset.",
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
     "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",

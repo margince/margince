@@ -53,6 +53,10 @@ Boot refuses a code with no compiled-in pack, in the api and in the worker. Afte
 Jurisdiction settings page changes it. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
 `seeds.*` again from the current file. Every other section of the file is read at each boot.
 
+`workspace.name` is the company's name only until an admin saves the company profile. From then on
+the profile's company name is the name, and each save of it writes the `installation.name` setting in
+the same transaction. `PATCH /installation/settings` refuses a different `name`.
+
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
 value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
 `margince.yaml` never changes a saved setting.

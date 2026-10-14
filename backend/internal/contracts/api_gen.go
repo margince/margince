@@ -37260,7 +37260,9 @@ type InstallationSettings struct {
 	// little room rather than compare a file against it exactly.
 	MaxUploadBytes int64 `json:"max_upload_bytes"`
 
-	// Name The company's display name.
+	// Name The company's display name. A human saving the anchor company's `display_name`
+	// (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+	// transaction; before the first save it is the name the installation was configured with.
 	Name string `json:"name"`
 
 	// OauthAccessTokenTtlMinutes How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
@@ -47391,7 +47393,10 @@ type UpdateInstallationSettingsRequest struct {
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
 	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
 
-	// Name Rename the company.
+	// Name Accepted only when it equals the stored name, so an older client that resends the whole
+	// form still saves. Any other value is refused with `422 set_on_company_profile`: the
+	// installation's name is the anchor company's display name, changed through `PUT /company`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Name *string `json:"name,omitempty"`
 
 	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.

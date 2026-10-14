@@ -9061,7 +9061,8 @@ export interface paths {
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-         *     later one. This is a HUMAN write: every field is stamped
+         *     later one. Its `display_name` is the installation's name: the same transaction writes it to
+         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
          *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
          *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
          *     theirs, and a later agent read-back will not overwrite it.
@@ -19998,7 +19999,11 @@ export interface components {
          *     changed only by admin/ops.
          */
         InstallationSettings: {
-            /** @description The company's display name. */
+            /**
+             * @description The company's display name. A human saving the anchor company's `display_name`
+             *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+             *     transaction; before the first save it is the name the installation was configured with.
+             */
             name: string;
             /**
              * @description IANA zone name every reporting period boundary is computed in (not a user's own
@@ -20119,7 +20124,12 @@ export interface components {
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
-            /** @description Rename the company. */
+            /**
+             * @deprecated
+             * @description Accepted only when it equals the stored name, so an older client that resends the whole
+             *     form still saves. Any other value is refused with `422 set_on_company_profile`: the
+             *     installation's name is the anchor company's display name, changed through `PUT /company`.
+             */
             name?: string;
             /**
              * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
