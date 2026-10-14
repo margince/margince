@@ -13,13 +13,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { useMe } from "../lib/session";
 import { locationDouble } from "../testing/locationdouble";
-import { useMe } from "./common";
+import { meFixture } from "../testing/mefixture";
+import { openRowMenu } from "../testing/tablerow.testkit";
 import { ConnectorsCard } from "./connectors";
 import { type RouteMap, stubWithSession } from "./story-utils";
-import { openRowMenu } from "./tablerow.testkit";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a

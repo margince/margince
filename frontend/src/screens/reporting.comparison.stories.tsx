@@ -14,7 +14,7 @@ function Preview({ paginated = false }: Readonly<{ paginated?: boolean }>) {
   const [open, setOpen] = useState(true);
   return open ? (
     <ReportingComparison
-      editions={loaded ? reportingEditions : [reportingEditions[0]]}
+      editions={loaded ? reportingEditions : reportingEditions.slice(0, 1)}
       hasMore={!loaded}
       onLoadMore={() => setLoaded(true)}
       onClose={() => setOpen(false)}

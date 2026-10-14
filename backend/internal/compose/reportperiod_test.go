@@ -167,7 +167,7 @@ func TestPeriodBucketValuesSurviveTheDerivationHandleRoundTrip(t *testing.T) {
 		minted := derivationURL("win-loss", map[string]any{"status": "won"},
 			[]string{bucket.dimension}, aggs,
 			map[string]any{bucket.dimension: bucket.value, "amount_minor_sum": int64(35000)},
-			time.Time{})
+			time.Time{}, "")
 
 		parsed, err := url.Parse(minted)
 		if err != nil {

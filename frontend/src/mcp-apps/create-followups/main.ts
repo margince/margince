@@ -26,7 +26,7 @@ import "../view.css";
 
 declareActions(actions["create-followups"]);
 
-/** The record types merge_records folds; a lead has no merge. */
+/** The record types a merge folds; a lead has no merge. */
 const MERGEABLE = new Set(["contact", "company"]);
 
 type Candidate = {
@@ -184,7 +184,7 @@ function choices(
       button("Undo", "ghost", () =>
         run(
           settle,
-          "decide_duplicate",
+          "resolve_duplicates",
           { candidate_id: candidate.id, decision: "reopen" },
           undefined,
         ),
@@ -203,7 +203,7 @@ function choices(
           () =>
             run(
               settle,
-              "merge_records",
+              "resolve_duplicates",
               {
                 record_type: recordType,
                 source_id: createdID,
@@ -222,7 +222,7 @@ function choices(
         () =>
           run(
             settle,
-            "decide_duplicate",
+            "resolve_duplicates",
             { candidate_id: candidate.id, decision: "not_the_same" },
             { kind: "dismissed" },
           ),

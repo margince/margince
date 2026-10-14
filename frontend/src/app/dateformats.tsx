@@ -3,7 +3,7 @@ import {
   type DateTimePreferences,
   setDateTimePreferences,
 } from "../format/preferences";
-import { useInstallationSettings } from "./uploadlimit";
+import { useInstallationSettings } from "../lib/uploadlimit";
 
 // Mounted at the authenticated boundary: a settings change updates the whole
 // presentation, while signing out releases this installation's preferences.

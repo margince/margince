@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import { type ClosedDeal, CloseReviewOffer } from "./closereviewoffer";
 
 // The point of this offer is that the reason typed into the close dialog

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
 import {
   BuyableRefused,
   PostureRefused,

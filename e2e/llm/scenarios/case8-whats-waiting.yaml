@@ -141,5 +141,13 @@ must_not_mention:
   # "you" or "a human" as its subject, walked straight past that one.
   - "(?:you|the user|somebody|a human)[^\n]{0,30}(?:will need to|need to|have to|has to|must)[^\n]{0,30}(?:approve|reject|decide)[^\n]{0,40}(?:in the (?:web )?app|in Margince|in the browser|yourself)|I (?:cannot|can not|can't|am unable to|am not able to) (?:approve|reject|decide)[^\n]{0,30}(?:on your behalf|for you|from here|through (?:this|the) (?:tool|surface|interface|chat)|in this (?:chat|session|conversation)|myself)|(?:approvals?|these|they|it|the queue) (?:have to|has to|must|need to|needs to) be (?:approved|rejected|decided|actioned)[^\n]{0,30}(?:in the (?:web )?app|in Margince|in the browser)"
 
+
+# A verdict changes no record: approving releases the proposer's retry, and
+# the proposer is the seed's passport, which never retries. So the description
+# is not read back, and the owner line cannot see a swapped verdict either. It
+# holds the account against a run that moved it by some other write.
+must_end_with:
+  - company "Taunus Gerätebau GmbH" owner=Sofia Meier
+
 runs: 3
 pass_at: 2

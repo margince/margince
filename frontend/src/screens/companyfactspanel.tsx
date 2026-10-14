@@ -10,10 +10,11 @@ import { Button, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import {
@@ -206,7 +207,7 @@ function FactCategoryBlock({
           // what changed, which is the value. A reader scanning four
           // Locations is not asked to read the word "Location" four times.
           label={
-            index === 0 || shown[index - 1].field !== fact.field
+            index === 0 || shown[index - 1]?.field !== fact.field
               ? t(factFieldLabelKey(fact.field))
               : undefined
           }
@@ -251,7 +252,7 @@ function AddFactForm({
 
   const add = useMutation({
     mutationFn: async (stated: { field: string; value: string }) => {
-      const [category, name] = stated.field.split(":");
+      const [category, name = ""] = stated.field.split(":");
       unwrap(
         await api.POST("/companies/{id}/facts", {
           params: { path: { id: companyId } },

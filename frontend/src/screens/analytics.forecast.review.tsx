@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { isEntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   type ResolveAnswer,
   ResolveSheet,
@@ -14,8 +13,10 @@ import {
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { isEntityKind } from "../lib/entity";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];
@@ -371,7 +372,7 @@ function useResolveCheck(onResolved: (id: string) => void) {
 
 // How urgent a finding is, as a word in the tone the rest of the product gives
 // that urgency.
-function SeverityBadge({
+export function SeverityBadge({
   severity,
 }: Readonly<{ severity: InputCheck["severity"] }>) {
   const t = useT();
@@ -406,7 +407,9 @@ function SubjectCell({ check }: Readonly<{ check: InputCheck }>) {
 // An unknown type falls back to a generic line rather than rendering the raw
 // key: a server that grew a tenth rule before this screen learned its name
 // should show a finding a reader can still act on, not `close_pushed_v2`.
-function checkLabel(type: string): Parameters<ReturnType<typeof useT>>[0] {
+export function checkLabel(
+  type: string,
+): Parameters<ReturnType<typeof useT>>[0] {
   const known: Record<string, string> = {
     close_past: "review.closePast",
     close_unconfirmed: "review.closeUnconfirmed",

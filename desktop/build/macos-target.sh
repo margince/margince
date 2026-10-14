@@ -30,6 +30,25 @@
 MACOS_MIN="13.0"
 export MACOSX_DEPLOYMENT_TARGET="$MACOS_MIN"
 
+# The same floor as a cgo FLAG, which is what makes Go's build cache honour it.
+#
+# MACOSX_DEPLOYMENT_TARGET reaches clang, and Go's cache does not key on it. So
+# objects compiled by an earlier build that did not set it are reused, the
+# linker reports "object file was built for newer 'macOS' version", and the
+# bundle's floor depends on which cache the runner restored. The link stamp
+# still reads this number, so assert_min_os below passes either way.
+#
+# CGO_CFLAGS and CGO_LDFLAGS are Go inputs: the cache keys on them, so changing
+# them recompiles. Measured on go1.27.2 with one cgo package, warm cache: the
+# same build invokes clang 0 times with the flags unchanged and 14 times with
+# the version flag added.
+#
+# Go's defaults are kept where the caller set nothing. Setting these variables
+# REPLACES the default rather than adding to it, and dropping `-O2 -g` here
+# would ship an unoptimised bundle to fix a floor.
+export CGO_CFLAGS="${CGO_CFLAGS:--O2 -g} -mmacosx-version-min=$MACOS_MIN"
+export CGO_LDFLAGS="${CGO_LDFLAGS:--O2 -g} -mmacosx-version-min=$MACOS_MIN"
+
 # assert_min_os <file>... — no shipped binary may require a NEWER macOS than
 # the floor above.
 #

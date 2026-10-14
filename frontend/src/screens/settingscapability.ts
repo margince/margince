@@ -9,7 +9,7 @@
 // React-free by construction, like the catalog itself — a node test and a
 // plain script both import this.
 
-import type { RbacObject } from "../app/capability";
+import type { RbacObject } from "../lib/capability";
 import type {
   CapabilityExpression,
   SettingsAvailabilityKey,

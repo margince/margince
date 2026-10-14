@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AuditLogCard } from "./settings-audit";
 import type { AuditLogEntry } from "./settings-audit.format";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -158,6 +158,7 @@ const openFirst = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const [toggle] = await canvas.findAllByRole("button", {
     name: /^Show change detail: /,
   });
+  if (!toggle) throw new Error("the audit log shows no change detail toggle");
   await userEvent.click(toggle);
 };
 
@@ -178,7 +179,7 @@ export const Expanded: Story = {
 };
 
 export const CreatedExpanded: Story = {
-  render: story(page([ENTRIES[1]])),
+  render: story(page(ENTRIES.slice(1, 2))),
   play: openFirst,
 };
 

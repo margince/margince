@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // The panel's recap: what the agent has done, and WHICH RECORD it did it on.
 //

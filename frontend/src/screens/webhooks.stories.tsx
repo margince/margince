@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { Badge } from "../design-system/atoms";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { WebhooksCard, webhookStatusBadge } from "./webhooks";
 
@@ -406,8 +406,9 @@ export const DeliveriesOpenBetweenTwoSubscriptions: Story = {
   // testid alone rejects on the pair rather than picking one. The first row is
   // the one whose log is stubbed.
   play: async () => {
-    const toggles = await screen.findAllByTestId("view-deliveries");
-    await userEvent.click(toggles[0]);
+    const [toggle] = await screen.findAllByTestId("view-deliveries");
+    if (!toggle) throw new Error("the page shows no deliveries toggle");
+    await userEvent.click(toggle);
     await screen.findByTestId("dead-letter-group");
   },
 };

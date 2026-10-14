@@ -7,7 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
 import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
 import "./settings.pipelines.css";

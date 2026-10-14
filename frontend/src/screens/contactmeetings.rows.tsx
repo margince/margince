@@ -4,8 +4,6 @@
 import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { routeHash } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { OffsiteLink } from "../design-system/offsitelink";
@@ -15,6 +13,8 @@ import { calendarDaysUntil } from "../format/daysuntil";
 import { formatNumber, formatTimeOfDay } from "../format/format";
 import { formatTimeRange } from "../format/meetingtime";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
+import { routeHash } from "../lib/router";
 import { InvitationBadge } from "./booking-meeting-parts";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "./booking-video";
 import { useMeetingInvitation } from "./meeting-invitation-query";

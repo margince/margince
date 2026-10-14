@@ -20,13 +20,13 @@ import { ListChecks, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { ComposeModal } from "./compose";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
@@ -247,6 +247,7 @@ function FollowUpDraft({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [contact, ...alsoTo] = recipients;
+  if (contact === undefined) return null;
   return (
     <>
       <Button variant="ai" onClick={() => setOpen(true)}>

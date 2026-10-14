@@ -51,9 +51,11 @@ export const Default: Story = {
 export const EarlierDefinition: Story = {
   render: () => {
     const routes = reportingStoryRoutes();
+    const evidence = routes["GET /analytics/evidence"];
+    if (!evidence) throw new Error("the reporting fixtures serve no evidence");
     installFetchStub({
       ...routes,
-      "GET /analytics/editions/old/evidence": routes["GET /analytics/evidence"],
+      "GET /analytics/editions/old/evidence": evidence,
     });
     return (
       <StoryProviders>

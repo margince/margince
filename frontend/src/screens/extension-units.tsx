@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Blocks, ChevronRight } from "lucide-react";
+import { KeyedName } from "../design-system/keyedname";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { useLocale, useT } from "../i18n";
 import {
   EXTENSION_SCREEN,
   type ExtensionDescriptor,
   type UnitSecretScope,
   unitsForSecretScope,
   unitTitle,
-} from "../app/extensions";
-import { KeyedName } from "../design-system/keyedname";
-import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
-import { useLocale, useT } from "../i18n";
+} from "../lib/extensions";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -27,7 +27,7 @@ import "./extension-units.css";
 // so it is offered on their personal Connections page; a `workspace` secret is
 // the installation's, so its unit is offered under Integrations. Both pages
 // already mean exactly that, which is why the declared scope is enough and no
-// unit names a destination. See app/extensions.ts's unitsForSecretScope.
+// unit names a destination. See lib/extensions.ts's unitsForSecretScope.
 //
 // The permission story is the page, and it was already written: Connections is
 // per-contact and ungated, Integrations is the company's and opens on the

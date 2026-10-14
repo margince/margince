@@ -516,7 +516,7 @@
 }
 
 /* THE VIEW RAIL SCROLLS from the width the header stops holding its row — the
-   same 1100px at which the verbs fold into one menu (app/viewport.ts
+   same 1100px at which the verbs fold into one menu (lib/viewport.ts
    NARROW_MAX_WIDTH), not the phone breakpoint. It used to be the phone block's
    alone, so between the two the rail kept its full intrinsic width on a row
    that does not wrap: the lead queue's eight tabs pushed the count and the

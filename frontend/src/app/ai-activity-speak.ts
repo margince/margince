@@ -11,9 +11,9 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { ENTITY, isEntityKind } from "../lib/entity";
+import type { Route } from "../lib/router";
 import { ACTIVITY_LINE, type LineSet, NAMED_LINE } from "./ai-activity-lines";
-import { ENTITY, isEntityKind } from "./entity";
-import type { Route } from "./router";
 
 type ActivityKind = components["schemas"]["AiActivityItem"]["kind"];
 

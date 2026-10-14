@@ -10,7 +10,6 @@ import { api } from "../api/client";
 import { subscribableEventTypeValues } from "../api/public-events";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -24,22 +23,25 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ArchiveAction } from "./archive";
+import { useCanWrite } from "../lib/capability";
 import {
-  LoadMoreButton,
   problemCode,
   problemMessageOf,
-  QueryGate,
-  QueryStates,
   throwProblem,
   unwrap,
-  useMe,
-} from "./common";
+} from "../lib/problem";
+import { useMe } from "../lib/session";
+import { ArchiveAction } from "./archive";
 import {
   type CreateField,
   type CreateFieldOption,
@@ -220,7 +222,7 @@ function useCreateWebhookSubscription(onCreated: (secret: string) => void) {
       return unwrap(
         await api.POST("/webhook-subscriptions", {
           body: {
-            target_url: values.target_url.trim(),
+            target_url: (values.target_url ?? "").trim(),
             event_types: splitMultiselectValue(values.event_types ?? ""),
           },
         }),

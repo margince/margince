@@ -16,12 +16,12 @@ import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
 import { RulePausedReason } from "./automations.lists";
 import { recipeSentence } from "./automations.recipe";
-import { problemMessageOf, unwrap } from "./common";
 import "./automations.css";
 
 // Configured automations as one table, rendered from the Automation wire schema

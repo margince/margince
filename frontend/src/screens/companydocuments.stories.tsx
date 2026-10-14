@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { CompanyDocumentsCard } from "./companydocuments";
 import {
   installFetchStub,
@@ -28,7 +28,7 @@ type Attachment = components["schemas"]["Attachment"];
 
 const page = { has_more: false, next_cursor: null };
 
-const documents: Attachment[] = [
+const documents: [Attachment, Attachment, Attachment] = [
   {
     id: "d-1",
     filename: "Rahmenvertrag.pdf",

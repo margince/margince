@@ -91,6 +91,8 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// importWait is how long preview_import waits for its test's report.
+	importWait importWait
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -107,6 +109,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,
+		importWait:   defaultImportWait(),
 	}
 	for _, opt := range opts {
 		opt(r)

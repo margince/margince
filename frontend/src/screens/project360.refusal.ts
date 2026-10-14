@@ -7,8 +7,8 @@
 // disagree with itself about whether the record is writable.
 
 import type { components } from "../api/schema";
-import { useRecordWriteRefusal } from "../app/capability";
 import { useT } from "../i18n";
+import { useRecordWriteRefusal } from "../lib/capability";
 
 type Project = components["schemas"]["Project"];
 

@@ -11,11 +11,11 @@ function Delete() {
   installFetchStub({
     "DELETE /automations/au-2": () => new Response(null, { status: 204 }),
   });
+  const automation = configuredAutomations(Date.now())[1];
+  if (automation === undefined) return null;
   return (
     <StoryProviders>
-      <DeleteAutomationAction
-        automation={configuredAutomations(Date.now())[1]}
-      />
+      <DeleteAutomationAction automation={automation} />
     </StoryProviders>
   );
 }

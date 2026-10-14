@@ -15,9 +15,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { FiltersScreen } from "./filters";
 import { filterView, mountFilters, type Sent } from "./filters.testkit";
 import { liveList, liveVocabulary, shortlist } from "./lists.fixtures";

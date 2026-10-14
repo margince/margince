@@ -50,7 +50,7 @@ must_call_with:
   - attach_document.contract_id=*
 
 may_call:
-  - read_project_360
+  - read_project
   - list_documents
   - list_records
   - search_records

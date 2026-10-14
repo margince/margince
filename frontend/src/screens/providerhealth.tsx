@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCan } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import { useProviderHealth } from "./ai-provider-health";
 import { ProviderHealthNotice } from "./ai-provider-health-notice";
 import { providerName } from "./ai-provider-names";

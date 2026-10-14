@@ -122,6 +122,7 @@ export const AttachingAProject: Story = {
     const [attach] = await canvas.findAllByRole("button", {
       name: "Attach project",
     });
+    if (!attach) throw new Error("the rail shows no Attach project button");
     await userEvent.click(attach);
     const panel = within(await within(document.body).findByRole("dialog"));
     await userEvent.type(panel.getByRole("combobox"), "Beacon");

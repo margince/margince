@@ -204,8 +204,9 @@ const (
 // searching for a string that was no longer anywhere and passing on nothing.
 //
 // It reads as a bare clause rather than a sentence so each surface can frame it
-// in its own voice: the schema prefixes "Optional.", the frame names the
-// argument and its type first.
+// in its own voice. Both frames lead with what omitting the key costs, which is
+// the fact a caller deciding whether to send one needs. The schema states it
+// before this clause, and the frame names the argument and its type first.
 const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
 
 // ConflictingSourcesRule is what a model does when two things it was given

@@ -2,9 +2,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import type { ListColumn } from "../design-system/listtable";
 import { LocaleProvider, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { leadColumns } from "./leads.columns";
 
 type Lead = components["schemas"]["Lead"];

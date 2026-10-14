@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { ContractForm, SignedFileField } from "./contractform";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

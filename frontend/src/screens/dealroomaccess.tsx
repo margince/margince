@@ -3,7 +3,6 @@ import { Copy, Link2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -15,19 +14,24 @@ import { ChoiceList } from "../design-system/choicelist";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { humanizeToken } from "./audit";
 import { IssuedNotice } from "./dealroomaccess.notices";
+import {
+  CAPABILITIES,
+  CAPABILITY_HINTS,
+  CAPABILITY_LABELS,
+} from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
 // Who may enter the room, and the verbs that change it: invite, issue a new
-// link, change what a contact may do, revoke. Every link a rep is handed here
-// is shown ONCE, with Copy — the server never stores it in clear, and dev has
-// no mail relay, so the rep pasting it into a chat is the normal path, not the
-// fallback.
+// link, change what a contact may do, revoke. Every link is shown once, with
+// Copy: the server never stores it in clear, and pasting it is the normal path.
 //
 // Capability is a required, explained choice. The API defaults to `view`,
 // and a buyer invited with the default could read the documents and never be
@@ -37,18 +41,6 @@ type DealRoom = components["schemas"]["DealRoom"];
 type Participant = components["schemas"]["DealRoomParticipant"];
 type Capability = components["schemas"]["DealRoomParticipantCapability"];
 type Issued = components["schemas"]["DealRoomInvitationIssued"];
-
-const CAPABILITIES: readonly Capability[] = ["view", "comment"];
-
-const CAPABILITY_LABELS: Record<Capability, MessageKey> = {
-  view: "access.cap.view",
-  comment: "access.cap.comment",
-};
-
-const CAPABILITY_HINTS: Record<Capability, MessageKey> = {
-  view: "access.cap.viewHint",
-  comment: "access.cap.commentHint",
-};
 
 export function participantsKey(roomId: string) {
   return ["deal-room-participants", roomId] as const;
@@ -203,6 +195,7 @@ function ParticipantRow({
   >(null);
   const revoked =
     participant.revoked_at !== null && participant.revoked_at !== undefined;
+  const capability = CAPABILITIES.find((c) => c === participant.capability);
   return (
     <PanelRow
       className={revoked ? "access-row access-row-revoked" : "access-row"}
@@ -213,7 +206,9 @@ function ParticipantRow({
           <span className="t-caption"> · {participant.email}</span>
         </p>
         <p className="t-caption">
-          {t(CAPABILITY_LABELS[participant.capability])}
+          {capability
+            ? t(CAPABILITY_LABELS[capability])
+            : humanizeToken(participant.capability)}
           {" · "}
           {revoked
             ? t("access.state.revoked")

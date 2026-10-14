@@ -14,7 +14,7 @@ import { Button } from "../design-system/atoms";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import type { CreateField } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
 import { EditAction, EditRecordModal } from "./edit";

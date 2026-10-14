@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Field } from "./atoms";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";

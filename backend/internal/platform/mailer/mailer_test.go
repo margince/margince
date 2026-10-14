@@ -20,6 +20,9 @@ import (
 type fakeRelay struct {
 	ln         net.Listener
 	rejectRcpt bool
+	// dropOnQuit closes the connection instead of answering QUIT, after the
+	// message itself was accepted.
+	dropOnQuit bool
 
 	mu   sync.Mutex
 	data string
@@ -78,7 +81,9 @@ func (r *fakeRelay) serveOne() {
 				say("250 queued")
 				continue
 			}
-			data.WriteString(line + "\n")
+			// The client dot-stuffs a line that starts with '.'; undo it as a
+			// relay does.
+			data.WriteString(strings.TrimPrefix(line, ".") + "\n")
 			continue
 		}
 		switch {
@@ -97,7 +102,9 @@ func (r *fakeRelay) serveOne() {
 			inData = true
 			say("354 go ahead")
 		case line == "QUIT":
-			say("221 bye")
+			if !r.dropOnQuit {
+				say("221 bye")
+			}
 			return
 		default:
 			say("250 ok")

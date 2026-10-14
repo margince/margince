@@ -3,6 +3,8 @@
 // screen, so it lives apart from the screen that renders the result: the
 // reading is testable on its own, and the form file stays about the form.
 
+import { isRecord } from "../lib/problembody";
+
 export type ParamField = {
   key: string;
   kind:
@@ -22,10 +24,6 @@ export type ParamField = {
   // would refuse.
   options?: string[];
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 // Catalog defaults and stored params are JSON scalars; anything non-scalar
 // has no honest single-line rendering, so it collapses to empty.

@@ -18932,8 +18932,14 @@ export interface paths {
          *     blank is visible and the guess is not.
          *
          *     The uploaded bytes are durable and addressed by the returned
-         *     `source_ref`; nothing is imported, validated or written by this call.
-         *     A source that is never used by `createImportRun` expires unreferenced.
+         *     `source_ref`; nothing is imported or validated by this call. It opens
+         *     the upload's run as a draft (`pending`), named by `run_id`, which keeps
+         *     the profile and every later choice. A draft left idle is cancelled and
+         *     its file released.
+         *
+         *     The file's rows are counted first. A file with more rows than one test
+         *     run reads is refused 422 `too_many_rows`, and no run and no stored file
+         *     are left behind.
          */
         post: operations["uploadImportSource"];
         delete?: never;
@@ -18961,12 +18967,29 @@ export interface paths {
         get: operations["listImportRuns"];
         put?: never;
         /**
-         * Create an import run from an uploaded source and a column mapping, and dry-run it.
+         * Create an import run from an uploaded source and a column mapping, and start its test run.
          * @description IEM-WIRE-3. Takes the connector, the `source_ref` from
-         *     `uploadImportSource`, and the mapping the human settled on, and runs the
-         *     validation pass — which writes **no** domain rows (AC-M5). The run
-         *     arrives at `awaiting_approval` carrying the report
-         *     `getImportRunReport` reads.
+         *     `uploadImportSource`, and the mapping the human settled on, and queues
+         *     the test run, which writes **no** domain rows (AC-M5). The call answers
+         *     at once with the run at `validating`. The worker then reads the file
+         *     and moves the run to `awaiting_approval` carrying the report
+         *     `getImportRunReport` reads, or back to `pending` with the reason in
+         *     `error` when the test stopped on the file or ran past its time.
+         *
+         *     An upload has one run. This call writes the mapping onto the draft the
+         *     upload opened and tests it, so a second call on one `source_ref`
+         *     re-tests the same run rather than opening another. A source with no run
+         *     gets one. A source whose run has written, or whose file was released,
+         *     is a 409.
+         *
+         *     A test run of a `source_name` cancels every other run of that name that
+         *     has not written (`superseded_by` names this run). A run of that name
+         *     that is writing refuses it with 409 `import_source_busy`, whose
+         *     `details.run_id` names that run when the caller may read it.
+         *
+         *     An agent tests one run at a time. Its second test run while the first
+         *     is still `validating` is a 409 `import_agent_busy`, whose
+         *     `details.run_id` names the run still being tested.
          *
          *     Permission-gated as a workspace-wide bulk mutation of the estate: a rep
          *     neither starts nor reads a migration run.
@@ -19062,6 +19085,82 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Save choices on a draft import run.
+         * @description Writes the choices the body names onto a `pending` run, or onto an
+         *     `awaiting_approval` run, which a changed choice returns to `pending`
+         *     with its report cleared. A field left out is left as it is, and a body
+         *     that changes nothing writes nothing and keeps the `version`. A changed
+         *     choice bumps `version`; a changed `draft_step` alone does not.
+         *
+         *     `version` must equal the run's, so a write made on an older read is a
+         *     409 rather than an overwrite. A body changing only `draft_step` on an
+         *     `awaiting_approval` run is a 409 too. The choices are checked for shape
+         *     here and against the object's fields by `validateImportRun`, because a
+         *     draft may hold a mapping the importer has not finished.
+         */
+        patch: operations["updateImportRun"];
+        trace?: never;
+    };
+    "/imports/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test a draft import run against the estate.
+         * @description Queues the test of the run's saved choices, which writes no domain
+         *     rows, on the same run. "Import anyway" is `updateImportRun` with
+         *     `on_broken_link: drop_link`, then this call. `version` must equal the
+         *     run's. The call answers 202 with the run at `validating`. The worker
+         *     then moves it to `awaiting_approval` with its report, or back to
+         *     `pending` with the reason in `error` when the test stopped on the file
+         *     or ran past its time. A second call for a run already being tested at
+         *     that `version` changes nothing and answers 200.
+         *
+         *     Supersede and `import_source_busy` work as they do for
+         *     `createImportRun`. This call never answers `import_agent_busy`: only a
+         *     human session calls it, and the test it queues is that human's. That
+         *     409 holds an agent to one test at a time, and an agent tests through
+         *     `createImportRun`, which documents it.
+         */
+        post: operations["validateImportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a draft, a test run, or a report nobody will approve.
+         * @description Moves a `pending` or `awaiting_approval` run to `cancelled` and
+         *     releases its uploaded file. Neither state has written anything, so
+         *     nothing is left to undo. A `validating` run stops its test and returns
+         *     to `pending` with its choices and file kept, so the answer is that
+         *     draft. A run already `cancelled` is answered as it stands. Any other
+         *     state is a 409.
+         */
+        post: operations["cancelImportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -19131,14 +19230,22 @@ export interface paths {
         put?: never;
         /**
          * Approve a validated import run and commit it.
-         * @description IEM-WIRE-5, and one of the three audited gates. Valid **only** from
-         *     `awaiting_approval`: approving a run that is already running, complete
-         *     or failed is a conflict, not a no-op, because each of those means the
-         *     approver is looking at a state that is not the one they judged.
+         * @description IEM-WIRE-5, and one of the three audited gates. Valid from
+         *     `awaiting_approval`: approving a run that is already running or
+         *     complete is a conflict, not a no-op, because each of those means the
+         *     approver is looking at a state that is not the one they judged. A
+         *     `version`, when sent, must equal the run's, so the report approved is
+         *     the one read; a mismatch is a 409 `version_skew`. A `failed` run that
+         *     was approved once resumes from its
+         *     checkpoint; one never approved is a 409. A run that a newer test run
+         *     replaced is a 409 whose `details.run_id` names that run. A resume while
+         *     another run of the same `source_name` holds the name is a 409
+         *     `import_source_busy` naming it the same way.
          *
          *     The commit is checkpointed and idempotent on the source's own key, so a
          *     re-run of the same file converges rather than duplicating (IEM-AC-9),
-         *     and a run interrupted mid-way resumes from its checkpoint.
+         *     and a run interrupted mid-way resumes from its checkpoint. A run that
+         *     completes releases its uploaded file; undo does not read it.
          */
         post: operations["approveImportRun"];
         delete?: never;
@@ -19185,6 +19292,12 @@ export interface paths {
          *     run is a conflict, not a no-op; a second call while one is already
          *     under way for the same run is a conflict too, not a second
          *     concurrent pass.
+         *
+         *     Starting an undo takes the run's `source_name` back. A test run or a
+         *     report of that name, which wrote nothing, is cancelled with
+         *     `superseded_by` naming this run. A run of that name that is writing
+         *     refuses the undo with 409 `import_source_busy`, whose
+         *     `details.run_id` names it when the caller may read it.
          */
         post: operations["undoImportRun"];
         delete?: never;
@@ -23212,12 +23325,19 @@ export interface components {
         };
         /**
          * @description What one uploaded file looks like, plus the mapping proposed for it.
-         *     Nothing here is stored against a run yet: the human may change every
-         *     line of `suggested_mapping` before `createImportRun` accepts one.
+         *     The upload's draft run keeps it; the human may change every line of
+         *     `suggested_mapping` before `createImportRun` accepts one.
          */
         ImportSourceProfile: {
+            /**
+             * Format: uuid
+             * @description The draft run the upload opened. Every later choice and test is made on it.
+             */
+            run_id: string;
             /** @description Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct. */
             source_ref: string;
+            /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
+            row_count: number;
             object?: components["schemas"]["ImportObject"];
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
@@ -23255,6 +23375,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             columns: components["schemas"]["ImportColumn"][];
             rows_profiled: number;
+            /** @description Rows the file holds, as `ImportRun.parts[].row_count` counts them. */
+            row_count: number;
             /** @description One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call. */
             suggested_mappings: {
                 [key: string]: {
@@ -23570,14 +23692,58 @@ export interface components {
             undo?: components["schemas"]["ImportUndoReport"];
         };
         /**
-         * @description IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-         *     carries the checkpoint it stopped at, and resuming continues from
-         *     there rather than re-reading the file from the top. `undoing`/`undone`
-         *     (IEM-WIRE-9) are the reversal's own states, reachable only from
-         *     `complete` and only for the `csv` connector.
+         * @description The choices one save changes on a draft run, with the `version` it was
+         *     made on. Each choice has the meaning and the shape it has on
+         *     `CreateImportRunRequest`. A field left out keeps its value.
+         */
+        UpdateImportRunRequest: {
+            /** @description The run's `version` this save was made on. */
+            version: number;
+            object?: components["schemas"]["ImportObject"];
+            parts?: components["schemas"]["ImportPartRequest"][];
+            mapping?: {
+                [key: string]: string;
+            };
+            /** @description Empty means the mapped natural key. */
+            source_key?: string;
+            source_name?: string;
+            on_duplicate?: components["schemas"]["ImportOnDuplicate"];
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /**
+             * Format: uuid
+             * @description The tag every created record is filed under; `null` files them under none.
+             */
+            context_tag_id?: string | null;
+            draft_step?: components["schemas"]["ImportDraftStep"];
+        };
+        /** @description The run's `version` a call was made on. */
+        ImportRunVersion: {
+            version: number;
+        };
+        /** @description What the approver read. Without a body, the run is approved at whatever version it holds. */
+        ApproveImportRunRequest: {
+            /** @description The run's `version` the approved report was read at. */
+            version?: number;
+        };
+        /**
+         * @description The wizard step a draft reopens on.
          * @enum {string}
          */
-        ImportRunStatus: "pending" | "validating" | "awaiting_approval" | "running" | "complete" | "failed" | "undoing" | "undone";
+        ImportDraftStep: "files" | "map";
+        /**
+         * @description IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+         *     still being made, and carrying the reason in `error` when its last test
+         *     stopped. `failed` only ever means a commit stopped, and it is
+         *     resumable, not terminal: the run carries the checkpoint it stopped at,
+         *     and resuming continues from there rather than re-reading the file from
+         *     the top. `undoing`/`undone`
+         *     (IEM-WIRE-9) are the reversal's own states, reachable only from
+         *     `complete` and only for the `csv` connector. `cancelled` ended before
+         *     the run wrote anything: cancelled, superseded by a newer test run of
+         *     its source, or left idle as a draft. Its file is released.
+         * @enum {string}
+         */
+        ImportRunStatus: "pending" | "validating" | "awaiting_approval" | "running" | "complete" | "failed" | "undoing" | "undone" | "cancelled";
         /**
          * @description The result of undoing a committed import run (IEM-WIRE-9; A93). Every
          *     import-created row lands in exactly one of three buckets: reversed,
@@ -23641,8 +23807,25 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
-            /** @description Why a failed run stopped, in the uploader's terms. Never a driver or SQL message. */
+            /** @description Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message. */
             error?: string | null;
+            /** @description Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another. */
+            version: number;
+            draft_step?: components["schemas"]["ImportDraftStep"];
+            /** @description What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list. */
+            profile?: components["schemas"]["ImportSourceProfile"];
+            /**
+             * Format: date-time
+             * @description When the run was approved. Absent for a run never approved.
+             */
+            approved_at?: string;
+            /**
+             * Format: uuid
+             * @description The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.
+             */
+            superseded_by?: string;
+            /** @description The uploaded file is no longer kept: the run completed, was cancelled or was superseded. */
+            source_released: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -37272,7 +37455,7 @@ export interface components {
             name: string;
             /** @description The written display name a client shows in place of the name. */
             title: string;
-            /** @description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause. */
+            /** @description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope. */
             description: string;
             /** @description Passport scope required to call it. */
             required_scope?: string;
@@ -39740,6 +39923,12 @@ export interface components {
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
+             * @description The key of each entry in `purposes`, at the same index. A page names a purpose the
+             *     product seeds in its reader's language by its key, and shows the published name of any
+             *     other.
+             */
+            purpose_keys?: string[];
+            /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
@@ -41518,6 +41707,39 @@ export interface components {
              */
             outlook?: components["schemas"]["WeeklyReviewOutlook"][];
             /**
+             * @description Every live member of the team that week, including those whose own week could not be
+             *     read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+             *     kept.
+             */
+            members?: components["schemas"]["TeamWeeklyMember"][];
+            quality?: components["schemas"]["TeamWeeklyQuality"];
+            /**
+             * @description The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+             *     composed or the team's book was refused.
+             */
+            coverage?: components["schemas"]["TeamWeeklyCoverage"][];
+            /**
+             * @description True when any horizon in `coverage` recommends a replan: coverage at risk against a
+             *     named basis.
+             */
+            replan_recommended?: boolean;
+            /**
+             * @description A short paragraph composed from the frozen figures by fixed rules, never by a model.
+             *     Absent on a snapshot frozen before it existed or a week nobody was counted in.
+             */
+            summary?: string;
+            /**
+             * @description LIVE, computed on every read and never frozen: the open input-check findings on deals
+             *     the team's members own now, under the reader's own deal scope. Absent when the read
+             *     did not ask.
+             */
+            exceptions?: components["schemas"]["InputCheck"][];
+            /**
+             * @description LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+             *     period, quietest first. Together with `exceptions` at most 25 items, findings first.
+             */
+            stale_deals?: components["schemas"]["TeamWeeklyStaleDeal"][];
+            /**
              * @description The Monday agenda: every id in `reps`, permuted into the order a lead should raise
              *     them. Derived on read from the same focus ranking that picked each rep's
              *     `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting
@@ -41559,7 +41781,7 @@ export interface components {
             commitments_due: number;
             commitments_kept: number;
         };
-        /** @description One member's week as their lead reads it, with the one thing to raise. */
+        /** @description One member's week as their lead reads it, with what to raise. */
         TeamWeeklyRep: {
             /** Format: uuid */
             user_id: string;
@@ -41574,17 +41796,124 @@ export interface components {
             help_requested: number;
             /**
              * @description Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-             *     celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-             *     outranks any metric, because walking past a request to raise a number is the
-             *     fastest way to teach them not to ask.
+             *     celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+             *     them: a rep who ASKED for help outranks any metric, because walking past a request
+             *     to raise a number is the fastest way to teach them not to ask.
+             *
+             *     `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+             *     replaced it still carry it.
              * @enum {string}
              */
-            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "meetings_without_next_step" | "strong_week" | "quiet_week";
+            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
             /**
              * @description The focus in words, composed from the stored figures — never model-written, so it
              *     cannot say something the snapshot does not hold.
              */
             focus_label: string;
+            /**
+             * @description Every rule that fired for this rep, in the order a lead raises them. The first is
+             *     the focus. A snapshot frozen before the list existed reads its focus as the one
+             *     pattern.
+             */
+            patterns: components["schemas"]["TeamWeeklyPattern"][];
+            /**
+             * @description Up to three stages where this rep's conversion differs most from the team's, over
+             *     the 13 weeks before the week closed. Stages with fewer than five entries on either
+             *     side are left out. Empty when no stage qualified or the snapshot predates it.
+             */
+            funnel?: components["schemas"]["TeamWeeklyFunnelDeviation"][];
+        };
+        TeamWeeklyPattern: {
+            /** @enum {string} */
+            kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
+            /** @description The pattern in words, composed from the stored figures. */
+            label: string;
+        };
+        /**
+         * @description One stage where the rep converts differently from the team. Entries and conversions are
+         *     attributed to the owner at the time of each move. "Converted" is a later move to a won
+         *     stage or to a later stage, compared by the stage order as it was configured when the
+         *     week was assembled.
+         */
+        TeamWeeklyFunnelDeviation: {
+            /** Format: uuid */
+            pipeline_id: string;
+            pipeline_name: string;
+            /** Format: uuid */
+            stage_id: string;
+            stage_name: string;
+            /** @description The stage after this one when the week was assembled; absent for the last. */
+            next_stage_name?: string;
+            rep_entered: number;
+            rep_converted: number;
+            team_entered: number;
+            team_converted: number;
+            /** @description The rep's conversion rate less the team's, in basis points. */
+            deviation_bp: number;
+        };
+        TeamWeeklyMember: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description What they were called that week. */
+            display_name: string;
+            /** @description Whether this member's own week was read into the counts. */
+            measured: boolean;
+        };
+        /**
+         * @description How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+         *     snapshot frozen before it was measured, which is not zero.
+         */
+        TeamWeeklyQuality: {
+            proposals_accepted?: number;
+            proposals_rejected?: number;
+            /**
+             * @description Changes an agent, a connector or the system made that a member of the team undid
+             *     inside the week.
+             */
+            auto_change_reversals?: number;
+        };
+        /**
+         * @description Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+         *     coverage at risk against the named basis, never as a target: the product has none.
+         *     Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+         */
+        TeamWeeklyCoverage: {
+            /** @enum {string} */
+            period_kind: "month" | "quarter";
+            /** @enum {string} */
+            basis?: "manager_call" | "historical_median";
+            /**
+             * @description Why there is no answer. `not_authorized` is a standing call the member who closed the
+             *     week could not read, which is not the same as no call.
+             * @enum {string}
+             */
+            absent?: "insufficient_basis" | "insufficient_history" | "not_authorized";
+            /** Format: int64 */
+            reference_landing_minor?: number;
+            /** Format: int64 */
+            remaining_to_support_minor?: number;
+            /** Format: int64 */
+            needed_open_minor?: number;
+            /** Format: int64 */
+            current_open_minor?: number;
+            /** Format: int64 */
+            coverage_bp?: number;
+            base_currency: string;
+            /**
+             * @description True when coverage is at risk against a named basis: under 8000 basis points of what
+             *     the basis needs. Never true without a basis.
+             */
+            replan_recommended: boolean;
+        };
+        TeamWeeklyStaleDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: date-time */
+            last_activity_at: string;
+            days_quiet: number;
         };
         /** @description A week's lessons and whether anybody looked for them. */
         WeeklyReviewLearnings: {
@@ -73458,7 +73787,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The run, validated and awaiting a human (dry run complete, zero rows written). */
+            /** @description The run at `validating`: its test run is queued, and zero rows are written. */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -73470,6 +73799,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -73546,6 +73876,103 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    updateImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateImportRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The run as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    validateImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRunVersion"];
+            };
+        };
+        responses: {
+            /** @description The run already being tested at this `version`, unchanged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            /** @description The run at `validating`, its test run queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    cancelImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cancelled run, or the draft a stopped test run returned to. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     getImportRunReport: {
         parameters: {
             query?: never;
@@ -73607,7 +74034,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveImportRunRequest"];
+            };
+        };
         responses: {
             /** @description Approved; the commit is under way (or complete — the run record says which). */
             202: {

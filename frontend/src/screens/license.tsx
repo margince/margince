@@ -2,16 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { useLicenseEntitlement } from "../app/license-posture";
 import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { useCan } from "../lib/capability";
+import { useLicenseEntitlement } from "../lib/license-posture";
+import { throwProblem } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { LicenseHolderCard } from "./licenseholder";
 
 // The entitlement surface: what the license grants, and how many seats are using

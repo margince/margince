@@ -6,10 +6,10 @@ import { Fragment, type ReactNode, useId, useRef } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ENTITY } from "../app/entity";
-import { routeHash } from "../app/router";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
+import { ENTITY } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import { Modal } from "./atoms";
 import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";

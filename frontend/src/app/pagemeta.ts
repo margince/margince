@@ -1,8 +1,9 @@
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import type { Route, Screen } from "../lib/router";
 import { useEntityName } from "../screens/entityref";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
-import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
   NAV,
   type NavLevelEntry,
@@ -10,7 +11,6 @@ import {
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
-import type { Route, Screen } from "./router";
 
 // What the chrome knows about a page before the page renders: its name, its
 // one-line description, and which entry of a section it is. The top bar's trail

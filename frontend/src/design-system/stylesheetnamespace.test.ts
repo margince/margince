@@ -44,7 +44,7 @@ const namespaces = [
   { prefix: "oauthconsent-", home: "screens/oauthconsent.css" },
   { prefix: "offers-", home: "screens/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
-  { prefix: "querygate-", home: "screens/common.css" },
+  { prefix: "querygate-", home: "design-system/querystates.css" },
   { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },
   { prefix: "relationships-", home: "screens/relationships.css" },
   { prefix: "repeatablerowsfield-", home: "screens/repeatablerowsfield.css" },

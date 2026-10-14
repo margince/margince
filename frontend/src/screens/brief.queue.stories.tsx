@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { announceAddressChanged } from "../app/router";
 import { en } from "../i18n/en";
+import { announceAddressChanged } from "../lib/router";
 import {
   leadRow,
   meetingRow,
@@ -119,9 +119,11 @@ export const AFullDay: Story = {
   // play reports a missing control rather than a missing portal.
   play: async () => {
     const drawer = within(document.body);
-    await userEvent.click(
-      (await drawer.findAllByRole("button", { name: /Meet next Tues/ }))[0],
-    );
+    const [meeting] = await drawer.findAllByRole("button", {
+      name: /Meet next Tues/,
+    });
+    if (!meeting) throw new Error("the queue shows no Meet next Tuesday row");
+    await userEvent.click(meeting);
     // The row is in hand and NO column opened beside it — the row already
     // names the contact and both moments, and the drawer has no width to
     // spend saying it twice.

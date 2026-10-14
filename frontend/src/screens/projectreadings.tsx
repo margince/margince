@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { reveal } from "../app/reveal";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -11,6 +9,8 @@ import { formatDateAbbrev, formatMoney, formatNumber } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
+import { reveal } from "../lib/reveal";
 import { type Project360, stateOf } from "./projectsections";
 
 // The project page's band under its header: the readings plate and the one

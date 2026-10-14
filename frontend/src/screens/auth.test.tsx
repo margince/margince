@@ -2,9 +2,9 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { STORAGE_KEYS } from "../app/storage";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../i18n";
+import { STORAGE_KEYS } from "../lib/storage";
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
 
@@ -598,12 +598,12 @@ describe("AuthScreen reset deep link", () => {
     );
   });
 
-  // The token no longer waits in the address bar for this screen to read it:
-  // app/router.tsx takes it as it reads the hash, which is what keeps it out of
-  // the history entry while a gate above this screen renders instead. Memory
-  // outlives a mount and the address did not, so the screen empties it as it
-  // takes the token in hand — a remount that found it there would put the reset
-  // form back over a reader who had gone back to sign-in.
+  // The token does not wait in the address bar for this screen to read it.
+  // lib/router.tsx takes it as it reads the hash. That keeps it out of the
+  // history entry while a gate above this screen renders instead. Memory
+  // outlives a mount and the address does not, so the screen empties it as it
+  // takes the token. A remount that found it there would put the reset form
+  // back over a reader who had gone back to sign-in.
   //
   // The REAL address, not the stubbed one the cases around this use: the scrub
   // rewrites the URL, and a plain object cannot be rewritten.

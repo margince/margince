@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
+import { parseHash, type Route } from "../lib/router";
 import { FiltersScreen } from "../screens/filters";
 import {
   type FiltersServer,
@@ -14,7 +15,6 @@ import {
 } from "../screens/filters.testkit";
 import { LIVE_ID, liveList } from "../screens/lists.fixtures";
 import type { NavSection } from "./nav";
-import { parseHash, type Route } from "./router";
 import {
   fixtureSection,
   ignoreSearch,

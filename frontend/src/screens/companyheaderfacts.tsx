@@ -3,20 +3,21 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Popover } from "../design-system/popover";
+import { provenanceOf } from "../design-system/provenanceof";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { provenanceOf, useViewerId } from "./common";
+import { useMemberName } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
 import {
   CompanyOwnerControl,
   companyWebsite,
   displayHost,
 } from "./companyheader";
 import { EntityRef } from "./entityref";
-import { useMemberName } from "./membernames";
 
 // The account's name-line subtitle and its facts strip: what CompanyIdentityLine
 // used to draw as one running sentence, in the contact record page's own

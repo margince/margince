@@ -83,7 +83,7 @@ function useDarkPage(): boolean {
   const [dark, setDark] = useState(isDarkRoot);
   useEffect(() => {
     const root = document.documentElement;
-    // The attribute is the shell's own output (app/theme.ts), and the Core's
+    // The attribute is the shell's own output (lib/theme.ts), and the Core's
     // stylesheet keys its own dark values off the same one. Observing it rather
     // than subscribing to the store keeps the design system from importing the
     // app it dresses.

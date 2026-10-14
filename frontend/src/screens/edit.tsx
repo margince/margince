@@ -1,13 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useState } from "react";
-import type { Route } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import {
+  ProblemError,
+  problemExistingId,
+  problemMessageOf,
+} from "../lib/problem";
+import type { Route } from "../lib/router";
 import { derivedRecordKeys } from "./activitykeys";
-import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import {
   type CreateField,
   type FormRows,
@@ -20,7 +24,7 @@ import {
   prefillRowsFromRecord,
   seedMissingFields,
 } from "./edit.prefill";
-import "./common.css";
+import "../design-system/querystates.css";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
 // copy.ts). Only the four record kinds a salesperson edits by hand carry

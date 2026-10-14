@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -15,12 +14,13 @@ import {
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
+import { QueryGate, QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, QueryStates } from "./common";
+import { useRecordZone } from "../lib/recordzone";
 import "./connected-agents.css";
 import "./settings-agents.css";
 import { usePassportRevoke } from "./passport-revoke";

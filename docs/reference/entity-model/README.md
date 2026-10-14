@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 305 |
-| Columns | 3591 |
-| Foreign keys | 504 |
+| Tables | 309 |
+| Columns | 3652 |
+| Foreign keys | 508 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -100,7 +100,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 38 |
+| [compose](compose.md) | 42 |
 | [consent](consent.md) | 19 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
@@ -299,7 +299,7 @@ erDiagram
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 6 | 0 |
-| [`import_run`](migration.md#import_run) | migration | 13 | 1 |
+| [`import_run`](migration.md#import_run) | migration | 34 | 1 |
 | [`intro_request`](introductions.md#intro_request) | introductions | 29 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
@@ -402,9 +402,13 @@ erDiagram
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 8 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 23 | 2 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 27 | 4 |
+| [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 12 | 0 |
+| [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
-| [`team_weekly_review_rep`](compose.md#team_weekly_review_rep) | compose | 12 | 0 |
+| [`team_weekly_review_rep`](compose.md#team_weekly_review_rep) | compose | 12 | 2 |
+| [`team_weekly_review_rep_funnel`](compose.md#team_weekly_review_rep_funnel) | compose | 13 | 0 |
+| [`team_weekly_review_rep_pattern`](compose.md#team_weekly_review_rep_pattern) | compose | 5 | 0 |
 | [`technical_lookup_cache`](contacts.md#technical_lookup_cache) | contacts | 6 | 0 |
 | [`transcript_read`](activities.md#transcript_read) | activities | 12 | 0 |
 | [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
@@ -427,7 +431,7 @@ erDiagram
 | [`weekly_review_learning_citation`](compose.md#weekly_review_learning_citation) | compose | 5 | 0 |
 | [`weekly_review_movement`](compose.md#weekly_review_movement) | compose | 5 | 0 |
 | [`weekly_review_outlook`](compose.md#weekly_review_outlook) | compose | 15 | 0 |
-| [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 24 | 0 |
+| [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 25 | 0 |
 | [`withdrawal_credential`](consent.md#withdrawal_credential) | consent | 12 | 0 |
 | [`workflow_run`](automation.md#workflow_run) | automation | 10 | 0 |
 | [`worklist_pin`](activities.md#worklist_pin) | activities | 5 | 0 |

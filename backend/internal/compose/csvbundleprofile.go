@@ -35,12 +35,21 @@ func (h importHandlers) profileBundle(
 		return crmcontracts.ImportSourceProfile{}, err
 	}
 	parts := make([]crmcontracts.ImportPartProfile, 0, len(ordered))
+	seeded := make([]migration.PartMapping, 0, len(ordered))
+	rows := 0
 	for _, part := range ordered {
 		profiled, err := profilePart(ctx, bundle, part, catalogs)
 		if err != nil {
 			return crmcontracts.ImportSourceProfile{}, importProblem(err)
 		}
 		parts = append(parts, profiled)
+		seeded = append(seeded, migration.PartMapping{
+			File: part.Entry, Object: part.Object, Fields: profiled.SuggestedMappings[part.Object],
+		})
+		rows += profiled.RowCount
+	}
+	if err := refuseTooManyRows(rows); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
 	}
 	ignored := make([]crmcontracts.ImportIgnoredEntry, 0, len(bundle.Ignored))
 	for _, entry := range bundle.Ignored {
@@ -54,16 +63,18 @@ func (h importHandlers) profileBundle(
 		return crmcontracts.ImportSourceProfile{}, err
 	}
 	sourceName := suggestedSourceName(upload.FileName)
-	return crmcontracts.ImportSourceProfile{
+	out := crmcontracts.ImportSourceProfile{
 		SourceRef:           key,
 		FileName:            &upload.FileName,
 		SuggestedSourceName: &sourceName,
 		Parts:               &parts,
 		Ignored:             &ignored,
 		Columns:             []crmcontracts.ImportColumn{},
+		RowCount:            rows,
 		SuggestedMapping:    map[string]string{},
 		Targets:             []string{},
-	}, nil
+	}
+	return h.openDraft(ctx, out, migration.RunMapping{Parts: seeded, SourceName: sourceName, FileName: upload.FileName})
 }
 
 // profilePart reads one file of the bundle whole and profiles it. It suggests a
@@ -83,6 +94,10 @@ func profilePart(
 	if err != nil {
 		return crmcontracts.ImportPartProfile{}, fmt.Errorf("%s: %w", part.Entry, err)
 	}
+	rows, err := migration.CountRecords(bytes.NewReader(body))
+	if err != nil {
+		return crmcontracts.ImportPartProfile{}, fmt.Errorf("%s: %w", part.Entry, err)
+	}
 	suggestions := make(map[string]map[string]string, len(migration.ImportOrder))
 	for _, object := range migration.ImportOrder {
 		targets, err := importTargets(object, catalogs[object])
@@ -96,6 +111,7 @@ func profilePart(
 		Object:            crmcontracts.ImportObject(part.Object),
 		Columns:           toContractColumns(profile),
 		RowsProfiled:      profile.RowsProfiled,
+		RowCount:          rows,
 		SuggestedMappings: suggestions,
 	}, nil
 }

@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -57,6 +58,10 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 		}
 		addFields(entity.Fields, granted.dimensions, analyticsquery.KindDimension)
 		addFields(entity.Fields, granted.measures, analyticsquery.KindMeasure)
+		// Narrowed by grant, not spec.filters. A filter reading another record
+		// type owes that type's read grant, and naming one the caller lacks
+		// would advertise a narrowing that answers 403.
+		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -70,6 +75,13 @@ func AnalyticsSchemaFor(ctx context.Context) analyticsquery.Schema {
 
 func addFields(into map[string]analyticsquery.Field, from map[string]string, kind analyticsquery.FieldKind) {
 	for name, expr := range from {
+		// A name already served keeps the kind it has. Most filters are also
+		// dimensions, and a dimension is the more capable of the two: it can
+		// be grouped on as well as narrowed by. Overwriting it with the filter
+		// kind would take the grouping away.
+		if _, served := into[name]; served {
+			continue
+		}
 		// A measure is a number by construction — it is the thing an aggregate
 		// adds up — so a caller's 1000 binds to it as readily as their "1000".
 		// A dimension is text unless its column says otherwise.
@@ -81,9 +93,9 @@ func addFields(into map[string]analyticsquery.Field, from map[string]string, kin
 	}
 }
 
-// columnValueShapes are the dimension EXPRESSIONS whose column holds something
-// other than text, so a filter against one carries the JSON literal a question
-// is naturally written in rather than a quoted spelling of it.
+// columnValueShapes are the EXPRESSIONS whose value is something other than
+// text. A filter against one carries the JSON literal a question is naturally
+// written in, rather than a quoted spelling of it.
 //
 // Keyed by the expression rather than declared per spec, because what a column
 // holds is the COLUMN's property and not each spec's that exposes it:
@@ -96,6 +108,11 @@ func addFields(into map[string]analyticsquery.Field, from map[string]string, kin
 var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	colWinProbability:    analyticsquery.ShapeNumber,
 	colBecameOpportunity: analyticsquery.ShapeBoolean,
+	// Predicates rather than columns, and boolean for the same reason: the
+	// expression yields true or false, so `stalled = true` is the question as
+	// anyone would write it.
+	deals.StalledSQL("t"):        analyticsquery.ShapeBoolean,
+	deals.PartnerSourcedSQL("t"): analyticsquery.ShapeBoolean,
 }
 
 // schemaVersion is a digest of the vocabulary this caller was handed.

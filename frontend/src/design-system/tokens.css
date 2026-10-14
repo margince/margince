@@ -883,7 +883,7 @@
  * The same dark palette, for a document whose host stated NOTHING.
  *
  * The attribute arm above is the whole answer only where something stamps the
- * attribute. The SPA does (app/theme.ts resolves the theme before React
+ * attribute. The SPA does (lib/theme.ts resolves the theme before React
  * mounts, precisely so no surface renders un-themed), but the SPA is not the
  * only document that reads these tokens: an MCP App view is drawn inside a
  * third-party host whose theme statement is OPTIONAL (SEP-1865), and an

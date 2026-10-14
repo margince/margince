@@ -2,6 +2,17 @@
 # config/presets/openrouter_openai.yaml — every lane on OpenAI's GPT-6 family,
 # reached through the OpenRouter broker.
 #
+# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
+# certification records do not grade every one of those bindings as certified.
+# Which tasks, and how badly, is in docs/reference/ai-certification.md under
+# this file's name. Read it before binding this preset to a workspace whose
+# confidentiality decisions matter: a task graded `supported_degraded` or
+# `not_supported` answers wrongly often enough to have been measured doing so.
+#
+# No task list here on purpose. The bands move when a prompt is fixed or the
+# corpus grows, and a list in this comment would read as true long after it
+# stopped being.
+#
 # One credential (OPENAI_COMPATIBLE_API_KEY), the same one the other broker
 # presets use. The models are first-party OpenAI endpoints on the broker, so
 # there is no serving lottery for `routing:` to bound.

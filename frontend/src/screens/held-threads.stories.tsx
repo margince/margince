@@ -19,6 +19,30 @@ import {
 
 type HeldThread = components["schemas"]["HeldThread"];
 
+const HELD_LEGAL: HeldThread = {
+  thread_key: "t-2",
+  status: "held",
+  pending: false,
+  attempts: 1,
+  has_message: true,
+  kind: "legal",
+  subject: "Entwurf Aufhebungsvertrag",
+  activity_id: "01a05500-0000-7000-8000-0000000000a2",
+  occurred_at: "2026-08-29T15:40:00Z",
+  // More outside addresses than the row names: the rest are counted.
+  participants: [
+    {
+      address: "k.huber@kanzlei-huber-partner.example",
+      contact_id: "0190b7a2-0000-7000-8000-0000000000c7",
+    },
+    { address: "office@kanzlei-huber-partner.example" },
+    { address: "a.lindqvist@betriebsrat.example" },
+    { address: "hr-legal@steireif.de" },
+    { address: "assistenz@kanzlei-huber-partner.example" },
+  ],
+  participant_count: 8,
+};
+
 const MIXED: HeldThread[] = [
   // Pending leads, which is the ordering the endpoint guarantees and the whole
   // reason this page is worth opening during an outage.
@@ -42,29 +66,7 @@ const MIXED: HeldThread[] = [
     ],
     participant_count: 1,
   },
-  {
-    thread_key: "t-2",
-    status: "held",
-    pending: false,
-    attempts: 1,
-    has_message: true,
-    kind: "legal",
-    subject: "Entwurf Aufhebungsvertrag",
-    activity_id: "01a05500-0000-7000-8000-0000000000a2",
-    occurred_at: "2026-08-29T15:40:00Z",
-    // More outside addresses than the row names: the rest are counted.
-    participants: [
-      {
-        address: "k.huber@kanzlei-huber-partner.example",
-        contact_id: "0190b7a2-0000-7000-8000-0000000000c7",
-      },
-      { address: "office@kanzlei-huber-partner.example" },
-      { address: "a.lindqvist@betriebsrat.example" },
-      { address: "hr-legal@steireif.de" },
-      { address: "assistenz@kanzlei-huber-partner.example" },
-    ],
-    participant_count: 8,
-  },
+  HELD_LEGAL,
   {
     thread_key: "t-3",
     status: "unsure",
@@ -167,14 +169,14 @@ export const Outage: Story = {
 // for still reads as words, and a thread with no message left says so.
 const EDGES: HeldThread[] = [
   {
-    ...MIXED[1],
+    ...HELD_LEGAL,
     thread_key: "t-long",
     subject:
       "Quarterly procurement review: revised framework agreement, annex C pricing schedule and the open questions from legal about indemnity caps",
   },
-  { ...MIXED[1], thread_key: "t-new-kind", kind: "export_control" },
+  { ...HELD_LEGAL, thread_key: "t-new-kind", kind: "export_control" },
   {
-    ...MIXED[1],
+    ...HELD_LEGAL,
     thread_key: "t-erased",
     has_message: false,
     subject: undefined,

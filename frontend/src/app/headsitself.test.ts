@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { parseHash } from "../lib/router";
 import { headsItself } from "./pagemeta";
-import { parseHash } from "./router";
 
 // Which pages print their own h1 is asked of the ROUTE: under one screen,
 // Filters and views, the library is named by the shell and every focused page

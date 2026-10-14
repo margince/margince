@@ -5,12 +5,12 @@ import { App } from "./App";
 import { api } from "./api/client";
 import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
-import { listenForInstall, registerServiceWorker } from "./app/pwa";
 import { createQueryClient } from "./app/queryclient";
-import { startTheme } from "./app/theme";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
+import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { startTheme } from "./lib/theme";
 import { BulkUndoProvider } from "./screens/bulkchange";
 import "./app.css";
 

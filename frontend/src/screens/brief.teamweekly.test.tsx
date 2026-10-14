@@ -2,9 +2,9 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import {
   beforeHistoryWeeklyNumbers,
   partlyRecordedWeeklyNumbers,

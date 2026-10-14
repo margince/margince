@@ -18,6 +18,7 @@ import { FileDropzone } from "../design-system/filedropzone";
 import { KeyedName } from "../design-system/keyedname";
 import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
+import { QueryStates } from "../design-system/querystates";
 import { forReader } from "../format/collate";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -30,13 +31,13 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { postMultipart } from "../lib/multipart";
 import {
   problemCodeOf,
   problemMessageOf,
-  QueryStates,
   throwProblem,
   unwrap,
-} from "./common";
+} from "../lib/problem";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
@@ -107,18 +108,11 @@ function useDocumentWrite<Vars>(
   });
 }
 
-// Multipart by hand: the generated client serializes JSON bodies only.
 async function uploadDocument(vars: { corpusId: string; file: File }) {
-  const body = new FormData();
-  body.append("file", vars.file);
-  const response = await fetch(
+  await postMultipart(
     `/v1/knowledge/corpora/${encodeURIComponent(vars.corpusId)}/documents`,
-    { method: "POST", body, credentials: "include" },
+    { file: vars.file },
   );
-  const payload = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throwProblem(payload);
-  }
 }
 
 async function deleteDocument(vars: { id: string }) {

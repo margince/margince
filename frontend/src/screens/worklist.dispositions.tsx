@@ -16,14 +16,13 @@
 
 import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useRef, useState } from "react";
-
-import { useFoldedViewport } from "../app/viewport";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { useFoldedViewport } from "../lib/viewport";
 import {
   type ReopenCondition,
   useClearDisposition,
@@ -444,14 +443,14 @@ export function swipeActions(
 ) {
   const side = (which: "start" | "end") => {
     const here = offered.filter((one) => SWIPE_SIDES[one] === which);
-    if (here.length === 0) {
-      return undefined;
-    }
     // Repeated swipes WALK the side rather than restaging the same judgement,
     // so a direction carrying two of them reaches both. Modulo rather than a
     // stop at the end: a reader who has swiped past what they wanted gets it
     // again on the next flick instead of a direction that stops answering.
     const one = here[walked[which] % here.length];
+    if (one === undefined) {
+      return undefined;
+    }
     return {
       label: t(`worklist.disposition.verb.${one}` as const),
       onAct: () => put(one),

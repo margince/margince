@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { en } from "../i18n/en";
 import { WorkAsLeadAction } from "./contactleadaction";
 import {
   installFetchStub,
@@ -42,6 +43,21 @@ export const MayNotCreateLeads: Story = {
     return (
       <StoryProviders>
         <WorkAsLeadAction contactId="p-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// An archived contact: the verb stays and points at the page's one reason.
+export const RefusedOnArchived: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ lead: ["read", "create"] }) });
+    return (
+      <StoryProviders>
+        <WorkAsLeadAction contactId="p-1" reasonId="contact-archived" />
+        <p id="contact-archived" className="t-caption">
+          {en["contact.rail.archivedReadOnly"]}
+        </p>
       </StoryProviders>
     );
   },

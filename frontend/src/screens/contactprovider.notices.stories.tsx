@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { WriteRefused } from "./common";
+import { WriteRefused } from "../design-system/querystates";
 import { LookupRunning } from "./contactprovider.notices";
 import { StoryProviders } from "./story-utils";
 

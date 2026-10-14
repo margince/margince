@@ -12,7 +12,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { type CreateField, CreateRecordModal } from "./create";
 import {
   CRITERION_KIND_LABEL,
@@ -229,8 +229,8 @@ export function CriterionCreateDialog({
         await api.POST("/stages/{id}/exit-criteria", {
           params: { path: { id: draft.stageId } },
           body: {
-            key: values.key,
-            label: values.label,
+            key: values.key ?? "",
+            label: values.label ?? "",
             kind: criterionKindOf(values.kind),
             required: values.required !== "false",
             ...(values.hint ? { hint: values.hint } : {}),

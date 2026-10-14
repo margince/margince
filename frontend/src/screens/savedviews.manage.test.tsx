@@ -14,8 +14,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import type { ListQuery } from "./listquery";
 import { SaveViewAction } from "./savedviews";
 import { ManageViewsButton } from "./savedviews.manage";

@@ -39,7 +39,7 @@ must_call:
 may_call:
   - resolve_entities
   - search_records
-  - list_pipelines
+  - read_directory
   - list_approvals
   - read_record
   - query_workspace

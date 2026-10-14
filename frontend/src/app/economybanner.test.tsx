@@ -4,8 +4,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { EconomyBanner } from "./economybanner";
-import { type GrantSpec, meFixture } from "./mefixture";
 
 function mount(
   allow: GrantSpec,

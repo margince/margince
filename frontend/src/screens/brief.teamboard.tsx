@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { navigate } from "../app/router";
+import { navigate } from "../lib/router";
 import { TeamBoard } from "./worklist.board";
 import { UNASSIGNED } from "./worklist.queries";
 

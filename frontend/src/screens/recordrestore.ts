@@ -19,8 +19,8 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import type { EntityKind } from "../app/entity";
-import { unwrap } from "./common";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
 
 // The variables one press carries. A mutationFn takes what it needs rather
 // than closing over render state: the click belongs to the committed render,

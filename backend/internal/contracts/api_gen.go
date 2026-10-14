@@ -10294,6 +10294,24 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ImportDraftStep.
+const (
+	ImportDraftStepFiles ImportDraftStep = "files"
+	ImportDraftStepMap   ImportDraftStep = "map"
+)
+
+// Valid indicates whether the value is a known member of the ImportDraftStep enum.
+func (e ImportDraftStep) Valid() bool {
+	switch e {
+	case ImportDraftStepFiles:
+		return true
+	case ImportDraftStepMap:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportFormatVersion.
 const (
 	ImportFormatVersionMarginceImport1 ImportFormatVersion = "margince-import/1"
@@ -10441,6 +10459,7 @@ func (e ImportRunConnector) Valid() bool {
 // Defines values for ImportRunStatus.
 const (
 	ImportRunStatusAwaitingApproval ImportRunStatus = "awaiting_approval"
+	ImportRunStatusCancelled        ImportRunStatus = "cancelled"
 	ImportRunStatusComplete         ImportRunStatus = "complete"
 	ImportRunStatusFailed           ImportRunStatus = "failed"
 	ImportRunStatusPending          ImportRunStatus = "pending"
@@ -10454,6 +10473,8 @@ const (
 func (e ImportRunStatus) Valid() bool {
 	switch e {
 	case ImportRunStatusAwaitingApproval:
+		return true
+	case ImportRunStatusCancelled:
 		return true
 	case ImportRunStatusComplete:
 		return true
@@ -16264,23 +16285,133 @@ func (e TeamExceptionKind) Valid() bool {
 	}
 }
 
+// Defines values for TeamWeeklyCoverageAbsent.
+const (
+	TeamWeeklyCoverageAbsentInsufficientBasis   TeamWeeklyCoverageAbsent = "insufficient_basis"
+	TeamWeeklyCoverageAbsentInsufficientHistory TeamWeeklyCoverageAbsent = "insufficient_history"
+	TeamWeeklyCoverageAbsentNotAuthorized       TeamWeeklyCoverageAbsent = "not_authorized"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageAbsent enum.
+func (e TeamWeeklyCoverageAbsent) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageAbsentInsufficientBasis:
+		return true
+	case TeamWeeklyCoverageAbsentInsufficientHistory:
+		return true
+	case TeamWeeklyCoverageAbsentNotAuthorized:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoverageBasis.
+const (
+	TeamWeeklyCoverageBasisHistoricalMedian TeamWeeklyCoverageBasis = "historical_median"
+	TeamWeeklyCoverageBasisManagerCall      TeamWeeklyCoverageBasis = "manager_call"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageBasis enum.
+func (e TeamWeeklyCoverageBasis) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageBasisHistoricalMedian:
+		return true
+	case TeamWeeklyCoverageBasisManagerCall:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoveragePeriodKind.
+const (
+	TeamWeeklyCoveragePeriodKindMonth   TeamWeeklyCoveragePeriodKind = "month"
+	TeamWeeklyCoveragePeriodKindQuarter TeamWeeklyCoveragePeriodKind = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoveragePeriodKind enum.
+func (e TeamWeeklyCoveragePeriodKind) Valid() bool {
+	switch e {
+	case TeamWeeklyCoveragePeriodKindMonth:
+		return true
+	case TeamWeeklyCoveragePeriodKindQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyPatternKind.
+const (
+	TeamWeeklyPatternKindCloseDatesProvisional   TeamWeeklyPatternKind = "close_dates_provisional"
+	TeamWeeklyPatternKindCommitmentsMissed       TeamWeeklyPatternKind = "commitments_missed"
+	TeamWeeklyPatternKindDealsAtRisk             TeamWeeklyPatternKind = "deals_at_risk"
+	TeamWeeklyPatternKindForecastDowngrades      TeamWeeklyPatternKind = "forecast_downgrades"
+	TeamWeeklyPatternKindHelpRequested           TeamWeeklyPatternKind = "help_requested"
+	TeamWeeklyPatternKindLeadsBreached           TeamWeeklyPatternKind = "leads_breached"
+	TeamWeeklyPatternKindMeetingsWithoutNextStep TeamWeeklyPatternKind = "meetings_without_next_step"
+	TeamWeeklyPatternKindNoNextStepCoverage      TeamWeeklyPatternKind = "no_next_step_coverage"
+	TeamWeeklyPatternKindQuietWeek               TeamWeeklyPatternKind = "quiet_week"
+	TeamWeeklyPatternKindStageRegressions        TeamWeeklyPatternKind = "stage_regressions"
+	TeamWeeklyPatternKindStrongWeek              TeamWeeklyPatternKind = "strong_week"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyPatternKind enum.
+func (e TeamWeeklyPatternKind) Valid() bool {
+	switch e {
+	case TeamWeeklyPatternKindCloseDatesProvisional:
+		return true
+	case TeamWeeklyPatternKindCommitmentsMissed:
+		return true
+	case TeamWeeklyPatternKindDealsAtRisk:
+		return true
+	case TeamWeeklyPatternKindForecastDowngrades:
+		return true
+	case TeamWeeklyPatternKindHelpRequested:
+		return true
+	case TeamWeeklyPatternKindLeadsBreached:
+		return true
+	case TeamWeeklyPatternKindMeetingsWithoutNextStep:
+		return true
+	case TeamWeeklyPatternKindNoNextStepCoverage:
+		return true
+	case TeamWeeklyPatternKindQuietWeek:
+		return true
+	case TeamWeeklyPatternKindStageRegressions:
+		return true
+	case TeamWeeklyPatternKindStrongWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamWeeklyRepFocusKind.
 const (
+	TeamWeeklyRepFocusKindCloseDatesProvisional   TeamWeeklyRepFocusKind = "close_dates_provisional"
 	TeamWeeklyRepFocusKindCommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
 	TeamWeeklyRepFocusKindDealsAtRisk             TeamWeeklyRepFocusKind = "deals_at_risk"
+	TeamWeeklyRepFocusKindForecastDowngrades      TeamWeeklyRepFocusKind = "forecast_downgrades"
 	TeamWeeklyRepFocusKindHelpRequested           TeamWeeklyRepFocusKind = "help_requested"
 	TeamWeeklyRepFocusKindLeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
 	TeamWeeklyRepFocusKindMeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
+	TeamWeeklyRepFocusKindNoNextStepCoverage      TeamWeeklyRepFocusKind = "no_next_step_coverage"
 	TeamWeeklyRepFocusKindQuietWeek               TeamWeeklyRepFocusKind = "quiet_week"
+	TeamWeeklyRepFocusKindStageRegressions        TeamWeeklyRepFocusKind = "stage_regressions"
 	TeamWeeklyRepFocusKindStrongWeek              TeamWeeklyRepFocusKind = "strong_week"
 )
 
 // Valid indicates whether the value is a known member of the TeamWeeklyRepFocusKind enum.
 func (e TeamWeeklyRepFocusKind) Valid() bool {
 	switch e {
+	case TeamWeeklyRepFocusKindCloseDatesProvisional:
+		return true
 	case TeamWeeklyRepFocusKindCommitmentsMissed:
 		return true
 	case TeamWeeklyRepFocusKindDealsAtRisk:
+		return true
+	case TeamWeeklyRepFocusKindForecastDowngrades:
 		return true
 	case TeamWeeklyRepFocusKindHelpRequested:
 		return true
@@ -16288,7 +16419,11 @@ func (e TeamWeeklyRepFocusKind) Valid() bool {
 		return true
 	case TeamWeeklyRepFocusKindMeetingsWithoutNextStep:
 		return true
+	case TeamWeeklyRepFocusKindNoNextStepCoverage:
+		return true
 	case TeamWeeklyRepFocusKindQuietWeek:
+		return true
+	case TeamWeeklyRepFocusKindStageRegressions:
 		return true
 	case TeamWeeklyRepFocusKindStrongWeek:
 		return true
@@ -22727,7 +22862,7 @@ type AgentRecordRef struct {
 
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
-	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause.
+	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
 	// Egress True if the tool reaches outside the workspace.
@@ -24501,6 +24636,12 @@ type ApprovalEvidenceSourceType string
 type ApprovalListResponse struct {
 	Data []Approval `json:"data"`
 	Page PageInfo   `json:"page"`
+}
+
+// ApproveImportRunRequest What the approver read. Without a body, the run is approved at whatever version it holds.
+type ApproveImportRunRequest struct {
+	// Version The run's `version` the approved report was read at.
+	Version *int `json:"version,omitempty"`
 }
 
 // ApproveRequest Approve a staged 🟡 action. **Who may approve:** the principal must hold the RBAC required
@@ -36187,6 +36328,9 @@ type ImportColumn struct {
 	Samples []string `json:"samples"`
 }
 
+// ImportDraftStep The wizard step a draft reopens on.
+type ImportDraftStep string
+
 // ImportFormat The files an import takes, for this workspace. The template ZIP, the
 // column guide and the screen's file order are all read from it.
 type ImportFormat struct {
@@ -36382,8 +36526,11 @@ type ImportPartProfile struct {
 	// already belongs to another contact, and files a review pair for a near
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
-	Object       ImportObject `json:"object"`
-	RowsProfiled int          `json:"rows_profiled"`
+	Object ImportObject `json:"object"`
+
+	// RowCount Rows the file holds, as `ImportRun.parts[].row_count` counts them.
+	RowCount     int `json:"row_count"`
+	RowsProfiled int `json:"rows_profiled"`
 
 	// SuggestedMappings One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call.
 	SuggestedMappings map[string]map[string]string `json:"suggested_mappings"`
@@ -36491,6 +36638,9 @@ type ImportRowIssue struct {
 
 // ImportRun defines model for ImportRun.
 type ImportRun struct {
+	// ApprovedAt When the run was approved. Absent for a run never approved.
+	ApprovedAt *time.Time `json:"approved_at,omitempty"`
+
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
@@ -36502,7 +36652,10 @@ type ImportRun struct {
 	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
 	CreatedAt    time.Time           `json:"created_at"`
 
-	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
+	// DraftStep The wizard step a draft reopens on.
+	DraftStep *ImportDraftStep `json:"draft_step,omitempty"`
+
+	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
 	// FileName The uploaded file's name, as the run was created with it. Display only.
@@ -36547,19 +36700,36 @@ type ImportRun struct {
 	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
 
 	// Parts The files the run imports, in import order. A single CSV is one part.
-	Parts  *[]ImportRunPart `json:"parts,omitempty"`
-	Source string           `json:"source"`
+	Parts *[]ImportRunPart `json:"parts,omitempty"`
+
+	// Profile What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.
+	Profile *ImportSourceProfile `json:"profile,omitempty"`
+	Source  string               `json:"source"`
 
 	// SourceName The name the run's source is filed under.
 	SourceName *string `json:"source_name,omitempty"`
 
-	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-	// carries the checkpoint it stopped at, and resuming continues from
-	// there rather than re-reading the file from the top. `undoing`/`undone`
+	// SourceReleased The uploaded file is no longer kept: the run completed, was cancelled or was superseded.
+	SourceReleased bool `json:"source_released"`
+
+	// Status IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+	// still being made, and carrying the reason in `error` when its last test
+	// stopped. `failed` only ever means a commit stopped, and it is
+	// resumable, not terminal: the run carries the checkpoint it stopped at,
+	// and resuming continues from there rather than re-reading the file from
+	// the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
-	Status    ImportRunStatus `json:"status"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
+	Status ImportRunStatus `json:"status"`
+
+	// SupersededBy The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.
+	SupersededBy *openapi_types.UUID `json:"superseded_by,omitempty"`
+	UpdatedAt    time.Time           `json:"updated_at"`
+
+	// Version Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.
+	Version int `json:"version"`
 }
 
 // ImportRunConnector defines model for ImportRun.Connector.
@@ -36688,27 +36858,42 @@ type ImportRunReport struct {
 	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
 	SourceKeyUsed string `json:"source_key_used"`
 
-	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-	// carries the checkpoint it stopped at, and resuming continues from
-	// there rather than re-reading the file from the top. `undoing`/`undone`
+	// Status IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+	// still being made, and carrying the reason in `error` when its last test
+	// stopped. `failed` only ever means a commit stopped, and it is
+	// resumable, not terminal: the run carries the checkpoint it stopped at,
+	// and resuming continues from there rather than re-reading the file from
+	// the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
 	Status ImportRunStatus `json:"status"`
 
 	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
 	Undo *ImportUndoReport `json:"undo,omitempty"`
 }
 
-// ImportRunStatus IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-// carries the checkpoint it stopped at, and resuming continues from
-// there rather than re-reading the file from the top. `undoing`/`undone`
+// ImportRunStatus IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+// still being made, and carrying the reason in `error` when its last test
+// stopped. `failed` only ever means a commit stopped, and it is
+// resumable, not terminal: the run carries the checkpoint it stopped at,
+// and resuming continues from there rather than re-reading the file from
+// the top. `undoing`/`undone`
 // (IEM-WIRE-9) are the reversal's own states, reachable only from
-// `complete` and only for the `csv` connector.
+// `complete` and only for the `csv` connector. `cancelled` ended before
+// the run wrote anything: cancelled, superseded by a newer test run of
+// its source, or left idle as a draft. Its file is released.
 type ImportRunStatus string
 
+// ImportRunVersion The run's `version` a call was made on.
+type ImportRunVersion struct {
+	Version int `json:"version"`
+}
+
 // ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
-// Nothing here is stored against a run yet: the human may change every
-// line of `suggested_mapping` before `createImportRun` accepts one.
+// The upload's draft run keeps it; the human may change every line of
+// `suggested_mapping` before `createImportRun` accepts one.
 type ImportSourceProfile struct {
 	Columns []ImportColumn `json:"columns"`
 
@@ -36748,8 +36933,14 @@ type ImportSourceProfile struct {
 	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
+	// RowCount Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP.
+	RowCount int `json:"row_count"`
+
 	// RowsProfiled Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.
 	RowsProfiled int `json:"rows_profiled"`
+
+	// RunId The draft run the upload opened. Every later choice and test is made on it.
+	RunId openapi_types.UUID `json:"run_id"`
 
 	// SourceRef Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.
 	SourceRef string `json:"source_ref"`
@@ -36858,11 +37049,16 @@ type ImportUndoReport struct {
 	ReversedCount int                `json:"reversed_count"`
 	RunId         openapi_types.UUID `json:"run_id"`
 
-	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-	// carries the checkpoint it stopped at, and resuming continues from
-	// there rather than re-reading the file from the top. `undoing`/`undone`
+	// Status IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+	// still being made, and carrying the reason in `error` when its last test
+	// stopped. `failed` only ever means a commit stopped, and it is
+	// resumable, not terminal: the run carries the checkpoint it stopped at,
+	// and resuming continues from there rather than re-reading the file from
+	// the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
 	Status ImportRunStatus `json:"status"`
 
 	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
@@ -41026,6 +41222,11 @@ type PrivacyInformationPage struct {
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
 	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
 	Kind       PrivacyInformationPageKind `json:"kind"`
+
+	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
+	// product seeds in its reader's language by its key, and shows the published name of any
+	// other.
+	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -46098,7 +46299,89 @@ type TeamWeeklyCounts struct {
 	RepsCounted int `json:"reps_counted"`
 }
 
-// TeamWeeklyRep One member's week as their lead reads it, with the one thing to raise.
+// TeamWeeklyCoverage Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+// coverage at risk against the named basis, never as a target: the product has none.
+// Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+type TeamWeeklyCoverage struct {
+	// Absent Why there is no answer. `not_authorized` is a standing call the member who closed the
+	// week could not read, which is not the same as no call.
+	Absent                  *TeamWeeklyCoverageAbsent    `json:"absent,omitempty"`
+	BaseCurrency            string                       `json:"base_currency"`
+	Basis                   *TeamWeeklyCoverageBasis     `json:"basis,omitempty"`
+	CoverageBp              *int64                       `json:"coverage_bp,omitempty"`
+	CurrentOpenMinor        *int64                       `json:"current_open_minor,omitempty"`
+	NeededOpenMinor         *int64                       `json:"needed_open_minor,omitempty"`
+	PeriodKind              TeamWeeklyCoveragePeriodKind `json:"period_kind"`
+	ReferenceLandingMinor   *int64                       `json:"reference_landing_minor,omitempty"`
+	RemainingToSupportMinor *int64                       `json:"remaining_to_support_minor,omitempty"`
+
+	// ReplanRecommended True when coverage is at risk against a named basis: under 8000 basis points of what
+	// the basis needs. Never true without a basis.
+	ReplanRecommended bool `json:"replan_recommended"`
+}
+
+// TeamWeeklyCoverageAbsent Why there is no answer. `not_authorized` is a standing call the member who closed the
+// week could not read, which is not the same as no call.
+type TeamWeeklyCoverageAbsent string
+
+// TeamWeeklyCoverageBasis defines model for TeamWeeklyCoverage.Basis.
+type TeamWeeklyCoverageBasis string
+
+// TeamWeeklyCoveragePeriodKind defines model for TeamWeeklyCoverage.PeriodKind.
+type TeamWeeklyCoveragePeriodKind string
+
+// TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
+// attributed to the owner at the time of each move. "Converted" is a later move to a won
+// stage or to a later stage, compared by the stage order as it was configured when the
+// week was assembled.
+type TeamWeeklyFunnelDeviation struct {
+	// DeviationBp The rep's conversion rate less the team's, in basis points.
+	DeviationBp int `json:"deviation_bp"`
+
+	// NextStageName The stage after this one when the week was assembled; absent for the last.
+	NextStageName *string            `json:"next_stage_name,omitempty"`
+	PipelineId    openapi_types.UUID `json:"pipeline_id"`
+	PipelineName  string             `json:"pipeline_name"`
+	RepConverted  int                `json:"rep_converted"`
+	RepEntered    int                `json:"rep_entered"`
+	StageId       openapi_types.UUID `json:"stage_id"`
+	StageName     string             `json:"stage_name"`
+	TeamConverted int                `json:"team_converted"`
+	TeamEntered   int                `json:"team_entered"`
+}
+
+// TeamWeeklyMember defines model for TeamWeeklyMember.
+type TeamWeeklyMember struct {
+	// DisplayName What they were called that week.
+	DisplayName string `json:"display_name"`
+
+	// Measured Whether this member's own week was read into the counts.
+	Measured bool               `json:"measured"`
+	UserId   openapi_types.UUID `json:"user_id"`
+}
+
+// TeamWeeklyPattern defines model for TeamWeeklyPattern.
+type TeamWeeklyPattern struct {
+	Kind TeamWeeklyPatternKind `json:"kind"`
+
+	// Label The pattern in words, composed from the stored figures.
+	Label string `json:"label"`
+}
+
+// TeamWeeklyPatternKind defines model for TeamWeeklyPattern.Kind.
+type TeamWeeklyPatternKind string
+
+// TeamWeeklyQuality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+// snapshot frozen before it was measured, which is not zero.
+type TeamWeeklyQuality struct {
+	// AutoChangeReversals Changes an agent, a connector or the system made that a member of the team undid
+	// inside the week.
+	AutoChangeReversals *int `json:"auto_change_reversals,omitempty"`
+	ProposalsAccepted   *int `json:"proposals_accepted,omitempty"`
+	ProposalsRejected   *int `json:"proposals_rejected,omitempty"`
+}
+
+// TeamWeeklyRep One member's week as their lead reads it, with what to raise.
 type TeamWeeklyRep struct {
 	CommitmentsDue  int `json:"commitments_due"`
 	CommitmentsKept int `json:"commitments_kept"`
@@ -46108,26 +46391,42 @@ type TeamWeeklyRep struct {
 	DisplayName string `json:"display_name"`
 
 	// FocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-	// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-	// outranks any metric, because walking past a request to raise a number is the
-	// fastest way to teach them not to ask.
+	// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+	// them: a rep who ASKED for help outranks any metric, because walking past a request
+	// to raise a number is the fastest way to teach them not to ask.
+	//
+	// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+	// replaced it still carry it.
 	FocusKind TeamWeeklyRepFocusKind `json:"focus_kind"`
 
 	// FocusLabel The focus in words, composed from the stored figures — never model-written, so it
 	// cannot say something the snapshot does not hold.
 	FocusLabel string `json:"focus_label"`
 
+	// Funnel Up to three stages where this rep's conversion differs most from the team's, over
+	// the 13 weeks before the week closed. Stages with fewer than five entries on either
+	// side are left out. Empty when no stage qualified or the snapshot predates it.
+	Funnel *[]TeamWeeklyFunnelDeviation `json:"funnel,omitempty"`
+
 	// HelpRequested Commitments they asked for help on.
-	HelpRequested int                `json:"help_requested"`
-	LeadsBreached int                `json:"leads_breached"`
-	MeetingsHeld  int                `json:"meetings_held"`
-	UserId        openapi_types.UUID `json:"user_id"`
+	HelpRequested int `json:"help_requested"`
+	LeadsBreached int `json:"leads_breached"`
+	MeetingsHeld  int `json:"meetings_held"`
+
+	// Patterns Every rule that fired for this rep, in the order a lead raises them. The first is
+	// the focus. A snapshot frozen before the list existed reads its focus as the one
+	// pattern.
+	Patterns []TeamWeeklyPattern `json:"patterns"`
+	UserId   openapi_types.UUID  `json:"user_id"`
 }
 
 // TeamWeeklyRepFocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-// outranks any metric, because walking past a request to raise a number is the
-// fastest way to teach them not to ask.
+// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+// them: a rep who ASKED for help outranks any metric, because walking past a request
+// to raise a number is the fastest way to teach them not to ask.
+//
+// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+// replaced it still carry it.
 type TeamWeeklyRepFocusKind string
 
 // TeamWeeklyReview One team's week, as it was measured when the week closed.
@@ -46146,12 +46445,26 @@ type TeamWeeklyReview struct {
 	// worth discussing is a two-item meeting, and padding it to a layout's number would
 	// be inventing an item. Empty exactly when `reps` is — a team whose week could not be
 	// read has no agenda, which a client says rather than drawing an empty list.
-	Agenda         []openapi_types.UUID `json:"agenda"`
-	AsOf           time.Time            `json:"as_of"`
-	Counts         TeamWeeklyCounts     `json:"counts"`
-	GeneratedAt    time.Time            `json:"generated_at"`
-	Id             openapi_types.UUID   `json:"id"`
-	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+	Agenda []openapi_types.UUID `json:"agenda"`
+	AsOf   time.Time            `json:"as_of"`
+	Counts TeamWeeklyCounts     `json:"counts"`
+
+	// Coverage The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+	// composed or the team's book was refused.
+	Coverage *[]TeamWeeklyCoverage `json:"coverage,omitempty"`
+
+	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
+	// the team's members own now, under the reader's own deal scope. Absent when the read
+	// did not ask.
+	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt    time.Time          `json:"generated_at"`
+	Id             openapi_types.UUID `json:"id"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Members Every live member of the team that week, including those whose own week could not be
+	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+	// kept.
+	Members *[]TeamWeeklyMember `json:"members,omitempty"`
 
 	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
 	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
@@ -46174,6 +46487,14 @@ type TeamWeeklyReview struct {
 	// missing a rep.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 
+	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+	// snapshot frozen before it was measured, which is not zero.
+	Quality *TeamWeeklyQuality `json:"quality,omitempty"`
+
+	// ReplanRecommended True when any horizon in `coverage` recommends a replan: coverage at risk against a
+	// named basis.
+	ReplanRecommended *bool `json:"replan_recommended,omitempty"`
+
 	// Reps Who was on the team that week — the frozen membership, which a join against the
 	// live team could never answer. Ordered by name, because that is what a membership
 	// list is read as; the order a MEETING takes them in is `agenda`.
@@ -46181,12 +46502,29 @@ type TeamWeeklyReview struct {
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
 	// week was counted.
-	RepsUnread *int               `json:"reps_unread,omitempty"`
-	TeamId     openapi_types.UUID `json:"team_id"`
+	RepsUnread *int `json:"reps_unread,omitempty"`
+
+	// StaleDeals LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+	// period, quietest first. Together with `exceptions` at most 25 items, findings first.
+	StaleDeals *[]TeamWeeklyStaleDeal `json:"stale_deals,omitempty"`
+
+	// Summary A short paragraph composed from the frozen figures by fixed rules, never by a model.
+	// Absent on a snapshot frozen before it existed or a week nobody was counted in.
+	Summary *string            `json:"summary,omitempty"`
+	TeamId  openapi_types.UUID `json:"team_id"`
 
 	// TeamName What the team was called that week. Frozen, so a team renamed in June does not
 	// relabel March's snapshot.
 	TeamName string `json:"team_name"`
+}
+
+// TeamWeeklyStaleDeal defines model for TeamWeeklyStaleDeal.
+type TeamWeeklyStaleDeal struct {
+	DaysQuiet      int                `json:"days_quiet"`
+	DealId         openapi_types.UUID `json:"deal_id"`
+	DealName       string             `json:"deal_name"`
+	LastActivityAt time.Time          `json:"last_activity_at"`
+	OwnerId        openapi_types.UUID `json:"owner_id"`
 }
 
 // TechnicalEnrichLane What one public source last did.
@@ -46889,6 +47227,93 @@ type UpdateDealRoomRequest struct {
 	Title                *string                `json:"title,omitempty"`
 	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// UpdateImportRunRequest The choices one save changes on a draft run, with the `version` it was
+// made on. Each choice has the meaning and the shape it has on
+// `CreateImportRunRequest`. A field left out keeps its value.
+type UpdateImportRunRequest struct {
+	// ContextTagId The tag every created record is filed under; `null` files them under none.
+	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+
+	// DraftStep The wizard step a draft reopens on.
+	DraftStep *ImportDraftStep   `json:"draft_step,omitempty"`
+	Mapping   *map[string]string `json:"mapping,omitempty"`
+
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// OnBrokenLink What a run does with a contact row whose company link finds no single
+	// company, in the upload or in the estate. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link. A ZIP run applies it to `company_ref` and
+	// `company_name`; a row holding both is decided by its `company_ref`. A
+	// single CSV applies it to `company_ref` only, and lands a row whose
+	// `company_name` finds nothing, with the link reported as unresolved. A
+	// lead's `company_name` is text, not a link, so it never skips a lead.
+	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
+
+	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
+	// by the same dedupe ladder every create path runs, not by this
+	// importer's own memory of what it once wrote.
+	//
+	// A collision with a record the CALLER MAY NOT SEE is answered as no
+	// collision: the row is not counted as a duplicate, not named in the
+	// report, and CREATES. The question is asked of EVERY candidate the dedupe
+	// ladder matched rather than of its winner — the winner is the highest
+	// score with the lowest uuid breaking ties, so an invisible record ranking
+	// first would otherwise mask a visible one behind it and decide the outcome
+	// without being disclosed. Skipping it would be the intuitive choice and it
+	// leaks — hiding which company was hit still says one was, and "your row
+	// was not created" answers "is this company in your CRM" about a
+	// colleague's owner-private capture, probed one row at a time against a
+	// report readable on the `import_run` grant. The cost is a twin the dedupe
+	// review queue picks up and a merge resolves; the cost of the alternative
+	// is a disclosure no merge undoes.
+	//
+	// `create` is the historical behaviour and stays the default: the row
+	// lands and the pair goes on the dedupe review queue, exactly as a manual
+	// create does. That is right for one company typed by a human and wrong
+	// for a spreadsheet, where it can mint hundreds of twins nobody asked for.
+	//
+	// `skip` leaves the incumbent alone and reports the row as skipped.
+	//
+	// The DRY RUN counts duplicates either way, so a contact is told "100
+	// companies, 94 duplicates" before deciding — which is the whole reason
+	// the count is separate from `created`.
+	OnDuplicate *ImportOnDuplicate   `json:"on_duplicate,omitempty"`
+	Parts       *[]ImportPartRequest `json:"parts,omitempty"`
+
+	// SourceKey Empty means the mapped natural key.
+	SourceKey  *string `json:"source_key,omitempty"`
+	SourceName *string `json:"source_name,omitempty"`
+
+	// Version The run's `version` this save was made on.
+	Version int `json:"version"`
 }
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
@@ -56968,6 +57393,15 @@ type CreateImportRunJSONRequestBody = CreateImportRunRequest
 
 // UploadImportSourceMultipartRequestBody defines body for UploadImportSource for multipart/form-data ContentType.
 type UploadImportSourceMultipartRequestBody UploadImportSourceMultipartBody
+
+// UpdateImportRunJSONRequestBody defines body for UpdateImportRun for application/json ContentType.
+type UpdateImportRunJSONRequestBody = UpdateImportRunRequest
+
+// ApproveImportRunJSONRequestBody defines body for ApproveImportRun for application/json ContentType.
+type ApproveImportRunJSONRequestBody = ApproveImportRunRequest
+
+// ValidateImportRunJSONRequestBody defines body for ValidateImportRun for application/json ContentType.
+type ValidateImportRunJSONRequestBody = ImportRunVersion
 
 // SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
 type SetOauthAppJSONRequestBody = ConnectorAppInput
@@ -69302,7 +69736,7 @@ type ServerInterface interface {
 	// List this workspace's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
-	// Create an import run from an uploaded source and a column mapping, and dry-run it.
+	// Create an import run from an uploaded source and a column mapping, and start its test run.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
 	// Describe the files an import takes, column by column, for this workspace.
@@ -69317,9 +69751,15 @@ type ServerInterface interface {
 	// Read one import run's lifecycle state.
 	// (GET /imports/{id})
 	GetImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Save choices on a draft import run.
+	// (PATCH /imports/{id})
+	UpdateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Approve a validated import run and commit it.
 	// (POST /imports/{id}/approve)
 	ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Cancel a draft, a test run, or a report nobody will approve.
+	// (POST /imports/{id}/cancel)
+	CancelImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Download the run's row problems as a CSV.
 	// (GET /imports/{id}/problems.csv)
 	DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -69329,6 +69769,9 @@ type ServerInterface interface {
 	// Reverse a completed CSV import run.
 	// (POST /imports/{id}/undo)
 	UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Test a draft import run against the estate.
+	// (POST /imports/{id}/validate)
+	ValidateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
@@ -73148,7 +73591,7 @@ func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create an import run from an uploaded source and a column mapping, and dry-run it.
+// Create an import run from an uploaded source and a column mapping, and start its test run.
 // (POST /imports)
 func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -73178,9 +73621,21 @@ func (_ Unimplemented) GetImportRun(w http.ResponseWriter, r *http.Request, id o
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Save choices on a draft import run.
+// (PATCH /imports/{id})
+func (_ Unimplemented) UpdateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Approve a validated import run and commit it.
 // (POST /imports/{id}/approve)
 func (_ Unimplemented) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Cancel a draft, a test run, or a report nobody will approve.
+// (POST /imports/{id}/cancel)
+func (_ Unimplemented) CancelImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -73199,6 +73654,12 @@ func (_ Unimplemented) GetImportRunReport(w http.ResponseWriter, r *http.Request
 // Reverse a completed CSV import run.
 // (POST /imports/{id}/undo)
 func (_ Unimplemented) UndoImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Test a draft import run against the estate.
+// (POST /imports/{id}/validate)
+func (_ Unimplemented) ValidateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95212,6 +95673,38 @@ func (siw *ServerInterfaceWrapper) GetImportRun(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateImportRun operation middleware
+func (siw *ServerInterfaceWrapper) UpdateImportRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ApproveImportRun operation middleware
 func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *http.Request) {
 
@@ -95237,6 +95730,38 @@ func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelImportRun operation middleware
+func (siw *ServerInterfaceWrapper) CancelImportRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelImportRun(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95335,6 +95860,38 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ValidateImportRun operation middleware
+func (siw *ServerInterfaceWrapper) ValidateImportRun(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ValidateImportRun(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111970,7 +112527,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/imports/{id}", wrapper.GetImportRun)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/imports/{id}", wrapper.UpdateImportRun)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/approve", wrapper.ApproveImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/imports/{id}/cancel", wrapper.CancelImportRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{id}/problems.csv", wrapper.DownloadImportProblems)
@@ -111980,6 +112543,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/undo", wrapper.UndoImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/imports/{id}/validate", wrapper.ValidateImportRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)

@@ -23,7 +23,7 @@ export type ExtensionVerbDescriptor = {
    * The RBAC object the operation gates on, or "" when it gates on none.
    *
    * A plain string, not a union: this file is generated, and the generator
-   * cannot enumerate what a unit will declare. app/extensions.ts narrows it
+   * cannot enumerate what a unit will declare. lib/extensions.ts narrows it
    * into the capability vocabulary, which is where the ext_ grammar is
    * checked once.
    */

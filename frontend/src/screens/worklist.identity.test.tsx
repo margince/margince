@@ -11,7 +11,7 @@ import {
   sessionOnlyFetch,
 } from "../testing/appharness";
 
-// Why the worklist keeps WHOLE_ADDRESS in app/router.tsx's IDENTITY_DEPTH.
+// Why the worklist keeps WHOLE_ADDRESS in lib/router.tsx's IDENTITY_DEPTH.
 //
 // Lowering it looks free. Selecting a row on this screen is local state and
 // never touches the address, so the obvious reading is that the screen has one

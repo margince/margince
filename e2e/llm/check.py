@@ -281,6 +281,15 @@ def total_usage(paths):
     }
 
 
+def settled(passed, made, runs, pass_at):
+    """Whether the runs still to come can no longer change the verdict.
+
+    A run past this point is paid for and cannot move PASS or FAIL, so the lane
+    stops there. The verdict records the runs made, never the runs planned.
+    """
+    return passed >= pass_at or made - passed > runs - pass_at or made >= runs
+
+
 def usage_line(expected, usage):
     """The report's one line for a scenario's cost.
 
@@ -614,6 +623,10 @@ def main():
             record["usage"] = usage
         print(json.dumps(record, indent=2))
         return 0
+
+    if sys.argv[1] == "--settled":
+        passed, made, runs, pass_at = (int(arg) for arg in sys.argv[2:6])
+        return 0 if settled(passed, made, runs, pass_at) else 1
 
     if sys.argv[1] == "--usage":
         # One line of prose for the lane's report, formatted here because this

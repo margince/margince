@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { feature } from "./ai-admin.testkit";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import type { SliceValue } from "./ai-routing-slice";
@@ -26,6 +26,13 @@ const ADMIN: GrantSpec = {
 };
 const READER: GrantSpec = { ai_routing: ["read"], ai_diagnostics: ["read"] };
 
+const CHEAP_CLOUD_BINDING = {
+  provider: "openai_compatible",
+  model: "openai/gpt-oss-120b",
+  base_url: "https://openrouter.ai/api",
+};
+const PREMIUM_BINDING = { provider: "gemini", model: "gemini-3.1-flash-lite" };
+
 const ROUTING: Routing = {
   profile: "cloud_frontier",
   tiers: {
@@ -34,12 +41,8 @@ const ROUTING: Routing = {
       model: "openai/gpt-oss-120b",
       base_url: "https://openrouter.ai/api",
     },
-    cheap_cloud: {
-      provider: "openai_compatible",
-      model: "openai/gpt-oss-120b",
-      base_url: "https://openrouter.ai/api",
-    },
-    premium: { provider: "gemini", model: "gemini-3.1-flash-lite" },
+    cheap_cloud: CHEAP_CLOUD_BINDING,
+    premium: PREMIUM_BINDING,
   },
   embeddings: {
     provider: "openai_compatible",
@@ -303,7 +306,7 @@ export const OpenRouterConnectionDark: Story = {
 const TIER: SliceValue = {
   kind: "tier",
   tier: "cheap_cloud",
-  binding: ROUTING.tiers.cheap_cloud,
+  binding: CHEAP_CLOUD_BINDING,
 };
 
 function Serving({ value }: Readonly<{ value: SliceValue }>) {
@@ -395,7 +398,7 @@ export const ServingNotApplicable: Story = {
         value={{
           kind: "tier",
           tier: "premium",
-          binding: ROUTING.tiers.premium,
+          binding: PREMIUM_BINDING,
         }}
       />
     );

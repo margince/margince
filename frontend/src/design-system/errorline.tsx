@@ -3,7 +3,7 @@
 
 import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { usePrefersReducedMotion } from "./motion";
 
 type ErrorLineProps = Readonly<

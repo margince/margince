@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
-import type { EntityKind } from "../app/entity";
+import type { EntityKind } from "../lib/entity";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import { leadWriteKeys } from "./leadkeys";
 

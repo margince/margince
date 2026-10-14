@@ -7,7 +7,6 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -20,12 +19,14 @@ import { DateInput, isISODate } from "../design-system/dateinput";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Markdown } from "../design-system/markdown";
+import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
@@ -110,7 +111,9 @@ export function snoozedDueAt(
     return null;
   }
   const today = calendarDay(new Date(dueAt), zone);
-  const [year, month, day] = today.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = today
+    .split("-")
+    .map(Number);
   // Through UTC parts, which is a pure calendar step: no zone reading happens
   // here, so no DST transition can shorten or lengthen the day being counted.
   const next = new Date(Date.UTC(year, month - 1, day + 1))
@@ -220,12 +223,8 @@ export function TaskQuickActions({
 
 // Moving a task to a day the reader names.
 //
-// Beside the snooze rather than instead of it, because they answer different
-// questions. Snooze is "not yet" and takes one press; this is "Tuesday",
-// which no number of presses reaches — and the snooze cannot reach it in
-// principle, not just in clicks: it adds a day to the task's OWN due date, so
-// a task three days overdue snoozes to two days overdue and the reader presses
-// it four times to mean tomorrow.
+// Beside the snooze, not instead of it. Snooze adds a day to the task's own due
+// date, so a task three days overdue only moves to two days overdue.
 //
 // It is offered on an UNDATED task too, where the snooze is not. A task with no
 // day has nothing to move but is exactly the one a rep wants to put a date on,

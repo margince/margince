@@ -9,7 +9,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import "./rates.css";
 
 type ProviderRefresh = components["schemas"]["AiModelRateProviderRefresh"];

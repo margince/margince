@@ -4,9 +4,6 @@ import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
-import { ENTITY } from "../../app/entity";
-import { navigate, routeHash } from "../../app/router";
-import { useUrlParams } from "../../app/urlstate";
 import {
   Badge,
   Button,
@@ -20,13 +17,16 @@ import { StatStrip } from "../../design-system/statstrip";
 import { ProvenanceTag } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { ENTITY } from "../../lib/entity";
 import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
   unwrap,
-  useViewerId,
-} from "../common";
+} from "../../lib/problem";
+import { navigate, routeHash } from "../../lib/router";
+import { useViewerId } from "../../lib/session";
+import { useUrlParams } from "../../lib/urlstate";
 import { EntityRef } from "../entityref";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";

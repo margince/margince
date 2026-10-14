@@ -229,6 +229,7 @@ export function useComposeFields({
   });
 
   const load = (next: FieldsSnapshot) => {
+    draftEpoch.current += 1;
     setTo(next.to);
     setCc(next.cc);
     setBcc(next.bcc);

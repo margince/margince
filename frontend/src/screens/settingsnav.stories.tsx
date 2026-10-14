@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
-import type { Route } from "../app/router";
 import { PageTitle, SettingsRail } from "../app/shell";
 import { en } from "../i18n/en";
+import type { Route } from "../lib/router";
+import type { GrantSpec } from "../testing/mefixture";
 import { SETTINGS_SCREEN, useSettingsSection } from "./settingsnav";
 import {
   installFetchStub,

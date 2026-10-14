@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
-import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
+import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
 
 // Every waiter that states no timeout gets the one per-waiter budget
@@ -186,9 +186,9 @@ if (typeof window !== "undefined") {
 
   // Every case opens at the same address, the way a new tab does.
   //
-  // The address is not a detail of the router any more: a list reads its
-  // search, sort, filters and page size out of it (app/urlstate.ts), so the
-  // hash one case leaves behind is state the NEXT case starts narrowed by.
+  // The address is not only a detail of the router. A list reads its search,
+  // sort, filters and page size out of it (lib/urlstate.ts). So the hash one
+  // case leaves behind is state the next case starts narrowed by.
   // That reads as an unrelated failure — a table with no rows, a chip already
   // chosen — and it is order-dependent, so the file passes when the case is run
   // alone. Registered here rather than per file because the leak belongs to

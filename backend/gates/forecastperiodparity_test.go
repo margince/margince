@@ -41,6 +41,8 @@ var forecastPeriodSites = []struct {
 	// covers, so a value here the server cannot resolve would freeze a
 	// retrospective against a window nothing can re-cut.
 	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}},
+	// The team week's frozen coverage, over the month and the quarter.
+	{"the frozen team coverage", []string{"components", "schemas", "TeamWeeklyCoverage"}},
 }
 
 // The census this gate is derived from: every place in the contract that

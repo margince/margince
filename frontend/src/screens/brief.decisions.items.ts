@@ -22,7 +22,7 @@ export function deckItems(approvals: readonly Approval[]): DecisionDeckItem[] {
     const members = approvals.filter((other) => other.bundle_id === bundleId);
     out.push(
       members.length === 1
-        ? { kind: "single", id: members[0].id, approval: members[0] }
+        ? { kind: "single", id: approval.id, approval }
         : { kind: "bundle", id: bundleId, bundleId, members },
     );
   }

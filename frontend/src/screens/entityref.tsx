@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { ENTITY, type EntityKind } from "../app/entity";
-import { routeHash } from "../app/router";
 import { useT } from "../i18n";
+import { ENTITY, type EntityKind } from "../lib/entity";
+import { useMemberName } from "../lib/membernames";
+import { routeHash } from "../lib/router";
 import {
   ENTITY_NAME_KEY,
   fetchEntityName,
@@ -12,7 +13,6 @@ import {
   readingOf,
   usableName,
 } from "./entityref.queries";
-import { useMemberName } from "./membernames";
 import { type RosterKind, useRosterWalk } from "./roster";
 
 // A cross-record reference rendered as the target's display name plus a

@@ -9,6 +9,7 @@
 import { Check, CircleHelp, X } from "lucide-react";
 import { calendarDaysBetween, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useMemberNames } from "../lib/membernames";
 import {
   type FilterVocabulary,
   useFilterVocabulary,
@@ -20,7 +21,6 @@ import type {
   ListExplanation,
   ListRecordType,
 } from "./lists.queries";
-import { useMemberNames } from "./membernames";
 import type { FilterOp } from "./segmentpredicate";
 
 /** Whether a Live List selects the record, and each clause's verdict. */

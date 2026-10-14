@@ -10,7 +10,12 @@ const coverage = {
   status: "ok",
   withheld: false,
 } satisfies components["schemas"]["ReportingCoverage"];
-const counts = [8, 12, 10, 4];
+const weeks = [
+  { held: 8, accepted: 3 },
+  { held: 12, accepted: 4 },
+  { held: 10, accepted: 3 },
+  { held: 4, accepted: 2 },
+];
 export const sdrEvaluation: ReportingEvaluation = {
   ...reportingStoryEvaluation,
   selection: {
@@ -52,10 +57,10 @@ export const sdrEvaluation: ReportingEvaluation = {
         unit: "count",
         coverage,
         interval: reportingStoryEvaluation.context.interval,
-        points: counts.map((count, i) => ({
+        points: weeks.map(({ held, accepted }, i) => ({
           key: `week-${i}`,
           label: `Week ${i + 1}${i === 3 ? " (partial)" : ""}`,
-          value: id === "meetings_held" ? count : [3, 4, 3, 2][i],
+          value: id === "meetings_held" ? held : accepted,
           status: "ok",
           evidence: { metric: id, context_id: "month", group_key: `week:${i}` },
         })),

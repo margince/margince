@@ -135,6 +135,9 @@ type runRecords interface {
 type Engine struct {
 	runs runRecords
 	w    Writers
+	// lease is set for a worker's slice, which writes fenced flushes; nil for
+	// the flip, which checkpoints every row.
+	lease *leasedRecords
 }
 
 // NewEngine wires the engine over its two seams.
@@ -201,13 +204,34 @@ func (e *Engine) DryRun(ctx context.Context, src Source) (Report, error) {
 // row phase and is idempotent as a whole; the run completes (with its
 // report persisted) or fails with the error recorded.
 func (e *Engine) Run(ctx context.Context, runID RunID, src Source) (Report, error) {
-	run, err := e.runs.Get(ctx, runID)
+	wk, _, err := e.walkSlice(ctx, runID, src, Budget{})
 	if err != nil {
 		return Report{}, err
 	}
-	if run.Status != StatusRunning {
-		return Report{}, fmt.Errorf("migration run %s is %s, not %s: %w", runID, run.Status, StatusRunning, apperrors.ErrConflict)
+	return wk.leg(), nil
+}
+
+// RunSlice walks the run from its checkpoint until the budget is spent or the
+// run is done, and answers which. A leased engine writes its progress in
+// fenced flushes; a stopped context flushes what landed and answers its error.
+func (e *Engine) RunSlice(ctx context.Context, runID RunID, src Source, b Budget) (bool, error) {
+	_, done, err := e.walkSlice(ctx, runID, src, b)
+	return done, err
+}
+
+func (e *Engine) walkSlice(ctx context.Context, runID RunID, src Source, b Budget) (*walk, bool, error) {
+	var led ledger = flipLedger{runs: e.runs}
+	if e.lease != nil {
+		led = e.lease
 	}
+	run, err := led.open(ctx, runID)
+	if err != nil {
+		return nil, false, err
+	}
+	if run.Status != StatusRunning {
+		return nil, false, fmt.Errorf("migration run %s is %s, not %s: %w", runID, run.Status, StatusRunning, apperrors.ErrConflict)
+	}
+	wk := newWalk(runID, run, b)
 	// Unconditionally, before the loop can duplicate anything: adopt
 	// records an earlier attempt created but never got to record.
 	//
@@ -218,93 +242,118 @@ func (e *Engine) Run(ctx context.Context, runID RunID, src Source) (Report, erro
 	// starts at zero with a previous attempt's orphans still on disk.
 	// Both are exactly the case the repair exists for.
 	if err := e.w.ReconcileIdentities(ctx); err != nil {
-		return Report{}, e.fail(ctx, runID, Report{}, fmt.Errorf("migration run: reconciling a previous attempt's records: %w", err))
+		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: reconciling a previous attempt's records: %w", err))
 	}
-	counts, err := src.Counts(ctx)
-	if err != nil {
-		return Report{}, e.fail(ctx, runID, Report{}, fmt.Errorf("migration run: counting source rows: %w", err))
+	wk.objects = src.Objects()
+	if wk.totals, err = totalsOf(ctx, src, wk.objects, run.Progress); err != nil {
+		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: counting source rows: %w", err))
 	}
-
-	rep := Report{}
-	done := run.Checkpoint // rows already processed across the ordered objects
-	seen := 0              // global index of the row about to be processed
-	for _, object := range src.Objects() {
-		or, advanced, err := e.importObject(ctx, runID, src, object, counts[object], done, seen, &rep)
-		if err != nil {
-			return Report{}, err
+	if wk.replayed, err = led.replayed(ctx); err != nil {
+		return nil, false, err
+	}
+	wk.budget = b.started()
+	seen := 0 // global index of the first row of the object about to be walked
+	for _, object := range wk.objects {
+		next, stopped, err := e.importObject(ctx, led, wk, src, object, seen)
+		if err != nil || stopped {
+			return nil, false, err
 		}
-		rep.Objects = append(rep.Objects, or)
-		rep.Imported += int64(or.Created + or.Updated)
-		// Only the global cursor advances. `done` is the checkpoint this
-		// attempt STARTED from and must stay put: reassigning it would
-		// make the next class compute a zero local offset and re-walk
-		// rows the run already landed, which the store's monotonic
-		// cursor then refuses — wedging every retry of a crashed flip.
-		seen = advanced
+		seen = next
 	}
-
 	assocs, err := src.Associations(ctx)
 	if err != nil {
-		return Report{}, e.fail(ctx, runID, rep, fmt.Errorf("migration run: reading associations: %w", err))
+		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: reading associations: %w", err))
 	}
-	for _, a := range assocs {
-		res, err := e.w.Associate(ctx, a)
-		if err != nil {
-			return Report{}, e.fail(ctx, runID, rep, fmt.Errorf("migration run: applying association %s/%s→%s/%s: %w", a.FromType, a.FromID, a.ToType, a.ToID, err))
-		}
-		if res.Applied {
-			rep.Associations++
-			continue
-		}
-		rep.AssociationsSkipped = append(rep.AssociationsSkipped, SkippedAssoc{
-			From:   a.FromType + "/" + a.FromID,
-			To:     a.ToType + "/" + a.ToID,
-			Reason: res.Reason,
-		})
+	if stopped, err := e.link(ctx, led, wk, assocs, seen); err != nil || stopped {
+		return nil, false, err
 	}
-
-	if err := e.runs.complete(ctx, runID, rep); err != nil {
-		return Report{}, e.fail(ctx, runID, rep, fmt.Errorf("migration run: recording completion: %w", err))
+	wk.phase, wk.object = PhaseFinishing, ""
+	if err := led.complete(ctx, wk); err != nil {
+		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: recording completion: %w", err))
 	}
-	return rep, nil
+	return wk, true, nil
 }
 
-// importObject runs one object class's rows, resuming past the prefix
-// an earlier attempt already landed. It returns the class's disposition
-// and the new global cursor — the checkpoint advances after every row,
-// so a kill mid-class resumes from the next one.
-func (e *Engine) importObject(ctx context.Context, runID RunID, src Source, object string, total, done, seen int, rep *Report) (ObjectReport, int, error) {
-	or := ObjectReport{Object: object, MirrorCount: total}
+// importObject runs one object class's rows past the prefix an earlier attempt
+// landed. It answers the new global cursor and whether the slice stopped inside
+// the class.
+func (e *Engine) importObject(ctx context.Context, led ledger, wk *walk, src Source, object string, seen int) (int, bool, error) {
+	total := wk.totals[object]
 	// A whole already-processed class is skipped without re-reading it.
-	if done >= seen+total {
-		return or, seen + total, nil
+	if wk.start >= seen+total {
+		wk.rep.Objects = append(wk.rep.Objects, ObjectReport{Object: object, MirrorCount: total})
+		return seen + total, false, nil
 	}
-	localOffset := max(done-seen, 0)
-	cursor := seen + localOffset
+	// The local offset comes from the checkpoint this attempt STARTED from:
+	// recomputing it from the moving cursor would re-walk landed rows.
+	localOffset := max(wk.start-seen, 0)
+	wk.cursor = seen + localOffset
+	wk.cur, wk.phase, wk.object = &ObjectReport{Object: object, MirrorCount: total}, PhaseImporting, object
 	for offset := localOffset; ; {
 		rows, err := src.Rows(ctx, object, offset, pageSize)
 		if err != nil {
-			return ObjectReport{}, 0, e.fail(ctx, runID, withPartial(*rep, or), fmt.Errorf("migration run: reading %s rows at %d: %w", object, offset, err))
-		}
-		if len(rows) == 0 {
-			return or, cursor, nil
+			return 0, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: reading %s rows at %d: %w", object, offset, err))
 		}
 		for _, row := range rows {
+			if stop, err := led.stop(ctx, wk); err != nil || stop {
+				return 0, stop, err
+			}
 			res, err := e.ensureRow(ctx, object, row)
 			if err != nil {
-				return ObjectReport{}, 0, e.fail(ctx, runID, withPartial(*rep, or), err)
+				return 0, false, e.fail(ctx, led, wk, err)
 			}
-			or.record(row, res)
-			cursor++
-			if err := e.runs.advanceCheckpoint(ctx, runID, cursor); err != nil {
-				return ObjectReport{}, 0, e.fail(ctx, runID, withPartial(*rep, or), err)
+			wk.landed(object, row, res)
+			if err := led.landed(ctx, wk); err != nil {
+				return 0, false, e.fail(ctx, led, wk, err)
+			}
+			if err := led.moved(ctx, wk); err != nil {
+				return 0, false, err
 			}
 		}
 		offset += len(rows)
 		if len(rows) < pageSize {
-			return or, cursor, nil
+			break
 		}
 	}
+	wk.finishObject()
+	return wk.cursor, false, nil
+}
+
+// link applies the edges past the cursor. Each is idempotent, so a slice may
+// stop between two of them.
+func (e *Engine) link(ctx context.Context, led ledger, wk *walk, assocs []Assoc, rowsEnd int) (bool, error) {
+	from := min(max(wk.start-rowsEnd, 0), len(assocs))
+	wk.cursor, wk.links, wk.phase, wk.object = rowsEnd+from, len(assocs), PhaseLinking, progressLinks
+	for _, a := range assocs[from:] {
+		if stop, err := led.stop(ctx, wk); err != nil || stop {
+			return stop, err
+		}
+		res, err := e.w.Associate(ctx, a)
+		if err != nil {
+			return false, e.fail(ctx, led, wk, fmt.Errorf("migration run: applying association %s/%s→%s/%s: %w", a.FromType, a.FromID, a.ToType, a.ToID, err))
+		}
+		wk.linked(a, res)
+		if err := led.moved(ctx, wk); err != nil {
+			return false, err
+		}
+	}
+	return false, nil
+}
+
+// totalsOf is each object's row count. A run's source never changes, so the
+// totals its first flush recorded stand for every later slice.
+func totalsOf(ctx context.Context, src Source, objects []string, recorded *Progress) (map[string]int, error) {
+	if recorded == nil || len(recorded.Objects) != len(objects)+1 {
+		return src.Counts(ctx)
+	}
+	totals := make(map[string]int, len(objects))
+	for i, object := range objects {
+		if recorded.Objects[i].Object != object {
+			return src.Counts(ctx)
+		}
+		totals[object] = recorded.Objects[i].RowsTotal
+	}
+	return totals, nil
 }
 
 func (e *Engine) ensureRow(ctx context.Context, object string, row Row) (EnsureResult, error) {
@@ -324,9 +373,13 @@ func (e *Engine) ensureRow(ctx context.Context, object string, row Row) (EnsureR
 // stopped. The partial report matters because a resumed run only ever
 // reports its own attempt: without persisting this one, every record
 // landed before the crash vanishes from the operator's final count.
-func (e *Engine) fail(ctx context.Context, runID RunID, rep Report, cause error) error {
-	if ferr := e.runs.failRun(ctx, runID, rep, cause); ferr != nil {
-		return fmt.Errorf("%w (and recording the failure failed: %v)", cause, ferr)
+func (e *Engine) fail(ctx context.Context, led ledger, wk *walk, cause error) error {
+	recorded, ferr := led.fail(ctx, wk, cause)
+	switch {
+	case ferr != nil:
+		return fmt.Errorf("%w (and recording the failure failed: %w)", cause, ferr)
+	case recorded:
+		return stopRecorded{cause}
 	}
 	return cause
 }

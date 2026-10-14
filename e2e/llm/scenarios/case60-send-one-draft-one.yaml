@@ -1,0 +1,62 @@
+# CASE 60 — Send one, draft one.
+#
+# Two emails in one ask, and each wants a different outbound tool. Jonas Reinhard
+# has a mail thread on record, so the answer to it is a reply on that thread:
+# send_outbound with as email_reply. Omar Haddad has no thread, and the user
+# wants to read the first mail before it goes, so it is a draft: draft_outbound
+# with for one_message, which leaves it on his page for the user. A first mail sent
+# with as email_new is the wrong reach twice over: it starts a conversation
+# where one exists, or sends what the user said to hold.
+#
+# THE CHOICE IS THE CASE, held by the calls alone. The lane's stack has no
+# mailbox, so the reply is refused after the right tool was chosen; whether the
+# answer then reports it honestly is case 44's judged question, not this one's.
+#
+# The seed holds both: Jonas's 75-day-old mail on the Reply Deutschland renewal
+# (case 44), and Omar Haddad at Lindqvist Anlagenbau (case 46).
+#
+# Needs the wide passport: draft and send are scopes the default one never holds.
+name: case60_send_one_draft_one
+criteria: [1, 2]
+passport: wide
+
+# WRITES: a first-message draft is saved on Omar's contact page.
+writes: true
+
+prompt: |
+  Two emails, please. Jonas Reinhard at Reply Deutschland: answer my last mail
+  about the renewal and tell him we can hold the offer until the end of next
+  month. Send that one now. And write Omar Haddad at Lindqvist Anlagenbau a first
+  email introducing our new service plan, but do not send it, I want to read it
+  before it goes out.
+
+  Tell me where each one stands.
+
+must_call:
+  - send_outbound
+  - draft_outbound
+may_call:
+  - search_records
+  - read_record
+  - resolve_entities
+  - catch_me_up_on
+  - search_context
+  - query_workspace
+  - whoami
+
+# Criterion 1 is the reply on the thread, not a fresh conversation beside it.
+# Criterion 2 is the draft for Omar, and the send that never reaches him below.
+must_call_with:
+  - send_outbound.as=email_reply
+  - draft_outbound.for=one_message
+
+# The mail the user wants to read first is never sent, by any channel.
+must_not_call_with:
+  - 'send_outbound~omar\.haddad'
+
+must_mention:
+  - "Jonas"
+  - "Omar"
+
+runs: 3
+pass_at: 2

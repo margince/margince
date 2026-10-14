@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
@@ -334,9 +334,9 @@ export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      (await canvas.findAllByRole("button", { name: /^edit\b/i }))[0],
-    );
+    const [edit] = await canvas.findAllByRole("button", { name: /^edit\b/i });
+    if (!edit) throw new Error("no lane offers an edit");
+    await userEvent.click(edit);
   },
 };
 

@@ -112,6 +112,13 @@ func (c *CloseDateCorrector) openRun(ctx context.Context, tx pgx.Tx) (*CloseDate
 	return &run, nil
 }
 
+// errPassAlreadyOpen says another worker won the race to open a pass.
+//
+// Internal to this package, because nothing a client reads is shaped by it.
+// The sweep stands down on it, and the next tick resumes the winner's pass, so
+// the apperrors registry owes it no sentinel.
+var errPassAlreadyOpen = errors.New("close-date: a pass is already open")
+
 // startRun opens a pass and freezes the deals it will check.
 //
 // The membership INSERT ... SELECT is the freeze, and it runs in the caller's
@@ -131,13 +138,27 @@ func (c *CloseDateCorrector) startRun(
 		return nil, err
 	}
 	var run CloseDateRun
-	if err := tx.QueryRow(ctx, `
+	// The conflict target is uq_close_date_run_one_running, the partial unique
+	// index admitting one running pass. Spelled with its predicate: a partial
+	// index is matched only by a target carrying the same `WHERE`.
+	//
+	// The cast is the catalog's own spelling of the index. Postgres matches
+	// either way, and a reader comparing the two should not have to know that.
+	//
+	// DO NOTHING rather than a raised unique violation. A second starter is an
+	// ordinary race, not a fault to log a stack for.
+	err = tx.QueryRow(ctx, `
 		INSERT INTO close_date_run (as_of, status, captured_by)
 		VALUES ($1, $2, $3)
+		ON CONFLICT (status) WHERE status = 'running'::text DO NOTHING
 		RETURNING id, as_of, status, eligible, checked, corrected, staged, started_at`,
 		asOf, CloseDateRunRunning, capturedBy).
 		Scan(&run.ID, &run.AsOf, &run.Status, &run.Eligible, &run.Checked,
-			&run.Corrected, &run.Staged, &run.StartedAt); err != nil {
+			&run.Corrected, &run.Staged, &run.StartedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errPassAlreadyOpen
+	}
+	if err != nil {
 		return nil, fmt.Errorf("close-date: opening the pass: %w", err)
 	}
 	tag, err := tx.Exec(ctx, `

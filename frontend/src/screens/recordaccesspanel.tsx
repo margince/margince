@@ -24,12 +24,13 @@ import {
   PanelGroupHead,
   PanelRow,
 } from "../design-system/panel";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryGate, throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];
@@ -176,7 +177,8 @@ function AccessBody({
   const plural = usePlural();
   const { locale } = useLocale();
   const count = (n: number) => ({ count: formatNumber(n, locale) });
-  const answer = pages[0];
+  const [answer] = pages;
+  if (answer === undefined) return null;
   const rows = pages.flatMap((page) => page.data);
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");

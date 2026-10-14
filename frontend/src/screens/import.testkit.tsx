@@ -10,8 +10,8 @@ import {
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 
@@ -37,10 +37,12 @@ export function render(ui: ReactNode): RenderResult {
 }
 
 export const profile = {
+  run_id: "019ff-draft",
   source_ref: "ws/import/abc",
   object: "lead",
   file_name: "leads.csv",
   rows_profiled: 4,
+  row_count: 4,
   columns: [
     { header: "Email", fill_rate: 1, samples: ["ada@x.test", "grace@x.test"] },
     { header: "Full Name", fill_rate: 0.75, samples: ["Ada Lovelace"] },
@@ -53,10 +55,12 @@ export const profile = {
 // A ZIP of two files the server detected, each with the mapping it proposes for
 // every type it could be.
 export const zipProfile = {
+  run_id: "019ff-draft",
   source_ref: "ws/import/zip",
   file_name: "pipedrive-export.zip",
   suggested_source_name: "pipedrive-export",
   rows_profiled: 0,
+  row_count: 5,
   columns: [],
   suggested_mapping: {},
   targets: [],
@@ -65,6 +69,7 @@ export const zipProfile = {
       file: "companies.csv",
       object: "company",
       rows_profiled: 2,
+      row_count: 2,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["CO-1"] },
         { header: "display_name", fill_rate: 1, samples: ["Acme"] },
@@ -80,6 +85,7 @@ export const zipProfile = {
       file: "contacts.csv",
       object: "contact",
       rows_profiled: 3,
+      row_count: 3,
       columns: [
         { header: "ref", fill_rate: 1, samples: ["P-1"] },
         { header: "email", fill_rate: 1, samples: ["jo@acme.com"] },
@@ -101,6 +107,8 @@ export const run = {
   object: "lead",
   status: "awaiting_approval",
   checkpoint: 0,
+  version: 3,
+  source_released: false,
   source: "import_api",
   captured_by: "u-ada",
   created_at: "2026-08-13T10:00:00Z",
@@ -136,7 +144,7 @@ const EXACT_DEFAULTS: Routes = {
   "GET /imports": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /users/names": () => jsonResponse({ data: [] }),
   "POST /imports/sources": () => jsonResponse(profile),
-  "POST /imports": () => jsonResponse(run, 202),
+  "POST /imports": () => jsonResponse({ ...run, status: "validating" }, 202),
 };
 
 const RUN_PATH = /^GET \/imports\/([^/]+)$/;
@@ -147,6 +155,19 @@ function runDefault(key: string): Response | undefined {
   if (read) return jsonResponse({ ...run, id: read[1] });
   if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
     return jsonResponse({ ...run, status: "complete" }, 202);
+  }
+  if (key.startsWith("PATCH /imports/")) {
+    return jsonResponse({
+      ...run,
+      status: "pending",
+      version: run.version + 1,
+    });
+  }
+  if (key.startsWith("POST /imports/") && key.endsWith("/validate")) {
+    return jsonResponse(
+      { ...run, status: "validating", version: run.version + 1 },
+      202,
+    );
   }
   if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
     return jsonResponse(dryRun);

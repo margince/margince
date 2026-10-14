@@ -478,3 +478,28 @@ export const CompanyFullHistory: Story = {
     await screen.findByRole("dialog", { name: "Full history" });
   },
 };
+
+// An archived account: the server refuses its 360, so the page draws the row
+// and no section reads as one that failed to load.
+export const CompanyArchived: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read", "update"] }),
+      ...overviewRoutes,
+      "GET /companies/o-1": () =>
+        jsonResponse({
+          ...company,
+          writable: false,
+          archived_at: "2026-07-14T09:00:00Z",
+        }),
+      "GET /companies/o-1/360": () =>
+        jsonResponse({ status: 404, code: "not_found" }, 404),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};

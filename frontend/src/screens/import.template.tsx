@@ -4,10 +4,10 @@
 import { Badge, Disclosure } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
-import { QueryStates } from "./common";
 import { ColumnGuide } from "./import.guide";
-import { useImportFormat } from "./importflow";
+import { useImportFormat } from "./importrun";
 import type { ImportFormat, ImportFormatColumn } from "./importtypes";
 
 /** Where the server builds the template ZIP for this installation's fields. */
