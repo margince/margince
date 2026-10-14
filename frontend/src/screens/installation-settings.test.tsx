@@ -143,7 +143,7 @@ describe("InstallationSettingsCard", () => {
     );
     expect(reason.id).not.toBe("");
     for (const fact of [
-      /edit company name/i,
+      /edit installation name/i,
       /edit reporting timezone/i,
       /edit base currency/i,
     ]) {
@@ -164,8 +164,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
-    const name = within(dialog).getByLabelText(/company name/i);
+    const dialog = await openFrom(user, /edit installation name/i);
+    const name = within(dialog).getByLabelText(/installation name/i);
     await user.clear(name);
     await user.type(name, "Brandt Group");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
@@ -257,7 +257,7 @@ describe("InstallationSettingsCard", () => {
     expect(within(dialog).getByText(reason)).not.toBeNull();
     // The editor can still change everything else.
     const name = within(dialog).getByLabelText(
-      /company name/i,
+      /installation name/i,
     ) as HTMLInputElement;
     expect(name.disabled).toBe(false);
   });
@@ -290,8 +290,8 @@ describe("InstallationSettingsCard", () => {
       expect(within(panel).getByText(value)).toBeTruthy();
     }
 
-    const dialog = await openFrom(user, /edit company name/i);
-    expect(within(dialog).getByLabelText(/company name/i)).toBeTruthy();
+    const dialog = await openFrom(user, /edit installation name/i);
+    expect(within(dialog).getByLabelText(/installation name/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/reporting timezone/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/base currency/i)).toBeTruthy();
 
@@ -307,7 +307,7 @@ describe("InstallationSettingsCard", () => {
     expect(saves).toHaveLength(1);
     expect(dialog.contains(saves[0])).toBe(true);
 
-    const name = within(dialog).getByLabelText(/company name/i);
+    const name = within(dialog).getByLabelText(/installation name/i);
     await user.clear(name);
     await user.type(name, "Brandt Group");
     const zone = within(dialog).getByLabelText(/reporting timezone/i);
@@ -340,9 +340,9 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
+    const dialog = await openFrom(user, /edit installation name/i);
     for (const label of [
-      /company name/i,
+      /installation name/i,
       /reporting timezone/i,
       /base currency/i,
     ]) {
@@ -397,8 +397,8 @@ describe("InstallationSettingsCard", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
-    const name = within(dialog).getByLabelText(/company name/i);
+    const dialog = await openFrom(user, /edit installation name/i);
+    const name = within(dialog).getByLabelText(/installation name/i);
     await user.type(name, " GmbH");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 

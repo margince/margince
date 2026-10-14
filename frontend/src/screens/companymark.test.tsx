@@ -119,6 +119,43 @@ it("draws both marks when the company wears both", () => {
   ).toBeTruthy();
 });
 
+// The verb under a tile opens that tile's own picker, never the other slot's.
+it.each([
+  { verb: "Replace wide logo", slotName: "Wide logo" },
+  { verb: "Replace square icon", slotName: "Square icon" },
+] as const)(
+  "$verb opens the picker of its own tile",
+  async ({ verb, slotName }) => {
+    const user = userEvent.setup();
+    mark(WITH_BOTH);
+    const opened: HTMLInputElement[] = [];
+    const click = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(function (this: HTMLInputElement) {
+        opened.push(this);
+      });
+
+    await user.click(screen.getByRole("button", { name: verb }));
+
+    expect(opened).toEqual([slot(slotName).getByLabelText(slotName)]);
+    click.mockRestore();
+  },
+);
+
+// One caption describes both files, tied to both tiles, so a keyboard reader
+// on either hears the format it takes.
+it("describes both tiles with one format line", () => {
+  mark(WITHOUT_MARK);
+  const wide = slot("Wide logo").getByLabelText("Wide logo");
+  const square = slot("Square icon").getByLabelText("Square icon");
+  const hint = wide.getAttribute("aria-describedby");
+  expect(hint).toBeTruthy();
+  expect(square.getAttribute("aria-describedby")).toBe(hint);
+  expect(document.getElementById(hint ?? "")?.textContent).toMatch(
+    /SVG or transparent PNG under 5 MB/,
+  );
+});
+
 // The STUB declares fetch's own parameters so the recorded calls are TYPED as
 // fetch's argument tuple. The runtime records every argument either way; what a
 // zero-parameter mock loses is the type, and `const [path, init]` below would
@@ -136,24 +173,16 @@ function stubFetch(answer: CompanyProfile) {
 // one decode on the server, so a slot that sent its file to the other's path
 // would store the picture successfully and hang it in the wrong place.
 it.each([
-  {
-    slotName: "Wide logo",
-    add: "Add wide logo",
-    path: "/v1/company/logo",
-  },
-  {
-    slotName: "Square icon",
-    add: "Add square icon",
-    path: "/v1/company/logo/icon",
-  },
+  { slotName: "Wide logo", path: "/v1/company/logo" },
+  { slotName: "Square icon", path: "/v1/company/logo/icon" },
 ] as const)(
   "sends $slotName to the upload route that owns it",
-  async ({ slotName, add, path }) => {
+  async ({ slotName, path }) => {
     const user = userEvent.setup();
     const fetchStub = stubFetch(WITH_BOTH);
     mark(WITHOUT_MARK);
 
-    await user.click(screen.getByRole("button", { name: add }));
+    // The tile is the target: no verb has to be pressed before a file lands.
     const chosen = new File(["not really a png"], "acme-logo.png", {
       type: "image/png",
     });
@@ -213,7 +242,6 @@ it("shows the server's refusal under the slot that was refused", async () => {
   );
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add square icon" }));
   await user.upload(
     slot("Square icon").getByLabelText("Square icon"),
     new File(["truncated"], "half-a-logo.png", { type: "image/png" }),

@@ -3210,8 +3210,6 @@ export const en = {
   "leadReasons.duplicate":
     "A reason with this name already exists. Choose another name.",
   "followUpSettings.title": "Follow-ups",
-  "followUpSettings.sub":
-    "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
   "followUpSettings.days": "Remind after (days)",
   "followUpSettings.daysHint":
     "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
@@ -8865,7 +8863,7 @@ export const en = {
   "settings.page.capture-activity.sub":
     "What capture did with your mail, and why.",
   "settings.page.company.sub":
-    "Company name, currency and business context used across all records.",
+    "Brand, business context, and the currency and calendar every report uses.",
   "settings.page.authentication.sub":
     "How people sign in to this installation, which apps may act for it, and which IdP groups grant roles.",
   "settings.page.members.sub":
@@ -9849,27 +9847,21 @@ export const en = {
   "users.link.retry": "Retry",
   "users.link.done": "Done",
   "settings.companyTitle": "Company profile",
+  "settings.companyContextTitle": "Business context",
+  "settings.companyEditContext": "Edit business context",
+  "settings.companyGroupSet_one": "{count} of {total} set",
+  "settings.companyGroupSet_other": "{count} of {total} set",
+  "settings.brandTitle": "Brand",
+  "settings.brandHint":
+    "SVG or transparent PNG under 5 MB. Wide logo: about 800 × 240 px. Square icon: 256 × 256 px, for the collapsed sidebar, which shows the wide logo until one is added.",
   "settings.companyReadOnly":
     "Read-only. Your role cannot change the company profile.",
   "settings.companySub":
-    "Shared business context for drafts, offers, search and agents. Each statement records who supplied it and its source.",
+    "What drafts, offers, search and agents know about your company.",
   "settings.companyTrust":
     "Confirmed statements only. Website text never becomes instructions.",
-  "settings.companyConfirmed_one": "{count} confirmed statement",
-  "settings.companyConfirmed_other": "{count} confirmed statements",
-  "settings.companyMark": "Company logo",
-  "settings.companyMarkIntro":
-    "The sidebar shows the company at 2 widths. The collapsed sidebar uses the wide logo until a square icon is added.",
   "settings.companyMarkWide": "Wide logo",
-  "settings.companyMarkWidePresent":
-    "Shown here and at the top of the expanded sidebar.",
-  "settings.companyMarkWideNone":
-    "No logo yet; initials are shown. Add one here, or read the website to find one.",
   "settings.companyMarkIcon": "Square icon",
-  "settings.companyMarkIconPresent":
-    "Shown in the collapsed sidebar, where the wide logo is too small to read.",
-  "settings.companyMarkIconNone":
-    "No icon yet. The collapsed sidebar uses the wide logo.",
   "settings.companyMarkAdd": "Add",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
@@ -9881,10 +9873,6 @@ export const en = {
   "settings.companyMarkAddIcon": "Add square icon",
   "settings.companyMarkReplaceIcon": "Replace square icon",
   "settings.companyMarkRemoveIcon": "Remove square icon",
-  "settings.companyMarkWideHint":
-    "SVG or transparent PNG, about 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Proportions are kept.",
-  "settings.companyMarkIconHint":
-    "SVG or transparent PNG, about 256 × 256 px, square, under 5 MB. A wide file is not cropped; it is shown small inside the square.",
   "settings.companyMarkEmpty": "Drop logo here, or choose a file",
   "settings.companyMarkIconEmpty": "Drop icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
@@ -10142,8 +10130,6 @@ export const en = {
   "countdown.expired": "Expired",
 
   "installationSettings.companyTitle": "Installation",
-  "installationSettings.companySub":
-    "Installation name, and the timezone reporting periods are computed in.",
   "installationSettings.currencyTitle": "Currency",
   "installationSettings.dateFormat": "Date format",
   "installationSettings.timeFormat": "Time format",
@@ -10156,18 +10142,18 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.name": "Company name",
+  "installationSettings.name": "Installation name",
   "installationSettings.nameHint":
-    "Shown wherever the product names the company.",
+    "Shown on account pages, and typed to confirm a data reset.",
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
-    "IANA timezone name, for example Europe/Berlin. Report periods and record dates are computed and shown in it for the whole team, separate from each user’s display timezone.",
+    "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
-    "Month the fiscal year begins. Reports group by this year and quarter; a year that does not start in January is labeled with both years, like FY2026/27. Changing it relabels every report, and saved views filtered by period then cover different months.",
+    "Reports group by this year and quarter. Changing it relabels every report and shifts the months saved period filters cover.",
   "installationSettings.forwardMeasure": "Projection basis",
   "installationSettings.forwardMeasureHint":
-    "Which remaining deal value the projection adds to won revenue. Commit evidence: committed deals with a confirmed close date. Weighted: every open deal at its stage probability. Manager’s call: replaces the projection; a period with no call falls back to commit evidence and says so.",
+    "Which open deals the projection adds to won revenue.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Commit evidence: confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":

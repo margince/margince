@@ -1,75 +1,108 @@
-/* The company's two marks and what can be done to each. A wide preview makes
-   the actual stored wordmark inspectable; a row-sized avatar made a healthy wide
-   logo look absent because its lettering was squeezed into a few pixels. */
-.company-mark {
-  padding-bottom: var(--space-4);
-}
-
-.company-mark-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-  flex: 1;
-}
-
-/* The two slots side by side while there is room, stacked when there is not.
-   Side by side is the arrangement that says they are two answers to one
-   question — which picture, at which width — rather than two settings that
-   happen to sit near each other. */
-.company-mark-slots {
+/* The company's two marks, each in a tile cut to its own shape: a wordmark in
+   a wide box and a badge in a square one, so a file in the wrong slot looks
+   wrong before the sidebar shows it. */
+.brand-slots {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-5);
-  align-items: flex-start;
+  margin-bottom: var(--space-3);
 }
 
-.company-mark-slot {
+/* Sized by its tile, so the two tiles stand side by side; a refusal widens
+   only the slot it is about. */
+.brand-slot {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-2);
+  flex: 0 1 auto;
   min-width: 0;
-  /* Wide enough for the 360px preview plus its own inset, and free to shrink
-     below that on a narrow column rather than forcing the card to scroll. */
-  flex: 1 1 320px;
 }
 
-.company-logo-preview {
-  width: min(100%, 360px);
-  height: 112px;
+.brand-slot > .callout {
+  align-self: stretch;
+}
+
+.brand-tile {
+  position: relative;
+  height: 6rem;
   box-sizing: border-box;
-  padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgInset);
 }
 
-.company-logo-preview .company-logo {
+.brand-slot-wide .brand-tile {
+  width: 15rem;
+  max-width: 100%;
+}
+
+.brand-slot-square {
+  flex-shrink: 0;
+}
+
+.brand-slot-square .brand-tile {
+  width: 6rem;
+}
+
+/* On a phone the wide tile gives up width, so the pair stays one row. */
+@media (max-width: 640px) {
+  .brand-slots {
+    flex-wrap: nowrap;
+    gap: var(--space-4);
+  }
+}
+
+/* An editable tile is the dropzone: its border and hover come from the zone,
+   which covers the whole tile, so a press or a drop anywhere on it lands. */
+.brand-tile:has(.fdz) {
+  border: 0;
+}
+
+.brand-tile > .fdz {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: var(--bgInset);
+}
+
+.brand-tile.is-filled > .fdz:not(:hover, .dragover) {
+  border-style: solid;
+  border-color: var(--borderSubtle);
+}
+
+.brand-tile > .fdz > .fdz-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Above the zone and deaf to the pointer, so the zone's input still takes the
+   press and the drop that land on the picture. */
+.brand-tile-mark {
+  position: absolute;
+  inset: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.brand-tile-mark > .company-logo {
   width: 100%;
   height: 100%;
 }
 
-/* The square slot's preview is square, because the shape IS the thing this
-   field is asking for: a contact looking at a 360 × 112 box has been shown the
-   wrong question, and a wide file dropped here would look correct in it. */
-.company-logo-preview-square {
-  width: 112px;
+.brand-tile[aria-busy="true"] .brand-tile-mark {
+  opacity: 0.5;
 }
 
-.company-logo-preview-empty {
-  width: 80px;
-  height: 80px;
-  padding: var(--space-3);
-}
-
-/* Both shapes collapse to the same monogram box when there is no mark, and the
-   square rule above would otherwise widen it back out. */
-.company-logo-preview-empty.company-logo-preview-square {
-  width: 80px;
-}
-
-/* The two verbs sit on one line and wrap together on a narrow column. */
-.company-mark-actions {
+.brand-slot-verbs {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gapActions);

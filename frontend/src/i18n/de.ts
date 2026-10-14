@@ -3153,8 +3153,6 @@ export const de = {
   "leadReasons.duplicate":
     "Einen Grund mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "followUpSettings.title": "Nachfassen",
-  "followUpSettings.sub":
-    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des Absenders erscheint.",
   "followUpSettings.days": "Erinnern nach (Tagen)",
   "followUpSettings.daysHint":
     "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor der Absender ans Nachfassen erinnert wird, 1 bis 30.",
@@ -8708,7 +8706,7 @@ export const de = {
   "settings.page.capture-activity.sub":
     "Was die Erfassung mit deinen E-Mails gemacht hat, und warum.",
   "settings.page.company.sub":
-    "Unternehmensname, Währung und Geschäftskontext für alle Datensätze.",
+    "Marke, Geschäftskontext sowie Währung und Kalender für alle Berichte.",
   "settings.page.authentication.sub":
     "Wie sich Personen an dieser Installation anmelden, welche Apps für diese Installation handeln dürfen und welche IdP-Gruppen Rollen vergeben.",
   "settings.page.members.sub":
@@ -9722,25 +9720,19 @@ export const de = {
   "settings.companyReadOnly":
     "Nur Lesezugriff. Deine Rolle darf das Unternehmensprofil nicht ändern.",
   "settings.companyTitle": "Unternehmensprofil",
+  "settings.companyContextTitle": "Geschäftskontext",
+  "settings.companyEditContext": "Geschäftskontext bearbeiten",
+  "settings.companyGroupSet_one": "{count} von {total} ausgefüllt",
+  "settings.companyGroupSet_other": "{count} von {total} ausgefüllt",
+  "settings.brandTitle": "Marke",
+  "settings.brandHint":
+    "SVG oder transparentes PNG unter 5 MB. Breites Logo: etwa 800 × 240 px. Quadratisches Symbol: 256 × 256 px, für die eingeklappte Seitenleiste, die bis dahin das breite Logo zeigt.",
   "settings.companySub":
-    "Gemeinsamer Geschäftskontext für Entwürfe, Angebote, Suche und Agenten. Zu jeder Aussage wird festgehalten, wer sie geliefert hat und woher sie stammt.",
+    "Was Entwürfe, Angebote, Suche und Agenten über dein Unternehmen wissen.",
   "settings.companyTrust":
     "Nur bestätigte Aussagen. Website-Text wird nie zu Anweisungen.",
-  "settings.companyConfirmed_one": "{count} bestätigte Aussage",
-  "settings.companyConfirmed_other": "{count} bestätigte Aussagen",
-  "settings.companyMark": "Unternehmenslogo",
-  "settings.companyMarkIntro":
-    "Die Seitenleiste zeigt das Unternehmen in 2 Breiten. Die eingeklappte Seitenleiste verwendet das breite Logo, bis ein quadratisches Symbol hinzugefügt wird.",
   "settings.companyMarkWide": "Breites Logo",
-  "settings.companyMarkWidePresent":
-    "Wird hier und oben in der ausgeklappten Seitenleiste angezeigt.",
-  "settings.companyMarkWideNone":
-    "Noch kein Logo; es werden Initialen angezeigt. Füge hier eines hinzu oder lies die Website aus, um eines zu finden.",
   "settings.companyMarkIcon": "Quadratisches Symbol",
-  "settings.companyMarkIconPresent":
-    "Wird in der eingeklappten Seitenleiste angezeigt, wo das breite Logo zu klein zum Lesen ist.",
-  "settings.companyMarkIconNone":
-    "Noch kein Symbol. Die eingeklappte Seitenleiste verwendet das breite Logo.",
   "settings.companyMarkAdd": "Hinzufügen",
   "settings.companyMarkReplace": "Ersetzen",
   "settings.companyMarkRemove": "Entfernen",
@@ -9752,10 +9744,6 @@ export const de = {
   "settings.companyMarkAddIcon": "Quadratisches Symbol hinzufügen",
   "settings.companyMarkReplaceIcon": "Quadratisches Symbol ersetzen",
   "settings.companyMarkRemoveIcon": "Quadratisches Symbol entfernen",
-  "settings.companyMarkWideHint":
-    "SVG oder transparentes PNG, etwa 800 × 240 px (bis 4:1), unter 5 MB. JPEG, GIF, WebP und ICO funktionieren ebenfalls. Die Proportionen bleiben erhalten.",
-  "settings.companyMarkIconHint":
-    "SVG oder transparentes PNG, etwa 256 × 256 px, quadratisch, unter 5 MB. Eine breite Datei wird nicht beschnitten; sie wird klein im Quadrat angezeigt.",
   "settings.companyMarkEmpty": "Logo hier ablegen oder Datei auswählen",
   "settings.companyMarkIconEmpty": "Symbol hier ablegen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
@@ -10024,8 +10012,6 @@ export const de = {
   "countdown.expired": "Abgelaufen",
 
   "installationSettings.companyTitle": "Installation",
-  "installationSettings.companySub":
-    "Name der Installation und die Zeitzone, in der Berichtszeiträume berechnet werden.",
   "installationSettings.currencyTitle": "Währung",
   "installationSettings.dateFormat": "Datumsformat",
   "installationSettings.timeFormat": "Zeitformat",
@@ -10038,18 +10024,18 @@ export const de = {
   "installationSettings.timeFormat.locale": "Sprache der Oberfläche verwenden",
   "installationSettings.timeFormat.24h": "24-Stunden-Format · 17:30",
   "installationSettings.timeFormat.12h": "12-Stunden-Format · 05:30 pm",
-  "installationSettings.name": "Unternehmensname",
+  "installationSettings.name": "Installationsname",
   "installationSettings.nameHint":
-    "Wird überall angezeigt, wo das Produkt das Unternehmen nennt.",
+    "Steht auf Kontoseiten und wird zur Bestätigung eines Datenresets eingegeben.",
   "installationSettings.timezone": "Berichtszeitzone",
   "installationSettings.timezoneHint":
-    "IANA-Zeitzonenname, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben von Datensätzen werden darin für das ganze Team berechnet und angezeigt, unabhängig von der Anzeigezeitzone jedes Nutzerkontos.",
+    "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben gelten damit für das ganze Team; jedes Nutzerkonto behält seine eigene Anzeigezeitzone.",
   "installationSettings.fiscalYearStart": "Beginn des Geschäftsjahres",
   "installationSettings.fiscalYearStartHint":
-    "Monat, in dem das Geschäftsjahr beginnt. Berichte gruppieren nach diesem Jahr und Quartal; ein Jahr, das nicht im Januar beginnt, wird mit beiden Jahren benannt, etwa FY2026/27. Eine Änderung benennt jeden Bericht neu, und gespeicherte Ansichten mit Zeitraumfilter umfassen dann andere Monate.",
+    "Berichte gruppieren nach diesem Jahr und Quartal. Eine Änderung benennt jeden Bericht neu und verschiebt die Monate gespeicherter Zeitraumfilter.",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",
   "installationSettings.forwardMeasureHint":
-    "Welcher verbleibende Deal-Wert in der Hochrechnung zum gewonnenen Umsatz addiert wird. Commit-Belege: Deals in Commit mit bestätigtem Abschlussdatum. Gewichtet: jeder offene Deal mit der Wahrscheinlichkeit seiner Phase. Einschätzung der Führungskraft: ersetzt die Hochrechnung; ein Zeitraum ohne Einschätzung fällt auf Commit-Belege zurück und weist darauf hin.",
+    "Welche offenen Deals die Hochrechnung zum gewonnenen Umsatz addiert.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Commit-Belege: nur bestätigte Abschlussdaten",
   "installationSettings.forwardMeasure.weighted":

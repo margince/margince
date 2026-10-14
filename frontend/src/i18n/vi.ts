@@ -3093,8 +3093,6 @@ export const vi = {
     "Lý do có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
   "leadReasons.duplicate": "Đã có lý do mang tên này. Hãy chọn tên khác.",
   "followUpSettings.title": "Việc tiếp theo",
-  "followUpSettings.sub":
-    "Thời điểm một thư đã gửi khách hàng hiện lại trên Trang chủ của người gửi thành việc tiếp theo.",
   "followUpSettings.days": "Nhắc sau (ngày)",
   "followUpSettings.daysHint":
     "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc liên hệ lại, từ 1 đến 30.",
@@ -8523,7 +8521,7 @@ export const vi = {
   "settings.page.capture-activity.sub":
     "Thu thập đã xử lý thư thế nào, và vì sao.",
   "settings.page.company.sub":
-    "Tên công ty, loại tiền và bối cảnh kinh doanh dùng cho mọi hồ sơ.",
+    "Thương hiệu, bối cảnh kinh doanh, cùng loại tiền và lịch mà mọi báo cáo dùng.",
   "settings.page.authentication.sub":
     "Cách thành viên đăng nhập vào bản cài đặt này, ứng dụng nào được thay mặt bản cài đặt, và nhóm IdP nào cấp vai trò.",
   "settings.page.members.sub":
@@ -9516,25 +9514,19 @@ export const vi = {
   "settings.companyReadOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi hồ sơ công ty.",
   "settings.companyTitle": "Hồ sơ công ty",
+  "settings.companyContextTitle": "Bối cảnh kinh doanh",
+  "settings.companyEditContext": "Sửa bối cảnh kinh doanh",
+  "settings.companyGroupSet_one": "Đã điền {count}/{total}",
+  "settings.companyGroupSet_other": "Đã điền {count}/{total}",
+  "settings.brandTitle": "Thương hiệu",
+  "settings.brandHint":
+    "SVG hoặc PNG nền trong suốt, dưới 5 MB. Logo rộng: khoảng 800 × 240 px. Biểu tượng vuông: 256 × 256 px, dùng cho thanh bên thu gọn; khi chưa có, thanh bên dùng logo rộng.",
   "settings.companySub":
-    "Bối cảnh kinh doanh dùng chung cho bản nháp, báo giá, tìm kiếm và trợ lý AI. Mỗi mục ghi rõ ai cung cấp và nguồn của mục đó.",
+    "Những gì bản nháp, báo giá, tìm kiếm và trợ lý AI biết về công ty.",
   "settings.companyTrust":
     "Chỉ dùng mục đã xác nhận. Văn bản trên trang web không bao giờ trở thành chỉ dẫn.",
-  "settings.companyConfirmed_one": "{count} mục đã xác nhận",
-  "settings.companyConfirmed_other": "{count} mục đã xác nhận",
-  "settings.companyMark": "Logo công ty",
-  "settings.companyMarkIntro":
-    "Thanh bên hiển thị logo công ty ở 2 độ rộng. Thanh bên thu gọn dùng logo rộng cho đến khi có biểu tượng vuông.",
   "settings.companyMarkWide": "Logo rộng",
-  "settings.companyMarkWidePresent":
-    "Hiển thị tại đây và ở đầu thanh bên khi mở rộng.",
-  "settings.companyMarkWideNone":
-    "Chưa có logo; đang hiển thị chữ viết tắt. Thêm logo tại đây, hoặc đọc trang web để tìm logo.",
   "settings.companyMarkIcon": "Biểu tượng vuông",
-  "settings.companyMarkIconPresent":
-    "Hiển thị trong thanh bên thu gọn, nơi logo rộng quá nhỏ để đọc.",
-  "settings.companyMarkIconNone":
-    "Chưa có biểu tượng. Thanh bên thu gọn dùng logo rộng.",
   "settings.companyMarkAdd": "Thêm",
   "settings.companyMarkReplace": "Thay thế",
   "settings.companyMarkRemove": "Gỡ",
@@ -9546,10 +9538,6 @@ export const vi = {
   "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
   "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
   "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
-  "settings.companyMarkWideHint":
-    "SVG hoặc PNG nền trong suốt, khoảng 800 × 240 px (tối đa 4:1), dưới 5 MB. JPEG, GIF, WebP và ICO cũng dùng được. Giữ nguyên tỷ lệ.",
-  "settings.companyMarkIconHint":
-    "SVG hoặc PNG nền trong suốt, khoảng 256 × 256 px, hình vuông, dưới 5 MB. Tệp rộng không bị cắt; tệp hiển thị nhỏ bên trong ô vuông.",
   "settings.companyMarkEmpty": "Thả logo vào đây, hoặc chọn tệp",
   "settings.companyMarkIconEmpty": "Thả biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Trang web công khai của công ty",
@@ -9812,8 +9800,6 @@ export const vi = {
   "countdown.expired": "Đã hết hạn",
 
   "installationSettings.companyTitle": "Bản cài đặt",
-  "installationSettings.companySub":
-    "Tên bản cài đặt và múi giờ dùng để tính kỳ báo cáo.",
   "installationSettings.currencyTitle": "Loại tiền",
   "installationSettings.dateFormat": "Định dạng ngày",
   "installationSettings.timeFormat": "Định dạng giờ",
@@ -9826,18 +9812,18 @@ export const vi = {
   "installationSettings.timeFormat.locale": "Theo ngôn ngữ giao diện",
   "installationSettings.timeFormat.24h": "24 giờ · 17:30",
   "installationSettings.timeFormat.12h": "12 giờ · 05:30 CH",
-  "installationSettings.name": "Tên công ty",
+  "installationSettings.name": "Tên bản cài đặt",
   "installationSettings.nameHint":
-    "Hiển thị ở mọi nơi sản phẩm nêu tên công ty.",
+    "Hiển thị trên trang tài khoản và được nhập để xác nhận đặt lại dữ liệu.",
   "installationSettings.timezone": "Múi giờ báo cáo",
   "installationSettings.timezoneHint":
-    "Tên múi giờ IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ được tính và hiển thị theo múi giờ này cho cả nhóm, tách biệt với múi giờ hiển thị của từng người dùng.",
+    "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ dùng múi giờ này cho cả nhóm; mỗi người dùng vẫn giữ múi giờ hiển thị riêng.",
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
-    "Tháng bắt đầu năm tài chính. Báo cáo được tổng hợp theo năm và quý này; năm không bắt đầu từ tháng 1 được ghi bằng cả hai năm, ví dụ FY2026/27. Thay đổi giá trị này sẽ đổi nhãn mọi báo cáo, và chế độ xem đã lưu có lọc theo kỳ khi đó sẽ bao gồm những tháng khác.",
+    "Báo cáo được tổng hợp theo năm và quý này. Thay đổi sẽ đổi nhãn mọi báo cáo và dời các tháng mà bộ lọc kỳ đã lưu bao gồm.",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",
   "installationSettings.forwardMeasureHint":
-    "Phần giá trị deal còn lại mà số dự kiến cộng vào doanh số đã chốt. Bằng chứng Commit: deal Commit có ngày chốt đã xác nhận. Có trọng số: mọi deal đang mở theo xác suất của giai đoạn. Nhận định của quản lý: thay thế số dự kiến; kỳ chưa có nhận định sẽ quay về bằng chứng Commit và ghi rõ điều đó.",
+    "Những deal đang mở mà số dự kiến cộng vào doanh số đã chốt.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Bằng chứng Commit: chỉ ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":

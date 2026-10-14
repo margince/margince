@@ -18,7 +18,7 @@ import {
   DrawerHead,
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -323,12 +323,11 @@ function InstallationSettingsForm({
 
   return (
     <Panel title={t("installationSettings.companyTitle")}>
-      <PanelBody>
-        <PanelIntro>{t("installationSettings.companySub")}</PanelIntro>
-        {!canManage && (
+      {!canManage && (
+        <PanelBody>
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
       <SettingList bleed="settings">
         <SettingRow
           label={t("installationSettings.name")}

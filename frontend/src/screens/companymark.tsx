@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Avatar, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
-import { FileDropzone } from "../design-system/filedropzone";
+import { FileDropzoneControl } from "../design-system/filedropzone";
+import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { postMultipart } from "../lib/multipart";
 import { problemMessageOf, unwrap } from "../lib/problem";
@@ -45,7 +46,12 @@ const ACCEPTED_IMAGES =
 export function CompanyMark({
   profile,
   canEdit,
-}: Readonly<{ profile: CompanyProfile; canEdit: boolean }>) {
+  readOnly = false,
+}: Readonly<{
+  profile: CompanyProfile;
+  canEdit: boolean;
+  readOnly?: boolean;
+}>) {
   const t = useT();
   const client = useQueryClient();
   // The response IS the new profile, so it is written straight into the entry
@@ -55,24 +61,20 @@ export function CompanyMark({
   };
   const wide = useMarkWrites("/v1/company/logo", deleteWideMark, settle);
   const icon = useMarkWrites("/v1/company/logo/icon", deleteIconMark, settle);
+  const hintId = useId();
 
   return (
-    <div className="company-mark">
-      <div className="company-mark-body">
-        <b>{t("settings.companyMark")}</b>
-        <p>{t("settings.companyMarkIntro")}</p>
-        <div className="company-mark-slots">
+    <Panel title={t("settings.brandTitle")}>
+      <PanelBody>
+        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
+        <div className="brand-slots">
           <MarkSlot
             profile={profile}
             canEdit={canEdit}
             src={profile.logo_url}
+            shape="wide"
             name={t("settings.companyMarkWide")}
-            status={
-              profile.logo_url
-                ? t("settings.companyMarkWidePresent")
-                : t("settings.companyMarkWideNone")
-            }
-            hint={t("settings.companyMarkWideHint")}
+            hintId={hintId}
             emptyLabel={t("settings.companyMarkEmpty")}
             verbs={{
               add: t("settings.companyMarkAddWide"),
@@ -85,14 +87,9 @@ export function CompanyMark({
             profile={profile}
             canEdit={canEdit}
             src={profile.logo_icon_url}
-            square
+            shape="square"
             name={t("settings.companyMarkIcon")}
-            status={
-              profile.logo_icon_url
-                ? t("settings.companyMarkIconPresent")
-                : t("settings.companyMarkIconNone")
-            }
-            hint={t("settings.companyMarkIconHint")}
+            hintId={hintId}
             emptyLabel={t("settings.companyMarkIconEmpty")}
             verbs={{
               add: t("settings.companyMarkAddIcon"),
@@ -102,8 +99,11 @@ export function CompanyMark({
             writes={icon}
           />
         </div>
-      </div>
-    </div>
+        <p className="t-caption" id={hintId}>
+          {t("settings.brandHint")}
+        </p>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -145,22 +145,17 @@ function useMarkWrites(
 }
 
 /**
- * One slot: the mark it holds now, and the verbs that change it.
- *
- * `verbs` carries the accessible name of each button rather than its visible
- * word. Two slots side by side would otherwise put two buttons called "Replace"
- * on the page, which a reader walking a list of controls cannot tell apart —
- * and the visible word stays inside the name, so what is said and what is seen
- * still match.
+ * One slot: a tile in the mark's shape that previews it and takes a file, then
+ * the slot's name and its verbs. `verbs` holds each button's accessible name,
+ * so two slots never offer two controls both called "Replace".
  */
 function MarkSlot({
   profile,
   canEdit,
   src,
-  square,
+  shape,
   name,
-  status,
-  hint,
+  hintId,
   emptyLabel,
   verbs,
   writes,
@@ -168,53 +163,65 @@ function MarkSlot({
   profile: CompanyProfile;
   canEdit: boolean;
   src?: string | null;
-  square?: boolean;
+  shape: "wide" | "square";
   name: string;
-  status: string;
-  hint: string;
+  hintId: string;
   emptyLabel: string;
   verbs: { add: string; replace: string; remove: string };
   writes: MarkWrites;
 }>) {
   const t = useT();
-  // The section is named by the heading it already shows, not by a second copy
-  // of that text in an `aria-label`: two elements carrying the same accessible
-  // name is what makes "the Square icon control" ambiguous to anything that
-  // looks one up, a test included.
-  const headingId = useId();
+  const nameId = useId();
+  const inputId = useId();
+  const tile = useRef<HTMLDivElement>(null);
   const { upload, remove } = writes;
-  // The picker is closed until it is asked for. A dropzone standing open under
-  // a mark the company already has reads as the thing to do, and the thing to
-  // do on this row is usually nothing.
-  const [picking, setPicking] = useState(false);
-  // Each verb is disabled by the OTHER one's flight and PENDING on its own: a
-  // button that disables itself the moment it is pressed takes the focus with
-  // it, where `pending` keeps the focus, marks the wait, and swallows a repeat
-  // press — so a double press or a held Enter cannot start a second request
-  // whose answer would race the first, nor open a second picker whose file
-  // would then be dropped.
-  const removeMark = () => {
-    // A picker left open under a removal is a second writer: a file dropped
-    // while the DELETE is out lands in whichever order the two answer.
-    setPicking(false);
-    remove.mutate();
+  // The tile takes nothing while a write is out: a drop racing a DELETE lands
+  // in whichever order the two answer.
+  const busy = upload.isPending || remove.isPending;
+  const control = {
+    id: inputId,
+    "aria-labelledby": nameId,
+    "aria-describedby": hintId,
+    disabled: busy,
   };
-  const uploadMark = (file: File) => {
-    setPicking(false);
-    upload.mutate(file);
+  const choose = () => {
+    tile.current?.querySelector<HTMLInputElement>("input[type=file]")?.click();
   };
 
   return (
-    <section className="company-mark-slot" aria-labelledby={headingId}>
-      <b id={headingId}>{name}</b>
-      <p className="t-caption">{status}</p>
-      {!picking && <p className="t-caption">{hint}</p>}
-      <MarkPreview profile={profile} src={src} square={square} />
+    <section
+      className={`brand-slot brand-slot-${shape}`}
+      aria-labelledby={nameId}
+    >
+      <div
+        ref={tile}
+        className={src ? "brand-tile is-filled" : "brand-tile"}
+        aria-busy={busy || undefined}
+      >
+        {canEdit && (
+          <FileDropzoneControl
+            control={control}
+            emptyLabel={emptyLabel}
+            accept={ACCEPTED_IMAGES}
+            onPick={(file) => upload.mutate(file)}
+          />
+        )}
+        <div className="brand-tile-mark">
+          <MarkPreview profile={profile} src={src} />
+        </div>
+      </div>
+      <span className="t-name" id={nameId}>
+        {name}
+      </span>
       {canEdit && (
-        <div className="company-mark-actions">
+        <div className="brand-slot-verbs">
+          {/* Each verb is disabled by the OTHER one's flight and pending on its
+              own, so focus stays on a pressed verb and a repeat press is
+              swallowed rather than racing the first request. */}
           <Button
+            variant="ghost"
             aria-label={src ? verbs.replace : verbs.add}
-            onClick={() => setPicking((open) => !open)}
+            onClick={choose}
             disabled={remove.isPending}
             pending={upload.isPending}
           >
@@ -226,7 +233,7 @@ function MarkSlot({
             <Button
               variant="ghost"
               aria-label={verbs.remove}
-              onClick={removeMark}
+              onClick={() => remove.mutate()}
               disabled={upload.isPending}
               pending={remove.isPending}
             >
@@ -234,15 +241,6 @@ function MarkSlot({
             </Button>
           )}
         </div>
-      )}
-      {picking && canEdit && (
-        <FileDropzone
-          label={name}
-          hint={hint}
-          emptyLabel={emptyLabel}
-          accept={ACCEPTED_IMAGES}
-          onPick={uploadMark}
-        />
       )}
       {/* One notice per verb: a single heading over `upload.error ?? remove.error`
           left the reader unable to tell which of the two the server refused. */}
@@ -273,32 +271,18 @@ function MarkSlot({
 function MarkPreview({
   profile,
   src,
-  square,
-}: Readonly<{
-  profile: CompanyProfile;
-  src?: string | null;
-  square?: boolean;
-}>) {
+}: Readonly<{ profile: CompanyProfile; src?: string | null }>) {
   const monogram = (
     <Avatar
       identity={profile.company_id}
       name={profile.display_name}
-      size="xl"
+      size="md"
     />
   );
-  const shape = square ? " company-logo-preview-square" : "";
   if (!src) {
-    return (
-      <div
-        className={`company-logo-preview company-logo-preview-empty${shape}`}
-      >
-        {monogram}
-      </div>
-    );
+    return monogram;
   }
   return (
-    <div className={`company-logo-preview${shape}`}>
-      <CompanyLogo name={profile.display_name} src={src} fallback={monogram} />
-    </div>
+    <CompanyLogo name={profile.display_name} src={src} fallback={monogram} />
   );
 }

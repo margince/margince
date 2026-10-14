@@ -467,8 +467,12 @@ describe("CompanyContextCard write posture", () => {
       expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
       // Stated once, at the surface, rather than annotated onto each absent
       // control.
-      expect(screen.getByText(READ_ONLY)).toBeTruthy();
+      const facts = screen.getByRole("region", { name: "Business context" });
+      expect(within(facts).getByText(READ_ONLY)).toBeTruthy();
       expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Edit business context" }),
+      ).toBeNull();
       expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
     },
     POSTURE_TEST_MS,
@@ -482,6 +486,9 @@ describe("CompanyContextCard write posture", () => {
       // Without this arm the test above would pass on a card that renders no
       // buttons for anybody.
       expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Edit business context" }),
+      ).toBeTruthy();
       expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
       // A reader who may write is told nothing about a posture they do not have.
       expect(screen.queryByText(READ_ONLY)).toBeNull();
@@ -519,6 +526,50 @@ describe("CompanyContextCard write posture", () => {
         () =>
           expect(document.activeElement).toBe(
             within(dialog).getByLabelText("Products and services"),
+          ),
+        { timeout: SETTLE_MS },
+      );
+    },
+    DIALOG_MS,
+  );
+
+  // The chevron is the keyboard path; a press anywhere else on the row is the
+  // pointer's, and it lands on the same field.
+  it(
+    "opens the editor at the fact whose row was pressed",
+    async () => {
+      await renderAs(ME_EDITOR);
+
+      fireEvent.click(screen.getByText(COMPANY.icp ?? ""));
+      const dialog = await screen.findByRole("dialog", undefined, {
+        timeout: SETTLE_MS,
+      });
+      await waitFor(
+        () =>
+          expect(document.activeElement).toBe(
+            within(dialog).getByLabelText("Ideal customer"),
+          ),
+        { timeout: SETTLE_MS },
+      );
+    },
+    DIALOG_MS,
+  );
+
+  it(
+    "opens the editor from the panel's own verb at the first fact",
+    async () => {
+      await renderAs(ME_EDITOR);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Edit business context" }),
+      );
+      const dialog = await screen.findByRole("dialog", undefined, {
+        timeout: SETTLE_MS,
+      });
+      await waitFor(
+        () =>
+          expect(document.activeElement).toBe(
+            within(dialog).getByLabelText("Company name"),
           ),
         { timeout: SETTLE_MS },
       );
@@ -663,24 +714,18 @@ describe("CompanyContextCard for a seat that is not an administrator", () => {
   });
 });
 
-describe("CompanyContextCard confirmed count", () => {
-  const CONFIRMED = [
-    { field: "display_name", value: "Acme", source: "human" },
-    { field: "icp", value: "Installers", source: "human" },
-  ] as const;
-
-  it.each([
-    [1, "1 confirmed statement"],
-    [2, "2 confirmed statements"],
-  ])(
-    "counts the confirmed statements in the footer (%i)",
-    async (count, line) => {
+// Each optional group counts its filled facts, so an empty group reads apart
+// from a full one while folded.
+describe("CompanyContextCard group counts", () => {
+  it(
+    "counts the filled facts on each group's summary, and no rollout stage",
+    async () => {
       const company = {
         ...COMPANY,
-        fields: CONFIRMED.slice(0, count).map((row) => ({
-          ...row,
-          captured_by: "human:u-1",
-        })),
+        value_proposition: "Faster installs",
+        usp: "  ",
+        sales_motion: "Field sales",
+        legal_name: "Acme GmbH",
       };
       vi.stubGlobal(
         "fetch",
@@ -700,9 +745,15 @@ describe("CompanyContextCard confirmed count", () => {
           <CompanyContextCard />
         </Providers>,
       );
+      // A blank answer is not a set one.
       expect(
-        await screen.findByText(line, undefined, { timeout: SETTLE_MS }),
+        await screen.findByText("2 of 8 set", undefined, {
+          timeout: SETTLE_MS,
+        }),
       ).toBeTruthy();
+      expect(screen.getByText("1 of 5 set")).toBeTruthy();
+      // The rollout flag is a fact about the deployment, not the profile.
+      expect(screen.queryByText(CAPABILITIES.rollout)).toBeNull();
     },
     POSTURE_TEST_MS,
   );
@@ -743,9 +794,11 @@ describe("CompanyContextCard after a failed refetch", () => {
         </QueryClientProvider>,
       );
       expect(
-        await screen.findByText("Company logo", undefined, {
-          timeout: SETTLE_MS,
-        }),
+        await screen.findByRole(
+          "heading",
+          { name: "Brand" },
+          { timeout: SETTLE_MS },
+        ),
       ).toBeTruthy();
 
       refusing = true;
@@ -758,7 +811,7 @@ describe("CompanyContextCard after a failed refetch", () => {
           { timeout: SETTLE_MS },
         ),
       ).toBeTruthy();
-      expect(screen.queryByText("Company logo")).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Brand" })).toBeNull();
     },
     SETTLE_MS * 2,
   );
