@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 var placeholder = regexp.MustCompile(`\{([a-z_]+)(?::q)?\}`)
@@ -32,7 +34,7 @@ func TestEveryReasonCodeHasAnEnglishRendering(t *testing.T) {
 	}
 	for _, code := range codes {
 		want := ReasonParamNames(code)
-		for _, lang := range ReasonLanguages() {
+		for _, lang := range textlang.Shipped {
 			template := ReasonTemplate(code, lang)
 			if strings.TrimSpace(template) == "" {
 				t.Errorf("%s has no %s sentence", code, lang)
@@ -47,10 +49,10 @@ func TestEveryReasonCodeHasAnEnglishRendering(t *testing.T) {
 
 func TestAReasonRendersItsValuesAndFallsBackToEnglish(t *testing.T) {
 	why := Why(ReasonLinkNotFound, "ref", ` CO-7 `)
-	if got, want := why.In(LangEnglish), `no company with " CO-7 " in this upload, in an earlier import, or in Margince`; got != want {
+	if got, want := why.In(textlang.English), `no company with " CO-7 " in this upload, in an earlier import, or in Margince`; got != want {
 		t.Errorf("english = %q, want %q", got, want)
 	}
-	if got := why.In("de"); !strings.Contains(got, `" CO-7 "`) {
+	if got := why.In(textlang.German); !strings.Contains(got, `" CO-7 "`) {
 		t.Errorf("german = %q, want the quoted ref", got)
 	}
 	if got := why.In("fr"); got != why.English() {

@@ -74,7 +74,7 @@ func TestEstimateScopeIsObjectUntilTheLastItem(t *testing.T) {
 }
 
 // A run whose speed drifts by a third either way is still bracketed most of the
-// time, and the low end is never zero before the end.
+// time. The low end is never zero before the end.
 func TestTheEstimateBracketsAVaryingRateRun(t *testing.T) {
 	const total, flushEvery = 12000, 2.0
 	rate := func(s float64) float64 { return 60 + 20*math.Sin(s/25) }

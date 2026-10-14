@@ -111,15 +111,14 @@ func rowsReachedOf(run migration.Run) []int {
 	return reached
 }
 
-// createdTagReason is the report's word for a new tag once the commit ran,
-// which creates every new tag before its first row.
-const createdTagReason = "no tag had this name, so the import created it"
-
-// reportTagsCreated rewords each new_tag issue as done.
+// reportTagsCreated rewords each new_tag issue as done: the commit creates
+// every new tag before its first row.
 func reportTagsCreated(issues []crmcontracts.ImportRowIssue) {
 	for i := range issues {
 		if kind := issues[i].Kind; kind != nil && string(*kind) == migration.ProblemNewTag {
-			issues[i].Reason = createdTagReason
+			issues[i].Reason = createdTagWhy.English()
+			issues[i].ReasonCode = reasonCodeOrAbsent(createdTagWhy.Code)
+			issues[i].Params = paramsOrAbsent(createdTagWhy.Params)
 		}
 	}
 }
@@ -273,12 +272,14 @@ func appendIssues(
 		}
 		seen[key] = true
 		*issues = append(*issues, crmcontracts.ImportRowIssue{
-			Line:   lineOrAbsent(lineOf(row)),
-			Reason: row.Reason,
-			File:   textOrAbsent(o.File),
-			Column: textOrAbsent(row.Column),
-			Kind:   kindOrAbsent(row.Kind),
-			Value:  textOrAbsent(row.Value),
+			Line:       lineOrAbsent(lineOf(row)),
+			Reason:     row.Reason,
+			ReasonCode: reasonCodeOrAbsent(row.Code),
+			Params:     paramsOrAbsent(row.Params),
+			File:       textOrAbsent(o.File),
+			Column:     textOrAbsent(row.Column),
+			Kind:       kindOrAbsent(row.Kind),
+			Value:      textOrAbsent(row.Value),
 		})
 	}
 }
@@ -403,6 +404,8 @@ func withSkippedLines(report migration.Report, object string, skipped []migratio
 				ExternalID: fmt.Sprintf("line %d", s.Line),
 				Line:       s.Line,
 				Reason:     s.Reason,
+				Code:       s.Why.Code,
+				Params:     s.Why.Params,
 			})
 		}
 	}

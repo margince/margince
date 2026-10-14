@@ -9,8 +9,8 @@ import (
 )
 
 // What a reader of a run's progress may be told about its speed. The window is
-// folded into the progress at every flush, so a read computes the estimate from
-// the row alone and nothing in the worker needs to be asked.
+// folded into the progress at every flush. A read computes the estimate from the
+// row alone, and nothing in the worker is asked.
 const (
 	// windowSamples and windowSpan bound the samples one run keeps: the speed
 	// of the last minute, not of the whole run.
@@ -30,7 +30,7 @@ const (
 )
 
 // What an ETA covers. Until the run is on its last item, only the item it is on
-// has a rate worth quoting, because the next one is a different file.
+// has a rate worth quoting. The next one is a different file.
 const (
 	EstimateScopeObject = "object"
 	EstimateScopeRun    = "run"
@@ -50,7 +50,7 @@ type Estimate struct {
 	Scope         string
 }
 
-// rowsDone is every row the run has walked, links included.
+// rowsDone counts the rows the run has walked, links included.
 func (p Progress) rowsDone() int {
 	done := 0
 	for _, o := range p.Objects {
@@ -61,8 +61,7 @@ func (p Progress) rowsDone() int {
 
 // foldWindow carries the previous window forward with one more sample, taken
 // at `at` on the database clock. A window that ran backwards is another pass
-// over the rows (the test run's second pass, or another attempt) and starts
-// over, so the rate never spans two passes.
+// over the rows, so it starts over and a rate never spans two passes.
 func (p *Progress) foldWindow(prior Progress, at time.Time) {
 	done := p.rowsDone()
 	window := prior.Window
@@ -138,7 +137,7 @@ func remainingOfCurrentItem(p Progress) (int, string) {
 	return 0, ""
 }
 
-// Phases is every phase a run reports, in a new slice. The contract's
+// Phases answers the phases a run reports, in a new slice. The contract's
 // ImportRunPhase enum is this same list, and a test holds the two equal.
 func Phases() []string {
 	return []string{

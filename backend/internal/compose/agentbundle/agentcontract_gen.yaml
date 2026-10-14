@@ -9277,6 +9277,10 @@ components:
       type: string
       enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+    ImportReasonCode:
+      type: string
+      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_tags, cannot_write_type, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_unset, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_not_found, link_not_found_dropped, linkedin_held, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, record_archived, row_key_empty, row_key_repeated, size_band_invalid, tag_created, tag_name_invalid, tag_new, value_refused, value_unreadable]
+      description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.'
     CreateImportRunRequest:
       type: object
       description: |-
@@ -9448,6 +9452,11 @@ components:
         kind: {$ref: '#/components/schemas/ImportProblemKind'}
         value: {type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.'}
         reason: {type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.'
     ImportPartReport:
       type: object
       description: One file's slice of a run's report.
@@ -9585,6 +9594,45 @@ components:
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        phase: {$ref: '#/components/schemas/ImportRunPhase'}
+        phase_object: {type: string, description: 'The object the run is working on in `phase`, when it is working on one.'}
+        progress: {$ref: '#/components/schemas/ImportRunProgress'}
+        started_at: {type: string, format: date-time, description: 'When a worker took up the run''s current job: its test, its commit or its undo. Absent while the job only waits.'}
+        finished_at: {type: string, format: date-time, description: 'When the run reached a final status: complete, undone or cancelled. Absent while it can still move.'}
+        elapsed_seconds: {type: integer, minimum: 0, description: 'Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.'}
+        idle_seconds: {type: integer, minimum: 0, description: 'Seconds since the run last made progress. Absent when the run is not being worked.'}
+        heartbeat_age_seconds: {type: integer, minimum: 0, description: 'Seconds since the worker last said it is alive. Absent when the run is not being worked.'}
+        rate_rows_per_second: {type: number, minimum: 0, description: 'Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.'}
+        eta_seconds_low: {type: integer, minimum: 1, description: 'The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.'}
+        eta_seconds_high: {type: integer, minimum: 1, description: 'The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.'}
+        eta_scope: {type: string, enum: [object, run], description: '`object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.'}
+    ImportRunPhase:
+      type: string
+      enum: [reading, checking, creating_tags, importing, linking, undoing, finishing]
+      description: 'What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.'
+    ImportRunProgress:
+      type: object
+      description: 'What a run has done so far, per object and in total. Absent on a run that never moved.'
+      required: [objects, counts]
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            required: [object, rows_done, rows_total]
+            properties:
+              object: {type: string, description: 'An import object, or `links` for the link phase after every object.'}
+              rows_done: {type: integer, minimum: 0}
+              rows_total: {type: integer, minimum: 0}
+        counts:
+          type: object
+          required: [created, updated, unchanged, skipped, problems]
+          properties:
+            created: {type: integer, minimum: 0}
+            updated: {type: integer, minimum: 0}
+            unchanged: {type: integer, minimum: 0}
+            skipped: {type: integer, minimum: 0}
+            problems: {type: integer, minimum: 0, description: 'Rows that carry a problem, skipped or landed.'}
     ImportRunPart:
       type: object
       required: [file, object, row_count]

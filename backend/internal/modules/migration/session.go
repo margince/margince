@@ -43,6 +43,7 @@ type Session struct {
 	Actor                *StoredActor
 	AttemptCorrelationID *ids.UUID
 	Phase                string
+	PhaseObject          string
 	Progress             *Progress
 	// StartedAt, FinishedAt, ProgressAt and HeartbeatAt are the lease's own
 	// instants; nil until the worker has set them. ReadAt is the database

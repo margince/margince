@@ -127,8 +127,9 @@ func encodeActorOf(ctx context.Context) ([]byte, error) {
 }
 
 // openAttempt is the SET of every move that queues work. The attempt is new, so
-// the sweep counts its resumes from zero.
-const openAttempt = `job_attempt = job_attempt + 1, resume_count = 0`
+// the sweep counts its resumes from zero. The run's clock starts over too:
+// started_at is the first claim of the job queued now.
+const openAttempt = `job_attempt = job_attempt + 1, resume_count = 0, started_at = NULL, finished_at = NULL`
 
 // fence is the predicate of every write a lease makes.
 const fence = ` WHERE id = $1 AND status = $2 AND job_attempt = $3`

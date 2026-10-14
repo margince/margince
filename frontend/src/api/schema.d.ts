@@ -23425,6 +23425,11 @@ export interface components {
          */
         ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
         /**
+         * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+         * @enum {string}
+         */
+        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_read_tags" | "cannot_write_type" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_unnamed" | "currency_unset" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_not_found" | "link_not_found_dropped" | "linkedin_held" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "record_archived" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "tag_created" | "tag_name_invalid" | "tag_new" | "value_refused" | "value_unreadable";
+        /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
          *     `source_key`. Both or neither is refused.
@@ -23656,6 +23661,11 @@ export interface components {
             value?: string;
             /** @description What is wrong, in terms of the file the human uploaded — never a database or driver message. */
             reason: string;
+            reason_code?: components["schemas"]["ImportReasonCode"];
+            /** @description The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed. */
+            params?: {
+                [key: string]: string;
+            };
         };
         /** @description One file's slice of a run's report. */
         ImportPartReport: {
@@ -23833,6 +23843,59 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            phase?: components["schemas"]["ImportRunPhase"];
+            /** @description The object the run is working on in `phase`, when it is working on one. */
+            phase_object?: string;
+            progress?: components["schemas"]["ImportRunProgress"];
+            /**
+             * Format: date-time
+             * @description When a worker took up the run's current job: its test, its commit or its undo. Absent while the job only waits.
+             */
+            started_at?: string;
+            /**
+             * Format: date-time
+             * @description When the run reached a final status: complete, undone or cancelled. Absent while it can still move.
+             */
+            finished_at?: string;
+            /** @description Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock. */
+            elapsed_seconds?: number;
+            /** @description Seconds since the run last made progress. Absent when the run is not being worked. */
+            idle_seconds?: number;
+            /** @description Seconds since the worker last said it is alive. Absent when the run is not being worked. */
+            heartbeat_age_seconds?: number;
+            /** @description Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle. */
+            rate_rows_per_second?: number;
+            /** @description The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is. */
+            eta_seconds_low?: number;
+            /** @description The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next. */
+            eta_seconds_high?: number;
+            /**
+             * @description `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
+             * @enum {string}
+             */
+            eta_scope?: "object" | "run";
+        };
+        /**
+         * @description What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
+         * @enum {string}
+         */
+        ImportRunPhase: "reading" | "checking" | "creating_tags" | "importing" | "linking" | "undoing" | "finishing";
+        /** @description What a run has done so far, per object and in total. Absent on a run that never moved. */
+        ImportRunProgress: {
+            objects: {
+                /** @description An import object, or `links` for the link phase after every object. */
+                object: string;
+                rows_done: number;
+                rows_total: number;
+            }[];
+            counts: {
+                created: number;
+                updated: number;
+                unchanged: number;
+                skipped: number;
+                /** @description Rows that carry a problem, skipped or landed. */
+                problems: number;
+            };
         };
         ImportRunPart: {
             /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
@@ -74001,7 +74064,10 @@ export interface operations {
     };
     downloadImportProblems: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The language of the header and of each reason. An issue stored without a code is written in English. */
+                lang?: "en" | "de" | "vi";
+            };
             header?: never;
             path: {
                 id: string;

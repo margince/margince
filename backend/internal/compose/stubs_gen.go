@@ -1883,7 +1883,7 @@ func (stubs) CancelImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id op
 	httperr.NotImplemented(w, r, "CancelImportRun")
 }
 
-func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.DownloadImportProblemsParams) {
 	httperr.NotImplemented(w, r, "DownloadImportProblems")
 }
 

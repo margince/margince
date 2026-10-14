@@ -251,7 +251,7 @@ const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at
 			mapping, report, undo_report, error, captured_by,
 			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
 			source_released_at IS NOT NULL, job_attempt, actor, attempt_correlation_id,
-			coalesce(phase, ''), progress,
+			coalesce(phase, ''), coalesce(phase_object, ''), progress,
 			started_at, finished_at, progress_at, heartbeat_at, now()`
 
 func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
@@ -268,7 +268,7 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
 		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
 		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
-		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &progress,
+		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &run.PhaseObject, &progress,
 		&run.StartedAt, &run.FinishedAt, &run.ProgressAt, &run.HeartbeatAt, &run.ReadAt,
 	}
 	if withProfile {

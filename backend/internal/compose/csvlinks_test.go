@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -99,8 +100,8 @@ func TestOnlyAnIDIsLookedUpByIDAndAMissNamesTheValue(t *testing.T) {
 		if err != nil || got.Found || got.Pending {
 			t.Fatalf("resolve(%q) = %+v err %v, want not found", raw, got, err)
 		}
-		if got.Reason != linkNotFoundReason(raw) {
-			t.Fatalf("reason = %q, want the one not-found sentence naming %q", got.Reason, raw)
+		if !reflect.DeepEqual(got.Why, linkNotFoundWhy(raw)) {
+			t.Fatalf("reason = %q, want the one not-found sentence naming %q", got.Why.English(), raw)
 		}
 	}
 	if len(byID) != 1 || byID[0] != id {
@@ -183,11 +184,11 @@ func TestACompanyNameOfThisUploadCountsAsOneMoreHolder(t *testing.T) {
 		want linkAnswer
 	}{
 		{"new co", employerCandidate{}, linkAnswer{Pending: true}},
-		{"twin ag", estate, linkAnswer{Reason: ambiguousEmployerReason("twin ag")}},
+		{"twin ag", estate, linkAnswer{Why: ambiguousEmployerWhy("twin ag")}},
 		{"kept ltd", estate, linkAnswer{Pending: true}},
 		{"elsewhere", estate, linkAnswer{ID: estate.id.UUID, Found: true}},
 	} {
-		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); got != tc.want {
+		if got := employerAnswer(r.names[tc.name].over(tc.hit), tc.name); !reflect.DeepEqual(got, tc.want) {
 			t.Fatalf("%s: got %+v, want %+v", tc.name, got, tc.want)
 		}
 	}

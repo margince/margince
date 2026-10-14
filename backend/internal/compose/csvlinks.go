@@ -38,7 +38,7 @@ type linkAnswer struct {
 	ID      ids.UUID
 	Pending bool
 	Found   bool
-	Reason  string
+	Why     migration.Reason
 }
 
 // resolves reports whether the link can be written when the run lands.
@@ -86,10 +86,10 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 	return r
 }
 
-// linkNotFoundReason is the one sentence for a ref no step answers to, whether
+// linkNotFoundWhy is the one sentence for a ref no step answers to, whether
 // nothing carries it or only records the caller cannot see do.
-func linkNotFoundReason(ref string) string {
-	return fmt.Sprintf("no company with %q in this upload, in an earlier import, or in Margince", strings.TrimSpace(ref))
+func linkNotFoundWhy(ref string) migration.Reason {
+	return migration.Why(migration.ReasonLinkNotFound, "ref", strings.TrimSpace(ref))
 }
 
 // markPending records a row the dry run predicts will land, so a later file's
@@ -185,7 +185,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 		return answer, err
 	}
 	// An ambiguous name stops here with its own reason: an id cannot carry it.
-	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Reason != "" {
+	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Why.Code != "" {
 		return answer, err
 	}
 	if _, parseErr := ids.Parse(key.Key); parseErr == nil {
@@ -193,7 +193,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 			return answer, err
 		}
 	}
-	return linkAnswer{Reason: linkNotFoundReason(key.Key)}, nil
+	return linkAnswer{Why: linkNotFoundWhy(key.Key)}, nil
 }
 
 // bindingOf finds a row this source landed before, through the identity map,
@@ -253,7 +253,7 @@ func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	case hit.count == 1:
 		return linkAnswer{ID: hit.id.UUID, Found: true}
 	case hit.count > 1:
-		return linkAnswer{Reason: ambiguousEmployerReason(name)}
+		return linkAnswer{Why: ambiguousEmployerWhy(name)}
 	default:
 		return linkAnswer{}
 	}

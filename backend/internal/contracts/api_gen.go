@@ -10435,6 +10435,180 @@ func (e ImportProblemKind) Valid() bool {
 	}
 }
 
+// Defines values for ImportReasonCode.
+const (
+	ImportReasonCodeAuthorTooLong              ImportReasonCode = "author_too_long"
+	ImportReasonCodeCannotCreate               ImportReasonCode = "cannot_create"
+	ImportReasonCodeCannotCreateTags           ImportReasonCode = "cannot_create_tags"
+	ImportReasonCodeCannotEdit                 ImportReasonCode = "cannot_edit"
+	ImportReasonCodeCannotEditAndTag           ImportReasonCode = "cannot_edit_and_tag"
+	ImportReasonCodeCannotReadTags             ImportReasonCode = "cannot_read_tags"
+	ImportReasonCodeCannotWriteType            ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCompanyDuplicateFound      ImportReasonCode = "company_duplicate_found"
+	ImportReasonCodeCompanyDuplicateSkipped    ImportReasonCode = "company_duplicate_skipped"
+	ImportReasonCodeCompanyNameEmpty           ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactDuplicateFound      ImportReasonCode = "contact_duplicate_found"
+	ImportReasonCodeContactDuplicateSkipped    ImportReasonCode = "contact_duplicate_skipped"
+	ImportReasonCodeContactEmailHeld           ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactUnnamed             ImportReasonCode = "contact_unnamed"
+	ImportReasonCodeCurrencyUnset              ImportReasonCode = "currency_unset"
+	ImportReasonCodeDescriptionTooLong         ImportReasonCode = "description_too_long"
+	ImportReasonCodeDomainHeld                 ImportReasonCode = "domain_held"
+	ImportReasonCodeDuplicateEmail             ImportReasonCode = "duplicate_email"
+	ImportReasonCodeEmployerColumnEmpty        ImportReasonCode = "employer_column_empty"
+	ImportReasonCodeEmployerColumnEmptyDropped ImportReasonCode = "employer_column_empty_dropped"
+	ImportReasonCodeEmployerNotFound           ImportReasonCode = "employer_not_found"
+	ImportReasonCodeEmployerNotFoundDropped    ImportReasonCode = "employer_not_found_dropped"
+	ImportReasonCodeEmptyPayload               ImportReasonCode = "empty_payload"
+	ImportReasonCodeFieldInactive              ImportReasonCode = "field_inactive"
+	ImportReasonCodeIdNotACompanyId            ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotVisible               ImportReasonCode = "id_not_visible"
+	ImportReasonCodeIdOnNonCompany             ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeLinkAmbiguous              ImportReasonCode = "link_ambiguous"
+	ImportReasonCodeLinkAmbiguousDropped       ImportReasonCode = "link_ambiguous_dropped"
+	ImportReasonCodeLinkNotFound               ImportReasonCode = "link_not_found"
+	ImportReasonCodeLinkNotFoundDropped        ImportReasonCode = "link_not_found_dropped"
+	ImportReasonCodeLinkedinHeld               ImportReasonCode = "linkedin_held"
+	ImportReasonCodeNaturalKeyTaken            ImportReasonCode = "natural_key_taken"
+	ImportReasonCodeNotADate                   ImportReasonCode = "not_a_date"
+	ImportReasonCodeNotADomain                 ImportReasonCode = "not_a_domain"
+	ImportReasonCodeNotANumber                 ImportReasonCode = "not_a_number"
+	ImportReasonCodeNotAnAmount                ImportReasonCode = "not_an_amount"
+	ImportReasonCodeNotAnEmail                 ImportReasonCode = "not_an_email"
+	ImportReasonCodeNotYesNo                   ImportReasonCode = "not_yes_no"
+	ImportReasonCodeOptionNotAllowed           ImportReasonCode = "option_not_allowed"
+	ImportReasonCodeOptionNotInList            ImportReasonCode = "option_not_in_list"
+	ImportReasonCodeOptionsNeedSemicolons      ImportReasonCode = "options_need_semicolons"
+	ImportReasonCodeOwnerRefused               ImportReasonCode = "owner_refused"
+	ImportReasonCodeOwnerUnknown               ImportReasonCode = "owner_unknown"
+	ImportReasonCodePhoneNeedsCountry          ImportReasonCode = "phone_needs_country"
+	ImportReasonCodeRecordArchived             ImportReasonCode = "record_archived"
+	ImportReasonCodeRowKeyEmpty                ImportReasonCode = "row_key_empty"
+	ImportReasonCodeRowKeyRepeated             ImportReasonCode = "row_key_repeated"
+	ImportReasonCodeSizeBandInvalid            ImportReasonCode = "size_band_invalid"
+	ImportReasonCodeTagCreated                 ImportReasonCode = "tag_created"
+	ImportReasonCodeTagNameInvalid             ImportReasonCode = "tag_name_invalid"
+	ImportReasonCodeTagNew                     ImportReasonCode = "tag_new"
+	ImportReasonCodeValueRefused               ImportReasonCode = "value_refused"
+	ImportReasonCodeValueUnreadable            ImportReasonCode = "value_unreadable"
+)
+
+// Valid indicates whether the value is a known member of the ImportReasonCode enum.
+func (e ImportReasonCode) Valid() bool {
+	switch e {
+	case ImportReasonCodeAuthorTooLong:
+		return true
+	case ImportReasonCodeCannotCreate:
+		return true
+	case ImportReasonCodeCannotCreateTags:
+		return true
+	case ImportReasonCodeCannotEdit:
+		return true
+	case ImportReasonCodeCannotEditAndTag:
+		return true
+	case ImportReasonCodeCannotReadTags:
+		return true
+	case ImportReasonCodeCannotWriteType:
+		return true
+	case ImportReasonCodeCompanyDuplicateFound:
+		return true
+	case ImportReasonCodeCompanyDuplicateSkipped:
+		return true
+	case ImportReasonCodeCompanyNameEmpty:
+		return true
+	case ImportReasonCodeContactDuplicateFound:
+		return true
+	case ImportReasonCodeContactDuplicateSkipped:
+		return true
+	case ImportReasonCodeContactEmailHeld:
+		return true
+	case ImportReasonCodeContactUnnamed:
+		return true
+	case ImportReasonCodeCurrencyUnset:
+		return true
+	case ImportReasonCodeDescriptionTooLong:
+		return true
+	case ImportReasonCodeDomainHeld:
+		return true
+	case ImportReasonCodeDuplicateEmail:
+		return true
+	case ImportReasonCodeEmployerColumnEmpty:
+		return true
+	case ImportReasonCodeEmployerColumnEmptyDropped:
+		return true
+	case ImportReasonCodeEmployerNotFound:
+		return true
+	case ImportReasonCodeEmployerNotFoundDropped:
+		return true
+	case ImportReasonCodeEmptyPayload:
+		return true
+	case ImportReasonCodeFieldInactive:
+		return true
+	case ImportReasonCodeIdNotACompanyId:
+		return true
+	case ImportReasonCodeIdNotVisible:
+		return true
+	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeLinkAmbiguous:
+		return true
+	case ImportReasonCodeLinkAmbiguousDropped:
+		return true
+	case ImportReasonCodeLinkNotFound:
+		return true
+	case ImportReasonCodeLinkNotFoundDropped:
+		return true
+	case ImportReasonCodeLinkedinHeld:
+		return true
+	case ImportReasonCodeNaturalKeyTaken:
+		return true
+	case ImportReasonCodeNotADate:
+		return true
+	case ImportReasonCodeNotADomain:
+		return true
+	case ImportReasonCodeNotANumber:
+		return true
+	case ImportReasonCodeNotAnAmount:
+		return true
+	case ImportReasonCodeNotAnEmail:
+		return true
+	case ImportReasonCodeNotYesNo:
+		return true
+	case ImportReasonCodeOptionNotAllowed:
+		return true
+	case ImportReasonCodeOptionNotInList:
+		return true
+	case ImportReasonCodeOptionsNeedSemicolons:
+		return true
+	case ImportReasonCodeOwnerRefused:
+		return true
+	case ImportReasonCodeOwnerUnknown:
+		return true
+	case ImportReasonCodePhoneNeedsCountry:
+		return true
+	case ImportReasonCodeRecordArchived:
+		return true
+	case ImportReasonCodeRowKeyEmpty:
+		return true
+	case ImportReasonCodeRowKeyRepeated:
+		return true
+	case ImportReasonCodeSizeBandInvalid:
+		return true
+	case ImportReasonCodeTagCreated:
+		return true
+	case ImportReasonCodeTagNameInvalid:
+		return true
+	case ImportReasonCodeTagNew:
+		return true
+	case ImportReasonCodeValueRefused:
+		return true
+	case ImportReasonCodeValueUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportRunConnector.
 const (
 	ImportRunConnectorCsv        ImportRunConnector = "csv"
@@ -10447,6 +10621,57 @@ func (e ImportRunConnector) Valid() bool {
 	case ImportRunConnectorCsv:
 		return true
 	case ImportRunConnectorSalesforce:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportRunEtaScope.
+const (
+	ImportRunEtaScopeObject ImportRunEtaScope = "object"
+	ImportRunEtaScopeRun    ImportRunEtaScope = "run"
+)
+
+// Valid indicates whether the value is a known member of the ImportRunEtaScope enum.
+func (e ImportRunEtaScope) Valid() bool {
+	switch e {
+	case ImportRunEtaScopeObject:
+		return true
+	case ImportRunEtaScopeRun:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportRunPhase.
+const (
+	ImportRunPhaseChecking     ImportRunPhase = "checking"
+	ImportRunPhaseCreatingTags ImportRunPhase = "creating_tags"
+	ImportRunPhaseFinishing    ImportRunPhase = "finishing"
+	ImportRunPhaseImporting    ImportRunPhase = "importing"
+	ImportRunPhaseLinking      ImportRunPhase = "linking"
+	ImportRunPhaseReading      ImportRunPhase = "reading"
+	ImportRunPhaseUndoing      ImportRunPhase = "undoing"
+)
+
+// Valid indicates whether the value is a known member of the ImportRunPhase enum.
+func (e ImportRunPhase) Valid() bool {
+	switch e {
+	case ImportRunPhaseChecking:
+		return true
+	case ImportRunPhaseCreatingTags:
+		return true
+	case ImportRunPhaseFinishing:
+		return true
+	case ImportRunPhaseImporting:
+		return true
+	case ImportRunPhaseLinking:
+		return true
+	case ImportRunPhaseReading:
+		return true
+	case ImportRunPhaseUndoing:
 		return true
 	default:
 		return false
@@ -21295,6 +21520,27 @@ func (e GetImportFormatParamsLang) Valid() bool {
 	case GetImportFormatParamsLangEn:
 		return true
 	case GetImportFormatParamsLangVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DownloadImportProblemsParamsLang.
+const (
+	DownloadImportProblemsParamsLangDe DownloadImportProblemsParamsLang = "de"
+	DownloadImportProblemsParamsLangEn DownloadImportProblemsParamsLang = "en"
+	DownloadImportProblemsParamsLangVi DownloadImportProblemsParamsLang = "vi"
+)
+
+// Valid indicates whether the value is a known member of the DownloadImportProblemsParamsLang enum.
+func (e DownloadImportProblemsParamsLang) Valid() bool {
+	switch e {
+	case DownloadImportProblemsParamsLangDe:
+		return true
+	case DownloadImportProblemsParamsLangEn:
+		return true
+	case DownloadImportProblemsParamsLangVi:
 		return true
 	default:
 		return false
@@ -36612,6 +36858,9 @@ type ImportPartRequest struct {
 // ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
 type ImportProblemKind string
 
+// ImportReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+type ImportReasonCode string
+
 // ImportRowIssue One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
 type ImportRowIssue struct {
 	// Column The offending column, when one is to blame.
@@ -36626,8 +36875,14 @@ type ImportRowIssue struct {
 	// Line The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.
 	Line *int `json:"line,omitempty"`
 
+	// Params The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.
+	Params *map[string]string `json:"params,omitempty"`
+
 	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
 	Reason string `json:"reason"`
+
+	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+	ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 
 	// Value The cell value at fault, when one is, so a screen can group the rows that share it.
 	Value *string `json:"value,omitempty"`
@@ -36652,12 +36907,33 @@ type ImportRun struct {
 	// DraftStep The wizard step a draft reopens on.
 	DraftStep *ImportDraftStep `json:"draft_step,omitempty"`
 
+	// ElapsedSeconds Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.
+	ElapsedSeconds *int `json:"elapsed_seconds,omitempty"`
+
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
+	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
+	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
+
+	// EtaSecondsHigh The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.
+	EtaSecondsHigh *int `json:"eta_seconds_high,omitempty"`
+
+	// EtaSecondsLow The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.
+	EtaSecondsLow *int `json:"eta_seconds_low,omitempty"`
+
 	// FileName The uploaded file's name, as the run was created with it. Display only.
-	FileName *string            `json:"file_name,omitempty"`
-	Id       openapi_types.UUID `json:"id"`
+	FileName *string `json:"file_name,omitempty"`
+
+	// FinishedAt When the run reached a final status: complete, undone or cancelled. Absent while it can still move.
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+
+	// HeartbeatAgeSeconds Seconds since the worker last said it is alive. Absent when the run is not being worked.
+	HeartbeatAgeSeconds *int               `json:"heartbeat_age_seconds,omitempty"`
+	Id                  openapi_types.UUID `json:"id"`
+
+	// IdleSeconds Seconds since the run last made progress. Absent when the run is not being worked.
+	IdleSeconds *int `json:"idle_seconds,omitempty"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -36699,15 +36975,30 @@ type ImportRun struct {
 	// Parts The files the run imports, in import order. A single CSV is one part.
 	Parts *[]ImportRunPart `json:"parts,omitempty"`
 
+	// Phase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
+	Phase *ImportRunPhase `json:"phase,omitempty"`
+
+	// PhaseObject The object the run is working on in `phase`, when it is working on one.
+	PhaseObject *string `json:"phase_object,omitempty"`
+
 	// Profile What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.
 	Profile *ImportSourceProfile `json:"profile,omitempty"`
-	Source  string               `json:"source"`
+
+	// Progress What a run has done so far, per object and in total. Absent on a run that never moved.
+	Progress *ImportRunProgress `json:"progress,omitempty"`
+
+	// RateRowsPerSecond Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.
+	RateRowsPerSecond *float32 `json:"rate_rows_per_second,omitempty"`
+	Source            string   `json:"source"`
 
 	// SourceName The name the run's source is filed under.
 	SourceName *string `json:"source_name,omitempty"`
 
 	// SourceReleased The uploaded file is no longer kept: the run completed, was cancelled or was superseded.
 	SourceReleased bool `json:"source_released"`
+
+	// StartedAt When a worker took up the run's current job: its test, its commit or its undo. Absent while the job only waits.
+	StartedAt *time.Time `json:"started_at,omitempty"`
 
 	// Status IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
 	// still being made, and carrying the reason in `error` when its last test
@@ -36731,6 +37022,9 @@ type ImportRun struct {
 
 // ImportRunConnector defines model for ImportRun.Connector.
 type ImportRunConnector string
+
+// ImportRunEtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
+type ImportRunEtaScope string
 
 // ImportRunDisposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 type ImportRunDisposition struct {
@@ -36818,6 +37112,28 @@ type ImportRunPart struct {
 
 	// RowCount Rows the file holds, once a dry run has read it; 0 before.
 	RowCount int `json:"row_count"`
+}
+
+// ImportRunPhase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
+type ImportRunPhase string
+
+// ImportRunProgress What a run has done so far, per object and in total. Absent on a run that never moved.
+type ImportRunProgress struct {
+	Counts struct {
+		Created int `json:"created"`
+
+		// Problems Rows that carry a problem, skipped or landed.
+		Problems  int `json:"problems"`
+		Skipped   int `json:"skipped"`
+		Unchanged int `json:"unchanged"`
+		Updated   int `json:"updated"`
+	} `json:"counts"`
+	Objects []struct {
+		// Object An import object, or `links` for the link phase after every object.
+		Object    string `json:"object"`
+		RowsDone  int    `json:"rows_done"`
+		RowsTotal int    `json:"rows_total"`
+	} `json:"objects"`
 }
 
 // ImportRunReport The same shape before and after approval: a dry run reports what the
@@ -53994,6 +54310,15 @@ type UploadImportSourceMultipartBody struct {
 	Object *ImportObject `json:"object,omitempty"`
 }
 
+// DownloadImportProblemsParams defines parameters for DownloadImportProblems.
+type DownloadImportProblemsParams struct {
+	// Lang The language of the header and of each reason. An issue stored without a code is written in English.
+	Lang *DownloadImportProblemsParamsLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// DownloadImportProblemsParamsLang defines parameters for DownloadImportProblems.
+type DownloadImportProblemsParamsLang string
+
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
 type CreateCorpusJSONBody struct {
 	DefaultAsk     *bool    `json:"default_ask,omitempty"`
@@ -69759,7 +70084,7 @@ type ServerInterface interface {
 	CancelImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Download the run's row problems as a CSV.
 	// (GET /imports/{id}/problems.csv)
-	DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DownloadImportProblemsParams)
 	// Read the run's report — what will happen, or what did.
 	// (GET /imports/{id}/report)
 	GetImportRunReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -73638,7 +73963,7 @@ func (_ Unimplemented) CancelImportRun(w http.ResponseWriter, r *http.Request, i
 
 // Download the run's row problems as a CSV.
 // (GET /imports/{id}/problems.csv)
-func (_ Unimplemented) DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (_ Unimplemented) DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DownloadImportProblemsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95789,8 +96114,24 @@ func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DownloadImportProblemsParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadImportProblems(w, r, id)
+		siw.Handler.DownloadImportProblems(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

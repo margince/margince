@@ -102,6 +102,39 @@ While old and new API pods answer together, a request can reach either one.
 
 Do not leave pods of two releases running longer than the rollout.
 
+## What the run says while it works
+
+`GET /v1/imports/{id}` and the run list carry the figures a screen shows for a run in flight. Each is
+absent when it cannot be told yet, so a reader treats every one as optional.
+
+| Field | Reads as |
+|---|---|
+| `phase`, `phase_object` | What the worker is doing, and on which object |
+| `progress` | Rows done of rows total for each object, then the links, and the counts of created, updated, unchanged, skipped and problem rows |
+| `started_at`, `finished_at` | When a worker took up the current job (test, commit or undo), and when the run reached `complete`, `undone` or `cancelled`. A run that ended without the column set reads its last change. |
+| `elapsed_seconds` | `started_at` to now, or to `finished_at` once the run ended |
+| `idle_seconds`, `heartbeat_age_seconds` | Time since the last progress write and the last heartbeat. Present only while a worker holds the run. |
+| `rate_rows_per_second` | Rows walked per second over the last minute |
+| `eta_seconds_low`, `eta_seconds_high`, `eta_scope` | A range for the item the run is on. `eta_scope` is `object` until the run is on its last item, and `run` after. |
+
+Every age is counted on the database clock, taken in the same read as the row, so a wrong clock in a
+browser or in the API host cannot make a run look stalled. The worker keeps the last 16 samples of the
+last 60 seconds in `progress`, and the range comes from the slowest and fastest speed in them, widened
+by a margin. It is a range, not a promise: no rate is given before 10 seconds and 200 rows have been
+seen, and none while the run has written no progress for 30 seconds.
+
+A screen needs no faster read than every 5 seconds. The worker writes progress at most every 2
+seconds, so a faster read repeats the last answer.
+
+## Reading a problem in another language
+
+Each issue of a run's report carries `reason`, the English sentence, and `reason_code` with `params`.
+A report written before the codes existed has the sentence alone. `GET /v1/imports/{id}/problems.csv`
+takes `lang` (`en`, `de` or `vi`; English when left out) and writes its header and every coded reason
+in that language. An issue with no code keeps its English sentence. The sentences come from one catalog
+in the migration module, `reasoncatalog.go`, and the contract's `ImportReasonCode` list holds the same
+codes.
+
 ## Reading a stuck run
 
 Read the run first: `GET /v1/imports/{id}` gives `status`, `checkpoint` and `error`. If it is

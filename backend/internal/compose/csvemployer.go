@@ -64,9 +64,9 @@ const csvEmployerName = migration.AssocTargetCompanyName
 // employerResolution is a name looked up, and why it produced no company when
 // it did not.
 type employerResolution struct {
-	id     ids.CompanyID
-	found  bool
-	reason string
+	id    ids.CompanyID
+	found bool
+	why   migration.Reason
 }
 
 // resolveEmployer answers which company a company name means, or why it
@@ -81,7 +81,7 @@ type employerResolution struct {
 func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employerResolution, error) {
 	normalized := employerKey(name)
 	if normalized == "" {
-		return employerResolution{reason: "the company column is empty, so the row names no employer"}, nil
+		return employerResolution{why: employerColumnEmptyWhy}, nil
 	}
 	hit, err := w.links.employerFor(ctx, normalized)
 	if err != nil {
@@ -89,20 +89,18 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	}
 	switch {
 	case hit.count == 0:
-		return employerResolution{reason: fmt.Sprintf(
-			"no company named %q is in the CRM, so there was nothing to link this contact to", strings.TrimSpace(name))}, nil
+		return employerResolution{why: migration.Why(migration.ReasonEmployerNotFound, "name", strings.TrimSpace(name))}, nil
 	case hit.count > 1:
-		return employerResolution{reason: ambiguousEmployerReason(name)}, nil
+		return employerResolution{why: ambiguousEmployerWhy(name)}, nil
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
 	}
 }
 
-// ambiguousEmployerReason is the answer for a name more than one visible
+// ambiguousEmployerWhy is the answer for a name more than one visible
 // company wears.
-func ambiguousEmployerReason(name string) string {
-	return fmt.Sprintf("more than one company is named %q, so which one employs this contact is a question only a human can answer",
-		strings.TrimSpace(name))
+func ambiguousEmployerWhy(name string) migration.Reason {
+	return migration.Why(migration.ReasonLinkAmbiguous, "name", strings.TrimSpace(name))
 }
 
 // employerKey folds a company name for comparison: case and whitespace, and
@@ -225,7 +223,7 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 		return migration.AssocResult{}, err
 	}
 	if !resolved.found {
-		return migration.AssocResult{Reason: resolved.reason}, nil
+		return migration.AssocResult{Reason: resolved.why.English()}, nil
 	}
 	return w.writeEmployment(ctx, contactID, resolved.id, w.provenanceOf(a.FromID+"→"+a.ToID))
 }
@@ -242,7 +240,7 @@ func (w *csvWriters) linkCompanyRef(ctx context.Context, a migration.Assoc) (mig
 		return migration.AssocResult{}, err
 	}
 	if !answer.Found {
-		return migration.AssocResult{Reason: answer.Reason}, nil
+		return migration.AssocResult{Reason: answer.Why.English()}, nil
 	}
 	return w.writeEmployment(ctx, contactID, ids.From[ids.CompanyKind](answer.ID), w.provenanceOf(a.FromID+"→"+a.ToID))
 }
@@ -317,30 +315,30 @@ func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowL
 		if err != nil || answer.resolves() {
 			return rowLink{}, err
 		}
-		return w.brokenLink(row, w.companyRefColumn, ref, answer.Reason), nil
+		return w.brokenLink(row, w.companyRefColumn, ref, answer.Why), nil
 	}
 	if name := strings.TrimSpace(fields[csvEmployerName]); w.companyNameColumn != "" && name != "" {
 		resolved, err := w.resolveEmployer(ctx, name)
 		if err != nil || resolved.found {
 			return rowLink{}, err
 		}
-		return w.brokenLink(row, w.companyNameColumn, name, resolved.reason), nil
+		return w.brokenLink(row, w.companyNameColumn, name, resolved.why), nil
 	}
 	return rowLink{}, nil
 }
 
 // brokenLink is the run's policy applied to a link cell that found nothing.
-func (w *csvWriters) brokenLink(row migration.Row, column, value, reason string) rowLink {
-	problem := &migration.SkippedRow{
+func (w *csvWriters) brokenLink(row migration.Row, column, value string, why migration.Reason) rowLink {
+	problem := migration.SkippedRow{
 		ExternalID: row.ExternalID, Line: row.Line, Column: column,
-		Kind: migration.ProblemBrokenLink, Value: value, Reason: reason,
-	}
+		Kind: migration.ProblemBrokenLink, Value: value,
+	}.Because(why)
 	if w.onBrokenLink != string(crmcontracts.ImportOnBrokenLinkDropLink) {
-		return rowLink{skip: true, problem: problem}
+		return rowLink{skip: true, problem: &problem}
 	}
 	problem.Kind = migration.ProblemDroppedLink
-	problem.Reason = reason + "; the row was imported without the link"
-	return rowLink{problem: problem}
+	problem = problem.Because(why.WithoutTheLink())
+	return rowLink{problem: &problem}
 }
 
 // relationshipKindEmployment is the edge a company column means.

@@ -210,7 +210,7 @@ func (w *csvWriters) namedTarget(ctx context.Context, row migration.Row) (target
 		return targetID{}, false
 	}
 	target := w.targetIDOf(ctx, row)
-	return target, target.reason == ""
+	return target, target.why.Code == ""
 }
 
 // part is the writer of one type. A run with no file of that type answers a

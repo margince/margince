@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // ReasonCode names why a row was skipped or warned about, so a screen can
@@ -41,18 +43,18 @@ func WhyCount(code ReasonCode, name string, n int) Reason {
 }
 
 // English is the sentence a reader without the code's translation gets.
-func (r Reason) English() string { return r.In(LangEnglish) }
+func (r Reason) English() string { return r.In(textlang.English) }
 
-// In renders the reason in lang, falling back to English for a language the
-// catalog does not carry, and to the bare code for a code it does not know.
-func (r Reason) In(lang string) string {
+// In renders the reason in lang. A language the catalog lacks falls back to
+// English, and a code it does not know to the bare code.
+func (r Reason) In(lang textlang.Lang) string {
 	entry, ok := reasonCatalog[r.Code]
 	if !ok {
 		return string(r.Code)
 	}
 	template, ok := entry.text[lang]
 	if !ok {
-		template = entry.text[LangEnglish]
+		template = entry.text[textlang.English]
 	}
 	return renderTemplate(template, r.Params)
 }
@@ -66,19 +68,7 @@ func (r Reason) WithoutTheLink() Reason {
 	return r
 }
 
-// Languages a reason is rendered in. The catalog holds each code in all three.
-const (
-	LangEnglish    = "en"
-	LangGerman     = "de"
-	LangVietnamese = "vi"
-)
-
-// ReasonLanguages is every language the catalog renders, in a new slice.
-func ReasonLanguages() []string {
-	return []string{LangEnglish, LangGerman, LangVietnamese}
-}
-
-// ReasonCodes is every code a report may carry, sorted, in a new slice. The
+// ReasonCodes answers the codes a report may carry, sorted, in a new slice. The
 // contract's ImportReasonCode enum is this same list, and a test holds the two
 // equal.
 func ReasonCodes() []ReasonCode {
@@ -99,12 +89,12 @@ func ReasonParamNames(code ReasonCode) []string {
 
 // ReasonTemplate is the catalog's sentence for a code, with its {name} and
 // {name:q} placeholders in place. It answers "" for an unknown code.
-func ReasonTemplate(code ReasonCode, lang string) string {
+func ReasonTemplate(code ReasonCode, lang textlang.Lang) string {
 	return reasonCatalog[code].text[lang]
 }
 
-// renderTemplate fills {name} with the value as it is and {name:q} with the
-// value in Go quotes, which is how the English sentences always quoted a cell.
+// renderTemplate fills {name} with the value as it is. It fills {name:q} with
+// the value in Go quotes, which is how English sentences always quoted a cell.
 func renderTemplate(template string, params Params) string {
 	args := make([]string, 0, 4*len(params))
 	for name, value := range params {

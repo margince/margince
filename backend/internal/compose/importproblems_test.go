@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestProblemsCSVDefusesAFormulaInAValue(t *testing.T) {
@@ -17,7 +18,7 @@ func TestProblemsCSVDefusesAFormulaInAValue(t *testing.T) {
 		{Reason: "a new tag", File: new("companies.csv"), Value: new("vip")},
 	}}
 	var buf bytes.Buffer
-	if err := writeImportProblems(&buf, rep); err != nil {
+	if err := writeImportProblems(&buf, rep, textlang.English); err != nil {
 		t.Fatal(err)
 	}
 	want := "file,row,column,problem,value\n" +

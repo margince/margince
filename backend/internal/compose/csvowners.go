@@ -22,9 +22,6 @@ import (
 
 const csvTargetOwner = "owner_email"
 
-// unknownOwnerReason is the report's word for an address no seat holds.
-const unknownOwnerReason = "no user has this email, so you become the owner"
-
 // seatsByEmail answers the seat each address belongs to, keyed by the folded
 // address, in one query. An address no seat holds is absent.
 func seatsByEmail(ctx context.Context, tx pgx.Tx, emails []string) (map[string]ids.UUID, error) {
@@ -96,7 +93,8 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 	}
 	seat, known := o.seats[foldedEmail(raw)]
 	if !known {
-		return nil, &migration.SkippedRow{Kind: migration.ProblemUnknownOwner, Value: strings.TrimSpace(raw), Reason: unknownOwnerReason}
+		warning := migration.SkippedRow{Kind: migration.ProblemUnknownOwner, Value: strings.TrimSpace(raw)}.Because(unknownOwnerWhy)
+		return nil, &warning
 	}
 	owner := ids.From[ids.UserKind](seat)
 	return &owner, nil
