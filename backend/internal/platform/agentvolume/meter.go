@@ -227,7 +227,7 @@ func (m *Meter) usable(ctx context.Context) (ws ids.UUID, agent string, ok bool)
 // SubjectOf names whose counters a passport's calls are charged to. A passport
 // minted under a connection is counted as the connection. A renewal retires the
 // passport and mints another under the same grant, and the allowance must
-// outlast the renewal. A passport a person minted is counted as itself.
+// outlast the renewal. A passport a user minted is counted as itself.
 func SubjectOf(passport, connection ids.UUID) string {
 	switch {
 	case connection != (ids.UUID{}):

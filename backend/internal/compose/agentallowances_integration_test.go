@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,7 +62,7 @@ func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) i
 
 func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, time.Now)
+	h := allowanceHandlers(t, e, wallClock(t))
 
 	code, saved := patchAllowances(t, installationAdminCtx(e), h,
 		`{"agent_reads_per_window":500,"agent_writes_per_window":10,"agent_egress_per_window":3,"agent_calls_per_window":60}`)
@@ -110,7 +111,7 @@ func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
 
 func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, time.Now)
+	h := allowanceHandlers(t, e, wallClock(t))
 	for _, body := range []string{
 		`{"agent_reads_per_window":99}`,
 		`{"agent_writes_per_window":5001}`,
@@ -126,7 +127,7 @@ func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 
 func TestAnAgentCannotChangeItsOwnAllowance(t *testing.T) {
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, time.Now)
+	h := allowanceHandlers(t, e, wallClock(t))
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), PassportID: ids.NewV7(),
@@ -159,8 +160,8 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 // source the API composes.
 func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, time.Now)
-	at := time.Now()
+	h := allowanceHandlers(t, e, wallClock(t))
+	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
 		func() time.Time { return at }).WithPolicySource(agentAllowanceSource{pool: e.Pool})
 	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
@@ -194,7 +195,7 @@ func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	passport, grant := seedConnectionPassport(t, e)
-	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, time.Now)
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))
 	renewed := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:connector", PassportID: ids.NewV7(), ConnectionID: grant,
 	})
@@ -236,4 +237,10 @@ func seedConnectionPassport(t *testing.T, e *integration.Env) (passport, grant i
 		}
 	}
 	return passport, grant
+}
+
+// wallClock is a store clock pinned to the fixture instant.
+func wallClock(t *testing.T) func() time.Time {
+	at := clocktest.Now(t)
+	return func() time.Time { return at }
 }

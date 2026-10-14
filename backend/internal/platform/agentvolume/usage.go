@@ -130,3 +130,29 @@ func (u *Usage) of(c Counter) *CounterUsage {
 		return &u.Calls
 	}
 }
+
+// ResetsAt is when the running window resets.
+func (m *Meter) ResetsAt(ctx context.Context) time.Time {
+	return ResetAfter(m.now(), m.window(ctx).length)
+}
+
+// Plus sums two subjects' usage, for a reader that reports them as one. A
+// user with two passports has used, and may use, what both have.
+func (u Usage) Plus(o Usage) Usage {
+	add := func(a, b CounterUsage) CounterUsage {
+		return CounterUsage{Used: a.Used + b.Used, Limit: a.Limit + b.Limit, Released: a.Released + b.Released}
+	}
+	return Usage{
+		Reads: add(u.Reads, o.Reads), Writes: add(u.Writes, o.Writes),
+		Egress: add(u.Egress, o.Egress), Calls: add(u.Calls, o.Calls), ResetsAt: u.ResetsAt,
+	}
+}
+
+// Worst is the more severe of two states.
+func (s UsageState) Worst(o UsageState) UsageState {
+	rank := map[UsageState]int{UsageOK: 0, UsageNear: 1, UsageStopped: 2}
+	if rank[o] > rank[s] {
+		return o
+	}
+	return s
+}

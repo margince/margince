@@ -47,9 +47,9 @@ func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 	return out, nil
 }
 
-// AgentPolicyTx reads the allowances and window plan in one statement. It is
-// the one reader of these settings. The meter applies its answer to every agent
-// call, and the settings page shows the same answer.
+// AgentPolicyTx reads the allowances and window plan in one statement. The
+// meter applies its answer to every agent call, and the settings page shows the
+// same answer.
 func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 	raw, err := settings.ApplyManyTx(ctx, tx,
 		AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
@@ -137,7 +137,7 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 }
 
 // PassportConnectionTx answers the connection a passport was minted under, or
-// the zero id for a passport a person minted.
+// the zero id for a passport a user minted.
 func PassportConnectionTx(ctx context.Context, tx pgx.Tx, passport ids.UUID) (ids.UUID, error) {
 	var connection *ids.UUID
 	if err := tx.QueryRow(ctx, `SELECT oauth_grant_id FROM passport WHERE id = $1`, passport).Scan(&connection); err != nil {

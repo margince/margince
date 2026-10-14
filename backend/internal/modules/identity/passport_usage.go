@@ -18,6 +18,7 @@ import (
 // (agentvolume.SubjectOf) in one round trip. compose wires the meter.
 type PassportUsageReader interface {
 	Usage(ctx context.Context, ws ids.UUID, subjects []string) (map[string]agentvolume.Usage, error)
+	ResetsAt(ctx context.Context) time.Time
 }
 
 // WithPassportUsage wires the meter the passport list reports usage from.

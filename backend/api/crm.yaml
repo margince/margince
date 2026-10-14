@@ -17664,6 +17664,33 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/agent-usage:
+    get:
+      tags: [AI]
+      operationId: listAgentUsageByUser
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How much of their allowances each user's agents have used in this window.
+      description: |
+        One row per user with a live passport or connection, summed over all of them: what
+        was used, the allowance it is judged against, and the worst state among them. It names
+        no passport, label, permission or token, and says nothing about what an agent read or
+        changed: which agents act for a user is that user's own business, and this read
+        answers only how much. Readable by whoever may read the AI usage page.
+      responses:
+        '200':
+          description: Usage per user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentUsageByUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: The agent counters cannot be read right now. Try again shortly.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /ai/profile:
     get:
       tags: [AI]
@@ -31347,7 +31374,7 @@ components:
       description: |
         How much one agent passport may do in one window, for every passport in the installation.
         A passport that reaches a count is refused on its next call until the window resets or
-        the person who lent it releases more. A change to a count applies within a minute, in the
+        the user who lent it releases more. A change to a count applies within a minute, in the
         window that is running: a raised count gives headroom at once, and a lowered one refuses
         a passport already past it on its next call. The per-minute limits are fixed by the
         build and shown here read-only.
@@ -56134,6 +56161,36 @@ components:
           description: When the window resets and every count starts again from zero.
         state: { $ref: '#/components/schemas/AgentUsageState' }
 
+    AgentUsageByUser:
+      type: object
+      required: [data, resets_at]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AgentUserUsage' }
+          description: Users with at least one live passport or connection, by name.
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+
+    AgentUserUsage:
+      type: object
+      description: |
+        One user's agents in the running window. Each count and allowance is the sum over
+        their live passports and connections, so a user with two passports has twice the
+        allowance. `state` is the worst state of any one of them.
+      required: [user_id, display_name, passport_count, reads, writes, egress, calls, state]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        passport_count: { type: integer, minimum: 1, description: 'Live passports and connections. A connection counts once.' }
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
     AgentCounterUsage:
       type: object
       description: One allowance in the running window.
@@ -56145,8 +56202,8 @@ components:
           minimum: 0
           description: |
             The allowance in force: the installation's value, plus one more allowance for each
-            release a person granted in this window.
-        released: { type: integer, minimum: 0, description: How many times a person released more in this window. }
+            release a user granted in this window.
+        released: { type: integer, minimum: 0, description: How many times a user released more in this window. }
 
     AgentUsageState:
       type: string

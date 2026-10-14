@@ -22817,7 +22817,7 @@ type AdvanceProjectPhaseRequestToPhase string
 
 // AgentAllowanceSettings How much one agent passport may do in one window, for every passport in the installation.
 // A passport that reaches a count is refused on its next call until the window resets or
-// the person who lent it releases more. A change to a count applies within a minute, in the
+// the user who lent it releases more. A change to a count applies within a minute, in the
 // window that is running: a raised count gives headroom at once, and a lowered one refuses
 // a passport already past it on its next call. The per-minute limits are fixed by the
 // build and shown here read-only.
@@ -22914,10 +22914,10 @@ type AgentContextSection struct {
 // AgentCounterUsage One allowance in the running window.
 type AgentCounterUsage struct {
 	// Limit The allowance in force: the installation's value, plus one more allowance for each
-	// release a person granted in this window.
+	// release a user granted in this window.
 	Limit int `json:"limit"`
 
-	// Released How many times a person released more in this window.
+	// Released How many times a user released more in this window.
 	Released int `json:"released"`
 
 	// Used What has been used in this window.
@@ -23096,9 +23096,44 @@ type AgentUsage struct {
 	Writes AgentCounterUsage `json:"writes"`
 }
 
+// AgentUsageByUser defines model for AgentUsageByUser.
+type AgentUsageByUser struct {
+	// Data Users with at least one live passport or connection, by name.
+	Data []AgentUserUsage `json:"data"`
+
+	// ResetsAt When the window resets and every count starts again from zero.
+	ResetsAt time.Time `json:"resets_at"`
+}
+
 // AgentUsageState The worst of the four allowances. `stopped` when one is used up, so the next call of
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
+
+// AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
+// their live passports and connections, so a user with two passports has twice the
+// allowance. `state` is the worst state of any one of them.
+type AgentUserUsage struct {
+	// Calls One allowance in the running window.
+	Calls       AgentCounterUsage `json:"calls"`
+	DisplayName string            `json:"display_name"`
+
+	// Egress One allowance in the running window.
+	Egress AgentCounterUsage `json:"egress"`
+
+	// PassportCount Live passports and connections. A connection counts once.
+	PassportCount int `json:"passport_count"`
+
+	// Reads One allowance in the running window.
+	Reads AgentCounterUsage `json:"reads"`
+
+	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+	State  AgentUsageState    `json:"state"`
+	UserId openapi_types.UUID `json:"user_id"`
+
+	// Writes One allowance in the running window.
+	Writes AgentCounterUsage `json:"writes"`
+}
 
 // AiActivity defines model for AiActivity.
 type AiActivity struct {
@@ -37418,7 +37453,7 @@ type InstallationJurisdiction struct {
 type InstallationSettings struct {
 	// AgentAllowances How much one agent passport may do in one window, for every passport in the installation.
 	// A passport that reaches a count is refused on its next call until the window resets or
-	// the person who lent it releases more. A change to a count applies within a minute, in the
+	// the user who lent it releases more. A change to a count applies within a minute, in the
 	// window that is running: a raised count gives headroom at once, and a lowered one refuses
 	// a passport already past it on its next call. The per-minute limits are fixed by the
 	// build and shown here read-only.
@@ -68987,6 +69022,9 @@ type ServerInterface interface {
 	// Re-price the models this installation calls from the providers' own catalogues.
 	// (POST /ai-model-rates/refresh)
 	RefreshAiModelRates(w http.ResponseWriter, r *http.Request)
+	// How much of their allowances each user's agents have used in this window.
+	// (GET /ai/agent-usage)
+	ListAgentUsageByUser(w http.ResponseWriter, r *http.Request)
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
@@ -71627,6 +71665,12 @@ func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.
 // Re-price the models this installation calls from the providers' own catalogues.
 // (POST /ai-model-rates/refresh)
 func (_ Unimplemented) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How much of their allowances each user's agents have used in this window.
+// (GET /ai/agent-usage)
+func (_ Unimplemented) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78265,6 +78309,26 @@ func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RefreshAiModelRates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAgentUsageByUser operation middleware
+func (siw *ServerInterfaceWrapper) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAgentUsageByUser(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -112111,6 +112175,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/refresh", wrapper.RefreshAiModelRates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/agent-usage", wrapper.ListAgentUsageByUser)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -25,6 +26,8 @@ func (r *recordedUsage) Usage(_ context.Context, _ ids.UUID, subjects []string) 
 	r.asked = subjects
 	return r.answer, r.err
 }
+
+func (r *recordedUsage) ResetsAt(context.Context) time.Time { return time.Time{} }
 
 func TestOnlyALivePassportIsAskedForUsage(t *testing.T) {
 	now := time.Date(2026, 7, 15, 8, 0, 0, 0, time.UTC)
@@ -48,7 +51,7 @@ func TestThePassportListSurvivesAnUnreadableCounter(t *testing.T) {
 	reader := &recordedUsage{err: errors.New("redis down")}
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 
-	usage := Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{passportRowForTest()}, time.Now())
+	usage := Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{passportRowForTest()}, clocktest.Now(t))
 
 	if usage != nil {
 		t.Errorf("an unreadable counter answered %v, want no usage", usage)

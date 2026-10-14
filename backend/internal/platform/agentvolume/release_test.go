@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -130,7 +131,7 @@ func TestOneReleaseGrantsOneMoreAllowanceAndNotAnUnboundedOne(t *testing.T) {
 	}
 }
 
-// releaseIn releases a person-minted passport's counter in the length in force.
+// releaseIn releases a user-minted passport's counter in the length in force.
 func releaseIn(t *testing.T, m *Meter, ws, passport ids.UUID, c Counter, bucket int64) (bool, error) {
 	t.Helper()
 	return m.Release(t.Context(), ws, SubjectOf(passport, ids.UUID{}), c, bucket, m.window(t.Context()).length)
@@ -142,7 +143,7 @@ func releaseIn(t *testing.T, m *Meter, ws, passport ids.UUID, c Counter, bucket 
 // ahead, which the length in force would refuse as a window not yet started.
 // Only the length check answers "nothing" here.
 func TestAReleaseStagedUnderAnotherLengthAppliesToNothing(t *testing.T) {
-	meter := NewWithClock(nil, Limits{}, DefaultWindow, time.Now)
+	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return clocktest.Now(t) })
 	ws, subject := ids.New[ids.WorkspaceKind]().UUID, SubjectOf(ids.New[ids.PassportKind]().UUID, ids.UUID{})
 
 	applied, err := meter.Release(t.Context(), ws, subject, Reads, meter.Bucket(t.Context())+1, 12*time.Hour)

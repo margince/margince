@@ -8855,7 +8855,7 @@ components:
       description: |-
         How much one agent passport may do in one window, for every passport in the installation.
         A passport that reaches a count is refused on its next call until the window resets or
-        the person who lent it releases more. A change to a count applies within a minute, in the
+        the user who lent it releases more. A change to a count applies within a minute, in the
         window that is running: a raised count gives headroom at once, and a lowered one refuses
         a passport already past it on its next call. The per-minute limits are fixed by the
         build and shown here read-only.

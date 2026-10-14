@@ -11974,6 +11974,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/agent-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much of their allowances each user's agents have used in this window.
+         * @description One row per user with a live passport or connection, summed over all of them: what
+         *     was used, the allowance it is judged against, and the worst state among them. It names
+         *     no passport, label, permission or token, and says nothing about what an agent read or
+         *     changed: which agents act for a user is that user's own business, and this read
+         *     answers only how much. Readable by whoever may read the AI usage page.
+         */
+        get: operations["listAgentUsageByUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/profile": {
         parameters: {
             query?: never;
@@ -21430,7 +21454,7 @@ export interface components {
         /**
          * @description How much one agent passport may do in one window, for every passport in the installation.
          *     A passport that reaches a count is refused on its next call until the window resets or
-         *     the person who lent it releases more. A change to a count applies within a minute, in the
+         *     the user who lent it releases more. A change to a count applies within a minute, in the
          *     window that is running: a raised count gives headroom at once, and a lowered one refuses
          *     a passport already past it on its next call. The per-minute limits are fixed by the
          *     build and shown here read-only.
@@ -41935,16 +41959,42 @@ export interface components {
             resets_at: string;
             state: components["schemas"]["AgentUsageState"];
         };
+        AgentUsageByUser: {
+            /** @description Users with at least one live passport or connection, by name. */
+            data: components["schemas"]["AgentUserUsage"][];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+        };
+        /**
+         * @description One user's agents in the running window. Each count and allowance is the sum over
+         *     their live passports and connections, so a user with two passports has twice the
+         *     allowance. `state` is the worst state of any one of them.
+         */
+        AgentUserUsage: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @description Live passports and connections. A connection counts once. */
+            passport_count: number;
+            reads: components["schemas"]["AgentCounterUsage"];
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            state: components["schemas"]["AgentUsageState"];
+        };
         /** @description One allowance in the running window. */
         AgentCounterUsage: {
             /** @description What has been used in this window. */
             used: number;
             /**
              * @description The allowance in force: the installation's value, plus one more allowance for each
-             *     release a person granted in this window.
+             *     release a user granted in this window.
              */
             limit: number;
-            /** @description How many times a person released more in this window. */
+            /** @description How many times a user released more in this window. */
             released: number;
         };
         /**
@@ -64555,6 +64605,37 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listAgentUsageByUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage per user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentUsageByUser"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The agent counters cannot be read right now. Try again shortly. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getAiProfile: {
