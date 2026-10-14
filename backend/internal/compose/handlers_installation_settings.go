@@ -10,6 +10,7 @@ package compose
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -192,6 +193,13 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
+	patch.AgentAllowances = identity.AgentAllowancePatch{
+		ReadsPerWindow:  req.AgentReadsPerWindow,
+		WritesPerWindow: req.AgentWritesPerWindow,
+		EgressPerWindow: req.AgentEgressPerWindow,
+		CallsPerWindow:  req.AgentCallsPerWindow,
+		WindowHours:     req.AgentWindowHours,
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -222,6 +230,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, time.Now()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

@@ -209,10 +209,10 @@ func newMCPLimiters() mcpLimiters { return newMCPLimitersWithClock(time.Now) }
 // numbers such a test pins must be the numbers a deployment actually runs.
 func newMCPLimitersWithClock(now func() time.Time) mcpLimiters {
 	return mcpLimiters{
-		perPassport: ratelimit.NewWithClock("mcp/per-passport", ratelimit.FailOpen, 240, time.Minute, now),
+		perPassport: ratelimit.NewWithClock("mcp/per-passport", ratelimit.FailOpen, mcpCallsPerMinute, time.Minute, now),
 		preAuth:     ratelimit.NewWithClock("mcp/pre-auth", ratelimit.FailClosed, 60, time.Minute, now),
 		preAuthPeer: ratelimit.NewWithClock("mcp/pre-auth-per-peer", ratelimit.FailClosed, 600, time.Minute, now),
-		streams:     ratelimit.NewWithClock("mcp/stream-open", ratelimit.FailOpen, 30, time.Minute, now),
+		streams:     ratelimit.NewWithClock("mcp/stream-open", ratelimit.FailOpen, mcpStreamOpensPerMinute, time.Minute, now),
 		token:       ratelimit.NewWithClock("mcp/token", ratelimit.FailClosed, 60, time.Minute, now),
 		authorize:   ratelimit.NewWithClock("mcp/authorize", ratelimit.FailClosed, 60, time.Minute, now),
 		revoke:      ratelimit.NewWithClock("mcp/revoke", ratelimit.FailClosed, 60, time.Minute, now),

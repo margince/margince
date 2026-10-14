@@ -22794,6 +22794,48 @@ type AdvanceProjectPhaseRequest struct {
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
 
+// AgentAllowanceSettings How much one agent passport may do in one window, for every passport in the installation.
+// A passport that reaches a count is refused on its next call until the window resets or
+// the person who lent it releases more. A change to a count applies within a minute, in the
+// window that is running: a raised count gives headroom at once, and a lowered one refuses
+// a passport already past it on its next call. The per-minute limits are fixed by the
+// build and shown here read-only.
+type AgentAllowanceSettings struct {
+	// AgentCallsPerWindow How many tool calls of any kind one passport may make per window. Default 1000.
+	AgentCallsPerWindow int `json:"agent_calls_per_window"`
+
+	// AgentEgressPerWindow How many calls that send something out of the workspace one passport may make per window. Default 20.
+	AgentEgressPerWindow int `json:"agent_egress_per_window"`
+
+	// AgentReadsPerWindow How many records one passport may read per window. Default 2000.
+	AgentReadsPerWindow int `json:"agent_reads_per_window"`
+
+	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
+	// resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+	AgentWindowHours int `json:"agent_window_hours"`
+
+	// AgentWindowNextHours The window length an admin saved that is not in force yet, in hours. Null when no
+	// change is waiting.
+	AgentWindowNextHours *int `json:"agent_window_next_hours,omitempty"`
+
+	// AgentWindowNextStartsAt When the saved window length takes over: the next reset of the window in force that
+	// is at least a minute away. Null when no change is waiting. The first window under the
+	// new length may be shorter than that length, never longer.
+	AgentWindowNextStartsAt *time.Time `json:"agent_window_next_starts_at,omitempty"`
+
+	// AgentWindowResetsAt When the window in force resets and every count starts again from zero.
+	AgentWindowResetsAt time.Time `json:"agent_window_resets_at"`
+
+	// AgentWritesPerWindow How many changing calls one passport may make per window. Default 200.
+	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+
+	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
+	McpCallsPerMinute int `json:"mcp_calls_per_minute"`
+
+	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
+	McpStreamOpensPerMinute int `json:"mcp_stream_opens_per_minute"`
+}
+
 // AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
 type AgentAssembledContext struct {
 	// Anchor One record an agent answer rests on.
@@ -37314,6 +37356,14 @@ type InstallationJurisdiction struct {
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
+	// AgentAllowances How much one agent passport may do in one window, for every passport in the installation.
+	// A passport that reaches a count is refused on its next call until the window resets or
+	// the person who lent it releases more. A change to a count applies within a minute, in the
+	// window that is running: a raised count gives headroom at once, and a lowered one refuses
+	// a passport already past it on its next call. The per-minute limits are fixed by the
+	// build and shown here read-only.
+	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
+
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
@@ -47640,8 +47690,26 @@ type UpdateImportRunRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty"`
+
+	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty"`
+
+	// AgentReadsPerWindow Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.
+	AgentReadsPerWindow *int `json:"agent_reads_per_window,omitempty"`
+
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
+
+	// AgentWindowHours Set how long one agent allowance window lasts, in hours. The window in force is never
+	// cut short: the new length takes effect at its next reset, and the response names that
+	// moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+	// in force cancels a change that is still waiting.
+	AgentWindowHours *int `json:"agent_window_hours,omitempty"`
+
+	// AgentWritesPerWindow Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty"`
 
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.

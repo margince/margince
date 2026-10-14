@@ -20276,6 +20276,7 @@ export interface components {
              */
             oauth_access_token_ttl_minutes: number;
             operations: components["schemas"]["OperationSettings"];
+            agent_allowances: components["schemas"]["AgentAllowanceSettings"];
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -20425,6 +20426,21 @@ export interface components {
             send_rate_window_seconds?: number;
             /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
             send_max_age_hours?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window. */
+            agent_reads_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window. */
+            agent_writes_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window. */
+            agent_egress_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
+            agent_calls_per_window?: number;
+            /**
+             * @description Set how long one agent allowance window lasts, in hours. The window in force is never
+             *     cut short: the new length takes effect at its next reset, and the response names that
+             *     moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+             *     in force cancels a change that is still waiting.
+             */
+            agent_window_hours?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -21410,6 +21426,50 @@ export interface components {
             send_rate_window_seconds: number;
             /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
             send_max_age_hours: number;
+        };
+        /**
+         * @description How much one agent passport may do in one window, for every passport in the installation.
+         *     A passport that reaches a count is refused on its next call until the window resets or
+         *     the person who lent it releases more. A change to a count applies within a minute, in the
+         *     window that is running: a raised count gives headroom at once, and a lowered one refuses
+         *     a passport already past it on its next call. The per-minute limits are fixed by the
+         *     build and shown here read-only.
+         */
+        AgentAllowanceSettings: {
+            /** @description How many records one passport may read per window. Default 2000. */
+            agent_reads_per_window: number;
+            /** @description How many changing calls one passport may make per window. Default 200. */
+            agent_writes_per_window: number;
+            /** @description How many calls that send something out of the workspace one passport may make per window. Default 20. */
+            agent_egress_per_window: number;
+            /** @description How many tool calls of any kind one passport may make per window. Default 1000. */
+            agent_calls_per_window: number;
+            /**
+             * @description How long the window in force lasts, in hours. Default 24. Every passport's window
+             *     resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+             */
+            agent_window_hours: number;
+            /**
+             * Format: date-time
+             * @description When the window in force resets and every count starts again from zero.
+             */
+            agent_window_resets_at: string;
+            /**
+             * @description The window length an admin saved that is not in force yet, in hours. Null when no
+             *     change is waiting.
+             */
+            agent_window_next_hours?: number | null;
+            /**
+             * Format: date-time
+             * @description When the saved window length takes over: the next reset of the window in force that
+             *     is at least a minute away. Null when no change is waiting. The first window under the
+             *     new length may be shorter than that length, never longer.
+             */
+            agent_window_next_starts_at?: string | null;
+            /** @description How many tool calls one passport may make per minute. Fixed by the build. */
+            mcp_calls_per_minute: number;
+            /** @description How many streams one passport may open per minute. Fixed by the build. */
+            mcp_stream_opens_per_minute: number;
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
