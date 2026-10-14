@@ -54,6 +54,29 @@ function panel(next: ImportRun) {
 }
 
 describe("the import progress panel", () => {
+  it("shows no Links bar until the links have a total", () => {
+    show(
+      panel({
+        ...working,
+        progress: {
+          counts: working.progress?.counts ?? {
+            created: 0,
+            updated: 0,
+            unchanged: 0,
+            skipped: 0,
+            problems: 0,
+          },
+          objects: [
+            { object: "contact", rows_done: 10, rows_total: 100 },
+            { object: "links", rows_done: 0, rows_total: 0 },
+          ],
+        },
+      }),
+    );
+    expect(screen.getByRole("progressbar", { name: "Contacts" })).toBeVisible();
+    expect(screen.queryByRole("progressbar", { name: "Links" })).toBeNull();
+  });
+
   it("stretches its column so the strip and the bars take the part's width", () => {
     // jsdom cannot lay this out; the class and its rule are what keep them wide.
     const { container } = show(panel(working));

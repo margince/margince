@@ -123,30 +123,34 @@ function ObjectBars({ run }: Readonly<{ run: ImportRun }>) {
   const { locale } = useLocale();
   return (
     <>
-      {(run.progress?.objects ?? []).map((one) => {
-        const label = typeName(t, one.object);
-        const done = formatNumber(one.rows_done, locale);
-        const total = formatNumber(one.rows_total, locale);
-        return (
-          <div key={one.object} className="import__part">
-            <div className="import__partHead t-sub">
-              <span>{label}</span>
-              <span>
-                {done} / {total}
-              </span>
+      {(run.progress?.objects ?? [])
+        .filter((one) => one.object !== "links" || one.rows_total > 0)
+        .map((one) => {
+          const label = typeName(t, one.object);
+          const done = formatNumber(one.rows_done, locale);
+          const total = formatNumber(one.rows_total, locale);
+          return (
+            <div key={one.object} className="import__part">
+              <div className="import__partHead t-sub">
+                <span>{label}</span>
+                <span>
+                  {done} / {total}
+                </span>
+              </div>
+              <ProgressBar
+                fraction={
+                  one.rows_total > 0 ? one.rows_done / one.rows_total : 0
+                }
+                label={label}
+                valueText={t("import.progress.rows", {
+                  type: label,
+                  done,
+                  total,
+                })}
+              />
             </div>
-            <ProgressBar
-              fraction={one.rows_total > 0 ? one.rows_done / one.rows_total : 0}
-              label={label}
-              valueText={t("import.progress.rows", {
-                type: label,
-                done,
-                total,
-              })}
-            />
-          </div>
-        );
-      })}
+          );
+        })}
     </>
   );
 }
