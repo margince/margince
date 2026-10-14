@@ -32,11 +32,20 @@ fi
 
 {
   grep '^#' "$target"
+  # A malformed line stops the refresh, so the old weights stay: awk reads a
+  # non-numeric duration as 0, which would weigh that test as free.
   LC_ALL=C sort -u "$work/all.txt" | awk -F'|' -v slow="${SLOW_TEST:-1}" '
-    NF != 4 { next }
+    NF != 4 || $4 !~ /^[0-9]+(\.[0-9]+)?$/ {
+      printf "FAIL: not `dir|package|Test|seconds`: %s\n", $0 > "/dev/stderr"; bad = 1; exit 1
+    }
+    { valid++ }
     $4 + 0 >= slow { print; next }
     { key = $1 "|" $2; rest[key] += $4; n[key]++ }
-    END { for (key in n) printf "%s|*|%.3f\n", key, rest[key] / n[key] }
+    END {
+      if (bad) exit 1
+      if (!valid) { print "FAIL: no test durations to write" > "/dev/stderr"; exit 1 }
+      for (key in n) printf "%s|*|%.3f\n", key, rest[key] / n[key]
+    }
   ' | LC_ALL=C sort
 } > "$work/timing.txt"
 mv "$work/timing.txt" "$target"
