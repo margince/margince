@@ -206,7 +206,7 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
 
 // A task nobody has taken, with the date it is due and how it is put down.
 //
-// The due moment drawn, "no owner" said out loud, and the row's menu opened on
+// The due moment drawn and "no owner" said out loud. The row's menu is opened on
 // its snooze spans, because a closed menu shows nothing about what it holds.
 export const ATaskNobodyOwnsBeingPutDown: Story = {
   args: {
@@ -248,7 +248,7 @@ export const ATaskOnAPhone: Story = {
 };
 
 // The row with the most verbs: a buyer waiting on a reply. The line holds Done,
-// the prepared move and Reply, then the row's menu, which is opened here on
+// the prepared move and Reply, then the row's menu. The menu is opened here on
 // the snooze spans, the pin and the judgements that hand the row back.
 export const AWaitingBuyerWithEveryVerb: Story = {
   args: {
