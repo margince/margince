@@ -6,11 +6,11 @@ package compose
 import (
 	"archive/zip"
 	"bytes"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"io"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
 
 	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -83,8 +83,8 @@ func readEntry(t *testing.T, zr *zip.Reader, name string) string {
 
 func TestTheTemplateListsEveryPipelineWithItsStages(t *testing.T) {
 	pipelines := []crmcontracts.Pipeline{
-		{Id: uuid.New(), Name: "Sales", IsDefault: true, Stages: &[]crmcontracts.Stage{{Id: uuid.New(), Name: "Qualified"}, {Id: uuid.New(), Name: "Won", Semantic: crmcontracts.StageSemanticWon}}},
-		{Id: uuid.New(), Name: "Renewals", Stages: &[]crmcontracts.Stage{{Id: uuid.New(), Name: "Due"}}},
+		{Id: openapi_types.UUID(ids.NewV7()), Name: "Sales", IsDefault: true, Stages: &[]crmcontracts.Stage{{Id: openapi_types.UUID(ids.NewV7()), Name: "Qualified"}, {Id: openapi_types.UUID(ids.NewV7()), Name: "Won", Semantic: crmcontracts.StageSemanticWon}}},
+		{Id: openapi_types.UUID(ids.NewV7()), Name: "Renewals", Stages: &[]crmcontracts.Stage{{Id: openapi_types.UUID(ids.NewV7()), Name: "Due"}}},
 	}
 	stages := dealStagesFrom(pipelines, importToday)
 	readme := templateReadme(crmcontracts.ImportFormat{SizeLimitMb: 10}, langcopy.For("en"), stages)
