@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
-import { Button, OverflowMenu } from "./atoms";
+import { Button, Modal, OverflowMenu } from "./atoms";
+import { Heading } from "./heading";
 
 // The panel hangs off the trigger's end, so the trigger sits at the right edge
 // with the height it drops into reserved.
@@ -79,4 +80,34 @@ export const WithAnItemInFlight: Story = {
     </OverflowMenu>
   ),
   play: openPanel,
+};
+
+// Inside a drawer the panel opens over the drawer, where a pointer reaches it.
+export const InsideADrawer: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <Modal open onClose={() => {}} labelledBy="menu-drawer" intent="drawer">
+      <Heading size="large" id="menu-drawer" className="t-h2 modal-title">
+        Senders
+      </Heading>
+      <OverflowMenu label="Actions for news@example.com">
+        <Button>Mark as business</Button>
+        <Button variant="danger">Exclude</Button>
+      </OverflowMenu>
+    </Modal>
+  ),
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Actions for news@example.com",
+      }),
+    );
+    const item = await screen.findByRole("button", {
+      name: "Mark as business",
+    });
+    const box = item.getBoundingClientRect();
+    await expect(
+      document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+    ).toBe(item);
+  },
 };

@@ -260,6 +260,29 @@ it("closes on Escape and on a chosen verb when it sits inside a dialog", async (
   expect(onDialogClose).not.toHaveBeenCalled();
 });
 
+// At the body the panel sits under the dialog's overlay, where no press reaches it.
+it("hangs its panel in the dialog it sits inside, and closes on a press elsewhere in it", async () => {
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={() => {}} labelledBy="deal" intent="drawer">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Archive</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+
+  await user.click(trigger);
+  const item = screen.getByRole("button", { name: "Archive" });
+  expect(item.closest(".overlay")).toBe(trigger.closest(".overlay"));
+
+  await user.click(screen.getByRole("heading", { name: "Deal" }));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});
+
 // The trigger's own geometry, asserted here because this is the design system's
 // own primitive: it draws the ellipsis on every record header in the product, so
 // a rectangle here is a rectangle everywhere at once. `btn-icon` is what makes a

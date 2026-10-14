@@ -25,7 +25,9 @@ import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
 import {
   coveredByDialog,
   panelsOpenedFrom,
+  pressedInLayerAbove,
   useDialogFocus,
+  useDialogLayer,
 } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
@@ -1288,6 +1290,7 @@ export function OverflowMenu({
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
   const at = useAnchoredToTrigger(open, trigger, panel);
+  const { layer, joinLayer } = useDialogLayer(wrap);
 
   // Choosing an item closes the menu, one commit after the press.
   //
@@ -1308,10 +1311,10 @@ export function OverflowMenu({
     trigger.current?.focus();
   }, [chosen]);
 
-  // FOCUS GOES IN. The panel is portalled to the body, so it sits at the end of
-  // the document rather than after its trigger: without this a reader who opens
-  // a menu Tabs to the NEXT row's trigger, then through every control on the
-  // page, and reaches the items they opened it for last. On a list drawing one
+  // FOCUS GOES IN. The panel is portalled into its dialog, or the body when
+  // there is none. It sits at the end of its layer, not after its trigger.
+  // Without this a reader who opens a menu Tabs to the NEXT row's trigger, then
+  // through every control, and reaches its items last. On a list drawing one
   // menu per row that is dozens of stops, which is a menu no keyboard reaches.
   //
   // The same hook the dialogs use, and for the same reason its own header
@@ -1355,13 +1358,7 @@ export function OverflowMenu({
       // A dialog or a panel this menu opened is portalled to the body, so every
       // click inside it looks like a click outside the menu. Closing on those
       // would hide the item it has to give focus back to when it closes.
-      const target = event.target;
-      if (
-        (target instanceof Element && target.closest(".overlay")) ||
-        panelsOpenedFrom(panel.current).some((opened) =>
-          opened.contains(target),
-        )
-      ) {
+      if (pressedInLayerAbove(event.target, layer, panel.current)) {
         return;
       }
       // The panel lives at the body, not inside the wrapper, so "outside" is
@@ -1380,10 +1377,10 @@ export function OverflowMenu({
       globalThis.removeEventListener("keydown", onKey);
       globalThis.removeEventListener("mousedown", onPointer);
     };
-  }, [open]);
+  }, [open, layer]);
 
   return (
-    <div className="overflow-menu" ref={wrap}>
+    <div className="overflow-menu" ref={joinLayer}>
       {/* A disclosure, not an ARIA menu. `role="menu"` promises arrow-key
           navigation and a roving tabstop; the items here are the caller's own
           buttons — each running its own verb, opening its own dialog or setting
@@ -1447,7 +1444,7 @@ export function OverflowMenu({
         >
           {(keepMounted || everOpened) && children}
         </div>,
-        document.body,
+        layer,
       )}
     </div>
   );

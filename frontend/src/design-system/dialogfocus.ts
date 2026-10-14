@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 // What a dialog owes the keyboard, in one place: Escape closes it, Tab stays
 // inside it, and focus goes in when it opens and back where it came from when
@@ -170,6 +176,40 @@ export function coveredByDialog(element: Element | null): boolean {
   const layers = liveDialogs();
   const top = layers[layers.length - 1];
   return top !== undefined && !top.contains(element);
+}
+
+/** The layer a panel portalled out of `anchorRef` joins, so it opens above its
+ * dialog: that dialog's overlay, or the body. `joinLayer` also fills the ref. */
+export function useDialogLayer<T extends HTMLElement>(
+  anchorRef: React.RefObject<T | null>,
+): { layer: HTMLElement; joinLayer: (node: T | null) => void } {
+  const [layer, setLayer] = useState<HTMLElement>(() => document.body);
+  const joinLayer = useCallback(
+    (node: T | null) => {
+      anchorRef.current = node;
+      if (node) {
+        setLayer(node.closest<HTMLElement>(".overlay") ?? document.body);
+      }
+    },
+    [anchorRef],
+  );
+  return { layer, joinLayer };
+}
+
+/**
+ * Whether a press landed in a layer above `layer`: a dialog, or a panel opened
+ * from inside `panel`. A popover in `layer` stays open for those presses.
+ */
+export function pressedInLayerAbove(
+  target: Node,
+  layer: HTMLElement,
+  panel: HTMLElement | null,
+): boolean {
+  const overlay = target instanceof Element ? target.closest(".overlay") : null;
+  return (
+    (overlay !== null && overlay !== layer) ||
+    panelsOpenedFrom(panel).some((opened) => opened.contains(target))
+  );
 }
 
 function ownsKeyboard(container: HTMLElement | null): boolean {
