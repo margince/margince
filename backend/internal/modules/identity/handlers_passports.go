@@ -89,9 +89,16 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
+	now := time.Now()
+	usage := h.liveUsage(r.Context(), rows, now)
 	data := make([]crmcontracts.PassportSummary, 0, len(rows))
 	for _, p := range rows {
-		data = append(data, passportSummary(p))
+		summary := passportSummary(p)
+		if u, ok := usage[p.UsageSubject()]; ok && p.live(now) {
+			wire := toAgentUsage(u)
+			summary.Usage = &wire
+		}
+		data = append(data, summary)
 	}
 	apiBase := ""
 	if h.agentAPIBase != nil {

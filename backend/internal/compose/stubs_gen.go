@@ -203,6 +203,10 @@ func (stubs) RefreshAiModelRates(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RefreshAiModelRates")
 }
 
+func (stubs) ListAgentUsageByUser(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAgentUsageByUser")
+}
+
 func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
 	httperr.NotImplemented(w, r, "ListAvailableModels")
 }

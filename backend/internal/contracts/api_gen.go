@@ -637,6 +637,27 @@ func (e AgentToolTier) Valid() bool {
 	}
 }
 
+// Defines values for AgentUsageState.
+const (
+	AgentUsageStateNear    AgentUsageState = "near"
+	AgentUsageStateOk      AgentUsageState = "ok"
+	AgentUsageStateStopped AgentUsageState = "stopped"
+)
+
+// Valid indicates whether the value is a known member of the AgentUsageState enum.
+func (e AgentUsageState) Valid() bool {
+	switch e {
+	case AgentUsageStateNear:
+		return true
+	case AgentUsageStateOk:
+		return true
+	case AgentUsageStateStopped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiActivityItemState.
 const (
 	AiActivityItemStateDegraded AiActivityItemState = "degraded"
@@ -22794,6 +22815,49 @@ type AdvanceProjectPhaseRequest struct {
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
 
+// AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
+// a connected MCP client has one allowance for all its passports, so a renewed credential
+// keeps counting where the last one stopped. An agent that reaches a count is refused on
+// its next call until the window resets or the user who lent it releases more. A change to
+// a count applies within a minute, in the window that is running: a raised count gives
+// headroom within that minute, and a lowered one refuses an agent already past it on its
+// next call. The per-minute limits are fixed by the build and shown here read-only.
+type AgentAllowanceSettings struct {
+	// AgentCallsPerWindow How many tool calls of any kind one passport or connection may make per window. Default 1000.
+	AgentCallsPerWindow int `json:"agent_calls_per_window"`
+
+	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
+	AgentEgressPerWindow int `json:"agent_egress_per_window"`
+
+	// AgentReadsPerWindow How many records one passport or connection may read per window. Default 2000.
+	AgentReadsPerWindow int `json:"agent_reads_per_window"`
+
+	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
+	// resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+	AgentWindowHours int `json:"agent_window_hours"`
+
+	// AgentWindowNextHours The window length an admin saved that is not in force yet, in hours. Null when no
+	// change is waiting.
+	AgentWindowNextHours *int `json:"agent_window_next_hours,omitempty"`
+
+	// AgentWindowNextStartsAt When the saved window length takes over: the next reset of the window in force that
+	// is at least a minute away. Null when no change is waiting. The first window under the
+	// new length may be shorter than that length, never longer.
+	AgentWindowNextStartsAt *time.Time `json:"agent_window_next_starts_at,omitempty"`
+
+	// AgentWindowResetsAt When the window in force resets and every count starts again from zero.
+	AgentWindowResetsAt time.Time `json:"agent_window_resets_at"`
+
+	// AgentWritesPerWindow How many changing calls one passport or connection may make per window. Default 200.
+	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+
+	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
+	McpCallsPerMinute int `json:"mcp_calls_per_minute"`
+
+	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
+	McpStreamOpensPerMinute int `json:"mcp_stream_opens_per_minute"`
+}
+
 // AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
 type AgentAssembledContext struct {
 	// Anchor One record an agent answer rests on.
@@ -22846,6 +22910,19 @@ type AgentContextItem struct {
 type AgentContextSection struct {
 	Items []AgentContextItem `json:"items"`
 	Name  string             `json:"name"`
+}
+
+// AgentCounterUsage One allowance in the running window.
+type AgentCounterUsage struct {
+	// Limit The allowance in force: the installation's value, plus one more allowance for each
+	// release a user granted in this window.
+	Limit int `json:"limit"`
+
+	// Released How many times a user released more in this window.
+	Released int `json:"released"`
+
+	// Used What has been used in this window.
+	Used int `json:"used"`
 }
 
 // AgentExcerpt A quoted passage and the field or record it was read from.
@@ -22996,6 +23073,67 @@ type AgentToolTier string
 // AgentToolListResponse defines model for AgentToolListResponse.
 type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
+}
+
+// AgentUsage One window's use of the four agent allowances, and when they reset.
+type AgentUsage struct {
+	// Calls One allowance in the running window.
+	Calls AgentCounterUsage `json:"calls"`
+
+	// Egress One allowance in the running window.
+	Egress AgentCounterUsage `json:"egress"`
+
+	// Reads One allowance in the running window.
+	Reads AgentCounterUsage `json:"reads"`
+
+	// ResetsAt When the window resets and every count starts again from zero.
+	ResetsAt time.Time `json:"resets_at"`
+
+	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+	State AgentUsageState `json:"state"`
+
+	// Writes One allowance in the running window.
+	Writes AgentCounterUsage `json:"writes"`
+}
+
+// AgentUsageByUser defines model for AgentUsageByUser.
+type AgentUsageByUser struct {
+	// Data Users with at least one live passport or connection, by name.
+	Data []AgentUserUsage `json:"data"`
+
+	// ResetsAt When the window resets and every count starts again from zero.
+	ResetsAt time.Time `json:"resets_at"`
+}
+
+// AgentUsageState The worst of the four allowances. `stopped` when one is used up, so the next call of
+// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+type AgentUsageState string
+
+// AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
+// their live passports and connections, so a user with two passports has twice the
+// allowance. `state` is the worst state of any one of them.
+type AgentUserUsage struct {
+	// Calls One allowance in the running window.
+	Calls       AgentCounterUsage `json:"calls"`
+	DisplayName string            `json:"display_name"`
+
+	// Egress One allowance in the running window.
+	Egress AgentCounterUsage `json:"egress"`
+
+	// PassportCount Live passports and connections. A connection counts once.
+	PassportCount int `json:"passport_count"`
+
+	// Reads One allowance in the running window.
+	Reads AgentCounterUsage `json:"reads"`
+
+	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+	State  AgentUsageState    `json:"state"`
+	UserId openapi_types.UUID `json:"user_id"`
+
+	// Writes One allowance in the running window.
+	Writes AgentCounterUsage `json:"writes"`
 }
 
 // AiActivity defines model for AiActivity.
@@ -37314,6 +37452,15 @@ type InstallationJurisdiction struct {
 // InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
 // changed only by admin/ops.
 type InstallationSettings struct {
+	// AgentAllowances How much one agent may do in one window. A passport a user minted has its own allowance;
+	// a connected MCP client has one allowance for all its passports, so a renewed credential
+	// keeps counting where the last one stopped. An agent that reaches a count is refused on
+	// its next call until the window resets or the user who lent it releases more. A change to
+	// a count applies within a minute, in the window that is running: a raised count gives
+	// headroom within that minute, and a lowered one refuses an agent already past it on its
+	// next call. The per-minute limits are fixed by the build and shown here read-only.
+	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
+
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
 	BaseCurrency string `json:"base_currency"`
 
@@ -41264,6 +41411,12 @@ type PassportSummary struct {
 
 	// Scopes The granted MCP scopes (intersected with the minting human's role at bind time).
 	Scopes []string `json:"scopes"`
+
+	// Usage What this passport has used of its allowances in the window that is running. A
+	// connection's passports share one count, so a renewed credential keeps it. **Omitted**
+	// on a revoked or expired passport, and when the counters cannot be read: the list is
+	// still answered, without the usage.
+	Usage *AgentUsage `json:"usage,omitempty"`
 }
 
 // Pipeline A pipeline. Mirrors the `pipeline` table (with embedded stages on GET).
@@ -47640,8 +47793,26 @@ type UpdateImportRunRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty"`
+
+	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty"`
+
+	// AgentReadsPerWindow Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.
+	AgentReadsPerWindow *int `json:"agent_reads_per_window,omitempty"`
+
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
+
+	// AgentWindowHours Set how long one agent allowance window lasts, in hours. The window in force is never
+	// cut short: the new length takes effect at its next reset, and the response names that
+	// moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+	// in force cancels a change that is still waiting.
+	AgentWindowHours *int `json:"agent_window_hours,omitempty"`
+
+	// AgentWritesPerWindow Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty"`
 
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
 	// rate against the current base.
@@ -68853,6 +69024,9 @@ type ServerInterface interface {
 	// Re-price the models this installation calls from the providers' own catalogues.
 	// (POST /ai-model-rates/refresh)
 	RefreshAiModelRates(w http.ResponseWriter, r *http.Request)
+	// How much of their allowances each user's agents have used in this window.
+	// (GET /ai/agent-usage)
+	ListAgentUsageByUser(w http.ResponseWriter, r *http.Request)
 	// What one vendor says it serves today (admin/ops).
 	// (GET /ai/available-models/{provider})
 	ListAvailableModels(w http.ResponseWriter, r *http.Request, provider string, params ListAvailableModelsParams)
@@ -71493,6 +71667,12 @@ func (_ Unimplemented) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.
 // Re-price the models this installation calls from the providers' own catalogues.
 // (POST /ai-model-rates/refresh)
 func (_ Unimplemented) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How much of their allowances each user's agents have used in this window.
+// (GET /ai/agent-usage)
+func (_ Unimplemented) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78131,6 +78311,26 @@ func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RefreshAiModelRates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListAgentUsageByUser operation middleware
+func (siw *ServerInterfaceWrapper) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListAgentUsageByUser(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111977,6 +112177,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai-model-rates/refresh", wrapper.RefreshAiModelRates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/agent-usage", wrapper.ListAgentUsageByUser)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/available-models/{provider}", wrapper.ListAvailableModels)

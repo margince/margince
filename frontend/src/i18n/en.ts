@@ -10657,6 +10657,51 @@ export const en = {
   "agentConnections.ttl.refusal":
     "Enter a whole number of minutes from 5 to 129,600.",
   "agentConnections.updateFailed": "Setting not changed",
+  "agentAllowances.title": "Agent passport allowances",
+  "agentAllowances.sub":
+    "What one passport or MCP connection may do in each window before it stops. A change to a count applies within a minute, in the window that is running. A passport can never change its own allowance.",
+  "agentAllowances.reads.label": "Records read",
+  "agentAllowances.reads.help":
+    "Records an agent may read per window, 100 to 20,000. Past it, reads wait for its owner to release more.",
+  "agentAllowances.writes.label": "Changes",
+  "agentAllowances.writes.help":
+    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to release more.",
+  "agentAllowances.egress.label": "Sends",
+  "agentAllowances.egress.help":
+    "Emails and other calls that leave Margince. Sends stop until the window resets, 1 to 200.",
+  "agentAllowances.calls.label": "Calls in total",
+  "agentAllowances.calls.help":
+    "Every tool or API call. The passport pauses until the window resets, 50 to 20,000.",
+  "agentAllowances.window.label": "Window (hours)",
+  "agentAllowances.window.help":
+    "How long one allowance lasts, 1 to 168. A new length starts at the next reset.",
+  "agentAllowances.burst":
+    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport.",
+  "agentAllowances.pending.title": "Window change waiting",
+  "agentAllowances.pending.body":
+    "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
+  "agentUsage.title": "Agent usage by user",
+  "agentUsage.sub":
+    "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
+  "agentUsage.withheld":
+    "Only an administrator, a Management user or an operations user can see agent usage.",
+  "agentUsage.empty": "No user has a live passport or connection.",
+  "agentUsage.resets": "Every allowance resets {date} UTC.",
+  "agentUsage.ofLimit": "{used} of {limit}",
+  "agentUsage.counter.reads": "Records read",
+  "agentUsage.counter.writes": "Changes",
+  "agentUsage.counter.egress": "Sends",
+  "agentUsage.counter.calls": "Calls",
+  "agentUsage.col.user": "User",
+  "agentUsage.col.passports": "Passports",
+  "agentUsage.state.ok": "Working",
+  "agentUsage.state.near": "Near a limit",
+  "agentUsage.state.stopped": "Stopped",
+  "settings.passportColWindow": "This window",
+  "settings.passportUsageToggle": "Show this window’s usage for {name}",
+  "settings.passportsShowRevoked_one": "Show {count} revoked passport",
+  "settings.passportsShowRevoked_other": "Show {count} revoked passports",
+  "settings.passportsHideRevoked": "Hide revoked",
   "operations.schedules.title": "Background schedules",
   "operations.schedules.sub":
     "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",

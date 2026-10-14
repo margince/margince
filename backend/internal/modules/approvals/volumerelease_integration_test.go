@@ -52,7 +52,7 @@ func (e *stagingEnv) stageStepUp(t *testing.T, counter agentvolume.Counter) ids.
 	t.Helper()
 	proposal := agentvolume.NewReleaseProposal(
 		agentvolume.Reading{Counter: counter, Observed: 2431, Limit: 2000, Allowance: 2000, Bucket: 42},
-		passport, "search_records")
+		passport, ids.UUID{}, "search_records")
 	payload, err := json.Marshal(proposal)
 	if err != nil {
 		t.Fatal(err)

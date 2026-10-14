@@ -10,6 +10,7 @@ package compose
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -21,6 +22,12 @@ import (
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// afterSave runs once a patch has committed. The meter's ForgetPolicy, so
+	// this process binds a saved allowance on the next agent call.
+	afterSave func()
+	// now reads the window plan in the answer; it is the store's clock in a test
+	// that pins one, and the wall clock otherwise.
+	now func() time.Time
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
@@ -192,10 +199,20 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
+	patch.AgentAllowances = identity.AgentAllowancePatch{
+		ReadsPerWindow:  req.AgentReadsPerWindow,
+		WritesPerWindow: req.AgentWritesPerWindow,
+		EgressPerWindow: req.AgentEgressPerWindow,
+		CallsPerWindow:  req.AgentCallsPerWindow,
+		WindowHours:     req.AgentWindowHours,
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if h.afterSave != nil {
+		h.afterSave()
 	}
 	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
 }
@@ -222,6 +239,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
@@ -266,4 +284,11 @@ func (h installationSettingsHandlers) signInProviders(chosen []string) []crmcont
 		})
 	}
 	return out
+}
+
+func (h installationSettingsHandlers) clock() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
 }
