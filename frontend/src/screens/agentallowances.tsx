@@ -231,8 +231,7 @@ function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
   const atDefaults =
     COUNTS.every(
       (row) => allowances[row.property] === allowances.defaults[row.property],
-    ) &&
-    allowances.agent_window_hours === allowances.defaults.agent_window_hours;
+    ) && chosenWindow(allowances) === allowances.defaults.agent_window_hours;
   return (
     <Callout
       tone="info"
@@ -287,6 +286,11 @@ function AllowanceForm({
                     className="t-num"
                     data-testid={`allowance-${row.property}`}
                     inputMode="numeric"
+                    aria-describedby={
+                      [control["aria-describedby"], `${control.id}-note`]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
                     aria-invalid={refused ? true : undefined}
                     value={draft[row.property]}
                     disabled={busy}
@@ -294,7 +298,7 @@ function AllowanceForm({
                       onDraft({ ...draft, [row.property]: e.target.value })
                     }
                   />
-                  <span className="t-caption">
+                  <span id={`${control.id}-note`} className="t-caption">
                     {refused
                       ? t("operations.refusal")
                       : t("agentAllowances.default", {
@@ -330,7 +334,7 @@ function AllowanceForm({
         {changed && (
           <Diff allowances={allowances} patch={patch} locale={locale} />
         )}
-        <div className="card-actions">
+        <div className="form-actions">
           <Button
             variant="primary"
             disabled={!changed || hasRefusal(parsed)}

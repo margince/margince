@@ -46,14 +46,14 @@ func TestEveryListResponseCarriesADataSlice(t *testing.T) {
 					continue
 				}
 				if _, isSlice := field.Type.(*ast.ArrayType); !isSlice {
-					t.Errorf("%s.Data is not a slice; httperr.recordsIn counts a page by its length "+
-						"and would charge this response as one record however many it serves", spec.Name.Name)
+					t.Errorf("%s.Data is not a slice; httperr.withEmptyLists would not turn a nil page "+
+						"into an empty array", spec.Name.Name)
 				}
 				return true
 			}
 		}
-		t.Errorf("%s declares no Data field; httperr.recordsIn reads the page off `Data` and would "+
-			"charge this response as one record however many it serves", spec.Name.Name)
+		t.Errorf("%s declares no Data field; httperr.withEmptyLists reads the page off `Data` and "+
+			"would send a nil page as null", spec.Name.Name)
 		return true
 	})
 

@@ -44,7 +44,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -335,8 +334,8 @@ func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (
 }
 
 // ServeRecorded answers a stored envelope to the caller AS THEY ARE NOW: it
-// re-proves every record the document names and re-charges what the original
-// call cost, then hands the bytes back unchanged.
+// re-proves every record the document names, then hands the bytes back
+// unchanged.
 //
 // It exists because there are now TWO surfaces holding a recorded answer — the
 // idempotency claim, and an MCP task whose completed result a client may poll
@@ -346,9 +345,7 @@ func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (
 // would drift the first time either moved.
 //
 // The refusal is ErrNotFound, the existence-hiding answer a live read would
-// give. The count is the ORIGINAL call's, never derived from the evidence list
-// — see chargeReplay for why that arithmetic would make a repeat cheaper than
-// the call.
+// give.
 func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json.RawMessage) (json.RawMessage, error) {
 	spec, ok := r.Spec(tool)
 	if !ok {
@@ -389,15 +386,8 @@ func (r *Registry) ServeTaskResult(ctx context.Context, tool string, recorded js
 	if err != nil {
 		return nil, err
 	}
-	if r.volume == nil {
-		return out, nil
-	}
-	if err := r.volume.Consume(ctx, agentvolume.Calls, 1); err != nil {
-		slog.ErrorContext(ctx, "recording a polled task result against the call ceiling failed",
-			"tool", tool, "err", err)
-		return nil, fmt.Errorf(
-			"crmagents: polling %s could not be counted against this agent's call ceiling, so the result is withheld: %w",
-			tool, apperrors.ErrBudgetExceeded)
+	if err := r.ChargeAdmittedRead(ctx); err != nil {
+		return nil, err
 	}
 	return out, nil
 }

@@ -140,6 +140,9 @@ describe("AgentAllowancesCard", () => {
       expect(
         await screen.findByText(translate("en", "operations.refusal")),
       ).toBeTruthy();
+      expect(box).toHaveAccessibleDescription(
+        expect.stringContaining(translate("en", "operations.refusal")),
+      );
       const save = screen.getByRole("button", {
         name: translate("en", "agentAllowances.save"),
       });

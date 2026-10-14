@@ -273,11 +273,10 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	return json.Marshal(result)
 }
 
-// noteBriefEvidence charges the brief's own citations against the read bound
-// and puts them in the envelope.
+// noteBriefEvidence puts the brief's own citations in the envelope.
 //
 // Naming a record to an agent is handing that record over, which is why
-// noteEvidence charges rather than only recording. The brief names attendees,
+// noteEvidence counts the record as served as well as citing it. The brief names attendees,
 // the meetings this room held before, and the conversations promises were
 // extracted from — records the context walk beside it never touched. Left
 // uncharged, the richest read on this surface would also be the cheapest, and

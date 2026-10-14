@@ -171,8 +171,8 @@ func TestAWriteIsServedEvenWhenItsChargeCannotBeRecorded(t *testing.T) {
 }
 
 // Every admitted call spends the ceiling every other counter sits under, and it
-// spends exactly one however many records the answer carried. Charging it per
-// record would make MCP-SESS-CALLS a second read bound with a different number.
+// spends one however many records the answer carried. A per-record charge would
+// make MCP-SESS-CALLS a record count under another name.
 func TestEveryAdmittedCallSpendsOneOfTheCallCeiling(t *testing.T) {
 	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records"), records: 20})
 

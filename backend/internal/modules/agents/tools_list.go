@@ -21,10 +21,8 @@ package agents
 // than the caller asked, and an unpublished bindable one is capability nobody
 // can reach.
 //
-// Metering is free here, and deliberately so: the answer is datasource.Records,
-// so every row rides newWireRecord and the read bound charges per record rather
-// than per call — the property A139 calls load-bearing, since an enumeration is
-// the densest read a surface can offer.
+// The answer is datasource.Records, so every row rides newWireRecord and is
+// cited in the envelope.
 
 import (
 	"bytes"

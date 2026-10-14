@@ -186,6 +186,12 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 		}
 	})
 
+	onReadScopedPost := advance(func() {
+		if status := e.Call(t, "POST", "/v1/reports/deals-by-stage", AnyMap{}, bearer, nil); status != http.StatusOK {
+			t.Fatalf("the agent report run → %d, want 200", status)
+		}
+	})
+
 	for _, owed := range []struct {
 		counter agentvolume.Counter
 		moved   int
@@ -193,6 +199,8 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 		door    string
 	}{
 		{agentvolume.Calls, onRead[agentvolume.Calls], 1, "a GET is one call"},
+		{agentvolume.Calls, onReadScopedPost[agentvolume.Calls], 1, "a POST whose tool is read-only is one call, not two"},
+		{agentvolume.Writes, onReadScopedPost[agentvolume.Writes], 0, "a POST whose tool is read-only changes nothing"},
 		{agentvolume.Writes, onRead[agentvolume.Writes], 0, "a GET changes nothing"},
 		{agentvolume.Writes, onWrite[agentvolume.Writes], 1, "a POST mutates"},
 		{agentvolume.Calls, onWrite[agentvolume.Calls], 1, "a POST is one call"},

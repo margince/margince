@@ -225,22 +225,6 @@ func TestTheVisibilityCaveatSizesNothing(t *testing.T) {
 	}
 }
 
-// A candidate answered with no record still costs a read. Left free,
-// `unresolved` is an unlimited lookup: ask about every address in turn and the
-// bound never moves, so the meter that is meant to bound probing sees exactly
-// the calls that are pure probing as costing nothing.
-func TestAnUnansweredCandidateIsStillCharged(t *testing.T) {
-	tool := resolveEntities{p: &queryProbeProvider{}, resolve: fixedResolver([]ResolveOutcome{{}, {}})}
-	registry, _, ctx := chargingRegistry(t, tool)
-
-	if _, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(
-		`{"candidates":[{"kind":"contact"},{"kind":"contact"}]}`,
-	)); err != nil {
-		t.Fatalf("invoking resolve_entities: %v", err)
-	}
-
-}
-
 // A kind outside the pair this tool answers is the CALLER's mistake and reads as
 // one. Unchecked it reaches the resolver's own switch and comes back as an
 // internal fault carrying the owning module's name.
@@ -258,33 +242,10 @@ func TestAnUnknownKindIsRefusedAsAnArgument(t *testing.T) {
 	}
 }
 
-// Resolution is a bulk read and is charged like one: a batch naming four records
-// spends four, not one.
-func TestResolutionIsChargedPerRecordServed(t *testing.T) {
-	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{}}
-	var outcomes []ResolveOutcome
-	for range 4 {
-		id := ids.NewV7()
-		provider.records[id] = recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
-		outcomes = append(outcomes, ResolveOutcome{Refs: []ResolveRef{
-			{Kind: "contact", ID: id, Exact: true, Confidence: 1, MatchedOn: "email"},
-		}})
-	}
-	tool := resolveEntities{p: provider, resolve: fixedResolver(outcomes)}
-	registry, _, ctx := chargingRegistry(t, tool)
-
-	if _, err := registry.Invoke(ctx, "resolve_entities", json.RawMessage(
-		`{"candidates":[{"kind":"contact"},{"kind":"contact"},{"kind":"contact"},{"kind":"contact"}]}`,
-	)); err != nil {
-		t.Fatalf("invoking resolve_entities: %v", err)
-	}
-
-}
-
-// One record named by two candidates is charged ONCE. A card carrying two
-// addresses, or a name and a phone number belonging to the same contact, is the
-// ordinary case — and the bound counts records handed over, not answers.
-func TestARecordNamedByTwoCandidatesIsChargedOnce(t *testing.T) {
+// One record named by two candidates is cited once and still answers both. A
+// card carrying two addresses, or a name and a phone number belonging to the same
+// contact, is the ordinary case.
+func TestARecordNamedByTwoCandidatesAnswersBoth(t *testing.T) {
 	contact := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
 		contact: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
@@ -302,8 +263,8 @@ func TestARecordNamedByTwoCandidatesIsChargedOnce(t *testing.T) {
 		t.Fatalf("invoking resolve_entities: %v", err)
 	}
 
-	// Both answers still carry it: charging once must not cost the second
-	// candidate its match.
+	// Both answers carry it: citing it once must not cost the second candidate
+	// its match.
 	var sealed struct {
 		Data ResolveEntitiesResult `json:"data"`
 	}

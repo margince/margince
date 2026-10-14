@@ -91,9 +91,9 @@ func (r *Registry) chargeCall(ctx context.Context, spec mcp.ToolSpec, mayRefuse 
 // tool's result passes through. Charging per TOOL instead would be a list to
 // maintain, and the tool added next is the one that forgets.
 //
-// Only the act is charged here, against the counter its own kind names. The gate
-// refuses on the same derivation, so the two cannot disagree. A read-only tool's
-// act is a call, which chargeCall already paid.
+// Only the act is charged here, against the counter its own kind names, which
+// the gate also refuses on. A read-only tool's act is a call, which chargeCall
+// already paid.
 //
 // It charges only after a successful answer: a failed handler changed nothing.
 func (r *Registry) chargeAnswer(ctx context.Context, spec mcp.ToolSpec) error {
@@ -213,23 +213,14 @@ func (r *Registry) ChargeAdmittedCall(ctx context.Context, spec mcp.ToolSpec) er
 	return r.chargeCall(ctx, spec, nothingHasHappenedYet)
 }
 
-// ChargeAdmittedRead is ChargeAdmittedCall for a REST read, which has no tool
-// spec: one request is one call.
+// ChargeAdmittedRead is ChargeAdmittedCall for a call with no tool spec: a REST
+// read, or a poll of a finished task. One request is one call.
 //
 // It refuses what it cannot count, as chargeCall does. A read has committed
 // nothing. A charge lost to a Redis blip is lost for good, so serving the read
 // would raise the ceiling by one per blip.
 func (r *Registry) ChargeAdmittedRead(ctx context.Context) error {
-	if r.volume == nil {
-		return nil
-	}
-	if err := r.volume.Consume(ctx, agentvolume.Calls, 1); err != nil {
-		slog.ErrorContext(ctx, "recording an admitted REST read against the call ceiling failed", "err", err)
-		return fmt.Errorf(
-			"crmagents: this request could not be counted against this agent's call ceiling, so it was not run: %w",
-			apperrors.ErrBudgetExceeded)
-	}
-	return nil
+	return r.chargeCall(ctx, mcp.ToolSpec{Name: "this request"}, nothingHasHappenedYet)
 }
 
 // ChargeRedeemedCall is ChargeAdmittedCall for a call whose approval has

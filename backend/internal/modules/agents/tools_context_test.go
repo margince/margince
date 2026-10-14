@@ -208,8 +208,8 @@ func TestTheRequestedRecordTypesReachTheRetriever(t *testing.T) {
 }
 
 // The published maximum is the one that binds. The seam clamps too, but to its
-// own ceiling — and this tool's limit is the unit its caller's read bound is
-// spent in, so the number in its schema has to be the number it means.
+// own ceiling. This tool's limit is the page size its caller plans around, so the
+// number in its schema has to be the number it means.
 func TestTheSearchLimitIsResolvedAgainstThePublishedCeiling(t *testing.T) {
 	for _, tc := range []struct{ asked, want int }{
 		{asked: 0, want: contextSearchDefaultLimit},

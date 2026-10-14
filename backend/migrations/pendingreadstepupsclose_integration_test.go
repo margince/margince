@@ -29,7 +29,7 @@ func TestPendingReadStepUpsAreDueForExpiryAndNothingElseMoves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1791956206")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1791987509")); err != nil {
 		t.Fatalf("up to the version before: %v", err)
 	}
 	future := clocktest.Now(t).Add(24 * time.Hour)
@@ -53,7 +53,7 @@ func TestPendingReadStepUpsAreDueForExpiryAndNothingElseMoves(t *testing.T) {
 		}
 	}
 
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1791986500")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1791987600")); err != nil {
 		t.Fatalf("up through the migration: %v", err)
 	}
 
