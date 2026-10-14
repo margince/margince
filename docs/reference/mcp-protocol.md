@@ -103,6 +103,13 @@ rights of the human who gave it.
 counter, `cost`, is only a warning. It refuses nothing, and says on the answer when this credential has used its share
 of the AI budget of the workspace.
 
+The four limits and the window length are installation settings (`agent_allowances` on `/installation/settings`),
+read through a cache of one minute (`agentvolume.PolicyRefresh`). The defaults are 2,000 `reads`, 200 `writes`, 20
+`egress` and 1,000 `calls` in a 24-hour window. A changed limit binds in the running window. A changed length waits for
+the next reset, since the bucket number comes from the moment and the length. The passports of one OAuth grant share their
+counters (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of
+the transport stay in the build (`compose/agentallowances.go`).
+
 **How a client gets a `client_id`.** There are two ways, and a client that reads the priority order of the profile
 picks the first:
 
