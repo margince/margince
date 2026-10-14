@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProvidersStat, SpendEstimate } from "./ai-settings";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /** The pair, composed here because no single page carries both any more. */
 const AiReadings = () => (

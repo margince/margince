@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { StoryProviders } from "../testing/story-utils";
 import { AddConnectionDialog, ALL_PROVIDERS } from "./connectors.add";
-import { StoryProviders } from "./story-utils";
 
 // The card's create verb: one row per provider not yet connected, each with
 // the sentence its choice turns on.

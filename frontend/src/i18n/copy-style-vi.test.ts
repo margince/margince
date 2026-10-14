@@ -94,7 +94,7 @@ function spokenByTheReader(key: string): boolean {
 // Vietnamese alone addresses as an outsider.
 const READ_BY_AN_OUTSIDER = [
   ...declaredStrings(
-    resolve(here, "address-register.test.ts"),
+    resolve(here, "..", "..", "scripts", "lib", "german-catalogs.ts"),
     "READ_BY_AN_OUTSIDER",
   ),
   "book.",

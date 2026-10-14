@@ -3,12 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactProviderSection } from "./contactprovider";
 import {
   completedProviderRun,
   providerCompletedProfile,
 } from "./contactprovider.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type Profile = components["schemas"]["ContactProviderProfile"];
 

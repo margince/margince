@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DataTable } from "../design-system/datatable";
+import { StoryProviders } from "../testing/story-utils";
 import { BarFigure, CountLink, columnScale } from "./analytics.cells";
-import { StoryProviders } from "./story-utils";
 
 // The cells every report table is drawn from: a count that opens the set it
 // names, and a figure with its bar in one cell, the bar on the column's own

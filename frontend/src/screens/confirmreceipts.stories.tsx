@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
-import { StoryProviders } from "./story-utils";
 import "./confirm.css";
 
 // What the subject is left holding after a confirm link opened a case.

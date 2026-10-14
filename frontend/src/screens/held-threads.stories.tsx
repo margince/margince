@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { HeldThreadsCard } from "./held-threads";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { HeldThreadsCard } from "./held-threads";
 
 // What a mailbox is holding back from the team. The states worth a picture are
 // the two a reader must tell apart at a glance: a thread a classifier JUDGED,

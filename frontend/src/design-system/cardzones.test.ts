@@ -61,10 +61,6 @@ const notARecordZone = new Map<string, string>([
     "screens/contactnetwork/edgedetail.tsx",
     "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],
-  [
-    "screens/transcriptread.tsx",
-    "an inset inside one activity-timeline row, which is where the timeline mounts it",
-  ],
 ]);
 
 /** The head band a card draws when it is claiming to be a zone. */

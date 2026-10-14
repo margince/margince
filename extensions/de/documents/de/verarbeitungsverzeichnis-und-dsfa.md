@@ -3,7 +3,7 @@
 > Vorlage. Jede Zeile nennt den Code-Pfad, der die Zusage durchsetzt, damit
 > prüfbar ist, ob das Verzeichnis das Produkt beschreibt oder eine Absicht.
 
-**Verantwortlicher:** [Firma, Anschrift] · **Stand:** [Datum]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift] · **Stand:** [Datum]
 
 ## Teil A: Verzeichnis nach Art. 30 DSGVO
 
@@ -12,10 +12,10 @@
 | Feld | Angabe |
 | --- | --- |
 | Zweck | Dokumentation geschäftlicher Vorgänge im CRM |
-| Betroffene | Beschäftigte; deren Korrespondenzpartner |
-| Datenkategorien | Absender, Empfänger, Betreff, Text, Anhänge, Zeitpunkt |
+| Betroffene | Beschäftigte; Personen, mit denen sie korrespondieren |
+| Datenkategorien | Absende- und Empfangsadressen, Betreff, Text, Anhänge, Zeitpunkt |
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. b, f DSGVO; § 26 Abs. 1 BDSG; bei Privatnutzung zusätzlich lit. a |
-| Empfänger | Auftragsverarbeiter: Hosting (AVV); KI-Anbieter gemäß `docs/reference/ai-egress.md`; weitere vom Betreiber konfigurierte Dienste [eintragen]. Keine Übermittlung an Dritte zu deren eigenen Zwecken |
+| Kategorien empfangender Stellen (Art. 30 Abs. 1 lit. d DSGVO) | Auftragsverarbeitende Stellen (Art. 28 DSGVO): Hosting (AVV); KI-Anbieter gemäß `docs/reference/ai-egress.md`; weitere von der betreibenden Stelle konfigurierte Dienste [eintragen]. Keine Übermittlung an Dritte zu deren eigenen Zwecken |
 | Löschfrist | Handelsbriefe [Frist]; übrige [Frist] |
 | Durchsetzung | `capture/sinkactivity.go` schreibt jede Nachricht mit der Sichtbarkeit, die das Postfach verlangt |
 
@@ -28,14 +28,14 @@
 | Besonderheit | Fällt die Klassifikation aus, bleibt alles zurückgehalten. Nicht verfügbar oder ohne Budget bedeutet zurückgehalten, nie freigegeben |
 | Durchsetzung | `activities/audiencerecompute.go` leitet die Sichtbarkeit als das Strengste ab, was ein erfassendes Postfach verlangt; `platform/auth` prüft sie bei jedem Lesen |
 
-### A.3 Automatisierte Klassifikation von Absendern und Threads
+### A.3 Automatisierte Klassifikation von Absendeadressen und Threads
 
 | Feld | Angabe |
 | --- | --- |
-| Zweck | Entscheidung, ob ein Absender ein Geschäftskontakt und ein Thread gewöhnliche Geschäftskorrespondenz ist |
+| Zweck | Entscheidung, ob eine Absendeadresse zu einem Geschäftskontakt gehört und ein Thread gewöhnliche Geschäftskorrespondenz ist |
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. f DSGVO |
 | Modellbetrieb | lokal, siehe `docs/reference/ai-egress.md` |
-| Menschliches Eingreifen | Die Seite „Absender“ zeigt jede Entscheidung; eine Korrektur ist endgültig und wird von der Maschine nicht überschrieben |
+| Menschliches Eingreifen | Die Seite „Absendeadressen“ zeigt jede Entscheidung; eine Korrektur ist endgültig und wird von der Maschine nicht überschrieben |
 | Besonderheit | Nicht verfügbar oder ohne Budget bedeutet zurückgehalten. Ein Ausfall führt nie zu einer Freigabe |
 | Durchsetzung | `compose/captureverdict.go`, `compose/confidentialityverdict.go`; die Vorrangregel in `capture/senderoverride.go` |
 
@@ -60,17 +60,17 @@ automatisiert bewertet, in einem Verhältnis struktureller Unterlegenheit.
 
 | Risiko | Abhilfe | Durchsetzung |
 | --- | --- | --- |
-| Kolleginnen lesen private Korrespondenz | Voreinstellung `classified`; nur gewöhnliche Threads werden freigegeben | `capture/birthdecision.go` |
-| Eine Administratorin liest zurückgehaltene Inhalte | Die Zugriffsprüfung kennt keine Administratorausnahme | `platform/auth/inheritedscope.go` |
+| Andere Beschäftigte lesen private Korrespondenz | Voreinstellung `classified`; nur gewöhnliche Threads werden freigegeben | `capture/birthdecision.go` |
+| Wer Adminrechte hat, liest zurückgehaltene Inhalte | Die Zugriffsprüfung kennt keine Ausnahme für Adminrechte | `platform/auth/inheritedscope.go` |
 | Der Klassifikator irrt und gibt Vertrauliches frei | Nur eine Antwort öffnet; alle übrigen halten. Öffnende Antworten unter der Schwelle gelten als unsicher und halten | `compose/confidentialityverdictkinds.go` |
 | Ein Ausfall führt zur Freigabe | Kein Modell, kein Budget, keine Antwort: alles bleibt zurückgehalten | dieselbe Datei; kein `default`-Zweig |
 | Inhalte verlassen die Infrastruktur | Beide Vertraulichkeitsaufgaben laufen lokal | `docs/reference/ai-egress.md`, erzeugt |
 | Leistungskontrolle über Metadaten | Verwertungsverbot in der Betriebsvereinbarung | vertraglich, nicht technisch |
-| Ein Kollege veröffentlicht, was ein anderer zurückhält | Die Sichtbarkeit ist das Strengste über alle erfassenden Postfächer | `activities/audiencerecompute.go` |
+| Ein Teammitglied veröffentlicht, was ein anderes zurückhält | Die Sichtbarkeit ist das Strengste über alle erfassenden Postfächer | `activities/audiencerecompute.go` |
 
 ### B.3 Verbleibendes Risiko
 
-**Ein neuer Absender ist zurückgehalten.** Seine erste Nachricht
+**Eine neue Absendeadresse ist zurückgehalten.** Ihre erste Nachricht
 wird gespeichert, bis eine Entscheidung fällt.
 
 **Der Klassifikator irrt.** Die asymmetrische Schwelle verschiebt Fehler in

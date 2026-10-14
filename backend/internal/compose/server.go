@@ -58,7 +58,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithSuggestionEffects(dealSuggestionEffects{})
+		WithSuggestionEffects(dealSuggestionEffects{}).
+		WithSettings(NewSettingsStore(pool)).
+		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
@@ -115,6 +117,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
 	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
 	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
+	// The meter pointer WithAgentVolume rebound, so the list reads the counters
+	// the gate charges.
+	srv.authHandlers = srv.WithPassportUsage(srv.volumeMeter)
+	srv.afterSave = srv.volumeMeter.ForgetPolicy
 	// After the option loop, so /me's answer and the endpoints' gate resolve one
 	// rollout value whether or not WithCompanyContextRollout ran.
 	srv.publishCompanyContextAvailability()
@@ -325,7 +331,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, srv.volumeMeter, log)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, connectionReleaser{meter: srv.volumeMeter, pool: pool}, log)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//

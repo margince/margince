@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ManageViewsButton } from "./savedviews.manage";
 import type { SavedView } from "./savedviews.queries";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The dialog a list's own view rail manages its views in: every view of the
 // list, each row opening in place into a rename or a delete, so a second

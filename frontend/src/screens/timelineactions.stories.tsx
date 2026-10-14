@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 
 import type { components } from "../api/schema";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { TimelineActions } from "./timelineactions";
 
 // The verbs a reader gets on one timeline row, and which visibility control

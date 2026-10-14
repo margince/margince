@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { formatFixture } from "./import.fixtures";
-import { ProblemTable } from "./import.testrun";
-import { ImportWizardPage } from "./import.wizard";
-import type { ImportRowIssue } from "./importtypes";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { formatFixture } from "./import.fixtures";
+import { ProblemTable } from "./import.testrun";
+import { ImportWizardPage } from "./import.wizard";
+import type { ImportRowIssue } from "./importtypes";
 
 // The test run shows the counts per type and every problem with where it is.
 // It offers to bring rows with broken links in without the link. The first

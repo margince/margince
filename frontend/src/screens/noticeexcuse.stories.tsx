@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ExcuseModal } from "./noticeexcuse";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Patterns/End a notice duty" };
 export default meta;

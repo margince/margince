@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { AddDocument } from "./dealroomdocuments";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AddDocument } from "./dealroomdocuments";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type DealDocument = components["schemas"]["DealDocument"];

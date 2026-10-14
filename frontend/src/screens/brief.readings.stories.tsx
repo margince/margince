@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { leadRow, readingsDay, wholeLeads } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof BriefReadingsStrip> = {
   title: "Shell/Home/Prospecting readings",

@@ -2,8 +2,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { LeadScreen, terminalBadge } from "./leads";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // What a merged-away lead's page says it is.
 //

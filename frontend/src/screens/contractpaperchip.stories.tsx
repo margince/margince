@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContractPaper } from "./contractpaperchip";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The row's own chrome (.rec-files and its label/items rows) is defined in
 // company360.css, which reaches this component by class from the screen that
 // hosts it — so a story mounting the chips alone has to load it.

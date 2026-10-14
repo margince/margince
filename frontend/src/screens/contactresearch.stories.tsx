@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { providerCompletedProfile } from "./contactprovider.fixtures";
 import { ContactResearchTab } from "./contactresearch";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The Research tab's own gallery: the two halves it stacks (the bought
 // provider snapshot and the enrichment evidence sidecar), the tab-wide empty

@@ -39,7 +39,7 @@ The api and the worker follow the same rules, and each reads only the values it 
 [The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
 
 **Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
-retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
+retention, starter automations, booking page, legal review, `ai_routing`). The api writes them in one transaction
 when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
 token instead. The user who claims the installation enters the company and the first admin, and
 the `seeds.*` values still apply.
@@ -52,6 +52,12 @@ code in small letters. It is also seeded into an existing installation that has 
 Boot refuses a code with no compiled-in pack, in the api and in the worker. After the first seed, the
 Jurisdiction settings page changes it. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
 `seeds.*` again from the current file. Every other section of the file is read at each boot.
+
+**Legal review.** Legal review on deals is on by default, as the setting `deals.legal_review_enabled`.
+`seeds.legal_review: false` starts a new installation with it off. An admin changes it later under
+Settings → Pipelines, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
+queue and the `legal_reviewed` criterion kind, and a stage stops waiting for legal. Reviews already
+recorded are kept.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
 value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing

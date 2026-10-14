@@ -2,13 +2,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { DealScreen } from "./deals";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealScreen } from "./deals";
 
 // WHY THE DEAL'S STAGE LADDER REFUSES, on the reader's screen.
 //

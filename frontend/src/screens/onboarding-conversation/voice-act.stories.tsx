@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import { initialConversationState } from "./conversation-machine";
 import type {

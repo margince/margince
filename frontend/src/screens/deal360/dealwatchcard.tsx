@@ -16,9 +16,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { DEAL_COMMITMENTS_KEY } from "../../lib/activitykeys";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { DEAL_COMMITMENTS_KEY } from "../activitykeys";
 import { DismissClaimButton } from "../claimdismiss";
 import "./deal360.css";
 

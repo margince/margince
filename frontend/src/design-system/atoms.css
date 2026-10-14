@@ -287,6 +287,8 @@
   inset-inline-end: var(--space-4);
   /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
   z-index: 2;
+  display: flex;
+  gap: var(--gapActions);
 }
 
 /* The dialog's first line stops short of the control drawn over it. A heading
@@ -309,7 +311,17 @@
   > .drawer-head
   > :first-child
   > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+/* An expandable drawer has Expand beside the X, and its title clears both. A
+   phone hides Expand, so there the corner is the X alone. */
+@media (min-width: 721px) {
+  .modal:has(> .modal-close > :nth-child(2)) {
+    --modal-corner: calc(var(--controlHeight) * 2 + var(--gapActions));
+  }
 }
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
@@ -417,6 +429,12 @@
   flex-direction: column;
   padding: 0;
 }
+/* An expanded drawer takes the window less the gap it floats in, whatever its
+   intent's width. After the intents' widths, which it replaces, and before the
+   phone sheet, which replaces it. */
+.modal-drawer-window {
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+}
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
@@ -501,6 +519,11 @@
      exactly the two dimensions it would spend, so the sheet takes the glass. */
   .overlay-right {
     padding: 0;
+  }
+  /* The sheet is the whole window already, so Expand has nothing to give. The
+     X is the corner's last control, and everything before it is Expand. */
+  .modal-close > :not(:last-child) {
+    display: none;
   }
   /* A confirm stays a card over the scrim: it asks one question about the
      page it covers, and the page has to stay in view for that. */
@@ -1690,6 +1713,18 @@ span.error-line {
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
+}
+/* A menu opened from inside a dialog stands above that dialog's overlay and
+   below a popover. The panel is portalled out of the dialog, so on the layer
+   above, the dialog would cover its own menu. */
+.overflow-menu-items[data-layer="dialog"] {
+  z-index: 60;
+}
+/* Under a dialog opened after its own, it sinks under the scrim as a menu
+   outside any dialog does. A panel follows its own dialog in the body, so a
+   later overlay is a dialog on top, and the top dialog's menu stays above. */
+.overflow-menu-items[data-layer="dialog"]:has(~ .overlay) {
+  z-index: 35;
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
    so without this the closed menu stays open — the whole point of folding the

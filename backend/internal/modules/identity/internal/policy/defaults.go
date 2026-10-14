@@ -118,6 +118,9 @@ var managerObjects = grid(crud, map[string]grant{
 
 	// The Team Lead leads the teams they are on; management inherits it.
 	objTeamLead: createRead,
+	// Reviewing legal requests is handed out by an admin, never inherited by a
+	// team lead.
+	objLegalReview: none,
 })
 
 // managementObjects is managerObjects with the administration reads a
@@ -191,6 +194,7 @@ var defaults = map[string]Document{
 			objSeatUsage:            readOnly,
 			objTeamOversight:        readOnly,
 			objTeamLead:             createRead,
+			objLegalReview:          readUpdate,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -256,14 +260,10 @@ var defaults = map[string]Document{
 			reportingReportEdition:    writeNoDelete,
 
 			"activity": writeNoDelete,
-			// A rep ANSWERS an assurance finding, and is usually the only one
-			// who can: the finding is about the quality of an input, and the
-			// seat that knows why a deal's numbers look the way they do is
-			// the one that entered them. Row scope already bounds what they
-			// reach, so this widens what they may say about their own work
-			// rather than what they can see. Making every finding a
-			// supervisory errand would route the question away from the only
-			// seat that can answer it.
+			// A rep answers assurance findings: the seat that entered a deal's
+			// numbers is usually the only one who knows why they look that way.
+			// assurance.Resolve bounds this to deals the rep may change, so it
+			// widens what they may say about their own work, not what they see.
 			objForecast:         readUpdate,
 			objAiModelRate:      none,
 			objAiRouting:        none,
@@ -314,6 +314,7 @@ var defaults = map[string]Document{
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
+			objLegalReview:            none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -356,6 +357,7 @@ var defaults = map[string]Document{
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
+			objLegalReview:            none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -409,6 +411,7 @@ var defaults = map[string]Document{
 			// team's coaching week.
 			objTeamOversight: none,
 			objTeamLead:      none,
+			objLegalReview:   none,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

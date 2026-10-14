@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { StatStrip } from "../design-system/statstrip";
+import { StoryProviders } from "../testing/story-utils";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
-import { StoryProviders } from "./story-utils";
 
 // The two readings that answer "where does this period land, and does the
 // pipeline support it?" — drawn INSIDE the stat strip, because that is the only

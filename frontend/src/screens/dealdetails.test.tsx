@@ -3,13 +3,13 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { DealDetails } from "./deals";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealDetails } from "./deals";
 
 const deal: components["schemas"]["Deal"] = {
   id: "d1",

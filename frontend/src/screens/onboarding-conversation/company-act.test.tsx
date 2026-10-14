@@ -7,7 +7,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { jsonResponse, type RouteMap, stubWithSession } from "../story-utils";
+import {
+  jsonResponse,
+  type RouteMap,
+  stubWithSession,
+} from "../../testing/story-utils";
 import { CompanyAct } from "./company-act";
 import type {
   ConversationEvent,

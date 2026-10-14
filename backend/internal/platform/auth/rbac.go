@@ -327,7 +327,11 @@ var auditActionGrant = map[string]principal.Action{
 	// business suspending the storage-limitation ladder over it.
 	"place_legal_hold": principal.ActionDelete,
 	"lift_legal_hold":  principal.ActionDelete,
-	"revoke":           principal.ActionUpdate,
+	// A legal review is asked for, and taken back, on the deal: both are
+	// written under deal.update, the grant the request path takes.
+	"request_legal_review":  principal.ActionUpdate,
+	"withdraw_legal_review": principal.ActionUpdate,
+	"revoke":                principal.ActionUpdate,
 	// The Deal Room lifecycle. All four move an existing room's state and all
 	// four take deal_room.update at the store, so update is the grant that
 	// actually admitted the call — not delete for close, which ends no row, and

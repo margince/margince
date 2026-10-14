@@ -6,9 +6,13 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { ConnectorRow } from "./connectors.row";
 import { ConnectionDrawer } from "./connectors.settings";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import "./connectors.css";
 
 // One roster row per state. A healthy row carries no badge; a broken one says

@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DealWatchList } from "./dealwatchcard";
 
 // What the customer committed to that a deal waits on. The states worth seeing

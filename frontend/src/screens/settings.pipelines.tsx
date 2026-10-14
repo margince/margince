@@ -27,6 +27,7 @@ import { unwrap } from "../lib/problem";
 import { useUrlParams } from "../lib/urlstate";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
+import { LegalReviewSettingsCard } from "./legalreviewsettings";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
 import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
@@ -405,6 +406,8 @@ export function PipelinesCard() {
     <div className="settings-pipelines">
       <PipelineCatalog query={query} openId={opened?.id} onOpen={open} />
       {opened && <PipelineDetail pipeline={opened} />}
+      {/* Whether a stage may wait for legal is a pipeline question. */}
+      <LegalReviewSettingsCard />
     </div>
   );
 }

@@ -98,9 +98,9 @@ func briefRowsDeal(item crmcontracts.WorklistItem) (ids.UUID, bool) {
 	return ids.UUID(item.Subject.Id), true
 }
 
-// carryBriefOnto moves what the folded row was carrying onto the survivor: the
-// brief's own id, so its verbs still reach it, and the night's composite, so the
-// opportunity tie-break can still read it.
+// carryBriefOnto moves what the folded row carried onto the survivor. The
+// brief's id and its declining verbs keep set-aside and dismiss reachable. The
+// night's composite keeps the opportunity tie-break readable.
 //
 // The survivor's level, band and every other field are untouched, which is the
 // invariant this fold is allowed to keep and nothing more.
@@ -113,7 +113,14 @@ func carryBriefOnto(survivor *ranked, brief ranked) {
 		return
 	}
 	named := openapi_types.UUID(id)
+	offered := make([]crmcontracts.WorklistItemBriefActions, 0, 2)
+	for _, verb := range brief.item.Actions {
+		if declining := crmcontracts.WorklistItemBriefActions(verb); declining.Valid() {
+			offered = append(offered, declining)
+		}
+	}
 	survivor.item.BriefItemId = &named
+	survivor.item.BriefActions = &offered
 	survivor.opportunity = brief.opportunity
 }
 

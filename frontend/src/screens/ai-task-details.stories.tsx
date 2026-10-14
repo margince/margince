@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { feature } from "./ai-admin.testkit";
 import { TaskDetails } from "./ai-task-details";
-import { StoryProviders } from "./story-utils";
 
 // What a task row opens onto, here for a task that asks a decision model first:
 // the model's vendor is named, never its adapter key.

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ContactBillingRoles } from "./contactbillingroles";
-import { StoryProviders } from "./story-utils";
 import "./company360.css";
 
 // The contact's side of billing, beside their employers rather than inside

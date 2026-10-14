@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import { meFixture } from "../testing/mefixture";
-import { emptyPage, jsonResponse, type RouteMap } from "./story-utils";
+import { emptyPage, jsonResponse, type RouteMap } from "../testing/story-utils";
 
 type Contact = components["schemas"]["Contact"];
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];

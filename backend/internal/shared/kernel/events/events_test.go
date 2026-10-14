@@ -80,6 +80,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,
 		// A rep said a Deal Scout suggestion is not a deal.
 		"dismissed": true,
+		// A deal's side took back a request it made, such as a legal review.
+		"withdrawn": true,
 		"received":  true, "normalized": true, "skipped": true,
 		// The recipient read the notice — the verb is its own past tense.
 		"read":               true,

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { bookingProfile } from "./book.testkit";
 import { DefaultFields, SetupChecklist } from "./meeting-settings-sections";
-import { StoryProviders } from "./story-utils";
 
 import "./book.css";
 

@@ -9,7 +9,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { AddTagPicker } from "./tagpicker";
 
 // Pick a word the workspace already has. The picker cannot coin one, so what

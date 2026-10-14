@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { CompanyScreen } from "./companies";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyScreen } from "./companies";
 
 // CompanyScreen reads through the api client on mount — fixtures mirror
 // companies.test.tsx's `company`.

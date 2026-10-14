@@ -110,7 +110,7 @@ craft_bin() {
 }
 
 # Executed rather than sourced: print the path. `$(scripts/craft-pin.sh)` is a
-# command, which is how the Makefile and the pre-push hook call the gate.
+# command, which is how the Makefile calls the gate.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 	set -euo pipefail
 	craft_bin

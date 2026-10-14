@@ -32,6 +32,14 @@ declare const __MARGINCE_RELEASE_VERSION__: string;
  */
 export const SPA_RELEASE: string = __MARGINCE_RELEASE_VERSION__;
 
+declare const __MARGINCE_CORE_VERSION__: string;
+
+/**
+ * CORE_RELEASE is the core release an instance build pins. Only an instance
+ * build stamps it, so a stamped value is what marks the bundle as an instance.
+ */
+export const CORE_RELEASE: string = __MARGINCE_CORE_VERSION__;
+
 /**
  * UNKNOWN mirrors buildinfo.Unknown: the value a plain `docker build` stamps
  * when no release was named. Empty means the same thing — nothing stamped it at

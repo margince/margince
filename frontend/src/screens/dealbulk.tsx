@@ -9,8 +9,8 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { dealRecordKeys } from "../lib/activitykeys";
 import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
-import { dealRecordKeys } from "./activitykeys";
 import { BulkVerbs } from "./bulkverbs";
 
 type Deal = components["schemas"]["Deal"];

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { CompanyFinanceCard } from "./companyfinance";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyFinanceCard } from "./companyfinance";
 
 // The finance card's own rule: no figure is invented, and the absence of one
 // is never drawn as a zero. `no_connection` and `connected` render as

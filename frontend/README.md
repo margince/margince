@@ -83,7 +83,8 @@ measures the real default.
   refuses one. That test is a vitest gate over the TypeScript AST, and `make native-controls` runs
   it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
-  [its README](src/design-system/README.md) before you build a control.
+  [its README](src/design-system/README.md) before you build a control. It never imports `app/` or
+  `screens/`.
 - `src/lib/`: shared code that draws nothing: the hash router, URL state, `theme.ts`, `capability.ts`,
   how a server problem reads, and the session. `theme.ts` resolves and applies `light` or `dark` before React
   mounts, so a screen before sign-in can be dark at all.

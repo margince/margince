@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OwnerIdentitiesCard } from "./capture-owner-identities";
 
 // A seat's own other addresses. Unlike the exclusions card beside it there is no
 // scope to tell apart — every row here is the reader's own, and a colleague's

@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { ComposeModal } from "./compose";
 import { ConversationFold } from "./composeconversation";
 import { SelectedReply, selectedReplyRoutes } from "./composethread.stories";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Patterns/Compose mail/Conversation fold",

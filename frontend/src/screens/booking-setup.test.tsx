@@ -9,6 +9,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   bookingConnection,
   bookingContact,
   bookingHours,
@@ -21,7 +26,6 @@ import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";
 import { BookingProfileScreen } from "./booking-profile";
 import { mount, view } from "./contactpage.testkit";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
   cleanup();

@@ -250,9 +250,11 @@ function emphasis(node: HTMLElement, inner: () => string): string {
 // The mark hugs the words: `** bold**` is not bold to the reader, so the
 // spaces a selection caught stand outside it.
 function wrap(mark: string, text: string): string {
-  const match = /^(\s*)([\s\S]*?)(\s*)$/.exec(text);
-  if (match === null || match[2] === "") return text;
-  return `${match[1]}${mark}${match[2]}${mark}${match[3]}`;
+  const core = text.trim();
+  if (core === "") return text;
+  const lead = text.slice(0, text.length - text.trimStart().length);
+  const trail = text.slice(text.trimEnd().length);
+  return `${lead}${mark}${core}${mark}${trail}`;
 }
 
 function codeSpan(text: string): string {

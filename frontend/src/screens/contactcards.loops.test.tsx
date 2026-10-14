@@ -2,8 +2,12 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactCommitmentsCard } from "./contactcards";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];

@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { LicenseHolderCard } from "./licenseholder";
-import { StoryProviders } from "./story-utils";
 
 // Settings → License, the card above the seat meter. It answers who holds the
 // license and how long it lasts.

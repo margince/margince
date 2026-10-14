@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { CaptureNotice } from "./capture-notice";
-import { StoryProviders } from "./story-utils";
 
 // What a contact is told before their mailbox is read. One state, because it has
 // one: it takes no props, reads nothing, and says the same thing on every

@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { MetricsTable } from "./reporting.metricstable";
 import { reportingStoryEvaluation } from "./reporting.story-fixtures";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/All metrics",

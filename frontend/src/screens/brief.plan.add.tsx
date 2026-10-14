@@ -12,7 +12,7 @@ import {
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
-import { useRecordTargets } from "./recordtargets";
+import { useRecordTargets } from "../lib/recordtargets";
 import { useAddCommitment } from "./weeklyplan.queries";
 
 // One more thing the week is FOR, typed into the plan it belongs to.

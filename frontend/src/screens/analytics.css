@@ -23,6 +23,12 @@
   margin-top: var(--space-4);
 }
 
+/* The aside over a readings strip says how to read it, so it sits on the
+   strip's top edge at a label's distance, not flush against the panes. */
+.analytics-strip-aside {
+  margin-bottom: var(--space-3);
+}
+
 /* A money cell that also carries the priced-of-total footnote: stacked rather
    than inline, or the two texts run together with no space between them
    (`.t-caption`/`.t-num` are typography-only, and a table cell does not

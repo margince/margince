@@ -7,7 +7,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { SourceEvidence } from "./sourceevidence";
 
 const ACTIVITY = "22222222-2222-4222-8222-222222222222";

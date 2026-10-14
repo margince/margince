@@ -302,7 +302,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 // what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
+		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool)))
 	}
 }
 

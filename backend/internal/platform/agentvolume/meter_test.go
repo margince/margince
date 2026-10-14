@@ -55,9 +55,9 @@ func TestAnUnreachableCounterRefusesTheAgentRatherThanAdmittingIt(t *testing.T) 
 		if !reading.Exceeded {
 			t.Errorf("a meter with no counter admitted %s; the bound is removable by stopping Redis", c)
 		}
-		if reading.Limit != meter.Limit(c) {
+		if reading.Limit != meter.window(t.Context()).limits.of(c) {
 			t.Errorf("the %s refusal reported limit %d, not the configured %d — a caller cannot act on a limit that is not the real one",
-				c, reading.Limit, meter.Limit(c))
+				c, reading.Limit, meter.window(t.Context()).limits.of(c))
 		}
 		if reading.Counter != c {
 			t.Errorf("a reading of %s named itself %s; a refusal that misnames its quota cannot be acted on", c, reading.Counter)
@@ -135,13 +135,13 @@ func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 	clock := func() time.Time { return now }
 	meter := NewWithClock(nil, Limits{}, time.Hour, clock)
 
-	first := meter.Bucket()
+	first := meter.Bucket(t.Context())
 	now = now.Add(59 * time.Minute)
-	if meter.Bucket() != first {
+	if meter.Bucket(t.Context()) != first {
 		t.Error("two moments inside one window landed in different buckets")
 	}
 	now = now.Add(2 * time.Minute)
-	if meter.Bucket() == first {
+	if meter.Bucket(t.Context()) == first {
 		t.Error("a moment past the window boundary stayed in the previous bucket")
 	}
 }
@@ -152,7 +152,7 @@ func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 func TestTheCounterOutlivesItsWindowByTheSkewSlackOnly(t *testing.T) {
 	meter := New(nil, Limits{}, 24*time.Hour)
 
-	ttl := time.Duration(meter.ttlSeconds()) * time.Second
+	ttl := time.Duration(meter.window(t.Context()).ttlSeconds()) * time.Second
 
 	if ttl <= 24*time.Hour {
 		t.Errorf("a counter with a %s expiry dies inside its own 24h window", ttl)
@@ -211,8 +211,8 @@ func TestRebindingReachesEveryHolderOfTheSharedPointer(t *testing.T) {
 
 	shared.RebindFrom(New(nil, Limits{Reads: 50}, time.Hour))
 
-	if held.Limit(Reads) != 50 {
-		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.Limit(Reads))
+	if held.window(t.Context()).limits.of(Reads) != 50 {
+		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.window(t.Context()).limits.of(Reads))
 	}
 }
 
@@ -224,10 +224,10 @@ func TestAnUnusableConfiguredWindowFallsBackToTheSpecDefault(t *testing.T) {
 		return time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	})
 
-	if meter.window != DefaultWindow {
-		t.Errorf("a zero window resolved to %s, not the %s default", meter.window, DefaultWindow)
+	if got := meter.window(t.Context()).length; got != DefaultWindow {
+		t.Errorf("a zero window resolved to %s, not the %s default", got, DefaultWindow)
 	}
-	if meter.Bucket() <= 0 {
+	if meter.Bucket(t.Context()) <= 0 {
 		t.Error("the window fallback did not produce a usable bucket")
 	}
 }
@@ -273,14 +273,14 @@ func TestASubSecondWindowBucketsRatherThanDividingByZero(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(nil, Limits{}, 500*time.Millisecond, func() time.Time { return now })
 
-	first := meter.Bucket()
+	first := meter.Bucket(t.Context())
 	now = now.Add(600 * time.Millisecond)
 
-	if meter.Bucket() == first {
+	if meter.Bucket(t.Context()) == first {
 		t.Error("a 500ms window did not roll after 600ms")
 	}
-	if meter.ttlSeconds() < 1 {
-		t.Errorf("a sub-second window asked Redis for a %ds expiry, which never expires", meter.ttlSeconds())
+	if meter.window(t.Context()).ttlSeconds() < 1 {
+		t.Errorf("a sub-second window asked Redis for a %ds expiry, which never expires", meter.window(t.Context()).ttlSeconds())
 	}
 }
 
@@ -327,8 +327,8 @@ func TestEveryReadingNamesItsOwnWindow(t *testing.T) {
 	ctx := agentCtx(t)
 
 	first := meter.Read(ctx, Reads).Bucket
-	if first != meter.Bucket() {
-		t.Errorf("a reading named window %d while the meter is in %d", first, meter.Bucket())
+	if first != meter.Bucket(t.Context()) {
+		t.Errorf("a reading named window %d while the meter is in %d", first, meter.Bucket(t.Context()))
 	}
 	now = now.Add(2 * time.Hour)
 	if meter.Read(ctx, Reads).Bucket == first {
@@ -367,10 +367,10 @@ func TestACounterValueThisMeterDidNotWriteIsAnErrorNotAZero(t *testing.T) {
 // of two different things — which is what a caller reaching for the package
 // default instead would produce.
 func TestTheMeterAnswersTheWindowItActuallyCounts(t *testing.T) {
-	if got := New(nil, Limits{}, time.Hour).Window(); got != time.Hour {
+	if got := New(nil, Limits{}, time.Hour).window(t.Context()).length; got != time.Hour {
 		t.Errorf("Window() = %s, want the configured hour", got)
 	}
-	if got := New(nil, Limits{}, 0).Window(); got != DefaultWindow {
+	if got := New(nil, Limits{}, 0).window(t.Context()).length; got != DefaultWindow {
 		t.Errorf("an unusable window answered %s, want the %s default", got, DefaultWindow)
 	}
 }
@@ -387,5 +387,19 @@ func TestRebindingCarriesTheCostCeiling(t *testing.T) {
 
 	if got := shared.Read(agentCtx(t), Cost).Limit; got != 40_000 {
 		t.Errorf("after a rebind the cost share reads %d, want the live 40000", got)
+	}
+}
+
+func TestAConnectionIsCountedAsItsGrantAndAMintedPassportAsItself(t *testing.T) {
+	passport, connection := ids.New[ids.PassportKind]().UUID, ids.NewV7()
+
+	if got := SubjectOf(passport, connection); got != connection.String() {
+		t.Errorf("a connection's passport is counted as %s, want its grant %s", got, connection)
+	}
+	if got := SubjectOf(passport, ids.UUID{}); got != passport.String() {
+		t.Errorf("a minted passport is counted as %s, want itself", got)
+	}
+	if got := SubjectOf(ids.UUID{}, ids.UUID{}); got != "" {
+		t.Errorf("no passport at all is counted as %q, want nothing", got)
 	}
 }

@@ -37,7 +37,7 @@ it("does not label a former or unknown company as the contact's current employer
 it("keeps unknown roles and additional current jobs on the Employers panel", async () => {
   const { render, within } = await import("@testing-library/react");
   const { Employers } = await import("./contactemployers");
-  const { StoryProviders } = await import("./story-utils");
+  const { StoryProviders } = await import("../testing/story-utils");
   render(
     <StoryProviders>
       <Employers

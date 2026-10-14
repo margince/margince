@@ -10,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { VoiceChangeLog, VoiceHistory } from "./voice-versions";
 
 // Every build this profile has had, and what each one changed. A `candidate`

@@ -82,28 +82,25 @@
    nothing on a 1358px card, which is what a full-bleed row with all its ink on
    the left reads as. Beside it, the work is bracketed by what can be done
    about it and the card is used end to end.
-   The column is CAPPED: a row can carry seven verbs, and uncapped they took
-   the width and squeezed the subject and its reasons into a strip that wrapped
-   every line — which is what put them under the work in the first place. At
-   the cap they wrap among themselves instead, and the work keeps the rest. The
-   cap survives them getting NARROWER: the pin and the hand-off are glyphs now,
-   so 20rem holds more of them than it did.
-   60rem is measured rather than picked: the Brief's work column is narrower
-   than that, and there the verbs stay under the work so the subject and its
-   reasons keep the whole width. Only a queue on a page of its own is wide
-   enough to spend on both.
+   The column is as wide as its one line of verbs, up to a cap: a narrower
+   column wraps the verbs, and then they rather than the work set the row's
+   height. The set-asides are one menu, which keeps a line under the cap; the
+   cap stops a row with extra verbs from squeezing the work.
+   70rem is where a capped column leaves the work about 25rem. The Brief's work
+   column and the queue drawer at its own width are narrower, so there the
+   verbs stay under the work; the drawer expanded to the window is wider.
    THE ANSWER KEEPS THE TRAILING EDGE at both widths. The line is right-aligned
    wherever it is drawn (see `.worklist-row-acts` below) and the answer is its
    last control, so it lands on one x down the whole queue whatever quiet verbs
    the row ahead of it carries — beside the work in this column, and under the
    work at the widths that have no column for it. */
-@container (min-width: 60rem) {
+@container (min-width: 70rem) {
   .worklist-row {
     grid-template-columns:
       auto
       var(--worklist-kind-w, 7.5rem)
       minmax(0, 1fr)
-      minmax(min-content, var(--worklist-acts-w, 20rem));
+      fit-content(var(--worklist-acts-w, 32rem));
   }
   .worklist-row > .worklist-row-acts {
     grid-column: 4;
@@ -212,15 +209,6 @@
   min-inline-size: var(--space-6);
   padding-block: var(--space-1);
   margin-block: calc(-1 * var(--space-1));
-}
-/* The set-asides on the row in hand take the leading edge and push the rest
-   of the line to the trailing one, on every line the verbs wrap onto. */
-.worklist-row-putdowns {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--gapActions);
-  margin-inline-end: auto;
 }
 /* The two moments of the silence as one caption: each term with its date,
    the dates in the reading ink so the eye lands on them. */

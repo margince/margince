@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { CallCard, RecordReading, RecordReadingPair } from "./reading";
 import { FoundMove, TodayPanel, TodoRow } from "./today";
 

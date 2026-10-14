@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
 // The inline Telegram connect form (Task 17, design §9.1/§9.2): the one

@@ -19,8 +19,9 @@ package gates
 // why the row is there, on the surface whose entire job is to say why.
 //
 // So: every kind a producer emits must be declared, and every kind the contract
-// declares must be renderable. The second direction is held on the frontend
-// (`KNOWN_REASONS` in worklist.copy.ts); this gate holds the first.
+// declares must be renderable. The client drops a kind missing from
+// `KNOWN_REASONS` (worklist.reasoncensus.ts) without a word, so the second
+// direction is read from that census and the English catalog.
 
 import (
 	"go/ast"
@@ -28,6 +29,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -42,6 +44,77 @@ import (
 // the shape of under-recognition this check must not have, since a smaller
 // corpus reports PASS with nothing to notice.
 const whereReasonsAreMinted = "internal/compose/attention"
+
+const (
+	frontendReasonCensus  = "../frontend/src/screens/worklist.reasoncensus.ts"
+	frontendReasonCatalog = "../frontend/src/i18n/en.ts"
+)
+
+// tsReasonCopyKey reads one `"worklist.because.<kind>":` key out of the English
+// catalog. de.ts and vi.ts are held to the same keys by i18n.test.ts.
+var tsReasonCopyKey = regexp.MustCompile(`"worklist\.because\.([a-z_]+)"\s*:`)
+
+// TestEveryDeclaredReasonKindIsOneTheClientCanSay fails both ways. A declared
+// kind the census lacks is a reason the row drops. A census entry the contract
+// does not declare is one no server sends.
+func TestEveryDeclaredReasonKindIsOneTheClientCanSay(t *testing.T) {
+	t.Parallel()
+	declared := crmYAMLEnum(t, "WorklistReason", "kind")
+	census := clientReasonCensus(t)
+	catalog, err := os.ReadFile(frontendReasonCatalog)
+	if err != nil {
+		t.Fatalf("reading the English catalog: %v", err)
+	}
+	worded := map[string]bool{}
+	for _, m := range tsReasonCopyKey.FindAllStringSubmatch(tsComment.ReplaceAllString(string(catalog), " "), -1) {
+		worded[m[1]] = true
+	}
+	if len(declared) == 0 || len(census) == 0 || len(worded) == 0 {
+		t.Fatalf("read %d declared kinds, %d census entries and %d sentences: a census that reads nothing agrees with everything",
+			len(declared), len(census), len(worded))
+	}
+	for _, kind := range declared {
+		if !slices.Contains(census, kind) {
+			t.Errorf("crm.yaml declares the reason kind %q and KNOWN_REASONS in %s lacks it: "+
+				"the client drops it, and the row no longer says why it is there", kind, frontendReasonCensus)
+		}
+		if !worded[kind] {
+			t.Errorf("the reason kind %q has no \"worklist.because.%s\" sentence in %s (add it to de.ts and vi.ts too)",
+				kind, kind, frontendReasonCatalog)
+		}
+	}
+	for _, kind := range census {
+		if !slices.Contains(declared, kind) {
+			t.Errorf("KNOWN_REASONS carries %q, which crm.yaml does not declare and no server sends: "+
+				"remove it, or declare it in WorklistReason.kind", kind)
+		}
+	}
+}
+
+// clientReasonCensus reads the keys of the KNOWN_REASONS literal. Comments are
+// stripped, so a kind only named in prose does not count as an entry.
+func clientReasonCensus(t *testing.T) []string {
+	t.Helper()
+	source, err := os.ReadFile(frontendReasonCensus)
+	if err != nil {
+		t.Fatalf("reading the client's reason census: %v", err)
+	}
+	const opener = "export const KNOWN_REASONS = {"
+	start := strings.Index(string(source), opener)
+	if start < 0 {
+		t.Fatalf("no %q in %s: this gate reads that literal and cannot judge what it cannot find", opener, frontendReasonCensus)
+	}
+	body := string(source)[start+len(opener):]
+	if end := strings.Index(body, "\n}"); end >= 0 {
+		body = body[:end]
+	}
+	var kinds []string
+	for _, m := range focusSurfaceEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(body, ""), -1) {
+		kinds = append(kinds, m[1])
+	}
+	slices.Sort(kinds)
+	return slices.Compact(kinds)
+}
 
 func TestEveryReasonKindAProducerEmitsIsDeclared(t *testing.T) {
 	t.Parallel()

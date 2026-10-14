@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DetailsGrid } from "./companyraildetails";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The rail's own Details grid: every known field draws a row whether or not
 // the account carries a value (the docblock in companyraildetails.tsx states

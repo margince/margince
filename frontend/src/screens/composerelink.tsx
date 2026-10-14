@@ -9,9 +9,9 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { entityTimelineKeys } from "../lib/activitykeys";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
-import { entityTimelineKeys } from "./activitykeys";
-import { type RelinkKind, useRecordTargets } from "./recordtargets";
+import { type RelinkKind, useRecordTargets } from "../lib/recordtargets";
 
 // Moving a filed message to the record it actually belongs to, extracted from
 // compose.tsx unchanged.
@@ -31,7 +31,7 @@ import { type RelinkKind, useRecordTargets } from "./recordtargets";
 //
 // An ARRAY with the type derived from it, rather than a bare union, because the
 // picker below has to decide at RUNTIME whether a search hit is one of these.
-export { RELINK_KINDS, type RelinkKind } from "./recordtargets";
+export { RELINK_KINDS, type RelinkKind } from "../lib/recordtargets";
 
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
 // activity's typed link to the right contact/company/deal/lead. Idempotent on the

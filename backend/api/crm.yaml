@@ -4679,6 +4679,224 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------- /deal-suggestions -----------------------------
+  /deals/{id}/legal-reviews:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealLegalReviews
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The legal reviews asked for on this deal, newest first.
+      description: |
+        Every review of the deal with its status, the request's note and the
+        reviewer's comments, so the deal's owner can act on "changes needed".
+        Needs `deal.read`. The review pack itself is served only to a reviewer,
+        by `GET /legal-reviews/{id}`. While legal review is switched off for the
+        installation this answers `404 legal_review_off`.
+      responses:
+        '200':
+          description: The deal's reviews.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealLegalReviewListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Deals]
+      operationId: requestLegalReview
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Ask legal to review this deal.
+      description: |
+        Builds the review pack from the deal as it stands: its company, value,
+        stage, close date, current offer, stage history, and the contract, legal
+        and offer documents the caller can see on it. Needs `deal.update` on a
+        live deal the caller may change, and `offer.read`. Audited on the deal
+        as `request_legal_review`. A new request replaces any earlier approval
+        on the deal's stage criteria: legal answers again before a gated stage is
+        passed.
+
+        `previous_review_id` names an earlier `changes_needed` review of this
+        deal that this request asks again after. `409 legal_review_already_open`
+        when the deal already has an open request. `404 legal_review_off` while
+        legal review is switched off.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestLegalReviewRequest' }
+      responses:
+        '201':
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /legal-reviews:
+    get:
+      tags: [Deals]
+      operationId: listLegalReviews
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: The reviewer's queue.
+      description: |
+        `status=open` (the default) lists the requests waiting for an answer,
+        the largest deal value first and then the nearest close date; a review
+        with no value or no close date sorts after those that have one.
+        `status=decided` lists the answered reviews, newest decision first.
+        Needs `legal_review.read`. `404 legal_review_off` while legal review is
+        switched off.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, decided], default: open }
+        - { name: cursor, in: query, schema: { type: string }, description: Opaque keyset cursor. }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: One page of the queue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /legal-reviews/settings:
+    get:
+      tags: [Deals]
+      operationId: getLegalReviewSettings
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Whether legal review is switched on for this installation.
+      description: |
+        On by default (`deals.legal_review_enabled`). Read by every seat, because
+        the deal page, the stage settings and the queue show or hide the feature
+        by it. Needs `installation_settings.read`.
+      responses:
+        '200':
+          description: The switch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Deals]
+      operationId: updateLegalReviewSettings
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Switch legal review on or off for this installation.
+      description: |
+        Admin only: the admin role, not the installation_settings grant, which
+        ops also holds. Off hides the request action, the
+        queue and the `legal_reviewed` criterion kind, and a stage's
+        `legal_reviewed` criterion stops blocking an advance. Reviews already
+        recorded are kept, and come back when the switch is turned on again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegalReviewSettings' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /legal-reviews/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getLegalReview
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: One review with its pack and the deal's earlier reviews.
+      description: |
+        Needs `legal_review.read`. The pack is the deal as it stood at the
+        request. A document's name and whether it can still be opened are read
+        now, so a file removed since reads as unavailable. `404 legal_review_off`
+        while legal review is switched off.
+      responses:
+        '200':
+          description: The review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /legal-reviews/{id}/decide:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: decideLegalReview
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Record legal's answer on a request.
+      description: |
+        Needs `legal_review.read` and `legal_review.update`, from a seated
+        contact who did not ask for this review (`422 own_request`).
+        `changes_needed` needs comments saying what to change. Audited on the
+        review as `resolve`. An approval settles every `legal_reviewed` criterion
+        on the deal's current stage in the same transaction. `409
+        legal_review_decided` unless the review is still open.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideLegalReviewRequest' }
+      responses:
+        '200':
+          description: The decided review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /legal-reviews/{id}/withdraw:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: withdrawLegalReview
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Take back an open request.
+      description: |
+        Needs `deal.update` on a live deal the caller may change. Audited on the
+        deal as `withdraw_legal_review`. `409 legal_review_decided` unless the
+        review is still open.
+      responses:
+        '200':
+          description: The withdrawn review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalReviewSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /deal-suggestions:
     get:
       tags: [Deals]
@@ -12466,6 +12684,9 @@ paths:
         the export is then listed on the list as a use. Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
+        A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
+        with a quote so a spreadsheet does not evaluate it; a bare international phone number
+        (`+` and 6 to 15 digits) is left unquoted.
       requestBody:
         required: true
         content:
@@ -17443,6 +17664,33 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/agent-usage:
+    get:
+      tags: [AI]
+      operationId: listAgentUsageByUser
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How much of their allowances each user's agents have used in this window.
+      description: |
+        One row per user with a live passport or connection, summed over all of them: what
+        was used, the allowance it is judged against, and the worst state among them. It names
+        no passport, label, permission or token, and says nothing about what an agent read or
+        changed: which agents act for a user is that user's own business, and this read
+        answers only how much. Readable by whoever may read the AI usage page.
+      responses:
+        '200':
+          description: Usage per user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentUsageByUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: The agent counters cannot be read right now. Try again shortly.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /ai/profile:
     get:
       tags: [AI]
@@ -18718,13 +18966,15 @@ paths:
         An assignee-scoped list would leave a card nobody could find the moment the colleague it named
         went on leave.
 
-        Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-        caller to discover it.
+        Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+        waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+        stranded the oldest reviews, which are the ones a reviewer most needs.
       parameters:
         - name: limit
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: What is waiting.
@@ -24876,6 +25126,7 @@ paths:
 
         Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
         opening the file reads them as the text the record holds rather than evaluating them.
+        A bare international phone number (`+` and 6 to 15 digits) is left unquoted.
       x-agent-access: human-only
       responses:
         '200':
@@ -27481,6 +27732,11 @@ paths:
         The file's rows are counted first. A file with more rows than one test
         run reads is refused 422 `too_many_rows`, and no run and no stored file
         are left behind.
+
+        A cell an export quoted against formula evaluation (a quote before `=`,
+        `+`, `-`, `@`, a tab or a carriage return) is read without that one
+        quote, here and in the run, so an unedited export imports as the values
+        it was written from.
       requestBody:
         required: true
         content:
@@ -29425,7 +29681,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
         name:
           type: string
@@ -29527,6 +29783,8 @@ components:
             they were issued with.
         operations:
           $ref: '#/components/schemas/OperationSettings'
+        agent_allowances:
+          $ref: '#/components/schemas/AgentAllowanceSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -29671,6 +29929,19 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
+        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.' }
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            Set how long one agent allowance window lasts, in hours. The window in force is never
+            cut short: the new length takes effect at its next reset, and the response names that
+            moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+            in force cancels a change that is still waiting.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -31096,6 +31367,49 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
+    AgentAllowanceSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        How much one agent may do in one window. A passport a user minted has its own allowance;
+        a connected MCP client has one allowance for all its passports, so a renewed credential
+        keeps counting where the last one stopped. An agent that reaches a count is refused on
+        its next call until the window resets or the user who lent it releases more. A change to
+        a count applies within a minute, in the window that is running: a raised count gives
+        headroom within that minute, and a lowered one refuses an agent already past it on its
+        next call. The per-minute limits are fixed by the build and shown here read-only.
+      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      properties:
+        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.' }
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            How long the window in force lasts, in hours. Default 24. Every passport's window
+            resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+        agent_window_resets_at:
+          type: string
+          format: date-time
+          description: When the window in force resets and every count starts again from zero.
+        agent_window_next_hours:
+          type: [integer, 'null']
+          description: |
+            The window length an admin saved that is not in force yet, in hours. Null when no
+            change is waiting.
+        agent_window_next_starts_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the saved window length takes over: the next reset of the window in force that
+            is at least a minute away. Null when no change is waiting. The first window under the
+            new length may be shorter than that length, never longer.
+        mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
+        mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
     UpdateCaptureSettingsRequest:
       type: object
@@ -32575,6 +32889,215 @@ components:
                   quiet_since: { type: string, format: date-time, description: 'When the silence began: the last filed activity, or the project''s creation when nothing was ever filed.' }
                   days_quiet: { type: integer }
                   owner_id: { type: [string, 'null'], format: uuid }
+    LegalReviewStatus:
+      type: string
+      description: |
+        `requested` waits for legal. `approved` and `changes_needed` are legal's
+        answers. `withdrawn` is a request the deal's side took back.
+      enum: [requested, approved, changes_needed, withdrawn]
+
+    LegalReviewOutcome:
+      type: string
+      enum: [approved, changes_needed]
+
+    LegalReviewSummary:
+      type: object
+      description: One legal review of a deal, without its pack.
+      required: [id, deal_id, status, created_at, version]
+      properties:
+        id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/LegalReviewStatus' }
+        note: { type: [string, 'null'], description: What the requester asked legal to look at. }
+        comments: { type: [string, 'null'], description: What legal answered. }
+        previous_review_id:
+          type: [string, 'null']
+          format: uuid
+          description: The changes_needed review this request asks again after.
+        requested_by: { type: [string, 'null'], format: uuid }
+        requested_by_name: { type: [string, 'null'] }
+        decided_by: { type: [string, 'null'], format: uuid }
+        decided_by_name: { type: [string, 'null'] }
+        decided_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+
+    LegalReviewQueueItem:
+      type: object
+      description: One row of the reviewer's queue, with the facts it is sorted by.
+      required: [review, deal_name]
+      properties:
+        review: { $ref: '#/components/schemas/LegalReviewSummary' }
+        deal_name: { type: string }
+        company_name: { type: [string, 'null'] }
+        stage_name: { type: [string, 'null'] }
+        value_minor:
+          type: [integer, 'null']
+          format: int64
+          description: The deal's amount in the base currency, priced on the request day.
+        value_currency: { type: [string, 'null'] }
+        expected_close_date: { type: [string, 'null'], format: date }
+
+    LegalReviewListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/LegalReviewQueueItem' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
+    DealLegalReviewListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/LegalReviewSummary' } }
+
+    LegalReview:
+      type: object
+      description: A review as the reviewer reads it.
+      required: [review, packet, earlier]
+      properties:
+        review: { $ref: '#/components/schemas/LegalReviewSummary' }
+        packet: { $ref: '#/components/schemas/LegalReviewPacket' }
+        earlier:
+          type: array
+          description: The deal's other reviews, newest first, so a repeated request reads with its history.
+          items: { $ref: '#/components/schemas/LegalReviewSummary' }
+
+    LegalReviewPacket:
+      type: object
+      description: |
+        The deal as it stood when the review was asked for, as this reader may
+        see it now. The deal, company and owner names are read now. Without `deal.read` the deal reads as its name alone. The
+        amount follows the reader's field masks, the company their sight of it,
+        the offer their `offer.read`, and each document its own read gate.
+      required: [deal, history, documents]
+      properties:
+        deal: { $ref: '#/components/schemas/LegalReviewPacketDeal' }
+        value_minor: { type: [integer, 'null'], format: int64 }
+        value_currency: { type: [string, 'null'] }
+        offer:
+          description: The current offer, or null when the deal has none.
+          allOf: [{ $ref: '#/components/schemas/LegalReviewPacketOffer' }]
+          nullable: true
+        binding:
+          type: array
+          description: Every other offer the buyer was sent or accepted. The approval binds to these too.
+          items: { $ref: '#/components/schemas/LegalReviewPacketOffer' }
+        history:
+          type: array
+          description: Each stage the deal entered, oldest first.
+          items: { $ref: '#/components/schemas/LegalReviewPacketStage' }
+        documents:
+          type: array
+          description: The deal's contract, legal and offer documents, newest first.
+          items: { $ref: '#/components/schemas/LegalReviewPacketDocument' }
+
+    LegalReviewPacketDeal:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        company_id: { type: [string, 'null'], format: uuid }
+        company_name: { type: [string, 'null'] }
+        amount_minor: { type: [integer, 'null'], format: int64 }
+        currency: { type: [string, 'null'] }
+        stage_id: { type: [string, 'null'], format: uuid }
+        stage_name: { type: [string, 'null'] }
+        expected_close_date: { type: [string, 'null'], format: date }
+        owner_id: { type: [string, 'null'], format: uuid }
+        owner_name: { type: [string, 'null'] }
+
+    LegalReviewPacketOffer:
+      type: object
+      description: |
+        Shown only to a reader holding `offer.read`. Its money is null for a
+        reader whose field masks withhold the deal's amount.
+      required: [id, offer_number, revision, status, currency, has_pdf, lines]
+      properties:
+        lines:
+          type: array
+          description: The offer's lines in their order, as legal read them.
+          items: { $ref: '#/components/schemas/LegalReviewPacketOfferLine' }
+        id: { type: string, format: uuid }
+        offer_number: { type: string }
+        revision: { type: integer }
+        status: { type: string }
+        net_minor: { type: [integer, 'null'], format: int64 }
+        tax_minor: { type: [integer, 'null'], format: int64 }
+        gross_minor: { type: [integer, 'null'], format: int64 }
+        currency: { type: string }
+        valid_until: { type: [string, 'null'], format: date }
+        intro_text: { type: [string, 'null'] }
+        terms_text: { type: [string, 'null'] }
+        has_pdf: { type: boolean }
+
+    LegalReviewPacketOfferLine:
+      type: object
+      required: [position, description, quantity]
+      properties:
+        position: { type: integer, description: The line's place in the offer. }
+        description: { type: string }
+        unit: { type: [string, 'null'] }
+        quantity: { type: string, description: 'The quantity as a decimal string.' }
+        unit_price_minor: { type: [integer, 'null'], format: int64 }
+        discount_pct: { type: [string, 'null'], description: 'The discount in percent, as a decimal string.' }
+        tax_rate: { type: [string, 'null'], description: 'The tax rate in percent, as a decimal string.' }
+        billing_model: { type: [string, 'null'], description: 'one_time or recurring. Null means nobody has classified it.' }
+        billing_interval_months: { type: [integer, 'null'], description: 'How many months one billing period spans.' }
+        interval_count: { type: [integer, 'null'], description: 'How many billing periods the buyer commits to.' }
+        staged: { type: boolean, description: 'A proposed line nobody has accepted yet. It is not in the totals.' }
+
+    LegalReviewPacketStage:
+      type: object
+      required: [stage_name, entered_at]
+      properties:
+        stage_name: { type: string }
+        entered_at: { type: string, format: date-time }
+
+    LegalReviewPacketDocument:
+      type: object
+      description: |
+        One document as it stood at the request, read now for this reader. A
+        file this reader may open carries its name, type and size. A file
+        that came with a message outside this reader's audience, or any file
+        for a reader without `deal.read`, is not listed at all. A file
+        uploaded on the deal and archived or removed since reads as
+        unavailable, with no name, type or size.
+      required: [attachment_id, category, doc_state, added_at, available]
+      properties:
+        attachment_id: { type: string, format: uuid }
+        category: { type: string, enum: [contract, offer, legal] }
+        doc_state: { type: string, enum: [draft, current, final] }
+        content_type: { type: [string, 'null'] }
+        byte_size: { type: [integer, 'null'], format: int64 }
+        added_at: { type: string, format: date-time }
+        title: { type: [string, 'null'] }
+        filename: { type: [string, 'null'] }
+        available: { type: boolean }
+
+    RequestLegalReviewRequest:
+      type: object
+      properties:
+        note: { type: [string, 'null'], maxLength: 4000 }
+        previous_review_id: { type: [string, 'null'], format: uuid }
+
+    DecideLegalReviewRequest:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { $ref: '#/components/schemas/LegalReviewOutcome' }
+        comments:
+          type: [string, 'null']
+          maxLength: 8000
+          description: Required for changes_needed.
+
+    LegalReviewSettings:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
     DealSuggestion:
       type: object
       description: 'One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal.'
@@ -42326,7 +42849,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
 
     StageEvidenceAuthorSide:
       type: string
@@ -42396,7 +42919,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
 
     CreateStageExitCriterionRequest:
       type: object
@@ -49589,7 +50112,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit]
+         authentication_policy, oauth_application, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review]
 
     RbacAction:
       type: string
@@ -50350,7 +50873,7 @@ components:
           # `close` freezes content while access continues, and `pause`/`resume`
           # suspend reads without touching a single credential. `hold`/`release`
           # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold]
+          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         entity_label:
@@ -53385,11 +53908,17 @@ components:
     CommunicationReviewList:
       type: object
       description: A page of refused sends waiting for a decision.
-      required: [data, total]
+      required: [data, page, total]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/CommunicationReview' }
+        page:
+          allOf:
+            - $ref: '#/components/schemas/PageInfo'
+          description: |
+            Where this page was cut. `total` beside it is the same count this object may carry, kept
+            at the top level because it shipped there: a client reading it keeps working.
         total:
           type: integer
           description: |
@@ -55610,6 +56139,79 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        usage:
+          allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
+          description: |
+            What this passport has used of its allowances in the window that is running. A
+            connection's passports share one count, so a renewed credential keeps it. **Omitted**
+            on a revoked or expired passport, and when the counters cannot be read: the list is
+            still answered, without the usage.
+
+    AgentUsage:
+      type: object
+      description: One window's use of the four agent allowances, and when they reset.
+      required: [reads, writes, egress, calls, resets_at, state]
+      properties:
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentUsageByUser:
+      type: object
+      required: [data, resets_at]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AgentUserUsage' }
+          description: Users with at least one live passport or connection, by name.
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+
+    AgentUserUsage:
+      type: object
+      description: |
+        One user's agents in the running window. Each count and allowance is the sum over
+        their live passports and connections, so a user with two passports has twice the
+        allowance. `state` is the worst state of any one of them.
+      required: [user_id, display_name, passport_count, reads, writes, egress, calls, state]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        passport_count: { type: integer, minimum: 1, description: 'Live passports and connections. A connection counts once.' }
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentCounterUsage:
+      type: object
+      description: One allowance in the running window.
+      required: [used, limit, released]
+      properties:
+        used: { type: integer, minimum: 0, description: What has been used in this window. }
+        limit:
+          type: integer
+          minimum: 0
+          description: |
+            The allowance in force: the installation's value, plus one more allowance for each
+            release a user granted in this window.
+        released: { type: integer, minimum: 0, description: How many times a user released more in this window. }
+
+    AgentUsageState:
+      type: string
+      enum: [ok, near, stopped]
+      description: |
+        The worst of the four allowances. `stopped` when one is used up, so the next call of
+        that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 
     PassportConnection:
       type: object
@@ -59071,6 +59673,18 @@ components:
             folded into one, and this carries the brief entry's id so the verbs that
             belong to the brief (`/brief/items/{id}/act`, and its set-aside and
             dismiss) still reach it. Absent on a row the night did not raise.
+
+            Set only on the reader's own queue: the brief is the acting reader's,
+            so a page naming another owner never carries it.
+        brief_actions:
+          type: array
+          items: { type: string, enum: [set_aside, dismiss] }
+          description: |
+            The verbs the folded brief entry offers, copied from that entry's own
+            row and posted to `/brief/items/{brief_item_id}/…`. The row's own
+            `actions` stay the row's: these answer the brief entry, not the deal.
+
+            Present exactly when `brief_item_id` is.
         brief_section:
           type: string
           enum: [respond_now, prepare_conversations, move_revenue, build_pipeline, review_and_repair]

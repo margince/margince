@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { createContext, useEffect, useLayoutEffect, useRef } from "react";
 
 // What a dialog owes the keyboard, in one place: Escape closes it, Tab stays
 // inside it, and focus goes in when it opens and back where it came from when
@@ -161,6 +161,12 @@ export function liveDialogs(): HTMLElement[] {
     ),
   ].filter((layer) => layer.closest("[inert]") === null);
 }
+
+/**
+ * True inside a `Modal`, so a surface portalled out of it, such as a menu's
+ * panel, can stand above the dialog its trigger is in.
+ */
+export const InsideDialog = createContext(false);
 
 /**
  * Whether a live dialog the element is not inside sits on top. A layer under

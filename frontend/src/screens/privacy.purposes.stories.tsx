@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../testing/mefixture";
-import { ConsentPurposesCard } from "./privacy.purposes";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConsentPurposesCard } from "./privacy.purposes";
 
 // The consent registry for a seat that may append to it, and for one that may
 // only read it. The read-only seat has no create verb, and the card says why.

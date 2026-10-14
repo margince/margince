@@ -21,6 +21,7 @@ import {
   criterionKindOf,
 } from "./criterionkinds";
 import { EditAction } from "./edit";
+import { useLegalReviewAvailable } from "./legalreviews.queries";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -156,7 +157,7 @@ function CriterionRow({
               required: String(criterion.required),
               hint: criterion.hint ?? "",
             }}
-            fields={criterionEditFields(t)}
+            fields={criterionEditFields(t, criterion.kind)}
             update={async (values, _rows, opened) => {
               const saved = unwrap(
                 await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
@@ -220,6 +221,7 @@ export function CriterionCreateDialog({
 }: Readonly<{ stageId: string; open: boolean; onClose: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const legalReview = useLegalReviewAvailable();
   const mutation = useMutation({
     mutationFn: async (
       draft: Readonly<{ stageId: string; values: Record<string, string> }>,
@@ -251,7 +253,7 @@ export function CriterionCreateDialog({
         onClose();
       }}
       title={t("stage.criteria.add")}
-      fields={criterionCreateFields(t)}
+      fields={criterionCreateFields(t, legalReview === true)}
       pending={mutation.isPending}
       error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
       onSubmit={(values) => mutation.mutate({ stageId, values })}
@@ -321,8 +323,13 @@ function refreshCriteria(queryClient: QueryClient, stageId: string) {
   queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
 }
 
-function kindOptions(t: ReturnType<typeof useT>) {
-  return CRITERION_KINDS.map((kind) => ({
+// The server keeps a criterion from turning into, or out of, legal_reviewed,
+// and offers the kind only while legal review is switched on.
+function kindOptions(
+  t: ReturnType<typeof useT>,
+  admits: (kind: CriterionKind) => boolean,
+) {
+  return CRITERION_KINDS.filter(admits).map((kind) => ({
     value: kind,
     label: t(CRITERION_KIND_LABEL[kind]),
   }));
@@ -335,7 +342,10 @@ function requiredOptions(t: ReturnType<typeof useT>) {
   ];
 }
 
-function criterionCreateFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionCreateFields(
+  t: ReturnType<typeof useT>,
+  legalReview: boolean,
+): CreateField[] {
   return [
     {
       key: "key",
@@ -346,29 +356,39 @@ function criterionCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         KEY_SHAPE.test(value) ? undefined : t("stage.criteria.keyHint"),
     },
     { key: "label", label: "stage.criteria.label", required: true },
-    ...criterionShapeFields(t),
+    ...criterionShapeFields(
+      t,
+      (kind) => legalReview || kind !== "legal_reviewed",
+    ),
   ];
 }
 
 // The edit form omits `key`: evidence matches a criterion by key across an
 // edit, so renaming one would orphan every claim already recorded under it.
 // The contract has no key field on the PATCH body either.
-function criterionEditFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionEditFields(
+  t: ReturnType<typeof useT>,
+  current: CriterionKind,
+): CreateField[] {
+  const legal = current === "legal_reviewed";
   return [
     { key: "label", label: "stage.criteria.label", required: true },
-    ...criterionShapeFields(t),
+    ...criterionShapeFields(t, (kind) => (kind === "legal_reviewed") === legal),
   ];
 }
 
 // The three fields both forms share, spelled once.
-function criterionShapeFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionShapeFields(
+  t: ReturnType<typeof useT>,
+  admits: (kind: CriterionKind) => boolean,
+): CreateField[] {
   return [
     {
       key: "kind",
       label: "stage.criteria.kind",
       type: "select",
       required: true,
-      options: kindOptions(t),
+      options: kindOptions(t, admits),
     },
     {
       key: "required",

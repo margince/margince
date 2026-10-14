@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { PipelinesCard } from "./settings.pipelines";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // The admin and read-only postures of this card live in settings.stories.tsx;
 // this file holds the retired pipeline and its refused restore.

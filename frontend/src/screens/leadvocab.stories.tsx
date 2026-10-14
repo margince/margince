@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { LeadHandlingCard } from "./leadvocab";
-import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
-import { VocabRowMenu } from "./leadvocab.rows";
-import { LeadSourcesCard } from "./leadvocab.sources";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { LeadHandlingCard } from "./leadvocab";
+import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
+import { VocabRowMenu } from "./leadvocab.rows";
+import { LeadSourcesCard } from "./leadvocab.sources";
 
 // Settings › Data model: where leads come from, why they get dropped, and
 // whether the first-response target is tracked. Every role reads the lists;

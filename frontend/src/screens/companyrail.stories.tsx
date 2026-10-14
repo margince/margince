@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { company360 } from "./company.fixtures";
-import { CompanyRail } from "./companyrail";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { company360 } from "./company.fixtures";
+import { CompanyRail } from "./companyrail";
 
 // The record's left rail (mockup State A): one panel, a details grid over
 // collapsible sections. Every seeded demo account grants full RBAC and

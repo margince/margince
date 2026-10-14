@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { SharedLinksButton } from "./analytics.sharelist";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { SharedLinksButton } from "./analytics.sharelist";
 
 // The drawer that lists the forecast links a reader issued and that still
 // open. Every state is behind the trigger, so each play opens it first; the

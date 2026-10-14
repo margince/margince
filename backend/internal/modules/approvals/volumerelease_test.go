@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,6 +22,7 @@ type recordingReleaser struct {
 	passport ids.UUID
 	counter  agentvolume.Counter
 	bucket   int64
+	length   time.Duration
 	calls    int
 	err      error
 	// widened is what the real meter answers: false when the window the human
@@ -30,7 +32,8 @@ type recordingReleaser struct {
 	widened bool
 }
 
-func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64) (bool, error) {
+func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error) {
+	r.length = length
 	r.calls++
 	r.ws, r.passport, r.counter, r.bucket = ws, passport, c, bucket
 	return r.widened, r.err
@@ -69,6 +72,9 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 
 	if meter.passport != passport {
 		t.Errorf("released passport %s, want the one the staging was stamped with (%s)", meter.passport, passport)
+	}
+	if meter.length != agentvolume.DefaultWindow {
+		t.Errorf("a proposal staged without a length released under %v, want the default window", meter.length)
 	}
 	if meter.ws != ws {
 		t.Errorf("released workspace %s, want %s", meter.ws, ws)
@@ -232,5 +238,24 @@ func TestAStepUpWithNoLenderIsDecidableByNobody(t *testing.T) {
 
 	if got {
 		t.Error("a step-up recorded for nobody was decidable by whoever asked")
+	}
+}
+
+// A release names the length its bucket was counted under. So a window that
+// ended at a length change cannot be widened by a bucket number from another.
+func TestAReleasePassesOnTheLengthItsWindowWasCountedUnder(t *testing.T) {
+	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	meter := &recordingReleaser{widened: true}
+	svc := NewService(nil).WithVolumeReleaser(meter)
+	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
+		Counter: agentvolume.Writes, Bucket: "42", WindowSeconds: "43200", Tool: "update_record",
+	})
+
+	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
+		t.Fatal(err)
+	}
+
+	if meter.length != 12*time.Hour {
+		t.Errorf("released under %v, want the 12h the proposal names", meter.length)
 	}
 }

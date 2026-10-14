@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useId, useState } from "react";
-import { expect, screen, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import {
   Button,
   Field,
@@ -11,7 +11,7 @@ import {
 } from "./atoms";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
-import type { ModalIntent } from "./modal";
+import type { DrawerSpan, ModalIntent } from "./modal";
 
 // fe-uat (frontend/scripts/fe-uat.mjs) maps modal.tsx → modal.stories.tsx and
 // fails a change to modal.tsx whose stories here do not render clean.
@@ -175,8 +175,9 @@ export const Drawer: Story = {
   play: opens("Log a call with Anna"),
 };
 
-function ReadingDemo() {
+function ReadingDemo({ expanded }: Readonly<{ expanded?: boolean }>) {
   const [open, setOpen] = useState(true);
+  const [span, setSpan] = useState<DrawerSpan>("window");
   const titleId = useId();
   return (
     <>
@@ -186,6 +187,8 @@ function ReadingDemo() {
         onClose={() => setOpen(false)}
         labelledBy={titleId}
         intent="drawer-reading"
+        span={expanded ? span : undefined}
+        onSpanChange={expanded ? setSpan : undefined}
       >
         <DrawerHead>
           <Heading size="large" id={titleId} className="t-h2">
@@ -220,6 +223,25 @@ function ReadingDemo() {
 export const DrawerReading: Story = {
   render: () => <ReadingDemo />,
   play: opens("Before the room with Anna Brandt"),
+};
+
+/** The same drawer, expandable and opened at the window less its gutter.
+ * Collapse, beside the X, takes it back to 880px. */
+export const DrawerReadingExpanded: Story = {
+  render: () => <ReadingDemo expanded />,
+  play: async () => {
+    const dialog = await screen.findByRole("dialog", {
+      name: "Before the room with Anna Brandt",
+    });
+    await expect(dialog).toHaveClass("modal-drawer-window");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Collapse" }),
+    );
+    await expect(dialog).not.toHaveClass("modal-drawer-window");
+    await expect(
+      within(dialog).getByRole("button", { name: "Expand" }),
+    ).toBeInTheDocument();
+  },
 };
 
 function FullDemo() {
@@ -274,4 +296,19 @@ export const PhoneForm: Story = {
   ...Form,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+/** A phone draws every drawer as the full sheet, so it offers no Collapse. */
+export const PhoneDrawerReadingExpanded: Story = {
+  render: () => <ReadingDemo expanded />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async () => {
+    const dialog = await screen.findByRole("dialog", {
+      name: "Before the room with Anna Brandt",
+    });
+    await expect(
+      within(dialog).queryByRole("button", { name: "Collapse" }),
+    ).toBeNull();
+  },
 };

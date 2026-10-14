@@ -7,14 +7,14 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { BindingEditor } from "./ai-binding-editor";
-import type { RoutingRead } from "./ai-routing-query";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BindingEditor } from "./ai-binding-editor";
+import type { RoutingRead } from "./ai-routing-query";
 
 type Routing = components["schemas"]["AiRouting"];
 

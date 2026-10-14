@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { TaskState } from "./ai-lane-state";
-import { StoryProviders } from "./story-utils";
 
 // How the lane a task starts on is answering: green, red, or grey for a lane
 // that took no calls in the window. Absent for a reader with no health read.
