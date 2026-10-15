@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
@@ -51,11 +52,7 @@ export function ImportDropzone({
         accept={csvOnly ? ".csv" : ".zip,.csv"}
         onPick={pick}
       />
-      {refused ? (
-        <p className="import__hint t-sub" role="alert">
-          {t("import.hub.csvOnly")}
-        </p>
-      ) : null}
+      {refused ? <ErrorLine>{t("import.hub.csvOnly")}</ErrorLine> : null}
     </>
   );
 }
