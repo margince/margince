@@ -104,9 +104,11 @@ Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI get prices from
 models.dev when their key works. The OpenRouter models that a model tier uses
 get prices from the OpenRouter list. Other providers keep the prices you set.
 A new chat or embedding model your key lists is added when models.dev prices it
-as the same kind of model. A model the provider answered a tier with, in place
-of the bound one, is priced too; one no list prices shows as **Not in the
-price list**.
+as the same kind of model.
+
+When a provider answers a tier with another model than the one tied to it, that
+model gets a price too. If no list prices it, it shows as **Not in the price
+list**.
 
 A price you set by hand is never changed by the
 sync; remove it to hand the model back.
@@ -153,17 +155,17 @@ Also called: AI call log, model latency, AI cost per task, failed AI calls.
 
 ### What does "Model switched" on a model tier mean?
 "Model switched" means the provider answered some of the tier's calls this week
-with a model other than the one the tier is bound to. A provider does this when
-it moves a model name to a newer model. The tier's health mark, the tier's
-editor and the task's **Recent calls** say how many calls and which model.
+with a model other than the one tied to the tier. A provider does this when it
+moves a model name to a newer model. The tier's health mark, the tier's editor
+and the task's **Recent calls** say how many calls and which model.
 - **Cost** uses the price of the model that answered. Until that model has a
-  price, the bound model's price is used.
+  price, the price of the tied model is used.
 - **Recent calls** **By model** lists the model that answered, so the new model
   has its own row. **View calls** opens those calls.
-- To keep the new model, bind the tier to it under **Model tiers**. To stay on
-  the old one, bind a fixed version of it if the provider offers one.
+- To keep the new model, tie the tier to it under **Model tiers**. To stay on
+  the old one, tie a fixed version of it if the provider offers one.
 
-Also called: model alias moved, provider changed the model, served model.
+Also called: provider changed the model, served model, model name moved.
 
 ### How do I choose which OpenRouter hosts serve a model tier?
 To choose how OpenRouter picks a host, open **Model tiers**, open the tier's row, and fill **Serving**.
