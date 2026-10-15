@@ -48,7 +48,7 @@ func TestUndoFreesTheSourceKeyOfAnImportedLead(t *testing.T) {
 	}
 }
 
-// A lead a person edited after the import stays, with its key.
+// A lead a colleague edited after the import stays, with its key.
 func TestUndoKeepsAHumanEditedLeadAndItsSourceKey(t *testing.T) {
 	e := integration.Setup(t)
 	system, ref, name := "csv:undo-kept", "lead-1", "Edited Lead"
