@@ -107,6 +107,7 @@ export function ContactFacts({
                 viewerId,
                 contact.author,
                 contact.source,
+                contact.imported_from,
               )}
             />
           }

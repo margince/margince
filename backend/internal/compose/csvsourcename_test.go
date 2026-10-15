@@ -34,3 +34,12 @@ func TestTwoSourceNamesAreTwoNamespaces(t *testing.T) {
 		t.Fatal("ref 1 from two old CRMs would land on one record")
 	}
 }
+
+// The read wire names a CSV run by its source name; that holds only while the
+// provenance package and the importer spell the connector segment the same way.
+func TestAnImportedRowReadsAsItsSourceName(t *testing.T) {
+	stored := importSourceSystem("bundle")
+	if got := provenance.ImportedFrom(&stored); got == nil || *got != "bundle" {
+		t.Fatalf("ImportedFrom(%q) = %v, want bundle", stored, got)
+	}
+}

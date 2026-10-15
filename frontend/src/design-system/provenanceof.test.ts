@@ -201,6 +201,15 @@ describe("a row the CSV importer wrote", () => {
     });
   });
 
+  it("reads the wire's imported_from when the row carries no stamp", () => {
+    const fromWire = (importedFrom: string | null) =>
+      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "", importedFrom);
+
+    expect(fromWire("crm")).toEqual({ kind: "import", uploadName: "crm" });
+    expect(fromWire("")).toEqual({ kind: "import", uploadName: undefined });
+    expect(fromWire(null)).toMatchObject({ kind: "human", self: true });
+  });
+
   it("names the upload of an imported activity", () => {
     expect(imported("mirror:csv:pipedrive-export:activity:a-9")).toEqual({
       kind: "import",

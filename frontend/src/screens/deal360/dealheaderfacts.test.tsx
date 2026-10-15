@@ -443,3 +443,34 @@ describe("the close date says how much it is worth believing", () => {
     expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
   });
 });
+
+describe("a deal an import wrote", () => {
+  const imported = (importedFrom: string | null) =>
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          captured_by: "human:admin",
+          source: "manual",
+          imported_from: importedFrom,
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+
+  it("reads as imported from its source, not typed by the administrator", () => {
+    imported("crm");
+
+    expect(screen.getByText("Imported from crm")).toBeInTheDocument();
+    expect(screen.queryByText(/Typed by/)).toBeNull();
+  });
+
+  it("a deal no import wrote carries no imported label", () => {
+    imported(null);
+
+    expect(screen.queryByText(/Imported/)).toBeNull();
+  });
+});

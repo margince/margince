@@ -9669,6 +9669,11 @@ components:
         strength: {allOf: [{$ref: '#/components/schemas/RelationshipStrength'}], readOnly: true, description: 'Deterministic relationship-strength. Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -9936,6 +9941,11 @@ components:
             How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -13356,6 +13366,11 @@ components:
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -14791,6 +14806,11 @@ components:
           items: {$ref: '#/components/schemas/ActivityLink'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -15650,6 +15670,11 @@ components:
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
