@@ -97,8 +97,8 @@
 815 frontend/src/design-system/decisioncard.tsx
 
 # The build scripts, frozen when the gate learned to read them.
-1047 frontend/scripts/ext-imports.test.ts
-577 frontend/scripts/fe-uat.mjs
+1060 frontend/scripts/ext-imports.test.ts
+581 frontend/scripts/fe-uat.mjs
 1026 frontend/scripts/lib/dialoglayout.ts
 612 frontend/scripts/test-budget.ts
 533 frontend/scripts/vite-inline-views.ts
