@@ -29,7 +29,7 @@ func namesCorroborate(a, b string) bool {
 		return givenNamesAgree(givenA, givenB)
 	}
 	// A suffix or a title kept by one source can push the family name out of
-	// reach while the whole name still reads as one person.
+	// reach while the whole name still reads as one contact.
 	return wholeNamesAgree(givenA, familyA, givenB, familyB)
 }
 
@@ -95,7 +95,7 @@ func splitContactName(full string) (given, family string) {
 var letterFold = strings.NewReplacer("đ", "d", "ł", "l", "ø", "o", "ħ", "h")
 
 // nameTitles are honorifics and generational or academic suffixes, which a
-// source may add or drop without naming a different person.
+// source may add or drop without naming a different contact.
 var nameTitles = map[string]bool{
 	"dr": true, "mr": true, "mrs": true, "ms": true, "prof": true,
 	"jr": true, "sr": true, "ii": true, "iii": true, "phd": true, "md": true,
