@@ -21,14 +21,15 @@
   gap: var(--space-2);
 }
 
-.webhook-section-title,
-.webhook-section-actions {
+.webhook-section-title {
   display: flex;
   align-items: center;
   gap: var(--space-1);
 }
 
 .webhook-section-actions {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--gapActions);
 }
@@ -259,7 +260,6 @@
 .webhook-body-row .field-label-row {
   justify-content: flex-start;
   align-items: center;
-  gap: var(--space-1);
 }
 
 .webhook-body-row {
