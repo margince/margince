@@ -2734,7 +2734,7 @@ export const en = {
   "email.detail.when": "Sent",
   "activity.detail.loading": "Loading activity…",
   "activity.detail.none": "This activity",
-  "activity.detail.withheldReason": "This activity is not shared with you",
+  "activity.detail.withheldReason": "Activity content is withheld",
   "activity.detail.when": "When",
   "activity.detail.attendees": "Attendees",
   "activity.detail.colleagues": "Colleagues",

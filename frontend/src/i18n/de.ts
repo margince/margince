@@ -2676,7 +2676,7 @@ export const de = {
   "activity.detail.loading": "Aktivität wird geladen…",
   "activity.detail.none": "Diese Aktivität",
   "activity.detail.withheldReason":
-    "Diese Aktivität ist nicht für dich freigegeben",
+    "Inhalt der Aktivität ist zurückgehalten",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
   "activity.detail.colleagues": "Teammitglieder",

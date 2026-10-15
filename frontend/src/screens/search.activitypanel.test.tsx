@@ -176,7 +176,7 @@ describe("SearchScreen — a meeting, call, note or task hit", () => {
     );
 
     const panel = await screen.findByRole("dialog");
-    await within(panel).findByText("This activity is not shared with you");
+    await within(panel).findByText("Activity content is withheld");
     expect(within(panel).queryByText("agreed")).toBeNull();
     expect(within(panel).queryByText("Colleagues")).toBeNull();
   });

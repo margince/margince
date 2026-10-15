@@ -2617,7 +2617,7 @@ export const vi = {
   "email.detail.when": "Thời gian gửi",
   "activity.detail.loading": "Đang tải hoạt động…",
   "activity.detail.none": "Hoạt động này",
-  "activity.detail.withheldReason": "Hoạt động này không được chia sẻ với bạn",
+  "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
   "activity.detail.when": "Thời gian",
   "activity.detail.attendees": "Người tham dự",
   "activity.detail.colleagues": "Đồng nghiệp",
