@@ -3157,7 +3157,6 @@ export const en = {
   "leadSources.title": "Lead sources",
   "leadSources.sub":
     "Where leads come from. Used in the New lead form, in filters and in scoring.",
-  "keyCode.label": "Key: {key}",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
   "leadSources.addOnlyTitle": "Your role can add entries but not change them",
@@ -4514,6 +4513,7 @@ export const en = {
   "create.relatedCompany": "Company",
   "create.expectedClose": "Expected close",
 
+  "keyCode.label": "Key: {key}",
   "field.unset": "Not set",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",

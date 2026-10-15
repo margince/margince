@@ -3106,7 +3106,6 @@ export const de = {
   "leadSources.title": "Lead-Quellen",
   "leadSources.sub":
     "Woher Leads kommen. Wird im Formular „Neuer Lead“, in Filtern und beim Scoring verwendet.",
-  "keyCode.label": "Schlüssel: {key}",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
   "leadSources.addOnlyTitle":
@@ -4417,6 +4416,7 @@ export const de = {
   "create.relatedCompany": "Unternehmen",
   "create.expectedClose": "Erwarteter Abschluss",
 
+  "keyCode.label": "Schlüssel: {key}",
   "field.unset": "Nicht festgelegt",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",

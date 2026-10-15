@@ -210,6 +210,48 @@ it("closes when an item opens a dialog, and the dialog hands focus back to the t
   expect(document.activeElement).toBe(trigger);
 });
 
+// The item's dialog is its child in React, so a press inside that dialog bubbles
+// to the panel. It chose nothing in the menu, and focus stays in the dialog.
+it("leaves focus in a dialog an item opened when a button inside it is pressed", async () => {
+  const user = userEvent.setup();
+  function GrowingDialogAction() {
+    const [open, setOpen] = useState(false);
+    const [rows, setRows] = useState(0);
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)}>
+          Merge with…
+        </button>
+        <Modal
+          open={open}
+          onClose={() => setOpen(false)}
+          labelledBy="merge-rows"
+          intent="form"
+        >
+          <Heading size="large" id="merge-rows">
+            Merge with…
+          </Heading>
+          <button type="button" onClick={() => setRows(rows + 1)}>
+            Add row {rows}
+          </button>
+        </Modal>
+      </>
+    );
+  }
+  render(
+    <OverflowMenu label="More actions">
+      <GrowingDialogAction />
+    </OverflowMenu>,
+  );
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "Merge with…" }));
+  await user.click(await screen.findByRole("button", { name: "Add row 0" }));
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Add row 1" }),
+  );
+});
+
 // A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits
 // on, so Escape and a chosen verb still close the menu, and only the menu.
 it("closes on Escape and on a chosen verb when it sits inside a dialog", async () => {

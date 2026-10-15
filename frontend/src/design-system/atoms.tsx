@@ -1385,7 +1385,12 @@ export function OverflowMenu({
             maxHeight: `${at.maxHeight}px`,
           }}
           onClick={(event) => {
-            if (!(event.target instanceof Element)) {
+            // React bubbles a press inside an item's own dialog to here through
+            // the portal; only a press inside this panel's DOM chose an item.
+            if (
+              !(event.target instanceof Element) ||
+              !event.currentTarget.contains(event.target)
+            ) {
               return;
             }
             // A control was pressed, not merely the panel. The caller also puts

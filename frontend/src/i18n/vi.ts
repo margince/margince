@@ -3042,7 +3042,6 @@ export const vi = {
   "leadSources.title": "Nguồn lead",
   "leadSources.sub":
     "Lead đến từ đâu. Dùng trong biểu mẫu Lead mới, trong bộ lọc và khi chấm điểm.",
-  "keyCode.label": "Khóa: {key}",
   "leadSources.removeOnlyTitle":
     "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
   "leadSources.addOnlyTitle":
@@ -4335,6 +4334,7 @@ export const vi = {
   "create.relatedCompany": "Công ty",
   "create.expectedClose": "Ngày chốt dự kiến",
 
+  "keyCode.label": "Khóa: {key}",
   "field.unset": "Chưa có",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
