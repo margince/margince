@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -83,7 +84,7 @@ func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelP
 		routingPath:     cfg.routingPath,
 		fake:            cfg.fakeBrain,
 		seeds:           deployCfg.Seeds,
-		capturePayloads: deployCfg.AI.CapturePayloads,
+		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
 	}
 }
 

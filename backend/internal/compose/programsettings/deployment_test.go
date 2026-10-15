@@ -34,3 +34,15 @@ func TestATypoUnderAuthStopsTheBoot(t *testing.T) {
 		t.Fatalf("an unknown key loaded silently: %v", err)
 	}
 }
+
+// Capture stores content close to special categories, so it is off unless the
+// file says so.
+func TestAIPayloadCaptureIsOffUnlessTheFileTurnsItOn(t *testing.T) {
+	t.Parallel()
+	if config.Val(configtest.MustLoad(t, "version: 1\n", ps.FileSettings()...), ps.CapturePayloads) {
+		t.Fatal("ai.capture_payloads must default to false")
+	}
+	if !config.Val(configtest.MustLoad(t, "version: 1\nai:\n  capture_payloads: true\n", ps.FileSettings()...), ps.CapturePayloads) {
+		t.Fatal("ai.capture_payloads: true read as off")
+	}
+}

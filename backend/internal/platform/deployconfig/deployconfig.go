@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	AI             AIConfig        `yaml:"ai"`
 	Rates          RatesConfig     `yaml:"rates"`
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
@@ -220,17 +219,6 @@ type ConsentPurpose struct {
 	Key         string `yaml:"key"`
 	Label       string `yaml:"label"`
 	DoubleOptIn bool   `yaml:"double_opt_in"`
-}
-
-// AIConfig carries operator-posture switches for the AI runtime. It names
-// no providers or models (that is `seeds.ai_routing`, and the stored binding
-// once an installation is running) and holds no secret —
-// only deployment posture. capture_payloads turns on Layer-3 AI payload
-// capture (ai_call_payload); OFF by default, because it stores
-// special-category-adjacent content that then ages under the retention
-// engine and the Art. 17 erasure cascade.
-type AIConfig struct {
-	CapturePayloads bool `yaml:"capture_payloads"`
 }
 
 // MCP is the connector's deployment gate (Gate 1, DESIGN §5.5). Off by

@@ -18,8 +18,10 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
@@ -383,7 +385,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 		return nil, nil, err
 	}
 	modelPath.SetCompanyContextEnabled(deployCfg.CompanyContext.TasksEnabled())
-	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(deployCfg.AI.CapturePayloads)}
+	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
 	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))

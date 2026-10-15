@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -67,7 +68,7 @@ func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSp
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
 		seeds:           deployCfg.Seeds,
-		capturePayloads: deployCfg.AI.CapturePayloads,
+		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
 	}
 }
 
