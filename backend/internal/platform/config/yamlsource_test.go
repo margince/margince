@@ -23,7 +23,7 @@ func TestYAMLFlattensToSettingKeysAndReportsUnknownOnes(t *testing.T) {
 	p := writeFile(t, t.TempDir(), "margince.yaml", `
 version: 1
 workspace: {name: Acme}
-log: {level: debug, levle: x}
+log: {level: debug, lvl: x}
 ai:
   routing: {chat: {model: m}}
 `)
@@ -39,7 +39,7 @@ ai:
 	if _, ok := layer.values["ai.routing"]; !ok {
 		t.Fatal("ai.routing is a struct leaf; its node is kept whole")
 	}
-	if !slices.Equal(unknown, []string{"log.levle"}) {
+	if !slices.Equal(unknown, []string{"log.lvl"}) {
 		t.Fatalf("unknown %v", unknown)
 	}
 }

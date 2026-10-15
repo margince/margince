@@ -8,4 +8,5 @@ package osenv
 
 import "os"
 
+// Get reads one variable, answering "" when it is not set.
 func Get(name string) string { return os.Getenv(name) }

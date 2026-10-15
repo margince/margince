@@ -29,8 +29,10 @@ const (
 	lockCapEnv = "X_TEST_CONFIG_LOCK_CAP"
 )
 
-var lockCap = config.DefineStored(config.Spec[int]{Key: lockCapKey, Env: lockCapEnv, Type: config.Int,
-	Default: config.Some(100), Min: config.Some(1), Doc: "d"},
+var lockCap = config.DefineStored(config.Spec[int]{
+	Key: lockCapKey, Env: lockCapEnv, Type: config.Int,
+	Default: config.Some(100), Min: config.Some(1), Doc: "d",
+},
 	config.Store{RBACObject: "installation_settings", AuditVerb: "update"})
 
 // storedFixture binds a principal holding the setting's object and a real store
@@ -71,7 +73,7 @@ func unlocked(t *testing.T, locked *config.Config, e *Env) *config.Config {
 	return cfg.WithDatabase(settings.New(e.Pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
 }
 
-func entryFor(t *testing.T, ctx context.Context, cfg *config.Config) config.Entry {
+func entryFor(ctx context.Context, t *testing.T, cfg *config.Config) config.Entry {
 	t.Helper()
 	entries, err := cfg.StoredEntries(ctx)
 	if err != nil {
@@ -107,7 +109,7 @@ func TestConfigStored_ABootSourceWinsOverTheRowAndLocksIt(t *testing.T) {
 	if v, o, err := config.StoredValWithSource(ctx, open, lockCap); err != nil || v != 500 || o.Source != config.SourceDatabase {
 		t.Fatalf("the row must stay untouched while locked, got %d %+v %v", v, o, err)
 	}
-	if en := entryFor(t, ctx, cfg); *en.Value != "900" || en.Origin.Source != config.SourceEnv {
+	if en := entryFor(ctx, t, cfg); *en.Value != "900" || en.Origin.Source != config.SourceEnv {
 		t.Fatalf("the overview of a locked setting shows %s from %+v", *en.Value, en.Origin)
 	}
 }
@@ -123,7 +125,7 @@ func TestConfigStored_WithoutABootSourceTheRowThenTheDefaultDecide(t *testing.T)
 	if v, o, err := config.StoredValWithSource(ctx, cfg, lockCap); err != nil || v != 250 || o.Source != config.SourceDatabase {
 		t.Fatalf("row: %d %+v %v", v, o, err)
 	}
-	if en := entryFor(t, ctx, cfg); *en.Value != "250" || en.Origin.Source != config.SourceDatabase {
+	if en := entryFor(ctx, t, cfg); *en.Value != "250" || en.Origin.Source != config.SourceDatabase {
 		t.Fatalf("the overview shows %s from %+v", *en.Value, en.Origin)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'installation_settings' AND after ? $1`, lockCapKey); n != 1 {

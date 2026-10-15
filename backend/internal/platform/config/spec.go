@@ -13,14 +13,17 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// Role is a program that reads a setting.
 type Role string
 
+// The programs.
 const (
 	RoleAPI     Role = "api"
 	RoleWorker  Role = "worker"
 	RoleMigrate Role = "migrate"
 )
 
+// Spec declares a setting: its names, type, default, bounds and doc.
 type Spec[T any] struct {
 	Key      string
 	Env      string
@@ -44,12 +47,14 @@ type Store struct {
 	SecretReference  bool
 }
 
+// Setting is a declared setting, read through Val or StoredVal.
 type Setting[T any] struct {
 	spec  Spec[T]
 	store *Store
 	row   *settings.Entry[T]
 }
 
+// Define declares a setting only boot sources set.
 func Define[T any](s Spec[T]) *Setting[T] { return &Setting[T]{spec: s} }
 
 // DefineStored declares a setting an administrator may also change at run
@@ -72,13 +77,28 @@ func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	return setting
 }
 
+// Spec is the declaration itself.
 func (s *Setting[T]) Spec() Spec[T] { return s.spec }
-func (s *Setting[T]) Stored() bool  { return s.store != nil }
-func (s *Setting[T]) Key() string   { return s.spec.Key }
-func (s *Setting[T]) Env() string   { return s.spec.Env }
-func (s *Setting[T]) Flag() string  { return s.spec.Flag }
-func (s *Setting[T]) Doc() string   { return s.spec.Doc }
-func (s *Setting[T]) Secret() bool  { return s.spec.Secret }
+
+// Stored is true for a setting an administrator may change at run time.
+func (s *Setting[T]) Stored() bool { return s.store != nil }
+
+// Key is the dotted name, also the YAML path.
+func (s *Setting[T]) Key() string { return s.spec.Key }
+
+// Env is the environment variable name.
+func (s *Setting[T]) Env() string { return s.spec.Env }
+
+// Flag is the command-line flag without dashes, or "".
+func (s *Setting[T]) Flag() string { return s.spec.Flag }
+
+// Doc is the operator-facing description.
+func (s *Setting[T]) Doc() string { return s.spec.Doc }
+
+// Secret is true for a value never shown or logged.
+func (s *Setting[T]) Secret() bool { return s.spec.Secret }
+
+// Roles are the programs that read the setting.
 func (s *Setting[T]) Roles() []Role { return s.spec.Roles }
 
 // TypeName tolerates a missing Type so the registry can report it instead of
@@ -90,6 +110,7 @@ func (s *Setting[T]) TypeName() string {
 	return s.spec.Type.Name()
 }
 
+//nolint:ireturn // the erased registry reaches every stored entry through settings.Definition
 func (s *Setting[T]) entry() settings.Definition { return s.row }
 
 func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string, bool, error) {
@@ -100,6 +121,7 @@ func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string
 	return s.spec.Type.Format(v), stored, nil
 }
 
+// DefaultText is the default as an operator writes it.
 func (s *Setting[T]) DefaultText() (string, bool) {
 	v, ok := s.spec.Default.Get()
 	if !ok {
@@ -138,8 +160,8 @@ func (s *Setting[T]) check(v any) error {
 	return s.checkTyped(typed)
 }
 
-// checkTyped never puts the value in its message, only the limits, so a secret
-// cannot leak through a refusal.
+// checkTyped never puts the value in its message, only the limits. A secret's
+// Validate is hand-written and may format its input, so its reason is dropped.
 func (s *Setting[T]) checkTyped(v T) error {
 	if limit, ok := s.spec.Min.Get(); ok {
 		if less, _ := s.spec.Type.Less(v, limit); less {
@@ -151,8 +173,14 @@ func (s *Setting[T]) checkTyped(v T) error {
 			return fmt.Errorf("must be at most %s", s.spec.Type.Format(limit))
 		}
 	}
-	if s.spec.Validate != nil {
-		return s.spec.Validate(v)
+	if s.spec.Validate == nil {
+		return nil
+	}
+	if err := s.spec.Validate(v); err != nil {
+		if s.spec.Secret {
+			return errInvalidSecret
+		}
+		return err
 	}
 	return nil
 }
@@ -168,7 +196,7 @@ func (s *Setting[T]) invariantFault() error {
 	_, hasMin := s.spec.Min.Get()
 	_, hasMax := s.spec.Max.Get()
 	var zero T
-	if _, comparable := s.spec.Type.Less(zero, zero); (hasMin || hasMax) && !comparable {
+	if _, ordered := s.spec.Type.Less(zero, zero); (hasMin || hasMax) && !ordered {
 		return fmt.Errorf("config: %s sets Min or Max on a %s", s.spec.Key, s.spec.Type.Name())
 	}
 	if def, ok := s.spec.Default.Get(); ok {

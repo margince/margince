@@ -75,7 +75,7 @@ func TestStructIsJSONInTextAndNativeInYAML(t *testing.T) {
 	if err != nil || got.Model != "m1" {
 		t.Fatalf("text: %v %v", got, err)
 	}
-	if _, err := typ.Parse(`{"modle":"m1"}`); err == nil {
+	if _, err := typ.Parse(`{"mdl":"m1"}`); err == nil {
 		t.Fatal("an unknown field in JSON must fail, as in YAML")
 	}
 	var n yaml.Node

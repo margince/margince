@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// refEnv is the ${env:NAME} reference kind.
+const refEnv = "env"
+
 // resolveRef turns ${file:p} or ${env:N} into the value; any other text is the
 // literal. The path, never the value, goes into the origin and any error.
 func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(string) (string, bool)) (value, file string, isRef bool, err error) {
@@ -23,7 +26,7 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 			return "", arg, true, fmt.Errorf("cannot read secret file %s", arg)
 		}
 		return strings.TrimSuffix(string(raw), "\n"), arg, true, nil
-	case "env":
+	case refEnv:
 		v, set := getenv(arg)
 		if !set {
 			return "", "", true, fmt.Errorf("references %s, which is not set", arg)

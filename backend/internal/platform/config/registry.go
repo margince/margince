@@ -53,6 +53,7 @@ var reserved = map[string]bool{
 	"config": true, "config-file": true, "env-file": true, "config-trace": true,
 }
 
+// Registry indexes the settings by key, env name and flag.
 type Registry struct {
 	byKey, byEnv, byFlag map[string]Any
 	ordered              []Any
@@ -123,6 +124,9 @@ func wellFormed(s Any) error {
 // All lists the settings sorted by key.
 func (r *Registry) All() []Any { return slices.Clone(r.ordered) }
 
+// Lookup finds a setting by key.
+//
+//nolint:ireturn // the registry holds settings of many types behind the erased Any
 func (r *Registry) Lookup(key string) (Any, bool) {
 	s, ok := r.byKey[key]
 	return s, ok

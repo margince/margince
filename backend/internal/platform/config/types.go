@@ -14,13 +14,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Type parses, decodes, formats and orders the values of one Go type.
 type Type[T any] interface {
 	Name() string
 	Parse(text string) (T, error)
 	DecodeYAML(n *yaml.Node) (T, error)
 	DecodeJSON(raw json.RawMessage) (T, error)
 	Format(v T) string
-	Less(a, b T) (less, comparable bool)
+	Less(a, b T) (less, ordered bool)
 }
 
 // textType backs the scalar types. YAML and JSON carry the same text a flag does, so
@@ -62,30 +63,36 @@ func (t textType[T]) Less(a, b T) (bool, bool) {
 }
 
 func signed[T ~int | ~int8 | ~int16 | ~int32 | ~int64](name string, bits int) Type[T] {
-	return textType[T]{name: name, compare: cmp.Compare[T],
+	return textType[T]{
+		name: name, compare: cmp.Compare[T],
 		parse: func(s string) (T, error) {
 			n, err := strconv.ParseInt(s, 0, bits)
 			return T(n), numErr(name, err)
 		},
-		format: func(v T) string { return strconv.FormatInt(int64(v), 10) }}
+		format: func(v T) string { return strconv.FormatInt(int64(v), 10) },
+	}
 }
 
 func unsigned[T ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64](name string, bits int) Type[T] {
-	return textType[T]{name: name, compare: cmp.Compare[T],
+	return textType[T]{
+		name: name, compare: cmp.Compare[T],
 		parse: func(s string) (T, error) {
 			n, err := strconv.ParseUint(s, 0, bits)
 			return T(n), numErr(name, err)
 		},
-		format: func(v T) string { return strconv.FormatUint(uint64(v), 10) }}
+		format: func(v T) string { return strconv.FormatUint(uint64(v), 10) },
+	}
 }
 
 func float[T ~float32 | ~float64](name string, bits int) Type[T] {
-	return textType[T]{name: name, compare: cmp.Compare[T],
+	return textType[T]{
+		name: name, compare: cmp.Compare[T],
 		parse: func(s string) (T, error) {
 			n, err := strconv.ParseFloat(s, bits)
 			return T(n), numErr(name, err)
 		},
-		format: func(v T) string { return strconv.FormatFloat(float64(v), 'g', -1, bits) }}
+		format: func(v T) string { return strconv.FormatFloat(float64(v), 'g', -1, bits) },
+	}
 }
 
 // numErr never includes the text it failed on, since a setting can hold a
@@ -100,6 +107,7 @@ func numErr(name string, err error) error {
 	return fmt.Errorf("not a valid %s", name)
 }
 
+// The scalar types. Each parses the same text from a flag, env, YAML or JSON.
 var (
 	Int   = signed[int]("int", strconv.IntSize)
 	Int8  = signed[int8]("int8", 8)
@@ -116,7 +124,8 @@ var (
 	Float32 = float[float32]("float32", 32)
 	Float64 = float[float64]("float64", 64)
 
-	Bool = textType[bool]{name: "bool",
+	Bool = textType[bool]{
+		name: "bool",
 		parse: func(s string) (bool, error) {
 			b, err := strconv.ParseBool(s)
 			if err != nil {
@@ -124,22 +133,28 @@ var (
 			}
 			return b, nil
 		},
-		format: strconv.FormatBool}
+		format: strconv.FormatBool,
+	}
 
-	String = textType[string]{name: "string",
+	String = textType[string]{
+		name:   "string",
 		parse:  func(s string) (string, error) { return s, nil },
-		format: func(s string) string { return s }}
+		format: func(s string) string { return s },
+	}
 
-	NonEmpty = textType[string]{name: "non-empty string",
+	NonEmpty = textType[string]{
+		name: "non-empty string",
 		parse: func(s string) (string, error) {
 			if s == "" {
 				return "", errors.New("must not be empty")
 			}
 			return s, nil
 		},
-		format: func(s string) string { return s }}
+		format: func(s string) string { return s },
+	}
 
-	Duration = textType[time.Duration]{name: "duration", compare: cmp.Compare[time.Duration],
+	Duration = textType[time.Duration]{
+		name: "duration", compare: cmp.Compare[time.Duration],
 		parse: func(s string) (time.Duration, error) {
 			d, err := time.ParseDuration(s)
 			if err != nil {
@@ -147,7 +162,8 @@ var (
 			}
 			return d, nil
 		},
-		format: time.Duration.String}
+		format: time.Duration.String,
+	}
 )
 
 func nodeKind(n *yaml.Node) string {

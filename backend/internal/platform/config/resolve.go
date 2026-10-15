@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -57,11 +56,8 @@ func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error)
 		}
 		text = value
 	}
-	v, err := s.parseText(text)
-	if err == nil {
-		err = s.check(v)
-	}
-	if err = withoutSecret(s, text, err); err != nil {
+	v, err := parseChecked(s, text)
+	if err != nil {
 		return resolved{}, fault(err)
 	}
 	return resolved{value: v, origin: origin, set: true}, nil
@@ -94,23 +90,23 @@ func resolveNode(s Any, l layer, node *yaml.Node, refs refReaders) (resolved, er
 	case file != "":
 		origin.File = file
 	}
-	v, err := s.parseText(value)
-	if err == nil {
-		err = s.check(v)
-	}
-	if err = withoutSecret(s, value, err); err != nil {
+	v, err := parseChecked(s, value)
+	if err != nil {
 		return resolved{}, fault(err)
 	}
 	return resolved{value: v, origin: origin, set: true}, nil
 }
 
-// withoutSecret keeps a refusal's reason unless it quotes the secret: a
-// Validate written by hand may format its input.
-func withoutSecret(s Any, text string, err error) error {
-	if err == nil || !s.Secret() || text == "" || !strings.Contains(err.Error(), text) {
-		return err
+// parseChecked cannot leak a secret: a Type's parse error never quotes its
+// input, and checkTyped drops the reason a secret's Validate gives.
+//
+//craft:ignore naked-any the registry holds settings of many types behind one erased view
+func parseChecked(s Any, text string) (any, error) {
+	v, err := s.parseText(text)
+	if err != nil {
+		return nil, err
 	}
-	return errInvalidSecret
+	return v, s.check(v)
 }
 
 // undeclared names the variables no program reads, from the environment and

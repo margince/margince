@@ -17,12 +17,16 @@ import (
 // The database-backed half is in internal/compose/integration; these cases
 // need none, because a boot source answers before the database is asked.
 
-var storedCap = config.DefineStored(config.Spec[int]{Key: "test.cap", Env: "X_TEST_CAP", Type: config.Int,
-	Default: config.Some(100), Min: config.Some(1), Doc: "d"},
+var storedCap = config.DefineStored(config.Spec[int]{
+	Key: "test.cap", Env: "X_TEST_CAP", Type: config.Int,
+	Default: config.Some(100), Min: config.Some(1), Doc: "d",
+},
 	config.Store{RBACObject: "installation_settings", AuditVerb: "update"})
 
-var appliedCap = config.DefineStored(config.Spec[int]{Key: "test.applied", Env: "X_TEST_APPLIED", Type: config.Int,
-	Default: config.Some(1), Doc: "d"},
+var appliedCap = config.DefineStored(config.Spec[int]{
+	Key: "test.applied", Env: "X_TEST_APPLIED", Type: config.Int,
+	Default: config.Some(1), Doc: "d",
+},
 	config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
 
 func asHolding(grant principal.ObjectGrant) context.Context {
@@ -159,5 +163,23 @@ func TestOnlyStoredSettingsAreLockedAndRegistered(t *testing.T) {
 	defs := cfg.StoredDefinitions()
 	if len(defs) != 1 || defs[0].Key() != "test.cap" || defs[0].Object() != "installation_settings" {
 		t.Fatalf("StoredDefinitions = %v", defs)
+	}
+}
+
+// A stored secret's Validate guards the settings write too, so its reason must
+// be dropped there as it is at boot.
+func TestAStoredSecretsRefusalDoesNotQuoteIt(t *testing.T) {
+	echo := config.DefineStored(config.Spec[string]{
+		Key: "test.key", Env: "X_TEST_KEY", Type: config.NonEmpty, Secret: true,
+		Validate: func(s string) error { return errors.New("bad " + s) }, Doc: "d",
+	},
+		config.Store{RBACObject: "installation_settings", AuditVerb: "update"})
+	cfg, err := load(t, fixture{}, echo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cfg.StoredDefinitions()[0].ValidateJSON([]byte(`"hunter2"`))
+	if err == nil || strings.Contains(err.Error(), "hunter2") {
+		t.Fatalf("got %v", err)
 	}
 }

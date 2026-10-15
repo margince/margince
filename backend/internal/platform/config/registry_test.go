@@ -12,8 +12,10 @@ import (
 )
 
 func addr() *config.Setting[string] {
-	return config.Define(config.Spec[string]{Key: "addr", Env: "MARGINCE_ADDR", Flag: "addr",
-		Type: config.NonEmpty, Default: config.Some(":8080"), Doc: "Listen address."})
+	return config.Define(config.Spec[string]{
+		Key: "addr", Env: "MARGINCE_ADDR", Flag: "addr",
+		Type: config.NonEmpty, Default: config.Some(":8080"), Doc: "Listen address.",
+	})
 }
 
 func TestRegistryRefusesWhatCannotBeDescribedHonestly(t *testing.T) {
@@ -24,14 +26,22 @@ func TestRegistryRefusesWhatCannotBeDescribedHonestly(t *testing.T) {
 		"no doc":          config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Type: config.Int}),
 		"no env":          config.Define(config.Spec[int]{Key: "x", Type: config.Int, Doc: "d"}),
 		"no type":         config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Doc: "d"}),
-		"secret default": config.Define(config.Spec[string]{Key: "x", Env: "X_ENV", Type: config.String,
-			Secret: true, Default: config.Some("s"), Doc: "d"}),
-		"min on text": config.Define(config.Spec[string]{Key: "x", Env: "X_ENV", Type: config.String,
-			Min: config.Some("a"), Doc: "d"}),
-		"default out of range": config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Type: config.Int,
-			Default: config.Some(0), Min: config.Some(1), Doc: "d"}),
-		"default fails validate": config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Type: config.Int,
-			Default: config.Some(3), Validate: func(int) error { return errors.New("odd") }, Doc: "d"}),
+		"secret default": config.Define(config.Spec[string]{
+			Key: "x", Env: "X_ENV", Type: config.String,
+			Secret: true, Default: config.Some("s"), Doc: "d",
+		}),
+		"min on text": config.Define(config.Spec[string]{
+			Key: "x", Env: "X_ENV", Type: config.String,
+			Min: config.Some("a"), Doc: "d",
+		}),
+		"default out of range": config.Define(config.Spec[int]{
+			Key: "x", Env: "X_ENV", Type: config.Int,
+			Default: config.Some(0), Min: config.Some(1), Doc: "d",
+		}),
+		"default fails validate": config.Define(config.Spec[int]{
+			Key: "x", Env: "X_ENV", Type: config.Int,
+			Default: config.Some(3), Validate: func(int) error { return errors.New("odd") }, Doc: "d",
+		}),
 	}
 	for name, s := range cases {
 		if _, err := config.NewRegistry([]config.Any{s}); err == nil {

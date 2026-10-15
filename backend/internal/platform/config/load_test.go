@@ -15,10 +15,14 @@ import (
 )
 
 var (
-	level = config.Define(config.Spec[string]{Key: "log.level", Env: "MARGINCE_LOG_LEVEL", Flag: "log-level",
-		Type: config.Enum[string]("debug", "info", "warn"), Default: config.Some("info"), Doc: "d"})
-	dsn = config.Define(config.Spec[string]{Key: "dsn", Env: "MARGINCE_DSN", Flag: "dsn",
-		Type: config.NonEmpty, Secret: true, Doc: "d"})
+	level = config.Define(config.Spec[string]{
+		Key: "log.level", Env: "MARGINCE_LOG_LEVEL", Flag: "log-level",
+		Type: config.Enum[string]("debug", "info", "warn"), Default: config.Some("info"), Doc: "d",
+	})
+	dsn = config.Define(config.Spec[string]{
+		Key: "dsn", Env: "MARGINCE_DSN", Flag: "dsn",
+		Type: config.NonEmpty, Secret: true, Doc: "d",
+	})
 )
 
 var errLen = errors.New("must be at least 32 bytes")
@@ -91,7 +95,7 @@ func TestEachSourceBeatsTheOnesBelowIt(t *testing.T) {
 func TestEveryFaultIsReportedInOneBoot(t *testing.T) {
 	_, err := load(t, fixture{
 		args:  []string{"--log-level=loud"},
-		files: map[string]string{"margince.yaml": "log: {levle: x}\n", "margince.dev.yaml": ""},
+		files: map[string]string{"margince.yaml": "log: {lvl: x}\n", "margince.dev.yaml": ""},
 	}, level, dsn)
 	if err == nil {
 		t.Fatal("want faults")
@@ -99,7 +103,7 @@ func TestEveryFaultIsReportedInOneBoot(t *testing.T) {
 	for _, want := range []string{
 		"--log-level (flag): want one of debug, info, warn",
 		"MARGINCE_DSN: required",
-		"unknown key log.levle",
+		"unknown key log.lvl",
 		"margince.dev.yaml: overlay files are no longer read; pass it with --config-file",
 	} {
 		if !strings.Contains(err.Error(), want) {
@@ -109,13 +113,15 @@ func TestEveryFaultIsReportedInOneBoot(t *testing.T) {
 }
 
 func TestASecretNeverAppearsInAFault(t *testing.T) {
-	short := config.Define(config.Spec[string]{Key: "key", Env: "X_KEY", Type: config.NonEmpty, Secret: true,
+	short := config.Define(config.Spec[string]{
+		Key: "key", Env: "X_KEY", Type: config.NonEmpty, Secret: true,
 		Validate: func(s string) error {
 			if len(s) < 32 {
 				return errLen
 			}
 			return nil
-		}, Doc: "d"})
+		}, Doc: "d",
+	})
 	_, err := load(t, fixture{env: []string{"X_KEY=hunter2"}}, short)
 	if err == nil || strings.Contains(err.Error(), "hunter2") {
 		t.Fatalf("got %v", err)
@@ -141,11 +147,11 @@ func TestANamedConfigFileThatIsMissingIsAFault(t *testing.T) {
 }
 
 func TestAnUnknownNamespacedVariableOnlyWarns(t *testing.T) {
-	cfg, err := load(t, fixture{env: []string{ns + "LOG_LEVLE=x", ns + "TEST_DSN=x", "HOME=/"}}, level)
+	cfg, err := load(t, fixture{env: []string{ns + "LOG_LVL=x", ns + "TEST_DSN=x", "HOME=/"}}, level)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if w := cfg.Warnings(); len(w) != 1 || w[0] != ns+"LOG_LEVLE" {
+	if w := cfg.Warnings(); len(w) != 1 || w[0] != ns+"LOG_LVL" {
 		t.Fatalf("warnings %v", w)
 	}
 }
@@ -196,8 +202,10 @@ func TestAnExplicitLoaderFlagBeatsTheEnvironment(t *testing.T) {
 }
 
 func TestASecretValidatorThatEchoesItsInputIsRedacted(t *testing.T) {
-	echo := config.Define(config.Spec[string]{Key: "key", Env: "X_KEY", Type: config.NonEmpty, Secret: true,
-		Validate: func(s string) error { return fmt.Errorf("bad %q", s) }, Doc: "d"})
+	echo := config.Define(config.Spec[string]{
+		Key: "key", Env: "X_KEY", Type: config.NonEmpty, Secret: true,
+		Validate: func(s string) error { return fmt.Errorf("bad %q", s) }, Doc: "d",
+	})
 	_, err := load(t, fixture{env: []string{"X_KEY=hunter2-secret"}}, echo)
 	if err == nil || strings.Contains(err.Error(), "hunter2") || !strings.Contains(err.Error(), "X_KEY (env)") {
 		t.Fatalf("got %v", err)

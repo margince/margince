@@ -35,6 +35,7 @@ type resolved struct {
 	set    bool
 }
 
+// Config holds the values Load resolved from the boot sources.
 type Config struct {
 	reg      *Registry
 	values   map[string]resolved
@@ -113,8 +114,10 @@ func environMap(environ []string) map[string]string {
 // Warnings names the MARGINCE_* variables that no program reads, never their values.
 func (c *Config) Warnings() []string { return c.warnings }
 
+// Files are the paths Load read.
 func (c *Config) Files() Files { return c.files }
 
+// Registry is the set of settings this Config resolved.
 func (c *Config) Registry() *Registry { return c.reg }
 
 // Trace is whether --config-trace or MARGINCE_CONFIG_TRACE asked for a trace.

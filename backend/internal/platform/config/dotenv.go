@@ -6,6 +6,7 @@ package config
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -50,7 +51,7 @@ func dotenvValue(v string) (string, error) {
 		}
 		rest := strings.TrimSpace(v[end+2:])
 		if rest != "" && !strings.HasPrefix(rest, "#") {
-			return "", fmt.Errorf("text after the closing quote")
+			return "", errors.New("text after the closing quote")
 		}
 		return v[1 : end+1], nil
 	}

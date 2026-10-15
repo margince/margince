@@ -5,6 +5,7 @@ package config
 
 import "fmt"
 
+// Val is the boot value of a setting that is not stored.
 func Val[T any](c *Config, s *Setting[T]) T {
 	v, _ := ValWithSource(c, s)
 	return v

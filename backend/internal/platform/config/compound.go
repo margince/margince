@@ -16,24 +16,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Enum admits only the listed values.
 func Enum[E ~string](values ...E) Type[E] {
 	names := make([]string, len(values))
 	for i, v := range values {
 		names[i] = string(v)
 	}
 	name := "enum(" + strings.Join(names, "|") + ")"
-	return textType[E]{name: name,
+	return textType[E]{
+		name: name,
 		parse: func(s string) (E, error) {
 			if slices.Contains(values, E(s)) {
 				return E(s), nil
 			}
 			return "", fmt.Errorf("want one of %s", strings.Join(names, ", "))
 		},
-		format: func(v E) string { return string(v) }}
+		format: func(v E) string { return string(v) },
+	}
 }
 
 type listType[T any] struct{ elem Type[T] }
 
+// List is a sequence of elem values.
 func List[T any](elem Type[T]) Type[[]T] { return listType[T]{elem: elem} }
 
 func (l listType[T]) Name() string { return "list<" + l.elem.Name() + ">" }
@@ -97,6 +101,7 @@ func (l listType[T]) Less(_, _ []T) (bool, bool) { return false, false }
 
 type mapType[T any] struct{ elem Type[T] }
 
+// Map is a string-keyed mapping of elem values.
 func Map[T any](elem Type[T]) Type[map[string]T] { return mapType[T]{elem: elem} }
 
 func (m mapType[T]) Name() string { return "map<string," + m.elem.Name() + ">" }
@@ -175,7 +180,7 @@ func (m mapType[T]) Less(_, _ map[string]T) (bool, bool) { return false, false }
 
 type structType[T any] struct{}
 
-// A struct value is replaced whole by a higher source, never merged field by
+// Struct is a value replaced whole by a higher source, never merged field by
 // field. Its fields are checked together, so only the whole is valid.
 func Struct[T any]() Type[T] { return structType[T]{} }
 

@@ -3,8 +3,10 @@
 
 package config
 
+// Source is the kind of place a value came from, highest precedence first.
 type Source string
 
+// The sources, in the order Load consults them.
 const (
 	SourceFlag       Source = "flag"
 	SourceEnv        Source = "env"

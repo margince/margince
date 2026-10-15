@@ -23,6 +23,7 @@ type LockedError struct {
 
 func (e LockedError) Error() string { return e.Key + " is set by " + originText(e.Origin) }
 
+// Is makes a lock a conflict to errors.Is, which the HTTP layer maps.
 func (e LockedError) Is(target error) bool { return target == apperrors.ErrConflict }
 
 // WithDatabase returns a copy that reads and writes stored settings through st,
@@ -33,6 +34,7 @@ func (c *Config) WithDatabase(st *settings.Store) *Config {
 	return &next
 }
 
+// StoredVal is StoredValWithSource without the origin.
 func StoredVal[T any](ctx context.Context, c *Config, s *Setting[T]) (T, error) {
 	v, _, err := StoredValWithSource(ctx, c, s)
 	return v, err
@@ -87,6 +89,9 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 	return settings.ApplyTx(ctx, tx, s.row)
 }
 
+// Save writes a stored setting through the audited settings store. The update
+// gate comes before the lock, so a caller without the grant learns nothing
+// about where the value comes from.
 func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 	if err := requireStored(s); err != nil {
 		return err
@@ -104,6 +109,7 @@ func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 	return settings.Set(ctx, db, s.row, v)
 }
 
+// SaveTx is Save inside the caller's transaction.
 func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T) error {
 	if err := requireStored(s); err != nil {
 		return err
@@ -120,9 +126,6 @@ func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T
 	}
 	return settings.SetTx(ctx, db, tx, s.row, v)
 }
-
-// Save and SaveTx take the update gate before the lock, so a caller without
-// the grant learns nothing about where the value comes from.
 
 // lockedAgainst accepts the boot value itself as a no-op, so a form that sends
 // every field still saves the fields that are not locked.

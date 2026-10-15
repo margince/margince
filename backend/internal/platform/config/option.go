@@ -10,6 +10,8 @@ type Option[T any] struct {
 	ok bool
 }
 
+// Some is an Option holding v.
 func Some[T any](v T) Option[T] { return Option[T]{v: v, ok: true} }
 
+// Get returns the value and whether there is one.
 func (o Option[T]) Get() (T, bool) { return o.v, o.ok }
