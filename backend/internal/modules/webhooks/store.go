@@ -78,7 +78,7 @@ func (e *BadInputError) Error() string { return e.Field + ": " + e.Reason }
 // subscriptionColumns reads header names only: a sealed value never leaves
 // the delivery path, not even as ciphertext.
 const subscriptionColumns = `id, owner_id, target_url, event_types, state,
-	ARRAY(SELECT h->>'name' FROM jsonb_array_elements(custom_headers) h),
+	ARRAY(SELECT h->>'name' FROM jsonb_array_elements(custom_headers) WITH ORDINALITY AS e(h, n) ORDER BY n),
 	body_template, body_content_type, version, created_at, updated_at, archived_at`
 
 // Subscription is the metadata view of a subscription — the signing
@@ -303,8 +303,8 @@ func validateUpdate(in UpdateSubscriptionInput) error {
 	return nil
 }
 
-// UpdateSubscription pauses/resumes or re-targets a subscription under an
-// optimistic-concurrency guard, auditing the before/after image.
+// UpdateSubscription changes a subscription's mutable fields (state, event set,
+// headers, body format) under an optimistic-concurrency guard, and audits them.
 func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSubscriptionInput) (Subscription, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return Subscription{}, err
@@ -341,22 +341,26 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 		if err := setBodyFormat(p, current, in.Body); err != nil {
 			return err
 		}
-		if p.Empty() && in.CustomHeaders == nil {
-			out = current
-			return nil
-		}
-		if !p.Empty() {
-			if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-				return err
-			}
-		}
-		before, after := p.Before(), p.After()
+		var headerNamesAfter, replaced []string
 		if in.CustomHeaders != nil {
-			names, replaced, err := s.replaceHeaders(ctx, tx, id, *in.CustomHeaders)
+			sealed, newValues, err := s.sealHeadersFor(ctx, tx, id, *in.CustomHeaders)
 			if err != nil {
 				return err
 			}
-			before[fieldCustomHeaders], after[fieldCustomHeaders] = current.HeaderNames, names
+			p.Set(fieldCustomHeaders, nil, sealed)
+			headerNamesAfter, replaced = headerNames(sealed), newValues
+		}
+		if p.Empty() {
+			out = current
+			return nil
+		}
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
+			return err
+		}
+		before, after := p.Before(), p.After()
+		if in.CustomHeaders != nil {
+			// The patch recorded the sealed values; the audit keeps names only.
+			before[fieldCustomHeaders], after[fieldCustomHeaders] = current.HeaderNames, headerNamesAfter
 			after["custom_headers_replaced"] = replaced
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {

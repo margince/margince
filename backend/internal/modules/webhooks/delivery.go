@@ -242,16 +242,22 @@ func (d *Deliverer) SweepOnce(ctx context.Context) error {
 		return fmt.Errorf("webhooks: resolving the workspace to sweep: %w", err)
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	due, err := d.store.claimDueRetries(ctx, d.clock(), sweepBatch)
-	if err != nil {
-		return fmt.Errorf("webhooks: scanning due retries: %w", err)
-	}
-	for _, deliveryID := range due {
+	// One claim per send: a lease taken for the whole batch would run out
+	// before the later rows were sent.
+	for range sweepBatch {
+		deliveryID, claim, ok, err := d.store.claimDueRetry(ctx, d.clock())
+		if err != nil {
+			return fmt.Errorf("webhooks: claiming a due retry: %w", err)
+		}
+		if !ok {
+			return nil
+		}
 		t, err := d.store.loadTarget(ctx, deliveryID)
 		if err != nil {
 			d.log.Warn("webhooks: loading due delivery", "delivery", deliveryID, "err", err)
 			continue
 		}
+		t.claim = &claim
 		authorized, err := d.attemptStillAuthorized(ctx, t)
 		if err != nil {
 			d.spendUncheckedAttempt(ctx, t, err)
@@ -329,12 +335,14 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 	if !authorized {
 		return d.store.getDelivery(ctx, deliveryID)
 	}
-	if err := d.store.resetForReplay(ctx, deliveryID); err != nil {
+	claim, err := d.store.resetForReplay(ctx, deliveryID)
+	if err != nil {
 		return Delivery{}, err
 	}
 	// A replay resets attempts to a fresh budget: the operator is
 	// asserting the endpoint is fixed, so the exponential clock restarts.
 	t.priorAttempts = 0
+	t.claim = &claim
 	d.deliverOnce(ctx, t)
 	return d.store.getDelivery(ctx, deliveryID)
 }

@@ -268,13 +268,12 @@ so is any name that starts with `webhook-` or `proxy-`.
 Each value is sealed under the webhook key. The subscription id and the header name are bound into
 the seal. So a value moved to another subscription or another name does not open.
 
-A header write never goes through `storekit.Patch`, which copies values into the audit image. It
-has its own `UPDATE`, under the same row lock and version check. The audit row holds the names.
-`custom_headers_replaced` names each header given a new value, never the value.
+Headers are sealed under the row lock and written in the same `UPDATE` as the other fields. The
+audit image holds the names in place of the sealed values. `custom_headers_replaced` names each
+header given a new value, never the value.
 
 A `PATCH` replaces the whole set. A row that names a stored header and sends no value keeps the
-stored value. A save that changes other fields and the headers raises `version` twice, once per
-`UPDATE`; the response carries the final one. The UI sends `custom_headers` only when a row changed.
+stored value. The UI sends `custom_headers` only when a row changed.
 
 An attempt reads the headers of the *current* subscription, like the URL and secret (§4). So a new
 token reaches the retries already waiting.

@@ -24,6 +24,7 @@ const (
 
 	maxTemplateBytes = 16 << 10
 	maxBodyBytes     = 256 << 10
+	maxPlaceholders  = 500
 )
 
 // templateRoots are the public envelope's fields: a template reads the
@@ -94,12 +95,25 @@ func parseBodyTemplate(src, contentType string) (*bodyTemplate, error) {
 		t.parts = append(t.parts, part)
 		offset = open + end + 2
 	}
+	if placeholders := len(t.parts) - countLiterals(t.parts); placeholders > maxPlaceholders {
+		return nil, templateError(fmt.Sprintf("has %d placeholders; the limit is %d", placeholders, maxPlaceholders))
+	}
 	if ct == contentTypeJSON {
 		if err := t.checkJSONPositions(src); err != nil {
 			return nil, err
 		}
 	}
 	return t, nil
+}
+
+func countLiterals(parts []templatePart) int {
+	n := 0
+	for _, p := range parts {
+		if p.path == nil {
+			n++
+		}
+	}
+	return n
 }
 
 func parsePlaceholder(inner string) (templatePart, error) {
@@ -203,11 +217,12 @@ func templateErrorAt(src string, offset int, reason string) *BadInputError {
 
 // render fills the template from a marshalled public envelope.
 func (t *bodyTemplate) render(envelope []byte) ([]byte, error) {
+	doc := newRawDoc(envelope)
 	var out bytes.Buffer
 	for _, p := range t.parts {
 		if p.path == nil {
 			out.WriteString(p.literal)
-		} else if err := t.writeValue(&out, lookup(envelope, p.path), p.asJSON); err != nil {
+		} else if err := t.writeValue(&out, doc.lookup(p.path), p.asJSON); err != nil {
 			return nil, err
 		}
 		if out.Len() > maxBodyBytes {
@@ -266,32 +281,58 @@ func marshalNoHTMLEscape(s string) ([]byte, error) {
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
 
-// lookup walks a dot path through raw JSON without decoding numbers, so a
-// value keeps the exact text the envelope carried. A miss returns nil.
-func lookup(doc json.RawMessage, path []string) json.RawMessage {
-	cur := doc
-	for _, seg := range path {
-		cur = bytes.TrimSpace(cur)
-		switch {
-		case len(cur) > 0 && cur[0] == '{':
-			var obj map[string]json.RawMessage
-			if json.Unmarshal(cur, &obj) != nil {
-				return nil
-			}
-			cur = obj[seg]
-		case len(cur) > 0 && cur[0] == '[':
-			var arr []json.RawMessage
-			i, err := strconv.Atoi(seg)
-			if json.Unmarshal(cur, &arr) != nil || err != nil || i < 0 || i >= len(arr) {
-				return nil
-			}
-			cur = arr[i]
-		default:
-			return nil
-		}
+// rawDoc walks dot paths through raw JSON without decoding numbers, so a value
+// keeps the exact text the envelope carried. Each object or array is decoded
+// once per render, however many placeholders read through it.
+type rawDoc struct {
+	root    json.RawMessage
+	objects map[string]map[string]json.RawMessage
+	arrays  map[string][]json.RawMessage
+}
+
+func newRawDoc(root json.RawMessage) *rawDoc {
+	return &rawDoc{root: root, objects: map[string]map[string]json.RawMessage{}, arrays: map[string][]json.RawMessage{}}
+}
+
+// lookup resolves a path, or returns nil when any segment misses.
+func (d *rawDoc) lookup(path []string) json.RawMessage {
+	cur := d.root
+	for depth, seg := range path {
+		cur = d.child(strings.Join(path[:depth], "."), cur, seg)
 		if cur == nil {
 			return nil
 		}
 	}
 	return cur
+}
+
+// child is one step down from the value at prefix, decoding that value at
+// most once.
+func (d *rawDoc) child(prefix string, value json.RawMessage, seg string) json.RawMessage {
+	value = bytes.TrimSpace(value)
+	switch {
+	case len(value) > 0 && value[0] == '{':
+		obj, seen := d.objects[prefix]
+		if !seen {
+			if json.Unmarshal(value, &obj) != nil {
+				obj = nil
+			}
+			d.objects[prefix] = obj
+		}
+		return obj[seg]
+	case len(value) > 0 && value[0] == '[':
+		arr, seen := d.arrays[prefix]
+		if !seen {
+			if json.Unmarshal(value, &arr) != nil {
+				arr = nil
+			}
+			d.arrays[prefix] = arr
+		}
+		i, err := strconv.Atoi(seg)
+		if err != nil || i < 0 || i >= len(arr) {
+			return nil
+		}
+		return arr[i]
+	}
+	return nil
 }

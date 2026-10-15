@@ -198,14 +198,17 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 // attemptTarget is one deliverable unit: the sealed secret and body the
 // signer needs, plus the identity to record the outcome against.
 type attemptTarget struct {
-	deliveryID    ids.UUID
-	subID         ids.UUID
-	targetURL     string
-	sealedSecret  string
-	eventType     string
-	eventID       ids.UUID
-	payload       []byte
-	contentType   string
+	deliveryID   ids.UUID
+	subID        ids.UUID
+	targetURL    string
+	sealedSecret string
+	eventType    string
+	eventID      ids.UUID
+	payload      []byte
+	contentType  string
+	// claim is the lease this sender holds, nil for a first attempt; the
+	// outcome lands only while the row still carries it.
+	claim         *time.Time
 	headers       []storedHeader
 	priorAttempts int
 	// entityType, entityID and ownerID are what a RE-attempt needs and a first
@@ -254,16 +257,17 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 	return out, err
 }
 
-// claimDueRetries claims the due retrying deliveries in the ctx's workspace
-// whose subscription is live and active, and returns them. A claim is a lease
-// on claimed_until: a second sweep skips the row until the outcome is
-// recorded, so one delivery is attempted once. Runs under the tenant GUC.
-func (s *Store) claimDueRetries(ctx context.Context, now time.Time, limit int) ([]ids.UUID, error) {
-	var out []ids.UUID
+// claimDueRetry claims the next due retrying delivery in the ctx's workspace
+// whose subscription is live and active. The claim is a lease on claimed_until
+// that a second sweep or a replay respects. The returned instant is the token
+// the sender records its outcome under. Runs under the tenant GUC.
+func (s *Store) claimDueRetry(ctx context.Context, now time.Time) (ids.UUID, time.Time, bool, error) {
+	var id ids.UUID
+	var claim time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE webhook_delivery SET claimed_until = now() + make_interval(secs => $3)
-			WHERE id IN (
+		return tx.QueryRow(ctx, `
+			UPDATE webhook_delivery SET claimed_until = now() + make_interval(secs => $2)
+			WHERE id = (
 				SELECT d.id
 				FROM webhook_delivery d
 				JOIN webhook_subscription s ON s.id = d.subscription_id
@@ -271,23 +275,14 @@ func (s *Store) claimDueRetries(ctx context.Context, now time.Time, limit int) (
 				  AND (d.claimed_until IS NULL OR d.claimed_until < now())
 				  AND s.state = 'active' AND s.archived_at IS NULL
 				ORDER BY d.next_retry_at
-				LIMIT $2
+				LIMIT 1
 				FOR UPDATE OF d SKIP LOCKED)
-			RETURNING id`, now, limit, claimLease.Seconds())
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			if err := rows.Scan(&id); err != nil {
-				return err
-			}
-			out = append(out, id)
-		}
-		return rows.Err()
+			RETURNING id, claimed_until`, now, claimLease.Seconds()).Scan(&id, &claim)
 	})
-	return out, err
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, time.Time{}, false, nil
+	}
+	return id, claim, err == nil, err
 }
 
 // loadTarget rehydrates a delivery into an attemptTarget for retry/replay:
@@ -352,8 +347,8 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 				UPDATE webhook_delivery
 				SET status = 'delivered', attempts = $2, last_status_code = $3,
 				    last_error = NULL, next_retry_at = NULL, delivered_at = $4, claimed_until = NULL
-				WHERE id = $1 AND status <> 'visibility_revoked'`,
-				t.deliveryID, attempts, statusCode, now)
+				WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $5`,
+				t.deliveryID, attempts, statusCode, now, t.claim)
 			return err
 		}
 		if attempts >= maxAttempts {
@@ -361,8 +356,8 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 				UPDATE webhook_delivery
 				SET status = 'dead_lettered', attempts = $2, last_status_code = $3,
 				    last_error = $4, next_retry_at = NULL, dead_lettered_at = $5, claimed_until = NULL
-				WHERE id = $1 AND status <> 'visibility_revoked'`,
-				t.deliveryID, attempts, statusCode, res.failure, now)
+				WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $6`,
+				t.deliveryID, attempts, statusCode, res.failure, now, t.claim)
 			return err
 		}
 		next := now.Add(backoff(attempts))
@@ -370,8 +365,8 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 			UPDATE webhook_delivery
 			SET status = 'retrying', attempts = $2, last_status_code = $3,
 			    last_error = $4, next_retry_at = $5, claimed_until = NULL
-			WHERE id = $1 AND status <> 'visibility_revoked'`,
-			t.deliveryID, attempts, statusCode, res.failure, next)
+			WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $6`,
+			t.deliveryID, attempts, statusCode, res.failure, next, t.claim)
 		return err
 	})
 }
@@ -406,19 +401,18 @@ func (s *Store) markVisibilityRevoked(ctx context.Context, deliveryID ids.UUID, 
 // resetForReplay claims a parked delivery and clears it back to pending. A
 // revoked row is never reset (ErrNotFound), which stops a concurrent revocation
 // being undone. A row another sender holds is errDeliveryInFlight.
-func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
+func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) (time.Time, error) {
+	var claim time.Time
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
 			UPDATE webhook_delivery
 			SET status = 'pending', next_retry_at = NULL, dead_lettered_at = NULL, last_error = NULL,
 			    claimed_until = now() + make_interval(secs => $2)
 			WHERE id = $1 AND status IN ('dead_lettered', 'retrying')
-			  AND (claimed_until IS NULL OR claimed_until < now())`, deliveryID, claimLease.Seconds())
-		if err != nil {
+			  AND (claimed_until IS NULL OR claimed_until < now())
+			RETURNING claimed_until`, deliveryID, claimLease.Seconds()).Scan(&claim)
+		if err == nil || !errors.Is(err, pgx.ErrNoRows) {
 			return err
-		}
-		if tag.RowsAffected() == 1 {
-			return nil
 		}
 		// A revoked row is never reset; anything else lost the claim to a sender.
 		var revoked bool
@@ -431,4 +425,5 @@ func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) error {
 		}
 		return errDeliveryInFlight
 	})
+	return claim, err
 }

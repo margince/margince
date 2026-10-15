@@ -20,11 +20,11 @@ const (
 	maxHeaderValueBytes = 4 << 10
 )
 
-// reservedHeaders are set by Margince or by the HTTP transport on every
-// delivery. A custom value would forge the signature, misstate the body, or
-// reshape the connection. The value says what governs the header instead.
 type reservedHeader struct{ name, why string }
 
+// reservedHeaders are set by Margince or by the HTTP transport on every
+// delivery. A custom value would forge the signature, misstate the body, or
+// reshape the connection. Each entry says what governs the header instead.
 var reservedHeaders = []reservedHeader{
 	{"webhook-id", "Margince sets webhook-id"},
 	{"webhook-timestamp", "Margince sets webhook-timestamp"},

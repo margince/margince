@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,11 +31,7 @@ func checkBodyFormat(template, contentType *string) error {
 		}
 		return nil
 	}
-	ct := ""
-	if contentType != nil {
-		ct = *contentType
-	}
-	_, err := parseBodyTemplate(*template, ct)
+	_, err := parseBodyTemplate(*template, deref(contentType))
 	return err
 }
 
@@ -70,35 +65,22 @@ func equalOptional(a, b *string) bool {
 	return (a == nil && b == nil) || (a != nil && b != nil && *a == *b)
 }
 
-// replaceHeaders writes the sealed header set outside the patch. The patch
-// copies every value it sets into the audit image, so the caller audits the
-// returned names instead.
-func (s *Store) replaceHeaders(ctx context.Context, tx pgx.Tx, id ids.UUID, in []CustomHeaderInput) (names, replaced []string, err error) {
+// sealHeadersFor seals the requested header set against the stored one, read
+// under the caller's row lock. The caller writes it through the patch and
+// audits the returned names in place of the sealed values.
+func (s *Store) sealHeadersFor(ctx context.Context, tx pgx.Tx, id ids.UUID, in []CustomHeaderInput) (sealed []storedHeader, replaced []string, err error) {
 	var raw []byte
-	var version int64
-	if err := tx.QueryRow(ctx,
-		"SELECT custom_headers, version FROM webhook_subscription WHERE id = $1 AND archived_at IS NULL", id).
-		Scan(&raw, &version); err != nil {
+	if err := tx.QueryRow(ctx, "SELECT custom_headers FROM webhook_subscription WHERE id = $1", id).Scan(&raw); err != nil {
 		return nil, nil, err
 	}
 	var existing []storedHeader
 	if err := json.Unmarshal(raw, &existing); err != nil {
 		return nil, nil, err
 	}
-	sealed, err := s.cipher.sealHeaders(id, in, existing)
-	if err != nil {
+	if sealed, err = s.cipher.sealHeaders(id, in, existing); err != nil {
 		return nil, nil, err
 	}
-	tag, err := tx.Exec(ctx,
-		"UPDATE webhook_subscription SET custom_headers = $2 WHERE id = $1 AND archived_at IS NULL AND version = $3",
-		id, sealed, version)
-	if err != nil {
-		return nil, nil, err
-	}
-	if tag.RowsAffected() != 1 {
-		return nil, nil, apperrors.ErrVersionSkew
-	}
-	return headerNames(sealed), namesWithNewValues(sealed, in), nil
+	return sealed, namesWithNewValues(sealed, in), nil
 }
 
 // namesWithNewValues names each stored header the request gave a value, so

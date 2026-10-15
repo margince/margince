@@ -134,6 +134,7 @@ func TestATemplateTheEngineCannotRenderSafelyIsRefusedAtSave(t *testing.T) {
 		{"unicode escape cut at its start", `{"a": "\u{{ type }}0041"}`, contentTypeJSON, "\\u escape"},
 		{"empty template", "  ", contentTypeText, "is empty"},
 		{"too large", strings.Repeat("x", maxTemplateBytes+1), contentTypeText, "16 KiB"},
+		{"too many placeholders", strings.Repeat("{{ type }}", maxPlaceholders+1), contentTypeText, "the limit is 500"},
 	} {
 		t.Run(tc.name, func(t *testing.T) { parseFails(t, tc.src, tc.contentType, tc.reason) })
 	}
@@ -147,11 +148,11 @@ func TestAContentTypeOutsideTheAllowListIsRefused(t *testing.T) {
 }
 
 func TestARenderedBodyOverTheCapFails(t *testing.T) {
-	tpl, err := parseBodyTemplate(strings.Repeat("{{ data.name }}", 1000), contentTypeText)
+	tpl, err := parseBodyTemplate(strings.Repeat("{{ data.name }}", maxPlaceholders), contentTypeText)
 	if err != nil {
 		t.Fatal(err)
 	}
-	big := `{"data": {"name": "` + strings.Repeat("y", 300) + `"}}`
+	big := `{"data": {"name": "` + strings.Repeat("y", 600) + `"}}`
 	if _, err := tpl.render([]byte(big)); !errors.Is(err, errBodyTooLarge) {
 		t.Fatalf("err = %v, want errBodyTooLarge", err)
 	}

@@ -135,7 +135,7 @@ export function WebhookHeaderRows({
                 <span className="webhook-sealed">
                   <Lock aria-hidden />
                   <span>{t("webhooks.headers.valueSet")}</span>
-                  <span className="webhook-sealed-dots" aria-hidden>
+                  <span aria-hidden>
                     ••••••••
                   </span>
                   <Button onClick={() => update(row.key, { value: "" })}>

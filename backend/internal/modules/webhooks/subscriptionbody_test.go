@@ -72,8 +72,8 @@ func TestABodyFormatThatCannotRenderIsRefused(t *testing.T) {
 }
 
 func TestEachSubscriptionGetsItsOwnBodyAndAFailureStaysItsOwn(t *testing.T) {
-	envelope := []byte(`{"type": "deal.created", "data": {"name": "Acme", "blob": "` + strings.Repeat("y", 300) + `"}}`)
-	named, oversized := `{"n": "{{ data.name }}"}`, strings.Repeat("{{ data.blob }}", 1000)
+	envelope := []byte(`{"type": "deal.created", "data": {"name": "Acme", "blob": "` + strings.Repeat("y", 600) + `"}}`)
+	named, oversized := `{"n": "{{ data.name }}"}`, strings.Repeat("{{ data.blob }}", maxPlaceholders)
 	rows := renderFor([]subCandidate{
 		{id: ids.NewV7()},
 		{id: ids.NewV7(), bodyTemplate: &named},

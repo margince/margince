@@ -129,11 +129,16 @@ func TestAReplacedHeaderReachesTheRetryAndAKeptOneStays(t *testing.T) {
 	if err := deliverer.HandleEvent(context.Background(), makeEnvelope(we.wsID, "deal.created")); err != nil {
 		t.Fatal(err)
 	}
+	before := sub.Version
 	sub, status := we.patchSubscription(t, sub, integration.AnyMap{
+		"state":          "active",
 		"custom_headers": []integration.AnyMap{{"name": "X-Api-Key", "value": "new-key"}, {"name": "x-tenant"}},
 	})
 	if status != http.StatusOK {
 		t.Fatalf("patch headers → %d", status)
+	}
+	if sub.Version != before+1 {
+		t.Errorf("one save moved version from %d to %d, want one step", before, sub.Version)
 	}
 	rcv.setStatus(http.StatusOK)
 	now = now.Add(time.Minute)
@@ -219,10 +224,10 @@ func TestABodyOverTheCapIsParkedUnsentAndCannotBeReplayed(t *testing.T) {
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 	sub, _ := we.createShaped(t, integration.AnyMap{
 		"target_url": rcv.server.URL + "/hook", "event_types": []string{"deal.created"},
-		"body_template": strings.Repeat("{{ data.blob }}", 1000), "body_content_type": "text/plain",
+		"body_template": strings.Repeat("{{ data.blob }}", 500), "body_content_type": "text/plain",
 	})
 	env := makeEnvelope(we.wsID, "deal.created")
-	env.Payload = []byte(`{"blob": "` + strings.Repeat("y", 300) + `"}`)
+	env.Payload = []byte(`{"blob": "` + strings.Repeat("y", 600) + `"}`)
 	if err := deliverer.HandleEvent(context.Background(), env); err != nil {
 		t.Fatalf("a render failure must not re-drive the bus: %v", err)
 	}
@@ -292,6 +297,9 @@ func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
 		t.Fatalf("replaying an empty body that was sent → %d, want 200", status)
 	}
 	// The API's replay dials through the production client, which refuses this
-	// loopback receiver, so the replay shows as a fresh attempt that failed.
+	// loopback receiver: a replay that sent records a dial failure, not the 500.
 	assertDeliveryStatus(t, we, sub.ID, "retrying", 1)
+	if reason := we.deliveryError(t, sub.ID); !strings.Contains(reason, "request failed") {
+		t.Errorf("after the replay the row says %q, want the replay's own failed request", reason)
+	}
 }
