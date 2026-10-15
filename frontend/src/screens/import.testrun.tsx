@@ -160,47 +160,16 @@ function TestingBody({ run }: Readonly<{ run: ImportRun }>) {
   );
 }
 
-function TestRunBody({
-  wizard,
-  format,
-  report,
-  runId,
-}: Readonly<{
-  wizard: ImportWizardState;
-  format: ImportFormat;
-  report: ImportReport;
-  runId: string;
-}>) {
+function TestRunNotices({ report }: Readonly<{ report: ImportReport }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const invalid = countOf(issuesOf(report), "invalid_value");
-  const linkless = countOf(issuesOf(report), "broken_link", "dropped_link");
-  const restaging = wizard.test.isPending;
   const closedWon = sumOf(report, "closed_won");
   const closedLost = sumOf(report, "closed_lost");
   const closed = closedWon + closedLost;
-  const landing = report.disposition.created + report.disposition.updated;
-  // Rows with a broken link can still land, but only once the box is ticked.
-  const nothingToWrite =
-    report.rows_read > 0 && landing === 0 && (linkless === 0 || !wizard.anyway);
-  const nothingLands = landing === 0 && !wizard.anyway;
-  const skippedRows = report.disposition.skipped > 0;
   return (
-    <div className="import">
-      <PartCounts
-        parts={partsOf(report, wizard.run.data, format.order)}
-        detail={(part) =>
-          t("import.test.detail", {
-            created: formatNumber(part.disposition.created, locale),
-            updated: formatNumber(part.disposition.updated, locale),
-            unchanged: formatNumber(part.disposition.unchanged, locale),
-          })
-        }
-      />
-      <ImportContextTagSummary
-        tagID={wizard.contextTagID || (wizard.run.data?.context_tag_id ?? "")}
-      />
+    <>
       {closed > 0 ? (
         <Callout
           tone="info"
@@ -226,6 +195,93 @@ function TestRunBody({
           {t("import.test.invalidBody")}
         </Callout>
       ) : null}
+    </>
+  );
+}
+
+function PrimaryAction({
+  wizard,
+  nothingToWrite,
+  nothingLands,
+  landing,
+}: Readonly<{
+  wizard: ImportWizardState;
+  nothingToWrite: boolean;
+  nothingLands: boolean;
+  landing: number;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (nothingToWrite) {
+    return (
+      <Button
+        variant="primary"
+        pending={wizard.cancelling.isPending}
+        onClick={wizard.cancel}
+      >
+        {t("import.test.nothing.done")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      variant="primary"
+      disabled={wizard.test.isPending || nothingLands}
+      pending={wizard.approve.isPending}
+      busyLabel={t("import.importing")}
+      onClick={() => {
+        const run = wizard.run.data;
+        if (run) wizard.approve.mutate(run);
+      }}
+    >
+      {wizard.anyway
+        ? t("import.test.importAnyway")
+        : plural("import.test.import", landing, {
+            count: formatNumber(landing, locale),
+          })}
+    </Button>
+  );
+}
+
+function TestRunBody({
+  wizard,
+  format,
+  report,
+  runId,
+}: Readonly<{
+  wizard: ImportWizardState;
+  format: ImportFormat;
+  report: ImportReport;
+  runId: string;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const linkless = countOf(issuesOf(report), "broken_link", "dropped_link");
+  const restaging = wizard.test.isPending;
+  const landing = report.disposition.created + report.disposition.updated;
+  // Rows with a broken link can still land, but only once the box is ticked.
+  const nothingToWrite =
+    report.rows_read > 0 && landing === 0 && (linkless === 0 || !wizard.anyway);
+  const nothingLands = landing === 0 && !wizard.anyway;
+  const skippedRows = report.disposition.skipped > 0;
+  return (
+    <div className="import">
+      <PartCounts
+        parts={partsOf(report, wizard.run.data, format.order)}
+        detail={(part) =>
+          t("import.test.detail", {
+            created: formatNumber(part.disposition.created, locale),
+            updated: formatNumber(part.disposition.updated, locale),
+            unchanged: formatNumber(part.disposition.unchanged, locale),
+          })
+        }
+      />
+      <ImportContextTagSummary
+        tagID={wizard.contextTagID || (wizard.run.data?.context_tag_id ?? "")}
+      />
+      <TestRunNotices report={report} />
       <ProblemTable issues={issuesOf(report)} />
       {linkless > 0 ? (
         <Checkbox
@@ -254,32 +310,12 @@ function TestRunBody({
             <Button variant="ghost" onClick={wizard.reset}>
               {t("import.test.reupload")}
             </Button>
-            {nothingToWrite ? (
-              <Button
-                variant="primary"
-                pending={wizard.cancelling.isPending}
-                onClick={wizard.cancel}
-              >
-                {t("import.test.nothing.done")}
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                disabled={restaging || nothingLands}
-                pending={wizard.approve.isPending}
-                busyLabel={t("import.importing")}
-                onClick={() => {
-                  const run = wizard.run.data;
-                  if (run) wizard.approve.mutate(run);
-                }}
-              >
-                {wizard.anyway
-                  ? t("import.test.importAnyway")
-                  : plural("import.test.import", landing, {
-                      count: formatNumber(landing, locale),
-                    })}
-              </Button>
-            )}
+            <PrimaryAction
+              wizard={wizard}
+              nothingToWrite={nothingToWrite}
+              nothingLands={nothingLands}
+              landing={landing}
+            />
           </>
         }
       >
