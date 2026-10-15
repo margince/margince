@@ -20,7 +20,7 @@ import (
 // names, which is how every column of these files is spelled.
 func dealImportParts(header string) []AnyMap {
 	mapping := AnyMap{}
-	for _, column := range strings.Split(header, ",") {
+	for _, column := range strings.SplitSeq(header, ",") {
 		mapping[column] = column
 	}
 	return []AnyMap{{"file": "deals.csv", "object": "deal", "mapping": mapping}}

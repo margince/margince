@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestEveryRefusalTheStoreGivesADealRowIsASkipNotAFailedRun(t *testing.T) {
 			t.Errorf("%s: reason = %q, refused = %v, want %q", name, why.Code, refused, tc.want)
 		}
 	}
-	if _, refused := dealRefusalOf(fmt.Errorf("the database is down"), fields, dealStages{}); refused {
+	if _, refused := dealRefusalOf(errors.New("the database is down"), fields, dealStages{}); refused {
 		t.Error("an error the store did not mean as a refusal was answered as a bad row, which would hide a failed run")
 	}
 	if why, _ := dealRefusalOf(&deals.PastCloseDateError{}, fields, dealStages{}); why.Params["value"] != "2020-01-01" {

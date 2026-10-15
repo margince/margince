@@ -83,7 +83,7 @@ func dealCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 		in.StageID = stage
 	}
 	if company, ok := linkedRecord(typed, csvTargetCompanyRef); ok {
-		in.CompanyID = ptrOf(ids.From[ids.CompanyKind](company))
+		in.CompanyID = new(ids.From[ids.CompanyKind](company))
 	}
 	return dealCreate{Deal: in, LostReason: importString(fields, dealTargetLostReason)}
 }
@@ -102,7 +102,7 @@ func dealUpdateFrom(changed map[string]string, typed map[string]any) dealPatch {
 	}}
 	if _, moved := changed[csvTargetCompanyRef]; moved {
 		if company, ok := linkedRecord(typed, csvTargetCompanyRef); ok {
-			patch.Deal.CompanyID = ptrOf(ids.From[ids.CompanyKind](company))
+			patch.Deal.CompanyID = new(ids.From[ids.CompanyKind](company))
 		}
 	}
 	_, newStage := changed[dealTargetStage]
@@ -134,9 +134,6 @@ func dealCloseDate(fields map[string]string, typed map[string]any) *time.Time {
 	}
 	return nil
 }
-
-// ptrOf answers the address of a copy of v.
-func ptrOf[T any](v T) *T { return &v }
 
 // dealCompanyChanged reports whether a deal row names a company other than the
 // one the deal holds. A row whose link resolved to nothing changes nothing.
