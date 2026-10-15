@@ -292,8 +292,10 @@ func TestACorrectedFileWithNoTypeColumnHoldsADurationToTheStoredKind(t *testing.
 		"contacts.csv":   contacts,
 		"activities.csv": activityHeader + "\nA-1,note,Fix note,,2025-03-02,contact:P-1,,,\n",
 	}, parts)
-	untyped := []AnyMap{parts[0], {"file": "activities.csv", "object": "activity",
-		"mapping": AnyMap{"ref": "ref", "subject": "subject", "occurred_at": "occurred_at", "links": "links", "duration_minutes": "duration_minutes"}}}
+	untyped := []AnyMap{parts[0], {
+		"file": "activities.csv", "object": "activity",
+		"mapping": AnyMap{"ref": "ref", "subject": "subject", "occurred_at": "occurred_at", "links": "links", "duration_minutes": "duration_minutes"},
+	}}
 	files := map[string]string{
 		"contacts.csv":   contacts,
 		"activities.csv": "ref,subject,occurred_at,links,duration_minutes\nA-1,Fix note,2025-03-02,contact:P-1,30\n",
