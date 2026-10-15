@@ -446,3 +446,41 @@ func TestACompanyNamedByIdAndByRefHoldsItsOwnDomain(t *testing.T) {
 	want.Updated = 2
 	assertPreviewIsTheCommit(t, preview, final, want)
 }
+
+// An update that replaces a single-valued key frees the old value, so a later
+// row of the same file may create a record under it.
+func TestALaterRowTakesTheKeyAnUpdateFrees(t *testing.T) {
+	cases := []struct {
+		name, object, header, key, landed, file string
+		mapping                                 map[string]string
+	}{{
+		name: "company LinkedIn", object: "company", header: "Company,LinkedIn", key: "Company",
+		landed: "Nordwind Logistik,https://www.linkedin.com/company/nordwind",
+		file: "Nordwind Logistik,https://www.linkedin.com/company/nordwind-logistik\n" +
+			"Zephyr Freight,https://www.linkedin.com/company/nordwind",
+		mapping: map[string]string{"Company": "display_name", "LinkedIn": "linkedin_url"},
+	}, {
+		name: "lead address", object: "lead", header: "Full Name,Email", key: "Full Name",
+		landed:  "Grace Hopper,grace@hopper.example",
+		file:    "Grace Hopper,grace@navy.example\nAda Lovelace,grace@hopper.example",
+		mapping: map[string]string{"Full Name": "full_name", "Email": "email"},
+	}, {
+		name: "lead LinkedIn", object: "lead", header: "Full Name,LinkedIn", key: "Full Name",
+		landed:  "Grace Hopper,https://www.linkedin.com/in/grace",
+		file:    "Grace Hopper,https://www.linkedin.com/in/grace-hopper\nAda Lovelace,https://www.linkedin.com/in/grace",
+		mapping: map[string]string{"Full Name": "full_name", "LinkedIn": "linkedin_url"},
+	}}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupImportApp(t)
+			run := map[string]any{"mapping": tc.mapping, "source_key": tc.key}
+			previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.landed+"\n", run)
+
+			preview, final := previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.file+"\n", run)
+
+			want := dispositionOf(1, 0, 0, 0)
+			want.Updated = 1
+			assertPreviewIsTheCommit(t, preview, final, want)
+		})
+	}
+}

@@ -187,7 +187,7 @@ func (w *csvWriters) reconcilePrediction(
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
-	refused, err := w.updateKeyRefusal(ctx, id, changed, typed)
+	refused, err := w.updateKeyRefusal(ctx, id, current, changed, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}

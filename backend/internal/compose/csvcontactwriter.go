@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -100,7 +101,7 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 	return err
 }
 
-// contactEmailHeld answers whether a live contact other than except holds this
+// contactEmailHeld answers whether a live contact outside except holds this
 // address, without regard to who holds it. A create reads the page's answer.
 //
 // It is deliberately not visibility-filtered, and that is the opposite of the
@@ -116,8 +117,8 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 // why, and it does not: the reason names the row's own address, which the caller
 // supplied, and never the incumbent or their existence beyond the fact that this
 // address is spoken for.
-func (w *csvWriters) contactEmailHeld(ctx context.Context, email string, except *ids.UUID) (bool, error) {
-	if claimed, read := w.heldEmails[email]; read && except == nil {
+func (w *csvWriters) contactEmailHeld(ctx context.Context, email string, except []ids.UUID) (bool, error) {
+	if claimed, read := w.heldEmails[email]; read && len(except) == 0 {
 		return claimed, nil
 	}
 	held, err := w.emailsHeld(ctx, []string{email}, except)
@@ -127,10 +128,10 @@ func (w *csvWriters) contactEmailHeld(ctx context.Context, email string, except 
 	return held[email], nil
 }
 
-// emailsHeld answers which of these addresses a live contact other than except
+// emailsHeld answers which of these addresses a live contact outside except
 // holds, in one query. Postgres lowers each address, as the store's own key
 // does.
-func (w *csvWriters) emailsHeld(ctx context.Context, emails []string, except *ids.UUID) (map[string]bool, error) {
+func (w *csvWriters) emailsHeld(ctx context.Context, emails []string, except []ids.UUID) (map[string]bool, error) {
 	held := make(map[string]bool, len(emails))
 	for _, email := range emails {
 		held[email] = false
@@ -140,7 +141,7 @@ func (w *csvWriters) emailsHeld(ctx context.Context, emails []string, except *id
 			SELECT given FROM unnest($1::text[]) AS given
 			 WHERE EXISTS (SELECT 1 FROM contact_email
 			                WHERE email = lower(given) AND archived_at IS NULL
-			                  AND ($2::uuid IS NULL OR contact_id <> $2))`, emails, except)
+			                  AND ($2::uuid[] IS NULL OR contact_id <> ALL($2)))`, emails, except)
 		if err != nil {
 			return err
 		}
@@ -190,14 +191,14 @@ func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher
 	}
 }
 
-// leadEmailHeld answers whether a live lead other than except holds this
+// leadEmailHeld answers whether a live lead outside except holds this
 // address. Not visibility-filtered, for the reason the contact check gives:
 // the store refuses a second lead on one address whoever holds it.
-func (w *csvWriters) leadEmailHeld(ctx context.Context, email string, except *ids.UUID) (bool, error) {
+func (w *csvWriters) leadEmailHeld(ctx context.Context, email string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		holder, found, err := storekit.LiveLeadByEmail(ctx, tx, email, nil)
-		held = found && (except == nil || holder.UUID != *except)
+		held = found && !slices.Contains(except, holder.UUID)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)

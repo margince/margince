@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -53,7 +54,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// companyDomainHeld answers whether a live company other than except holds
+// companyDomainHeld answers whether a live company outside except holds
 // this domain, without regard to which company holds it.
 //
 // Not visibility-filtered, and that is the opposite of the name-collision check
@@ -63,13 +64,13 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 // duplicate domain is not a judgement: the key is estate-wide, so the commit
 // refuses the row whoever holds the domain, and a preview promising a create
 // would simply be wrong.
-func (w *csvWriters) companyDomainHeld(ctx context.Context, domain string, except *ids.UUID) (bool, error) {
+func (w *csvWriters) companyDomainHeld(ctx context.Context, domain string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM company_domain
 			                WHERE domain = lower($1) AND archived_at IS NULL
-			                  AND ($2::uuid IS NULL OR company_id <> $2))`,
+			                  AND ($2::uuid[] IS NULL OR company_id <> ALL($2)))`,
 			domain, except).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)
@@ -89,13 +90,13 @@ func linkedInClaimed(err error) bool {
 
 // companyLinkedInHeld is linkedInClaimed asked before the write, so the
 // preview skips the row the commit will.
-func (w *csvWriters) companyLinkedInHeld(ctx context.Context, url string, except *ids.UUID) (bool, error) {
+func (w *csvWriters) companyLinkedInHeld(ctx context.Context, url string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM company
 			                WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL
-			                  AND ($2::uuid IS NULL OR id <> $2))`,
+			                  AND ($2::uuid[] IS NULL OR id <> ALL($2)))`,
 			url, except).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
@@ -103,12 +104,13 @@ func (w *csvWriters) companyLinkedInHeld(ctx context.Context, url string, except
 	return held, nil
 }
 
-// leadLinkedInHeld is the lead store's own probe, asked before a create.
-func (w *csvWriters) leadLinkedInHeld(ctx context.Context, url string) (bool, error) {
+// leadLinkedInHeld is the lead store's own probe, asked before a create, of
+// a live lead outside except.
+func (w *csvWriters) leadLinkedInHeld(ctx context.Context, url string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		var err error
-		_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
+		holder, found, err := storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
+		held = found && !slices.Contains(except, holder.UUID)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)

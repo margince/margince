@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // inFileCreates is what the dry run has counted as landing so far.
@@ -31,16 +33,22 @@ type inFileCreates struct {
 	// holders maps each unique key an earlier row will hold to the record
 	// holding it: "row:<ref>" for a create, "id:<uuid>" for an update.
 	holders map[string]string
-	// claimed is the row under prediction's keys, filed once it is known to
-	// land.
+	// freedBy maps each key an earlier update frees to the record that held
+	// it. The estate still shows that record holding it, so a probe leaves
+	// the record out.
+	freedBy map[string]ids.UUID
+	// claimed and freeing are the row under prediction's keys, filed once it
+	// is known to land.
 	claimed     []rowKey
 	claimant    string
+	freeing     []string
+	freer       ids.UUID
 	companies   contacts.CompanyBatch
 	contactRows contacts.ContactBatch
 }
 
 func newInFileCreates(ctx context.Context, writers *csvWriters) (*inFileCreates, error) {
-	ledger := &inFileCreates{writers: writers, holders: map[string]string{}}
+	ledger := &inFileCreates{writers: writers, holders: map[string]string{}, freedBy: map[string]ids.UUID{}}
 	if writers.object != migration.ObjectContact {
 		return ledger, nil
 	}
@@ -61,6 +69,24 @@ func (f *inFileCreates) claim(holder string, keys []rowKey) {
 	if f != nil {
 		f.claimant, f.claimed = holder, keys
 	}
+}
+
+// release notes the keys the update under prediction frees from record id.
+func (f *inFileCreates) release(id ids.UUID, keys []string) {
+	if f != nil {
+		f.freer, f.freeing = id, keys
+	}
+}
+
+// leaveOut is except plus the record an earlier update freed key from.
+func (f *inFileCreates) leaveOut(key string, except []ids.UUID) []ids.UUID {
+	if f == nil {
+		return except
+	}
+	if id, ok := f.freedBy[key]; ok {
+		return append(slices.Clone(except), id)
+	}
+	return except
 }
 
 // heldByAnother reports whether an earlier row's record other than holder
@@ -95,10 +121,18 @@ func (f *inFileCreates) reconsider(
 // record files the row's claimed keys when the prediction says it lands, and a
 // created row as a rival for the rows after it.
 func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
-	claimed, claimant := f.claimed, f.claimant
-	f.claimed, f.claimant = nil, ""
+	claimed, claimant, freeing, freer := f.claimed, f.claimant, f.freeing, f.freer
+	f.claimed, f.claimant, f.freeing, f.freer = nil, "", nil, ids.UUID{}
 	if outcome != predictCreate && outcome != predictCollides && outcome != predictUpdate {
 		return
+	}
+	// Freed before claimed: an update that only recases a company's URL frees
+	// and claims one key.
+	for _, key := range freeing {
+		f.freedBy[key] = freer
+		if f.holders[key] == claimant {
+			delete(f.holders, key)
+		}
 	}
 	for _, key := range claimed {
 		f.holders[key.ledger] = claimant
