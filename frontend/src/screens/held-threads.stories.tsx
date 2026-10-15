@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -116,8 +117,7 @@ function story(rows: HeldThread[]) {
       "GET /capture/senders": () => jsonResponse({ data: [] }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: [] }),
-      "GET /me/linkedin-reach": () =>
-        jsonResponse({ accounts: [], accounts_total: 0 }),
+      "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     });
     return (
       <StoryProviders>

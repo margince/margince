@@ -374,8 +374,7 @@ export function RetentionCard() {
     );
   }
 
-  // Sorted by the authorable enum's order, so the ladder reads the same on
-  // every visit and after every edit.
+  // In the authorable enum's order, so the ladder reads the same every visit.
   const rows = [...(policies.data?.data ?? [])].sort(
     (left, right) =>
       RETENTION_SCOPES.indexOf(left.scope) -
@@ -523,6 +522,7 @@ function PolicyTable({
           label={t("retention.editScope", {
             scope: t(scopeLabelKey(policy.scope)),
           })}
+          opensDialog
           onOpen={() => onEdit(policy)}
         />
       ),

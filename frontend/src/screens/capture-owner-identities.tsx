@@ -172,28 +172,29 @@ export function OwnerIdentitiesCard() {
       <PanelBody>
         <PanelIntro>{t("ownerIdentities.sub")}</PanelIntro>
       </PanelBody>
-      <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
-        {(list) => (
-          // One list, so a hairline parts the add row from the first address.
-          <SettingList bleed="settings" testId="owner-identities-list">
-            <SettingRow
-              label={t("ownerIdentities.addLabel")}
-              description={
-                list.data.length === 0 ? (
-                  <span data-testid="owner-identities-empty">
-                    {t("ownerIdentities.addDescriptionEmpty")}
-                  </span>
-                ) : (
-                  t("ownerIdentities.addDescription")
-                )
-              }
-              control={
-                <Button ref={addVerb} onClick={() => setDeclaring(true)}>
-                  {t("ownerIdentities.add")}
-                </Button>
-              }
-            />
-            {list.data.map((identity) => (
+      {/* One list, so a hairline parts the add row from the first address. The
+          add row stands while the addresses load or fail. */}
+      <SettingList bleed="settings" testId="owner-identities-list">
+        <SettingRow
+          label={t("ownerIdentities.addLabel")}
+          description={
+            query.data?.data.length === 0 ? (
+              <span data-testid="owner-identities-empty">
+                {t("ownerIdentities.addDescriptionEmpty")}
+              </span>
+            ) : (
+              t("ownerIdentities.addDescription")
+            )
+          }
+          control={
+            <Button ref={addVerb} onClick={() => setDeclaring(true)}>
+              {t("ownerIdentities.add")}
+            </Button>
+          }
+        />
+        <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
+          {(list) =>
+            list.data.map((identity) => (
               <IdentityRow
                 key={identity.id}
                 identity={identity}
@@ -206,10 +207,10 @@ export function OwnerIdentitiesCard() {
                   ).mutate(chosen)
                 }
               />
-            ))}
-          </SettingList>
-        )}
-      </QueryGate>
+            ))
+          }
+        </QueryGate>
+      </SettingList>
       {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );

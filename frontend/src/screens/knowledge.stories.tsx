@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -191,16 +191,15 @@ async function chooseFromMenu(
   await page.findByRole("dialog");
 }
 
-const meta: Meta<typeof KnowledgeCard> = {
+const meta = {
   title: "Settings/Data/Knowledge/Document sets",
   component: KnowledgeCard,
-};
+} satisfies Meta<typeof KnowledgeCard>;
 export default meta;
-type Story = StoryObj<typeof KnowledgeCard>;
+type Story = StoryObj<typeof meta>;
 
-// The administrator's card: both sets as rows with one searchability badge
-// each. The archive verb is in each row's menu, the create verb in the head.
-// One set answers in full and one does not yet, so the two badges differ.
+// The administrator's card. One set answers in full and one does not yet, so
+// the two searchability badges differ.
 export const Administered: Story = {
   render: card(sets(administers, [handbook, priceBook])),
 };
@@ -294,10 +293,19 @@ export const ShippedSet: Story = {
   play: showDocuments,
 };
 
-// A set created and not yet filled. This is the one absence on the screen that
-// IS honest — the set list itself never draws an empty state, because every
-// installation is filed with the operator handbook at boot and "no document
-// sets" could then only mean a reconciliation that did not run.
+// No set at all: one line under the intro, not a table of headings.
+export const NoSetsYet: Story = {
+  render: card(sets(administers, [])),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("No document sets yet."),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+// A set created and not yet filled: the set is there, its documents are not.
 export const NothingFiledYet: Story = {
   render: card(
     sets(

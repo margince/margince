@@ -119,10 +119,8 @@ export function extensionLayers(
   });
 }
 
-// extensionPackageLayers is the layers gen-composition mounts: a `frontend/`
-// folder counts as a screen layer only with a package.json. A unit shipping
-// copy alone (frontend/i18n) holds no source, so a gate asking "was every layer
-// read" must not name it.
+// The layers gen-composition mounts (collectUnitFrontend): a `frontend/` with a
+// package.json. A unit shipping copy alone (frontend/i18n) holds no source.
 export function extensionPackageLayers(root: string): string[] {
   return extensionLayers(root).filter((layer) =>
     existsSync(join(layer, "package.json")),

@@ -17,9 +17,8 @@ import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RequestsPanel } from "./settings.privacy";
 
-// Settings → Privacy → Restricted records: the controller sees what a
-// statutory obligation is holding, by transaction and deadline, and never the
-// correspondence; a role without the retention authority sees why not.
+// The Held lane shows what a statutory obligation holds, by transaction and
+// deadline, never the correspondence. A role without the authority sees why not.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -314,6 +313,43 @@ describe("RestrictedRecordsCard", () => {
     expect(
       await screen.findByRole("button", { name: /^Held\W+1$/ }),
     ).toBeVisible();
+  });
+
+  it("claims no count while more held records wait on a next page", async () => {
+    backend({ retention_policy: ["read"] }, [], {
+      "GET /retention/restrictions": () =>
+        jsonResponse({
+          data: [HELD_ANGEBOT],
+          page: { next_cursor: "next", has_more: true },
+        }),
+    });
+    render(<RequestsPanel />);
+    expect(await screen.findByRole("button", { name: /^Held$/ })).toBeVisible();
+  });
+
+  it("releases a row whatever shape its id has, since the server named it", async () => {
+    backend({ retention_policy: ["read", "update"] }, [
+      { ...HELD_ANGEBOT, activity_id: "held-1" },
+    ]);
+    const user = userEvent.setup();
+    render(<RestrictedRecordsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /^Release email of/i }),
+    );
+    await user.type(screen.getByRole("textbox", { name: /Why/ }), "erase it");
+    expect(
+      screen.getByRole("button", { name: "Release and erase" }),
+    ).toBeEnabled();
+  });
+
+  it("offers no pin to a role that may decide but not read what is held", async () => {
+    backend({ retention_policy: ["update"] }, []);
+    await renderHeld();
+    expect(await screen.findByText(/Only an administrator/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Pin a record" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers no decision to a role that may read the list but not decide", async () => {

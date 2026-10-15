@@ -6606,7 +6606,7 @@ export const vi = {
     "Dành cho thư từ mà quy tắc tự động không nhận ra, ví dụ thư nhà cung cấp và thư mua hàng thuộc §257 HGB nhưng không có deal ở đây. Mã của mục có trong nhật ký hoạt động.",
   "restricted.pin.idMalformed":
     "Mã mục không hợp lệ. Định dạng gồm 8-4-4-4-12 ký tự thập lục phân, hiển thị đầy đủ trong nhật ký hoạt động của mục đó.",
-  "restricted.pin.idPlaceholder": "Mã mục",
+  "restricted.pin.idLabel": "Mã mục",
   "restricted.pin.title": "Đưa mục này vào lưu trữ pháp lý?",
   "restricted.pin.body":
     "Mục này được giữ trong thời hạn luật định: bị ẩn khỏi mọi chế độ xem thông thường, bị khóa và sẽ bị xóa khi hết thời hạn. Mã định danh của mục này bị che ngay từ bây giờ.",
@@ -7217,6 +7217,7 @@ export const vi = {
   "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
   "connectionOutcomes.view": "Xem",
   "connectionOutcomes.viewNamed": "Xem {name}",
+  "connectionOutcomes.retryNamed": "Tải lại {name}",
   "connectionOutcomes.none": "Chưa có",
   "connectionOutcomes.unread": "Không tải được",
   "connectionOutcomes.waitingEmpty":
@@ -8928,6 +8929,7 @@ export const vi = {
   "knowledge.sub":
     "Các bộ tài liệu công ty có thể truy vấn. Câu trả lời chỉ dùng tài liệu đã lưu, và câu hỏi nằm ngoài phạm vi sẽ bị từ chối.",
   "knowledge.withheld": "Bạn không có quyền xem danh sách bộ tài liệu.",
+  "knowledge.empty": "Chưa có bộ tài liệu nào.",
   "knowledge.documentCount_one": "{count} tài liệu",
   "knowledge.documentCount_other": "{count} tài liệu",
   "knowledge.passages_one": "{embedded} trên {count} đoạn tìm kiếm được",
@@ -9538,7 +9540,7 @@ export const vi = {
     "Vai trò của bạn xem được trang này. Cần tài khoản đầy đủ quyền để thay đổi phân quyền.",
   "extAccess.empty": "Chưa cài đơn vị tiện ích nào.",
   "extAccess.version": "Phiên bản {version}",
-  "extAccess.openUnit": "Mở trang {name}",
+  "extAccess.openUnit": "Đi tới {name}",
   "extAccess.noPage":
     "{name} đã được cài trên API, nhưng bản dựng ứng dụng này không có trang cho tiện ích đó. Có thể ứng dụng cũ hơn máy chủ.",
   "extAccess.brings.heading": "Đơn vị này bổ sung gì",
@@ -11407,7 +11409,7 @@ export const vi = {
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
-    "Liên hệ mới được bổ sung các thông tin miễn phí từ nhà cung cấp, như vai trò và lịch sử công tác. Tắt mục này nếu luật cấm mua bán dữ liệu cá nhân.",
+    "Liên hệ mới được bổ sung các thông tin miễn phí từ nhà cung cấp, như vai trò và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua tự động, và nút trên từng liên hệ vẫn dùng được. Tắt mục này nếu luật cấm mua bán dữ liệu cá nhân.",
   "provider.buyable": "Cho phép mua {category}",
   "provider.buyableWriteFailed": "Không thể đổi hạng mục",
   "provider.postureReadFailed": "Không rõ cài đặt hiện tại",

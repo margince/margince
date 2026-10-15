@@ -121,6 +121,8 @@ export function MailSharingCard() {
     },
   });
 
+  const notAdmin = canManage ? undefined : t("captureSettings.adminOnly");
+
   return (
     <Panel title={t("mailSharing.cardTitle")}>
       <QueryGate query={query} pendingLabel={t("mailSharing.cardTitle")}>
@@ -174,9 +176,7 @@ export function MailSharingCard() {
                       testId="mail-sharing-toggle"
                       label={t("mailSharing.label")}
                       labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
+                      reason={notAdmin}
                       checked={shown}
                       disabled={!canManage || save.isPending}
                       onChange={(next) => setPending(next)}
@@ -194,9 +194,7 @@ export function MailSharingCard() {
                       testId="shared-posture-allowed-toggle"
                       label={t("mailSharing.sharedPosture.label")}
                       labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
+                      reason={notAdmin}
                       checked={sharedShown}
                       disabled={!canManage || saveShared.isPending}
                       onChange={(next) => setPendingShared(next)}
@@ -213,6 +211,7 @@ export function MailSharingCard() {
                   {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
                   refusal={t("captureMailSync.interval.refusal")}
                   disabled={!canManage || sync.isPending}
+                  reason={notAdmin}
                   onCommit={(next) =>
                     sync.mutate({ mail_sync_interval_seconds: next })
                   }

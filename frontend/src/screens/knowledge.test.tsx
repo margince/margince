@@ -224,6 +224,40 @@ describe("KnowledgeCard", () => {
     ).toBeNull();
   });
 
+  it("says no set is filed in one line, with no table of headings", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN, { sets: [] }).fetchMock);
+    render(<KnowledgeCard />);
+
+    expect(await screen.findByText("No document sets yet.")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("states why a set is not searchable on its own line under the figures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        sets: [
+          corpus({
+            coverage: {
+              documents_total: 1,
+              chunks_total: 4,
+              chunks_embedded: 0,
+              embed_state: "indexing",
+            },
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const reason = await screen.findByText("Passages are still being indexed.");
+    expect(reason.textContent).toBe("Passages are still being indexed.");
+  });
+
   it("withholds the list from a reader with no grant, rather than showing an empty one", async () => {
     vi.stubGlobal("fetch", backendFor(OUTSIDER).fetchMock);
     render(<KnowledgeCard />);

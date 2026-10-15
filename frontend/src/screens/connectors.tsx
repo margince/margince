@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -133,6 +133,7 @@ function MailRoster({
   origin,
   pendingProvider,
   connectFailure,
+  addId,
   onAdd,
   onReconnect,
   onDisconnect,
@@ -142,6 +143,7 @@ function MailRoster({
   origin: ConnectorsResult["publicOrigin"];
   pendingProvider: Provider | null;
   connectFailure: ConnectFailure;
+  addId: string;
   /** Absent when every provider is already on the roster. */
   onAdd: (() => void) | undefined;
   onReconnect: (provider: Provider) => void;
@@ -163,7 +165,11 @@ function MailRoster({
           label={t("connectors.emptyLabel")}
           description={t("connectors.emptyHint")}
           control={
-            onAdd && <Button onClick={onAdd}>{t("connectors.addOpen")}</Button>
+            onAdd && (
+              <Button id={addId} onClick={onAdd}>
+                {t("connectors.addOpen")}
+              </Button>
+            )
           }
         />
       )}
@@ -289,14 +295,26 @@ function MailConnectorsPanel() {
   const rosterKnown = connectors.isSuccess && !notConfigured;
   const offerAdd = rosterKnown && addable.length > 0;
   const pendingProvider = connect.isPending ? connect.variables : null;
+  const titleId = useId();
+  const headAddId = useId();
+  const rowAddId = useId();
+  // Adding a mailbox moves the verb between the empty row and the head.
+  const backToAdd = () =>
+    document.getElementById(headAddId) ??
+    document.getElementById(rowAddId) ??
+    document.getElementById(titleId);
 
   return (
     <Panel
-      title={t("connectors.title")}
+      title={
+        <span id={titleId} tabIndex={-1}>
+          {t("connectors.title")}
+        </span>
+      }
       // On an empty roster the verb rides the one row that says so.
       titleAction={
         offerAdd && rows.length > 0 ? (
-          <Button onClick={() => setAddOpen(true)}>
+          <Button id={headAddId} onClick={() => setAddOpen(true)}>
             {t("connectors.addOpen")}
           </Button>
         ) : undefined
@@ -309,6 +327,7 @@ function MailConnectorsPanel() {
         origin={connectors.data?.publicOrigin}
         pendingProvider={pendingProvider}
         connectFailure={connectFailure}
+        addId={rowAddId}
         onAdd={offerAdd ? () => setAddOpen(true) : undefined}
         onReconnect={(provider) =>
           OAUTH_PROVIDERS.has(provider)
@@ -320,6 +339,7 @@ function MailConnectorsPanel() {
       <AddConnectionDialog
         open={addOpen && offerAdd}
         onClose={() => setAddOpen(false)}
+        returnFocusTo={backToAdd}
         addable={addable}
         pendingProvider={pendingProvider}
         notConfigured501={notConfigured501}

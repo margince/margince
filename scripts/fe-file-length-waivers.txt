@@ -77,7 +77,6 @@
 651 frontend/src/format/format.ts
 727 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
-503 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 737 frontend/src/screens/worklist.tsx
 781 frontend/src/screens/companycontacts/summary.tsx

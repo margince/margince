@@ -5,6 +5,7 @@ import { Badge, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { KeyedName } from "../design-system/keyedname";
 import type { ListColumn } from "../design-system/listtable";
+import { sortState } from "../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
@@ -171,17 +172,18 @@ function ProductPrice({ product }: Readonly<{ product: Product }>) {
   );
 }
 
-function hasStatus(product: Product): boolean {
-  return Boolean(product.archived_at) || !product.active;
+// Only a status that differs from the usual one has a name.
+function productStatus(product: Product): MessageKey | null {
+  if (product.archived_at) {
+    return "product.archived";
+  }
+  return product.active ? null : "product.inactive";
 }
 
-// Only a status that differs from the usual one is drawn.
 function ProductStatus({ product }: Readonly<{ product: Product }>) {
   const t = useT();
-  if (product.archived_at) {
-    return <Badge>{t("product.archived")}</Badge>;
-  }
-  return product.active ? null : <Badge>{t("product.inactive")}</Badge>;
+  const status = productStatus(product);
+  return status === null ? null : <Badge>{t(status)}</Badge>;
 }
 
 function editableProduct(p: Product) {
@@ -306,7 +308,7 @@ export function ProductsAdmin() {
       );
     };
 
-  // Only while some row has a status to show: a column of blanks says nothing.
+  // Only while some row has a status to show, or the list is ordered by it.
   const statusColumn: ListColumn<Product> = {
     key: "status",
     header: t("product.status"),
@@ -423,7 +425,10 @@ export function ProductsAdmin() {
             header: t("product.billingModel"),
             cell: (p: Product) => billingLabel(p, t),
           },
-          ...(list.rows.some(hasStatus) ? [statusColumn] : []),
+          ...(list.rows.some((p) => productStatus(p) !== null) ||
+          sortState(statusColumn, list.query.sort) !== null
+            ? [statusColumn]
+            : []),
           ...(canUpdate || canArchive ? [rowMenu] : []),
         ]}
         rowKey={(p) => p.id}

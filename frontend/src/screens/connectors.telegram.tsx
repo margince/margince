@@ -81,7 +81,6 @@ function TelegramConnectionRow({
   return (
     <SettingRow
       testId="telegram-connection"
-      description={t("connectors.telegramSub")}
       label={
         <span className="connector-head">
           <KeyedName name={t("connectors.provTelegram")} code={handle} />

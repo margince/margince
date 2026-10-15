@@ -10,9 +10,8 @@ import {
 } from "../testing/story-utils";
 import { CaptureSettingsCard } from "./capture-settings";
 
-// The enrichment switches and the website reader's limits. The denied fixture
-// holds `capture_settings` read without update. `meRoute({})` would be an admin
-// with no object grants, which draws a different card.
+// The denied fixture holds `capture_settings` read without update: `meRoute({})`
+// is an admin with no object grants, which draws a different card.
 function story(auto_enrich: boolean, allow: Parameters<typeof meRoute>[0]) {
   return () => {
     installFetchStub({

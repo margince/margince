@@ -516,6 +516,17 @@ describe("the retain-only posture", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("tells a reader the row's Edit verb opens a dialog", async () => {
+    backend();
+    render(<RetentionCard />);
+
+    const row = await findRow("deal/won");
+    expect(within(row).getByRole("button", { name: /edit/i })).toHaveAttribute(
+      "aria-haspopup",
+      "dialog",
+    );
+  });
+
   it("opens a policy from a press anywhere on its row", async () => {
     backend();
     render(<RetentionCard />);

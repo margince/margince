@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,9 +12,8 @@ import {
 } from "../testing/story-utils";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 
-// One row per list the reader's connections produced: a count, and a verb
-// that opens the list only when there is something in it. The drawers have
-// their own stories beside the lists they draw.
+// One row per list: a count, and a verb that opens the list only when there
+// is something in it. The drawers have stories beside the lists they draw.
 
 type Lists = Readonly<{
   senders: number;
@@ -22,10 +22,23 @@ type Lists = Readonly<{
   reach: number;
 }>;
 
-const ids = (count: number, make: (i: number) => object) =>
-  Array.from({ length: count }, (_, i) => make(i));
+function ids<T>(count: number, make: (i: number) => T): T[] {
+  return Array.from({ length: count }, (_, i) => make(i));
+}
 
-function story(lists: Lists, failed = false) {
+type Read = "ok" | "failed" | "pending";
+
+const failedRead = () => jsonResponse({ title: "Internal Server Error" }, 500);
+
+function story(
+  lists: Lists,
+  reads: Readonly<{ held?: Read; waiting?: Read }> = {},
+) {
+  const answer = (read: Read | undefined, ok: () => Response) => () => {
+    if (read === "failed") return failedRead();
+    if (read === "pending") return new Promise<Response>(() => {});
+    return ok();
+  };
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -39,7 +52,7 @@ function story(lists: Lists, failed = false) {
             message_count: 1,
           })),
         }),
-      "GET /capture/contacts-awaiting-decision": () =>
+      "GET /capture/contacts-awaiting-decision": answer(reads.waiting, () =>
         jsonResponse({
           data: ids(lists.waiting, (i) => ({
             contact_id: `0190b7a2-0000-7000-8000-00000000003${i}`,
@@ -47,30 +60,30 @@ function story(lists: Lists, failed = false) {
             captured_at: "2026-09-10T14:40:00Z",
           })),
         }),
-      "GET /capture/held-threads": () =>
-        failed
-          ? jsonResponse({ title: "Internal Server Error" }, 500)
-          : jsonResponse({
-              data: ids(lists.held, (i) => ({
-                thread_key: `t-${i}`,
-                status: "held",
-                pending: false,
-                attempts: 1,
-                has_message: true,
-                kind: "legal",
-              })),
-            }),
-      "GET /me/linkedin-reach": () =>
+      ),
+      "GET /capture/held-threads": answer(reads.held, () =>
         jsonResponse({
-          accounts: ids(lists.reach, (i) => ({
-            company_id: `018f3a1b-0000-7000-8000-0000000000b${i}`,
-            display_name: `Company ${i + 1}`,
-            connections: 3,
-            contacts_on_file: 1,
+          data: ids(lists.held, (i) => ({
+            thread_key: `t-${i}`,
+            status: "held",
+            pending: false,
+            attempts: 1,
+            has_message: true,
+            kind: "legal",
           })),
-          accounts_total: lists.reach,
-          unresolved_connections: 0,
         }),
+      ),
+      "GET /me/linkedin-reach": () =>
+        jsonResponse(
+          linkedInReachFixture(
+            ids(lists.reach, (i) => ({
+              company_id: `018f3a1b-0000-7000-8000-0000000000b${i}`,
+              display_name: `Company ${i + 1}`,
+              connections: 3,
+              contacts_on_file: 1,
+            })),
+          ),
+        ),
     });
     return (
       <StoryProviders>
@@ -112,7 +125,39 @@ export const SomeOfEach: Story = {
 };
 
 // A list that failed to load says so on its row rather than reading as empty.
-export const OneListFailed: Story = { render: story(SOME, true) };
+export const OneListFailed: Story = {
+  render: story(SOME, { held: "failed" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Could not load")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Retry Held threads" }),
+    ).toBeVisible();
+  },
+};
+
+// A queue that could not be read may hold somebody, so its row stays.
+export const WaitingFailed: Story = {
+  render: story(NOTHING, { waiting: "failed" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", {
+        name: "Retry Waiting on a decision",
+      }),
+    ).toBeVisible();
+  },
+};
+
+// A list still loading holds its place with a bar, never "None yet".
+export const OneListLoading: Story = {
+  render: story(SOME, { held: "pending" }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("24 senders")).toBeVisible();
+    await expect(canvasElement.querySelectorAll(".skeleton")).toHaveLength(1);
+  },
+};
 
 export const SomeOfEachDark: Story = {
   globals: { theme: "dark" },

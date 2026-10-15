@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
-  createContext,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -170,12 +169,6 @@ export function liveDialogs(): HTMLElement[] {
 }
 
 /**
- * True inside a `Modal`, so a surface portalled out of it, such as a menu's
- * panel, can stand above the dialog its trigger is in.
- */
-export const InsideDialog = createContext(false);
-
-/**
  * Whether a live dialog the element is not inside sits on top. A layer under
  * one leaves Escape to it; a layer opened from inside the dialog keeps its own.
  */
@@ -189,18 +182,33 @@ export function coveredByDialog(element: Element | null): boolean {
  * dialog: that dialog's overlay, or the body. `joinLayer` also fills the ref. */
 export function useDialogLayer<T extends HTMLElement>(
   anchorRef: React.RefObject<T | null>,
-): { layer: HTMLElement; joinLayer: (node: T | null) => void } {
-  const [layer, setLayer] = useState<HTMLElement>(() => document.body);
+  eager: boolean,
+): {
+  layer: HTMLElement | null;
+  joinLayer: (node: T | null) => void;
+  join: () => void;
+} {
+  // Null until joined: a portal that moves container remounts its children.
+  // Only an eager panel joins at mount; the rest join on the press that opens.
+  const [layer, setLayer] = useState<HTMLElement | null>(null);
   const joinLayer = useCallback(
     (node: T | null) => {
       anchorRef.current = node;
-      if (node) {
-        setLayer(node.closest<HTMLElement>(".overlay") ?? document.body);
+      if (node && eager) {
+        setLayer(layerOf(node));
       }
     },
+    [anchorRef, eager],
+  );
+  const join = useCallback(
+    () => setLayer(layerOf(anchorRef.current)),
     [anchorRef],
   );
-  return { layer, joinLayer };
+  return { layer, joinLayer, join };
+}
+
+function layerOf(node: HTMLElement | null): HTMLElement {
+  return node?.closest<HTMLElement>(".overlay") ?? document.body;
 }
 
 /**
@@ -209,7 +217,7 @@ export function useDialogLayer<T extends HTMLElement>(
  */
 export function pressedInLayerAbove(
   target: Node,
-  layer: HTMLElement,
+  layer: HTMLElement | null,
   panel: HTMLElement | null,
 ): boolean {
   const overlay = target instanceof Element ? target.closest(".overlay") : null;

@@ -34,7 +34,7 @@
 }
 /* The intro's body pays the interval above the surface, so whatever the
    surface opens with (its header or its one empty line) adds none. */
-.listsection-intro + .lt > .lt-head {
+.listsection-intro + .lt > :is(.lt-head, .lt-tools) {
   padding-top: 0;
 }
 .listsection-intro + .lt > .lt-emptyline {

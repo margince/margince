@@ -168,6 +168,7 @@ export function CaptureSettingsCard() {
                   {...READ_LIMITS[row.property]}
                   refusal={t(`captureReading.${row.copy}.refusal`)}
                   disabled={locked}
+                  reason={reason}
                   onCommit={(next) => update.mutate({ [row.property]: next })}
                 />
               ))}

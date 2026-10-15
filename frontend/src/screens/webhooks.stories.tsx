@@ -192,7 +192,7 @@ export const NotConfigured: Story = {
   }),
 };
 
-// Off, the card is one line: what it would do and what it waits for.
+// Off, the card is one line: webhooks wait for a signing key.
 export const NotConfiguredPhone: Story = {
   ...NotConfigured,
   globals: { viewport: { value: "phone" } },

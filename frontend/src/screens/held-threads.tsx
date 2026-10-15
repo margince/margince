@@ -234,8 +234,8 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           )}
         </div>
       )}
-      {/* One drawer over the table, at its level rather than inside a row:
-          two mounted dialogs would be two `aria-modal` elements. */}
+      {/* One email drawer for the table, not one per row, so a long list
+          mounts one dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}

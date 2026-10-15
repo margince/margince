@@ -11,7 +11,6 @@ import {
   unitsForSecretScope,
   unitTitle,
 } from "../lib/extensions";
-import { unitLabel } from "./extension-access";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -75,7 +74,7 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const t = useT();
   const { locale } = useLocale();
   const { name } = unit;
-  const title = unitLabel(name, unitTitle(unit, locale));
+  const title = unitTitle(unit, locale);
   return (
     <PanelRow interactive record className="extunits-row">
       <a

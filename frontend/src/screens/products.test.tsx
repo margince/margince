@@ -132,6 +132,18 @@ describe("ProductsAdmin", () => {
     expect(screen.queryByRole("columnheader", { name: /Status/ })).toBeNull();
   });
 
+  it("keeps the Status column while the list is ordered by it", async () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings?products.sort=active",
+    );
+    vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+    render(<ProductsAdmin />);
+    expect(await screen.findByText("Consulting Day")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: /Status/ })).toBeTruthy();
+  });
+
   it("says an empty catalogue in one line, with no table", async () => {
     vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER, rows: [] }));
     render(<ProductsAdmin />);

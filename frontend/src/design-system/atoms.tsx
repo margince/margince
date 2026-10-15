@@ -12,7 +12,6 @@ import {
   type FormEventHandler,
   type InputHTMLAttributes,
   type ReactNode,
-  useContext,
   useEffect,
   useId,
   useRef,
@@ -25,7 +24,6 @@ import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
 import {
   coveredByDialog,
-  InsideDialog,
   panelsOpenedFrom,
   pressedInLayerAbove,
   useDialogFocus,
@@ -1291,9 +1289,8 @@ export function OverflowMenu({
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
-  const inDialog = useContext(InsideDialog);
   const at = useAnchoredToTrigger(open, trigger, panel);
-  const { layer, joinLayer } = useDialogLayer(wrap);
+  const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
 
   // Choosing an item closes the menu, one commit after the press.
   //
@@ -1393,6 +1390,7 @@ export function OverflowMenu({
         aria-label={label}
         title={label}
         onClick={() => {
+          join();
           setEverOpened(true);
           setOpen((was) => !was);
         }}
@@ -1409,7 +1407,6 @@ export function OverflowMenu({
           id={panelId}
           ref={panel}
           className="overflow-menu-items"
-          data-layer={inDialog ? "dialog" : undefined}
           hidden={!open}
           style={{
             top: `${at.top}px`,
@@ -1431,9 +1428,9 @@ export function OverflowMenu({
             }
           }}
         >
-          {(keepMounted || everOpened) && children}
+          {(keepMounted || everOpened) && layer !== null && children}
         </div>,
-        layer,
+        layer ?? document.body,
       )}
     </div>
   );

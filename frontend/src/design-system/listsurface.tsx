@@ -96,9 +96,8 @@ export function ListSurface({
    */
   title?: ReactNode;
   /**
-   * No count and no toolbar, for a list with nothing to narrow. The header row
-   * stays only for a title, views or a verb. The archived switch stays: the
-   * rows in hand never include archived ones, so it is their only way in.
+   * No count and no toolbar, for a list with nothing to narrow. The archived
+   * switch stays: the rows in hand never include archived ones.
    */
   bare?: boolean;
   views?: readonly ListView[];

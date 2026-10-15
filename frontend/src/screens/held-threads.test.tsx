@@ -19,6 +19,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What this card must never do is state a fact it does not have. A thread whose
@@ -155,13 +156,10 @@ async function renderCard(
         });
       }
       if (key === "GET /me/linkedin-reach") {
-        return new Response(
-          JSON.stringify({ accounts: [], accounts_total: 0 }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
+        return new Response(JSON.stringify(linkedInReachFixture()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       if (key.startsWith("POST /activities/threads/")) {
         return new Response(JSON.stringify(share ?? { shared: true }), {
@@ -185,14 +183,15 @@ async function renderCard(
       </LocaleProvider>
     </QueryClientProvider>
   );
-  const rendered = render(ui);
+  const user = userEvent.setup();
+  render(ui);
   if (rows.length > 0) {
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "View Held threads" }),
     );
     await screen.findByRole("dialog", { name: "Held threads" });
   }
-  return rendered;
+  return user;
 }
 
 afterEach(() => {
@@ -319,8 +318,10 @@ describe("held threads", () => {
   ])(
     "reports a release the other holders kept closed (%i)",
     async (owners, line) => {
-      const user = userEvent.setup();
-      await renderCard([JUDGED], { shared: false, held_by_others: owners });
+      const user = await renderCard([JUDGED], {
+        shared: false,
+        held_by_others: owners,
+      });
       await user.click(
         await screen.findByRole("button", { name: /share with the team/i }),
       );
@@ -350,7 +351,7 @@ it("opens the message a held thread is about", async () => {
     thread_key: "t-openable",
     activity_id: "01a05500-0000-7000-8000-0000000000b1",
   };
-  await renderCard([openable]);
+  const user = await renderCard([openable]);
 
   const button = await screen.findByRole("button", {
     name: "Entwurf Aufhebungsvertrag",
@@ -358,7 +359,7 @@ it("opens the message a held thread is about", async () => {
   expect(button.getAttribute("aria-haspopup")).toBe("dialog");
   // Pressing it asks for THIS message's presentation — the screen's half of
   // the job. What the drawer then draws is emaildetail's own contract.
-  await userEvent.click(button);
+  await user.click(button);
   await waitFor(() => {
     const asked = (
       globalThis.fetch as ReturnType<typeof vi.fn>

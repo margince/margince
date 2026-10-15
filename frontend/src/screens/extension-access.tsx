@@ -3,11 +3,12 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info } from "lucide-react";
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import type { components } from "../api/schema";
 import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FactList } from "../design-system/factlist";
+import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   QueryGate,
@@ -22,6 +23,7 @@ import {
   EXTENSION_SCREEN,
   extensionTitle,
   findExtension,
+  readableKey,
 } from "../lib/extensions";
 import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
 import { routeHash } from "../lib/router";
@@ -251,7 +253,7 @@ function UnitCard({
   const unread = unit.rbac_objects.filter((object) =>
     roles.every((role) => !grantOf(role, object).read),
   );
-  const title = unitLabel(unit.name, extensionTitle(unit.name, locale));
+  const title = extensionTitle(unit.name, locale);
   return (
     <Panel
       className="ext-unit"
@@ -347,16 +349,6 @@ export function objectLabel(unit: string, object: string): string {
   return readableKey(bare || unit);
 }
 
-// A unit's own title where its copy carries one, else its key read the same way.
-export function unitLabel(name: string, title: string): string {
-  return title === name ? readableKey(name) : title;
-}
-
-function readableKey(key: string): string {
-  const words = key.replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 // Built-in and custom roles are told apart only where both kinds stand in the
 // grid. The mark goes on the fewer of the two, so it says what differs.
 function roleBadges(
@@ -375,13 +367,16 @@ function roleBadges(
 
 function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
   const t = useT();
-  const list = (items: readonly string[]) =>
+  const list = (
+    items: readonly string[],
+    show: (item: string) => ReactNode = (item) => item,
+  ) =>
     items.length === 0 ? (
       t("extAccess.brings.none")
     ) : (
       <ul className="ext-brings-list">
         {items.map((item) => (
-          <li key={item}>{item}</li>
+          <li key={item}>{show(item)}</li>
         ))}
       </ul>
     );
@@ -391,9 +386,9 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
         {
           key: "objects",
           term: t("extAccess.brings.objects"),
-          value: list(
-            unit.rbac_objects.map((object) => objectLabel(unit.name, object)),
-          ),
+          value: list(unit.rbac_objects, (object) => (
+            <KeyedName name={objectLabel(unit.name, object)} code={object} />
+          )),
         },
         {
           key: "routes",

@@ -132,11 +132,8 @@ function isFilterRowSegment(value: string): value is FilterRowSegment {
   return value === "cond" || value === "value" || value === "menu";
 }
 
-/**
- * Which segment of one row's popover the toolbar's single `openMenu` key names,
- * if any. A string key rather than per-row state keeps one menu open at a time
- * across filter rows too.
- */
+/** The segment of one row the toolbar's single `openMenu` key names, if any:
+ * one key, not per-row state, keeps one menu open across filter rows. */
 export function openRowSegment(
   openMenu: string | null,
   key: string,

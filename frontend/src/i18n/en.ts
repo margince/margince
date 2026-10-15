@@ -6880,7 +6880,7 @@ export const en = {
     "For correspondence the automatic rule cannot recognize, such as supplier and purchasing mail under §257 HGB with no deal here. The record ID is on its audit entry.",
   "restricted.pin.idMalformed":
     "Not a valid record ID. The format is 8-4-4-4-12 hexadecimal characters, shown in full on the record’s audit entry.",
-  "restricted.pin.idPlaceholder": "Record ID",
+  "restricted.pin.idLabel": "Record ID",
   "restricted.pin.title": "Place record under legal hold?",
   "restricted.pin.body":
     "The record is held for the statutory window: hidden from every ordinary view, locked, and erased when the window closes. Its identifiers are redacted now.",
@@ -7500,6 +7500,7 @@ export const en = {
   "connectionOutcomes.title": "What your connections found",
   "connectionOutcomes.view": "View",
   "connectionOutcomes.viewNamed": "View {name}",
+  "connectionOutcomes.retryNamed": "Retry {name}",
   "connectionOutcomes.none": "None yet",
   "connectionOutcomes.unread": "Could not load",
   "connectionOutcomes.waitingEmpty": "No contacts are waiting on a decision.",
@@ -9270,6 +9271,7 @@ export const en = {
   "knowledge.sub":
     "Document collections this company can query. Answers use only filed documents, and questions they do not cover are refused.",
   "knowledge.withheld": "You do not have access to the list of document sets.",
+  "knowledge.empty": "No document sets yet.",
   "knowledge.documentCount_one": "{count} document",
   "knowledge.documentCount_other": "{count} documents",
   "knowledge.passages_one": "{embedded} of {count} passage searchable",
@@ -11771,7 +11773,7 @@ export const en = {
   "provider.deleteDataConfirm.typed": "Enter the provider name to confirm",
   "provider.automaticLookup": "Look up contacts automatically",
   "provider.automaticLookupHint":
-    "New contacts get the details the provider gives for free, such as role and work history. Switch this off where the law forbids trading personal data.",
+    "New contacts get the details the provider gives for free, such as role and work history. Email addresses and mobile numbers are never bought automatically, and the button on each contact still works. Switch this off where the law forbids trading personal data.",
   "provider.buyable": "Allow buying {category}",
   "provider.buyableWriteFailed": "Category not changed",
   "provider.postureReadFailed": "Current setting unknown",

@@ -107,8 +107,6 @@ export function KnowledgeCard() {
     );
   }
 
-  // No empty state: every installation is filed with the shipped handbook, so
-  // "no document sets yet" could only ever hide a reconciliation that failed.
   return (
     <Panel
       title={
@@ -122,13 +120,19 @@ export function KnowledgeCard() {
         <PanelIntro>{t("knowledge.sub")}</PanelIntro>
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("knowledge.title")}>
-        {(data) => (
-          <DocumentSets
-            sets={data.items}
-            canManage={canManage}
-            afterArchive={() => document.getElementById(titleId)}
-          />
-        )}
+        {(data) =>
+          data.items.length === 0 ? (
+            <PanelBody>
+              <EmptyState>{t("knowledge.empty")}</EmptyState>
+            </PanelBody>
+          ) : (
+            <DocumentSets
+              sets={data.items}
+              canManage={canManage}
+              afterArchive={() => document.getElementById(titleId)}
+            />
+          )
+        }
       </QueryGate>
     </Panel>
   );
@@ -136,14 +140,6 @@ export function KnowledgeCard() {
 
 function setRowTestId(set: Corpus): string {
   return `knowledge-set-${set.id}`;
-}
-
-// The row's chevron, its last control: a deleted document's menu leaves with it.
-function setToggle(set: Corpus): HTMLElement | null {
-  const toggles = document.querySelectorAll<HTMLElement>(
-    `[data-testid="${setRowTestId(set)}"] [aria-expanded]`,
-  );
-  return toggles.item(toggles.length - 1);
 }
 
 // The set's searchability as one badge; the figures and the reason are in its detail.
@@ -246,13 +242,7 @@ function DocumentSets({
           header: t("knowledge.col.detail"),
           toggleLabel: (set) => t("knowledge.documentsIn", { set: set.name }),
           single: true,
-          render: (set) => (
-            <SetDetail
-              set={set}
-              canManage={canManage}
-              afterDelete={() => setToggle(set)}
-            />
-          ),
+          render: (set) => <SetDetail set={set} canManage={canManage} />,
         }}
       />
       <ConfirmModal
@@ -286,13 +276,18 @@ function DocumentSets({
 function SetDetail({
   set,
   canManage,
-  afterDelete,
-}: Readonly<{
-  set: Corpus;
-  canManage: boolean;
-  afterDelete: () => HTMLElement | null;
-}>) {
+}: Readonly<{ set: Corpus; canManage: boolean }>) {
   const t = useT();
+  const root = useRef<HTMLDivElement>(null);
+  // The chevron that opened this detail: a deleted document's menu leaves with it.
+  const toggle = () => {
+    const cell = root.current?.closest("td[id]");
+    return cell
+      ? ([...document.querySelectorAll<HTMLElement>("[aria-controls]")].find(
+          (control) => control.getAttribute("aria-controls") === cell.id,
+        ) ?? null)
+      : null;
+  };
   const plural = usePlural();
   const { locale } = useLocale();
   const { coverage } = set;
@@ -301,7 +296,7 @@ function SetDetail({
       ? null
       : NOT_SEARCHABLE[coverage.embed_state];
   return (
-    <div className="knowledge-detail">
+    <div className="knowledge-detail" ref={root}>
       <div className="knowledge-detail-head">
         <p>{set.topic_statement}</p>
         <p className="t-caption">
@@ -309,8 +304,8 @@ function SetDetail({
             embedded: formatNumber(coverage.chunks_embedded, locale),
             count: formatNumber(coverage.chunks_total, locale),
           })}
-          {state && <>. {t(state.reason)}</>}
         </p>
+        {state && <p className="t-caption">{t(state.reason)}</p>}
       </div>
       {set.reindexing && <ReindexingNotice />}
       <DocumentList
@@ -319,7 +314,7 @@ function SetDetail({
         setState={coverage.embed_state}
         shipped={set.shipped}
         canManage={canManage}
-        afterDelete={afterDelete}
+        afterDelete={toggle}
       />
     </div>
   );

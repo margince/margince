@@ -905,7 +905,7 @@ export function WebhooksCard() {
       }
     >
       <PanelBody>
-        {/* Off, the line below already says what the card would do. */}
+        {/* Off, the not-enabled line says what webhooks wait for. */}
         {!deliveryOff && <PanelIntro>{t("webhooks.sub")}</PanelIntro>}
         {/* Outside QueryGate for the same reason the create button is: its
             `empty` branch replaces `children` wholesale, and the posture is most

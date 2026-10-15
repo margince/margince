@@ -172,12 +172,23 @@ it("says what an address must look like when the server refuses it", async () =>
   expect(screen.queryByText(/give one email address/)).toBeNull();
 });
 
+it("offers the add verb while the addresses are still loading", async () => {
+  showing([], {
+    "GET /capture/owner-identities": () => new Promise<Response>(() => {}),
+  });
+
+  const list = await screen.findByTestId("owner-identities-list");
+  expect(
+    within(list).getByRole("button", { name: en["ownerIdentities.add"] }),
+  ).toBeTruthy();
+});
+
 it("shows when each address was declared, under the address", async () => {
   showing([identity({})]);
 
   const list = await screen.findByTestId("owner-identities-list");
   expect(
-    within(list).getByText(en["ownerIdentities.kind.address"]),
+    await within(list).findByText(en["ownerIdentities.kind.address"]),
   ).toBeTruthy();
   expect(within(list).getByText(/2026/)).toBeTruthy();
 });

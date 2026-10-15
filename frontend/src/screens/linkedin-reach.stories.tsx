@@ -11,9 +11,8 @@ import {
 } from "../testing/story-utils";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 
-// The network-reach row of the outcomes card, and the drawer it opens. Three
-// cases read differently: accounts reached, nothing resolved yet (which still
-// reports the unresolved count), and a failed read, which is not an empty one.
+// Three cases read differently: accounts reached, nothing resolved yet (still
+// counting the unresolved), and a failed read, which is not an empty one.
 
 function reachStory(body: unknown, status = 200) {
   return () => {
@@ -104,6 +103,13 @@ export const ReadFailed: Story = {
     { title: "Internal Server Error", detail: "the reach index is rebuilding" },
     500,
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Could not load")).toBeVisible();
+    await expect(
+      canvas.getByText("the reach index is rebuilding"),
+    ).toBeVisible();
+  },
 };
 
 export const ReachesDark: Story = {

@@ -3,13 +3,14 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
-import { Button, EmptyState, Modal } from "../design-system/atoms";
+import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Panel } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import {
   AwaitingContacts,
   SenderDecisions,
@@ -19,9 +20,8 @@ import {
 import { HeldThreads, useHeldThreads } from "./held-threads";
 import { NetworkReach, reachCaveat, useLinkedInReach } from "./linkedin-reach";
 
-// What the reader's mailboxes and LinkedIn import produced, one row per list.
-// Each list is long and read rarely, so the row says how much there is and
-// the list opens in a drawer.
+// One row per list the mailboxes and LinkedIn import produced. Each list is
+// long and read rarely, so the row says how much there is and opens a drawer.
 
 type Outcome = "senders" | "waiting" | "held" | "reach";
 
@@ -34,10 +34,15 @@ export function ConnectionOutcomesCard() {
   const reach = useLinkedInReach();
   const [open, setOpen] = useState<Outcome | null>(null);
   const close = () => setOpen(null);
+  const titleId = useId();
+  const viewBase = useId();
+  const viewId = (outcome: Outcome) => `${viewBase}-${outcome}`;
+  // Emptied from inside the drawer, the row loses its View button.
+  const backTo = (outcome: Outcome) => () =>
+    document.getElementById(viewId(outcome)) ??
+    document.getElementById(titleId);
   const waitingCount = waiting.data?.data.length ?? 0;
-  const reachCount = reach.data
-    ? (reach.data.accounts ?? []).length
-    : undefined;
+  const reachCount = reach.data?.accounts_total;
   // With nothing reached, the caveat is the one fact the reader can act on.
   const reachNote =
     reach.data && reachCount === 0
@@ -45,7 +50,13 @@ export function ConnectionOutcomesCard() {
       : undefined;
 
   return (
-    <Panel title={t("connectionOutcomes.title")}>
+    <Panel
+      title={
+        <span id={titleId} tabIndex={-1}>
+          {t("connectionOutcomes.title")}
+        </span>
+      }
+    >
       <SettingList bleed="settings" testId="connection-outcomes">
         <OutcomeRow
           label={t("senders.title")}
@@ -53,16 +64,18 @@ export function ConnectionOutcomesCard() {
           query={senders}
           count={senders.data?.data.length}
           unit="connectionOutcomes.senders"
+          viewId={viewId("senders")}
           onView={() => setOpen("senders")}
         />
-        {/* A queue, not a list: shown only while somebody waits on the reader. */}
-        {waitingCount > 0 && (
+        {/* A queue, not a list: shown while somebody may wait on the reader. */}
+        {(waitingCount > 0 || waiting.isError) && (
           <OutcomeRow
             label={t("senders.waiting.title")}
             description={t("senders.waiting.sub")}
             query={waiting}
             count={waitingCount}
             unit="connectionOutcomes.contacts"
+            viewId={viewId("waiting")}
             onView={() => setOpen("waiting")}
           />
         )}
@@ -72,6 +85,7 @@ export function ConnectionOutcomesCard() {
           query={held}
           count={held.data?.data.length}
           unit="connectionOutcomes.threads"
+          viewId={viewId("held")}
           onView={() => setOpen("held")}
         />
         <OutcomeRow
@@ -80,11 +94,16 @@ export function ConnectionOutcomesCard() {
           query={reach}
           count={reachCount}
           unit="connectionOutcomes.companies"
+          viewId={viewId("reach")}
           onView={() => setOpen("reach")}
         />
       </SettingList>
       {open === "senders" && senders.data && (
-        <OutcomeDrawer title={t("senders.title")} onClose={close}>
+        <OutcomeDrawer
+          title={t("senders.title")}
+          onClose={close}
+          returnFocusTo={backTo("senders")}
+        >
           {senders.data.data.length === 0 ? (
             <EmptyState>{t("senders.emptyBody")}</EmptyState>
           ) : (
@@ -93,7 +112,11 @@ export function ConnectionOutcomesCard() {
         </OutcomeDrawer>
       )}
       {open === "waiting" && waiting.data && (
-        <OutcomeDrawer title={t("senders.waiting.title")} onClose={close}>
+        <OutcomeDrawer
+          title={t("senders.waiting.title")}
+          onClose={close}
+          returnFocusTo={backTo("waiting")}
+        >
           {waiting.data.data.length === 0 ? (
             <EmptyState>{t("connectionOutcomes.waitingEmpty")}</EmptyState>
           ) : (
@@ -102,7 +125,11 @@ export function ConnectionOutcomesCard() {
         </OutcomeDrawer>
       )}
       {open === "held" && held.data && (
-        <OutcomeDrawer title={t("heldThreads.title")} onClose={close}>
+        <OutcomeDrawer
+          title={t("heldThreads.title")}
+          onClose={close}
+          returnFocusTo={backTo("held")}
+        >
           {held.data.data.length === 0 ? (
             <EmptyState>{t("heldThreads.empty")}</EmptyState>
           ) : (
@@ -111,7 +138,11 @@ export function ConnectionOutcomesCard() {
         </OutcomeDrawer>
       )}
       {open === "reach" && reach.data && (
-        <OutcomeDrawer title={t("linkedinReach.title")} onClose={close}>
+        <OutcomeDrawer
+          title={t("linkedinReach.title")}
+          onClose={close}
+          returnFocusTo={backTo("reach")}
+        >
           <NetworkReach reach={reach.data} />
         </OutcomeDrawer>
       )}
@@ -125,33 +156,54 @@ function OutcomeRow({
   query,
   count,
   unit,
+  viewId,
   onView,
 }: Readonly<{
   label: string;
   description: string;
-  query: Pick<UseQueryResult, "isError">;
+  query: Pick<UseQueryResult, "isPending" | "isError" | "error" | "refetch">;
   count: number | undefined;
   unit: PluralBase;
+  viewId: string;
   onView: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  if (query.isError) {
+    return (
+      <SettingRow
+        label={label}
+        description={problemMessageOf(query.error, t)}
+        value={t("connectionOutcomes.unread")}
+        control={
+          <Button
+            aria-label={t("connectionOutcomes.retryNamed", { name: label })}
+            onClick={() => query.refetch()}
+          >
+            {t("common.retry")}
+          </Button>
+        }
+      />
+    );
+  }
+  let value: ReactNode = <Skeleton width="5rem" />;
+  if (!query.isPending && count !== undefined) {
+    value =
+      count === 0
+        ? t("connectionOutcomes.none")
+        : plural(unit, count, { count: formatNumber(count, locale) });
+  }
   return (
     <SettingRow
       label={label}
       description={description}
-      value={
-        <OutcomeCount
-          failed={query.isError}
-          count={count}
-          reading={(n) => plural(unit, n, { count: formatNumber(n, locale) })}
-        />
-      }
+      value={value}
       control={
         count !== undefined &&
         count > 0 && (
           <Button
+            id={viewId}
             aria-haspopup="dialog"
             aria-label={t("connectionOutcomes.viewNamed", { name: label })}
             onClick={onView}
@@ -164,29 +216,26 @@ function OutcomeRow({
   );
 }
 
-function OutcomeCount({
-  failed,
-  count,
-  reading,
-}: Readonly<{
-  failed: boolean;
-  count: number | undefined;
-  reading: (count: number) => string;
-}>) {
-  const t = useT();
-  if (failed) return t("connectionOutcomes.unread");
-  if (count === undefined) return null;
-  return count === 0 ? t("connectionOutcomes.none") : reading(count);
-}
-
 function OutcomeDrawer({
   title,
   onClose,
+  returnFocusTo,
   children,
-}: Readonly<{ title: string; onClose: () => void; children: ReactNode }>) {
+}: Readonly<{
+  title: string;
+  onClose: () => void;
+  returnFocusTo: () => HTMLElement | null;
+  children: ReactNode;
+}>) {
   const headingId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} intent="drawer">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="drawer"
+      returnFocusTo={returnFocusTo}
+    >
       <DrawerHead>
         <Heading id={headingId} as="h2" size="medium" className="modal-title">
           {title}

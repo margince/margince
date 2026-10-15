@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../testing/mefixture";
 import { tableRowCells } from "../testing/tablerow.testkit";
@@ -115,7 +115,11 @@ it("names the unit and which check refused, so an operator knows what to fix", a
     "Refused connector records",
     "retired-bridge",
   );
-  expect(unnamed.Connector).toHaveTextContent(/^retired-bridge$/);
+  // A unit with no title reads its key as words, with the key itself under it.
+  expect(within(unnamed.Connector).getByText("Retired bridge")).toBeVisible();
+  expect(within(unnamed.Connector).getByText("retired-bridge").tagName).toBe(
+    "CODE",
+  );
 });
 
 it("says nothing was refused rather than showing an empty card", async () => {

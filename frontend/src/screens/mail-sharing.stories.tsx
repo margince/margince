@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../api/schema";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,23 +11,28 @@ import {
 } from "../testing/story-utils";
 import { MailSharingCard } from "./mail-sharing";
 
-// The workspace mail-sharing posture and the sync interval beside it. On is the
-// quiet default. Off draws the danger callout, the one place that states what
-// turning sharing off costs.
+// On is the quiet default. Off draws the danger callout, the one place that
+// states what turning sharing off costs.
+type CaptureSettings = components["schemas"]["CaptureSettings"];
+
 function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
   return () => {
+    let settings: CaptureSettings = {
+      auto_enrich: true,
+      auto_enrich_daily_cap: 500,
+      mail_sharing,
+      shared_posture_allowed: false,
+      signature_enrich: true,
+      site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+      mail_sync_interval_seconds: 120,
+    };
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /capture/settings": () =>
-        jsonResponse({
-          auto_enrich: true,
-          mail_sharing,
-          shared_posture_allowed: false,
-          signature_enrich: true,
-          mail_sync_interval_seconds: 120,
-        }),
-      "PATCH /capture/settings": (body) =>
-        jsonResponse({ mail_sharing, ...(body as object) }),
+      "GET /capture/settings": () => jsonResponse(settings),
+      "PATCH /capture/settings": (body) => {
+        settings = Object.assign({}, settings, body);
+        return jsonResponse(settings);
+      },
     });
     return (
       <StoryProviders>

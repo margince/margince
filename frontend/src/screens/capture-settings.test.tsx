@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -13,9 +14,8 @@ import { type Locale, LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CaptureSettingsCard } from "./capture-settings";
 
-// The enrichment card on Capture rules: every role reads it, and only admin or
-// ops may change it. The client mirrors the server's refusal by disabling the
-// controls, never by hiding them.
+// Every role reads the enrichment card and only admin or ops may change it, so
+// a refusal disables the controls and never hides them.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -262,8 +262,10 @@ describe("the website-read limits on the enrichment card", () => {
     expect(pages.value).toBe("60");
     expect(pages.disabled).toBe(true);
     expect(
-      screen.getAllByText(translate("en", "captureSettings.adminOnly")),
-    ).not.toHaveLength(0);
+      within(screen.getByTestId("capture-website-reads")).getAllByText(
+        translate("en", "captureSettings.adminOnly"),
+      ),
+    ).toHaveLength(4);
   });
 
   // Each row writes its own wire field and refuses on its own bounds: a row

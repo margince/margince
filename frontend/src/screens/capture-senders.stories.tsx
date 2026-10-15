@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,9 +13,8 @@ import {
 } from "../testing/story-utils";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 
-// What the classifier decided about a mailbox's senders, in the drawer the
-// outcomes card opens. A reader tells three states apart at a glance: a machine
-// verdict, a verdict the seat overruled, and a mailbox with nothing decided.
+// The senders drawer, in the three states a reader tells apart at a glance: a
+// machine verdict, a verdict the seat overruled, and nothing decided.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
@@ -131,8 +131,7 @@ function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: waiting }),
       "GET /capture/held-threads": () => jsonResponse({ data: [] }),
-      "GET /me/linkedin-reach": () =>
-        jsonResponse({ accounts: [], accounts_total: 0 }),
+      "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     });
     return (
       <StoryProviders>

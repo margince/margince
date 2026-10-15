@@ -12,6 +12,7 @@ import { viewerZone } from "../format/timezone";
 import { translate, translatePlural } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import { openRowMenu } from "../testing/tablerow.testkit";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { jsonResponse, render } from "./settings.testkit";
@@ -47,7 +48,7 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
       if (path === "/me") return jsonResponse(meFixture({ roles: ["rep"] }));
       if (path === "/capture/held-threads") return jsonResponse({ data: [] });
       if (path === "/me/linkedin-reach")
-        return jsonResponse({ accounts: [], accounts_total: 0 });
+        return jsonResponse(linkedInReachFixture());
       return jsonResponse({});
     }),
   );
@@ -202,6 +203,12 @@ it("marks a sender as business from its row's menu", async () => {
         body: { decision: "business" },
       },
     ]),
+  );
+  // The contacts that waited on this sender are settled with it.
+  await waitFor(() =>
+    expect(
+      read.filter((path) => path === "/capture/contacts-awaiting-decision"),
+    ).toHaveLength(2),
   );
 });
 

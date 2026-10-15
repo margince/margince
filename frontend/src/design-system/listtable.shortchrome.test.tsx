@@ -28,7 +28,17 @@ function Short({
   rows,
   search = "",
   archivable = true,
-}: Readonly<{ rows: Row[]; search?: string; archivable?: boolean }>) {
+  showingArchived = false,
+  pending = false,
+  problem,
+}: Readonly<{
+  rows: Row[];
+  search?: string;
+  archivable?: boolean;
+  showingArchived?: boolean;
+  pending?: boolean;
+  problem?: string;
+}>) {
   return (
     <ListTable
       rows={rows}
@@ -36,9 +46,13 @@ function Short({
       rowKey={(row) => row.id}
       unit="rows"
       hideShortChrome
+      pending={pending}
+      problem={problem}
       search={{ value: search, onChange: () => undefined }}
       archived={
-        archivable ? { checked: false, onChange: () => undefined } : undefined
+        archivable
+          ? { checked: showingArchived, onChange: () => undefined }
+          : undefined
       }
     />
   );
@@ -79,6 +93,25 @@ describe("a short list that hides its chrome", () => {
     render(<Short rows={[]} search="acme" />);
     expect(screen.getByRole("searchbox")).toBeTruthy();
     expect(screen.getByText(/No rows match these filters/)).toBeTruthy();
+  });
+
+  it("keeps every dial while it shows archived rows too", () => {
+    render(<Short rows={testRows(3)} showingArchived />);
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(screen.getByText(/1 to 3 of 3 rows/)).toBeTruthy();
+  });
+
+  // Not yet known to be short: the rows that arrive may run past one page.
+  it("draws no empty line while its rows load", () => {
+    render(<Short rows={[]} pending />);
+    expect(screen.queryByText("No rows yet.")).toBeNull();
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+  });
+
+  it("states a failed read instead of an empty line", () => {
+    render(<Short rows={[]} problem="The rows could not be read." />);
+    expect(screen.getByText("The rows could not be read.")).toBeTruthy();
+    expect(screen.queryByText("No rows yet.")).toBeNull();
   });
 
   it("keeps every dial past the smallest page size", () => {

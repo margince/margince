@@ -109,6 +109,20 @@ export const List: Story = {
   },
 };
 
+// A short list keeps only the archived switch, flush under the intro's interval.
+export const ShortWithArchivedSwitch: Story = {
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const archived = await canvas.findByRole("checkbox", {
+      name: "Show archived",
+    });
+    const tools = archived.closest<HTMLElement>(".lt-tools");
+    await expect(tools).not.toBeNull();
+    await expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
+  },
+};
+
 export const RowMenu: Story = {
   render: renderCatalogue,
   play: async ({ canvasElement }) => {

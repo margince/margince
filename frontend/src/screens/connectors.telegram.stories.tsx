@@ -77,6 +77,15 @@ export const NoBotYetPhone: Story = {
 // surface that can end that, so each bot has its own Disconnect.
 export const TwoBots: Story = {
   render: telegramStory([salesBot, supportBotPending]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findAllByTestId("telegram-connection"),
+    ).toHaveLength(2);
+    await expect(
+      canvas.queryByText(/One bot receives and sends messages/),
+    ).toBeNull();
+  },
 };
 
 export const TwoBotsDark: Story = {

@@ -324,10 +324,14 @@ describe("ExtensionAccessCard", () => {
       .getByText("Permission objects")
       .closest(".factlist-row");
     expect(
-      [...(objects?.querySelectorAll("li") ?? [])].map(
-        (item) => item.textContent,
-      ),
-    ).toEqual(["Note", "Signing key"]);
+      [...(objects?.querySelectorAll("li") ?? [])].map((item) => [
+        item.querySelector(".cell-stack > span")?.textContent,
+        item.querySelector("code")?.textContent,
+      ]),
+    ).toEqual([
+      ["Note", "ext_notes_note"],
+      ["Signing key", "ext_notes_signing_key"],
+    ]);
     expect(screen.getByText("ext_notes_digest")).toBeTruthy();
 
     // The grants, read straight off the fixture: admin reads and creates the

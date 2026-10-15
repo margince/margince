@@ -6771,7 +6771,7 @@ export const de = {
     "Für Korrespondenz, die die automatische Regel nicht erkennen kann, zum Beispiel Lieferanten- und Einkaufspost nach § 257 HGB ohne Deal in diesem System. Die Datensatz-ID steht im Audit-Eintrag des Datensatzes.",
   "restricted.pin.idMalformed":
     "Keine gültige Datensatz-ID. Das Format ist 8-4-4-4-12 Hexadezimalzeichen. Die vollständige ID steht im Audit-Eintrag des Datensatzes.",
-  "restricted.pin.idPlaceholder": "Datensatz-ID",
+  "restricted.pin.idLabel": "Datensatz-ID",
   "restricted.pin.title": "Datensatz unter Legal Hold stellen?",
   "restricted.pin.body":
     "Der Datensatz wird für die gesetzliche Frist gesperrt: in keiner normalen Ansicht sichtbar, unveränderbar und nach Ablauf der Frist gelöscht. Die Kennungen des Datensatzes werden jetzt geschwärzt.",
@@ -7394,6 +7394,7 @@ export const de = {
   "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
   "connectionOutcomes.view": "Ansehen",
   "connectionOutcomes.viewNamed": "{name} ansehen",
+  "connectionOutcomes.retryNamed": "{name} erneut laden",
   "connectionOutcomes.none": "Noch keine",
   "connectionOutcomes.unread": "Laden fehlgeschlagen",
   "connectionOutcomes.waitingEmpty":
@@ -9148,6 +9149,7 @@ export const de = {
     "Dokumentensammlungen, die dieses Unternehmen befragen kann. Antworten stützen sich nur auf abgelegte Dokumente, und Fragen, die diese nicht abdecken, werden abgelehnt.",
   "knowledge.withheld":
     "Du hast keinen Zugriff auf die Liste der Dokumentensammlungen.",
+  "knowledge.empty": "Noch keine Dokumentensammlungen.",
   "knowledge.documentCount_one": "{count} Dokument",
   "knowledge.documentCount_other": "{count} Dokumente",
   "knowledge.passages_one": "{embedded} von {count} Textstelle durchsuchbar",
@@ -9777,7 +9779,7 @@ export const de = {
     "Deine Rolle kann diese Seite lesen. Um eine Berechtigung zu ändern, ist ein voller Platz nötig.",
   "extAccess.empty": "Es sind keine Erweiterungseinheiten installiert.",
   "extAccess.version": "Version {version}",
-  "extAccess.openUnit": "Seite {name} öffnen",
+  "extAccess.openUnit": "Zu {name} wechseln",
   "extAccess.noPage":
     "{name} ist in der API installiert, aber diese App-Version hat keine Seite dafür. Die App ist vermutlich älter als der Server.",
   "extAccess.brings.heading": "Was diese Einheit hinzufügt",
@@ -11699,7 +11701,7 @@ export const de = {
     "Zum Bestätigen den Namen des Anbieters eingeben",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Neue Kontakte erhalten die Angaben, die der Anbieter kostenlos liefert, etwa Rolle und Werdegang. Deaktiviere das automatische Nachschlagen, wo das Recht den Handel mit personenbezogenen Daten verbietet.",
+    "Neue Kontakte erhalten die Angaben, die der Anbieter kostenlos liefert, etwa Rolle und Werdegang. E-Mail-Adressen und Mobilnummern werden nie automatisch gekauft, und die Schaltfläche am einzelnen Kontakt funktioniert weiterhin. Deaktiviere das automatische Nachschlagen, wo das Recht den Handel mit personenbezogenen Daten verbietet.",
   "provider.buyable": "Kaufen erlauben: {category}",
   "provider.buyableWriteFailed": "Kategorie nicht geändert",
   "provider.postureReadFailed": "Aktuelle Einstellung unbekannt",

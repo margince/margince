@@ -238,10 +238,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "capture":
       return (
         <>
-          {/* Whose mail is shared and how often it arrives, then which domains
-              are ours, what is learned from the rest, and which of the rest are
-              consumer mailboxes. Last, the outcome of those rules: which
-              domains ended up refused a company. */}
+          {/* The rules in the order mail meets them, then their outcome:
+              which domains ended up refused a company. */}
           <MailSharingCard />
           <OwnDomainsCard />
           <CaptureSettingsCard />

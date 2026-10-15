@@ -380,10 +380,8 @@ export function ListTable<Row>({
   hasMore?: boolean;
   onLoadMore?: () => void;
   /**
-   * No count line, dials or pager while every row fits the smallest page size
-   * and nothing narrows the list. No rows then reads as one empty line, not a
-   * table of headings. A longer or narrowed list keeps them all, so a dial the
-   * reader set can always be undone. The archived switch always stays.
+   * No count, dials or pager while every row fits the smallest page and nothing
+   * narrows the list. A dial the reader set can then always be undone.
    */
   hideShortChrome?: boolean;
   /**
@@ -497,6 +495,7 @@ export function ListTable<Row>({
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
   const short =
     hideShortChrome &&
+    !pending &&
     !narrowedBy(dials) &&
     archived?.checked !== true &&
     fitsOnePage(rows, serverTotal, hasMore);
@@ -579,7 +578,7 @@ export function ListTable<Row>({
       }
     >
       <BulkBar selection={selection} />
-      {short && !pending && !problem && rows.length === 0 ? (
+      {short && !problem && rows.length === 0 ? (
         <div className="lt-emptyline">
           <EmptyState>{emptyLine}</EmptyState>
         </div>

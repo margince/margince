@@ -84,7 +84,17 @@ export const PopulatedPhone: Story = {
 // Nothing declared, which is the ordinary state and has to read as a fact rather
 // than as a list that failed to draw — "I have told it about no other addresses"
 // is what a reader opens this card to confirm.
-export const Empty: Story = { render: story([]) };
+// No address yet: the add row's own description says so, with no second line.
+export const Empty: Story = {
+  render: story([]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByTestId("owner-identities-empty"),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
 
 export const Declaring: Story = {
   render: story([ALIAS]),

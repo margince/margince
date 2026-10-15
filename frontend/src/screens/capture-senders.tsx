@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -51,9 +56,18 @@ const kindLabel: Record<string, MessageKey> = {
 // colour is never the only signal.
 const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
+const SENDERS_KEY = ["capture-senders"] as const;
+const AWAITING_KEY = ["capture-contacts-awaiting-decision"] as const;
+
+// A decision on a sender also settles the contacts that waited on it.
+function invalidateSenderLists(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: SENDERS_KEY });
+  queryClient.invalidateQueries({ queryKey: AWAITING_KEY });
+}
+
 export function useSenders() {
   return useQuery({
-    queryKey: ["capture-senders"],
+    queryKey: SENDERS_KEY,
     queryFn: async () => {
       const { data, error, response } = await api.GET("/capture/senders");
       if (error || !response.ok) {
@@ -70,7 +84,7 @@ export function useSenders() {
 // senders list above is waiting too, and that list cannot show it.
 export function useAwaitingDecision() {
   return useQuery({
-    queryKey: ["capture-contacts-awaiting-decision"],
+    queryKey: AWAITING_KEY,
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/capture/contacts-awaiting-decision",
@@ -104,7 +118,7 @@ function useSetDecision() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["capture-senders"] });
+      invalidateSenderLists(queryClient);
       toast.show(t("settings.saved"));
     },
   });
@@ -123,7 +137,7 @@ function useWithdrawDecision() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["capture-senders"] });
+      invalidateSenderLists(queryClient);
       toast.show(t("settings.saved"));
     },
   });

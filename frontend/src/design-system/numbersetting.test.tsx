@@ -41,6 +41,33 @@ function renderPages(onCommit: (next: number) => void) {
 }
 
 describe("NumberSetting", () => {
+  it("says why the reader may not change it, and refuses the edit on that alone", () => {
+    render(
+      <SettingList>
+        <SettingRow
+          label="Pages per read"
+          description="Most pages one read fetches."
+          control={(control) => (
+            <NumberSetting
+              control={control}
+              value={60}
+              min={1}
+              max={200}
+              refusal={REFUSAL}
+              reason="Only an administrator can change this."
+              onCommit={vi.fn()}
+            />
+          )}
+        />
+      </SettingList>,
+    );
+    const box = screen.getByRole("textbox", { name: "Pages per read" });
+    expect(box).toBeDisabled();
+    expect(box).toHaveAccessibleDescription(
+      "Most pages one read fetches. Only an administrator can change this.",
+    );
+  });
+
   it("commits a whole number in range on Enter", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();

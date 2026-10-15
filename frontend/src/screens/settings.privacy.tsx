@@ -18,11 +18,8 @@ import {
 } from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 
-/**
- * The governance page's panels, in the order somebody works them. Defaults
- * first, then the requests that override them, then the duties nobody asked
- * for.
- */
+/** The governance page's panels in working order: defaults, the requests
+ * that override them, then the duties nobody asked for. */
 export function PrivacyLanes() {
   return (
     <>
@@ -37,11 +34,8 @@ export function PrivacyLanes() {
 const LANES = ["requests", "corrections", "restricted"] as const;
 type Lane = (typeof LANES)[number];
 
-/**
- * The work a contact asked for, one list at a time: formal requests, informal
- * corrections, and the records an erasure could not destroy. One officer, so
- * one panel.
- */
+/** The work a contact asked for, one list at a time. One officer works all
+ * three lists, so they share one panel. */
 export function RequestsPanel() {
   const t = useT();
   const [lane, setLane] = useState<Lane>("requests");
@@ -63,7 +57,7 @@ export function RequestsPanel() {
       0,
     );
   }
-  if (restricted.isSuccess) {
+  if (restricted.isSuccess && !restricted.data.page.has_more) {
     counts.restricted = restricted.data.data.length;
   }
 

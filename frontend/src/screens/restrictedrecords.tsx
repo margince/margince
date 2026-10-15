@@ -24,15 +24,10 @@ import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { humanizeToken } from "./audit";
 
-// Settings → Privacy → Restricted records (A165/ADR-0114 §4): what a
-// statutory obligation is holding after an erasure — which record, why, and
-// until when — stated without the correspondence itself. The audit log proves
-// what happened; this answers what is being held right now, which is the
-// question a supervisory authority asks the controller.
-//
-// It reads through the same authority as the retention ladder above it, so a
-// role that may not see how long records are kept may not see which are being
-// kept either.
+// The Held lane of Settings → Privacy → Requests: what a statutory obligation
+// holds after an erasure, why, and until when, never the correspondence itself.
+// It reads through the retention ladder's authority: a role that may not see
+// how long records are kept may not see which are kept either.
 
 export type RestrictedRecord = components["schemas"]["RestrictedRecord"];
 
@@ -101,7 +96,7 @@ function OverrideModal({
   const [reason, setReason] = useState("");
   const [typedId, setTypedId] = useState("");
   const activityId = kind === "pin" ? typedId.trim() : target?.activityId;
-  const idIsWellFormed = RECORD_ID_RE.test(activityId ?? "");
+  const idIsWellFormed = RECORD_ID_RE.test(typedId.trim());
   const idIsMalformed =
     kind === "pin" && typedId.trim() !== "" && !idIsWellFormed;
 
@@ -140,7 +135,9 @@ function OverrideModal({
       title={t(`restricted.${kind}.title`)}
       confirmLabel={t(`restricted.${kind}.confirm`)}
       confirmVariant="danger"
-      confirmDisabled={reason.trim() === "" || !idIsWellFormed}
+      confirmDisabled={
+        reason.trim() === "" || (kind === "pin" && !idIsWellFormed)
+      }
       onConfirm={() =>
         activityId && decide.mutate({ activityId, kind, reason })
       }
@@ -150,7 +147,7 @@ function OverrideModal({
       <p>{t(`restricted.${kind}.body`)}</p>
       {kind === "pin" && (
         <Field
-          label={t("restricted.pin.idPlaceholder")}
+          label={t("restricted.pin.idLabel")}
           hint={t("restricted.pin.idHint")}
           error={idIsMalformed ? t("restricted.pin.idMalformed") : undefined}
           required
@@ -196,9 +193,10 @@ export function useRestrictedRecords(enabled: boolean) {
 // The pin verb for the Requests panel's head, shown to the authority that can carry it out.
 export function PinRecordAction() {
   const t = useT();
+  const canRead = useCan("retention_policy", "read");
   const canDecide = useCanWrite("retention_policy", "update");
   const [pinning, setPinning] = useState(false);
-  if (!canDecide) {
+  if (!canRead || !canDecide) {
     return null;
   }
   return (

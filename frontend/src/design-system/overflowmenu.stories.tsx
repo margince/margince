@@ -84,7 +84,6 @@ export const WithAnItemInFlight: Story = {
 
 // Inside a drawer the panel opens over the drawer, where a pointer reaches it.
 export const InsideADrawer: Story = {
-  tags: ["uat-phone"],
   render: () => (
     <Modal open onClose={() => {}} labelledBy="menu-drawer" intent="drawer">
       <Heading size="large" id="menu-drawer" className="t-h2 modal-title">
@@ -110,4 +109,10 @@ export const InsideADrawer: Story = {
       document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
     ).toBe(item);
   },
+};
+
+export const InsideADrawerPhone: Story = {
+  ...InsideADrawer,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

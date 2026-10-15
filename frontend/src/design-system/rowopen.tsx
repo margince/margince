@@ -9,8 +9,14 @@ import { IconAction } from "./iconaction";
 export function RowOpen({
   label,
   refusal,
+  opensDialog,
   onOpen,
-}: Readonly<{ label: string; refusal?: string; onOpen?: () => void }>) {
+}: Readonly<{
+  label: string;
+  refusal?: string;
+  opensDialog?: boolean;
+  onOpen?: () => void;
+}>) {
   return (
     <IconAction
       variant="ghost"
@@ -18,6 +24,7 @@ export function RowOpen({
       label={label}
       hint={refusal}
       disabled={refusal !== undefined}
+      opensDialog={opensDialog}
       onClick={onOpen}
     />
   );

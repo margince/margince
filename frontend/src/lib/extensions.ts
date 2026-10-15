@@ -146,14 +146,20 @@ export function findExtension(
   return registry.find((unit) => unit.name === name) ?? null;
 }
 
-/** What `unit` is called in `locale`: its own title, else its directory name. */
+/** A key read as words: separators as spaces, the first letter capital. */
+export function readableKey(key: string): string {
+  const words = key.replaceAll(/[_-]/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** What `unit` is called in `locale`: its own title, else its name read as words. */
 export function unitTitle(unit: ExtensionDescriptor, locale: Locale): string {
-  return unit.title ? translate(locale, unit.title) : unit.name;
+  return unit.title ? translate(locale, unit.title) : readableKey(unit.name);
 }
 
 /**
  * What unit `name` is called in `locale`. A unit this installation does not
- * compose has only its name.
+ * compose has only its name, read as words.
  */
 export function extensionTitle(
   name: string,
@@ -161,7 +167,7 @@ export function extensionTitle(
   registry: readonly ExtensionDescriptor[] = extensions,
 ): string {
   const unit = findExtension(name, registry);
-  return unit ? unitTitle(unit, locale) : name;
+  return unit ? unitTitle(unit, locale) : readableKey(name);
 }
 
 /**

@@ -165,13 +165,13 @@ describe("MailSharingCard", () => {
       screen.getByTestId<HTMLButtonElement>("mail-sharing-toggle"),
     );
     expect(toggle.disabled).toBe(true);
-    // Both switches on this card carry the same refusal now, so the count is
-    // what the assertion can state: the sentence reaches the reader for the row
-    // under test, and matching one of two identical strings by text alone would
-    // not say which.
+    expect(
+      screen.getByTestId<HTMLInputElement>("capture-mail-sync").disabled,
+    ).toBe(true);
+    // Every row on the card carries the same refusal, so the count says it reached each one.
     expect(
       screen.getAllByText(/Only an administrator or operations user/),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   // The sync row commits on its own: pacing the mailboxes withholds nothing,

@@ -381,7 +381,10 @@ function ExcludeDialog({
           label={t("captureExclusions.kindLabel")}
         />
         {kind === "container" ? (
-          <Field label={t("captureExclusions.containerLabel")}>
+          <Field
+            label={t("captureExclusions.containerLabel")}
+            hint={t("captureExclusions.notRetroactive")}
+          >
             {(control) => (
               <Select
                 {...control}
@@ -393,20 +396,31 @@ function ExcludeDialog({
             )}
           </Field>
         ) : (
-          <TextInput
-            value={draft}
-            aria-label={t("captureExclusions.addLabel")}
-            placeholder={
-              kind === "address"
-                ? t("captureExclusions.placeholder.address")
-                : t("captureExclusions.placeholder.domain")
-            }
-            disabled={refused}
-            aria-describedby={refused ? denialId : undefined}
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <Field
+            label={t("captureExclusions.addLabel")}
+            labelHidden
+            hint={t("captureExclusions.notRetroactive")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={draft}
+                placeholder={
+                  kind === "address"
+                    ? t("captureExclusions.placeholder.address")
+                    : t("captureExclusions.placeholder.domain")
+                }
+                disabled={refused}
+                aria-describedby={
+                  [control["aria-describedby"], refused ? denialId : null]
+                    .filter(Boolean)
+                    .join(" ") || undefined
+                }
+                onChange={(event) => setDraft(event.target.value)}
+              />
+            )}
+          </Field>
         )}
-        <p className="t-caption">{t("captureExclusions.notRetroactive")}</p>
         {picking && !folders.isPending && folders.isError && (
           <Callout
             tone="danger"
