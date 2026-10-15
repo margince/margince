@@ -197,6 +197,10 @@ The Connections page in Settings holds the mailbox and calendar you connected,
 and your LinkedIn import. Connections is what *you* connected; **Integrations**
 is what the *installation* is connected to.
 
+**What your connections found** counts what they brought in: **Senders**,
+**Waiting on a decision** (only while a sender waits), **Held threads** and
+**Network reach**. Choose **View** on a row to see its list.
+
 ### How do I connect my mailbox?
 To connect your mailbox or calendar to Margince, open Settings → **Connections** and choose **Add connector** in **Connected mailboxes and calendars**.
 1. Pick a provider: **Gmail**, **Google Calendar**, **Outlook**, **Outlook Calendar** or **IMAP mailbox**. You connect a calendar apart from its mail.
@@ -218,18 +222,18 @@ the CRM. Your rules apply only to mailboxes you connected. The company's rules
 apply to everyone, and only an administrator may add or remove one of those. A
 rule applies from the next message; what is already captured stays.
 
-**Outcomes** are counts for those 24 hours: **Captured**, **Dropped as
-internal**, **No contact created**, **Awaiting sender check** and **Derivation
-failed**. Click one to narrow the list under it.
+**Outcomes** are counts for those 24 hours: **Captured**, **Internal**, **No
+contact created**, **Awaiting check** and **Failed**. Click one to narrow the
+list under it.
 
-**Messages**, behind a disclosure, is the log for each message: which step a message
+**Messages** is the log for each message: which step a message
 stopped at, and why. Open it when a message you expected did not show up. By
 default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.
-1. Click an **Outcomes** count, such as **Dropped as internal** or **No contact created**, to narrow the list.
+1. Click an **Outcomes** count, such as **Internal** or **No contact created**, to narrow the list.
 2. Open a row's steps to see where that message stopped, and why.
 
 Mail between colleagues is never stored, and a sender under **Capture exclusions** is always kept out.

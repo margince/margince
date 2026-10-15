@@ -139,9 +139,25 @@ it("says what an address must look like when the server refuses it", async () =>
   render(<OwnerIdentitiesCard />);
   const user = userEvent.setup();
 
-  await user.click(
-    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  // An empty list is said on the add row itself, not as a line of its own.
+  expect(
+    (await screen.findByTestId("owner-identities-empty")).closest(
+      ".settingrow",
+    ),
+  ).toBe(
+    screen
+      .getByRole("button", { name: en["ownerIdentities.add"] })
+      .closest(".settingrow"),
   );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  // That a declaration is not retroactive is said where it is made.
+  expect(
+    within(screen.getByRole("dialog")).getByText(
+      en["ownerIdentities.notRetroactive"],
+    ),
+  ).toBeTruthy();
   await user.type(
     screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
     "not an address",
@@ -156,12 +172,23 @@ it("says what an address must look like when the server refuses it", async () =>
   expect(screen.queryByText(/give one email address/)).toBeNull();
 });
 
+it("offers the add verb while the addresses are still loading", async () => {
+  showing([], {
+    "GET /capture/owner-identities": () => new Promise<Response>(() => {}),
+  });
+
+  const list = await screen.findByTestId("owner-identities-list");
+  expect(
+    within(list).getByRole("button", { name: en["ownerIdentities.add"] }),
+  ).toBeTruthy();
+});
+
 it("shows when each address was declared, under the address", async () => {
   showing([identity({})]);
 
   const list = await screen.findByTestId("owner-identities-list");
   expect(
-    within(list).getByText(en["ownerIdentities.kind.address"]),
+    await within(list).findByText(en["ownerIdentities.kind.address"]),
   ).toBeTruthy();
   expect(within(list).getByText(/2026/)).toBeTruthy();
 });

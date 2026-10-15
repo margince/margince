@@ -17,7 +17,7 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../testing/story-utils";
-import { PrivacyInboxCard } from "./privacy";
+import { RequestsPanel } from "./settings.privacy";
 
 // The DSR inbox: the open form, a request worked in its drawer, and fulfilling
 // an erasure. A legal-hold 409 never carries a retention date; nor does a story.
@@ -140,7 +140,7 @@ function inbox(routes: RouteMap) {
     );
     return (
       <StoryProviders>
-        <PrivacyInboxCard />
+        <RequestsPanel />
       </StoryProviders>
     );
   };
@@ -159,18 +159,26 @@ function findRow(subjectRef: string): Promise<HTMLElement> {
   return screen.findByRole("dialog", { name: subjectRef });
 }
 
-const meta: Meta<typeof PrivacyInboxCard> = {
+const meta = {
   title: "Settings/Governance/Privacy and retention/Subject requests",
-  component: PrivacyInboxCard,
-};
+  component: RequestsPanel,
+} satisfies Meta<typeof RequestsPanel>;
 export default meta;
 
-type Story = StoryObj<typeof PrivacyInboxCard>;
+type Story = StoryObj<typeof meta>;
 
 // An overdue erasure, a fulfilled access request, a named correction in
 // progress and a rejected request whose contact this reader cannot see.
 export const Inbox: Story = {
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
+};
+
+// No request yet: one line under the intro, and no status filter to cut nothing.
+export const NoRequests: Story = {
+  render: inbox({
+    "GET /data-subject-requests": () =>
+      jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
+  }),
 };
 
 // A still-open request in its drawer: subject, assignee, and only the

@@ -78,6 +78,12 @@ export const WithCompanyClaimedDomains: Story = {
     "brandt-automotive.de",
     "brandt-group.example",
   ]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("link", { name: "Open the company profile" }),
+    ).toHaveAttribute("href", "#/settings/company");
+  },
 };
 
 // Readable, unwritable: the rows stay, the add row and the per-row verbs go, and
@@ -113,6 +119,9 @@ export const Adding: Story = {
     // Refused until /me answers, and a click on a refused button opens nothing.
     await waitFor(() => expect(open).toBeEnabled());
     await userEvent.click(open);
-    await body.findByRole("dialog");
+    const dialog = within(await body.findByRole("dialog"));
+    await expect(
+      dialog.getByRole("textbox", { name: "Add own domain" }),
+    ).toHaveAccessibleDescription(/Captured mail stays/);
   },
 };

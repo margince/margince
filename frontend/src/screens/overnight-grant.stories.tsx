@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -83,11 +84,52 @@ export const SettingsGranted: Story = {
   },
 };
 
-/** Settings, withdrawn: the same red notice as onboarding, same words. */
+/** Settings, declined on an earlier visit: the answer stands with no notice. */
 export const SettingsDeclined: Story = {
   render: () => {
     installFetchStub({
       "GET /me/agent-grants": () => grantsResponse("declined"),
+    });
+    return (
+      <StoryProviders>
+        <OvernightGrantCard />
+      </StoryProviders>
+    );
+  },
+};
+
+/** Switched off here: the same notice as onboarding, in the same words. */
+export const SettingsSwitchedOff: Story = {
+  render: () => {
+    let state: "granted" | "declined" = "granted";
+    installFetchStub({
+      "GET /me/agent-grants": () => grantsResponse(state),
+      "PUT /me/agent-grants/morning_brief": () => {
+        state = "declined";
+        return jsonResponse({ spec: "morning_brief", state });
+      },
+    });
+    return (
+      <StoryProviders>
+        <OvernightGrantCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("overnight-grant-toggle"));
+    await waitFor(() =>
+      expect(canvas.getByText("Overnight agent will not run")).toBeVisible(),
+    );
+  },
+};
+
+export const SettingsGrantedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installFetchStub({
+      "GET /me/agent-grants": () => grantsResponse("granted"),
     });
     return (
       <StoryProviders>

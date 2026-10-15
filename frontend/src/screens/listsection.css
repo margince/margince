@@ -32,6 +32,15 @@
 .listsection > .lt > .lt-head {
   border-top: 0;
 }
+/* The intro's body pays the interval above the surface, so whatever the
+   surface opens with (its header or its one empty line) adds none. */
+.listsection-intro + .lt > :is(.lt-head, .lt-tools) {
+  padding-top: 0;
+}
+.listsection-intro + .lt > .lt-emptyline {
+  padding-top: 0;
+  padding-bottom: var(--padPanel);
+}
 
 /* What the section IS, and what a reader may not do in it: two caption lines on
    the panel's own padding, above the surface that runs full-bleed under them. */
@@ -39,7 +48,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-bottom: 0;
 }
 
 /* The two lines here are ONE caption — what the section is, and what a reader

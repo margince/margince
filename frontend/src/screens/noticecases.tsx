@@ -10,13 +10,13 @@ import {
   Button,
   EmptyState,
   OverflowMenu,
-  SegmentedControl,
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
+import { type FilterPill, FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   LoadMoreButton,
@@ -89,13 +89,13 @@ export function NoticeCasesCard() {
     setExcusing(null);
   });
 
-  const facetLabels = useMemo(
-    (): Record<NoticeFacet, string> => ({
+  const facetPills = useMemo((): FilterPill<NoticeFacet>[] => {
+    const labels: Record<NoticeFacet, string> = {
       owed: t("notice.facetOwed"),
       all: t("notice.facetAll"),
-    }),
-    [t],
-  );
+    };
+    return NOTICE_FACETS.map((value) => ({ value, label: labels[value] }));
+  }, [t]);
 
   let body: ReactNode = null;
   if (!canSee) {
@@ -121,11 +121,10 @@ export function NoticeCasesCard() {
         <PanelIntro>{t("notice.sub")}</PanelIntro>
         {canSee && (
           <div className="filter-tabs">
-            <SegmentedControl
-              options={[...NOTICE_FACETS]}
+            <FilterPills
+              pills={facetPills}
               value={facet}
               onChange={setFacet}
-              labels={facetLabels}
               label={t("notice.facetLabel")}
             />
           </div>

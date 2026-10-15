@@ -149,7 +149,7 @@ async function findRow(scope: string): Promise<HTMLElement> {
 }
 
 // The window, the action, the basis and the Enabled switch are committed
-// together, so they live in the dialog the row's Edit verb opens.
+// together, so they live in the dialog the row opens.
 async function openEditor(scope: string): Promise<HTMLElement> {
   const row = await findRow(scope);
   await userEvent.click(within(row).getByRole("button", { name: /edit/i }));
@@ -172,21 +172,20 @@ describe("RetentionCard rows", () => {
     ).toBeInTheDocument();
     // The consequence is said once, by the posture row above the ladder, and
     // not repeated under every row it holds back.
-    expect(screen.getByText(/whatever a policy below says/i)).toBeVisible();
+    expect(
+      screen.getByText(/no policy anonymizes or erases anything/i),
+    ).toBeVisible();
     expect(
       within(suppressed).queryByText(/does not act until the mode/i),
     ).not.toBeInTheDocument();
 
-    // Archiving retains, so the posture leaves it alone. An acting row carries
-    // no status at all: the intro says once that enabled policies act on the schedule.
+    // Archiving retains, so the posture leaves it alone, and an acting row
+    // carries no status at all.
     const acting = await findRow("deal/won");
     expect(
       within(acting).queryByText(/paused by retain-only mode/i),
     ).not.toBeInTheDocument();
     expect(within(acting).queryByText(/disabled/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/enabled policies act on the data retention schedule/i),
-    ).toBeVisible();
   });
 
   it("tones each action by what it destroys", async () => {
@@ -517,6 +516,27 @@ describe("the retain-only posture", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("tells a reader the row's Edit verb opens a dialog", async () => {
+    backend();
+    render(<RetentionCard />);
+
+    const row = await findRow("deal/won");
+    expect(within(row).getByRole("button", { name: /edit/i })).toHaveAttribute(
+      "aria-haspopup",
+      "dialog",
+    );
+  });
+
+  it("opens a policy from a press anywhere on its row", async () => {
+    backend();
+    render(<RetentionCard />);
+
+    await userEvent.click(await screen.findByText("Call transcripts"));
+    expect(
+      await screen.findByRole("dialog", { name: "Call transcripts" }),
+    ).toBeVisible();
+  });
+
   it("announces on the switch itself why the posture cannot be changed", async () => {
     backend({ allow: { retention_policy: ["read"] } });
     render(<RetentionCard />);
@@ -549,7 +569,7 @@ describe("the retain-only posture", () => {
       expect(row.className).not.toContain("settingrow-stack");
       expect(
         within(row)
-          .getByText(/destroys nothing/i)
+          .getByText(/no policy anonymizes or erases anything/i)
           .closest(".settingrow-naming"),
       ).not.toBeNull();
       expect(posture.closest(".settingrow-control")).not.toBeNull();

@@ -21,7 +21,7 @@ import {
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelBody, PanelIntro } from "../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -33,19 +33,10 @@ import { correctableFieldLabel } from "./confirmfields";
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 type Resolution = "accepted" | "rejected";
 
-// A correction is only reviewable as a comparison ("she says Schmidt, we hold
-// Schmitt"). A row shows the proposal beside what the record holds now.
-export function ConfirmSubmissionsPanel() {
-  const t = useT();
-  const queryClient = useQueryClient();
-  // `useCanWrite`, not `useCan`: the seat ceiling refuses a read seat's POST
-  // even when it holds the grant.
-  const canDecide = useCanWrite("contact", "update");
-  const [deciding, setDeciding] = useState<ConfirmSubmission | null>(null);
-  const [note, setNote] = useState("");
-
-  // Paged, because the queue is as long as the contacts make it.
-  const query = useInfiniteQuery({
+// Paged, because the queue is as long as the contacts make it. Shared by the
+// lane and the Requests panel's count, so both read one cache entry.
+export function useCorrections() {
+  return useInfiniteQuery({
     queryKey: ["confirm-submissions"],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
@@ -59,6 +50,20 @@ export function ConfirmSubmissionsPanel() {
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
+}
+
+// The corrections lane of the Requests panel. A correction is reviewed as a
+// comparison ("she says Schmidt, we hold Schmitt"), so a row shows both values.
+export function ConfirmSubmissionsPanel() {
+  const t = useT();
+  const queryClient = useQueryClient();
+  // `useCanWrite`, not `useCan`: the seat ceiling refuses a read seat's POST
+  // even when it holds the grant.
+  const canDecide = useCanWrite("contact", "update");
+  const [deciding, setDeciding] = useState<ConfirmSubmission | null>(null);
+  const [note, setNote] = useState("");
+
+  const query = useCorrections();
 
   const resolve = useMutation({
     mutationFn: async (command: {
@@ -88,12 +93,18 @@ export function ConfirmSubmissionsPanel() {
   });
 
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const shown = query.isSuccess && rows.length > 0;
   return (
-    <Panel title={t("privacy.corrections")}>
+    <>
       <PanelBody>
         <PanelIntro>{t("privacy.correctionsSub")}</PanelIntro>
+        {!shown && (
+          <QueryStates query={query} pendingLabel={t("privacy.corrections")}>
+            <EmptyState>{t("privacy.correctionsEmpty")}</EmptyState>
+          </QueryStates>
+        )}
       </PanelBody>
-      {query.isSuccess && rows.length > 0 ? (
+      {shown && (
         <>
           <CorrectionTable
             rows={rows}
@@ -110,12 +121,6 @@ export function ConfirmSubmissionsPanel() {
             </PanelBody>
           )}
         </>
-      ) : (
-        <PanelBody>
-          <QueryStates query={query} pendingLabel={t("privacy.corrections")}>
-            <EmptyState>{t("privacy.correctionsEmpty")}</EmptyState>
-          </QueryStates>
-        </PanelBody>
       )}
       <DecideModal
         row={deciding}
@@ -128,7 +133,7 @@ export function ConfirmSubmissionsPanel() {
           resolve.mutate({ id: row.id, resolution, note })
         }
       />
-    </Panel>
+    </>
   );
 }
 

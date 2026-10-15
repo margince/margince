@@ -326,6 +326,7 @@ internal/modules/agents/envelope_test.go 2
 internal/modules/agents/httpmcp_largebody_test.go 1
 internal/modules/agents/outputshapes_derive_test.go 2
 internal/modules/agents/tasks_test.go 6
+internal/modules/ai/answeredmodel_integration_test.go 5
 internal/modules/ai/callfigures_integration_test.go 2
 internal/modules/ai/decisioncall_integration_test.go 1
 internal/modules/ai/decisionsummary_integration_test.go 3

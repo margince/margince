@@ -19,9 +19,11 @@ import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { ChipValueList } from "./listfiltervalues";
 import {
+  type FilterRowSegment,
   type ListChip,
   type ListView,
   nextSortValue,
+  openRowSegment,
   type SortControl,
   type SortOption,
   sortDirection,
@@ -59,6 +61,7 @@ const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 export function ListSurface({
   title,
+  bare = false,
   views = [],
   activeView = 0,
   onViewChange,
@@ -92,6 +95,11 @@ export function ListSurface({
    * change, or the page is named twice at heading level.
    */
   title?: ReactNode;
+  /**
+   * No count and no toolbar, for a list with nothing to narrow. The archived
+   * switch stays: the rows in hand never include archived ones.
+   */
+  bare?: boolean;
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
@@ -159,49 +167,58 @@ export function ListSurface({
 
   return (
     <div className="lt">
-      <div className="lt-head">
-        {title && (
-          <Heading size="xlarge" className="lt-title t-display">
-            {title}
-          </Heading>
-        )}
-        {views.length > 0 && (
-          <div className="lt-views">
-            {views.map((view, index) => (
-              <button
-                type="button"
-                key={view.id ?? view.label}
-                className={`lt-vtab${index === activeView ? " on" : ""}`}
-                aria-pressed={index === activeView}
-                onClick={() => onViewChange?.(index)}
-              >
-                {view.label}
-              </button>
-            ))}
+      {(!bare || title || views.length > 0 || action) && (
+        <div className="lt-head">
+          {title && (
+            <Heading size="xlarge" className="lt-title t-display">
+              {title}
+            </Heading>
+          )}
+          {views.length > 0 && (
+            <div className="lt-views">
+              {views.map((view, index) => (
+                <button
+                  type="button"
+                  key={view.id ?? view.label}
+                  className={`lt-vtab${index === activeView ? " on" : ""}`}
+                  aria-pressed={index === activeView}
+                  onClick={() => onViewChange?.(index)}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="lt-head-end">
+            {!bare && <HeadCount>{count}</HeadCount>}
+            <HeadActions>{action}</HeadActions>
           </div>
-        )}
-        <div className="lt-head-end">
-          <HeadCount>{count}</HeadCount>
-          <HeadActions>{action}</HeadActions>
         </div>
-      </div>
+      )}
 
       {caption && <p className="lt-caption">{caption}</p>}
 
-      <Toolbar
-        search={search}
-        sort={sort}
-        sortOptions={sortOptions}
-        chips={chips}
-        chosen={chosen}
-        onChipChange={onChipChange}
-        archived={archived}
-        tools={tools}
-        displayMenu={displayMenu}
-        saveView={saveView}
-        openMenu={openMenu}
-        setOpenMenu={setOpenMenu}
-      />
+      {!bare && (
+        <Toolbar
+          search={search}
+          sort={sort}
+          sortOptions={sortOptions}
+          chips={chips}
+          chosen={chosen}
+          onChipChange={onChipChange}
+          archived={archived}
+          tools={tools}
+          displayMenu={displayMenu}
+          saveView={saveView}
+          openMenu={openMenu}
+          setOpenMenu={setOpenMenu}
+        />
+      )}
+      {bare && archived && (
+        <div className="lt-tools">
+          <ArchivedSwitch archived={archived} />
+        </div>
+      )}
 
       {children}
 
@@ -471,30 +488,6 @@ function FilterConditionMenu({
       </Menu>
     </span>
   );
-}
-
-/** Which segment of a filter row currently owns the one open popover. */
-type FilterRowSegment = "cond" | "value" | "menu";
-
-function isFilterRowSegment(value: string): value is FilterRowSegment {
-  return value === "cond" || value === "value" || value === "menu";
-}
-
-/**
- * Reads which segment (if any) of one row's own popover the toolbar's single
- * `openMenu` key names — a plain string key rather than per-row state, so
- * the existing one-menu-open-at-a-time behaviour covers filter rows too.
- */
-function openRowSegment(
-  openMenu: string | null,
-  key: string,
-): FilterRowSegment | null {
-  const prefix = `row:${key}:`;
-  if (!openMenu?.startsWith(prefix)) {
-    return null;
-  }
-  const segment = openMenu.slice(prefix.length);
-  return isFilterRowSegment(segment) ? segment : null;
 }
 
 /**
@@ -1033,13 +1026,7 @@ function Toolbar({
         />
       )}
 
-      {archived && (
-        <Checkbox
-          checked={archived.checked}
-          label={t("list.showArchived")}
-          onChange={(event) => archived.onChange(event.target.checked)}
-        />
-      )}
+      {archived && <ArchivedSwitch archived={archived} />}
 
       <span className="lt-spacer" />
 
@@ -1053,5 +1040,20 @@ function Toolbar({
 
       {saveView}
     </div>
+  );
+}
+
+function ArchivedSwitch({
+  archived,
+}: Readonly<{
+  archived: { checked: boolean; onChange: (next: boolean) => void };
+}>) {
+  const t = useT();
+  return (
+    <Checkbox
+      checked={archived.checked}
+      label={t("list.showArchived")}
+      onChange={(event) => archived.onChange(event.target.checked)}
+    />
   );
 }

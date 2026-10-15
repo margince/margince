@@ -1,16 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { NumberSettingRow } from "../design-system/numbersetting";
+import { Panel, PanelBody } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import {
+  MAIL_SYNC_BOUNDS,
+  useCaptureSettings,
+  useUpdateCaptureSettings,
+} from "./capture-settings";
 
 // The workspace mail-sharing posture: ON by default, captured mail is
 // readable by every colleague who can see the contact — the thing that makes
@@ -19,19 +26,6 @@ import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 // a deliberate act: a switch plus a Save button plus a warning that says the
 // cost out loud, never a silent instant toggle. Every role sees the posture;
 // only admin/ops may change it (same gating as the auto-enrich card).
-
-function useMailSharing() {
-  return useQuery({
-    queryKey: ["capture-settings"],
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/capture/settings");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
 
 type BandState = Readonly<{
   notice: ReactNode;
@@ -87,7 +81,8 @@ export function MailSharingCard() {
   const t = useT();
   const toast = useToast();
   const canManage = useCanWrite("capture_settings", "update");
-  const query = useMailSharing();
+  const query = useCaptureSettings();
+  const sync = useUpdateCaptureSettings();
   const queryClient = useQueryClient();
   // null = no unsaved change; the switch renders the stored posture.
   const [pending, setPending] = useState<boolean | null>(null);
@@ -126,12 +121,11 @@ export function MailSharingCard() {
     },
   });
 
+  const notAdmin = canManage ? undefined : t("captureSettings.adminOnly");
+
   return (
-    <Panel title={t("mailSharing.title")}>
-      <PanelBody>
-        <PanelIntro>{t("mailSharing.sub")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
+    <Panel title={t("mailSharing.cardTitle")}>
+      <QueryGate query={query} pendingLabel={t("mailSharing.cardTitle")}>
         {(settings) => {
           const shown = pending ?? settings.mail_sharing;
           const dirty = pending !== null && pending !== settings.mail_sharing;
@@ -182,9 +176,7 @@ export function MailSharingCard() {
                       testId="mail-sharing-toggle"
                       label={t("mailSharing.label")}
                       labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
+                      reason={notAdmin}
                       checked={shown}
                       disabled={!canManage || save.isPending}
                       onChange={(next) => setPending(next)}
@@ -202,14 +194,27 @@ export function MailSharingCard() {
                       testId="shared-posture-allowed-toggle"
                       label={t("mailSharing.sharedPosture.label")}
                       labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
+                      reason={notAdmin}
                       checked={sharedShown}
                       disabled={!canManage || saveShared.isPending}
                       onChange={(next) => setPendingShared(next)}
                     />
                   )}
+                />
+                {/* Commits on its own, like every number row: pacing the
+                    mailboxes withholds nothing from anybody. */}
+                <NumberSettingRow
+                  label={t("captureMailSync.interval.label")}
+                  description={t("captureMailSync.interval.help")}
+                  testId="capture-mail-sync"
+                  value={settings.mail_sync_interval_seconds}
+                  {...MAIL_SYNC_BOUNDS.mail_sync_interval_seconds}
+                  refusal={t("captureMailSync.interval.refusal")}
+                  disabled={!canManage || sync.isPending}
+                  reason={notAdmin}
+                  onCommit={(next) =>
+                    sync.mutate({ mail_sync_interval_seconds: next })
+                  }
                 />
               </SettingList>
               {(bandShows(sharedBand) || bandShows(sharingBand)) && (
@@ -238,6 +243,13 @@ export function MailSharingCard() {
           );
         }}
       </QueryGate>
+      <PanelNotices
+        refused={
+          sync.isError
+            ? { title: t("captureSettings.updateFailed"), error: sync.error }
+            : undefined
+        }
+      />
     </Panel>
   );
 }
@@ -259,7 +271,7 @@ export function MailSharingCard() {
  */
 export function MailSharingPostureRow() {
   const t = useT();
-  const query = useMailSharing();
+  const query = useCaptureSettings();
   // The same question the switch on the other page asks, not "may they open
   // that page". Every seeded role may READ the capture posture, so a visibility
   // test offered "Change this" to a rep who would arrive at a disabled switch —

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Callout } from "../design-system/callout";
+import { PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRoute } from "../lib/router";
@@ -68,20 +69,22 @@ export function OAuthOutcomeNote() {
     return null;
   }
   return (
-    <Callout
-      tone={note.tone}
-      kind="outcome"
-      title={t(
-        note.tone === "success"
-          ? "connectors.oauthConnected"
-          : "connectors.oauthNotConnected",
-      )}
-      dismiss={{
-        label: t("connectors.dismissOutcome"),
-        onDismiss: () => setDismissedOutcome(oauthOutcome ?? null),
-      }}
-    >
-      {t(note.key)}
-    </Callout>
+    <PanelBody>
+      <Callout
+        tone={note.tone}
+        kind="outcome"
+        title={t(
+          note.tone === "success"
+            ? "connectors.oauthConnected"
+            : "connectors.oauthNotConnected",
+        )}
+        dismiss={{
+          label: t("connectors.dismissOutcome"),
+          onDismiss: () => setDismissedOutcome(oauthOutcome ?? null),
+        }}
+      >
+        {t(note.key)}
+      </Callout>
+    </PanelBody>
   );
 }

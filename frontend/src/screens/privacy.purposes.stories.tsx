@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   jsonResponse,
@@ -75,7 +75,16 @@ type Story = StoryObj<typeof ConsentPurposesCard>;
 
 // A seat that may append: the registry, and `Add purpose` in the card header
 // above it.
-export const Registry: Story = { render: purposes(MAY_APPEND_PURPOSE) };
+export const Registry: Story = {
+  render: purposes(MAY_APPEND_PURPOSE),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = (await canvas.findByText("Marketing")).closest("tr");
+    await expect(row).not.toBeNull();
+    await expect(row && within(row).getByText("Double opt-in")).toBeVisible();
+    await expect(canvas.getAllByRole("columnheader")).toHaveLength(1);
+  },
+};
 
 // A seat without the grant: the same registry, no verb, and the read-only
 // posture under the card's description.

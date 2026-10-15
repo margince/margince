@@ -2544,7 +2544,7 @@ export const de = {
   "linkedinImport.notConnectedNote":
     "Wenn du deine Profil-URL speicherst, werden importierte Verbindungen dir namentlich zugeordnet.",
   "linkedinImport.whichFile":
-    "LinkedIn stellt die Datei Connections.csv unter „Einstellungen“, dann „Datenschutz“ bereit, wo sich eine Kopie der eigenen Daten anfordern lässt. Lade diese Datei aus dem Archiv hoch. Hochgeladene Verbindungen werden nie zu Kontakten: Suche, Listen und Kontaktseiten zeigen sie nicht, und niemand kann ihnen schreiben oder E-Mails senden.",
+    "Connections.csv aus der LinkedIn-Datenkopie unter „Datenschutz“. Importierte Verbindungen werden nie zu Kontakten, und niemand kann ihnen E-Mails senden.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
   "linkedinImport.importLabel": "Export der Verbindungen",
   "linkedinImport.noMatchesYet":
@@ -2558,10 +2558,6 @@ export const de = {
   "linkedinReach.title": "Reichweite im Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
-  "linkedinReach.readFailed":
-    "Die Reichweite im Netzwerk konnte nicht geladen werden.",
-  "linkedinReach.empty":
-    "Noch keine deiner Verbindungen arbeitet bei einem erfassten Unternehmen.",
   "linkedinReach.allUnresolved":
     "Alle deine Verbindungen arbeiten bei Unternehmen, die noch nicht erfasst sind. Verbindungen: {unresolved}.",
   "linkedinReach.accountsLabel": "Unternehmen in deiner Reichweite",
@@ -6679,8 +6675,7 @@ export const de = {
   "privacy.corrections": "Korrekturanfragen",
   "privacy.correctionsSub":
     "Kontakte haben diese Korrekturen über den Link eingegeben, den sie per E-Mail erhalten haben. Noch keine Korrektur hat den Datensatz geändert. Eine Korrektur bleibt eine Anfrage, bis jemand sie annimmt.",
-  "privacy.correctionsEmpty":
-    "Keine Korrekturen offen. Ein Kontakt sendet eine Korrektur über den Link aus der erhaltenen E-Mail.",
+  "privacy.correctionsEmpty": "Keine Korrekturen offen.",
   "privacy.correctionContact": "Kontakt",
   "privacy.correctionChange": "Gewünschte Änderung",
   "privacy.correctionReceived": "Eingegangen",
@@ -6880,7 +6875,6 @@ export const de = {
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
   "privacy.purpose": "Zweck",
-  "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
@@ -6934,12 +6928,11 @@ export const de = {
     "Das Aufheben LÖSCHT den Datensatz und gibt ihn nicht zur Nutzung zurück. Die Löschanfrage, die diese Pflicht ausgesetzt hat, ist noch offen und wird damit abgeschlossen. Das lässt sich nicht rückgängig machen.",
   "restricted.release.confirm": "Aufheben und löschen",
   "restricted.pin.action": "Datensatz festsetzen",
-  "restricted.pin.submit": "Festsetzen",
   "restricted.pin.idHint":
     "Für Korrespondenz, die die automatische Regel nicht erkennen kann, zum Beispiel Lieferanten- und Einkaufspost nach § 257 HGB ohne Deal in diesem System. Die Datensatz-ID steht im Audit-Eintrag des Datensatzes.",
   "restricted.pin.idMalformed":
     "Keine gültige Datensatz-ID. Das Format ist 8-4-4-4-12 Hexadezimalzeichen. Die vollständige ID steht im Audit-Eintrag des Datensatzes.",
-  "restricted.pin.idPlaceholder": "Datensatz-ID",
+  "restricted.pin.idLabel": "Datensatz-ID",
   "restricted.pin.title": "Datensatz unter Legal Hold stellen?",
   "restricted.pin.body":
     "Der Datensatz wird für die gesetzliche Frist gesperrt: in keiner normalen Ansicht sichtbar, unveränderbar und nach Ablauf der Frist gelöscht. Die Kennungen des Datensatzes werden jetzt geschwärzt.",
@@ -6957,7 +6950,7 @@ export const de = {
   "retention.editScope": "{scope} bearbeiten",
   "retention.retainOnly": "Nur-Behalten-Modus",
   "retention.retainOnlyHelp":
-    "Solange dieser Modus aktiviert ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Das Archivieren läuft weiter. Ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
+    "Solange dieser Modus aktiviert ist, anonymisiert oder löscht keine Regel etwas. Das Archivieren läuft weiter.",
   "retention.adminOnly":
     "Nur Admins und Operations können die Aufbewahrung ändern.",
   "retention.withheld":
@@ -6974,7 +6967,6 @@ export const de = {
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
   "retention.enabled": "Aktiv",
-  "retention.edit": "Bearbeiten",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
   "retention.deleteTitle": "Aufbewahrungsregel löschen?",
@@ -7457,12 +7449,10 @@ export const de = {
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
-  "overnightGrant.sub":
-    "Margince arbeitet über Nacht deine Deals durch, und der Morgenbericht liegt bereit, wenn du anfängst. Margince handelt in deinem Namen, sieht nur, was du sehen kannst, und du kannst es jederzeit stoppen.",
   "overnightGrant.label":
     "Margince den Morgenbericht über Nacht vorbereiten lassen",
   "overnightGrant.help":
-    "Margince liest deine Deals und E-Mails, um die Prioritäten des Tages zu ordnen, und schreibt Notizen zurück. Senden kann Margince nicht: Die hier erteilte Berechtigung umfasst nur Lesen und Schreiben, niemals Senden.",
+    "Margince ordnet die Deals und E-Mails des Tages und schreibt Notizen für deinen Morgenbericht. Dabei handelt Margince in deinem Namen, sieht nur, was du sehen kannst, und sendet nie.",
   "overnightGrant.dangerTitle": "Vorbereitung über Nacht läuft nicht",
   "overnightGrant.danger":
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
@@ -7562,12 +7552,26 @@ export const de = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
+  "connectionOutcomes.view": "Ansehen",
+  "connectionOutcomes.viewNamed": "{name} ansehen",
+  "connectionOutcomes.retryNamed": "{name} erneut laden",
+  "connectionOutcomes.none": "Noch keine",
+  "connectionOutcomes.unread": "Laden fehlgeschlagen",
+  "connectionOutcomes.waitingEmpty":
+    "Keine Kontakte warten auf eine Entscheidung.",
+  "connectionOutcomes.senders_one": "{count} Adresse",
+  "connectionOutcomes.senders_other": "{count} Adressen",
+  "connectionOutcomes.threads_one": "{count} Thread",
+  "connectionOutcomes.threads_other": "{count} Threads",
+  "connectionOutcomes.contacts_one": "{count} Kontakt",
+  "connectionOutcomes.contacts_other": "{count} Kontakte",
+  "connectionOutcomes.companies_one": "{count} Unternehmen",
+  "connectionOutcomes.companies_other": "{count} Unternehmen",
   "mailSharing.title": "Teilen von E-Mails",
-  "mailSharing.sub":
-    "Erfasste E-Mails sind für alle Teammitglieder lesbar, die den Kontakt sehen können. Standardmäßig aktiviert, damit die Arbeit an Deals geteilt werden kann.",
   "mailSharing.label": "Erfasste E-Mails mit dem Team teilen",
   "mailSharing.help":
-    "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen oder Domains vorab ausschließen.",
+    "Alle Teammitglieder, die einen Kontakt sehen können, lesen seine erfassten E-Mails. Einzelne Nachrichten lassen sich nachträglich einschränken.",
   "mailSharing.danger":
     "Ohne das Teilen von E-Mails ist das CRM schwer zu nutzen. Neue E-Mails sind dann nur für die Beteiligten der jeweiligen Nachricht sichtbar.",
   "mailSharing.posture.shared":
@@ -7586,14 +7590,12 @@ export const de = {
     "Damit wird eine Rechtsgrundlage erklärt",
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
   "mailSharing.save": "Speichern",
+  "mailSharing.cardTitle": "Teilen und Abgleich von E-Mails",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originUnreachable": "Nicht erreichbar",
-  "connectors.sub":
-    "Postfächer und Kalender, aus denen das CRM Daten erfasst. Beim Trennen bleiben die bereits erfassten Datensätze erhalten.",
   "connectors.loading": "Connectors werden geladen…",
   "connectors.loadFailed":
     "Die Connectors konnten nicht geladen werden. Bitte lade die Seite neu.",
-  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -7770,7 +7772,6 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Nachrichtenkanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
-  "connectors.telegramEmpty": "Kein Bot verbunden.",
   "connectors.telegramReadOnly":
     "Nur Admins und Operations können den Bot verbinden oder ändern.",
   "connectors.telegramEditToken": "Token ersetzen",
@@ -7787,11 +7788,15 @@ export const de = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
   "connectors.openNamed": "{name} öffnen",
+  "connectors.emptyLabel": "Kein Postfach verbunden",
+  "connectors.emptyHint":
+    "Verbinde ein Postfach oder einen Kalender, um E-Mails und Termine zu erfassen.",
+  "connectors.telegramEmptyLabel": "Kein Bot verbunden",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails aus einem Freemail-Postfach erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste dieser Anbieter mit. Ergänze fehlende Domains oder übersteuere einen falschen Eintrag.",
+    "E-Mails von diesen Domains erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
@@ -7822,7 +7827,7 @@ export const de = {
 
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
-    "Als Unternehmen abgelehnte Domains und was jeweils entschieden hat: ein Modellergebnis, eine Heuristik oder ein Mensch. Wird eine Domain zugelassen, ist die Frage wieder offen. Hier erscheinen nur offene Fragen ohne Zuständigkeit.",
+    "Als Unternehmen abgelehnte Domains und ob ein Modell, eine Heuristik oder ein Mensch entschieden hat. Wird eine Domain zugelassen, ist die Frage wieder offen.",
   "blockedDomains.listTitle": "Erfasste Entscheidungen",
   "blockedDomains.record": "Entscheidung erfassen",
   "blockedDomains.recordOpen": "Entscheidung erfassen",
@@ -9255,6 +9260,12 @@ export const de = {
   "privacy.dueRuleUnknown":
     "Manuell eingetragen, bevor Fristen berechnet wurden",
   "privacy.dueOverridden": "Früher gesetzt, als die Regel vorgibt",
+  "privacy.requestsPanel": "Anfragen",
+  "privacy.lanesLabel": "Anfragelisten",
+  "privacy.laneRequests": "Datenschutz",
+  "privacy.laneCorrections": "Korrekturen",
+  "privacy.laneRestricted": "Gesperrt",
+  "privacy.requestsEmpty": "Noch keine Datenschutzanfragen.",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Capture-Regeln",
   "settings.tab.knowledge": "Wissen",
@@ -9301,6 +9312,7 @@ export const de = {
     "Dokumentensammlungen, die dieses Unternehmen befragen kann. Antworten stützen sich nur auf abgelegte Dokumente, und Fragen, die diese nicht abdecken, werden abgelehnt.",
   "knowledge.withheld":
     "Du hast keinen Zugriff auf die Liste der Dokumentensammlungen.",
+  "knowledge.empty": "Noch keine Dokumentensammlungen.",
   "knowledge.documentCount_one": "{count} Dokument",
   "knowledge.documentCount_other": "{count} Dokumente",
   "knowledge.passages_one": "{embedded} von {count} Textstelle durchsuchbar",
@@ -9317,6 +9329,9 @@ export const de = {
   "knowledge.col.added": "Hinzugefügt",
   "knowledge.col.status": "Status",
   "knowledge.col.actions": "Aktionen",
+  "knowledge.col.documents": "Dokumente",
+  "knowledge.col.searchable": "Durchsuchbar",
+  "knowledge.col.detail": "Details",
   "knowledge.passageCount_one": "{count} Textstelle",
   "knowledge.passageCount_other": "{count} Textstellen",
   "knowledge.addedOn": "hinzugefügt am {date}",
@@ -9356,9 +9371,8 @@ export const de = {
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
-  "knowledge.new.submit": "Sammlung erstellen",
-  "knowledge.new.failed":
-    "Die Sammlung konnte nicht erstellt werden. Bitte versuche es erneut.",
+  "knowledge.searchable": "Durchsuchbar",
+  "knowledge.reindexingBadge": "Wird neu indexiert",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "settings.tab.capture-activity": "Capture-Aktivität",
   "verdictPass.subject.senders": "Absendeadressen",
@@ -9377,7 +9391,7 @@ export const de = {
   "captureActivity.scope.mine": "Meine",
   "captureActivity.scope.workspace": "Geteilte Kanäle",
   "captureActivity.scopeNote":
-    "Gezählt ab dem Zeitpunkt, an dem ein Connector eine Nachricht an dieses CRM übergibt. Was ein Connector auf seiner eigenen Seite gefiltert hat, etwa eine Chat-Reaktion oder eine E-Mail-Regel, ist nicht enthalten. Umfasst nur Nachrichten. Die Lead-Erfassung wird hier nicht angezeigt.",
+    "Nachrichten, die ein Connector an Margince übergeben hat. Lead-Erfassung und vom Connector selbst gefilterte Einträge zählen nicht mit.",
   "captureActivity.filtered":
     "Angezeigt: {shown} von {total} mit dem Ergebnis „{outcome}“ in diesem Zeitraum.",
   "captureActivity.openTraceFrom":
@@ -9982,15 +9996,13 @@ export const de = {
   "roles.refusal.nameTaken":
     "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
   "extAccess.title": "Erweiterungen und Zugriff",
-  "extAccess.sub":
-    "Was jede Erweiterungseinheit dieser Installation hinzufügt und welche Rollen sie nutzen dürfen. Nur für Admins.",
   "extAccess.adminOnly":
     "Diese Seite erfordert die Berechtigung, Erweiterungen und Rollen der Installation zu lesen. Deiner Rolle fehlt eine davon oder beide.",
   "extAccess.readOnly":
     "Deine Rolle kann diese Seite lesen. Um eine Berechtigung zu ändern, ist ein voller Platz nötig.",
   "extAccess.empty": "Es sind keine Erweiterungseinheiten installiert.",
   "extAccess.version": "Version {version}",
-  "extAccess.openUnit": "Seite {name} öffnen",
+  "extAccess.openUnit": "Zu {name} wechseln",
   "extAccess.noPage":
     "{name} ist in der API installiert, aber diese App-Version hat keine Seite dafür. Die App ist vermutlich älter als der Server.",
   "extAccess.brings.heading": "Was diese Einheit hinzufügt",
@@ -10015,6 +10027,7 @@ export const de = {
   "extAccess.grantFailed": "Berechtigung nicht geändert",
   "extAccess.nobodyReads":
     "Jedes Mitglied sieht für diese Erweiterung eine leere Ansicht, da keine Rolle Lesezugriff auf {object} hat. Vergib unten mindestens einer Rolle das Leserecht.",
+  "extAccess.matrixName": "Rollenzugriff auf {unit}",
   "users.empty": "Noch keine Mitglieder.",
   "users.adminOnly": "Deine Rolle darf keine Mitglieder verwalten.",
   "users.inviteTitle": "Mitglied einladen",
@@ -10406,6 +10419,7 @@ export const de = {
   "aicalls.outcome.failed": "Fehlgeschlagen",
   "aicalls.model.afterDecision": "Entscheidungsmodell, dann {tier}",
   "aicalls.filter.servedProvider": "Ausgeliefert von",
+  "aicalls.filter.servedModel": "Beantwortet von",
   "aicalls.sentinel.provider_quota": "Kontingent erschöpft",
   "aicalls.sentinel.provider_throttled": "Gedrosselt",
   "aicalls.sentinel.provider_refused": "Vom Anbieter abgelehnt",
@@ -10906,20 +10920,16 @@ export const de = {
   "autonomy.kind.lifecycle_change.help":
     "Margince verschiebt ein Unternehmen anhand der Aktivität in eine andere Lebenszyklusphase. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Phasenwechsel können beeinflussen, wer das Unternehmen sieht und welche Automatisierungen laufen.",
   "captureSettings.title": "Anreicherung",
-  "captureSettings.sub":
-    "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",
   "captureSettings.autoEnrich.label":
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Jedes neue Unternehmen aus erfassten E-Mails erhält automatisch ein Webprofil, das aus seiner Website erstellt wird. Läuft innerhalb eines Tageslimits.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails lesen",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiviert, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Jobtitel, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen. Eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens. Ein Postfach mit eigener Einstellung behält diese Einstellung.",
+    "Margince liest Jobtitel, Telefonnummer, Adresse oder Unternehmen, die eine Person in ihrer eigenen Signatur oder Visitenkarte angibt. Nichts wird erschlossen. Die eigene Einstellung eines Postfachs hat Vorrang.",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
   "captureReading.title": "Website-Analysen",
-  "captureReading.sub":
-    "Wie viel Margince von Unternehmenswebsites analysiert. Eine Änderung gilt ab der nächsten Analyse.",
   "captureReading.dailyCap.label": "Automatische Analysen pro Tag",
   "captureReading.dailyCap.help":
     "Analysen, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
@@ -11074,9 +11084,6 @@ export const de = {
     "Gib 0 zum Deaktivieren ein oder ganze Sekunden von {min} bis {max}.",
   "operations.refusal.hours": "Gib ganze Stunden von {min} bis {max} ein.",
   "operations.refusal.count": "Gib eine ganze Zahl von {min} bis {max} ein.",
-  "captureMailSync.title": "E-Mail-Abgleich",
-  "captureMailSync.sub":
-    "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
   "captureMailSync.interval.label": "Abgleichsintervall (Sekunden)",
   "captureMailSync.interval.help":
     "Zeit zwischen zwei Abgleichen eines Postfachs, 30 bis 3.600. Eine Änderung gilt ab dem nächsten Abgleich jedes Postfachs.",
@@ -11090,7 +11097,6 @@ export const de = {
     "Adressen und Domains, deren Nachrichten nie ins CRM gelangen. Deine Regeln gelten nur für Postfächer, die du verbunden hast. Unternehmensregeln gelten für alle.",
   "captureExclusions.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben erhalten.",
-  "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
   "ownerIdentities.title": "Deine weiteren Adressen",
   "ownerIdentities.sub":
@@ -11099,10 +11105,8 @@ export const de = {
   "ownerIdentities.addLabel": "Eigene Adresse hinzufügen",
   "ownerIdentities.addDescription":
     "Nur für dich sichtbar. Teammitglieder sehen diese Liste nie.",
-  "ownerIdentities.current": "Angegeben",
   "ownerIdentities.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste E-Mails bleiben, und ein bereits aus einem Alias erstellter Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
-  "ownerIdentities.empty": "Keine weiteren Adressen hinzugefügt.",
   "ownerIdentities.remove": "{value} entfernen",
   "ownerIdentities.added": "Adresse hinzugefügt",
   "ownerIdentities.confirm": "Hinzufügen",
@@ -11127,6 +11131,8 @@ export const de = {
     "Diese Adresse wurde seitdem erneut entfernt. Mache stattdessen das neuere Entfernen rückgängig.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -11209,7 +11215,6 @@ export const de = {
   "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine hinzugefügte Domain gilt ab der nächsten Nachricht. Wird die Domain entfernt, werden E-Mails ab dann wieder erfasst. E-Mails, die während der Eintragung übersprungen wurden, bietet kein Postfach erneut an. Erfasste E-Mails bleiben erhalten.",
-  "ownDomains.fromCompany": "Aus dem Unternehmensprofil. Dort ändern:",
   "ownDomains.openCompany": "Unternehmensprofil öffnen",
   "ownDomains.empty":
     "Keine weiteren Domains eingetragen. Füge eine hinzu, wenn dein Unternehmen auch von einer anderen Domain sendet.",
@@ -11230,7 +11235,7 @@ export const de = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Ausgehende Webhooks sind in dieser Installation nicht aktiviert. Konfiguriere zuerst einen Signaturschlüssel.",
+    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
@@ -11933,9 +11938,7 @@ export const de = {
     "Zum Bestätigen den Namen des Anbieters eingeben",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Jeder Kontakt wird einmal nach den Angaben nachgeschlagen, die diese Verbindung auswählt und für die der Anbieter nichts berechnet, in der Regel Link zum beruflichen Profil, aktuelle Rolle und Arbeitgeber sowie Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft. Diese Angaben kosten Credits und bleiben eine Entscheidung pro Kontakt.",
-  "provider.automaticLookupJurisdiction":
-    "Deaktiviere das automatische Nachschlagen, wenn die Kontakte in deinem CRM einem Recht unterliegen, das den Handel mit personenbezogenen Daten verbietet, etwa dem vietnamesischen. Die Schaltfläche an jedem Kontakt funktioniert weiterhin, damit die Entscheidung bei denen bleibt, die sie treffen.",
+    "Neue Kontakte erhalten die Angaben, die der Anbieter kostenlos liefert, etwa Rolle und Werdegang. E-Mail-Adressen und Mobilnummern werden nie automatisch gekauft, und die Schaltfläche am einzelnen Kontakt funktioniert weiterhin. Deaktiviere das automatische Nachschlagen, wo das Recht den Handel mit personenbezogenen Daten verbietet.",
   "provider.buyable": "Kaufen erlauben: {category}",
   "provider.buyableWriteFailed": "Kategorie nicht geändert",
   "provider.postureReadFailed": "Aktuelle Einstellung unbekannt",
@@ -12026,10 +12029,6 @@ export const de = {
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
   "provider.profile.buyRebuys":
     "Der Preis enthält erneut: {categories}. Der Anbieter verlangt das für diese Suche und berechnet alles, was er zurückliefert.",
-  "provider.freeTier.hint":
-    "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Lass diese Option aktiviert, damit jeder neue Kontakt diese Angaben automatisch erhält.",
-  "provider.pricedTier.hint":
-    "Wird nie automatisch gekauft, sondern einzeln pro Kontakt, mit dem Preis auf der Schaltfläche.",
   "provider.profile.receiptAt": "Abgefragt am {at}.",
   "provider.profile.receipt":
     "Abgefragt am {at} · {answered} von {asked} Angaben geliefert.",
@@ -13478,7 +13477,7 @@ export const de = {
   "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
   "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
   "aiProviders.setByHand": "Manuell",
-  "aiRates.refresh.unlisted": "Nicht in der Liste des Brokers: {ids}",
+  "aiRates.refresh.unlisted": "Nicht in der Preisliste: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
   "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
@@ -13922,6 +13921,11 @@ export const de = {
   "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
   "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
+  "aiFigures.switched_other":
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
+  "aiFigures.switchedBadge": "Modell gewechselt",
   "aiFigures.line.sort": "Sortierung: {sort}",
   "aiFigures.line.week": "7 T: {figures}",
   "aiFigures.line.prefix": "7 T: {sentence}",

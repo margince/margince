@@ -136,8 +136,8 @@ export const CreateForm: Story = {
   },
 };
 
-// The editor a row's Edit verb opens: window, action and basis, plus the
-// Enabled switch that pauses a rule without losing it.
+// The editor a row opens: window, action and basis, plus the Enabled switch
+// that pauses a rule without losing it.
 export const RowEditor: Story = {
   render: retention(true),
   play: async ({ canvasElement }) => {

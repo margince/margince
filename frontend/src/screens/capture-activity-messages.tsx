@@ -130,6 +130,7 @@ export function CaptureMessages({
                   })
                 : t("captureActivity.openTraceAt", { at })
             }
+            opensDialog
             onOpen={() => onOpen(entry)}
           />
         );
