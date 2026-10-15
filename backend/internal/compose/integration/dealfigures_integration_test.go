@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -202,7 +203,9 @@ func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
 	for semantic, probability := range map[string]int{"won": 100, "lost": 0} {
 		t.Run(semantic, func(t *testing.T) {
 			e := Setup(t)
-			dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, time.Now().UTC().AddDate(0, 0, -30))
+			now := clocktest.Now(t)
+			e.Deals.WithClock(func() time.Time { return now })
+			dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, now.AddDate(0, 0, -30))
 			if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE stage SET semantic = $1, win_probability = $3 WHERE id = (SELECT stage_id FROM deal WHERE id = $2)`, semantic, dealID, probability); err != nil {
 				t.Fatalf("closing the deal's stage: %v", err)
 			}
