@@ -837,7 +837,6 @@ partial
 participant
 particular
 partner
-partway
 pass
 passage
 passport

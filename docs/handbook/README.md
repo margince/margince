@@ -53,7 +53,8 @@ Records, deals and mail in Margince, by page:
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
-- What does the import preview show, and how do I correct companies with a spreadsheet? → [Settings](settings.md)
+- What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
+- What happens if I import the same file again? → [Importing data](importing-data.md)
 
 ## The pages
 
@@ -164,8 +165,10 @@ Records, deals and mail in Margince, by page:
   and your writing voice. Your agent passports and your mailbox connections.
   What the last 24 hours of your mail turned into.
 - [Settings](settings.md): how to open Settings, every settings page and which
-  one you need. Whose state each changes, and which permission opens it. The
-  import preview, running a file again, and correcting companies by their ID.
+  one you need. Whose state each changes, and which permission opens it.
+- [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the
+  template, and the steps. The test run, the problems that skip a row, deals,
+  and importing the same file again. Undo and the limits.
 
 ## How this handbook is written
 

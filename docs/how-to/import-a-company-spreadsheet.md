@@ -2,9 +2,9 @@
 # Import a spreadsheet or a ZIP over MCP or REST
 
 This page is for a developer or an assistant that imports a CSV of companies, or a ZIP of CSV files,
-through MCP or REST. A user who imports in the app reads the handbook: the
-[Settings](../handbook/settings.md) page covers **Data import**, its test run and how to correct
-companies. Undo is in
+through MCP or REST. A user who imports in the app reads the handbook. The
+[Importing data](../handbook/importing-data.md) page covers **Data import**, its test run, importing
+the same file again and how to correct companies. Undo is in
 [What is kept, what is destroyed](../handbook/retention-exports-and-deletion.md).
 
 A run can **add** companies you do not have, and **correct** ones you do. Every run shows a preview
@@ -141,7 +141,8 @@ either, and an activity to any of them. Undo goes the other way and archives act
 `GET /v1/imports/template` lists every pipeline with its stages in its `README.txt`.
 
 A ZIP holds at most 20 files, and the upload limit applies to the ZIP. Two files of one type are
-refused.
+refused. One upload holds at most 15,000 rows, all files together; a file over that is refused with
+`too_many_rows`. A file named `activities.csv` or `notes.csv` is listed in `ignored` as not yet read.
 
 A contact's `company_ref` names its company by the company's `ref` in this upload or an earlier one, its
 domain, its name or its ID. `on_broken_link` decides a row whose link finds nothing: `skip_row` leaves
