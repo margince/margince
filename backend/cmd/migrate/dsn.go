@@ -7,9 +7,45 @@ import (
 	"cmp"
 	"errors"
 	"flag"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
+
+// dsnSettings are the two credentials, on a flag set that also holds
+// migrate's own flags, which Load does not know.
+type dsnSettings struct {
+	reg   *config.Registry
+	given *config.CommandFlags
+}
+
+// addDSNFlags registers --dsn without a default: one read from the
+// environment would reach the usage text, which on CI is a public log.
+func addDSNFlags(fs *flag.FlagSet) (*dsnSettings, error) {
+	reg, err := compose.ProgramRegistry(config.RoleMigrate)
+	if err != nil {
+		return nil, err
+	}
+	return &dsnSettings{reg: reg, given: config.AddFlags(fs, reg)}, nil
+}
+
+// resolve runs after the flag set parsed, so --dsn still beats environ.
+func (d *dsnSettings) resolve(environ []string) (string, error) {
+	loaded, err := config.Load(d.reg, config.Sources{
+		Args:           d.given.Args(),
+		Environ:        environ,
+		KnownKey:       compose.AllSettingKeys,
+		KnownEnv:       compose.AllSettingEnvs,
+		BootstrapRoots: deployconfig.Sections(),
+	})
+	if err != nil {
+		return "", fmt.Errorf("migrate: %w", err)
+	}
+	return ownerDSN(loaded)
+}
 
 // ownerDSN resolves which credential migrates: an explicit --dsn, else
 // MARGINCE_OWNER_DSN, else MARGINCE_DSN.
@@ -19,34 +55,17 @@ import (
 // (NOSUPERUSER, NOBYPASSRLS), which holds no DDL rights. It remains the last
 // resort because an installation may run everything under one
 // sufficiently-privileged credential.
-func ownerDSN(flagValue string) string {
-	return cmp.Or(flagValue, config.FromOS("MARGINCE_OWNER_DSN"), config.FromOS("MARGINCE_DSN"))
-}
-
-// resolveDSN returns the DSN to migrate with, or an error naming every way to
-// supply one. It owns the whole decision so run() carries none of it.
-func resolveDSN(fs *flag.FlagSet, flagValue string) (string, error) {
-	// An explicit `--dsn ""` is refused rather than falling through to the
-	// environment. Emptiness alone cannot tell "flag absent" from "flag given,
-	// empty", so a wrapper passing --dsn "$UNSET_VAR" would otherwise run
-	// `down --steps 5` or `drop-db` against whatever the ambient DSN names.
-	if flagWasGiven(fs, "dsn") && flagValue == "" {
+func ownerDSN(loaded *config.Config) (string, error) {
+	dsn, origin := config.ValWithSource(loaded, dbsettings.DSN)
+	if !origin.FromFlag() {
+		dsn = cmp.Or(config.Val(loaded, dbsettings.OwnerDSN), dsn)
+	} else if dsn == "" {
+		// An explicit `--dsn ""` is refused, not read as absent. A wrapper passing
+		// --dsn "$UNSET_VAR" would otherwise run `drop-db` on the ambient DSN.
 		return "", errors.New("migrate: --dsn was given but empty; pass a DSN or omit the flag to use MARGINCE_OWNER_DSN")
 	}
-	if dsn := ownerDSN(flagValue); dsn != "" {
-		return dsn, nil
+	if dsn == "" {
+		return "", errors.New("migrate: --dsn, MARGINCE_OWNER_DSN or MARGINCE_DSN required")
 	}
-	return "", errors.New("migrate: --dsn, MARGINCE_OWNER_DSN or MARGINCE_DSN required")
-}
-
-// flagWasGiven reports whether the caller passed name, as opposed to it holding
-// its default. flag offers no direct query, so Visit is the only way to ask.
-func flagWasGiven(fs *flag.FlagSet, name string) bool {
-	given := false
-	fs.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			given = true
-		}
-	})
-	return given
+	return dsn, nil
 }

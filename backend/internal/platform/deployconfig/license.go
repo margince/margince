@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // LicenseTokenEnvVar overrides license.token_file when it is set. It is the
@@ -137,24 +136,15 @@ func (l License) TokenOrigin(lookup config.Lookup) string {
 	return TokenOriginNone
 }
 
-// ConfigItems declares the two variables that belong to the DEPLOYMENT rather
-// than to any one process role: the posture, and the licence override.
-//
-// Here rather than in each cmd/<role>, because both roles read both and a
-// per-role copy is a doc string that drifts. Here rather than in
-// shared/runtimeenv, because that package is Tier-0 and stdlib-only — it cannot
-// import platform/config, so the name travels up to the package that already
-// owns the licence half.
-func ConfigItems() []config.Item {
-	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
-	return []config.Item{
-		{
-			Name: runtimeenv.EnvVar, Kind: config.KindString, Default: "production", Roles: both,
-			Doc: "deployment posture: dev|test honour the non-production licence authorities and may run unlicensed; anything else, staging included, is production",
-		},
-		{
-			Name: LicenseTokenEnvVar, Kind: config.KindString, Secret: true, Roles: both,
-			Doc: "licence token, overriding license.token_file when non-empty",
-		},
-	}
-}
+// licenseTokenSetting declares the licence override; Token still reads it
+// through a Lookup, so its rank against license.token and license.token_file
+// is the one TokenOrigin states.
+var licenseTokenSetting = config.Define(config.Spec[string]{
+	Key: "license", Env: LicenseTokenEnvVar, Type: config.String, Secret: true,
+	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
+	Doc:   "Licence token, overriding license.token_file when non-empty.",
+})
+
+// Settings are this package's boot settings. MARGINCE_ENV is not one: the
+// loader reads the posture before any setting.
+func Settings() []config.Any { return []config.Any{licenseTokenSetting} }

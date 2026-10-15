@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -79,7 +80,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	reportConfiguration(logger, loaded, cfg.unknownVars)
+	loaded.Report(logger)
 
 	pool, vault, err := openInstallation(ctx, cfg.dsn)
 	if err != nil {
@@ -172,17 +173,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, config.FromOS, logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
-}
-
-// reportConfiguration logs once the logger exists, so the trace and the
-// unknown-variable warning reach the stream an operator reads.
-func reportConfiguration(logger *slog.Logger, loaded *config.Config, unknownVars []string) {
-	if loaded.Trace() {
-		for _, line := range loaded.TraceLines() {
-			logger.Info(line)
-		}
-	}
-	config.WarnUndeclared(logger, unknownVars)
 }
 
 // openInstallation opens what this role reaches the installation THROUGH: the
@@ -315,7 +305,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		logger.Info("api: per-IP rate limits key on X-Forwarded-For from trusted proxies", "trusted_proxies", cfg.trustedProxies.String())
 	}
 	switch {
-	case cfg.metricsAccess == metricsAccessOpen:
+	case cfg.metricsAccess == programsettings.MetricsAccessOpen:
 		opts = append(opts, compose.WithOpenMetrics())
 		logger.Warn("api: MARGINCE_METRICS_ACCESS=open — /metrics is served to anything that reaches this port, and its exposition names every route and carries workspace ids; keep the port contained")
 	case cfg.metricsToken == "":

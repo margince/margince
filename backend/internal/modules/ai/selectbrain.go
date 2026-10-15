@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -295,19 +296,18 @@ var (
 	errNoBaseURL     = errors.New("ai: provider needs a base_url")
 )
 
-// ConfigItems declares the BYOK keys. They carry no MARGINCE_ prefix — the
-// names match each vendor's own convention so an operator already exporting one
-// needs no extra wiring — which is exactly why they have to be declared: the
-// documentation gate that sweeps the tree exempts non-namespaced names, so this
-// registry is the only artefact that can describe them at all.
+// providerKeySettings declare the BYOK keys under each vendor's own name, so
+// an operator already exporting one needs no extra wiring. Each provider still
+// reads its key through a Lookup.
 //
-// None is Required. A deployment binds whichever providers it uses, and a cloud
-// binding without its key fails loudly at construction naming the variable
-// (byokKeyRequired) rather than being pre-empted here, because which keys an
-// installation needs is a property of its routing file, not of the product.
-func ConfigItems() []config.Item {
-	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
-	items := make([]config.Item, 0, len(cloudKeyEnv))
+// None is required. A cloud binding without its key fails at construction,
+// naming the variable (byokKeyRequired). Which keys an installation needs
+// follows from its routing.
+var providerKeySettings = declareProviderKeys()
+
+func declareProviderKeys() []config.Any {
+	roles := []config.Role{config.RoleAPI, config.RoleWorker}
+	keys := make([]config.Any, 0, len(cloudKeyEnv))
 	for _, provider := range knownProviders {
 		env, cloud := cloudKeyEnv[provider]
 		if !cloud {
@@ -317,13 +317,16 @@ func ConfigItems() []config.Item {
 		if credentialKindFor(provider) == CredentialKindServiceAccount {
 			credential = "service-account key (the JSON key file's contents)"
 		}
-		items = append(items, config.Item{
-			Name: env, Kind: config.KindString, Secret: true, Roles: both,
-			Doc: "BYOK " + credential + " for the " + provider + " provider; required only when the routing file binds it (ADR-0020 — we provide no inference)",
-		})
+		keys = append(keys, config.Define(config.Spec[string]{
+			Key: strings.ToLower(env), Env: env, Type: config.String, Secret: true, Roles: roles,
+			Doc: "BYOK " + credential + " for the " + provider + " provider; required only when a binding names it.",
+		}))
 	}
-	return items
+	return keys
 }
+
+// Settings are this package's boot settings.
+func Settings() []config.Any { return slices.Clone(providerKeySettings) }
 
 // ParseBinding reads a "provider:model" spec and the endpoint that goes with it.
 //

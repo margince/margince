@@ -8,8 +8,12 @@ package main
 // still watching a terminal, rather than on the first request that needs it.
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 )
 
 const testDSN = "postgres://localhost/margince_test"
@@ -184,8 +188,8 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing: %v", err)
 		}
-		if cfg.metricsAccess != metricsAccessToken {
-			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, metricsAccessToken)
+		if cfg.metricsAccess != programsettings.MetricsAccessToken {
+			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, programsettings.MetricsAccessToken)
 		}
 	})
 
@@ -194,8 +198,8 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing: %v", err)
 		}
-		if cfg.metricsAccess != metricsAccessOpen {
-			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, metricsAccessOpen)
+		if cfg.metricsAccess != programsettings.MetricsAccessOpen {
+			t.Errorf("metricsAccess = %q, want %q", cfg.metricsAccess, programsettings.MetricsAccessOpen)
 		}
 	})
 
@@ -286,5 +290,18 @@ func TestTheFakeModelStaysOutOfAProductionEnvironment(t *testing.T) {
 		if err != nil || !cfg.fakeBrain {
 			t.Errorf("%s: fake %v, err %v; want the fake model allowed", name, cfg.fakeBrain, err)
 		}
+	}
+}
+
+// One margince.yaml serves the api and the worker, so a key only the worker
+// reads must not fail the api's boot.
+func TestTheAPIAcceptsAYAMLKeyOnlyTheWorkerReads(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(path, []byte("job_drain_window: 45s\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := loadAPIConfig([]string{"--config", path, "--dsn", testDSN}, nil); err != nil {
+		t.Fatal(err)
 	}
 }

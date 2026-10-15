@@ -69,7 +69,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	cfg, deployCfg, logger := boot.cfg, boot.deploy, boot.log
-	config.WarnUndeclared(logger, cfg.unknownVars)
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
 	if err != nil {
@@ -261,7 +260,7 @@ type workerBoot struct {
 // of them opens a connection, so a deployment misconfigured in any of these
 // ways fails before a pool, a bus client or a listener exists to clean up.
 func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
-	cfg, err := parseWorkerFlags(args)
+	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
 	}
@@ -277,6 +276,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
+	loaded.Report(log)
 	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
 	compose.WarnStaleRates(deployCfg.Rates, log)
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an

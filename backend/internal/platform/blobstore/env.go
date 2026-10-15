@@ -81,41 +81,42 @@ func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bo
 	return s, true, nil
 }
 
-// ConfigItems declares this package's surface for the composition root that
-// wires it. Endpoint or Path is what turns the seam on: with both unset the
-// other five are never read, which is why none of them is Required — an
-// installation without object storage is a supported deployment, not a
-// misconfigured one.
-func ConfigItems() []config.Item {
-	worker := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
-	return []config.Item{
-		{
-			Name: EnvEndpoint, Kind: config.KindString, Roles: worker,
-			Doc: "S3/MinIO endpoint for attachment bytes; with both this and MARGINCE_BLOBSTORE_PATH unset there is no object storage and the attachment endpoints answer 501. When both are set, THIS ENDPOINT WINS and the path is not read",
-		},
-		{
-			Name: EnvAccessKey, Kind: config.KindString, Secret: true, Roles: worker,
-			Doc: "access key for the object store",
-		},
-		{
-			Name: EnvSecretKey, Kind: config.KindString, Secret: true, Roles: worker,
-			Doc: "secret key for the object store",
-		},
-		{
-			Name: EnvBucket, Kind: config.KindString, Roles: worker,
-			Doc: "bucket attachments are written to",
-		},
-		{
-			Name: EnvRegion, Kind: config.KindString, Roles: worker,
-			Doc: "region the bucket lives in",
-		},
-		{
-			Name: EnvUseSSL, Kind: config.KindBool, Default: "false", Roles: worker,
-			Doc: "reach the object store over TLS; the literal \"true\" enables it",
-		},
-		{
-			Name: EnvPath, Kind: config.KindString, Roles: worker,
-			Doc: "directory attachment bytes are written to, for an installation with no object storage service; IGNORED when MARGINCE_BLOBSTORE_ENDPOINT is set, which wins",
-		},
-	}
+// The settings that turn object storage on. Endpoint or Path enables it: with
+// both unset the other five are never read, which is why none is required.
+var (
+	storeRoles = []config.Role{config.RoleAPI, config.RoleWorker}
+
+	endpointSetting = config.Define(config.Spec[string]{
+		Key: "blobstore_endpoint", Env: EnvEndpoint, Type: config.String, Roles: storeRoles,
+		Doc: "S3/MinIO endpoint for attachment bytes; it wins over MARGINCE_BLOBSTORE_PATH, and with both unset the attachment endpoints answer 501.",
+	})
+	accessKeySetting = config.Define(config.Spec[string]{
+		Key: "blobstore_access_key", Env: EnvAccessKey, Type: config.String, Secret: true, Roles: storeRoles,
+		Doc: "Access key for the object store.",
+	})
+	secretKeySetting = config.Define(config.Spec[string]{
+		Key: "blobstore_secret_key", Env: EnvSecretKey, Type: config.String, Secret: true, Roles: storeRoles,
+		Doc: "Secret key for the object store.",
+	})
+	bucketSetting = config.Define(config.Spec[string]{
+		Key: "blobstore_bucket", Env: EnvBucket, Type: config.String, Roles: storeRoles,
+		Doc: "Bucket attachments are written to.",
+	})
+	regionSetting = config.Define(config.Spec[string]{
+		Key: "blobstore_region", Env: EnvRegion, Type: config.String, Roles: storeRoles,
+		Doc: "Region the bucket lives in.",
+	})
+	useSSLSetting = config.Define(config.Spec[bool]{
+		Key: "blobstore_use_ssl", Env: EnvUseSSL, Type: config.Bool, Default: config.Some(false), Roles: storeRoles,
+		Doc: "Reach the object store over TLS.",
+	})
+	pathSetting = config.Define(config.Spec[string]{
+		Key: "blobstore_path", Env: EnvPath, Type: config.String, Roles: storeRoles,
+		Doc: "Directory attachment bytes are written to when there is no object storage service; ignored when MARGINCE_BLOBSTORE_ENDPOINT is set.",
+	})
+)
+
+// Settings are this package's boot settings.
+func Settings() []config.Any {
+	return []config.Any{endpointSetting, accessKeySetting, secretKeySetting, bucketSetting, regionSetting, useSSLSetting, pathSetting}
 }

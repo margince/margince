@@ -10,7 +10,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -58,10 +61,7 @@ type apiConfig struct {
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
 	// It selects the configuration overlay and which license authorities are
 	// honoured; it decides nothing destructive — see shared/runtimeenv.
-	posture runtimeenv.Environment
-	// unknownVars are the MARGINCE_* variables set that this role does not
-	// read, reported once the logger exists so they reach the same stream.
-	unknownVars    []string
+	posture        runtimeenv.Environment
 	trustedProxies httpserver.TrustedProxies
 }
 
@@ -69,23 +69,16 @@ type apiConfig struct {
 // ones that read two settings. Every fault this layer sees is reported in one
 // error: one fault per boot made starting the binary by hand a guessing game.
 func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
-	reg, err := config.NewRegistry(APISettings())
+	reg, err := compose.ProgramRegistry(config.RoleAPI)
 	if err != nil {
 		return apiConfig{}, nil, err
 	}
-	legacy, err := config.NewItemRegistry(legacyAPIItems()...)
-	if err != nil {
-		return apiConfig{}, nil, err
-	}
-	legacyNames := map[string]bool{}
-	for _, item := range legacy.Items() {
-		legacyNames[item.Name] = true
-	}
-	posture := runtimeenv.Parse(environValue(environ, runtimeenv.EnvVar))
+	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
 	loaded, err := config.Load(reg, config.Sources{
 		Args:           args,
 		Environ:        environ,
-		KnownEnv:       func(name string) bool { return legacyNames[name] },
+		KnownKey:       compose.AllSettingKeys,
+		KnownEnv:       compose.AllSettingEnvs,
 		BootstrapRoots: deployconfig.Sections(),
 		Faults:         func(c *config.Config) []error { return apiFaults(c, posture) },
 	})
@@ -106,39 +99,27 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 // cmd/api reads.
 func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiConfig, error) {
 	cfg := apiConfig{
-		dsn: config.Val(loaded, apiDSN), configPath: loaded.Files().Base, schemaDSN: config.Val(loaded, apiSchemaDSN),
-		addr: config.Val(loaded, apiAddr), redisAddr: config.Val(loaded, apiRedis), redisPassword: config.Val(loaded, apiRedisPassword),
-		inlineRelay: config.Val(loaded, apiInlineRelay), routingPath: config.Val(loaded, apiAIRouting), fakeBrain: config.Val(loaded, apiAIFake),
-		logLevel: config.Val(loaded, apiLogLevel), logFormat: config.Val(loaded, apiLogFormat),
-		publicBaseURL: config.Val(loaded, apiPublicBaseURL), mcpAppsBaseURL: config.Val(loaded, apiMCPAppsBaseURL), apiBaseURL: config.Val(loaded, apiAPIBaseURL),
-		gmailClientID: config.Val(loaded, apiGmailClientID), gmailClientSecret: config.Val(loaded, apiGmailClientSecret),
-		gmailPushToken: config.Val(loaded, apiGmailPushToken), gmailPushAudience: config.Val(loaded, apiGmailPushAudience),
-		gmailPushSA: config.Val(loaded, apiGmailPushSA), gmailJWKSURL: config.Val(loaded, apiGmailJWKSURL),
-		graphPushToken: config.Val(loaded, apiGraphPushToken), graphClientID: config.Val(loaded, apiGraphClientID),
-		graphClientSecret: config.Val(loaded, apiGraphClientSecret), graphTenant: config.Val(loaded, apiGraphTenant),
-		microsoftSignInTenant: config.Val(loaded, apiMicrosoftSignInTenant), connectorStateKey: config.Val(loaded, apiConnectorStateKey),
-		webhookKey: config.Val(loaded, apiWebhookKey), metricsToken: config.Val(loaded, apiMetricsToken), metricsAccess: config.Val(loaded, apiMetricsAccess),
-		vatCheckBaseURL: config.Val(loaded, apiVATCheckBaseURL), geocodeBaseURL: config.Val(loaded, apiGeocodeBaseURL),
-		posture:     posture,
-		unknownVars: loaded.Warnings(),
+		dsn: config.Val(loaded, dbsettings.DSN), configPath: loaded.Files().Base, schemaDSN: config.Val(loaded, ps.SchemaDSN),
+		addr: config.Val(loaded, ps.Addr), redisAddr: config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
+		inlineRelay: config.Val(loaded, ps.InlineRelay), routingPath: config.Val(loaded, ps.AIRouting), fakeBrain: config.Val(loaded, ps.AIFake),
+		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
+		publicBaseURL: config.Val(loaded, ps.PublicBaseURL), mcpAppsBaseURL: config.Val(loaded, ps.MCPAppsBaseURL), apiBaseURL: config.Val(loaded, ps.APIBaseURL),
+		gmailClientID: config.Val(loaded, ps.GmailClientID), gmailClientSecret: config.Val(loaded, ps.GmailClientSecret),
+		gmailPushToken: config.Val(loaded, ps.GmailPushToken), gmailPushAudience: config.Val(loaded, ps.GmailPushAudience),
+		gmailPushSA: config.Val(loaded, ps.GmailPushServiceAccount), gmailJWKSURL: config.Val(loaded, ps.GmailJWKSURL),
+		graphPushToken: config.Val(loaded, ps.GraphPushToken), graphClientID: config.Val(loaded, ps.GraphClientID),
+		graphClientSecret: config.Val(loaded, ps.GraphClientSecret), graphTenant: config.Val(loaded, ps.GraphTenant),
+		microsoftSignInTenant: config.Val(loaded, ps.MicrosoftSignInTenant), connectorStateKey: config.Val(loaded, ps.ConnectorStateKey),
+		webhookKey: config.Val(loaded, ps.WebhookKey), metricsToken: config.Val(loaded, ps.MetricsToken), metricsAccess: config.Val(loaded, ps.MetricsAccess),
+		vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL), geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL),
+		posture: posture,
 	}
-	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, apiTrustedProxies))
+	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, ps.TrustedProxies))
 	if err != nil {
 		return apiConfig{}, fmt.Errorf("--trusted-proxies: %w", err)
 	}
 	cfg.trustedProxies = trusted
 	return cfg, nil
-}
-
-// environValue is the last NAME=value for name, as os.Getenv reads a repeat.
-func environValue(environ []string, name string) string {
-	var value string
-	for _, entry := range environ {
-		if k, v, ok := strings.Cut(entry, "="); ok && k == name {
-			value = v
-		}
-	}
-	return value
 }
 
 // bootError renders one fault as a sentence and several as a list.
@@ -157,28 +138,21 @@ func bootError(err error) error {
 	return errors.New("api: the configuration is incomplete:\n  - " + strings.Join(lines, "\n  - "))
 }
 
-// The two postures --metrics-access names.
-const (
-	metricsAccessToken = "token"
-	metricsAccessOpen  = "open"
-)
-
 // apiFaults holds the checks that read two settings, or a setting and the
 // posture. Load runs them beside every other fault, so one boot names all.
 func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	var faults []error
+	if err := dbsettings.Require(c); err != nil {
+		faults = append(faults, err)
+	}
 	// An open endpoint given a token: the token would authenticate nothing,
 	// while its operator believes the endpoint closed.
-	if config.Val(c, apiMetricsAccess) == metricsAccessOpen && config.Val(c, apiMetricsToken) != "" {
+	if config.Val(c, ps.MetricsAccess) == ps.MetricsAccessOpen && config.Val(c, ps.MetricsToken) != "" {
 		faults = append(faults, errors.New("--metrics-access=open serves /metrics to anyone, so the --metrics-token also set would "+
 			"authenticate nothing: unset the token to open the endpoint, or drop --metrics-access=open to require it"))
 	}
-	// A fake model left on in a deployment's environment or files would serve
-	// canned answers in production. A flag is typed per command, as the desktop
-	// launcher does, and a stored binding outranks the fake anyway.
-	if fake, origin := config.ValWithSource(c, apiAIFake); fake && !origin.FromFlag() && posture == runtimeenv.Production {
-		faults = append(faults, fmt.Errorf("ai_fake from %s turns on the offline fake model, and %s is production: "+
-			"unset it, or pass --ai-fake on the command line", origin, runtimeenv.EnvVar))
+	if err := ps.FakeModelFault(c, posture); err != nil {
+		faults = append(faults, err)
 	}
 	return faults
 }

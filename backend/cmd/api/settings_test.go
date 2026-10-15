@@ -6,19 +6,27 @@ package main
 import (
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// secretByEnv marks every variable this role reads: its own settings and the
-// items its packages still declare for themselves.
-func secretByEnv() map[string]bool {
-	secret := map[string]bool{}
-	for _, s := range APISettings() {
-		secret[s.Env()] = s.Secret()
+// apiSettings are what the api's registry holds.
+func apiSettings(t *testing.T) []config.Any {
+	t.Helper()
+	reg, err := compose.ProgramRegistry(config.RoleAPI)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, group := range legacyAPIItems() {
-		for _, item := range group {
-			secret[item.Name] = item.Secret
-		}
+	return reg.All()
+}
+
+// secretByEnv marks every variable this role reads.
+func secretByEnv(t *testing.T) map[string]bool {
+	t.Helper()
+	secret := map[string]bool{}
+	for _, s := range apiSettings(t) {
+		secret[s.Env()] = s.Secret()
 	}
 	return secret
 }
@@ -27,7 +35,7 @@ func TestTheCredentialsThisRoleReadsAreMarkedSecret(t *testing.T) {
 	t.Parallel()
 	// Named explicitly because nothing mechanical can tell a path from a
 	// password; this catches a credential wrongly declared public.
-	secret := secretByEnv()
+	secret := secretByEnv(t)
 	for _, name := range []string{
 		"MARGINCE_DSN", "MARGINCE_SCHEMA_DSN", "MARGINCE_REDIS_PASSWORD",
 		"MARGINCE_GMAIL_CLIENT_SECRET", "MARGINCE_GMAIL_PUSH_TOKEN",
@@ -44,7 +52,7 @@ func TestTheCredentialsThisRoleReadsAreMarkedSecret(t *testing.T) {
 	// A value that authenticates nobody stays visible, because an operator
 	// debugging a boot wants to read it.
 	for _, name := range []string{
-		"MARGINCE_LOG_LEVEL", "MARGINCE_PUBLIC_BASE_URL", "MARGINCE_ENV", "MARGINCE_METRICS_ACCESS",
+		"MARGINCE_LOG_LEVEL", "MARGINCE_PUBLIC_BASE_URL", "MARGINCE_METRICS_ACCESS",
 		"MARGINCE_TRUSTED_PROXIES", "MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL", "MARGINCE_GRAPH_TENANT",
 	} {
 		if secret[name] {
@@ -58,21 +66,22 @@ func TestAMisspelledVariableReachesTheBootReport(t *testing.T) {
 	// Assembled rather than written whole: the documentation gate reads a
 	// quoted MARGINCE_* literal as a variable somebody must document.
 	const misspelled = "MARGINCE_" + "REDDIS"
-	cfg, _, err := loadAPIConfig([]string{"--dsn", "postgres://user@localhost:5432/db"}, []string{
+	_, loaded, err := loadAPIConfig([]string{"--dsn", "postgres://user@localhost:5432/db"}, []string{
 		misspelled + "=localhost:6379",
 		"MARGINCE_DSN=postgres://user@localhost:5432/db",
-		// Read by a package this role wires, not by a setting of its own.
+		// Read by a package this role wires, and by the worker only.
 		"MARGINCE_KEYVAULT_ROOT_KEY=stands-in-for-a-key",
+		"MARGINCE_OBSERVE_ADDR=127.0.0.1:9101",
 	})
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if !slices.Contains(cfg.unknownVars, misspelled) {
-		t.Errorf("unknownVars = %v; the misspelling never reached the boot report", cfg.unknownVars)
+	if !slices.Contains(loaded.Warnings(), misspelled) {
+		t.Errorf("warnings = %v; the misspelling never reached the boot report", loaded.Warnings())
 	}
-	for _, read := range []string{"MARGINCE_DSN", "MARGINCE_KEYVAULT_ROOT_KEY"} {
-		if slices.Contains(cfg.unknownVars, read) {
-			t.Errorf("%s is read by this role and was reported as unread", read)
+	for _, read := range []string{"MARGINCE_DSN", "MARGINCE_KEYVAULT_ROOT_KEY", "MARGINCE_OBSERVE_ADDR"} {
+		if slices.Contains(loaded.Warnings(), read) {
+			t.Errorf("%s is read by a program and was reported as unread", read)
 		}
 	}
 }

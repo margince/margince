@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Boot configuration for the worker process role: the parsed flag/env
-// surface and the small helpers that back a flag's default with an
-// environment variable. Kept out of main.go so that file stays the
+// Boot configuration for the worker process role: the resolved settings and
+// the checks that read two of them. Kept out of main.go so that file stays the
 // process lifecycle (wire, run, drain) rather than the config vocabulary.
 package main
 
@@ -11,12 +10,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"strconv"
+	"os"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/cliflags"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -58,161 +59,74 @@ type workerConfig struct {
 	vatCheckBaseURL   string
 	certLogBaseURL    string
 	// jobDrainWindow is how long a job already running at shutdown keeps its
-	// work context; see defaultJobDrainWindow for the budget it is part of.
+	// work context; see programsettings.DefaultJobDrainWindow for the budget it is part of.
 	jobDrainWindow time.Duration
 	logLevel       string
 	logFormat      string
 	observeAddr    string
-	// observePprofRaw is --observe-pprof as typed; observePprof is what it
-	// parsed to. Two fields because the flag is bound through cliflags, which
-	// binds strings only — and a string read back strictly is what lets a
-	// mistyped "ture" fail the boot instead of silently leaving profiling off
-	// on the one night somebody needed it on.
-	observePprofRaw string
-	observePprof    bool
+	observePprof   bool
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2). It selects the configuration overlay and which license
 	// authorities are honoured; it decides nothing destructive — see
 	// shared/runtimeenv.
 	posture runtimeenv.Environment
-	// unknownVars are the MARGINCE_* variables found in the environment that
-	// this role does not read; reported once the logger exists. See the api's
-	// copy for why the reporting is deferred.
-	unknownVars []string
 }
 
-// workerFlagSet registers this role's flags and their environment bindings,
-// unparsed — the same registration that a boot reads and that describes this
-// role's configurable surface, so neither is a copy of the other.
-func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
-	fs := flag.NewFlagSet("worker", flag.ContinueOnError)
-	env := &cliflags.Env{}
-	cfg := &workerConfig{}
-	env.String(fs, &cfg.dsn, "dsn", "MARGINCE_DSN", "", "Postgres DSN (runtime app role)")
-	// The same canonical origin the api serves: a marketing send from this
-	// role's Surface-B agent run builds the recipient's tokenized unsubscribe
-	// link from it, and without one that send refuses rather than go out
-	// unlinkable.
-	env.String(fs, &cfg.publicBaseURL, "public-base-url", "MARGINCE_PUBLIC_BASE_URL", "",
-		"canonical external scheme+host for buyer-facing links (RFC 8058 unsubscribe); required for a marketing send from the Surface-B agent run")
-	env.String(fs, &cfg.configPath, "config", "MARGINCE_CONFIG", "margince.yaml",
-		"path to the deployment configuration file (A107/ADR-0061); read for the ai.capture_payloads posture the Surface-B runner honors and the capture pipeline tuning (capture.freemail_extra). A missing file boots with defaults")
-	env.String(fs, &cfg.redisAddr, "redis", "MARGINCE_REDIS", "localhost:16379", "Redis address (event bus)")
-	env.String(fs, &cfg.redisPassword, "redis-password", "MARGINCE_REDIS_PASSWORD", "",
-		"Event-bus credential, where the instance requires one")
-	env.String(fs, &cfg.routingPath, "ai-routing", "MARGINCE_AI_ROUTING", "", "IGNORED (kept so an existing command line still parses): the model binding is a stored setting, declared for a fresh install under `seeds.ai_routing` in margince.yaml and changed on a running one through Settings -> AI or PUT /v1/ai/routing. Passing it logs a warning naming which of those applies and does nothing else. Nothing reads a routing file any more: the debug lanes take --model or --ai-fake, and the certification runner is told its model outright")
-	fs.BoolVar(&cfg.fakeBrain, "ai-fake", false, "run the Surface-B runner on the offline fake model (dev/test only)")
-	env.String(fs, &cfg.gmailClientID, "gmail-client-id", "MARGINCE_GMAIL_CLIENT_ID", "", "Google OAuth client id for the Gmail capture connector; enables the background Gmail sync poll")
-	env.String(fs, &cfg.gmailClientSecret, "gmail-client-secret", "MARGINCE_GMAIL_CLIENT_SECRET", "", "Google OAuth client secret for the Gmail capture connector")
-	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; enables its background sync poll")
-	env.String(fs, &cfg.graphClientSecret, "graph-client-secret", "MARGINCE_GRAPH_CLIENT_SECRET", "", "Microsoft client secret for the Outlook/M365 capture connector")
-	env.String(fs, &cfg.graphTenant, "graph-tenant", "MARGINCE_GRAPH_TENANT", "", "Microsoft identity tenant for token refresh (default: common — any company)")
-	env.String(fs, &cfg.gmailPubsubTopic, "gmail-pubsub-topic", "MARGINCE_GMAIL_PUBSUB_TOPIC", "", "Gmail Pub/Sub topic (projects/<p>/topics/<t>); enables the push-watch register+renew job. Empty leaves capture on the poll.")
-	env.String(fs, &cfg.graphNotifyURL, "graph-notification-url", "MARGINCE_GRAPH_NOTIFICATION_URL", "", "public URL Microsoft posts Graph change notifications to, operator token and all (https://<api>/webhooks/graph?token=...); enables the subscription register+renew job. Empty leaves Outlook capture on the poll.")
-	env.Duration(fs, &cfg.jobDrainWindow, "job-drain-window", jobDrainWindowEnv, defaultJobDrainWindow,
-		"how long a job already running at shutdown is given to finish before its context is cancelled; "+
-			"shutdown then waits a further 5s for cancelled jobs to return, so the pod's termination grace "+
-			"period must cover the drain window plus that and a few seconds of teardown")
-	env.String(fs, &cfg.webhookKey, "webhook-key", "MARGINCE_WEBHOOK_KEY", "", "base64 32-byte key sealing outbound-webhook signing secrets; enables the cg:webhooks delivery consumer + retry sweep. Empty leaves the delivery worker off.")
-	// Off by default, and off means no listener at all rather than one bound
-	// somewhere harmless. Unlike the api's /metrics it carries no workspace id
-	// and no tenant data — but it is unauthenticated and discloses dependency
-	// health and process capacity, so whether to expose it, and on which
-	// interface, is the operator's decision.
-	env.String(fs, &cfg.geocodeBaseURL, "geocode-base-url", "MARGINCE_GEOCODE_BASE_URL", "",
-		"Nominatim base URL; enables geocoding company addresses to coordinates, which is what "+
-			"within_radius answers from. Empty leaves it off and every radius query unavailable. "+
-			"Use 'public' for OpenStreetMap's own service — POC only: its terms hold a recurring "+
-			"client to 4 requests a minute, so any real volume wants a self-hosted instance.")
-	env.String(fs, &cfg.vatCheckBaseURL, "vat-check-base-url", "MARGINCE_VAT_CHECK_BASE_URL", "",
-		"VIES base URL; enables checking a company's stated VAT ID against the EU register. "+
-			"Empty leaves it off and a VAT number is stored as the page stated it, unverified. "+
-			"Use 'public' for the Commission's own service.")
-	env.String(fs, &cfg.certLogBaseURL, "certlog-base-url", "MARGINCE_CERTLOG_BASE_URL", "",
-		"certificate-transparency base URL; enables reading what a company publicly runs — its DNS "+
-			"records, its certificate history and one polite fetch of its own homepage. Empty "+
-			"leaves the whole lane off, which is honest for an installation that should make no "+
-			"outbound lookups. Use 'public' for crt.sh — it is free and needs no key, but it is one "+
-			"small service run on goodwill, so this reader paces itself to one query every five "+
-			"seconds and caches every answer.")
-	env.String(fs, &cfg.observeAddr, "observe-addr", "MARGINCE_OBSERVE_ADDR", "",
-		"address to serve this worker's /healthz, /readyz and /metrics on (e.g. 127.0.0.1:9101). Empty serves nothing. Process-local metrics only — the job-table and outbox gauges stay a single fleet-wide reading on the api.")
-	// Opt-in profiling on the SAME listener, never on a port of its own: a
-	// second unauthenticated surface would need its own bind decision and its
-	// own containment, and an operator diagnosing a memory burst at 3am should
-	// not have to make either. Off by default because a goroutine dump and the
-	// process command line are more than the probes and metrics disclose.
-	env.String(fs, &cfg.observePprofRaw, "observe-pprof", "MARGINCE_OBSERVE_PPROF", "false",
-		"true mounts Go's net/http/pprof handlers under /debug/pprof/ on the --observe-addr listener, for diagnosing a memory or CPU problem in a running worker (heap, allocs, goroutine, profile, trace). Requires --observe-addr. Off by default and meant to be enabled temporarily: the handlers are unauthenticated like the rest of that listener, and a goroutine dump and the command line disclose more than the probes do.")
-	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
-	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
-	return fs, env, cfg, nil
+// loadWorkerConfig resolves the boot settings from args and environ, and
+// reports every fault of the configuration in one error.
+func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, error) {
+	reg, err := compose.ProgramRegistry(config.RoleWorker)
+	if err != nil {
+		return workerConfig{}, nil, err
+	}
+	posture := runtimeenv.Parse(config.EnvironValue(environ, runtimeenv.EnvVar))
+	loaded, err := config.Load(reg, config.Sources{
+		Args:           args,
+		Environ:        environ,
+		KnownKey:       compose.AllSettingKeys,
+		KnownEnv:       compose.AllSettingEnvs,
+		BootstrapRoots: deployconfig.Sections(),
+		Faults:         func(c *config.Config) []error { return workerFaults(c, posture) },
+	})
+	if errors.Is(err, flag.ErrHelp) {
+		config.PrintUsage(os.Stderr, reg)
+	}
+	if err != nil {
+		return workerConfig{}, nil, fmt.Errorf("worker: %w", err)
+	}
+	return fromRegistry(loaded, posture), loaded, nil
 }
 
-// parseWorkerFlags parses and validates the boot flags; the DSN is the one
-// dependency without a sane default, so its absence fails the boot here.
-func parseWorkerFlags(args []string) (workerConfig, error) {
-	fs, env, cfg, err := workerFlagSet()
-	if err != nil {
-		return workerConfig{}, err
+// fromRegistry copies the resolved settings into the struct the rest of
+// cmd/worker reads.
+func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerConfig {
+	return workerConfig{
+		dsn: config.Val(loaded, dbsettings.DSN), configPath: loaded.Files().Base,
+		publicBaseURL: config.Val(loaded, ps.PublicBaseURL),
+		redisAddr:     config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
+		routingPath: config.Val(loaded, ps.AIRouting), fakeBrain: config.Val(loaded, ps.AIFake),
+		gmailClientID: config.Val(loaded, ps.GmailClientID), gmailClientSecret: config.Val(loaded, ps.GmailClientSecret),
+		graphClientID: config.Val(loaded, ps.GraphClientID), graphClientSecret: config.Val(loaded, ps.GraphClientSecret),
+		graphTenant: config.Val(loaded, ps.GraphTenant), gmailPubsubTopic: config.Val(loaded, ps.GmailPubsubTopic),
+		graphNotifyURL: config.Val(loaded, ps.GraphNotificationURL), webhookKey: config.Val(loaded, ps.WebhookKey),
+		geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL), vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL),
+		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow),
+		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
+		observeAddr: config.Val(loaded, ps.ObserveAddr), observePprof: config.Val(loaded, ps.ObservePprof),
+		posture: posture,
 	}
-	// An undescribable surface fails the boot rather than the generator, and
-	// the same registry is what names the variables this role does not read.
-	registry, err := workerConfigItems(fs, env)
-	if err != nil {
-		return workerConfig{}, err
-	}
-	if err := fs.Parse(args); err != nil {
-		return workerConfig{}, err
-	}
-	// The environment fills every flag the caller did not pass. It happens HERE
-	// rather than in each flag's default because `flag` echoes a non-empty default
-	// in its usage output, and these values are DSNs, signing keys, OAuth client
-	// secrets and bearer tokens — see internal/platform/cliflags.
-	if err := env.Apply(fs, config.FromOS); err != nil {
-		return workerConfig{}, fmt.Errorf("worker: %w", err)
-	}
-	// After Apply, so the report describes the environment the role consulted.
-	cfg.unknownVars = registry.Undeclared(config.Environ())
-	cfg.posture = runtimeenv.Parse(config.FromOS(runtimeenv.EnvVar))
-	if cfg.dsn == "" {
-		return workerConfig{}, errors.New("worker: --dsn or MARGINCE_DSN required")
-	}
-	// Zero would make River's stop hard: every running job cancelled the moment
-	// the shutdown signal arrives, which is what the window is there to prevent.
-	if cfg.jobDrainWindow <= 0 {
-		return workerConfig{}, fmt.Errorf("worker: --job-drain-window / %s must be a positive duration, got %s", jobDrainWindowEnv, cfg.jobDrainWindow)
-	}
-	if err := resolveObservePprof(cfg); err != nil {
-		return workerConfig{}, err
-	}
-	return *cfg, nil
 }
 
-// resolveObservePprof parses --observe-pprof and refuses the one pairing it
-// cannot honour.
-//
-// A value strconv.ParseBool rejects is a boot error rather than "off": the
-// operator who typed it was trying to turn profiling ON, and a worker that
-// booted with it silently off would be found out only when the burst it was
-// meant to catch had already come and gone.
-//
-// On with no --observe-addr is refused for the reason the api refuses an open
-// /metrics that was also given a token: the setting would do nothing, and the
-// operator who set it believes it did something. There is no listener to mount
-// the handlers on, and binding one on their behalf would expose a surface
-// nobody chose an interface for.
-func resolveObservePprof(cfg *workerConfig) error {
-	on, err := strconv.ParseBool(cfg.observePprofRaw)
-	if err != nil {
-		return fmt.Errorf("worker: --observe-pprof / MARGINCE_OBSERVE_PPROF %q is not a boolean: true or false", cfg.observePprofRaw)
+// workerFaults holds the checks that read two settings, or a setting and the
+// posture. Load joins them to its own faults.
+func workerFaults(c *config.Config, posture runtimeenv.Environment) []error {
+	var faults []error
+	for _, err := range []error{dbsettings.Require(c), ps.ObserveFault(c), ps.FakeModelFault(c, posture)} {
+		if err != nil {
+			faults = append(faults, err)
+		}
 	}
-	if on && cfg.observeAddr == "" {
-		return errors.New("worker: --observe-pprof / MARGINCE_OBSERVE_PPROF=true serves profiles on the observe listener, " +
-			"and --observe-addr / MARGINCE_OBSERVE_ADDR is unset so there is none: set an address, or drop the pprof setting")
-	}
-	cfg.observePprof = on
-	return nil
+	return faults
 }
 
 // defaultFxBootstrapCurrencies is the candidate set the FX refresh proposes on

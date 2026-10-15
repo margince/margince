@@ -8,17 +8,6 @@ import (
 	"testing"
 )
 
-// A deployment sets every boot setting from its container's environment, and
-// an operator by hand from the command line, so each has both names.
-func TestEveryAPIBootSettingHasAFlagAndAnEnvironmentName(t *testing.T) {
-	t.Parallel()
-	for _, s := range APISettings() {
-		if s.Flag() == "" || s.Env() == "" {
-			t.Errorf("%s: flag %q, env %q; a boot setting needs both", s.Key(), s.Flag(), s.Env())
-		}
-	}
-}
-
 // A value the environment holds but its setting cannot read is reported with
 // the other faults of the same boot, not instead of them.
 func TestAnUnreadableEnvironmentValueJoinsTheBootFaults(t *testing.T) {

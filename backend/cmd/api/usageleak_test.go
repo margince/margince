@@ -7,7 +7,7 @@ package main
 // environment supplied. That environment holds DSNs, OAuth client secrets and
 // signing keys, and `-h` or one mistyped argument writes to the pod's log.
 //
-// The variable set comes from APISettings itself, so a setting added later is
+// The variable set comes from the api's registry itself, so a setting added later is
 // covered the day it is added.
 
 import (
@@ -19,18 +19,18 @@ import (
 
 const leakSentinel = "SENTINEL_VALUE_MUST_NOT_APPEAR"
 
-// sentinelEnviron sets every credential the api's own settings read to the
-// sentinel. A setting that is not Secret may quote its value in a fault.
+// sentinelEnviron sets every credential the api reads to the sentinel. A
+// setting that is not Secret may quote its value in a fault.
 func sentinelEnviron(t *testing.T) []string {
 	t.Helper()
 	var environ []string
-	for _, s := range APISettings() {
+	for _, s := range apiSettings(t) {
 		if s.Secret() {
 			environ = append(environ, s.Env()+"="+leakSentinel)
 		}
 	}
 	if len(environ) == 0 {
-		t.Fatal("APISettings declares no secret, so this gate checks nothing")
+		t.Fatal("the api reads no secret, so this gate checks nothing")
 	}
 	return environ
 }

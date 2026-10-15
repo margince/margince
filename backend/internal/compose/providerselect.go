@@ -18,15 +18,20 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// ProviderModeEnv selects WHICH adapter this process talks to: "live" (the
-// default, the real vendor), "offline" for the deterministic fake, and "off"
-// to register none at all.
+// providerModeEnv selects which adapter this process talks to. It is "live"
+// (the default, the real vendor), "offline" for the fake, or "off" for none.
 //
 // It does not decide whether the FEATURE exists. That is the connection's
 // business, and an admin's to change from the settings page.
-// ProviderModeEnv is exported so the composition roots can declare it as part
-// of their configurable surface without spelling the string a second time.
-const ProviderModeEnv = "MARGINCE_PROVIDER_SURFE"
+const providerModeEnv = "MARGINCE_PROVIDER_SURFE"
+
+// providerModeSetting declares the mode; ProviderRegistryFromEnv still reads it
+// through a Lookup, case-insensitively, so the type stays free text.
+var providerModeSetting = config.Define(config.Spec[string]{
+	Key: "provider_surfe", Env: providerModeEnv, Type: config.String, Default: config.Some("live"),
+	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
+	Doc:   "Enrichment provider: live, offline or off; an unknown value fails the boot.",
+})
 
 // offlinePollsBeforeDone makes the fake's polled transport visible on a dev
 // stack: two pending polls before it completes, so in_progress is a state a
@@ -57,7 +62,7 @@ const offlinePollsBeforeDone = 2
 // unknown value is still a boot error — a typo must not silently disable a
 // feature an operator asked for, nor silently choose the wrong vendor.
 func ProviderRegistryFromEnv(now func() time.Time, env config.Lookup) (*integrations.Registry, bool, error) {
-	switch mode := strings.ToLower(strings.TrimSpace(env(ProviderModeEnv))); mode {
+	switch mode := strings.ToLower(strings.TrimSpace(env(providerModeEnv))); mode {
 	case "off":
 		return nil, false, nil
 	case "offline":
@@ -73,6 +78,6 @@ func ProviderRegistryFromEnv(now func() time.Time, env config.Lookup) (*integrat
 		}
 		return reg, true, nil
 	default:
-		return nil, false, fmt.Errorf("compose: %s=%q is not a provider mode (off, offline, live)", ProviderModeEnv, mode)
+		return nil, false, fmt.Errorf("compose: %s=%q is not a provider mode (off, offline, live)", providerModeEnv, mode)
 	}
 }

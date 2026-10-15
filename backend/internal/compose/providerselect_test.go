@@ -22,7 +22,7 @@ import (
 )
 
 func TestAnUnconfiguredInstallationStillOffersTheProviderSurface(t *testing.T) {
-	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: ""}))
+	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{providerModeEnv: ""}))
 	if err != nil {
 		t.Fatalf("the default mode failed to boot: %v", err)
 	}
@@ -44,13 +44,13 @@ func TestBootingTheLiveAdapterCallsNothing(t *testing.T) {
 	// A URL that would fail loudly if anything dialled it. The adapter's own
 	// host is a constant, so this is belt-and-braces: the assertion that
 	// matters is that New() returns without touching the network at all.
-	if _, _, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: "live"})); err != nil {
+	if _, _, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{providerModeEnv: "live"})); err != nil {
 		t.Fatalf("registering the live adapter failed: %v", err)
 	}
 }
 
 func TestOffRegistersNothingAndUnknownModesRefuseToBoot(t *testing.T) {
-	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: "off"}))
+	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{providerModeEnv: "off"}))
 	if err != nil {
 		t.Fatalf("off failed to boot: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestOffRegistersNothingAndUnknownModesRefuseToBoot(t *testing.T) {
 
 	// A typo must not silently disable a feature an operator asked for, nor
 	// silently pick a different vendor.
-	if _, _, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: "surfe"})); err == nil {
+	if _, _, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{providerModeEnv: "surfe"})); err == nil {
 		t.Error("an unrecognised mode booted anyway; a typo would silently change which provider this installation talks to")
 	}
 }
@@ -68,7 +68,7 @@ func TestOffRegistersNothingAndUnknownModesRefuseToBoot(t *testing.T) {
 // The offline fake stays reachable by name: it is what the dev stack and the
 // acceptance walk run against, and it must never be what a plain boot picks.
 func TestOfflineIsOptInOnly(t *testing.T) {
-	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: "offline"}))
+	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{providerModeEnv: "offline"}))
 	if err != nil || !configured {
 		t.Fatalf("offline failed to register: configured=%v err=%v", configured, err)
 	}
