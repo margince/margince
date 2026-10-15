@@ -29,7 +29,7 @@ func namesCorroborate(a, b string) bool {
 		return givenNamesAgree(givenA, givenB)
 	}
 	// A suffix or a title kept by one source can push the family name out of
-	// reach while the whole name still reads as one contact.
+	// reach. The whole name may still read as one contact.
 	return wholeNamesAgree(givenA, familyA, givenB, familyB)
 }
 

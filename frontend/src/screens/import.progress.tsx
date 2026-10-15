@@ -68,7 +68,7 @@ export function workerSilent(run: ImportRun): boolean {
 
 /**
  * True when the progress panel shows its own notice for a run that stopped
- * moving, so a screen around it must not say the same again.
+ * moving. A screen around it must not say the same again.
  */
 export function panelStalled(run: ImportRun): boolean {
   const queued = run.started_at === undefined && run.phase === undefined;
