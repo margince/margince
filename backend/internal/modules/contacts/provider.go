@@ -26,7 +26,15 @@ import (
 // Provider answers the datasource verbs for contact|company|lead|
 // relationship|partner.
 type Provider struct {
-	store *Store
+	store       *Store
+	listMembers storekit.ListMemberFilterResolver
+}
+
+// WithListMembers lets a list narrow to one list's members, through the
+// resolver the HTTP door uses. Compose injects it while lists are on.
+func (p *Provider) WithListMembers(resolve storekit.ListMemberFilterResolver) *Provider {
+	p.listMembers = resolve
+	return p
 }
 
 // NewProvider builds this module's system-of-record provider over a
@@ -136,6 +144,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := contactListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, contactEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListContacts(ctx, in)
 		return pageOf(datasource.EntityContact, rows, page, err, func(v crmcontracts.Contact) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version
@@ -145,6 +158,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := companyListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, companyEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListCompanies(ctx, in)
 		return pageOf(datasource.EntityCompany, rows, page, err,
 			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
@@ -153,6 +171,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := leadListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, leadEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListLeads(ctx, in)
 		return pageOf(datasource.EntityLead, rows, page, err, func(v crmcontracts.Lead) (openapi_types.UUID, *int64) {
 			return v.Id, v.Version

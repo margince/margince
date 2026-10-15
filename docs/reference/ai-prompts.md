@@ -217,7 +217,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `agent_loop` / `morning_brief`
 
-`system 10,555 B (~2,638 tok)`: rules 10,273 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 11,187 B (~2,796 tok)`: rules 10,905 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -257,7 +257,7 @@ Available tools:
 - catch_me_up_on — Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting: the recent activity and related records in one picture, with the evidence each part rests on. Built around ONE record you name; everything it reports carries a source, and what cannot be evidenced is absent rather than inferred. Each item carries the record_type and record_id a follow-up call acts on. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
   input schema: {"properties":{"max_items":{"maximum":20,"minimum":1,"type":"integer"},"project_id":{"description":"Keep only what is filed under this project or under none","format":"uuid","type":"string"},"record_id":{"description":"The record to build around. Give this or record_name, not both.","format":"uuid","type":"string"},"record_name":{"description":"The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.","type":"string"},"record_type":{"enum":["contact","company","deal","lead","project","activity"],"type":"string"}},"required":["record_type"],"type":"object"}
 - list_records — Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. A result's `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned.
-  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"active":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"from_contact_id":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"locale":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project","product","offer_template"],"type":"string"}},"required":["record_type"],"type":"object"}
+  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"active":{"type":"string"},"ai_written":{"type":"string"},"captured_by_kind":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"from_contact_id":{"type":"string"},"include_archived":{"type":"string"},"industry":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"list_id":{"type":"string"},"locale":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"owner_team_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"size_band":{"type":"string"},"sla_state":{"type":"string"},"sort":{"type":"string"},"source":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"},"unassigned":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project","product","offer_template"],"type":"string"}},"required":["record_type"],"type":"object"}
 - read_brief — Read the ranked queue the user you act for sees when they open their morning brief — the deals the workspace decided are worth their attention today, in order, with the rows behind each ranking. It re-reads the last assembled run rather than building a new one, so its as_of says how current it is, and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or snoozing an item is theirs alone. Each item names a deal_id and its evidence_ids; read those to cite what the ranking rested on rather than restating the item's own summary.
   input schema: {"properties":{},"type":"object"}
 - read_record — Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned.
@@ -402,12 +402,18 @@ Available tools:
             },
             "filters": {
               "additionalProperties": false,
-              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"
                 },
                 "active": {
+                  "type": "string"
+                },
+                "ai_written": {
+                  "type": "string"
+                },
+                "captured_by_kind": {
                   "type": "string"
                 },
                 "commercial_motion": {
@@ -425,10 +431,19 @@ Available tools:
                 "from_contact_id": {
                   "type": "string"
                 },
+                "include_archived": {
+                  "type": "string"
+                },
+                "industry": {
+                  "type": "string"
+                },
                 "key": {
                   "type": "string"
                 },
                 "lifecycle": {
+                  "type": "string"
+                },
+                "list_id": {
                   "type": "string"
                 },
                 "locale": {
@@ -438,6 +453,9 @@ Available tools:
                   "type": "string"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "owner_team_id": {
                   "type": "string"
                 },
                 "partner_attribution": {
@@ -464,6 +482,18 @@ Available tools:
                 "relationship_type": {
                   "type": "string"
                 },
+                "size_band": {
+                  "type": "string"
+                },
+                "sla_state": {
+                  "type": "string"
+                },
+                "sort": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
                 "stage_id": {
                   "type": "string"
                 },
@@ -477,6 +507,9 @@ Available tools:
                   "type": "string"
                 },
                 "tag_mode": {
+                  "type": "string"
+                },
+                "unassigned": {
                   "type": "string"
                 }
               },
@@ -612,7 +645,7 @@ Available tools:
 
 ### `agent_loop` / `overnight_at_risk_sweep`
 
-`system 14,544 B (~3,636 tok)`: rules 14,262 B · boundary 282 B · after boundary 0 B · **cacheable 98%**
+`system 15,176 B (~3,794 tok)`: rules 14,894 B · boundary 282 B · after boundary 0 B · **cacheable 98%**
 
 <details><summary>system prompt</summary>
 
@@ -652,7 +685,7 @@ Available tools:
 - catch_me_up_on — Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting: the recent activity and related records in one picture, with the evidence each part rests on. Built around ONE record you name; everything it reports carries a source, and what cannot be evidenced is absent rather than inferred. Each item carries the record_type and record_id a follow-up call acts on. occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
   input schema: {"properties":{"max_items":{"maximum":20,"minimum":1,"type":"integer"},"project_id":{"description":"Keep only what is filed under this project or under none","format":"uuid","type":"string"},"record_id":{"description":"The record to build around. Give this or record_name, not both.","format":"uuid","type":"string"},"record_name":{"description":"The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.","type":"string"},"record_type":{"enum":["contact","company","deal","lead","project","activity"],"type":"string"}},"required":["record_type"],"type":"object"}
 - list_records — Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by the filters this workspace publishes for that record_type, which the schema lists per type, and it answers ONE page: the set continues past it. Keep next_cursor and pass it back to read the next page — a second call without it re-reads the first one. A result's `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned.
-  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"active":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"from_contact_id":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"locale":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project","product","offer_template"],"type":"string"}},"required":["record_type"],"type":"object"}
+  input schema: {"properties":{"cursor":{"description":"Keyset cursor from a previous page's next_cursor","type":"string"},"filters":{"description":"Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.","properties":{"acquisition_source":{"type":"string"},"active":{"type":"string"},"ai_written":{"type":"string"},"captured_by_kind":{"type":"string"},"commercial_motion":{"type":"string"},"company_id":{"type":"string"},"domain":{"type":"string"},"forecast_category":{"type":"string"},"from_contact_id":{"type":"string"},"include_archived":{"type":"string"},"industry":{"type":"string"},"key":{"type":"string"},"lifecycle":{"type":"string"},"list_id":{"type":"string"},"locale":{"type":"string"},"min_score":{"type":"string"},"owner_id":{"type":"string"},"owner_team_id":{"type":"string"},"partner_attribution":{"type":"string"},"partner_company_id":{"type":"string"},"partner_sourced":{"type":"string"},"phase":{"type":"string"},"pipeline_id":{"type":"string"},"priority":{"type":"string"},"project_id":{"type":"string"},"relationship_type":{"type":"string"},"size_band":{"type":"string"},"sla_state":{"type":"string"},"sort":{"type":"string"},"source":{"type":"string"},"stage_id":{"type":"string"},"stalled":{"type":"string"},"status":{"type":"string"},"tag_id":{"type":"string"},"tag_mode":{"type":"string"},"unassigned":{"type":"string"}},"type":"object"},"limit":{"maximum":50,"minimum":1,"type":"integer"},"record_type":{"enum":["contact","company","deal","lead","project","product","offer_template"],"type":"string"}},"required":["record_type"],"type":"object"}
 - log_activity — Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a contact, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which waits for the user's yes when it files under a project. Keep the activity id — draft_outbound and send_outbound identify a conversation by it.
   input schema: {"properties":{"attendee_user_ids":{"description":"Meeting or call only: the workspace members who attended besides you, ids from read_directory (list: colleagues). The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused.","items":{"format":"uuid","type":"string"},"maxItems":25,"type":"array"},"body":{"description":"Prose a colleague reads. Same language rule as subject.","type":"string"},"channel_provider":{"description":"Required when kind is \"message\", else refused; a provider read_directory (list: channel_providers) names.","type":"string"},"direction":{"enum":["inbound","outbound"],"type":"string"},"due_at":{"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.","format":"date-time","type":"string"},"idempotency_key":{"maxLength":255,"type":"string"},"kind":{"enum":["email","call","meeting","note","task","message"],"type":"string"},"links":{"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.","items":{"properties":{"entity_id":{"format":"uuid","type":"string"},"entity_type":{"enum":["contact","company","deal","lead","project"],"type":"string"}},"required":["entity_type","entity_id"],"type":"object"},"type":"array"},"occurred_at":{"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.","format":"date-time","type":"string"},"source_id":{"type":"string"},"source_system":{"type":"string"},"subject":{"description":"Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.","type":"string"}},"required":["kind"],"type":"object"}
 - read_record — Read one record's own stored fields — the values a reader would see on its detail page — when you already know which record you mean. It returns that record and nothing around it: no timeline, no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been happening on the record rather than what it currently says. Keep the version from the result and pass it back as if_version on a later update, so a write is refused rather than silently overwriting a change made in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than advising an approach as though the record were unowned.
@@ -760,12 +793,18 @@ Available tools:
             },
             "filters": {
               "additionalProperties": false,
-              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"
                 },
                 "active": {
+                  "type": "string"
+                },
+                "ai_written": {
+                  "type": "string"
+                },
+                "captured_by_kind": {
                   "type": "string"
                 },
                 "commercial_motion": {
@@ -783,10 +822,19 @@ Available tools:
                 "from_contact_id": {
                   "type": "string"
                 },
+                "include_archived": {
+                  "type": "string"
+                },
+                "industry": {
+                  "type": "string"
+                },
                 "key": {
                   "type": "string"
                 },
                 "lifecycle": {
+                  "type": "string"
+                },
+                "list_id": {
                   "type": "string"
                 },
                 "locale": {
@@ -796,6 +844,9 @@ Available tools:
                   "type": "string"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "owner_team_id": {
                   "type": "string"
                 },
                 "partner_attribution": {
@@ -822,6 +873,18 @@ Available tools:
                 "relationship_type": {
                   "type": "string"
                 },
+                "size_band": {
+                  "type": "string"
+                },
+                "sla_state": {
+                  "type": "string"
+                },
+                "sort": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
                 "stage_id": {
                   "type": "string"
                 },
@@ -835,6 +898,9 @@ Available tools:
                   "type": "string"
                 },
                 "tag_mode": {
+                  "type": "string"
+                },
+                "unassigned": {
                   "type": "string"
                 }
               },

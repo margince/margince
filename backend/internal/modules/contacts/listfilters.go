@@ -28,6 +28,7 @@ package contacts
 // number at all.
 
 import (
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -48,20 +49,55 @@ const (
 	filterMinScore         = "min_score"
 	filterPartnerRole      = "partner_role"
 	filterCertStatus       = "cert_status"
+	filterCompanyID        = "company_id"
+	filterOwnerTeamID      = "owner_team_id"
+	filterUnassigned       = "unassigned"
+	filterIncludeArchived  = "include_archived"
+	filterSort             = "sort"
+	filterCapturedByKind   = "captured_by_kind"
+	filterAiWritten        = "ai_written"
+	filterIndustry         = "industry"
+	filterSizeBand         = "size_band"
+	filterSource           = "source"
+	filterSLAState         = "sla_state"
+	filterListID           = "list_id"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
-	filterOwnerID: storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
-	filterTag:     storekit.FilterIDList[ids.TagKind](func(in *ListContactsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterListID: storekit.FilterID(func(in *ListContactsInput, id *ids.ID[ids.ListKind]) {
+		member := id.UUID
+		in.MemberOf = &member
+	}),
+	filterOwnerID:         storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterOwnerTeamID:     storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:      storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
+	filterCompanyID:       storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
+	filterCapturedByKind:  storekit.FilterWord(func(in *ListContactsInput, v *string) { in.CapturedByKind = v }),
+	filterAiWritten:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.AiWritten = v }),
+	filterTag:             storekit.FilterIDList[ids.TagKind](func(in *ListContactsInput, v []ids.UUID) { in.TagIDs = v }),
 	filterTagMode: storekit.FilterWord(func(in *ListContactsInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
 }
 
 var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
-	filterDomain:    storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
-	filterLifecycle: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
-	filterOwnerID:   storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
+	filterListID: storekit.FilterID(func(in *ListCompaniesInput, id *ids.ID[ids.ListKind]) {
+		member := id.UUID
+		in.MemberOf = &member
+	}),
+	filterOwnerTeamID:     storekit.FilterID(func(in *ListCompaniesInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:      storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.Unassigned = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Sort = v }),
+	filterCapturedByKind:  storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.CapturedByKind = v }),
+	filterAiWritten:       storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.AiWritten = v }),
+	filterIndustry:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Industry = v }),
+	filterSizeBand:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SizeBand = v }),
+	filterDomain:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
+	filterLifecycle:       storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
+	filterOwnerID:         storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
 	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
@@ -79,6 +115,21 @@ var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
 }
 
 var leadListFilters = storekit.FilterSet[ListLeadsInput]{
+	filterListID: storekit.FilterID(func(in *ListLeadsInput, id *ids.ID[ids.ListKind]) {
+		member := id.UUID
+		in.MemberOf = &member
+	}),
+	filterOwnerTeamID:     storekit.FilterID(func(in *ListLeadsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:      storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.Unassigned = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Sort = v }),
+	filterCapturedByKind:  storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CapturedByKind = v }),
+	filterAiWritten:       storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.AiWritten = v }),
+	filterSource:          storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Source = v }),
+	filterSLAState: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
+		state := crmcontracts.ListLeadsParamsSlaState(*v)
+		in.SLAState = &state
+	}),
 	filterMinScore: storekit.FilterNumber(func(in *ListLeadsInput, v *int) { in.MinScore = v }),
 	filterOwnerID:  storekit.FilterID(func(in *ListLeadsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterStatus:   storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Status = v }),

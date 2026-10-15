@@ -12,6 +12,9 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // A passport has the same functionality on both doors. So each path and query
@@ -21,16 +24,24 @@ import (
 func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	arguments := map[string]map[string]bool{}
+	var listSchema json.RawMessage
 	for _, spec := range registry.Specs() {
 		arguments[spec.Name] = argumentNames(t, spec.Name, spec.InputSchema)
+		if spec.Name == "list_records" {
+			listSchema = spec.InputSchema
+		}
 	}
 	params := routeParameters(t)
+	stores := NewProvider(nil)
 	var gaps []string
 	checked := 0
 	for route, policy := range agentPolicies {
 		args, registered := arguments[policy.Tool]
 		if policy.Access != accessTool || !registered {
 			continue // TestEveryDeclaredToolVerbIsRegistered owns an unregistered verb.
+		}
+		if policy.Tool == "list_records" && policy.RecordType != "" {
+			args = listArguments(t, listSchema, stores.ListFilters(datasource.EntityType(policy.RecordType)))
 		}
 		names, known := params[route]
 		if !known {
@@ -48,7 +59,7 @@ func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 	}
 	sort.Strings(gaps)
 	for _, gap := range gaps {
-		if slices.Contains(parameterGapsPendingParity, gap) {
+		if answeredByAnotherVerb.Waived(t, gap) || slices.Contains(parameterGapsPendingParity, gap) {
 			continue
 		}
 		route, name, _ := strings.Cut(gap, "#")
@@ -56,6 +67,7 @@ func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 			"MCP cannot. Add the argument to the verb (top level or under filters), or point the route at "+
 			"a verb that takes it.", route, name, agentPolicies[route].Tool)
 	}
+	answeredByAnotherVerb.AssertAllMatched(t)
 	for _, waived := range parameterGapsPendingParity {
 		if !slices.Contains(gaps, waived) {
 			t.Errorf("%s is waived but no longer a gap; remove it from parameterGapsPendingParity", waived)
@@ -83,6 +95,27 @@ func TestNoRouteNamesARouter(t *testing.T) {
 				"serves this route (one of %v)", route, policy.Tool, targets)
 		}
 	}
+}
+
+// listArguments narrows list_records to what one record type is listed by. Its
+// filters object publishes every type's filters at once. Checked against all of
+// them, one type's filter would hide another type's gap.
+func listArguments(t *testing.T, schema json.RawMessage, filters []string) map[string]bool {
+	t.Helper()
+	var parsed struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(schema, &parsed); err != nil {
+		t.Fatalf("list_records publishes an input schema that is not JSON: %v", err)
+	}
+	narrowed := map[string]bool{}
+	for arg := range parsed.Properties {
+		narrowed[arg] = true
+	}
+	for _, filter := range filters {
+		narrowed[filter] = true
+	}
+	return narrowed
 }
 
 // pagingParameters are the ones a verb may answer with its own page size.
@@ -218,6 +251,13 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 	return byRoute
 }
 
+// answeredByAnotherVerb are route parameters whose question an agent asks
+// through some other verb, so the route's own verb need not take them.
+var answeredByAnotherVerb = gatekit.Waive(map[string]string{
+	"GET /v1/companies#id": "a screen's batch read of companies it holds ids for; an agent reads each by id " +
+		"through read_record (gates/seamfilters_test.go rules it out of list_records)",
+})
+
 // parameterGapsPendingParity are the route parameters no verb takes yet, as
 // "METHOD /v1/route#parameter". The list only shrinks: an entry that stops
 // being a gap fails the test above.
@@ -254,31 +294,16 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/approvals#target_entity_id",
 	"GET /v1/approvals#target_entity_type",
 	"GET /v1/commissions#deal_id",
-	"GET /v1/companies#ai_written",
-	"GET /v1/companies#captured_by_kind",
-	"GET /v1/companies#id",
+	"GET /v1/commissions#partner_company_id",
+	"GET /v1/commissions#status",
 	"GET /v1/companies#include_anchor",
-	"GET /v1/companies#include_archived",
-	"GET /v1/companies#industry",
-	"GET /v1/companies#list_id",
-	"GET /v1/companies#owner_team_id",
 	"GET /v1/companies#q",
-	"GET /v1/companies#size_band",
-	"GET /v1/companies#sort",
-	"GET /v1/companies#unassigned",
 	"GET /v1/companies/{id}/documents#category",
 	"GET /v1/companies/{id}/documents#contract_id",
 	"GET /v1/companies/{id}/documents#doc_state",
 	"GET /v1/companies/{id}/documents#pinned_only",
 	"GET /v1/companies/{id}/site-reads/{readId}#readId",
-	"GET /v1/contacts#ai_written",
-	"GET /v1/contacts#captured_by_kind",
-	"GET /v1/contacts#include_archived",
-	"GET /v1/contacts#list_id",
-	"GET /v1/contacts#owner_team_id",
 	"GET /v1/contacts#q",
-	"GET /v1/contacts#sort",
-	"GET /v1/contacts#unassigned",
 	"GET /v1/custom-fields#object",
 	"GET /v1/custom-fields#sort",
 	"GET /v1/custom-fields#status",
@@ -292,12 +317,7 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/deal-rooms/{id}/participants#id",
 	"GET /v1/deal-rooms/{id}/threads#document_id",
 	"GET /v1/deal-rooms/{id}/threads#id",
-	"GET /v1/deals#include_archived",
-	"GET /v1/deals#list_id",
-	"GET /v1/deals#owner_team_id",
 	"GET /v1/deals#q",
-	"GET /v1/deals#sort",
-	"GET /v1/deals#unassigned",
 	"GET /v1/deals/{id}/documents#category",
 	"GET /v1/deals/{id}/documents#include_hidden",
 	"GET /v1/deals/{id}/offers#id",
@@ -305,34 +325,17 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/deals/{id}/status#facts_only",
 	"GET /v1/deals/{id}/status#refresh",
 	"GET /v1/imports/format#lang",
-	"GET /v1/leads#ai_written",
-	"GET /v1/leads#captured_by_kind",
-	"GET /v1/leads#include_archived",
-	"GET /v1/leads#list_id",
-	"GET /v1/leads#owner_team_id",
 	"GET /v1/leads#q",
-	"GET /v1/leads#sla_state",
-	"GET /v1/leads#sort",
-	"GET /v1/leads#source",
-	"GET /v1/leads#unassigned",
 	"GET /v1/lists#include_archived",
 	"GET /v1/lists#list_type",
 	"GET /v1/lists#q",
 	"GET /v1/lists/{id}/members#entity_id",
-	"GET /v1/offer-templates#include_archived",
-	"GET /v1/offer-templates#sort",
 	"GET /v1/partners#cert_status",
 	"GET /v1/partners#partner_role",
 	"GET /v1/partners#sort",
 	"GET /v1/pipelines#include_archived",
-	"GET /v1/products#include_archived",
 	"GET /v1/products#q",
-	"GET /v1/products#sort",
-	"GET /v1/projects#include_archived",
-	"GET /v1/projects#owner_team_id",
 	"GET /v1/projects#q",
-	"GET /v1/projects#sort",
-	"GET /v1/projects#unassigned",
 	"GET /v1/records/{entity_type}/{entity_id}/tags#entity_id",
 	"GET /v1/records/{entity_type}/{entity_id}/tags#entity_type",
 	"GET /v1/search#per_type",

@@ -23,7 +23,15 @@ import (
 
 // Provider answers the datasource verbs for deal and the catalog.
 type Provider struct {
-	store *Store
+	store       *Store
+	listMembers storekit.ListMemberFilterResolver
+}
+
+// WithListMembers lets the deal list narrow to one list's members, through
+// the resolver the HTTP door uses. Compose injects it while lists are on.
+func (p *Provider) WithListMembers(resolve storekit.ListMemberFilterResolver) *Provider {
+	p.listMembers = resolve
+	return p
 }
 
 // NewProvider wires the datasource verbs over the same store the transport
@@ -74,6 +82,11 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		if err := dealListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
+		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, dealListEntity)
+		if err != nil {
+			return nil, "", false, err
+		}
+		in.Membership = membership
 		rows, page, err := p.store.ListDeals(ctx, in)
 		if err != nil {
 			return nil, "", false, err

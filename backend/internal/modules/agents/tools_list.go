@@ -159,24 +159,49 @@ func (t listRecords) publishedFilterNames() []string {
 
 // describeFilters writes the per-type vocabulary into the one place a caller
 // reads it: which record type takes which key, and the operand each takes.
+// Filters several types take alike sit on one line headed by all of them
+// (contact/deal), because the listing rides in every prompt against a ceiling.
 func (t listRecords) describeFilters() string {
-	lines := make([]string, 0, len(listRecordTypes)+2)
-	lines = append(lines, "Narrow the list. Every operand is a string. Each record_type takes only its own:")
+	lines := []string{"Narrow the list. Every operand is a string. Each record_type takes only its own:"}
 	used := map[string]bool{}
+	takers := map[string][]string{}
 	for _, recordType := range listRecordTypes {
-		names := make([]string, 0, len(t.filters[recordType]))
 		for _, filter := range t.filters[recordType] {
-			names = append(names, filter.describe())
 			used[filter.Type] = true
+			takers[filter.describe()] = append(takers[filter.describe()], recordType)
 		}
-		if len(names) == 0 {
+	}
+	shared := map[string][]string{}
+	for _, recordType := range listRecordTypes {
+		var own []string
+		for _, filter := range t.filters[recordType] {
+			if types := takers[filter.describe()]; len(types) > 1 {
+				shared[strings.Join(types, "/")] = appendOnce(shared[strings.Join(types, "/")], filter.describe())
+				continue
+			}
+			own = append(own, filter.describe())
+		}
+		switch {
+		case len(t.filters[recordType]) == 0:
 			lines = append(lines, recordType+" — none; it can only be listed whole")
-			continue
+		case len(own) > 0:
+			lines = append(lines, recordType+" — "+strings.Join(own, ", "))
+		default:
+			lines = append(lines, recordType+" — only the shared lines")
 		}
-		lines = append(lines, recordType+" — "+strings.Join(names, ", "))
+	}
+	for _, types := range slices.Sorted(maps.Keys(shared)) {
+		lines = append(lines, types+" — "+strings.Join(shared[types], ", "))
 	}
 	lines = append(lines, operandKey(used)...)
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
+}
+
+func appendOnce(list []string, item string) []string {
+	if slices.Contains(list, item) {
+		return list
+	}
+	return append(list, item)
 }
 
 // operandCodes abbreviates the non-string operand types, and says what each

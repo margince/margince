@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 14,
     "permitted_but_never_required": 11,
-    "tokens_served_but_never_driven": 5018,
+    "tokens_served_but_never_driven": 5176,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1787,7 +1787,7 @@
   "tools": [
     {
       "name": "list_records",
-      "tokens": 854,
+      "tokens": 1012,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

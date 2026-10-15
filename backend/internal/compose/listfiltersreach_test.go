@@ -17,6 +17,7 @@ package compose
 // narrows.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -65,28 +66,31 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 }
 
 // publishedFilterLine is what the tool tells a caller ONE record type may be
-// narrowed by. The schema carries the per-type vocabulary as prose, because the
-// names are not type-independent — `status` is one of open|won|lost on a deal
-// and new|working|… on a lead — so this reads back the line for the type asked
-// about rather than the whole document.
+// narrowed by. The schema carries the per-type vocabulary as prose, because a
+// name means different things per type: `status` is open|won|lost on a deal.
+// Each line is headed by the types that take it, one or several joined by "/".
+// This joins every line whose heading names the type asked about.
 func publishedFilterLine(t *testing.T, published, recordType string) string {
 	t.Helper()
-	const separator = " — "
-	opening := recordType + separator
-	start := strings.Index(published, opening)
-	if start < 0 {
+	segments := strings.Split(published, " — ")
+	var lines []string
+	for i := 0; i+1 < len(segments); i++ {
+		words := strings.Fields(segments[i])
+		if len(words) == 0 || !slices.Contains(strings.Split(words[len(words)-1], "/"), recordType) {
+			continue
+		}
+		body := segments[i+1]
+		if i+2 < len(segments) {
+			if boundary := strings.LastIndex(body, " "); boundary >= 0 {
+				body = body[:boundary]
+			}
+		}
+		lines = append(lines, body)
+	}
+	if len(lines) == 0 {
 		t.Fatalf("list_records publishes no filter line for %s at all:\n%s", recordType, published)
 	}
-	line := published[start+len(opening):]
-	// Each type's line runs to the next type's, which is the next occurrence of
-	// the same separator; the last one runs to the end of the description.
-	if end := strings.Index(line, separator); end >= 0 {
-		// Back up to the start of the name that separator belongs to.
-		if boundary := strings.LastIndex(line[:end], " "); boundary >= 0 {
-			line = line[:boundary]
-		}
-	}
-	return line
+	return strings.Join(lines, ", ")
 }
 
 // The one record type the enumeration deliberately excludes stays excluded. A

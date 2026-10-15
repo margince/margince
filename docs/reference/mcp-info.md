@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.6 KB |
+| Tool catalog | 176.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45839 |
+| Approx. wire tokens | 45997 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
-| Input schemas | 52.8 KB | 30% | Yes, every step |
+| Input schemas | 53.5 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **101.1 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **101.7 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -82,7 +82,7 @@ descriptions and input schemas are what each step pays for.
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 854 |
+| [`list_records`](#list_records) | List records | yes |  | 1012 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
@@ -4607,12 +4607,18 @@ advising an approach as though the record were unowned.
     },
     "filters": {
       "additionalProperties": false,
-      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
       "properties": {
         "acquisition_source": {
           "type": "string"
         },
         "active": {
+          "type": "string"
+        },
+        "ai_written": {
+          "type": "string"
+        },
+        "captured_by_kind": {
           "type": "string"
         },
         "commercial_motion": {
@@ -4630,10 +4636,19 @@ advising an approach as though the record were unowned.
         "from_contact_id": {
           "type": "string"
         },
+        "include_archived": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
         "key": {
           "type": "string"
         },
         "lifecycle": {
+          "type": "string"
+        },
+        "list_id": {
           "type": "string"
         },
         "locale": {
@@ -4643,6 +4658,9 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "owner_id": {
+          "type": "string"
+        },
+        "owner_team_id": {
           "type": "string"
         },
         "partner_attribution": {
@@ -4669,6 +4687,18 @@ advising an approach as though the record were unowned.
         "relationship_type": {
           "type": "string"
         },
+        "size_band": {
+          "type": "string"
+        },
+        "sla_state": {
+          "type": "string"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
         "stage_id": {
           "type": "string"
         },
@@ -4682,6 +4712,9 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "tag_mode": {
+          "type": "string"
+        },
+        "unassigned": {
           "type": "string"
         }
       },

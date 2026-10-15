@@ -85,6 +85,9 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) 
 // serving a lexically-ranked page under a semantic label.
 func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
+	if features.lists {
+		provider = provider.WithListMembers(NewCollectionsStore(pool).MemberFilter)
+	}
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),

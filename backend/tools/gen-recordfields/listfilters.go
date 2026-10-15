@@ -95,15 +95,23 @@ func operationsByID(paths map[string]map[string]yaml.Node) (map[string]*operatio
 	return byID, nil
 }
 
-// listFiltersFor reads one operation's INLINE query parameters. The $ref'd ones
-// (cursor, limit, sort, include_archived, captured_by_kind, ai_written) are the
-// contract's shared REST affordances rather than per-type filters: the tool
-// declares cursor and limit itself, and the rest are human list controls whose
-// meaning on an agent surface is a separate question from this one.
-func listFiltersFor(op *operation) []listFilter {
+// pagingParameters are the list controls the tool declares itself.
+var pagingParameters = map[string]bool{"cursor": true, "limit": true}
+
+// listFiltersFor reads one operation's query parameters, the shared ones given
+// by $ref included. A passport lists by sort, include_archived and the capture
+// filters on REST, so it lists by them on MCP too.
+func listFiltersFor(op *operation, shared map[string]*parameter) ([]listFilter, error) {
 	var filters []listFilter
 	for _, p := range op.Parameters {
-		if p.Ref != "" || p.In != "query" || p.Schema == nil {
+		if p.Ref != "" {
+			resolved, ok := shared[strings.TrimPrefix(p.Ref, "#/components/parameters/")]
+			if !ok {
+				return nil, fmt.Errorf("%s names parameter %s, which components.parameters does not declare", op.OperationID, p.Ref)
+			}
+			p = resolved
+		}
+		if p.In != "query" || p.Schema == nil || pagingParameters[p.Name] {
 			continue
 		}
 		if _, excluded := notAFieldFilter[p.Name]; excluded {
@@ -116,7 +124,7 @@ func listFiltersFor(op *operation) []listFilter {
 		})
 	}
 	sort.Slice(filters, func(i, j int) bool { return filters[i].Name < filters[j].Name })
-	return filters
+	return filters, nil
 }
 
 // firstTypeName reduces a parameter's declared type to the one JSON type name
@@ -132,7 +140,7 @@ func firstTypeName(schema *node) string {
 
 // renderListFilters emits the per-record_type filter table list_records builds
 // its InputSchema from.
-func renderListFilters(b *strings.Builder, paths map[string]map[string]yaml.Node) error {
+func renderListFilters(b *strings.Builder, shared map[string]*parameter, paths map[string]map[string]yaml.Node) error {
 	byID, err := operationsByID(paths)
 	if err != nil {
 		return err
@@ -152,9 +160,12 @@ func renderListFilters(b *strings.Builder, paths map[string]map[string]yaml.Node
 			return fmt.Errorf("crm.yaml declares no operation %s (the list operation for %s)",
 				entry.operationID, entry.recordType)
 		}
-		filters := listFiltersFor(op)
+		filters, err := listFiltersFor(op, shared)
+		if err != nil {
+			return err
+		}
 		if len(filters) == 0 {
-			return fmt.Errorf("%s declares no inline query parameters, so %s could only be enumerated unfiltered",
+			return fmt.Errorf("%s declares no query parameters, so %s could only be enumerated unfiltered",
 				entry.operationID, entry.recordType)
 		}
 		b.WriteString("\t" + strconv.Quote(entry.recordType) + ": {\n")

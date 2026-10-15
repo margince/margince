@@ -28,11 +28,15 @@ const (
 )
 
 var productListFilters = storekit.FilterSet[ListProductsInput]{
-	filterActive: storekit.FilterFlag(func(in *ListProductsInput, v *bool) { in.Active = v }),
+	filterActive:          storekit.FilterFlag(func(in *ListProductsInput, v *bool) { in.Active = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListProductsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListProductsInput, v *string) { in.Sort = v }),
 }
 
 var offerTemplateListFilters = storekit.FilterSet[ListOfferTemplatesInput]{
-	filterLocale: storekit.FilterWord(func(in *ListOfferTemplatesInput, v *string) { in.Locale = v }),
+	filterLocale:          storekit.FilterWord(func(in *ListOfferTemplatesInput, v *string) { in.Locale = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListOfferTemplatesInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListOfferTemplatesInput, v *string) { in.Sort = v }),
 }
 
 func (p *Provider) readCatalog(ctx context.Context, r datasource.EntityRef) (datasource.Record, error) {

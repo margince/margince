@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 179798,
+    "tool_catalog_bytes": 180430,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45839,
+    "approx_wire_tokens_total": 45997,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49400,
-      "input_schema_bytes": 54118,
+      "input_schema_bytes": 54750,
       "output_schema_bytes": 62541,
-      "description_plus_input_schema_bytes": 103518
+      "description_plus_input_schema_bytes": 104150
     }
   },
   "tools": {
@@ -4064,12 +4064,18 @@
             },
             "filters": {
               "additionalProperties": false,
-              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+              "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
               "properties": {
                 "acquisition_source": {
                   "type": "string"
                 },
                 "active": {
+                  "type": "string"
+                },
+                "ai_written": {
+                  "type": "string"
+                },
+                "captured_by_kind": {
                   "type": "string"
                 },
                 "commercial_motion": {
@@ -4087,10 +4093,19 @@
                 "from_contact_id": {
                   "type": "string"
                 },
+                "include_archived": {
+                  "type": "string"
+                },
+                "industry": {
+                  "type": "string"
+                },
                 "key": {
                   "type": "string"
                 },
                 "lifecycle": {
+                  "type": "string"
+                },
+                "list_id": {
                   "type": "string"
                 },
                 "locale": {
@@ -4100,6 +4115,9 @@
                   "type": "string"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "owner_team_id": {
                   "type": "string"
                 },
                 "partner_attribution": {
@@ -4126,6 +4144,18 @@
                 "relationship_type": {
                   "type": "string"
                 },
+                "size_band": {
+                  "type": "string"
+                },
+                "sla_state": {
+                  "type": "string"
+                },
+                "sort": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
                 "stage_id": {
                   "type": "string"
                 },
@@ -4139,6 +4169,9 @@
                   "type": "string"
                 },
                 "tag_mode": {
+                  "type": "string"
+                },
+                "unassigned": {
                   "type": "string"
                 }
               },

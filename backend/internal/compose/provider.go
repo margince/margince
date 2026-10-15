@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -434,67 +433,4 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
 	return module.ArchiveAt(ctx, in)
-}
-
-func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
-	switch in.Type {
-	case datasource.EntityContact, datasource.EntityCompany:
-		return p.contacts.Merge(ctx, in)
-	default:
-		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
-	}
-}
-
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
-	return p.deals.AdvanceDeal(ctx, in)
-}
-
-// StageSemantic feeds the advance_deal tier resolver (interfaces.md
-// §2.1) — part of the frozen v1 seam, resolved from pipeline config,
-// never from labels or request args.
-func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error) {
-	return p.deals.StageSemantic(ctx, stageID)
-}
-
-// PromoteLead is the features/01 §6.4 graduation — a cross-module
-// orchestration verb of the frozen v1 seam (interfaces.md §3), owned by
-// the contacts module's transaction and dispatched here.
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error) {
-	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
-}
-
-// Freshness in SoR-mode is trivially authoritative: there is no mirror
-// to go stale.
-func (p *Provider) Freshness(_ context.Context, _ datasource.EntityRef) (datasource.FreshnessInfo, error) {
-	return datasource.FreshnessInfo{LastSyncedAt: time.Now().UTC(), Authoritative: true}, nil
-}
-
-// ListObjects/ListFields expose the SoR-mode schema descriptors
-// (interfaces.md §3): static, versioned with the code (P11).
-func (p *Provider) ListObjects(context.Context) ([]datasource.ObjectDef, error) {
-	return schemaObjects, nil
-}
-
-func (p *Provider) ListFields(_ context.Context, entity datasource.EntityType) ([]datasource.FieldDef, error) {
-	fields, ok := schemaFields(entity)
-	if !ok {
-		return nil, &datasource.UnsupportedEntityError{Type: string(entity)}
-	}
-	return fields, nil
-}
-
-// RunReport executes a seam-level plan against the descriptor
-// vocabulary — the same engine the HTTP surface and the run_report
-// tool ride.
-func (p *Provider) RunReport(ctx context.Context, plan datasource.ReportPlan) (datasource.ReportResult, error) {
-	return p.reports.runAdHocPlan(ctx, plan)
-}
-
-// WithTranscriptEnqueue lets a transcript CREATED over this seam start its own
-// reading, the way one created over REST does. Without it the tool surface can
-// store a transcript and nothing reads it — which is how the extraction lane
-// came to hold zero rows while being fully built.
-func (p *Provider) WithTranscriptEnqueue(enqueue activities.TranscriptReadEnqueue) *Provider {
-	p.activities = p.activities.WithTranscriptEnqueue(enqueue)
-	return p
 }
