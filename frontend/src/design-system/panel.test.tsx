@@ -592,7 +592,9 @@ describe("the panel head stands at the height every panel shares, and grows only
     const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
     expect(padding).toMatch(/^var\(--space-\d+\) var\(--padPanel\)$/);
     const fine = tokenPx(spaceToken(padding));
-    expect(2 * fine + tokenPx("--controlHeight") + 1).toBeLessThanOrEqual(floor);
+    expect(2 * fine + tokenPx("--controlHeight") + 1).toBeLessThanOrEqual(
+      floor,
+    );
     const coarse = tokenPx(spaceToken(armPadding("pointer: coarse")));
     expect(2 * coarse + TOUCH_TARGET_PX + 1).toBeLessThanOrEqual(floor);
   });
@@ -635,7 +637,10 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(declaredValue(declared, "white-space"), selector).toBeUndefined();
     expect(declaredValue(declared, "text-overflow"), selector).toBeUndefined();
     expect(declaredValue(declared, "overflow"), selector).toBeUndefined();
-    expect(declaredValue(declared, "-webkit-line-clamp"), selector).toBeUndefined();
+    expect(
+      declaredValue(declared, "-webkit-line-clamp"),
+      selector,
+    ).toBeUndefined();
     expect(declaredValue(declared, "hyphens"), selector).toBe("auto");
     expect(declaredValue(declared, "min-width"), selector).toBe("0");
     // The push that keeps an action at the far end rides on the title, so a

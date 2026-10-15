@@ -207,7 +207,7 @@ export const LongTitleWraps: Story = {
   },
 };
 
-// German at a report tile's width: the verb no longer fits beside the title,
+// German at a report tile's width: the verb does not fit beside the title,
 // so it drops under it and the title keeps every word. `lang` lets a compound
 // break at a syllable.
 export const GermanTitleBesideAction: Story = {
