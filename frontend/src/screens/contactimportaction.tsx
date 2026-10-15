@@ -8,8 +8,8 @@ import { openActivityImport } from "./importaddress";
 
 /**
  * Starts an import of activities that all belong to this contact. Shown only
- * to a reader who may run an import: the same two grants the import page asks
- * for, so the verb never leads to a page that refuses them.
+ * to a reader who may run an import. It asks the same two grants as the import
+ * page, so the verb never leads to a page that refuses them.
  */
 export function ImportActivitiesAction({
   contactId,

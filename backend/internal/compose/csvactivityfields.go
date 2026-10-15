@@ -36,9 +36,9 @@ var activityStoredColumns = map[string]string{
 	activityTargetDuration: "duration_seconds",
 }
 
-// activityCreateFrom builds the create input for one checked activity row. The
-// idempotency key stays empty on purpose: the identity map is the one authority
-// on which row landed, and a source key would replay an archived row.
+// activityCreateFrom builds the create input for one checked activity row.
+// The idempotency key stays empty: the identity map is the one authority on
+// which row landed, and a source key would replay an archived row.
 func activityCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, source string) activities.LogActivityInput {
 	in := activities.LogActivityInput{
 		SourceSystem:    &sourceSystem,

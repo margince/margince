@@ -228,8 +228,8 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
 // the one name it carries. A contact's is its email address. A lead or a deal
-// has none a file can write, so it is found by ref or id and never by a name
-// that happens to be a company's.
+// has none a file can write. It is found by ref or id, never by a name that
+// happens to be a company's.
 func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
 	switch object {
 	case migration.ObjectContact:

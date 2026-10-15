@@ -30,8 +30,8 @@ const csvTargetAuthor = "author"
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
-// where it came from, a lost reason why the deal closed, and an activity's
-// type, direction and links what it was and about whom; a later file rewrites
+// where it came from. A lost reason is why the deal closed. An activity's type,
+// direction and links are what it was and about whom. A later file rewrites
 // none of them.
 func isCreateOnlyTarget(field string) bool {
 	switch field {

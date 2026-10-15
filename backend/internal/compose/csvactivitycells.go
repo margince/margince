@@ -3,8 +3,8 @@
 
 package compose
 
-// An activity row's own cells, read the way the activities store takes them:
-// the type as a kind, the timestamp with its zone, the duration in seconds.
+// An activity row's own cells, read the way the activities store takes them.
+// The type is a kind, the timestamp carries its zone, the duration is in seconds.
 // The kind rules are the store's own (activities.CheckKindFields).
 
 import (
@@ -80,9 +80,9 @@ func checkActivityType(fields map[string]string, typed map[string]any, _ time.Ti
 	return nil
 }
 
-// checkOccurredAt reads the timestamp: a day is midnight UTC, and any other
-// instant must carry its zone, because a time read in the server's zone is a
-// time nobody wrote. It converts to UTC so an unedited cell compares equal.
+// checkOccurredAt reads the timestamp: a day is midnight UTC. Any other instant
+// must carry its zone, because a time read in the server's zone is a time
+// nobody wrote. It converts to UTC so an unedited cell compares equal.
 func checkOccurredAt(fields map[string]string, typed map[string]any, now time.Time) *cellProblem {
 	raw, mapped := fields[activityTargetOccurredAt]
 	if !mapped {

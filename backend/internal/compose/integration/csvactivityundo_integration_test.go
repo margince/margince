@@ -165,8 +165,8 @@ func TestTheActivityArchiveReAsksUntouchedInsideItsTransaction(t *testing.T) {
 	}
 }
 
-// A re-import rewrites an activity under the approving user's own name, and
-// that write is the import's, so undoing the first run still archives the row.
+// A re-import rewrites an activity under the approving user's own name.
+// That write is the import's, so undoing the first run still archives the row.
 func TestUndoArchivesAnActivityALaterImportRewrote(t *testing.T) {
 	e := setupImportApp(t)
 	files := func(subject string) map[string]string {

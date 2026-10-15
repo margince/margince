@@ -364,15 +364,11 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	return in, nil
 }
 
-// optionalFieldsFrom carries the create wire's optional fields onto the input,
-// with the kind rules that only apply when their field is present: a request
-// acceptance belongs to a task, a host to a meeting. The meeting status and
+// optionalFieldsFrom carries the create wire's optional fields onto the input.
+// The kind rules apply only when their field is present: a request acceptance
+// belongs to a task, a host to a meeting. The meeting status and
 // duration rules are the pieces of CheckKindFields, asked where they were.
-//
-// Apart from logActivityInput because they are one group — every branch here is
-// "the caller said nothing, so leave it alone" — and holding them beside the
-// required fields put more of one function in a reader's head than the mapping
-// itself needed.
+// Every branch here means "the caller said nothing, so leave it alone".
 func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
 	if req.RequestActivityId != nil {
 		if string(req.Kind) != string(crmcontracts.ActivityKindTask) {
@@ -435,11 +431,8 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 }
 
 // importedProvenanceFrom takes what an importer keeps with a record it carried
-// across: the source system's own copy, how long it took, and the message's own
-// identity and addresses. Its kind is judged by the rule CheckKindFields holds.
-//
-// All of it was accepted on the wire and dropped before the store, which is the
-// defect this path closes.
+// across. That is the source system's own copy, how long it took, and the
+// message's own identity and addresses. Its kind is judged by the rule CheckKindFields holds.
 func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
 	in.Raw = req.Raw
 	if err := checkDurationKind(in.Kind, req.DurationSeconds); err != nil {

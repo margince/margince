@@ -11,10 +11,9 @@ import (
 // The wire mapper and the import ask it, so a request and a spreadsheet row are
 // refused for the same field with the same error.
 //
-// The order is the order a caller fixes things in: the kind, then what only a
-// meeting carries, then the transport, then the duration. The wire mapper asks
-// the same four checks one at a time, at the points where its own earlier
-// errors have always won.
+// The order is the order a caller fixes things in: the kind, what only a
+// meeting carries, the transport, then the duration. The wire mapper asks the
+// same four checks one at a time, where its own earlier errors win.
 func CheckKindFields(kind string, durationSeconds *int, meetingStatus *string, channelProvider string) error {
 	if err := checkKind(kind); err != nil {
 		return err

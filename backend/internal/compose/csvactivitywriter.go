@@ -70,9 +70,9 @@ func (w *csvWriters) activityBirthOf(row migration.Row, typed map[string]any) (a
 	return in, migration.Reason{}
 }
 
-// predictActivityCreate asks the activities store, without writing, the
-// refusals a filing meets outside the row's cells: a record the importer may
-// read but not attach to. The commit's own function answers the refusal.
+// predictActivityCreate asks the activities store, without writing, for the
+// refusals a filing meets outside the row's cells. One is a record the importer
+// may read but not attach to. The commit's own function answers the refusal.
 func (w *csvWriters) predictActivityCreate(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	in, why := w.activityBirthOf(row, typed)
 	if why.Code != "" {

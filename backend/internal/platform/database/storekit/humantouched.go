@@ -15,9 +15,10 @@ import (
 
 // AuditNotFromAnImport is the audit_log predicate (alias a) for a row a user
 // wrote, as against one an import run landed. A re-import's update carries the
-// approving user as its actor but is the import's own write, so it must not
-// make an earlier run's undo keep the row. A bulk change's batch is not an
-// import run and still counts. The undo's page check and HumanActedSince share it.
+// approving user as its actor but is the import's own write. It must not make
+// an earlier run's undo keep the row. A bulk change's batch is not an
+// import run and still counts. The undo's page check and HumanActedSince
+// share it.
 const AuditNotFromAnImport = `(a.batch_id IS NULL OR NOT EXISTS (SELECT 1 FROM import_run ir WHERE ir.id = a.batch_id))`
 
 // HumanActedSince reports whether a human has acted on one record after `at`.

@@ -74,8 +74,8 @@ func refuseNonActivityPreset(m migration.RunMapping) error {
 }
 
 // presetsAreVisible asks, with the caller's own row scope, whether each preset
-// record may be read. A record the caller cannot see answers not-found exactly
-// as one that does not exist, so a preset discloses nothing.
+// record may be read. A record the caller cannot see answers not-found like one
+// that does not exist, so a preset discloses nothing.
 func (h importHandlers) presetsAreVisible(ctx context.Context, links []migration.PresetLink) error {
 	for _, link := range links {
 		id, err := ids.Parse(link.ID)
@@ -110,9 +110,9 @@ func (p presetSet) types() []string {
 	return out
 }
 
-// resolvePreset answers the links every row carries, or the reason none can:
-// a record that has since gone out of the importer's row scope refuses each
-// row, as a links cell naming it would.
+// resolvePreset answers the links every row carries, or the reason none can.
+// A record that has gone out of the importer's row scope refuses each row, as
+// a links cell naming it would.
 func (w *csvWriters) resolvePreset(ctx context.Context) ([]activities.ActivityLinkInput, *migration.Reason, error) {
 	if w.preset.checked {
 		return w.preset.found, w.preset.missing, nil

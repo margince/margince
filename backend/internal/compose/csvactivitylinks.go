@@ -5,8 +5,8 @@ package compose
 
 // The links cell of an activity row: type:key pairs naming the records the
 // activity is filed under. Each key is found by the run's one resolver, so the
-// dry run and the commit find the same record, and the file's own rows of
-// another type count before they exist.
+// dry run and the commit find the same record. The file's own rows of another
+// type count before they exist.
 
 import (
 	"cmp"
@@ -87,9 +87,9 @@ func (w *csvWriters) activityLinkProblemOf(ctx context.Context, row migration.Ro
 }
 
 // resolveActivityLinks files the row under the run's preset records, then finds
-// each pair's record. A row of this upload that has
-// not landed yet counts as found in the dry run, and a pair that finds nothing
-// is the run's policy: skip the row, or drop that link and land the rest.
+// each pair's record. A row of this upload that has not landed yet counts as
+// found in the dry run. A pair that finds nothing follows the run's policy:
+// skip the row, or drop that link and land the rest.
 func (w *csvWriters) resolveActivityLinks(
 	ctx context.Context, row migration.Row, keys []linkKey, refuse func(migration.Reason) rowLink,
 ) (rowLink, error) {

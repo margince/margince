@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
-// ImportOrder is the order a bundle's types land in. A contact names its company,
-// a lead may name a contact, a deal names both, and an activity names any of
-// them, so the record named lands first.
+// ImportOrder is the order a bundle's types land in. A contact names its
+// company, a lead may name a contact, and a deal names both. An activity names
+// any of them, so the record named lands first.
 var ImportOrder = []string{ObjectCompany, ObjectContact, ObjectLead, ObjectDeal, ObjectActivity}
 
 // ZipPart names one file of a stored ZIP. Budget is the upload cap the upload

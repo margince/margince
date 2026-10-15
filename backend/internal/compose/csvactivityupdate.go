@@ -6,9 +6,9 @@ package compose
 // A corrected activities file landing on activities an earlier import made.
 //
 // The dry run and the commit share one plan, so the report says what the commit
-// does. The subject, body, timestamp, duration and meeting status are the only
-// fields a re-import rewrites; the type, direction, links and author are fixed
-// when the activity lands.
+// does. A re-import rewrites only the subject, body, timestamp, duration and
+// meeting status. The type, direction, links and author are fixed when the
+// activity lands.
 
 import (
 	"context"

@@ -46,8 +46,8 @@ func TestTheImportAndTheWireRefuseTheSameKindFields(t *testing.T) {
 	}
 }
 
-// The wire keeps the order its errors have always come in: a blank source is
-// reported before a kind field, and a status on a call before a transport.
+// The wire keeps its error order. A blank source is reported before a kind
+// field, and a status on a call before a transport.
 func TestTheWireReportsASourceBeforeAKindField(t *testing.T) {
 	seconds := 600
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
