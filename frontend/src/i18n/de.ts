@@ -6051,6 +6051,10 @@ export const de = {
     "Die 1 Zeile mit fehlerhafter Verknüpfung trotzdem importieren, ohne die Verknüpfung. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
   "import.test.anyway_other":
     "Die {count} Zeilen mit fehlerhaften Verknüpfungen trotzdem importieren, ohne diese Verknüpfungen. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
+  "import.test.nothing.title": "Nichts zu importieren",
+  "import.test.nothing.body":
+    "Jede Zeile ist schon im CRM oder oben als Problem aufgeführt. Es wurde nichts geschrieben.",
+  "import.test.nothing.done": "Fertig",
   "import.test.reupload": "Korrigieren und neu hochladen",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",

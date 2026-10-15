@@ -6175,6 +6175,10 @@ export const en = {
     "Import the 1 row with a broken link anyway, without the link. The result lists every link left out.",
   "import.test.anyway_other":
     "Import the {count} rows with broken links anyway, without those links. The result lists every link left out.",
+  "import.test.nothing.title": "Nothing to import",
+  "import.test.nothing.body":
+    "Every row is already in the CRM, or is listed above as a problem. Nothing was written.",
+  "import.test.nothing.done": "Done",
   "import.test.reupload": "Fix and re-upload",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",

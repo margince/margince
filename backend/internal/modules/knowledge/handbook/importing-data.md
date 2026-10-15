@@ -174,7 +174,7 @@ Also called: bulk edit companies, update companies from Excel, fix company data.
 ### What happens if I import the same file again?
 Importing a file again with the same source name updates the records the file made. It does not copy them. These rules hold for every record type:
 - **Rows are matched on the `ref`** within the source name and the record type.
-- **A row that did not change writes nothing.** The test run counts it as the same.
+- **A row that did not change writes nothing.** The test run counts it as the same. When every row is the same or skipped, the test run says **Nothing to import**. **Done** closes the run, and there is nothing to undo.
 - **A changed row updates only its changed fields.** Every other field of the record stays as it is.
 - **A new `ref` creates a new record.**
 - **A missing row is left alone.** A re-import never archives or deletes a record because its row is gone.

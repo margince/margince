@@ -5902,6 +5902,10 @@ export const vi = {
     "Vẫn nhập 1 dòng có liên kết hỏng, bỏ liên kết đó. Kết quả liệt kê mọi liên kết bị bỏ.",
   "import.test.anyway_other":
     "Vẫn nhập {count} dòng có liên kết hỏng, bỏ các liên kết đó. Kết quả liệt kê mọi liên kết bị bỏ.",
+  "import.test.nothing.title": "Không có gì để nhập",
+  "import.test.nothing.body":
+    "Mọi hàng đã có trong CRM hoặc được liệt kê ở trên như một vấn đề. Chưa ghi gì cả.",
+  "import.test.nothing.done": "Xong",
   "import.test.reupload": "Sửa và tải lại",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",

@@ -158,6 +158,7 @@ function TestRunBody({
   const closedLost = sumOf(report, "closed_lost");
   const closed = closedWon + closedLost;
   const landing = report.disposition.created + report.disposition.updated;
+  const nothingToWrite = landing === 0 && linkless === 0;
   return (
     <div className="import">
       <PartCounts
@@ -209,6 +210,15 @@ function TestRunBody({
           })}
         />
       ) : null}
+      {nothingToWrite ? (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("import.test.nothing.title")}
+        >
+          {t("import.test.nothing.body")}
+        </Callout>
+      ) : null}
       <div className="import__actions">
         {report.issues.length > 0 ? (
           <a
@@ -222,22 +232,32 @@ function TestRunBody({
         <Button variant="ghost" onClick={wizard.reset}>
           {t("import.test.reupload")}
         </Button>
-        <Button
-          variant="primary"
-          disabled={restaging}
-          pending={wizard.approve.isPending}
-          busyLabel={t("import.importing")}
-          onClick={() => {
-            const run = wizard.run.data;
-            if (run) wizard.approve.mutate(run);
-          }}
-        >
-          {wizard.anyway
-            ? t("import.test.importAnyway")
-            : plural("import.test.import", landing, {
-                count: formatNumber(landing, locale),
-              })}
-        </Button>
+        {nothingToWrite ? (
+          <Button
+            variant="primary"
+            pending={wizard.cancelling.isPending}
+            onClick={wizard.cancel}
+          >
+            {t("import.test.nothing.done")}
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            disabled={restaging}
+            pending={wizard.approve.isPending}
+            busyLabel={t("import.importing")}
+            onClick={() => {
+              const run = wizard.run.data;
+              if (run) wizard.approve.mutate(run);
+            }}
+          >
+            {wizard.anyway
+              ? t("import.test.importAnyway")
+              : plural("import.test.import", landing, {
+                  count: formatNumber(landing, locale),
+                })}
+          </Button>
+        )}
       </div>
       {wizard.approve.error ? (
         <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>

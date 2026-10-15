@@ -122,6 +122,36 @@ describe("the test run", () => {
     expect(sent.filter((s) => s.path === "POST /imports")).toHaveLength(0);
   });
 
+  it("says there is nothing to import when every row is unchanged, and closes the run on Done", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 3, skipped: 0 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+      [`POST /imports/${run.id}/cancel`]: () =>
+        jsonResponse({ ...run, status: "cancelled" }),
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /^Import (\d|anyway)/ }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain(
+        `POST /imports/${run.id}/cancel`,
+      ),
+    );
+    expect(sent.map((s) => s.path)).not.toContain(
+      `POST /imports/${run.id}/approve`,
+    );
+  });
+
   it("polls a validating run until its report arrives", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
