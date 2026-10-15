@@ -119,6 +119,43 @@ it("draws both marks when the company wears both", () => {
   ).toBeTruthy();
 });
 
+// The verb under a tile opens that tile's own picker, never the other slot's.
+it.each([
+  { verb: "Replace wide logo", slotName: "Wide logo" },
+  { verb: "Replace square icon", slotName: "Square icon" },
+] as const)(
+  "$verb opens the picker of its own tile",
+  async ({ verb, slotName }) => {
+    const user = userEvent.setup();
+    mark(WITH_BOTH);
+    const opened: HTMLInputElement[] = [];
+    const click = vi
+      .spyOn(HTMLInputElement.prototype, "click")
+      .mockImplementation(function (this: HTMLInputElement) {
+        opened.push(this);
+      });
+
+    await user.click(screen.getByRole("button", { name: verb }));
+
+    expect(opened).toEqual([slot(slotName).getByLabelText(slotName)]);
+    click.mockRestore();
+  },
+);
+
+// One caption describes both files, tied to both tiles, so a keyboard reader
+// on either hears the format it takes.
+it("describes both tiles with one format line", () => {
+  mark(WITHOUT_MARK);
+  const wide = slot("Wide logo").getByLabelText("Wide logo");
+  const square = slot("Square icon").getByLabelText("Square icon");
+  const hint = wide.getAttribute("aria-describedby");
+  expect(hint).toBeTruthy();
+  expect(square.getAttribute("aria-describedby")).toBe(hint);
+  expect(document.getElementById(hint ?? "")?.textContent).toMatch(
+    /SVG or transparent PNG under 5 MB/,
+  );
+});
+
 // The STUB declares fetch's own parameters so the recorded calls are TYPED as
 // fetch's argument tuple. The runtime records every argument either way; what a
 // zero-parameter mock loses is the type, and `const [path, init]` below would
@@ -136,24 +173,16 @@ function stubFetch(answer: CompanyProfile) {
 // one decode on the server, so a slot that sent its file to the other's path
 // would store the picture successfully and hang it in the wrong place.
 it.each([
-  {
-    slotName: "Wide logo",
-    add: "Add wide logo",
-    path: "/v1/company/logo",
-  },
-  {
-    slotName: "Square icon",
-    add: "Add square icon",
-    path: "/v1/company/logo/icon",
-  },
+  { slotName: "Wide logo", path: "/v1/company/logo" },
+  { slotName: "Square icon", path: "/v1/company/logo/icon" },
 ] as const)(
   "sends $slotName to the upload route that owns it",
-  async ({ slotName, add, path }) => {
+  async ({ slotName, path }) => {
     const user = userEvent.setup();
     const fetchStub = stubFetch(WITH_BOTH);
     mark(WITHOUT_MARK);
 
-    await user.click(screen.getByRole("button", { name: add }));
+    // The tile is the target: no verb has to be pressed before a file lands.
     const chosen = new File(["not really a png"], "acme-logo.png", {
       type: "image/png",
     });
@@ -189,40 +218,104 @@ it.each([
   expect(request.method).toBe("DELETE");
 });
 
-// A refusal is shown where the contact is standing, and only there. The server
-// is the one that judges an image: the picker's filter goes on media type and
-// says nothing about whether the bytes behind it decode, so a file that passes
-// the picker can still be refused — and a refusal that surfaced under BOTH
-// slots would accuse a mark the contact never touched.
-it("shows the server's refusal under the slot that was refused", async () => {
-  const user = userEvent.setup();
+const UNSUPPORTED = {
+  type: "about:blank",
+  title: "Unsupported media type",
+  status: 415,
+  code: "unsupported_media_type",
+  detail: "the upload is not an image this server can read",
+};
+
+function refuseUploads(
+  problem: Readonly<Record<string, unknown> & { status: number }> = UNSUPPORTED,
+) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      Response.json(
-        {
-          type: "about:blank",
-          title: "Unsupported media type",
-          status: 415,
-          code: "unsupported_media_type",
-          detail: "the upload is not an image this server can read",
-        },
-        { status: 415 },
-      ),
-    ),
+    vi.fn(async () => Response.json(problem, { status: problem.status })),
   );
+}
+
+const NOT_AN_IMAGE = () =>
+  new File(["truncated"], "half-a-logo.png", { type: "image/png" });
+
+// The refusal names its slot and is tied to that slot's control only.
+// A notice under both slots would accuse a mark never touched.
+it("names the refused slot and describes only that slot's control", async () => {
+  const user = userEvent.setup();
+  refuseUploads();
   mark(WITHOUT_MARK);
 
-  await user.click(screen.getByRole("button", { name: "Add square icon" }));
   await user.upload(
     slot("Square icon").getByLabelText("Square icon"),
-    new File(["truncated"], "half-a-logo.png", { type: "image/png" }),
+    NOT_AN_IMAGE(),
   );
 
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByText("Square icon not uploaded")).toBeTruthy();
   expect(
-    await slot("Square icon").findByText(/not an image this server can read/),
+    within(alert).getByText("Use a PNG, JPEG, GIF, WebP, ICO or SVG file."),
   ).toBeTruthy();
-  expect(slot("Wide logo").queryByRole("alert")).toBeNull();
+  const described = slot("Square icon")
+    .getByLabelText("Square icon")
+    .getAttribute("aria-describedby");
+  expect(described?.split(" ")).toContain(alert.parentElement?.id);
+  expect(
+    slot("Wide logo")
+      .getByLabelText("Wide logo")
+      .getAttribute("aria-describedby"),
+  ).not.toContain(alert.parentElement?.id ?? "none");
+});
+
+// The body httperr.BodyTooLargeRefusal writes: a code the server never sends
+// would pass on a dead entry.
+it("says what to do when the file is over the upload limit", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Request Entity Too Large",
+    status: 413,
+    code: "body_too_large",
+    detail: "the upload exceeds the 5 MB limit",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    NOT_AN_IMAGE(),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByText("Wide logo not uploaded")).toBeTruthy();
+  expect(within(alert).getByText("Use a smaller file.")).toBeTruthy();
+  expect(within(alert).queryByText(/exceeds/)).toBeNull();
+});
+
+// A notice inside a slot widens it and wraps the other tile onto its own row.
+it("draws the refusals below the tiles, wide first, never inside a slot", async () => {
+  const user = userEvent.setup();
+  refuseUploads();
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Square icon").getByLabelText("Square icon"),
+    NOT_AN_IMAGE(),
+  );
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    NOT_AN_IMAGE(),
+  );
+
+  const alerts = await screen.findAllByRole("alert");
+  expect(alerts).toHaveLength(2);
+  expect(
+    alerts.map((alert) => alert.querySelector(".callout-title")?.textContent),
+  ).toEqual(["Wide logo not uploaded", "Square icon not uploaded"]);
+  for (const alert of alerts) {
+    expect(alert.closest(".brand-slot")).toBeNull();
+  }
+  const slots = alerts[0].closest(".brand-refusals")?.previousElementSibling;
+  expect(slots?.className).toBe("brand-slots");
+  expect(slots?.querySelectorAll("section")).toHaveLength(2);
 });
 
 // The removal is judged by the server too, and its refusal lands in the same
@@ -250,6 +343,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
 
   await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
+  expect(await screen.findByText("Wide logo not removed")).toBeTruthy();
   expect(
     await screen.findByText(/being replaced by another write/),
   ).toBeTruthy();

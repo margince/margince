@@ -213,6 +213,7 @@ var retired = gatekit.Waive(map[string]string{
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
 
+	"frontend/src/format/rbacobjects.ts": "a grant area named for the seats settings group",
 	"frontend/src/i18n/en.ts": "the catalog's human-sense values, held key by key and from both " +
 		"sides by frontend/src/i18n/record-noun.test.ts, which is where the reason each one keeps " +
 		"the word is written down",
@@ -229,6 +230,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
 	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
 	"frontend/src/screens/roles-detail.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/screens/roles-drawer.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/screens/team-dialogs.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",

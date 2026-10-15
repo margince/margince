@@ -49,12 +49,14 @@ const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
  */
 export function FactRow({
   companyId,
+  anchor,
   fact,
   label,
   canEdit,
   onOpenHistory,
 }: Readonly<{
   companyId: string;
+  anchor: boolean;
   fact: CompanyFact;
   label?: string;
   canEdit: boolean;
@@ -104,6 +106,7 @@ export function FactRow({
       <span className="meta-row-action">
         <EvidenceVerdict
           companyId={companyId}
+          anchor={anchor}
           claim={factClaim(companyId, fact)}
           canEdit={canEdit}
         />
@@ -124,6 +127,7 @@ export function FactRow({
       {removing && (
         <RemoveFactConfirm
           companyId={companyId}
+          anchor={anchor}
           fact={fact}
           canEdit={canEdit}
           onClose={() => setRemoving(false)}
@@ -135,11 +139,13 @@ export function FactRow({
 
 function RemoveFactConfirm({
   companyId,
+  anchor,
   fact,
   canEdit,
   onClose,
 }: Readonly<{
   companyId: string;
+  anchor: boolean;
   fact: CompanyFact;
   // Re-read at CONFIRM time, not only at open time. A grant can be withdrawn
   // while this dialog stands, and a confirm that fired on the answer from
@@ -167,7 +173,7 @@ function RemoveFactConfirm({
       );
     },
     onSuccess: async () => {
-      await settleFacts(queryClient, companyId);
+      await settleFacts(queryClient, { id: companyId, is_anchor: anchor });
       onClose();
     },
   });

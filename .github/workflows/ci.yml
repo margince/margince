@@ -1202,9 +1202,18 @@ jobs:
   # below: a UI regression that breaks a named acceptance criterion fails the
   # merge instead of shipping. Nothing in it reads a clock — the record-open
   # BUDGET belongs to `make bench-mobile` — so a slow runner cannot redden it.
+  #
+  # Three shards, because one job of 534 tests on 2 workers took 12.5 min and
+  # was the last job `ci` waited for. The suite is fullyParallel, so
+  # `--shard` splits it evenly by test. `needs.uat.result` folds every leg, so
+  # one red shard is a red `uat` in the aggregate.
   uat:
-    name: uat (AC screens + axe WCAG 2.2 AA + 390px, mocked)
+    name: uat (AC screens + axe WCAG 2.2 AA + 390px, mocked) (${{ matrix.shard }}/3)
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     # BESIDE the frontend lane, not behind it. This job builds the SPA itself
     # (`pnpm e2e` is a build and then the run) and shares no artefact with
     # `frontend`, so an order between them buys nothing but latency — and since
@@ -1243,7 +1252,7 @@ jobs:
       - name: Install the Playwright Chromium browser
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
-        run: make frontend-e2e
+        run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
 
   # ONE required context stands for the whole lane.
   #

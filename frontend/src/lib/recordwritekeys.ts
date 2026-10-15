@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import type {
+  InvalidateQueryFilters,
+  QueryClient,
+  QueryKey,
+} from "@tanstack/react-query";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import type { EntityKind } from "./entity";
 import { leadWriteKeys } from "./leadkeys";
@@ -23,6 +27,16 @@ import { leadWriteKeys } from "./leadkeys";
 export function recordWriteKeys(kind: EntityKind, id: string): QueryKey[] {
   return RECORD_WRITE_KEYS[kind](id);
 }
+
+// `anchor` is the record's `is_anchor`: the installation's own company.
+type RecordWriteScope = Readonly<{ anchor?: boolean }>;
+
+// The anchor is also read as the settings company profile and as /me's brand.
+// Not a ["company"] prefix: it would also stale every company record read.
+const ANCHOR_WRITE_FILTERS: readonly InvalidateQueryFilters[] = [
+  { queryKey: ["company"], exact: true },
+  { queryKey: ["me"] },
+];
 
 const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
   contact: (id) => [
@@ -52,10 +66,22 @@ export function invalidateRecord(
   client: QueryClient,
   kind: EntityKind,
   id: string,
+  scope: RecordWriteScope = {},
 ): Promise<void> {
+  const filters: InvalidateQueryFilters[] = recordWriteKeys(kind, id).map(
+    (queryKey) => ({ queryKey }),
+  );
+  if (scope.anchor) filters.push(...ANCHOR_WRITE_FILTERS);
   return Promise.all(
-    recordWriteKeys(kind, id).map((queryKey) =>
-      client.invalidateQueries({ queryKey }),
-    ),
+    filters.map((filter) => client.invalidateQueries(filter)),
   ).then(() => undefined);
+}
+
+export function invalidateCompany(
+  client: QueryClient,
+  company: Readonly<{ id: string; is_anchor?: boolean }>,
+): Promise<void> {
+  return invalidateRecord(client, "company", company.id, {
+    anchor: company.is_anchor,
+  });
 }

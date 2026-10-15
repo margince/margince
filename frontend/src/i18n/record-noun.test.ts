@@ -351,7 +351,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "activity.detail.attendees",
     "book.attendee",
     "followUpSettings.daysHint",
-    "followUpSettings.sub",
     "scheduling.cancelConfirm",
     "pipeline.reason.answered_on_the_company",
     "pipeline.reason.no_site_identified",

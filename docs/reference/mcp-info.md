@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.5 KB |
+| Tool catalog | 175.3 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45809 |
+| Approx. wire tokens | 45758 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 61.0 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.4 KB | 27% | Yes, every step |
-| Input schemas | 52.6 KB | 29% | Yes, every step |
+| Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
+| Input schemas | 52.6 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **101.0 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **100.8 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 678 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 627 |
 | [`create_task`](#create_task) | Create a task |  |  | 221 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 346 |
@@ -3146,11 +3146,9 @@ Create a contact, company, deal, lead, project, activity or relationship that do
 Creating a deal requires a pipeline_id and a stage_id, and read_directory (list: pipelines) is what
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
-CONTACT created here is visible to the human you are acting for and to nobody else, until they
-publish it or correspondence with that address earns a widening verdict — attending a meeting
-together does not earn one. Do not tell anyone a contact you just created is on their colleagues'
-screens. Search first when the record might already exist — a second copy of a contact or company
-is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
+CONTACT created here is visible to everyone in the workspace, the same as one a human types in.
+Search first when the record might already exist — a second copy of a contact or company is a
+problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
 different email, phone or employer, is not proof of a duplicate: create it — the create files the
 pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several
 contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which
