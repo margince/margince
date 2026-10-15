@@ -55,17 +55,17 @@ var (
 // wrong.
 const smtpPasswordLimit = 64 << 10
 
-// MailFaults are the relay checks that read two settings. An enabled relay
-// needs somewhere to send and someone to send as. A password cannot be both
-// declared absent and named by a file.
+// MailFaults are the checks on an enabled relay that read two settings. It
+// needs somewhere to send and someone to send as, and its password cannot be
+// both declared absent and named by a file.
 func MailFaults(c *config.Config) []error {
+	if !config.Val(c, EmailEnabled) {
+		return nil
+	}
 	var faults []error
 	if _, origin := config.ValWithSource(c, SMTPPassword); origin.None && config.Val(c, SMTPPasswordFile) != "" {
 		faults = append(faults, errors.New("email.smtp.password declares the relay password absent while "+
 			"email.smtp.password_file names one — keep one of the two"))
-	}
-	if !config.Val(c, EmailEnabled) {
-		return faults
 	}
 	if config.Val(c, SMTPHost) == "" {
 		faults = append(faults, errors.New("email.enabled requires email.smtp.host"))

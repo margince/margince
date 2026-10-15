@@ -99,13 +99,19 @@ func TestTheRelayIsCheckedAsAWhole(t *testing.T) {
 		"email without smtp":     {"email: { enabled: true, from_address: a@b.co }\n", "email.smtp.host"},
 		"smtp port out of range": {"email: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n", "email.smtp.port"},
 		"no sender":              {"email: { enabled: true, smtp: { host: h, port: 587 } }\n", "email.from_address"},
-		"absent beside a file":   {smtpBlock("    password: ${none}\n    password_file: /run/secrets/smtp\n"), "keep one of the two"},
+		"absent beside a file": {"email:\n  enabled: true\n  from_address: ops@example.test\n  smtp:\n    host: h\n    port: 587\n" +
+			"    password: ${none}\n    password_file: /run/secrets/smtp\n", "keep one of the two"},
 	} {
 		if _, err := loadMail(t, tc.body); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err %v; want it to name %q", name, err, tc.want)
 		}
 	}
-	if _, err := loadMail(t, "email: { enabled: false, smtp: { port: 70000 } }\n"); err != nil {
-		t.Errorf("a disabled relay is not checked, so a half-written block can wait: %v", err)
+	for _, body := range []string{
+		"email: { enabled: false, smtp: { port: 70000 } }\n",
+		smtpBlock("    password: ${none}\n    password_file: /run/secrets/smtp\n"),
+	} {
+		if _, err := loadMail(t, body); err != nil {
+			t.Errorf("%q: a disabled relay is not checked, so a half-written block can wait: %v", body, err)
+		}
 	}
 }
