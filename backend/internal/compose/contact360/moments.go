@@ -321,10 +321,12 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 // reEngagedMoment: they came back. The strongest reason captured data alone can
 // produce, and the one most likely to be acted on the same hour.
 func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {
-	if page.LastInboundAt == nil {
+	// Imported mail is history, not a reply, so this rung reads the inbound
+	// that is not import-written.
+	if page.LastLiveInboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	inbound := *page.LastInboundAt
+	inbound := *page.LastLiveInboundAt
 	if page.LastOutboundAt != nil && !page.LastOutboundAt.Before(inbound) {
 		// We answered after they wrote. Nothing is owed, and their message is
 		// not news.

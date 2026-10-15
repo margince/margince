@@ -30,11 +30,11 @@ import (
 // record's timeline, the same fortnight the worklist's other reminders keep.
 const AwaitingReplyLookbackDays = 14
 
-// importedHistorySQL is the test that an activity on alias a came from an
+// ImportedHistorySQL is the test that an activity on alias a came from an
 // import. A reminder to follow up is about what happened lately. An import
 // brings history that may fall inside the lookback though nobody acted on it
 // in this CRM. The importer's namespace is reserved, so no live write carries it.
-const importedHistorySQL = "starts_with(COALESCE(a.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
+const ImportedHistorySQL = "starts_with(COALESCE(a.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
 // AwaitingReplyScanCap bounds one read. Newest first, so the cap drops the
 // oldest reminders, which are the closest to aging out anyway.
@@ -224,7 +224,7 @@ var awaitingRepliesSQL = `
 	 WHERE a.kind = 'email'
 	   AND a.direction = 'outbound'
 	   AND a.archived_at IS NULL
-	   AND NOT ` + importedHistorySQL + `
+	   AND NOT ` + ImportedHistorySQL + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s

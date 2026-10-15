@@ -55,3 +55,53 @@ func TestACalledOffMeetingDoesNotMoveAContactsDirectionClocks(t *testing.T) {
 			page.LastOutboundAt)
 	}
 }
+
+// Imported mail is engagement but not a reply: the page keeps it in
+// last_inbound_at, leaves it out of last_live_inbound_at, and so raises no
+// re-engaged suggestion.
+func TestImportedInboundCountsAsEngagementButNotAsAReply(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	now := time.Now().UTC()
+
+	seed := func(subject, direction, sourceSystem string, ago time.Duration) {
+		id := SeedIDRow(t, owner, `INSERT INTO activity
+			(id, kind, subject, occurred_at, direction, source, source_system, captured_by)
+			VALUES ($1, 'email', $2, $3, $4, 'manual', NULLIF($5, ''), 'human:x')`,
+			subject, now.Add(-ago), direction, sourceSystem)
+		LinkActivity(t, owner, id, "contact", mine)
+		if direction == "inbound" {
+			LinkActivitySender(t, owner, id, mine)
+		}
+	}
+	seed("we wrote", "outbound", "", 60*24*time.Hour)
+	seed("imported reply", "inbound", "mirror:csv-upload", 3*24*time.Hour)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	page, err := contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("assembling the contact: %v", err)
+	}
+	if page.LastInboundAt == nil {
+		t.Fatal("last_inbound_at is empty: imported mail must still count as engagement")
+	}
+	if page.LastLiveInboundAt != nil {
+		t.Errorf("last_live_inbound_at = %v, want none: the only inbound was imported", page.LastLiveInboundAt)
+	}
+	if page.Moment != nil && page.Moment.Rule == "re_engaged" {
+		t.Errorf("an imported inbound raised the re-engaged suggestion")
+	}
+
+	seed("live reply", "inbound", "", 2*24*time.Hour)
+	page, err = contactRoomService(e).Assemble(rep, ids.From[ids.ContactKind](mine))
+	if err != nil {
+		t.Fatalf("assembling the contact: %v", err)
+	}
+	if page.LastLiveInboundAt == nil {
+		t.Fatal("last_live_inbound_at is empty after a live inbound")
+	}
+	if page.Moment == nil || page.Moment.Rule != "re_engaged" {
+		t.Errorf("a live inbound after 58 quiet days gave %+v, want re_engaged", page.Moment)
+	}
+}
