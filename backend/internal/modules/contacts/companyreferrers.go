@@ -26,8 +26,8 @@ func (e *StillReferencedError) Error() string {
 func (e *StillReferencedError) Is(target error) bool { return target == apperrors.ErrConflict }
 
 // refuseIfReferenced counts the live records that name the company, inside the
-// archive's own transaction. Archived deals and contacts do not count: they no
-// longer answer a list.
+// archive's own transaction. An archived deal does not count, and archiving a
+// contact retires its employment edges, so a live edge is a live contact.
 func refuseIfReferenced(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error {
 	var e StillReferencedError
 	err := tx.QueryRow(ctx, `
@@ -35,7 +35,6 @@ func refuseIfReferenced(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error 
 		  (SELECT count(*) FROM deal d
 		    WHERE d.archived_at IS NULL AND $1 IN (d.company_id, d.partner_company_id)),
 		  (SELECT count(DISTINCT r.contact_id) FROM relationship r
-		     JOIN contact c ON c.id = r.contact_id AND c.archived_at IS NULL
 		    WHERE r.kind = 'employment' AND r.company_id = $1 AND r.archived_at IS NULL)`,
 		id.UUID).Scan(&e.Deals, &e.Contacts)
 	if err != nil {

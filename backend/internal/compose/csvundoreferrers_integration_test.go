@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,7 +41,7 @@ func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 		t.Fatalf("seeding the employment: %v", err)
 	}
 	w := &csvWriters{pool: e.DB().Pool(), contacts: e.Contacts, deals: e.Deals}
-	importedAt := time.Now().Add(time.Hour)
+	importedAt := clocktest.Now(t).Add(time.Hour)
 	reverse := func() error { return w.Reverse(e.Admin(), migration.ObjectCompany, company, importedAt) }
 	live := func() bool {
 		c, err := e.Contacts.GetCompany(e.Admin(), companyID, storekit.IncludeArchived)
