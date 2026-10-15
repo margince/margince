@@ -12996,7 +12996,7 @@ export const vi = {
   "aiRates.refresh.keptCount_one": "Đã giữ {count} giá nhập thủ công",
   "aiRates.refresh.keptCount_other": "Đã giữ {count} giá nhập thủ công",
   "aiProviders.setByHand": "Nhập thủ công",
-  "aiRates.refresh.unlisted": "Không có trong danh sách của broker: {ids}",
+  "aiRates.refresh.unlisted": "Không có trong bảng giá: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
@@ -13424,9 +13424,9 @@ export const vi = {
   "aiFigures.line.timeoutCount_other": "{count} lần hết thời gian",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "Nhà cung cấp đã trả lời {count} trong {total} bằng {model}, không phải mô hình đã gán.",
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng {model}, không phải mô hình đã gán.",
   "aiFigures.switched_other":
-    "Nhà cung cấp đã trả lời {count} trong {total} bằng {model}, không phải mô hình đã gán.",
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng {model}, không phải mô hình đã gán.",
   "aiFigures.switchedBadge": "Đã đổi mô hình",
   "aiFigures.line.sort": "sắp xếp: {sort}",
   "aiFigures.line.week": "7 ngày: {figures}",

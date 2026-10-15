@@ -223,12 +223,13 @@ describe("TierRecentCalls", () => {
     expect(figuresAsked(asked).searchParams.get("group")).toBe("served_model");
   });
 
-  it("says which model the provider answered with, and links its calls", async () => {
+  it("says which model answered how many of the answered calls, and links them", async () => {
     statsServer((url) =>
       url.searchParams.get("group") === "tier"
         ? [
             row("premium", {
               calls: 63,
+              failed: 2,
               switched: 41,
               switched_to: "gemini-3.6-flash",
             }),
@@ -241,7 +242,7 @@ describe("TierRecentCalls", () => {
     render(<TierRecentCalls tier="premium" broker={false} />);
     const line = await screen.findByRole("status");
     expect(line.textContent).toContain(
-      "The provider answered 41 of 63 calls with gemini-3.6-flash, not the bound model.",
+      "The provider answered 41 of 61 calls with gemini-3.6-flash, not the bound model.",
     );
     expect(
       within(line)

@@ -11,7 +11,6 @@ package ai
 import (
 	"context"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -29,15 +28,17 @@ const (
 // cost must come from.
 type answeredCase struct {
 	name                       string
+	provider                   string
 	servedModel, servedSource  string
 	wantInputRate, wantOutRate int64
 }
 
 var answeredCases = []answeredCase{
-	{"the provider named a priced model", answeredGemini, servedIdentitySourceResponse, 750_000, 3_750_000},
-	{"the provider named a model the sheet does not price", answeredGemini + "-001", servedIdentitySourceResponse, 1_500_000, 9_000_000},
-	{"the wire only echoed the request", answeredGemini, servedIdentitySourceEcho, 1_500_000, 9_000_000},
-	{"nobody said which model answered", "", servedIdentitySourceConfigured, 1_500_000, 9_000_000},
+	{"the provider named a priced model", providerGemini, answeredGemini, servedIdentitySourceResponse, 750_000, 3_750_000},
+	{"the provider named a model the sheet does not price", providerGemini, answeredGemini + "-001", servedIdentitySourceResponse, 1_500_000, 9_000_000},
+	{"the wire only echoed the request", providerGemini, answeredGemini, servedIdentitySourceEcho, 1_500_000, 9_000_000},
+	{"nobody said which model answered", providerGemini, "", servedIdentitySourceConfigured, 1_500_000, 9_000_000},
+	{"Vertex named a model only Gemini prices", providerGeminiVertex, answeredGemini, servedIdentitySourceResponse, 750_000, 3_750_000},
 }
 
 type answeredFixture struct {
@@ -66,7 +67,7 @@ func seedAnsweredCalls(t *testing.T) answeredFixture {
 		f.tasks, f.correlations = append(f.tasks, task), append(f.correlations, correlation)
 		if err := NewCallMeter(db).Record(ctx, []Call{{
 			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, CorrelationID: &correlation,
-			Task: task, Tier: TierPremium, Provider: providerGemini, ModelID: boundGemini, RequestFingerprint: "fp-" + ids.NewV7().String(),
+			Task: task, Tier: TierPremium, Provider: c.provider, ModelID: boundGemini, RequestFingerprint: "fp-" + ids.NewV7().String(),
 			TokensIn: 1000, TokensOut: 200, ServedModel: c.servedModel, ServedIdentitySource: c.servedSource,
 		}}); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
@@ -144,7 +145,7 @@ func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
 	for _, row := range rows {
 		got[row.Key] = [2]int64{row.Calls, row.Switched}
 	}
-	want := map[string][2]int64{answeredGemini: {1, 1}, answeredGemini + "-001": {1, 1}, boundGemini: {2, 0}}
+	want := map[string][2]int64{answeredGemini: {2, 2}, answeredGemini + "-001": {1, 1}, boundGemini: {2, 0}}
 	if len(got) != len(want) {
 		t.Fatalf("groups = %v, want %v", got, want)
 	}
@@ -158,8 +159,8 @@ func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tiers) != 1 || tiers[0].Switched != 2 || !strings.HasPrefix(tiers[0].SwitchedTo, answeredGemini) {
-		t.Errorf("tier figures = %+v, want 2 of 4 calls switched to %s", tiers, answeredGemini)
+	if len(tiers) != 1 || tiers[0].Switched != 3 || tiers[0].SwitchedTo != answeredGemini {
+		t.Errorf("tier figures = %+v, want 3 of 5 calls switched, most to %s", tiers, answeredGemini)
 	}
 }
 
@@ -188,7 +189,7 @@ func TestTheCallListNarrowsToTheModelThatAnswered(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The echoed call reflected the same id but did not answer as it.
-	if len(page.Items) != 1 || page.Items[0].Task != string(f.tasks[0]) {
+	if len(page.Items) != 2 || page.Items[0].Task == string(f.tasks[2]) || page.Items[1].Task == string(f.tasks[2]) {
 		t.Fatalf("listed %+v, want only the call the provider answered as %s", page.Items, answeredGemini)
 	}
 }
@@ -200,7 +201,7 @@ func TestAPriceSyncReadsOnlyTheModelsAProviderSwitchedTo(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{answeredGemini, answeredGemini + "-001"}
-	if len(got) != 1 || !slices.Equal(got[providerGemini], want) {
-		t.Errorf("switched models = %v, want gemini: %v and no echoed or assumed model", got, want)
+	if len(got) != 2 || !slices.Equal(got[providerGemini], want) || !slices.Equal(got[providerGeminiVertex], want[:1]) {
+		t.Errorf("switched models = %v, want gemini: %v, vertex: %v and no echoed or assumed model", got, want, want[:1])
 	}
 }

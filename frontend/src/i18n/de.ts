@@ -13319,7 +13319,7 @@ export const de = {
   "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
   "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
   "aiProviders.setByHand": "Manuell",
-  "aiRates.refresh.unlisted": "Nicht in der Liste des Brokers: {ids}",
+  "aiRates.refresh.unlisted": "Nicht in der Preisliste: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
   "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
@@ -13764,9 +13764,9 @@ export const de = {
   "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "Der Anbieter hat {count} von {total} mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+    "Der Anbieter hat {count} von {total} Aufrufen mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
   "aiFigures.switched_other":
-    "Der Anbieter hat {count} von {total} mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+    "Der Anbieter hat {count} von {total} Aufrufen mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
   "aiFigures.switchedBadge": "Modell gewechselt",
   "aiFigures.line.sort": "Sortierung: {sort}",
   "aiFigures.line.week": "7 T: {figures}",

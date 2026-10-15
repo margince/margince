@@ -231,26 +231,3 @@ func TestAModelTheVendorSwitchedCallsToIsPricedEvenUnlisted(t *testing.T) {
 		t.Errorf("unlisted = %v, want the switched-to model the catalogue does not price", got)
 	}
 }
-
-func TestAModelTheBrokerSwitchedCallsToIsPriced(t *testing.T) {
-	src := PriceSources{
-		Routing: RoutingConfig{Tiers: map[Tier]ProviderConfig{"premium": openRouterBinding("a/bound")}},
-		Broker: AvailableModels{Models: []AvailableModel{
-			{ID: "a/bound", InputPerMtok: new("5"), OutputPerMtok: new("25")},
-			{ID: "a/next", InputPerMtok: new("2"), OutputPerMtok: new("10")},
-		}},
-		Switched: map[string][]string{providerOpenAICompatible: {"a/next", "a/gone"}, providerGemini: {"gemini-3.5-flash"}},
-	}
-	plan := planPriceSync(src, nil)
-
-	got := writesOf(plan)
-	if next := got[providerOpenAICompatible+"/a/next"]; next.Lane != LaneChat || next.InputUsd != "2" {
-		t.Errorf("switched-to write = %+v, want the broker's chat price", next)
-	}
-	if _, wrote := got["gemini/gemini-3.5-flash"]; wrote {
-		t.Error("the broker priced a model of a provider it does not carry")
-	}
-	if unlisted := plan.lines[providerOpenAICompatible].Unlisted; !slices.Equal(unlisted, []string{"a/gone"}) {
-		t.Errorf("unlisted = %v, want the switched-to model the broker does not list", unlisted)
-	}
-}

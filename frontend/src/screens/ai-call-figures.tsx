@@ -155,7 +155,7 @@ export function TierCallsLine({
   );
 }
 
-/** How many of total calls the provider answered with another model than the binding. */
+/** How many of total answered calls the provider answered with another model than the binding. */
 export function switchedSentence(
   switched: number,
   total: number,
@@ -165,9 +165,7 @@ export function switchedSentence(
 ): string {
   return plural("aiFigures.switched", switched, {
     count: formatNumber(switched, locale),
-    total: plural("aiFigures.line.calls", total, {
-      count: formatNumber(total, locale),
-    }),
+    total: formatNumber(total, locale),
     model,
   });
 }
@@ -198,10 +196,10 @@ export function TierSwitchedLine({
   const row = useTierWeek(tier);
   if (!row?.switched || !row.switched_to) return null;
   return (
-    <span className="t-caption" role="status">
+    <p className="t-caption" role="status">
       {switchedSentence(
         row.switched,
-        row.calls,
+        row.calls - row.failed,
         row.switched_to,
         plural,
         locale,
@@ -217,7 +215,7 @@ export function TierSwitchedLine({
           </a>
         </>
       )}
-    </span>
+    </p>
   );
 }
 
@@ -327,9 +325,7 @@ export function TierRecentCalls({
           </a>
         </span>
       </div>
-      <p>
-        <TierSwitchedLine tier={tier} linked />
-      </p>
+      <TierSwitchedLine tier={tier} linked />
       <FiguresTable
         rows={stats.data?.rows}
         failed={stats.isError}

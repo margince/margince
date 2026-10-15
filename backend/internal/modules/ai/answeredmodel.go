@@ -40,7 +40,8 @@ func answeredModelSQL(alias string) string {
 }
 
 // switchedServedModels is, by provider, every chat model the provider named as
-// answering a call bound to another model since the given instant.
+// answering a call bound to another model since the given instant. Decision
+// models are left out: no catalogue the sync reads prices them.
 func (s *RateStore) switchedServedModels(ctx context.Context, since time.Time) (map[string][]string, error) {
 	out := map[string][]string{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

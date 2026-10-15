@@ -105,8 +105,8 @@ models.dev when their key works. The OpenRouter models that a model tier uses
 get prices from the OpenRouter list. Other providers keep the prices you set.
 A new chat or embedding model your key lists is added when models.dev prices it
 as the same kind of model. A model the provider answered a tier with, in place
-of the bound one, is priced too; one no list prices shows under **Not in the
-list**.
+of the bound one, is priced too; one no list prices shows as **Not in the
+price list**.
 
 A price you set by hand is never changed by the
 sync; remove it to hand the model back.

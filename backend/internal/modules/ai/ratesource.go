@@ -51,12 +51,13 @@ func rateMatch(provider, model, day string, fromArg, toArg int) string {
 func pricedRate(alias string, fromArg, toArg int) string {
 	day := alias + ".occurred_at::date"
 	return fmt.Sprintf(`SELECT ranked.* FROM (
-		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered
+		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered WHERE %[3]s
 		  UNION ALL
 		  SELECT 1 AS match_rank, bound.* FROM (%[2]s) bound
 		) ranked
 		ORDER BY ranked.match_rank
 		LIMIT 1`,
-		rateMatch(alias+".provider", answeredModelSQL(alias), day, fromArg, toArg),
-		rateMatch(alias+".provider", alias+".model_id", day, fromArg, toArg))
+		rateMatch(alias+".provider", alias+".served_model", day, fromArg, toArg),
+		rateMatch(alias+".provider", alias+".model_id", day, fromArg, toArg),
+		switchedModelSQL(alias))
 }

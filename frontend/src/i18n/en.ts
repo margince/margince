@@ -13393,7 +13393,7 @@ export const en = {
   "aiRates.refresh.keptCount_one": "{count} hand-set price kept",
   "aiRates.refresh.keptCount_other": "{count} hand-set prices kept",
   "aiProviders.setByHand": "Hand-set",
-  "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
+  "aiRates.refresh.unlisted": "Not in the price list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
@@ -13834,9 +13834,9 @@ export const en = {
   "aiFigures.line.timeoutCount_other": "{count} timeouts",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "The provider answered {count} of {total} with {model}, not the bound model.",
+    "The provider answered {count} of {total} calls with {model}, not the bound model.",
   "aiFigures.switched_other":
-    "The provider answered {count} of {total} with {model}, not the bound model.",
+    "The provider answered {count} of {total} calls with {model}, not the bound model.",
   "aiFigures.switchedBadge": "Model switched",
   "aiFigures.line.sort": "sort: {sort}",
   "aiFigures.line.week": "7 d: {figures}",

@@ -395,9 +395,7 @@ function HealthDot({
       <p>
         <TierCallsLine tier={rungOf(lane)} sort={sort} />
       </p>
-      <p>
-        <TierSwitchedLine tier={rungOf(lane)} />
-      </p>
+      <TierSwitchedLine tier={rungOf(lane)} />
     </Popover>
   );
 }
