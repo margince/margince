@@ -195,6 +195,9 @@ func (s *Setting[T]) invariantFault() error {
 		return fmt.Errorf("config: %s declares no type", s.spec.Key)
 	}
 	_, hasDefault := s.spec.Default.Get()
+	if s.spec.AllowNone && !s.spec.Secret {
+		return fmt.Errorf("config: %s allows ${none} but is not a secret; only a secret reads it", s.spec.Key)
+	}
 	if s.spec.Secret && hasDefault {
 		return fmt.Errorf("config: %s is a secret with a default; a default is printed in docs", s.spec.Key)
 	}

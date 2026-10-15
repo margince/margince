@@ -111,3 +111,11 @@ func TestASecretFileTooLargeToBeASecretIsRefused(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+// ${none} is read only for a secret, so AllowNone elsewhere would be inert.
+func TestAllowNoneOnASettingThatIsNotSecretIsRefused(t *testing.T) {
+	plain := config.Define(config.Spec[string]{Key: "smtp.host", Env: "TEST_RELAY_HOST", Type: config.String, AllowNone: true, Doc: "d"})
+	if _, err := config.NewRegistry([]config.Any{plain}); err == nil || !strings.Contains(err.Error(), "not a secret") {
+		t.Fatalf("got %v", err)
+	}
+}
