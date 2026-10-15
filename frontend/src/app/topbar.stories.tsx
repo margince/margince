@@ -367,12 +367,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * rest of the name is on the tooltip the clipped label carries, on hover and on
  * keyboard focus alike.
  *
- * True at every width, and it was not always: the search was `position: absolute`
- * once, which left nothing bounding `.topbar-lead` but the row itself — the last
- * crumb grew to the full width of the bar, ran UNDER the centred field and came
- * out the other side, unclipped and with no tooltip. The bar is a three-track
- * grid now. `.topbar-lead` carries a cap, which is the bound the trail shrinks
- * against, so this frame shows the rule rather than the bug.
+ * True at every width: `.topbar-lead` carries a cap, the bound the trail shrinks
+ * against.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
