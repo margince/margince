@@ -155,5 +155,39 @@ export const ScrolledToTheEnd: Story = {
 // hovered row alike.
 export const EndEdgeOnPhoneDark: Story = {
   ...EndEdgeOnPhone,
-  globals: { ...EndEdgeOnPhone.globals, theme: "dark" },
+  globals: { viewport: { value: "phone" }, theme: "dark" },
+  tags: ["uat-phone"],
+};
+
+// A table with no width of its own, as a Markdown table has, keeps the width
+// of its content rather than stretching across the box.
+export const NarrowTableKeepsItsWidth: Story = {
+  render: () => (
+    <div style={{ inlineSize: "28rem" }}>
+      <TableScroll label="Tiers">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Tier</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Premium</td>
+            </tr>
+          </tbody>
+        </table>
+      </TableScroll>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const table = await within(canvasElement).findByRole("table");
+    const box = table.parentElement;
+    await expect(box).not.toBeNull();
+    if (box) {
+      await expect(table.getBoundingClientRect().width).toBeLessThan(
+        box.getBoundingClientRect().width / 2,
+      );
+    }
+  },
 };

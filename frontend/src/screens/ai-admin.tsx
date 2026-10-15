@@ -253,9 +253,12 @@ function BudgetEditor({
   );
   const [company, setCompany] = useState(() => companyText(budget.config));
   const [revision, setRevision] = useState(budget.revision);
+  // The values the editor opened on, so a save elsewhere is not a draft here.
+  const [opened, setOpened] = useState(budget.config);
+  const perUserBox = useRef<HTMLInputElement | null>(null);
   useUnsavedGuard(
-    perUser !== String(budget.config.tokens_per_full_user) ||
-      company !== companyText(budget.config),
+    perUser !== String(opened.tokens_per_full_user) ||
+      company !== companyText(opened),
   );
   const preview = useMutation({
     mutationFn: async (change: Change) => {
@@ -294,8 +297,11 @@ function BudgetEditor({
     setPerUser(String(budget.config.tokens_per_full_user));
     setCompany(companyText(budget.config));
     setRevision(budget.revision);
+    setOpened(budget.config);
     preview.reset();
     save.reset();
+    // The button goes with the callout, so focus lands on the first value.
+    perUserBox.current?.focus();
   };
   return (
     <>
@@ -304,6 +310,7 @@ function BudgetEditor({
           {(control) => (
             <TextInput
               {...control}
+              ref={perUserBox}
               inputMode="numeric"
               value={perUser}
               disabled={busy}

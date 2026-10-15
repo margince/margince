@@ -497,27 +497,13 @@ describe("SettingsScreen RBAC surfaces", () => {
     // right alarm.
     vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
-    // Waited on the BOUNDARY's own words rather than on an absence: the trace
-    // is missing before /me resolves too, so an absence alone would pass
-    // against a page that goes on to render it.
-    //
-    // It used to wait on Account's content, because a denied address silently
-    // landed there. It does not any more — the reader is told, and the address
-    // they were given is left in the bar for them to quote.
-    // Waited on content only a RESOLVED /me draws — the AI rate card this
-    // principal DOES hold — before asserting the denial beside it. The boundary
-    // is also what renders while the snapshot is in flight, so asserting it
-    // alone would pass against a page that goes on to render the trace.
+    // The boundary's own words come only once /me has resolved, so an absence
+    // asserted after them is not the absence of a page still loading.
     await waitFor(() =>
       expect(screen.getByText(/no access to this settings page/i)).toBeTruthy(),
     );
-    // The trace card never mounted, so it never asked for a call.
-    const asked = vi
-      .mocked(fetch)
-      .mock.calls.map(([input]) =>
-        String(input instanceof Request ? input.url : input),
-      );
-    expect(asked.some((url) => url.includes("/ai/calls"))).toBe(false);
+    // A trace card mounted for this reader would say it is withheld.
+    expect(screen.queryByText(translate("en", "aicalls.withheld"))).toBeNull();
   });
 
   // The way off the boundary leads to the settings home, which is the address

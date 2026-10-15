@@ -523,12 +523,29 @@ it("offers to reload the values when the allowance changed under the editor", as
 
   await user.click(screen.getByRole("button", { name: "Reload values" }));
   expect(field).toHaveValue("15000000");
+  expect(field).toHaveFocus();
   expect(
     screen.queryByText("This allowance changed while you were editing"),
   ).toBeNull();
   expect(
     screen.getByRole("button", { name: "Preview effects" }),
   ).not.toBeDisabled();
+});
+
+it("holds no draft when another admin saves under an untouched editor", async () => {
+  const user = userEvent.setup({ delay: null });
+  const { server, client } = mount();
+  await openEditor(user);
+  server.budget = {
+    ...allowance,
+    config: { tokens_per_full_user: 15000000, company_monthly_tokens: null },
+    revision: "budget-v2",
+  };
+  await client.invalidateQueries({ queryKey: ["ai-budget"] });
+  expect(
+    await screen.findByText("This allowance changed while you were editing"),
+  ).toBeInTheDocument();
+  expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
 });
 
 it("hands focus back to Edit when the editor closes", async () => {

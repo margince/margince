@@ -10213,8 +10213,8 @@ export const vi = {
   "aiSettings.providers.value": "Khóa đã lưu: {count}/{total}",
   "aiSettings.providers.missing": "{count} đã gán, chưa có khóa",
   "aiSettings.providers.lastCall": "lần gọi gần nhất {elapsed}",
-  "aiSettings.providers.neverCalled": "Chưa từng gọi",
-  "aiSettings.providers.traceFailed": "Dấu vết lượt gọi không khả dụng",
+  "aiSettings.providers.neverCalled": "chưa từng gọi",
+  "aiSettings.providers.traceFailed": "dấu vết lượt gọi không khả dụng",
   "aiSettings.providers.standIn":
     "đang trả lời bằng nhà cung cấp thử nghiệm tích hợp",
   "elapsed.justNow": "vừa xong",

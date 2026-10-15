@@ -1607,6 +1607,14 @@ span.error-line {
   .table-scroll > :first-child {
     grid-area: 1 / 1;
   }
+  /* A table with no width of its own keeps it, as it would in a block. */
+  .table-scroll > table:first-child {
+    justify-self: start;
+  }
+  /* Clear of the inset focus ring, which the shade would otherwise cover. */
+  .table-scroll:focus-visible::after {
+    inset-inline-end: 2px;
+  }
   .table-scroll::after {
     --table-scroll-toward: to left;
     content: "";
