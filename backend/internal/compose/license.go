@@ -44,9 +44,9 @@ import (
 // api that refuses to boot beside a worker that shrugs would be a licensing
 // posture nobody could describe.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
-	// The SOURCE is handed over, not a token: the watcher re-reads it, so a
-	// license the operator renews in place takes effect on the next re-check
-	// instead of waiting for a restart.
+	// The SOURCE is handed over, not a token: the watcher re-reads it. A
+	// license.token_file renewed in place takes effect on the next re-check;
+	// license.token is fixed at boot.
 	//
 	// The source reads the deployment's declaration first and the key vault
 	// where there is none, so an installation that has sealed its token and

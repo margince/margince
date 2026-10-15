@@ -281,10 +281,10 @@ func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.
 // SealedLicenseTokenSource is the license watcher's token source, reading the
 // vault where the deployment no longer declares one.
 //
-// A SOURCE rather than a token, because the watcher re-reads it: a license the
-// operator renews in place takes effect on the next re-check instead of waiting
-// for a restart, and re-reading is also what keeps the sealed mirror current
-// when they renew it that way.
+// A SOURCE rather than a token, because the watcher re-reads it. Only a
+// license.token_file renewed in place takes effect on the next re-check, and
+// re-reading keeps the sealed mirror current then; license.token is fixed at
+// boot.
 func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) func() (string, error) {
 	declared := declaredLicenseToken(cfg)
 	return func() (string, error) {

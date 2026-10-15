@@ -40,8 +40,9 @@ const licenseTokenLimit = 64 << 10
 // production, "no licence" and "an empty file" would otherwise refuse the boot
 // with the wrong remedy.
 //
-// A source rather than a value because token_file is read again at each check,
-// so a licence renewed in place takes effect without a restart.
+// A source rather than a value because token_file is read again at each
+// check, so a licence renewed there takes effect without a restart. The
+// license.token value is fixed at boot.
 func declaredLicenseToken(c *config.Config) func() (string, error) {
 	token, origin := config.ValWithSource(c, LicenseToken)
 	path, pathOrigin := config.ValWithSource(c, LicenseTokenFile)
