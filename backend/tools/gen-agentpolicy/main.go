@@ -124,7 +124,8 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					Scope      string `yaml:"scope"`
 					ServedBy   string `yaml:"served_by"`
 				} `yaml:"x-mcp-tool"`
-				AgentAccess string `yaml:"x-agent-access"`
+				AgentAccess string                 `yaml:"x-agent-access"`
+				Security    *[]map[string][]string `yaml:"security"`
 			}
 			if err := node.Decode(&op); err != nil {
 				log.Fatalf("gen-agentpolicy: %s %s: %v", httpMethod, path, err)
@@ -158,11 +159,12 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 			case mutating[httpMethod]:
 				defects = append(defects, fmt.Sprintf("%s %s (%s): mutating operation carries neither x-mcp-tool nor x-agent-access", httpMethod, path, op.OperationID))
 				continue
+			case op.Security != nil && len(*op.Security) == 0:
+				continue // anonymous: no principal, so no agent, ever reaches it
 			default:
-				// An unannotated read: ordinary agent-readable data. No row,
-				// and no defect — the gate admits a read it has no policy for,
-				// which is the opposite of its mutating default and is why an
-				// unannotated GET does not need to say so.
+				// The gate refuses a route it has no row for, read or write. So
+				// an unannotated read is a defect, as a mutation is.
+				defects = append(defects, fmt.Sprintf("%s %s (%s): operation carries neither x-mcp-tool nor x-agent-access — name the verb that serves it on MCP, or mark it human-only", httpMethod, path, op.OperationID))
 				continue
 			}
 			policies = append(policies, p)
