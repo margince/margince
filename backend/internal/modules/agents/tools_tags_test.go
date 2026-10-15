@@ -77,6 +77,10 @@ func (s stubTags) UpdateTag(_ context.Context, tagID ids.UUID, edit TagEdit) (Ta
 	return out, nil
 }
 
+func (s stubTags) ArchiveTag(_ context.Context, tagID ids.UUID) (Tag, error) {
+	return Tag{TagID: tagID, Archived: true}, nil
+}
+
 func (s stubTags) TaggableTypes() []string { return s.taggable }
 
 // Both schemas advertise whatever the seam answers — the enum is the seam's

@@ -39,5 +39,8 @@ func (changeTags) Spec() mcp.ToolSpec {
 func (changeTags) routeField() string { return "action" }
 
 func (changeTags) routeTargets() map[string]string {
-	return map[string]string{"apply": "apply_tag", "remove": "remove_tag", "create": "create_tag", "update": "update_tag"}
+	return map[string]string{
+		"apply": "apply_tag", "remove": "remove_tag", "create": "create_tag", "update": "update_tag",
+		"archive": "archive_tag",
+	}
 }

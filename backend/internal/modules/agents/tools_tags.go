@@ -133,6 +133,9 @@ type Tags interface {
 	// is left alone, which is what lets a caller recolour without restating a
 	// name it never read.
 	UpdateTag(ctx context.Context, tagID ids.UUID, in TagEdit) (Tag, error)
+	// ArchiveTag retires a word: it stays on the records carrying it and can
+	// no longer be applied. The store takes `tag.delete`.
+	ArchiveTag(ctx context.Context, tagID ids.UUID) (Tag, error)
 	// MergeTags folds the source word into the target: every record carrying
 	// the source ends up carrying the target, the source is archived, and its
 	// NAME IS RELEASED. The store takes `tag.update`, the same grant an update
@@ -173,6 +176,7 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(removeTag{tags: tags})
 	r.Register(createTag{tags: tags})
 	r.Register(updateTag{tags: tags})
+	r.Register(archiveTag{tags: tags})
 	r.Register(mergeTags{tags: tags, language: r.language})
 	r.Register(readTags{})
 	r.Register(changeTags{})

@@ -143,6 +143,36 @@ func (t updateTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMess
 	return json.Marshal(detail)
 }
 
+// archiveTag retires a word for every record, as DELETE /tags/{id} does.
+type archiveTag struct{ tags Tags }
+
+func (t archiveTag) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "archive_tag", Title: "Retire a tag", Version: toolVersionV1,
+		Description:   archiveTagCopy.render(),
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionDelete},
+		OpenAPIOp:   "archiveTag",
+		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
+			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
+		OutputSchema: schemaFor[Tag](),
+	}
+}
+
+func (t archiveTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args struct {
+		TagID ids.UUID `json:"tag_id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	tag, err := t.tags.ArchiveTag(ctx, args.TagID)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(tag)
+}
+
 // clearColor is the value that REMOVES a tag's colour, spelled the way
 // UpdateTagRequest spells it.
 //

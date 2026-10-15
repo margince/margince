@@ -65,6 +65,7 @@ var agentActsGerman = agentActVocabulary{
 		"send_email":               "E-Mail senden",
 		"send_message":             "Nachricht senden",
 		"update_tag":               "Tag ändern",
+		"archive_tag":              "Tag stilllegen",
 	},
 	recordFrames: map[string]string{
 		toolCreateRecord:  "%s erstellen",
@@ -117,6 +118,7 @@ var agentActsVietnamese = agentActVocabulary{
 		"send_email":               "Gửi một email",
 		"send_message":             "Gửi một tin nhắn",
 		"update_tag":               "Cập nhật thẻ",
+		"archive_tag":              "Ngừng dùng thẻ",
 	},
 	recordFrames: map[string]string{
 		toolCreateRecord:  "Tạo %s",

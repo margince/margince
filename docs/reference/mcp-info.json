@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 180430,
+    "tool_catalog_bytes": 180452,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45997,
+    "approx_wire_tokens_total": 46003,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 49400,
-      "input_schema_bytes": 54750,
+      "description_bytes": 49403,
+      "input_schema_bytes": 54769,
       "output_schema_bytes": 62541,
-      "description_plus_input_schema_bytes": 104150
+      "description_plus_input_schema_bytes": 104172
     }
   },
   "tools": {
@@ -2054,12 +2054,13 @@
           "readOnlyHint": false,
           "title": "Change tags"
         },
-        "description": "Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new word. update renames, recolours or describes one; fields left out are unchanged. apply never creates a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as archived, and the same tag twice is a conflict. Before create, read the list — a near-duplicate splits records that belong together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it changes what a word is called, never what carries it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one kept, and archive_record on a tag to retire it for every record. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new word. update renames, recolours or describes one; fields left out are unchanged. apply never creates a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as archived, and the same tag twice is a conflict. Before create, read the list — a near-duplicate splits records that belong together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it changes what a word is called, never what carries it. Removing a tag that is not there succeeds. archive retires a word for every record; the records keep it. Use merge_tags to fold a duplicate word into the one kept. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
               "enum": [
                 "apply",
+                "archive",
                 "create",
                 "remove",
                 "update"
@@ -2113,7 +2114,7 @@
               "type": "string"
             },
             "tag_id": {
-              "description": "apply, remove, update only",
+              "description": "apply, archive, remove, update only",
               "format": "uuid",
               "type": "string"
             },

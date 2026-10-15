@@ -220,6 +220,14 @@ func (a tagAdapter) MergeTags(ctx context.Context, source, target ids.UUID) (age
 	return agents.TagMergeResult{Moved: out.Moved, Collapsed: out.Collapsed}, nil
 }
 
+func (a tagAdapter) ArchiveTag(ctx context.Context, tagID ids.UUID) (agents.Tag, error) {
+	row, err := a.store.ArchiveTag(ctx, ids.From[ids.TagKind](tagID))
+	if err != nil {
+		return agents.Tag{}, err
+	}
+	return tagOf(row.ID, row.Name, row.Color, true), nil
+}
+
 func (a tagAdapter) UpdateTag(ctx context.Context, tagID ids.UUID, in agents.TagEdit) (agents.Tag, error) {
 	// expectedVersion 0: the tool takes no If-Match, and zero is the store's
 	// own spelling for "the caller sent none and accepts last-write-wins" —

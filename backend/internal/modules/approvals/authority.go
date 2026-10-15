@@ -176,6 +176,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
+	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
+	// so a floored archive is decided on that grant.
+	"archive_tag": {{targetTag, principal.ActionDelete}},
 	// A phase transition writes the project row and one phase-history row in
 	// one transaction (deals/project_advance.go); the gated effect is the
 	// project move, so the approver needs the project's update grant.

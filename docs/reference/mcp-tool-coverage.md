@@ -338,8 +338,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `query_workspace` | 1.00 | 2 | `case4_use_the_moment` |
 | `progress_deal` | 1.00 | 2 | `case45_move_the_deal_on` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
-| `change_lead_state` | 1.00 | 4 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `change_lead_state` | 1.00 | 4 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
 | `search_records` | 1.00 | 2 | `case5_before_the_meeting` |
 | `decide_approvals` | 1.00 | 6 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `advance_project_phase` | 1.00 | 2 | `case41_close_the_project` |
@@ -382,8 +382,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `progress_deal` | 1.00 | 2 | `case45_move_the_deal_on` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `run_analytics_query` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
-| `change_lead_state` | 1.00 | 4 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `change_lead_state` | 1.00 | 4 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
 | `advance_project_phase` | 1.00 | 2 | `case41_close_the_project` |
 | `attach_document` | 1.00 | 4 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |

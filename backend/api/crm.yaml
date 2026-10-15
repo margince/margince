@@ -13382,7 +13382,7 @@ paths:
     delete:
       tags: [Tags]
       operationId: archiveTag
-      x-mcp-tool: { verb: archive_record, record_type: tag, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_tag, record_type: tag, tier: auto_execute, scope: write }
       summary: Archive a tag.
       description: |
         Retiring a word leaves every record that carries it alone: the taggings stay, so a

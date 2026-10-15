@@ -171,7 +171,7 @@ var agentPolicies = map[string]agentPolicy{
 	"DELETE /v1/signals/{id}":                                               {Op: "archiveSignal", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/stages/{id}":                                                {Op: "archiveStage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/stages/{id}/exit-criteria/{criterion_id}":                   {Op: "archiveStageExitCriterion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"DELETE /v1/tags/{id}":                                                  {Op: "archiveTag", Access: "tool", Tool: "archive_record", RecordType: "tag", Tier: "auto_execute", Scope: "write", ServedBy: "rest_only"},
+	"DELETE /v1/tags/{id}":                                                  {Op: "archiveTag", Access: "tool", Tool: "archive_tag", RecordType: "tag", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/tags/{id}/apply":                                            {Op: "removeTag", Access: "tool", Tool: "remove_tag", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"DELETE /v1/teams/{id}/members/{userId}":                                {Op: "removeTeamMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"DELETE /v1/users/{id}/sessions/{sessionId}":                            {Op: "revokeUserSession", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 176.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45997 |
+| Approx. wire tokens | 46003 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -69,7 +69,7 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 492 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 497 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
@@ -2433,8 +2433,8 @@ archived, and the same tag twice is a conflict. Before create, read the list —
 splits records that belong together, and a taken name is a conflict, even a retired one, which only
 Settings restores. create and update need tag grants an ordinary seat lacks. update sends no
 version, so read the tag right before editing; it changes what a word is called, never what carries
-it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one
-kept, and archive_record on a tag to retire it for every record. (Runs immediately; requires
+it. Removing a tag that is not there succeeds. archive retires a word for every record; the records
+keep it. Use merge_tags to fold a duplicate word into the one kept. (Runs immediately; requires
 passport scope "write".)
 ```
 
@@ -2446,6 +2446,7 @@ passport scope "write".)
     "action": {
       "enum": [
         "apply",
+        "archive",
         "create",
         "remove",
         "update"
@@ -2499,7 +2500,7 @@ passport scope "write".)
       "type": "string"
     },
     "tag_id": {
-      "description": "apply, remove, update only",
+      "description": "apply, archive, remove, update only",
       "format": "uuid",
       "type": "string"
     },
