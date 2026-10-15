@@ -5,6 +5,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"io"
 )
 
@@ -42,6 +43,9 @@ func parseFlags(r *Registry, args []string) (flagValues, error) {
 	}
 	if err := fs.Parse(args); err != nil {
 		return flagValues{}, err
+	}
+	if fs.NArg() > 0 {
+		return flagValues{}, fmt.Errorf("unexpected argument at position %d; flags take --name=value", len(args)-fs.NArg()+1)
 	}
 	return out, nil
 }

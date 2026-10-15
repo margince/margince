@@ -5,6 +5,7 @@ package config
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -37,5 +38,18 @@ func TestDotenvNamesTheLineOfAMistake(t *testing.T) {
 	_, err = parseDotenv("x.env", []byte(`X_A="open`))
 	if err == nil {
 		t.Fatal("an unclosed quote must fail")
+	}
+}
+
+func TestDotenvRefusesTextAfterAClosingQuote(t *testing.T) {
+	got, err := parseDotenv(".env", []byte("X_A=\"x\" # c\n"))
+	if err != nil || got["X_A"] != "x" {
+		t.Fatalf("a comment after the quote is fine: %v %v", got, err)
+	}
+	for _, line := range []string{`X_A="x"y`, `X_A="x" junk`} {
+		_, err := parseDotenv(".env", []byte(line))
+		if err == nil || strings.Contains(err.Error(), "junk") || strings.Contains(err.Error(), `"x"`) {
+			t.Fatalf("%s: got %v", line, err)
+		}
 	}
 }

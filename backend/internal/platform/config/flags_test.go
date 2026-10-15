@@ -25,6 +25,14 @@ func TestFlagsAreTheRegisteredOnesPlusTheLoaderOwn(t *testing.T) {
 	}
 }
 
+func TestFlagsRefuseStrayArguments(t *testing.T) {
+	reg := mustRegistry(t, Define(Spec[bool]{Key: "inline_relay", Env: "X_INLINE_RELAY", Flag: "inline-relay", Type: Bool, Doc: "d"}))
+	_, err := parseFlags(reg, []string{"--inline-relay", "false", "--addr=:9"})
+	if err == nil || err.Error() != "unexpected argument at position 2; flags take --name=value" {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func mustRegistry(t *testing.T, s ...Any) *Registry {
 	t.Helper()
 	r, err := NewRegistry(s)

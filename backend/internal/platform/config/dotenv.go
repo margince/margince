@@ -48,6 +48,10 @@ func dotenvValue(v string) (string, error) {
 		if end < 0 {
 			return "", fmt.Errorf("unclosed %c quote", q)
 		}
+		rest := strings.TrimSpace(v[end+2:])
+		if rest != "" && !strings.HasPrefix(rest, "#") {
+			return "", fmt.Errorf("text after the closing quote")
+		}
 		return v[1 : end+1], nil
 	}
 	if i := strings.Index(v, " #"); i >= 0 {
