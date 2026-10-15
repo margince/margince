@@ -354,7 +354,7 @@ func TestSeedRefusesAValueTheEntryWouldNotAccept(t *testing.T) {
 			return nil
 		})
 
-	stored, err := Seed(context.Background(), tx, entry, json.RawMessage(`"EURO"`))
+	stored, err := Seed(context.Background(), tx, entry, json.RawMessage(`"EURO"`), nil)
 	if err == nil {
 		t.Fatal("Seed accepted a value the entry's validator rejects; bootstrap would have written it")
 	}
@@ -369,7 +369,7 @@ func TestSeedReportsNotStoredWhenTheInsertItselfFails(t *testing.T) {
 
 	entry := Define[bool]("capture.seedprobe", "capture_settings", "update", true, nil)
 
-	stored, err := Seed(context.Background(), tx, entry, json.RawMessage(`true`))
+	stored, err := Seed(context.Background(), tx, entry, json.RawMessage(`true`), nil)
 	if !errors.Is(err, refused) {
 		t.Fatalf("Seed swallowed the database's refusal: %v", err)
 	}
@@ -383,12 +383,36 @@ func TestSeedValueRefusesAValueItCannotEncode(t *testing.T) {
 
 	entry := Define[chan int]("capture.unencodable", "capture_settings", "update", nil, nil)
 
-	stored, err := SeedValue(context.Background(), tx, entry, make(chan int))
+	stored, err := SeedValue(context.Background(), tx, entry, make(chan int), nil)
 	if err == nil {
 		t.Fatal("SeedValue accepted a value json.Marshal cannot represent")
 	}
 	if stored {
 		t.Error("a value that never became JSON was reported as stored")
+	}
+}
+
+// The fake fails any insert, so a skipped key that still reached the database
+// would surface as an error here.
+func TestSeedLeavesASkippedKeyAlone(t *testing.T) {
+	tx := &settingRowTx{execErr: errors.New("the insert ran")}
+	entry := Define[bool]("capture.seedprobe", "capture_settings", "update", true, nil)
+
+	stored, err := Seed(context.Background(), tx, entry, json.RawMessage(`false`), map[string]bool{"capture.seedprobe": true})
+	if err != nil || stored {
+		t.Fatalf("Seed of a skipped key = %v, %v; want not stored and no error", stored, err)
+	}
+}
+
+// The pool is nil, so a Has that read before judging the grant would panic.
+func TestHasTakesTheReadGateBeforeReading(t *testing.T) {
+	s := New(nil, NewRegistry(Define[bool]("privacy.probe", "retention_policy", "update", false, nil)))
+
+	if _, err := s.Has(readerCtx("capture_settings"), "privacy.probe"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("Has without the object grant = %v, want ErrPermissionDenied", err)
+	}
+	if _, err := s.Has(readerCtx("retention_policy"), "privacy.never_declared"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("Has of an unregistered key = %v, want ErrNotFound", err)
 	}
 }
 

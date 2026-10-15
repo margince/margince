@@ -94,6 +94,25 @@ func (s *Store) Raw(ctx context.Context, key string) (json.RawMessage, error) {
 	return raw, nil
 }
 
+// Has reports whether key has a stored row, under the read gate Raw takes. It
+// tells a saved value from the default nobody changed.
+func (s *Store) Has(ctx context.Context, key string) (bool, error) {
+	def, err := s.lookup(key)
+	if err != nil {
+		return false, err
+	}
+	if err := auth.Require(ctx, def.Object(), principal.ActionRead); err != nil {
+		return false, err
+	}
+	var has bool
+	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		has, err = hasRow(ctx, tx, key)
+		return err
+	})
+	return has, err
+}
+
 // SetRaw writes a setting, committing the row + audit in ONE transaction like
 // every other mutation. No event: the closed event catalog defines no
 // settings verb (EVT-NOEVT-3), the same ruling the capture-settings and
@@ -334,36 +353,6 @@ func Set[T any](ctx context.Context, s *Store, e *Entry[T], v T) error {
 	return s.SetRaw(ctx, e.Key(), raw)
 }
 
-// Seed writes a bootstrap value, consumed exactly once (ADR-0061 §2): it
-// inserts only when no row exists, so a restart never overwrites a setting a
-// human has since changed. Runs inside the caller's bootstrap transaction and
-// takes no RBAC gate — bootstrap runs before any human exists, and the caller
-// IS the boot path.
-//
-// It reports whether the row was STORED, and that is not a courtesy. DO NOTHING
-// is deliberate and stays, but "no row existed" is not the only way to reach it:
-// `setting` is not tenant-scoped, so a re-bootstrap creates a new workspace while
-// the previous installation's rows survive, and every value the operator just put
-// in margince.yaml is discarded. The columns that once carried a second copy of
-// these values are gone, so nothing downstream can notice the divergence.
-//
-// What Seed does NOT do is decide what should happen then — that is a product
-// question, open on #863. It refuses only to be silent about it, which is why
-// the boolean is returned rather than logged: platform plumbing owns no domain
-// and holds no logger.
-func Seed(ctx context.Context, tx pgx.Tx, def Definition, raw json.RawMessage) (stored bool, err error) {
-	if err := def.ValidateJSON(raw); err != nil {
-		return false, err
-	}
-	tag, err := tx.Exec(ctx,
-		`INSERT INTO setting (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
-		def.Key(), raw)
-	if err != nil {
-		return false, fmt.Errorf("settings: seeding %s: %w", def.Key(), err)
-	}
-	return tag.RowsAffected() == 1, nil
-}
-
 // hasRow reports whether the setting has a stored row at all, which is a
 // different question from what its value reads as: an absent row reads as the
 // registered default everywhere except the readers that refuse it.
@@ -417,45 +406,6 @@ func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
 	return out, nil
-}
-
-// ResetConfig restores the CONFIGURATION settings to first-boot state by
-// deleting their rows: an absent row reads as the registered default, which is
-// exactly what a fresh installation sees. Identity settings are spared.
-//
-// Deleting rather than writing defaults is what keeps this honest — a row
-// holding the default value and no row at all are the same to every reader,
-// and "has anyone ever changed this?" stays answerable afterwards.
-//
-// Runs inside the caller's reset transaction. The key list comes from the
-// registry, so a setting added later is reset with nothing here to keep in
-// step.
-func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry) error {
-	keys := make([]string, 0, len(reg.byKey))
-	for key, def := range reg.byKey {
-		if def.SurvivesDataReset() {
-			continue
-		}
-		keys = append(keys, key)
-	}
-	if len(keys) == 0 {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = ANY($1)`, keys); err != nil {
-		return fmt.Errorf("settings: restoring configuration to first-boot state: %w", err)
-	}
-	return nil
-}
-
-// SeedValue is the typed form of Seed, for a caller holding the entry. It
-// reports what Seed reports: whether the value was stored, or discarded because
-// a row was already there.
-func SeedValue[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], v T) (stored bool, err error) {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return false, fmt.Errorf("settings: encoding seed for %s: %w", e.Key(), err)
-	}
-	return Seed(ctx, tx, e, raw)
 }
 
 // RequireTx reads a setting inside a transaction the caller already holds, for

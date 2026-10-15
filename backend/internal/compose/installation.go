@@ -319,7 +319,7 @@ func configuredSeed(seeds deployconfig.Seeds, dealsH dealsHandlers, discarded *[
 			return err
 		}
 		if seeds.LegalReview != nil && !*seeds.LegalReview {
-			if _, err := settings.SeedValue(ctx, tx, deals.LegalReviewEnabled, false); err != nil {
+			if _, err := settings.SeedValue(ctx, tx, deals.LegalReviewEnabled, false, nil); err != nil {
 				return err
 			}
 		}
@@ -382,7 +382,7 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 	// only have preserved a row that already says what this would have written.
 	// Nothing an operator supplied is lost, which is exactly what separates it
 	// from the identity trio.
-	_, err := settings.SeedValue(ctx, tx, privacy.RetainOnly, true)
+	_, err := settings.SeedValue(ctx, tx, privacy.RetainOnly, true, nil)
 	return err
 }
 
@@ -411,7 +411,7 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	if err != nil || !declaredAny {
 		return err
 	}
-	stored, err := settings.SeedValue(ctx, tx, ai.Routing, cfg)
+	stored, err := settings.SeedValue(ctx, tx, ai.Routing, cfg, nil)
 	if err != nil {
 		return err
 	}

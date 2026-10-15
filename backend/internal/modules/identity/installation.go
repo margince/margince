@@ -384,7 +384,7 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIde
 		{BaseCurrency, id.currency},
 		{BaseLanguage, id.language},
 	} {
-		stored, err := settings.SeedValue(ctx, tx, seed.entry, seed.value)
+		stored, err := settings.SeedValue(ctx, tx, seed.entry, seed.value, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -395,7 +395,7 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIde
 	if id.country == nil {
 		return discarded, nil
 	}
-	stored, err := settings.SeedValue(ctx, tx, Country, *id.country)
+	stored, err := settings.SeedValue(ctx, tx, Country, *id.country, nil)
 	if err != nil {
 		return nil, err
 	}

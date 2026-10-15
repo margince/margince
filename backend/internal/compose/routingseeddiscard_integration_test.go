@@ -97,7 +97,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 		t.Fatalf("building the surviving binding: %v", err)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(ctx, tx, ai.Routing, surviving)
+		_, err := settings.SeedValue(ctx, tx, ai.Routing, surviving, nil)
 		return err
 	}); err != nil {
 		t.Fatalf("storing the surviving binding: %v", err)

@@ -268,7 +268,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true)
+		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true, nil)
 		return err
 	}); err != nil {
 		t.Fatal(err)

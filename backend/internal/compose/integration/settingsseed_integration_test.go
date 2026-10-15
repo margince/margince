@@ -42,10 +42,10 @@ func TestASecondSeedKeepsTheStoredValueAndSaysItDiscardedTheNewOne(t *testing.T)
 			return err
 		}
 		var err error
-		if storedFirst, err = settings.SeedValue(context.Background(), tx, identity.Name, first); err != nil {
+		if storedFirst, err = settings.SeedValue(context.Background(), tx, identity.Name, first, nil); err != nil {
 			return err
 		}
-		storedSecond, err = settings.SeedValue(context.Background(), tx, identity.Name, second)
+		storedSecond, err = settings.SeedValue(context.Background(), tx, identity.Name, second, nil)
 		return err
 	}); err != nil {
 		t.Fatal(err)

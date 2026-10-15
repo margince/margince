@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // Sources are what Load reads. Args holds flags only: a program strips its
@@ -40,6 +42,7 @@ type Config struct {
 	tracing  bool
 	warnings []string
 	files    Files
+	db       *settings.Store
 }
 
 // Load resolves every setting and returns all faults joined, so an operator

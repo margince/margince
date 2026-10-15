@@ -181,7 +181,7 @@ func plantRouting(ctx context.Context, store settingsWriter, cfg ai.RoutingConfi
 	var planted bool
 	if err := store.WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		planted, err = settings.SeedValue(ctx, tx, ai.Routing, cfg)
+		planted, err = settings.SeedValue(ctx, tx, ai.Routing, cfg, nil)
 		return err
 	}); err != nil {
 		// Not fatal. The installation still boots and still resolves whatever it

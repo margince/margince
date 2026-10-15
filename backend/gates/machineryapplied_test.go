@@ -7,6 +7,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"path/filepath"
 	"strconv"
@@ -102,7 +103,7 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 				// refuses it at runtime, which is the failure this exists to
 				// move forward in time.
 				args := machineryEntryArgs(node)
-				if args == nil {
+				if args == nil || forwardsItsCallersEntry(pkg, enclosingFunc(file, node.Pos())) {
 					return true
 				}
 				for _, arg := range args {
@@ -176,6 +177,9 @@ func definesASetting(expr ast.Expr) bool {
 			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "settings" && strings.HasPrefix(sel.Sel.Name, "Define") {
 				return true
 			}
+			if isDefineStored(call) {
+				return true
+			}
 			// A builder method — unwrap and keep looking for the Define under it.
 			expr = sel.X
 			continue
@@ -197,6 +201,9 @@ func hasMachineryApplied(expr ast.Expr) bool {
 		if !ok {
 			return false
 		}
+		if isDefineStored(call) {
+			return storeDeclaresMachineryApplied(call)
+		}
 		sel, ok := call.Fun.(*ast.SelectorExpr)
 		if !ok {
 			return false
@@ -206,6 +213,51 @@ func hasMachineryApplied(expr ast.Expr) bool {
 		}
 		expr = sel.X
 	}
+}
+
+// isDefineStored matches config.DefineStored, with or without its type
+// argument: the registry's stored setting, which builds its settings entry.
+func isDefineStored(call *ast.CallExpr) bool {
+	fun := call.Fun
+	if idx, ok := fun.(*ast.IndexExpr); ok {
+		fun = idx.X
+	}
+	sel, ok := fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	return ok && pkg.Name == "config" && sel.Sel.Name == "DefineStored"
+}
+
+// storeDeclaresMachineryApplied reads `MachineryApplied: true` off the
+// config.Store literal a DefineStored call passes.
+func storeDeclaresMachineryApplied(call *ast.CallExpr) bool {
+	for _, arg := range call.Args {
+		lit, ok := arg.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, keyOK := kv.Key.(*ast.Ident)
+			value, valueOK := kv.Value.(*ast.Ident)
+			if keyOK && valueOK && key.Name == "MachineryApplied" && value.Name == "true" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// forwardsItsCallersEntry is config.StoredApplyTx handing its caller's entry
+// to settings.ApplyTx. The entry is named at that caller, which this gate
+// reads as a machinery read of its own.
+func forwardsItsCallersEntry(pkg, fn string) bool {
+	return pkg == "config" && fn == "StoredApplyTx"
 }
 
 // entryName renders the entry argument as declaringPackage.Name.
@@ -388,6 +440,37 @@ func machineryEntryArgs(call *ast.CallExpr) []ast.Expr {
 		return call.Args[2:]
 	case calleeName(call) == "ApplyManyTx" && len(call.Args) > 2:
 		return call.Args[2:]
+	case calleeName(call) == "StoredApplyTx" && len(call.Args) == 4:
+		return call.Args[3:]
 	}
 	return nil
+}
+
+// The registry's stored settings reach ApplyTx through config.StoredApplyTx, so
+// the census must read that call and the DefineStored declaration behind it.
+func TestTheMachineryCensusReadsAStoredSettingAndItsDeclaration(t *testing.T) {
+	t.Parallel()
+	parse := func(src string) *ast.CallExpr {
+		expr, err := parser.ParseExpr(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		call, ok := expr.(*ast.CallExpr)
+		if !ok {
+			t.Fatalf("%s is not a call", src)
+		}
+		return call
+	}
+	declared := parse(`config.DefineStored(config.Spec[int]{}, config.Store{RBACObject: "x", MachineryApplied: true})`)
+	if !definesASetting(declared) || !hasMachineryApplied(declared) {
+		t.Error("a DefineStored declaring MachineryApplied is not read as one")
+	}
+	undeclared := parse(`config.DefineStored[int](config.Spec[int]{}, config.Store{RBACObject: "x"})`)
+	if !definesASetting(undeclared) || hasMachineryApplied(undeclared) {
+		t.Error("a DefineStored without MachineryApplied is read as declaring it")
+	}
+	args := machineryEntryArgs(parse(`config.StoredApplyTx(ctx, tx, cfg, identity.Country)`))
+	if len(args) != 1 || entryName(args[0], "compose", map[string]string{"identity": "identity"}, nil) != "identity.Country" {
+		t.Errorf("StoredApplyTx's entry is not read: %v", args)
+	}
 }

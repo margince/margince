@@ -43,7 +43,7 @@ func SetBaseLanguage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, code
 			`DELETE FROM setting WHERE key = $1`, identity.BaseLanguage.Key()); err != nil {
 			return err
 		}
-		stored, err := settings.SeedValue(ctx, tx, identity.BaseLanguage, code)
+		stored, err := settings.SeedValue(ctx, tx, identity.BaseLanguage, code, nil)
 		if err != nil {
 			return err
 		}

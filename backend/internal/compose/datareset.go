@@ -271,7 +271,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// keeps its name, currency and zone), configuration is deleted back to
 		// its registered default, and a setting is configuration unless its
 		// entry declares otherwise.
-		if err := settings.ResetConfig(ctx, tx, settingsRegistry()); err != nil {
+		if err := settings.ResetConfig(ctx, tx, settingsRegistry(), nil); err != nil {
 			return err
 		}
 
