@@ -354,10 +354,10 @@ func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo
 	}, nil
 }
 
-// Guards refuses, before anything is staged: a `fields` payload naming a key
-// the record type does not accept, a target the caller cannot see (the read
-// answers the row-scope miss as not-found), and a target whose authority
-// lives in another system of record.
+// Guards refuses before anything is staged: a `fields` key the record type does
+// not accept, or a target the caller cannot see. The read answers a row-scope
+// miss as not-found. It also refuses a target held in another system of record,
+// and a machine renaming the anchor company.
 //
 // Unlike create's, there is no "verb does not serve this type" refusal here.
 // One keyed on the seam's vocabulary would make the stand-down below
@@ -374,7 +374,10 @@ func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
 	if err != nil {
 		return err
 	}
-	return refuseStagingElsewhere(rec)
+	if err := refuseStagingElsewhere(rec); err != nil {
+		return err
+	}
+	return refuseAnchorRename(ctx, rec, cmd.Fields)
 }
 
 // servedByTheRecordSeam reports whether the record seam speaks this type at all.

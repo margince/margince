@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -16,12 +17,12 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 // it can honestly be in: something was refused, nothing was, and the reader may
 // not ask.
 
-const meta: Meta<typeof ExtensionIngestHealthCard> = {
+const meta = {
   title: "Settings/Governance/System health/Connector records refused",
   component: ExtensionIngestHealthCard,
-};
+} satisfies Meta<typeof ExtensionIngestHealthCard>;
 export default meta;
-type Story = StoryObj<typeof ExtensionIngestHealthCard>;
+type Story = StoryObj<typeof meta>;
 
 // Every story serves /me too: the card gates its own fetch on the grant, so a
 // story without a principal would only ever render the withheld state.
@@ -76,6 +77,13 @@ export const NothingRefused: Story = {
     window_days: 7,
     units: [],
   }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/No records refused in the last 7 days/);
+    await expect(
+      canvas.queryByText(/Shows counts and the refusing/),
+    ).toBeNull();
+  },
 };
 
 // A reader without the grant. The card keeps its place and says the reading is

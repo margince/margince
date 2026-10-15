@@ -549,16 +549,17 @@ export const vi = {
   "aiAdmin.allowance": "Hạn mức AI hàng tháng",
   "aiAdmin.pool":
     "Hạn mức chung của công ty. Không phải hạn mức cá nhân hay mức trần chi tiêu bằng đô la.",
-  "aiAdmin.consumption": "Đã dùng {spent}/{total} token · {pct}%",
-  "aiAdmin.remaining": "Còn {tokens} token",
-  "aiAdmin.reset": "Đặt lại lúc {date} UTC",
+  "aiAdmin.consumption": "{spent}/{total} token · {pct}%",
+  "aiAdmin.used": "Đã dùng",
+  "aiAdmin.resets": "Đặt lại lúc",
+  "aiAdmin.basis": "Cách tính",
+  "aiAdmin.reset": "{date} theo giờ UTC",
   "aiAdmin.fixed":
     "Hạn mức cố định của công ty thay cho cách tính theo người dùng.",
   "aiAdmin.formula":
     "Người dùng đầy đủ đang hoạt động: {users} × {tokens} token mỗi người dùng mỗi tháng.",
   "aiAdmin.floor":
     "Khi không có người dùng đủ điều kiện, hạn mức tính là 1 người dùng.",
-  "aiAdmin.normal": "Trong ngưỡng hạn mức bình thường",
   "aiAdmin.degraded": "Đã đạt ngưỡng 80%: đang định tuyến sang cấp thấp hơn",
   "aiAdmin.queued": "Đã chạm hạn mức: AI nền bị hoãn",
   "aiAdmin.policy":
@@ -574,7 +575,9 @@ export const vi = {
     "Để trống để tính theo người dùng. Giá trị theo người dùng vẫn giữ nguyên.",
   "aiAdmin.routingStale": "Gán mô hình đã thay đổi trong lúc đang sửa",
   "aiAdmin.stale": "Hạn mức này đã thay đổi trong lúc đang sửa",
-  "aiAdmin.staleHelp": "Hủy rồi mở lại trình sửa để dùng cài đặt mới nhất.",
+  "aiAdmin.staleHelp":
+    "Tải lại giá trị để sửa trên cài đặt mới nhất. Nội dung đã nhập sẽ bị thay thế.",
+  "aiAdmin.reload": "Tải lại giá trị",
   "aiAdmin.failed": "Không thể áp dụng thay đổi",
   "aiAdmin.preview": "Xem trước tác động",
   "aiAdmin.previewHint":
@@ -1128,7 +1131,6 @@ export const vi = {
   "nav.deals": "Deal",
   "nav.analytics": "Analytics",
   "nav.settings": "Cài đặt",
-  "nav.automations": "Tự động hóa",
   "nav.group.records": "Hồ sơ",
   "nav.group.work": "Công việc",
   "nav.group.intelligence": "Phân tích",
@@ -3108,8 +3110,6 @@ export const vi = {
     "Lý do có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
   "leadReasons.duplicate": "Đã có lý do mang tên này. Hãy chọn tên khác.",
   "followUpSettings.title": "Việc tiếp theo",
-  "followUpSettings.sub":
-    "Thời điểm một thư đã gửi khách hàng hiện lại trên Trang chủ của người gửi thành việc tiếp theo.",
   "followUpSettings.days": "Nhắc sau (ngày)",
   "followUpSettings.daysHint":
     "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc liên hệ lại, từ 1 đến 30.",
@@ -5692,6 +5692,7 @@ export const vi = {
   "import.object.lead": "Lead",
   "import.object.company": "Công ty",
   "import.object.contact": "Liên hệ",
+  "import.object.deal": "Deal",
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
@@ -5888,6 +5889,10 @@ export const vi = {
   "import.test.invalid_one": "1 dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
   "import.test.invalid_other":
     "{count} dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
+  "import.test.closedDeals_one": "1 deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDeals_other": "{count} deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDealsBody":
+    "{won} thắng và {lost} thua. Các deal giữ ngày chốt trong tệp, và không có tự động hóa hay hoa hồng nào chạy cho chúng.",
   "import.test.invalidBody":
     "Sửa trong tệp rồi tải lên lại để nhập các dòng này.",
   "import.test.anyway_one":
@@ -6024,6 +6029,38 @@ export const vi = {
   "import.reason.tag_new":
     "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
   "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
+  "import.reason.stage_unnamed": "Hãy nêu giai đoạn của deal.",
+  "import.reason.pipeline_unnamed":
+    "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
+  "import.reason.pipeline_unknown":
+    "“{value}” không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
+  "import.reason.stage_unknown":
+    "“{value}” không phải giai đoạn của quy trình “{pipeline}”. Các giai đoạn: {names}.",
+  "import.reason.currency_not_a_code":
+    "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+  "import.reason.close_date_future":
+    "“{value}” ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
+  "import.reason.close_date_past":
+    "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
+  "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
+  "import.reason.deal_pipeline_fixed":
+    "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "import.reason.deal_already_closed":
+    "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
+  "import.reason.fx_rate_missing":
+    "Chưa có tỷ giá {currency} cho ngày deal này đóng nên hàng bị bỏ qua. Hãy thêm tỷ giá rồi nhập lại.",
+  "import.reason.deal_legal_gate":
+    "Một giai đoạn trước giai đoạn của deal này cần được rà soát pháp lý nên không thể nhập deal vượt qua giai đoạn đó.",
+  "import.reason.pipeline_no_open_stage":
+    "Quy trình không có giai đoạn đang mở để bắt đầu một deal đã đóng.",
+  "import.reason.cannot_link_stakeholders":
+    "Bạn không thể thêm bên liên quan vào deal nên liên hệ của hàng này không được liên kết.",
+  "import.reason.contact_not_found":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
@@ -6097,7 +6134,6 @@ export const vi = {
   "jobs.failingSince": "lỗi từ {when}",
   "jobs.reasonVetted":
     "Lý do, lớp lỗi và cách xử lý đến từ tầng tác vụ, không bao giờ từ nguyên nhân thô của worker. Lỗi mà tầng này không diễn đạt được sẽ hiện câu thay thế cố định và không có lớp lỗi.",
-  "jobs.generatedAt": "Tính đến {time}",
   "jobs.kind.account_scan": "Phân tích công ty",
   "jobs.kind.agent_task_retention": "Dọn dẹp tác vụ của trợ lý AI",
   "jobs.kind.ai_price_sync_sweep": "Cập nhật giá mô hình",
@@ -6173,6 +6209,29 @@ export const vi = {
   "settings.providerHealth": "Trạng thái nhà cung cấp AI",
   "settings.providerHealthSub":
     "Từng nhà cung cấp AI có đang phản hồi hay không, theo ghi nhận của máy chủ này.",
+  "systemHealth.strip": "Trạng thái",
+  "systemHealth.asOf": "Tính đến {time}",
+  "systemHealth.checking": "Đang kiểm tra…",
+  "systemHealth.unread": "Không kiểm tra được",
+  "systemHealth.notSetUp": "Chưa thiết lập",
+  "systemHealth.jobs.idle": "Đang rảnh",
+  "systemHealth.jobs.keepingUp": "Đang theo kịp",
+  "systemHealth.jobs.dead_one": "{count} đã hỏng",
+  "systemHealth.jobs.dead_other": "{count} đã hỏng",
+  "systemHealth.jobs.retrying_one": "{count} đang thử lại",
+  "systemHealth.jobs.retrying_other": "{count} đang thử lại",
+  "systemHealth.intake.label": "Mục từ trình kết nối",
+  "systemHealth.intake.none": "Không có",
+  "systemHealth.intake.refused_one": "{count} bị từ chối",
+  "systemHealth.intake.refused_other": "{count} bị từ chối",
+  "systemHealth.providers.answering": "Đang phản hồi",
+  "systemHealth.providers.affected_one": "{count} cần xử lý",
+  "systemHealth.providers.affected_other": "{count} cần xử lý",
+  "systemHealth.providers.standIn": "Nhà cung cấp thử nghiệm tích hợp",
+  "systemHealth.providers.standInDetail":
+    "Không thể gọi các mô hình đã gán. Thêm khóa trong mục Mô hình AI.",
+  "systemHealth.providers.standInPartialDetail":
+    "Một số cấp đang trả lời bằng nhà cung cấp thử nghiệm tích hợp. Thêm khóa của các cấp đó trong mục Mô hình AI.",
   "providerHealth.adminOnly":
     "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ bản cài đặt và cần quyền mà vai trò hiện tại không có.",
   "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
@@ -6224,7 +6283,6 @@ export const vi = {
   "extIngest.col.lastRefused": "Lần từ chối gần nhất",
   "extIngest.noDetail":
     "Chỉ hiển thị số lượng và bước kiểm tra đã từ chối, không bao giờ hiển thị chính mục đó, vì trường bị từ chối có thể trích dẫn nội dung của bên gửi. Nhật ký trình kết nối có lý do đầy đủ cho từng trường hợp.",
-  "extIngest.generatedAt": "Tính đến {time}",
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
@@ -6254,7 +6312,6 @@ export const vi = {
   "recoveryHealth.lastBackupHint":
     "Sao lưu chạy bên ngoài Margince, vì vậy hãy kiểm tra trong công cụ sao lưu của bạn.",
   "recoveryHealth.backupNotObserved": "Margince không theo dõi",
-  "recoveryHealth.generatedAt": "Đọc lúc {time}",
   "settings.captureHealth": "Kiểm tra thu thập thư",
   "settings.captureHealthSub":
     "Thu thập thư có theo kịp các câu hỏi cần trả lời hay không.",
@@ -6287,6 +6344,7 @@ export const vi = {
   "captureHealth.fact.pending": "Người gửi chờ kiểm tra",
   "captureHealth.fact.unsure": "Người gửi chưa kiểm tra chắc chắn được",
   "captureHealth.fact.exhausted": "Người gửi đã hết lượt thử lại",
+  "captureHealth.fact.mailboxes": "Hộp thư có mục đang chờ",
   "captureHealth.oldestWaited": "mục cũ nhất đã chờ {age}",
   "captureHealth.contactsWaiting_one": "{count} liên hệ đang chờ",
   "captureHealth.contactsWaiting_other": "{count} liên hệ đang chờ",
@@ -6297,13 +6355,10 @@ export const vi = {
   "captureHealth.mailboxes": "Hộp thư",
   "captureHealth.noDetail":
     "Chỉ có số đếm. Chỉ chủ hộp thư mới thấy liên hệ và chuỗi thư nào đang chờ.",
-  "captureHealth.mailboxesEmpty": "Không hộp thư nào có mục đang chờ.",
   "captureHealth.unnamedMailbox": "Hộp thư chưa đặt tên",
-  "captureHealth.installation": "Toàn bộ bản cài đặt",
   "captureHealth.heldMeetings": "Cuộc họp bị giữ lại",
   "captureHealth.heldMeetingsSub":
     "Cuộc họp đã gắn hồ sơ nhưng vẫn ẩn với đồng nghiệp. Tác vụ chạy hằng đêm sẽ chia sẻ các cuộc họp này.",
-  "captureHealth.generatedAt": "Tính đến {time}",
 
   "audit.you": "Bạn",
   "audit.system": "Hệ thống",
@@ -6314,12 +6369,9 @@ export const vi = {
   "audit.viaDealRoom": "trong Deal Room",
   "audit.viaNamed": "qua {client}",
   "audit.noHumanAuthority": "Không ghi nhận người ủy quyền",
-  "settings.auditSub":
-    "Mọi hành động, gắn với thành viên, trợ lý AI hoặc trình kết nối.",
   "settings.auditAdminOnly":
     "Vai trò hiện tại không có quyền xem toàn bộ nhật ký hoạt động. Nhật ký ghi lại mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
   "settings.auditFilters": "Bộ lọc",
-  "settings.auditEntries": "Nhật ký hoạt động",
   "settings.auditTrailLabel": "Hành động đã ghi nhận",
   "settings.auditActor": "Tác nhân",
   "settings.auditEntity": "Loại đối tượng",
@@ -6327,6 +6379,56 @@ export const vi = {
   "settings.auditAction": "Hành động",
   "settings.auditFrom": "Từ",
   "settings.auditTo": "Đến",
+  "audit.action.create": "Đã tạo",
+  "audit.action.update": "Đã cập nhật",
+  "audit.action.archive": "Đã lưu trữ",
+  "audit.action.merge": "Đã gộp",
+  "audit.action.promote": "Đã nâng cấp",
+  "audit.action.demote": "Đã hạ cấp",
+  "audit.action.disqualify": "Đã loại",
+  "audit.action.restore": "Đã khôi phục",
+  "audit.action.export": "Đã xuất",
+  "audit.action.erase": "Đã xóa vĩnh viễn",
+  "audit.action.anonymize": "Đã ẩn danh hóa",
+  "audit.action.assign": "Đã giao",
+  "audit.action.advanceStage": "Đã chuyển giai đoạn",
+  "audit.action.advancePhase": "Đã chuyển giai đoạn dự án",
+  "audit.action.sendEmail": "Đã gửi email",
+  "audit.action.consentGrant": "Đã ghi nhận đồng ý",
+  "audit.action.consentWithdraw": "Đã rút lại đồng ý",
+  "audit.action.approve": "Đã duyệt",
+  "audit.action.reject": "Đã từ chối",
+  "audit.action.recordShare": "Đã chia sẻ",
+  "audit.action.recordUnshare": "Đã ngừng chia sẻ",
+  "audit.action.activityRelink": "Đã liên kết lại hoạt động",
+  "audit.action.import": "Đã nhập",
+  "audit.action.importUndo": "Đã hoàn tác nhập",
+  "audit.action.resetData": "Đã đặt lại dữ liệu",
+  "audit.action.passwordLinkIssued": "Đã gửi liên kết mật khẩu",
+  "audit.action.connect": "Đã kết nối",
+  "audit.action.disconnect": "Đã ngắt kết nối",
+  "audit.action.schedule": "Đã lên lịch",
+  "audit.action.reschedule": "Đã dời lịch",
+  "audit.action.cancel": "Đã hủy",
+  "audit.action.release": "Đã bỏ tạm giữ",
+  "audit.action.hold": "Đã tạm giữ",
+  "audit.action.expire": "Đã hết hạn",
+  "audit.action.resolve": "Đã xử lý",
+  "audit.action.restrict": "Đã hạn chế",
+  "audit.action.pin": "Đã ghim",
+  "audit.action.accrue": "Đã ghi nhận khoản phát sinh",
+  "audit.action.pay": "Đã thanh toán",
+  "audit.action.publish": "Đã xuất bản",
+  "audit.action.pause": "Đã tạm dừng",
+  "audit.action.resume": "Đã tiếp tục",
+  "audit.action.close": "Đã đóng",
+  "audit.action.invite": "Đã mời",
+  "audit.action.revoke": "Đã thu hồi",
+  "audit.action.delete": "Đã xóa",
+  "audit.action.placeLegalHold": "Đã đặt lưu trữ pháp lý",
+  "audit.action.liftLegalHold": "Đã gỡ lưu trữ pháp lý",
+  "audit.action.requestLegalReview": "Đã yêu cầu rà soát pháp lý",
+  "audit.action.withdrawLegalReview": "Đã rút yêu cầu rà soát pháp lý",
   "settings.auditExpandEntry": "Xem chi tiết thay đổi: {action} trên {entity}",
   "settings.auditLoading": "Đang tải các hành động đã ghi nhận…",
   "settings.auditNoMatch": "Không có hành động nào khớp với các bộ lọc này.",
@@ -6340,11 +6442,6 @@ export const vi = {
   "settings.auditAllowedBy": "Căn cứ cho phép",
   "settings.auditRecordId": "ID đối tượng",
   "settings.auditEvidence": "Bằng chứng",
-  "settings.auditChanges": "Các trường đã thay đổi",
-  "settings.auditColField": "Trường",
-  "settings.auditColValue": "Giá trị",
-  "settings.auditColChange": "Trước và sau",
-  "settings.auditColRemoved": "Giá trị đã xóa",
   "settings.auditNoValue": "Không có giá trị",
   "settings.auditRuleSystem": "Hệ thống, không kiểm tra vai trò",
   "settings.auditRuleDealRoom": "Phiên Deal Room",
@@ -8448,11 +8545,12 @@ export const vi = {
     "Đăng ký lại là một lựa chọn đồng ý rõ ràng và không bao giờ tự động bật lại. Lưu bên dưới để ghi nhận sự đồng ý, hoặc bỏ thay đổi.",
 
   "auto.tier.approval": "Cần duyệt",
-  "auto.sub":
-    "Quy tắc tự hành động. Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
+  "auto.sub": "Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
   "auto.readOnly": "Chỉ đọc: bạn không có quyền thay đổi tự động hóa.",
   "auto.catalog": "Thư viện khởi đầu",
   "auto.instances": "Tự động hóa đã cấu hình",
+  "auto.instances.empty":
+    "Chưa có tự động hóa nào. Bắt đầu từ thư viện khởi đầu.",
   "auto.use": "Dùng mẫu",
   "auto.useNamed": "Dùng mẫu: {name}",
   "auto.modeAuto": "Tự chạy",
@@ -8486,7 +8584,6 @@ export const vi = {
     "Đối tượng này chưa có trường ngày nào đang hoạt động.",
   "auto.dateField.loadError": "Không thể tải trường ngày. Thử lại.",
   "auto.enabledFor": "{name} đang bật",
-  "auto.colMode": "Chế độ",
   "auto.colLastRun": "Lần chạy gần nhất",
   "auto.colRuns30": "Số lần chạy (30 ngày)",
   "auto.colStatus": "Trạng thái",
@@ -8521,7 +8618,7 @@ export const vi = {
   "auto.runs.open": "Lượt chạy",
   "auto.runs.title": "Lịch sử chạy",
   "auto.runsFor": "Lịch sử chạy của {name}",
-  "auto.runs.filterAll": "Tất cả",
+  "auto.runs.filterAll": "Mọi kết quả",
   "auto.runs.filterFired": "Đã kích hoạt",
   "auto.runs.filterFailed": "Bị lỗi",
   "auto.runs.filterBlocked": "Bị chặn",
@@ -8539,6 +8636,7 @@ export const vi = {
   "auto.runs.outcomeBlocked": "Bị chặn",
   "auto.runs.outcomeSkipped": "Đã bỏ qua",
   "auto.runs.outcomeQueued": "Chờ duyệt",
+  "auto.runs.outcome": "Kết quả",
 
   "auto.preview.open": "Xem trước",
   "auto.preview.title": "Tác động khi chạy thử",
@@ -8691,7 +8789,7 @@ export const vi = {
   "settings.page.capture-activity.sub":
     "Thu thập đã xử lý thư thế nào, và vì sao.",
   "settings.page.company.sub":
-    "Tên công ty, loại tiền và bối cảnh kinh doanh dùng cho mọi hồ sơ.",
+    "Thương hiệu, bối cảnh kinh doanh, cùng loại tiền và lịch mà mọi báo cáo dùng.",
   "settings.page.authentication.sub":
     "Cách thành viên đăng nhập vào bản cài đặt này, ứng dụng nào được thay mặt bản cài đặt, và nhóm IdP nào cấp vai trò.",
   "settings.page.members.sub":
@@ -9220,8 +9318,6 @@ export const vi = {
     "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
   "settings.rates.fxWithheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được tỷ giá. Mọi số liệu tổng hợp trong bản cài đặt đều quy đổi theo tỷ giá này.",
-  "settings.rates.modelWithheld":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được giá mô hình.",
   "settings.rates.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi tỷ giá và giá mô hình.",
   "settings.rates.fxTableLabel": "Tỷ giá đang áp dụng",
@@ -9229,9 +9325,6 @@ export const vi = {
   "settings.rates.fxEmpty": "Chưa có tỷ giá nào.",
   "settings.rates.fxModalTitle": "Nhập tỷ giá",
   "settings.rates.rateToBase": "Tỷ giá (quy đổi sang loại tiền cơ sở)",
-  "settings.rates.modelTitle": "Chi phí mô hình AI",
-  "settings.rates.modelIntro":
-    "Giá từng mô hình tính bằng USD cho mỗi 1M token, dùng để ước tính chi phí AI. Giá không bao giờ ảnh hưởng đến định tuyến mô hình.",
   "settings.rates.modelTableLabel": "Giá đang áp dụng",
   "settings.rates.modelAdd": "Thêm giá mô hình",
   "settings.rates.modelEmpty": "Chưa có giá mô hình nào.",
@@ -9495,19 +9588,84 @@ export const vi = {
   "roles.scope.all": "Của tất cả",
   "roles.scope.allSub": "Mọi hồ sơ trong công ty.",
   "roles.grantsSub": "Mỗi công tắc lưu ngay lập tức.",
-  "roles.grantsCore": "Hồ sơ và cài đặt",
-  "roles.grantsExtensions": "Tiện ích mở rộng",
   "roles.grantsNarrowOnly":
     "Mỗi công tắc lưu ngay lập tức. Chỉ quản trị viên mới bật được quyền; bạn có thể tắt quyền.",
   "roles.turnOnAdminOnly": "Chỉ quản trị viên mới bật được quyền.",
   "roles.widenAdminOnly":
     "Chỉ quản trị viên mới mở rộng được phạm vi hồ sơ của vai trò; bạn có thể thu hẹp phạm vi.",
   "roles.objectColumn": "Đối tượng",
+  "roles.grants": "Quyền",
+  "roles.showKeys": "Hiện tên API",
+  "roles.group.extension": "Tiện ích mở rộng {name}",
+  "roles.group.other": "Khác",
+  "roles.object.activity": "Hoạt động",
+  "roles.object.relationship": "Quan hệ",
+  "roles.object.partner": "Đối tác",
+  "roles.object.signal": "Tín hiệu",
+  "roles.object.introduction": "Giới thiệu",
+  "roles.object.list": "Danh sách",
+  "roles.object.saved_view": "Chế độ xem đã lưu",
+  "roles.object.pipeline": "Pipeline",
+  "roles.object.product": "Sản phẩm",
+  "roles.object.offer": "Báo giá",
+  "roles.object.offer_template": "Mẫu báo giá",
+  "roles.object.contract": "Hợp đồng",
+  "roles.object.legal_review": "Rà soát pháp lý",
+  "roles.object.commission": "Hoa hồng",
+  "roles.object.deal_room": "Deal Room",
+  "roles.object.forecast": "Dự báo",
+  "roles.object.weekly_plan": "Kế hoạch tuần",
+  "roles.object.tag": "Thẻ",
+  "roles.object.custom_field": "Trường tùy chỉnh",
+  "roles.object.computed_field": "Trường tính toán",
+  "roles.object.report_definition": "Báo cáo đã lưu",
+  "roles.object.report_schedule": "Lịch chạy báo cáo",
+  "roles.object.report_edition": "Ảnh chụp báo cáo",
+  "roles.object.sales_target": "Mục tiêu doanh số",
+  "roles.object.reporting_framework": "Thiết lập báo cáo",
+  "roles.object.reporting_credit": "Kết quả SDR",
+  "roles.object.capture_settings": "Quy tắc thu thập",
+  "roles.object.capture_trace": "Hoạt động kênh dùng chung",
+  "roles.object.channel_connection": "Bot nhắn tin",
+  "roles.object.integrations": "Nhà cung cấp dữ liệu",
+  "roles.object.webhook_subscription": "Webhook",
+  "roles.object.import_run": "Nhập dữ liệu",
+  "roles.object.finance": "Dữ liệu tài chính",
+  "roles.object.fx_rate": "Tỷ giá",
+  "roles.object.data_coverage": "Độ bao phủ dữ liệu",
+  "roles.object.knowledge_corpus": "Kho tài liệu",
+  "roles.object.knowledge_document": "Tài liệu",
+  "roles.object.automation": "Tự động hóa",
+  "roles.object.voice_profile": "Giọng văn",
+  "roles.object.ai_routing": "Định tuyến AI",
+  "roles.object.ai_budget": "Hạn mức AI",
+  "roles.object.ai_diagnostics": "Mức sử dụng AI",
+  "roles.object.ai_model_rate": "Giá mô hình",
+  "roles.object.embedding_reindex": "Chỉ mục tìm kiếm",
+  "roles.object.user_admin": "Thành viên",
+  "roles.object.role_admin": "Vai trò",
+  "roles.object.team_admin": "Nhóm",
+  "roles.object.team_lead": "Kèm cặp nhóm",
+  "roles.object.team_oversight": "Tuần của mọi nhóm",
+  "roles.object.seat_usage": "Tài khoản đã dùng",
+  "roles.object.license": "Giấy phép",
+  "roles.object.installation_settings": "Hồ sơ công ty",
+  "roles.object.authentication_policy": "Phương thức đăng nhập",
+  "roles.object.oauth_application": "Ứng dụng OAuth",
+  "roles.object.privacy_request": "Yêu cầu về quyền riêng tư",
+  "roles.object.consent_config": "Mục đích xin sự đồng ý",
+  "roles.object.communication_exception": "Ngoại lệ khi gửi",
+  "roles.object.retention_policy": "Quy tắc lưu trữ",
+  "roles.object.audit_log": "Nhật ký hoạt động",
+  "roles.object.job_health": "Tình trạng hệ thống",
+  "roles.object.extension_access": "Tiện ích mở rộng",
+  "roles.object.system_reset": "Đặt lại dữ liệu",
   "roles.preview": "Xem trước những gì vai trò này thấy",
   "roles.archive": "Chuyển vai trò vào kho lưu trữ",
   "roles.restore": "Khôi phục vai trò",
   "roles.archivedNote":
     "Vai trò này đang trong kho lưu trữ: không cấp quyền nào và không thể gán cho ai cho đến khi được khôi phục.",
+  "roles.archivedReadOnly": "Hãy khôi phục vai trò này để thay đổi.",
   "roles.archivedToast": "Đã chuyển {name} vào kho lưu trữ",
   "roles.restoredToast": "Đã khôi phục {name}",
   "roles.notSaved": "Không thể lưu thay đổi",
@@ -9684,40 +9842,35 @@ export const vi = {
   "settings.companyReadOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi hồ sơ công ty.",
   "settings.companyTitle": "Hồ sơ công ty",
+  "settings.companyContextTitle": "Bối cảnh kinh doanh",
+  "settings.companyEditContext": "Sửa bối cảnh kinh doanh",
+  "settings.companyGroupSet_one": "Đã điền {count}/{total}",
+  "settings.companyGroupSet_other": "Đã điền {count}/{total}",
+  "settings.brandTitle": "Thương hiệu",
+  "settings.brandHint":
+    "SVG hoặc PNG nền trong suốt, dưới 5 MB. Logo rộng: khoảng 800 × 240 px. Biểu tượng vuông: 256 × 256 px, dùng cho thanh bên thu gọn; khi chưa có, thanh bên dùng logo rộng.",
   "settings.companySub":
-    "Bối cảnh kinh doanh dùng chung cho bản nháp, báo giá, tìm kiếm và trợ lý AI. Mỗi mục ghi rõ ai cung cấp và nguồn của mục đó.",
+    "Những gì bản nháp, báo giá, tìm kiếm và trợ lý AI biết về công ty.",
   "settings.companyTrust":
     "Chỉ dùng mục đã xác nhận. Văn bản trên trang web không bao giờ trở thành chỉ dẫn.",
-  "settings.companyConfirmed_one": "{count} mục đã xác nhận",
-  "settings.companyConfirmed_other": "{count} mục đã xác nhận",
-  "settings.companyMark": "Logo công ty",
-  "settings.companyMarkIntro":
-    "Thanh bên hiển thị logo công ty ở 2 độ rộng. Thanh bên thu gọn dùng logo rộng cho đến khi có biểu tượng vuông.",
   "settings.companyMarkWide": "Logo rộng",
-  "settings.companyMarkWidePresent":
-    "Hiển thị tại đây và ở đầu thanh bên khi mở rộng.",
-  "settings.companyMarkWideNone":
-    "Chưa có logo; đang hiển thị chữ viết tắt. Thêm logo tại đây, hoặc đọc trang web để tìm logo.",
   "settings.companyMarkIcon": "Biểu tượng vuông",
-  "settings.companyMarkIconPresent":
-    "Hiển thị trong thanh bên thu gọn, nơi logo rộng quá nhỏ để đọc.",
-  "settings.companyMarkIconNone":
-    "Chưa có biểu tượng. Thanh bên thu gọn dùng logo rộng.",
   "settings.companyMarkAdd": "Thêm",
   "settings.companyMarkReplace": "Thay thế",
   "settings.companyMarkRemove": "Gỡ",
-  "settings.companyMarkUploadFailed": "Không thể tải lên logo",
-  "settings.companyMarkRemoveFailed": "Không thể gỡ logo",
+  "settings.companyMarkUploadFailedWide": "Không thể tải lên logo rộng",
+  "settings.companyMarkRemoveFailedWide": "Không thể gỡ logo rộng",
+  "settings.companyMarkUploadFailedIcon": "Không thể tải lên biểu tượng vuông",
+  "settings.companyMarkRemoveFailedIcon": "Không thể gỡ biểu tượng vuông",
+  "settings.companyMarkUnsupported":
+    "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
+  "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
   "settings.companyMarkAddWide": "Thêm logo rộng",
   "settings.companyMarkReplaceWide": "Thay logo rộng",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",
   "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
   "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
   "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
-  "settings.companyMarkWideHint":
-    "SVG hoặc PNG nền trong suốt, khoảng 800 × 240 px (tối đa 4:1), dưới 5 MB. JPEG, GIF, WebP và ICO cũng dùng được. Giữ nguyên tỷ lệ.",
-  "settings.companyMarkIconHint":
-    "SVG hoặc PNG nền trong suốt, khoảng 256 × 256 px, hình vuông, dưới 5 MB. Tệp rộng không bị cắt; tệp hiển thị nhỏ bên trong ô vuông.",
   "settings.companyMarkEmpty": "Thả logo vào đây, hoặc chọn tệp",
   "settings.companyMarkIconEmpty": "Thả biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Trang web công khai của công ty",
@@ -9738,6 +9891,7 @@ export const vi = {
   "settings.companySave": "Lưu bối cảnh công ty",
   "settings.companySaved": "Đã lưu",
   "settings.companySaveFailed": "Không thể lưu bối cảnh công ty",
+  "settings.companyNameTooLong": "Hãy rút ngắn tên công ty.",
   "settings.companyRefreshFailed": "Quá trình đọc trang web bị gián đoạn",
   "settings.companyApplyFailed": "Không thể áp dụng thay đổi",
   "settings.companyRefreshWarnings": "Cảnh báo từ lần đọc này",
@@ -9766,6 +9920,9 @@ export const vi = {
   "settings.companyManualSub":
     "Bản cài đặt này chưa bật đọc trang web. 3 câu trả lời này tạo bối cảnh công ty dùng được mà không gọi mô hình hay gửi yêu cầu ra bên ngoài.",
   "settings.companyCreateWorkspace": "Tạo bối cảnh công ty",
+  "settings.auditActorExample": "agent:sdr",
+  "settings.auditEntityExample": "deal",
+  "settings.auditAnyAction": "Mọi hành động",
   "product.title": "Sản phẩm",
   "product.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi sản phẩm.",
@@ -9840,11 +9997,11 @@ export const vi = {
   "tools.noMatch": "Không có công cụ nào khớp với tìm kiếm này.",
   "tools.descriptionToggle": "Mô tả đầy đủ của {tool}",
 
-  "aiusage.title": "Chi phí AI ước tính và mức sử dụng",
+  "aiusage.title": "Chi phí AI",
   "aiusage.withheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành xem được chi phí AI. Số liệu bao gồm toàn bộ bản cài đặt.",
   "aiusage.sub":
-    "Mức sử dụng của tháng đã chọn. Số ước tính tách biệt với hạn mức token đang áp dụng và với hóa đơn của nhà cung cấp.",
+    "Số ước tính cho tháng đã chọn, tách biệt với hạn mức token và với hóa đơn của nhà cung cấp.",
   "aiusage.col.task": "Tác vụ",
   "aiTier.decide": "Mô hình quyết định",
   "aiTier.local_small": "Cục bộ nhỏ",
@@ -9857,14 +10014,20 @@ export const vi = {
   "aiusage.col.cached": "Đã cache",
   "aiusage.col.cost": "Chi phí ước tính",
   "aiusage.col.tokens": "Token vào / ra",
-  "aiusage.days.label": "Lượt gọi theo ngày",
+  "aiusage.days.label": "Chi phí theo ngày",
   "aiusage.days.col.day": "Ngày",
   "aiusage.costNote": "Chi phí là số ước tính theo mức giá đã cấu hình.",
-  "aiusage.costPartial":
-    "Tổng này chỉ gồm các lượt gọi có giá: {calls} lượt khác chưa cấu hình mức giá, và mức sử dụng của chúng chỉ hiện trong số token.",
-  "aiusage.monthLabel": "Tháng",
   "aiusage.spendLabel": "Chi phí theo tác vụ",
-  "aiusage.days.show": "Hiển thị theo ngày",
+  "aiusage.totals": "Tổng của tháng",
+  "aiusage.notPriced": "Chưa có giá",
+  "aiusage.unpriced_one":
+    "{count} lượt gọi chưa có giá, không tính vào tổng này.",
+  "aiusage.unpriced_other":
+    "{count} lượt gọi chưa có giá, không tính vào tổng này.",
+  "aiusage.view.label": "Cách xem chi phí",
+  "aiusage.view.task": "Theo tác vụ",
+  "aiusage.view.day": "Theo ngày",
+  "aiusage.pricesLink": "Giá được thiết lập trong Mô hình AI",
   "aiusage.empty": "Không có lượt gọi AI nào trong tháng này.",
   "aiusage.prevMonth": "Tháng trước",
   "aiusage.nextMonth": "Tháng sau",
@@ -9891,8 +10054,6 @@ export const vi = {
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới đọc được dấu vết lượt gọi. Dấu vết này ghi lại mọi lượt gọi mô hình của bản cài đặt.",
-  "aicalls.sub":
-    "Mọi lượt gọi mô hình: danh tính định tuyến, token, số lần thử lại, nội dung đã ghi lại.",
   "aicalls.col.detail": "Chi tiết",
   "aicalls.expandCall": "Xem các lần thử của {task} lúc {when}",
   "aicalls.col.when": "Thời điểm",
@@ -9980,8 +10141,6 @@ export const vi = {
   "countdown.expired": "Đã hết hạn",
 
   "installationSettings.companyTitle": "Bản cài đặt",
-  "installationSettings.companySub":
-    "Tên bản cài đặt và múi giờ dùng để tính kỳ báo cáo.",
   "installationSettings.currencyTitle": "Loại tiền",
   "installationSettings.dateFormat": "Định dạng ngày",
   "installationSettings.timeFormat": "Định dạng giờ",
@@ -9994,18 +10153,15 @@ export const vi = {
   "installationSettings.timeFormat.locale": "Theo ngôn ngữ giao diện",
   "installationSettings.timeFormat.24h": "24 giờ · 17:30",
   "installationSettings.timeFormat.12h": "12 giờ · 05:30 CH",
-  "installationSettings.name": "Tên công ty",
-  "installationSettings.nameHint":
-    "Hiển thị ở mọi nơi sản phẩm nêu tên công ty.",
   "installationSettings.timezone": "Múi giờ báo cáo",
   "installationSettings.timezoneHint":
-    "Tên múi giờ IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ được tính và hiển thị theo múi giờ này cho cả nhóm, tách biệt với múi giờ hiển thị của từng người dùng.",
+    "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ dùng múi giờ này cho cả nhóm; mỗi người dùng vẫn giữ múi giờ hiển thị riêng.",
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
-    "Tháng bắt đầu năm tài chính. Báo cáo được tổng hợp theo năm và quý này; năm không bắt đầu từ tháng 1 được ghi bằng cả hai năm, ví dụ FY2026/27. Thay đổi giá trị này sẽ đổi nhãn mọi báo cáo, và chế độ xem đã lưu có lọc theo kỳ khi đó sẽ bao gồm những tháng khác.",
+    "Báo cáo được tổng hợp theo năm và quý này. Thay đổi sẽ đổi nhãn mọi báo cáo và dời các tháng mà bộ lọc kỳ đã lưu bao gồm.",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",
   "installationSettings.forwardMeasureHint":
-    "Phần giá trị deal còn lại mà số dự kiến cộng vào doanh số đã chốt. Bằng chứng Commit: deal Commit có ngày chốt đã xác nhận. Có trọng số: mọi deal đang mở theo xác suất của giai đoạn. Nhận định của quản lý: thay thế số dự kiến; kỳ chưa có nhận định sẽ quay về bằng chứng Commit và ghi rõ điều đó.",
+    "Những deal đang mở mà số dự kiến cộng vào doanh số đã chốt.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Bằng chứng Commit: chỉ ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":
@@ -10145,18 +10301,13 @@ export const vi = {
   "firstRun.ai.embedModel": "Mô hình embedding",
   "firstRun.ai.keyFailed": "Không thể lưu khóa",
   "firstRun.ai.bindFailed": "Không thể gán nhà cung cấp",
-  "aiSettings.withheld": "Bị hạn chế",
-  "aiSettings.unread": "Không khả dụng",
-  "aiSettings.pending": "Đang tải…",
-  "aiSettings.spend.estimated": "≈ {amount} đã chi",
-  "aiSettings.spend.notPriced": "Chưa có giá",
-  "aiSettings.providers.label": "Khóa nhà cung cấp",
-  "aiSettings.providers.value": "{count} trên {total}",
+  "aiSettings.providers.value": "Khóa đã lưu: {count}/{total}",
   "aiSettings.providers.missing": "{count} đã gán, chưa có khóa",
   "aiSettings.providers.lastCall": "lần gọi gần nhất {elapsed}",
-  "aiSettings.providers.lastCallOnly": "Lần gọi gần nhất {elapsed}",
-  "aiSettings.providers.neverCalled": "Chưa từng gọi",
-  "aiSettings.providers.traceFailed": "Dấu vết lượt gọi không khả dụng",
+  "aiSettings.providers.neverCalled": "chưa từng gọi",
+  "aiSettings.providers.traceFailed": "dấu vết lượt gọi không khả dụng",
+  "aiSettings.providers.standIn":
+    "đang trả lời bằng nhà cung cấp thử nghiệm tích hợp",
   "elapsed.justNow": "vừa xong",
   "elapsed.minutes": "{minutes} phút trước",
   "elapsed.hours": "{hours} giờ trước",
@@ -10180,7 +10331,6 @@ export const vi = {
     "Điền sẵn máy chủ và mô hình. Khóa nằm trong JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Chưa có mô hình quyết định. Mọi tác vụ dùng các cấp.",
-  "aiRouting.priceSheet": "Bảng giá",
   "aiRouting.provider.label": "Nhà cung cấp",
   "aiProviderKeys.title": "Nhà cung cấp",
   "aiProviderKeys.keyless": "Không cần khóa",
@@ -10227,7 +10377,7 @@ export const vi = {
   "aiRouting.location.loading":
     "Đang hỏi Google khóa này truy cập được những vị trí nào…",
   "aiRouting.location.noKey":
-    "Chưa có khóa tài khoản dịch vụ. Thêm khóa trong Khóa nhà cung cấp mô hình, rồi các vị trí khóa truy cập được sẽ hiện ở đây.",
+    "Chưa có khóa tài khoản dịch vụ. Thêm khóa trong mục Nhà cung cấp, rồi các vị trí khóa truy cập được sẽ hiện ở đây.",
   "aiRouting.location.unreachable":
     "Google không phản hồi nên chỉ có vị trí đã lưu. Khi lưu, hệ thống kiểm tra lại.",
   "aiRouting.location.noModels":
@@ -10341,17 +10491,13 @@ export const vi = {
   "aiProviderKeys.reason.unreachable":
     "Nhà cung cấp không phản hồi. Kiểm tra máy chủ và mạng.",
   "aiRouting.intro":
-    "Chọn nhà cung cấp và mô hình cho từng cấp, cho embedding và, nếu muốn, cho mô hình quyết định. Cấu hình gán đã lưu áp dụng cho mọi tiến trình trong vòng một phút, không cần khởi động lại.",
+    "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
-  "aiTerms.providerGloss": "bên được gọi",
   "aiTerms.tier": "Cấp",
-  "aiTerms.tierGloss": "một loại công việc, gán với một mô hình",
-  "aiTerms.task": "Tác vụ",
-  "aiTerms.taskGloss": "việc sản phẩm làm",
   "aiRouting.taskCount_one": "{count} tác vụ",
   "aiRouting.taskCount_other": "{count} tác vụ",
   "aiRouting.colTasks": "Tác vụ",
@@ -10360,6 +10506,10 @@ export const vi = {
   "aiRouting.unkeyed.title": "Một số cấp không thể trả lời",
   "aiRouting.unkeyed.body":
     "Chưa có khóa cho {providers}. Thêm khóa trong mục Nhà cung cấp. Trước khi thêm, các mục sau không thể trả lời: {lanes}.",
+  "aiRouting.standIn.title":
+    "Các cấp đang trả lời bằng nhà cung cấp thử nghiệm",
+  "aiRouting.standIn.body":
+    "Chưa có khóa cho {providers}, nên các cấp sau trả lời bằng văn bản thử nghiệm từ nhà cung cấp thử nghiệm tích hợp: {lanes}. Thêm khóa trong mục Nhà cung cấp.",
   "aiRouting.noPrice": "Chưa có giá. Thêm giá trong mục nhà cung cấp.",
   "aiRouting.editTitle": "Sửa cấu hình gán {lane}",
   "aiRouting.saveBinding": "Lưu cấu hình gán",
@@ -10373,7 +10523,7 @@ export const vi = {
   "aiRouting.median": "Trung vị {ms} ms",
   "aiTasks.title": "Tác vụ AI",
   "aiTasks.intro":
-    "Mỗi dòng hiển thị cấp của tác vụ; mô hình của cấp được thiết lập trong Cấp mô hình. Chọn tên tác vụ để xem tác vụ làm gì, trạng thái hiện tại và cách xử lý khi nhà cung cấp ngừng hoạt động. Mở dòng để thiết lập mức suy nghĩ và thời gian chờ; cấp của tác vụ cố định theo hợp đồng.",
+    "Tác vụ được nhóm theo cấp chạy chúng; chọn tên để xem tác vụ làm gì, hoặc mở dòng để thiết lập mức suy nghĩ và thời gian chờ.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
@@ -10545,61 +10695,67 @@ export const vi = {
   "operations.schedules.title": "Lịch chạy nền",
   "operations.schedules.sub":
     "Tần suất chạy của từng tác vụ nền. Tiến trình nền đang chạy sẽ nhận thay đổi trong vòng một phút: tác vụ chạy một lần, rồi tiếp tục theo chu kỳ mới.",
+  "operations.schedules.fold": "Tất cả lịch chạy",
   "operations.pacing.title": "Nhịp gửi thư",
   "operations.pacing.sub":
     "Tốc độ gửi tối đa của một hộp thư. Thay đổi sẽ áp dụng từ lần gửi tiếp theo.",
   "operations.adminOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể thay đổi mục này.",
   "operations.updateFailed": "Không thể thay đổi cài đặt",
-  "operations.refusal": "Nhập một số nguyên trong khoảng đã nêu.",
-  "operations.inWords": "= {interval}",
   "operations.off": "Tắt",
-  "operations.agentRunner.label": "Chạy trợ lý AI (giây)",
+  "operations.agentRunner.label": "Lượt chạy trợ lý AI",
   "operations.agentRunner.help":
-    "Tần suất kiểm tra các trợ lý AI đã lên lịch có lần chạy nào đến hạn không, 10 đến 3.600.",
-  "operations.webhookRetry.label": "Thử lại webhook (giây)",
+    "Tần suất kiểm tra các trợ lý AI đã lên lịch có lần chạy nào đến hạn không.",
+  "operations.webhookRetry.label": "Lượt thử lại webhook",
   "operations.webhookRetry.help":
-    "Tần suất thử gửi lại các webhook gửi không thành công, 10 đến 3.600.",
-  "operations.timeScan.label": "Tự động hóa theo thời gian (giây)",
+    "Tần suất thử gửi lại các webhook gửi không thành công.",
+  "operations.timeScan.label": "Tự động hóa theo thời gian",
   "operations.timeScan.help":
-    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian, 60 đến 86.400.",
-  "operations.closeDate.label": "Ngày chốt quá hạn (giây)",
-  "operations.closeDate.help":
-    "Tần suất đánh dấu các deal đã quá ngày chốt, 3.600 đến 604.800.",
-  "operations.followUp.label": "Đề xuất việc tiếp theo (giây)",
+    "Tần suất kiểm tra các quy tắc kích hoạt theo thời gian.",
+  "operations.closeDate.label": "Ngày chốt quá hạn",
+  "operations.closeDate.help": "Tần suất đánh dấu các deal đã quá ngày chốt.",
+  "operations.followUp.label": "Đề xuất việc tiếp theo",
   "operations.followUp.help":
-    "Tần suất kiểm tra các deal bị đình trệ để đề xuất việc tiếp theo, 3.600 đến 604.800.",
-  "operations.retention.label": "Lưu trữ dữ liệu (giây)",
+    "Tần suất kiểm tra các deal bị đình trệ để đề xuất việc tiếp theo.",
+  "operations.retention.label": "Lưu trữ dữ liệu",
   "operations.retention.help":
-    "Tần suất xóa dữ liệu đã quá thời hạn lưu trữ, 3.600 đến 604.800. Luôn bật.",
-  "operations.geocode.label": "Tra cứu địa chỉ (giây)",
+    "Tần suất xóa dữ liệu đã quá thời hạn lưu trữ. Luôn bật.",
+  "operations.geocode.label": "Tra cứu địa chỉ",
   "operations.geocode.help":
-    "Tần suất tra cứu các địa chỉ chưa có tọa độ, 300 đến 604.800, hoặc 0 để tắt.",
-  "operations.technical.label": "Tra cứu kỹ thuật (giây)",
+    "Tần suất tra cứu các địa chỉ chưa có tọa độ. Nhập 0 để tắt.",
+  "operations.technical.label": "Tra cứu kỹ thuật",
   "operations.technical.help":
-    "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật, 300 đến 604.800, hoặc 0 để tắt.",
-  "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail (giây)",
+    "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật. Nhập 0 để tắt.",
+  "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail",
   "operations.gmailWatchScan.help":
-    "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn, 600 đến 43.200.",
-  "operations.graphWatchScan.label":
-    "Kiểm tra thông báo đẩy Microsoft 365 (giây)",
+    "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn.",
+  "operations.graphWatchScan.label": "Kiểm tra thông báo đẩy Microsoft 365",
   "operations.graphWatchScan.help":
-    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn, 600 đến 43.200.",
-  "operations.gmailWatchRenew.label": "Gia hạn Gmail trước hạn (giờ)",
+    "Tần suất kiểm tra các đăng ký thư Microsoft 365 cần gia hạn.",
+  "operations.gmailWatchRenew.label": "Gia hạn sớm Gmail",
   "operations.gmailWatchRenew.help":
-    "Gia hạn đăng ký Gmail bao lâu trước khi đăng ký hết hạn (thời hạn 7 ngày), 24 đến 144.",
-  "operations.graphWatchRenew.label": "Gia hạn Microsoft 365 trước hạn (giờ)",
+    "Gia hạn đăng ký Gmail bao lâu trước khi đăng ký hết hạn (thời hạn 7 ngày).",
+  "operations.graphWatchRenew.label": "Gia hạn sớm Microsoft 365",
   "operations.graphWatchRenew.help":
-    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi đăng ký hết hạn (thời hạn 3 ngày), 24 đến 60.",
+    "Gia hạn đăng ký Microsoft 365 bao lâu trước khi đăng ký hết hạn (thời hạn 3 ngày).",
   "operations.sendRateLimit.label": "Số thư mỗi khung thời gian",
   "operations.sendRateLimit.help":
-    "Số thư tối đa một hộp thư có thể gửi trong một khung thời gian, 1 đến 1.000.",
-  "operations.sendRateWindow.label": "Khung thời gian (giây)",
-  "operations.sendRateWindow.help":
-    "Khung thời gian dùng để đếm số thư, 10 đến 3.600.",
-  "operations.sendMaxAge.label": "Thời gian chờ tối đa (giờ)",
+    "Số thư tối đa một hộp thư có thể gửi trong một khung thời gian.",
+  "operations.sendRateWindow.label": "Khung thời gian",
+  "operations.sendRateWindow.help": "Khung thời gian dùng để đếm số thư.",
+  "operations.sendMaxAge.label": "Thời gian chờ tối đa",
   "operations.sendMaxAge.help":
-    "Thời gian tối đa một thư bị giữ lại có thể chờ trước khi dừng kèm lý do, 1 đến 168.",
+    "Thời gian tối đa một thư bị giữ lại có thể chờ trước khi dừng kèm lý do.",
+  "operations.reading": "{amount} = {interval}",
+  "operations.unit.seconds_one": "{count} giây",
+  "operations.unit.seconds_other": "{count} giây",
+  "operations.unit.hours_one": "{count} giờ",
+  "operations.unit.hours_other": "{count} giờ",
+  "operations.refusal.seconds": "Nhập số giây nguyên từ {min} đến {max}.",
+  "operations.refusal.secondsOrOff":
+    "Nhập 0 để tắt, hoặc số giây nguyên từ {min} đến {max}.",
+  "operations.refusal.hours": "Nhập số giờ nguyên từ {min} đến {max}.",
+  "operations.refusal.count": "Nhập một số nguyên từ {min} đến {max}.",
   "captureMailSync.title": "Đồng bộ thư",
   "captureMailSync.sub":
     "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
@@ -13446,7 +13602,7 @@ export const vi = {
   "aiPriceSync.autoSync.help":
     "Đọc giá của từng nhà cung cấp đã cấu hình mỗi ngày một lần. Giá nhập thủ công vẫn được giữ nguyên.",
   "aiPriceSync.sources": "Nguồn: models.dev · OpenRouter",
-  "aiPriceSync.lastSynced": "Đồng bộ lần cuối {ago}",
+  "aiPriceSync.lastSyncedLabel": "Đồng bộ lần cuối",
   "aiPriceSync.never": "Chưa đồng bộ",
   "aiPriceSync.adminOnly": "Vai trò hiện tại không có quyền đổi mục này.",
   "aiPriceSync.withheld": "Bạn không có quyền xem giá mô hình.",
@@ -13887,6 +14043,9 @@ export const vi = {
   "aiFigures.line.prefix": "7 ngày: {sentence}",
   "aicalls.filtered": "Đang hiển thị các lượt gọi kết thúc ở {filter}.",
   "aicalls.filtered.clear": "Hiển thị mọi lượt gọi",
+  "aicalls.filters": "Bộ lọc",
+  "aicalls.folded.tokens": "Token: {in} vào, {out} ra",
+  "aicalls.folded.latency": "Độ trễ: {value} ms",
   "aiOpenRouter.title": "Cài đặt OpenRouter",
   "aiOpenRouter.privacyDocs": "Chính sách dữ liệu ↗",
   "aiOpenRouter.routingDocs": "Định tuyến nhà cung cấp ↗",

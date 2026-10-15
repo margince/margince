@@ -151,7 +151,7 @@ import { TimelineActions } from "./timelineactions";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
-import { invalidateRecord } from "../lib/recordwritekeys";
+import { invalidateCompany } from "../lib/recordwritekeys";
 import { useAddressedTab } from "./recordtab";
 import { WorklistReturnLink } from "./worklist.return";
 
@@ -1370,8 +1370,7 @@ function CompanyPage({
                 id={company.id}
                 restore={{
                   version: company.version,
-                  onRestored: () =>
-                    invalidateRecord(queryClient, "company", company.id),
+                  onRestored: () => invalidateCompany(queryClient, company),
                 }}
               />
             )}

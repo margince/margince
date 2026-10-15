@@ -425,6 +425,40 @@ describe("the test run", () => {
     expect(within(row).getByText("Invalid value")).toBeVisible();
   });
 
+  it("notes closed deals imported as history", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...bundleReportFixture,
+          parts: [
+            ...bundleReportFixture.parts,
+            {
+              file: "deals.csv",
+              object: "deal",
+              rows_read: 5,
+              disposition: { created: 5, updated: 0, unchanged: 0, skipped: 0 },
+              closed_won: 2,
+              closed_lost: 1,
+            },
+          ],
+        }),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText("3 deals are imported as closed history"),
+    ).toBeVisible();
+    expect(screen.getByText(/2 won and 1 lost/)).toBeVisible();
+  });
+
+  it("says nothing of closed history when no deal lands closed", async () => {
+    const user = userEvent.setup();
+    stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
+    await renderAtTestRun(user);
+    await screen.findByText("1 row has invalid values and will be skipped");
+    expect(screen.queryByText(/closed history/)).not.toBeInTheDocument();
+  });
+
   it("names the file alone for a problem of the whole file, one row per tag", async () => {
     const user = userEvent.setup();
     const consoleError = vi.spyOn(console, "error");

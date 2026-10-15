@@ -3,21 +3,37 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, EmptyState } from "../design-system/atoms";
+import {
+  Button,
+  EmptyState,
+  SegmentedControl,
+  StatCard,
+} from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate, QueryStates } from "../design-system/querystates";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatStrip } from "../design-system/statstrip";
+import { calendarMonth } from "../format/calendarday";
 import { formatMoney, formatNumber, monthAndYear } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { viewerZone } from "../format/timezone";
+import { formatTokens } from "../format/tokens";
+import { useLocale, usePlural, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useRouting } from "./ai-routing-query";
 import { DecisionSummary } from "./aiusage-decisions";
-import { aggregate, CallsByDay, SpendByTask, spendRows } from "./aiusage-spend";
+import {
+  aggregate,
+  monthTotals,
+  SPEND_VIEWS,
+  SpendByDay,
+  SpendByTask,
+  type SpendView,
+  spendRows,
+} from "./aiusage-spend";
+import { settingsHref } from "./settingsrouting";
 import "./aiusage.css";
-import { calendarMonth } from "../format/calendarday";
-import { viewerZone } from "../format/timezone";
 
 type AiUsage = components["schemas"]["AiUsage"];
 export type Month = { from: string; to: string };
@@ -75,39 +91,112 @@ function isCurrentMonth(month: Month): boolean {
   return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());
 }
 
-// The body is its own component so the per-task rollup can be a useMemo. Inside
-// QueryGate's render prop it was an O(days × tasks) fold re-run on every render
-// of the card — including the ones a sibling's 60-second clock causes.
-function AiUsageBody({
-  data,
+// The arrows keep their own names: an icon announces as nothing.
+function MonthSwitch({
   month,
   onMonth,
-  decisionsBound,
-}: Readonly<{
-  data: AiUsage;
-  month: Month;
-  onMonth: (next: Month) => void;
-  decisionsBound: boolean;
-}>) {
+}: Readonly<{ month: Month; onMonth: (next: Month) => void }>) {
   const t = useT();
   const { locale } = useLocale();
+  return (
+    <span className="aiusage-month">
+      <Button
+        iconOnly
+        aria-label={t("aiusage.prevMonth")}
+        onClick={() => onMonth(adjacentMonth(month, -1))}
+      >
+        <ChevronLeft aria-hidden="true" />
+      </Button>
+      <span className="aiusage-month-name" aria-live="polite">
+        {monthAndYear(new Date(`${month.from}T00:00`), locale)}
+      </span>
+      <Button
+        iconOnly
+        aria-label={t("aiusage.nextMonth")}
+        disabled={isCurrentMonth(month)}
+        onClick={() => onMonth(adjacentMonth(month, 1))}
+      >
+        <ChevronRight aria-hidden="true" />
+      </Button>
+    </span>
+  );
+}
+
+function MonthTotals({
+  lines,
+  currency,
+}: Readonly<{ lines: ReturnType<typeof aggregate>; currency: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const plural = usePlural();
+  const totals = monthTotals(lines);
+  const number = (value: number) => formatNumber(value, locale);
+  return (
+    <>
+      <StatStrip
+        label={t("aiusage.totals")}
+        testId="aiusage-totals"
+        density="compact"
+      >
+        <StatCard
+          narrow="row"
+          label={t("aiusage.col.cost")}
+          value={
+            totals.cost === undefined
+              ? t("aiusage.notPriced")
+              : formatMoney(totals.cost, currency, locale)
+          }
+        />
+        <StatCard
+          narrow="row"
+          label={t("aiusage.col.calls")}
+          value={number(totals.calls)}
+        />
+        <StatCard
+          narrow="row"
+          label={t("aiusage.col.tokens")}
+          value={`${formatTokens(totals.tokensIn, locale)} / ${formatTokens(totals.tokensOut, locale)}`}
+        />
+        <StatCard
+          narrow="row"
+          label={t("aiusage.col.cached")}
+          value={number(totals.cached)}
+        />
+      </StatStrip>
+      {totals.cost !== undefined && (
+        <p className="t-caption" data-testid="aiusage-cost-note">
+          {t("aiusage.costNote")}
+          {/* Calls with usage and no rate leave the total short, and a short
+              money figure that does not say so is the one a reader acts on. */}
+          {totals.unpricedCalls > 0
+            ? ` ${plural("aiusage.unpriced", totals.unpricedCalls, {
+                count: number(totals.unpricedCalls),
+              })}`
+            : null}
+        </p>
+      )}
+    </>
+  );
+}
+
+// Its own component so the per-task rollup can be a useMemo, out of reach of
+// the re-renders a sibling's 60-second clock causes.
+function AiUsageBody({
+  data,
+  decisionsBound,
+  view,
+  onView,
+}: Readonly<{
+  data: AiUsage;
+  decisionsBound: boolean;
+  view: SpendView;
+  onView: (view: SpendView) => void;
+}>) {
+  const t = useT();
   const lines = useMemo(() => aggregate(data.days), [data.days]);
   const rows = useMemo(() => spendRows(lines), [lines]);
   const showCost = lines.some((line) => line.cost_est_minor !== undefined);
   const currency = data.budget.currency ?? "USD";
-  const totalCost = lines.reduce(
-    (sum, line) => sum + (line.cost_est_minor ?? 0),
-    0,
-  );
-  // Calls that carried usage and no rate. Their spend is in the token columns
-  // and not in the total beside them, so the total is SHORT — and a money
-  // number that is short without saying so is the one a reader acts on: it is
-  // always the smaller figure, and nobody investigates a bill that looks
-  // cheaper than expected until it does not.
-  const unpricedCalls = lines.reduce(
-    (sum, line) => sum + (line.unpriced_calls ?? 0),
-    0,
-  );
   const taskNames = useMemo(
     () => new Map(lines.map((line) => [line.task, line.task_display_name])),
     [lines],
@@ -116,64 +205,49 @@ function AiUsageBody({
     () => new Map(lines.map((line) => [line.task, line.task_summary])),
     [lines],
   );
-  // Absent when the server priced nothing: a total of zero would state a figure
-  // this window has none of.
-  const costNote = showCost
-    ? [
-        `${t("aiusage.costNote")} ${formatMoney(totalCost, currency, locale)}`,
-        unpricedCalls > 0
-          ? t("aiusage.costPartial", {
-              calls: formatNumber(unpricedCalls, locale),
-            })
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : undefined;
 
+  const decisions = decisionsBound && (
+    <DecisionSummary
+      decisions={data.decisions ?? []}
+      taskName={(task) => taskNames.get(task) ?? task}
+      taskSummary={(task) => taskSummaries.get(task)}
+    />
+  );
+  if (rows.length === 0) {
+    return (
+      <>
+        <PanelBody>
+          <PanelIntro>{t("aiusage.sub")}</PanelIntro>
+          <EmptyState>{t("aiusage.empty")}</EmptyState>
+        </PanelBody>
+        {decisions}
+      </>
+    );
+  }
   return (
     <>
-      <SettingList bleed="settings">
-        <SettingRow
-          label={t("aiusage.monthLabel")}
-          value={monthAndYear(new Date(`${month.from}T00:00`), locale)}
-          control={
-            // The two arrows keep their own names. An icon announces as nothing,
-            // and the row's label names the decision, not which way each moves.
-            <>
-              <Button
-                iconOnly
-                aria-label={t("aiusage.prevMonth")}
-                onClick={() => onMonth(adjacentMonth(month, -1))}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Button
-                iconOnly
-                aria-label={t("aiusage.nextMonth")}
-                disabled={isCurrentMonth(month)}
-                onClick={() => onMonth(adjacentMonth(month, 1))}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </>
-          }
-        />
-      </SettingList>
-      <SpendByTask
-        rows={rows}
-        showCost={showCost}
-        currency={currency}
-        note={costNote}
-      />
-      {decisionsBound && (
-        <DecisionSummary
-          decisions={data.decisions ?? []}
-          taskName={(task) => taskNames.get(task) ?? task}
-          taskSummary={(task) => taskSummaries.get(task)}
-        />
+      <PanelBody className="form-stack">
+        <PanelIntro>{t("aiusage.sub")}</PanelIntro>
+        <MonthTotals lines={lines} currency={currency} />
+        <div className="aiusage-view">
+          <SegmentedControl
+            label={t("aiusage.view.label")}
+            options={SPEND_VIEWS}
+            value={view}
+            onChange={onView}
+            labels={{
+              task: t("aiusage.view.task"),
+              day: t("aiusage.view.day"),
+            }}
+          />
+        </div>
+      </PanelBody>
+      {view === "task" ? (
+        <SpendByTask rows={rows} showCost={showCost} currency={currency} />
+      ) : (
+        <SpendByDay days={data.days} showCost={showCost} currency={currency} />
       )}
-      {data.days.length > 0 && <CallsByDay days={data.days} />}
+      {decisions}
     </>
   );
 }
@@ -215,7 +289,10 @@ export function AiUsageCard() {
   // recomputing it per render would churn the query key on the one day of the
   // month it could change.
   const [month, setMonth] = useState<Month>(currentMonth);
+  // Held here, so the reader's view outlives the body a month step remounts.
+  const [view, setView] = useState<SpendView>("task");
   const query = useAiUsage(month, canSee);
+  const canReadPrices = useCan("ai_model_rate", "read");
   // The decision rates are shown only while a decision model is bound: rows
   // written under a binding outlive it, and a rate for a model nobody runs
   // answers a question nobody is asking. A reader who may not see the routing
@@ -245,21 +322,30 @@ export function AiUsageCard() {
 
   // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
-    <Panel title={t("aiusage.title")}>
-      <PanelBody>
-        <PanelIntro>{t("aiusage.sub")}</PanelIntro>
-        {query.data === undefined && (
+    <Panel
+      title={t("aiusage.title")}
+      titleAction={<MonthSwitch month={month} onMonth={setMonth} />}
+      footer={
+        canReadPrices && (
+          <a className="link-button" href={routeHash(settingsHref("models"))}>
+            {t("aiusage.pricesLink")}
+          </a>
+        )
+      }
+    >
+      {query.data === undefined ? (
+        <PanelBody>
+          <PanelIntro>{t("aiusage.sub")}</PanelIntro>
           <QueryStates query={query} pendingLabel={t("aiusage.title")}>
             {null}
           </QueryStates>
-        )}
-      </PanelBody>
-      {query.data !== undefined && (
+        </PanelBody>
+      ) : (
         <AiUsageBody
           data={query.data}
-          month={month}
-          onMonth={setMonth}
           decisionsBound={decisionsBound}
+          view={view}
+          onView={setView}
         />
       )}
     </Panel>

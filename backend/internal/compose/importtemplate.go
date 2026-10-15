@@ -33,8 +33,13 @@ func (h importHandlers) DownloadImportTemplate(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
+	stages, err := readDealStages(r.Context(), h.db)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	var buf bytes.Buffer
-	if err := writeImportTemplate(&buf, f, langcopy.For(string(lang))); err != nil {
+	if err := writeImportTemplate(&buf, f, langcopy.For(string(lang)), stages); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -52,10 +57,11 @@ func writeImportDownload(w http.ResponseWriter, r *http.Request, d httperr.Downl
 }
 
 // writeImportTemplate writes the template ZIP of a format: a README and one
-// CSV per file holding only its header row.
-func writeImportTemplate(w io.Writer, f crmcontracts.ImportFormat, spoken langcopy.Spoken) error {
+// CSV per file holding only its header row. The stages are the ones the deal
+// rows are checked against, so the README names what a row may say.
+func writeImportTemplate(w io.Writer, f crmcontracts.ImportFormat, spoken langcopy.Spoken, stages dealStages) error {
 	archive := zip.NewWriter(w)
-	if err := writeZipEntry(archive, "README.txt", []byte(templateReadme(f, spoken))); err != nil {
+	if err := writeZipEntry(archive, "README.txt", []byte(templateReadme(f, spoken, stages))); err != nil {
 		return err
 	}
 	for _, file := range f.Files {
@@ -105,9 +111,10 @@ func columnHeading(col crmcontracts.ImportFormatColumn) string {
 	return col.Name
 }
 
-// templateReadme lists the order, the key rules, every allowed value, the
-// size limit and the formula warning, then each file's columns and guides.
-func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken) string {
+// templateReadme lists the order, key rules, allowed values, pipelines with
+// their stages, size limit and formula warning, then each file's columns and
+// guides.
+func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken, stages dealStages) string {
 	var b strings.Builder
 	line := func(indent int, text string) {
 		b.WriteString(strings.Repeat("  ", indent) + text + "\n")
@@ -129,6 +136,7 @@ func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken) string 
 	}
 	line(0, "")
 	writeAllowedValues(line, f, spoken)
+	writePipelines(line, spoken, stages)
 	line(0, fmt.Sprintf(spoken.Say(importguide.Template.SizeLimit), f.SizeLimitMb))
 	line(0, "")
 	line(0, spoken.Say(importguide.Template.Formulas))
@@ -172,4 +180,19 @@ func writeAllowedValues(line func(int, string), f crmcontracts.ImportFormat, spo
 	if heading {
 		line(0, "")
 	}
+}
+
+// writePipelines lists every live pipeline with its stages in order, so a
+// deal row can name them. It writes nothing when the reader may not read
+// pipelines or none exists.
+func writePipelines(line func(int, string), spoken langcopy.Spoken, stages dealStages) {
+	if !stages.readable || len(stages.names) == 0 {
+		return
+	}
+	line(0, spoken.Say(importguide.Template.Pipelines))
+	for _, name := range stages.names {
+		p := stages.byPipeline[foldName(name)]
+		line(1, p.name+": "+strings.Join(p.names, ", "))
+	}
+	line(0, "")
 }

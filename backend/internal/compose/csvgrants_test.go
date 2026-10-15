@@ -49,3 +49,10 @@ func TestGrantReasonsNameTheFileInWords(t *testing.T) {
 		t.Fatalf("update reason %q names tags, but this file maps no tags column", needs[1].Why.English())
 	}
 }
+
+func TestADealsFileNeedsToReadPipelines(t *testing.T) {
+	got := grantNames(grantsFor([]migration.PartMapping{{Object: migration.ObjectDeal}}, tagGrants{}))
+	if want := []string{"deal:create", "deal:update", "pipeline:read"}; !slices.Equal(got, want) {
+		t.Fatalf("grantsFor = %v, want %v: a stage is found by reading the pipelines", got, want)
+	}
+}

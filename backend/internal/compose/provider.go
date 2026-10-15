@@ -61,7 +61,8 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithGrantCarrier(identity.NewServiceFor(db)),
+			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithInstallationRenamer(installationRenamer(pool)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
 		activities: activities.NewProvider(InstallationDB(pool)),

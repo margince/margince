@@ -307,6 +307,8 @@ func (w *csvWriters) writeEmployment(
 type rowLink struct {
 	skip    bool
 	problem *migration.SkippedRow
+	// links are the ids a deal row's link cells resolved to, by target.
+	links map[string]any
 }
 
 // linkProblemOf checks a contact row's employer before the row lands, so the
@@ -314,6 +316,9 @@ type rowLink struct {
 // and the commit both ask here. A company_ref is checked in every run and wins
 // over a company name, which is checked only in a ZIP run.
 func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowLink, error) {
+	if w.object == migration.ObjectDeal {
+		return w.dealLinkProblemOf(ctx, row)
+	}
 	fields := textFields(row.Fields)
 	if ref := strings.TrimSpace(fields[csvTargetCompanyRef]); w.companyRefColumn != "" && ref != "" {
 		answer, err := w.links.resolveCompany(ctx, ref)

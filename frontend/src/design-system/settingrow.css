@@ -301,6 +301,19 @@
   background: var(--bgHover);
 }
 
+/* The control yields and the naming keeps a floor, or a wide value squeezes the
+ * name to a letter a line. Inline rows only: stacked, a basis is a height. */
+@media (min-width: 641px) {
+  .settingrow:not(.settingrow-stack) > .settingrow-control {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .settingrow:not(.settingrow-stack) > .settingrow-naming {
+    flex: 1 0 10rem;
+  }
+}
+
 /* Narrow viewport: the two columns become one. A right-aligned control in a
  * 320px column leaves the label with three words per line, so the row gives up
  * the alignment before it gives up the reading. */
@@ -332,5 +345,14 @@
     min-width: 0;
     max-width: none;
     width: 100%;
+  }
+
+  /* A bare switch stays on its name's line, as a phone's own settings put it;
+   * one with a refusal or a hint under it needs the width and stacks. */
+  .settingrow:not(.settingrow-stack):has(
+    > .settingrow-control > .switchrow:only-child
+  ):not(:has(.switchreason, .switchhint)) {
+    flex-direction: row;
+    align-items: flex-start;
   }
 }

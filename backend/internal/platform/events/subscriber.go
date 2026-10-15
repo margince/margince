@@ -214,6 +214,11 @@ func (s *Subscriber) deliver(ctx context.Context, stream string, entry redis.XMe
 		return
 	}
 
+	if s.leavesOut(env) {
+		s.ack(ctx, stream, entry.ID)
+		return
+	}
+
 	if err := s.handler(ctx, env); err != nil {
 		if errors.Is(err, kevents.ErrUnactionable) {
 			// Acked, not retried: the subject is gone and no later pass finds
@@ -233,6 +238,13 @@ func (s *Subscriber) deliver(ctx context.Context, stream string, entry redis.XMe
 		return
 	}
 	s.ack(ctx, stream, entry.ID)
+}
+
+// leavesOut reports whether the group's policy is to leave an event unhandled:
+// one an import wrote, for a group that does not react to history. It is still
+// acknowledged, so it is not redelivered.
+func (s *Subscriber) leavesOut(env kevents.Envelope) bool {
+	return kevents.SkipsImported(s.group.Name) && kevents.IsImported(env)
 }
 
 func (s *Subscriber) ack(ctx context.Context, stream, entryID string) {

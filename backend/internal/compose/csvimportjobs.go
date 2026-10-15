@@ -258,7 +258,7 @@ func (s importSlicer) actAs(
 	if err != nil {
 		return nil, run.AttemptCorrelationID, err
 	}
-	return storekit.WithBatch(actorCtx, lease.Run), run.AttemptCorrelationID, nil
+	return storekit.WithImportRun(storekit.WithBatch(actorCtx, lease.Run), lease.Run), run.AttemptCorrelationID, nil
 }
 
 // settle records how a slice that will not continue ended.

@@ -70,14 +70,20 @@ afterEach(() => {
 });
 
 describe("AiTasksCard", () => {
-  it("names each task's tier and leaves the model to the tier", async () => {
+  it("groups each task under its tier's name and leaves the model to the tier", async () => {
     vi.stubGlobal("fetch", withDiagnostics(EVERYTHING));
     render(<AiTasksCard />);
 
     const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
-    expect(within(row).getByText("Everyday cloud")).toBeTruthy();
+    const group = screen.getByRole("table", { name: "Everyday cloud" });
+    expect(group.contains(row)).toBe(true);
+    expect(
+      within(group).getByRole("columnheader", { name: "Everyday cloud" }),
+    ).toBeVisible();
+    // The group names the tier, so no column says it a second time.
+    expect(screen.queryByRole("columnheader", { name: "Tier" })).toBeNull();
+    expect(within(row).queryByText("Everyday cloud")).toBeNull();
     expect(within(row).queryByText("example-model")).toBeNull();
-    expect(screen.getByRole("columnheader", { name: "Tier" })).toBeVisible();
     expect(within(row).queryByText("Custom")).toBeNull();
   });
 
@@ -87,7 +93,7 @@ describe("AiTasksCard", () => {
     render(<AiTasksCard />);
 
     const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
-    await user.click(within(row).getByText("Everyday cloud"));
+    await user.click(row);
     const sheet = await screen.findByRole("dialog");
     expect(
       within(sheet)
@@ -181,7 +187,7 @@ describe("AiTasksCard", () => {
     expect(verb).toHaveAccessibleDescription(/embedding model row/i);
     expect(rows[1]).not.toHaveClass("rowlink");
     expect(rows[0]).toHaveClass("rowlink");
-    await user.click(within(rows[1]).getByText("Embedding model"));
+    await user.click(rows[1]);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -304,7 +310,8 @@ describe("the Model tiers card for a diagnostics-only reader", () => {
     ).toBeTruthy();
     const embed = screen.getByTestId("ai-routing-tier-embeddings");
     expect(within(embed).getByText("Embedding model")).toBeTruthy();
-    expect(within(embed).getByText("embeddings")).toBeTruthy();
+    // The lane's key belongs to its editor, not to the row.
+    expect(within(embed).queryByText("embeddings")).toBeNull();
     expect(
       within(embed).getByText("3 calls, 3 failed · out of quota"),
     ).toBeTruthy();

@@ -378,6 +378,9 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseRenameTx(ctx, tx, in.Name); err != nil {
+			return err
+		}
 		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
 			return err
 		}
@@ -398,6 +401,29 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	return s.GetInstallation(ctx)
+}
+
+// refuseRenameTx admits only the name the installation already holds. The
+// anchor company's display name is that name, and a rename here would drift
+// from it. An older client resending the name it read still saves.
+func refuseRenameTx(ctx context.Context, tx pgx.Tx, next *string) error {
+	if next == nil {
+		return nil
+	}
+	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
+		return err
+	}
+	current, err := settings.GetTx(ctx, tx, Name)
+	if err != nil {
+		return err
+	}
+	if *next == current {
+		return nil
+	}
+	return settings.InvalidValue{
+		Setting: Name.Key(), Code: "set_on_company_profile",
+		Reason: "the installation's name is the company's name; change it on the company profile",
+	}
 }
 
 // changeCountryTx runs the country-change hook under the setting's write lock,

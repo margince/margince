@@ -43,15 +43,18 @@ var bundleFileObjects = map[string]string{
 	"companies": ObjectCompany, "company": ObjectCompany,
 	"contacts": ObjectContact, "contact": ObjectContact,
 	"leads": ObjectLead, "lead": ObjectLead,
+	"deals": ObjectDeal, "deal": ObjectDeal,
 }
 
 // notYetImportable names files of a type a later writer takes; they are listed,
 // not refused, so a template ZIP from a newer installation still imports.
-var notYetImportable = map[string]bool{"deals": true, "deal": true, "activities": true, "activity": true, "notes": true}
+var notYetImportable = map[string]bool{"activities": true, "activity": true, "notes": true}
 
 // templateFileStems is the plural each type's template file carries; it must
 // be a key of bundleFileObjects, which the detection test holds.
-var templateFileStems = map[string]string{ObjectCompany: "companies", ObjectContact: "contacts", ObjectLead: "leads"}
+var templateFileStems = map[string]string{
+	ObjectCompany: "companies", ObjectContact: "contacts", ObjectLead: "leads", ObjectDeal: "deals",
+}
 
 // BundlePart is one CSV of the bundle matched to the type it imports.
 type BundlePart struct {

@@ -29,9 +29,9 @@
 904 frontend/src/screens/contactpage.tsx
 1182 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
-936 frontend/src/screens/worklist.row.tsx
+932 frontend/src/screens/worklist.row.tsx
 1125 frontend/src/screens/analytics.test.tsx
-1289 frontend/src/screens/company-context.tsx
+1030 frontend/src/screens/company-context.tsx
 1278 frontend/src/components/listquery.test.tsx
 1384 frontend/src/components/listquery.tsx
 1279 frontend/src/screens/offers.tsx
@@ -49,10 +49,10 @@
 1509 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx
-2079 frontend/src/screens/companies.tsx
+2078 frontend/src/screens/companies.tsx
 2409 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
-901 frontend/src/screens/settings.tsx
+877 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3168 frontend/src/screens/deals.tsx
@@ -76,8 +76,8 @@
 530 frontend/src/screens/contractform.tsx
 651 frontend/src/format/format.ts
 727 frontend/src/screens/companytoday.tsx
-708 frontend/src/screens/installation-settings.tsx
-531 frontend/src/screens/extension-access.tsx
+678 frontend/src/screens/installation-settings.tsx
+519 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 737 frontend/src/screens/worklist.tsx
 781 frontend/src/screens/companycontacts/summary.tsx
@@ -87,7 +87,7 @@
 855 frontend/src/screens/onboarding-gate.tsx
 833 frontend/src/screens/worklist.copy.ts
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
-849 frontend/src/screens/settingscatalog.ts
+845 frontend/src/screens/settingscatalog.ts
 592 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
 888 frontend/src/screens/share.tsx

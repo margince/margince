@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, EmptyState } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
@@ -81,13 +81,18 @@ export function sweepWarning(
 }
 
 function sweepColumns(
-  generatedAt: string,
+  health: Health,
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
   zone: string,
 ): DataTableColumn<Sweep>[] {
-  return [
+  const generatedAt = health.generated_at;
+  // A column that would stand empty in every row is left out.
+  const warned = health.sweeps.some((sweep) =>
+    sweepWarning(sweep, generatedAt),
+  );
+  const columns: DataTableColumn<Sweep>[] = [
     {
       key: "pass",
       header: t("captureHealth.col.pass"),
@@ -134,6 +139,12 @@ function sweepColumns(
             })
           : undefined,
     },
+  ];
+  if (!warned) {
+    return columns;
+  }
+  return [
+    ...columns,
     {
       key: "warning",
       header: t("captureHealth.col.state"),
@@ -230,6 +241,7 @@ function installationFacts(
   locale: Locale,
 ): Fact[] {
   const { classifier, held_meetings: held } = health;
+  const waiting = health.mailboxes.length;
   const waited = (seconds: number | null | undefined) =>
     typeof seconds === "number"
       ? t("captureHealth.oldestWaited", { age: formatAge(seconds, locale) })
@@ -258,6 +270,11 @@ function installationFacts(
       ),
     },
     {
+      key: "mailboxes",
+      term: t("captureHealth.fact.mailboxes"),
+      value: waitingCount(waiting, formatNumber(waiting, locale)),
+    },
+    {
       key: "held-meetings",
       term: t("captureHealth.heldMeetings"),
       value: waitingCount(held.count, formatNumber(held.count, locale)),
@@ -267,6 +284,8 @@ function installationFacts(
   ];
 }
 
+// The mailbox table only when one has something waiting; the installation's
+// counts above already say how many do.
 function CaptureHealthBody({
   health,
   zone,
@@ -284,31 +303,26 @@ function CaptureHealthBody({
         bleed
         fold
         label={t("captureHealth.sweeps")}
-        columns={sweepColumns(health.generated_at, t, plural, locale, zone)}
+        columns={sweepColumns(health, t, plural, locale, zone)}
         rows={[...health.sweeps]}
         rowKey={(sweep) => sweep.sweep}
       />
-      <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("captureHealth.noDetail")}</PanelIntro>
-        {health.mailboxes.length === 0 && (
-          <EmptyState>{t("captureHealth.mailboxesEmpty")}</EmptyState>
-        )}
-      </PanelBody>
       {health.mailboxes.length > 0 && (
-        <DataTable
-          bleed
-          fold
-          label={t("captureHealth.mailboxes")}
-          columns={mailboxColumns(t, plural, locale)}
-          rows={[...health.mailboxes]}
-          rowKey={(box) => box.user_id}
-        />
+        <>
+          <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
+          <PanelBody>
+            <PanelIntro>{t("captureHealth.noDetail")}</PanelIntro>
+          </PanelBody>
+          <DataTable
+            bleed
+            fold
+            label={t("captureHealth.mailboxes")}
+            columns={mailboxColumns(t, plural, locale)}
+            rows={[...health.mailboxes]}
+            rowKey={(box) => box.user_id}
+          />
+        </>
       )}
-      <PanelGroupHead title={t("captureHealth.installation")} level="h3" />
-      <PanelBody>
-        <FactList numeric facts={installationFacts(health, t, locale)} />
-      </PanelBody>
     </>
   );
 }
@@ -329,11 +343,8 @@ function isCaptureHealth(data: Health | undefined): data is Health {
   );
 }
 
-export function CaptureHealthCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  // `job_health:read`, what the endpoint asks for (compose/capturehealth.go).
+// `job_health:read`, what the endpoint asks for (compose/capturehealth.go).
+export function useCaptureHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({
     queryKey: ["capture-health"],
@@ -346,6 +357,14 @@ export function CaptureHealthCard() {
       return data;
     },
   });
+  return { canSee, query };
+}
+
+export function CaptureHealthCard() {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const { canSee, query } = useCaptureHealth();
 
   return (
     <HealthCard
@@ -354,11 +373,9 @@ export function CaptureHealthCard() {
       withheld={t("captureHealth.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={(report) =>
-        t("captureHealth.generatedAt", {
-          time: formatDateTime(report.generated_at, locale, zone),
-        })
-      }
+      lead={(health) => (
+        <FactList numeric facts={installationFacts(health, t, locale)} />
+      )}
     >
       {(health) => <CaptureHealthBody health={health} zone={zone} />}
     </HealthCard>

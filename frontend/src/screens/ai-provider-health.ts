@@ -12,13 +12,44 @@ export function useProviderHealth(canSee: boolean) {
   return useQuery({
     queryKey: ["ai-provider-health"],
     enabled: canSee,
+    // A malformed body fails the read inside the gate, not a reading outside
+    // any card. A server older than `configured` omits it: none configured.
     queryFn: async () => {
-      return unwrap(await api.GET("/ai/provider-health"));
+      const health = unwrap(await api.GET("/ai/provider-health"));
+      const configured: unknown = health?.configured ?? [];
+      if (!Array.isArray(health?.providers) || !isNames(configured)) {
+        throw new Error("malformed provider health response");
+      }
+      return { ...health, configured };
     },
     // Same cadence and same off-with-the-grant rule as useAiHealth: the
     // question is whether it answers now.
     refetchInterval: canSee ? 60_000 : false,
   });
+}
+
+function isNames(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((name) => typeof name === "string")
+  );
+}
+
+// A boot whose stored binding cannot be served may fall back to the offline
+// fake. Its lanes answer with canned text while the screen still names a vendor.
+export function answersFromStandIn(
+  configured: readonly string[] | undefined,
+): boolean {
+  return configured?.includes("fake") === true;
+}
+
+// Whether every lane answers from the fake, so no real vendor is reachable.
+export function answersOnlyFromStandIn(
+  configured: readonly string[] | undefined,
+): boolean {
+  return (
+    answersFromStandIn(configured) &&
+    configured?.every((p) => p === "fake") === true
+  );
 }
 
 // A key, settings or routing save, and a successful key test, change what the

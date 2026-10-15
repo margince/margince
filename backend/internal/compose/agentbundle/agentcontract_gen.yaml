@@ -73,6 +73,23 @@ paths:
               schema: {$ref: '#/components/schemas/ActingIdentity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /openapi.json:
+    get:
+      tags: [Identity]
+      operationId: getAgentOpenAPIDocument
+      summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+      description: |-
+        The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+        Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+        address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+        both read it: the document says what a passport may call and holds no record data.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /contacts/{id}/employment-import:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -626,6 +643,15 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |-
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -640,15 +666,10 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Company'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a company (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Companies]
       operationId: archiveCompany
@@ -8141,7 +8162,10 @@ components:
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |-
+            The company's display name. An administrator saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |-
@@ -8632,7 +8656,7 @@ components:
         winner_id: {type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.'}
     ImportObject:
       type: string
-      enum: [company, lead, contact]
+      enum: [company, lead, contact, deal]
       description: |-
         What the file's rows are, and therefore what the run creates.
     ImportColumn:
@@ -8755,7 +8779,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_tags, cannot_write_type, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_unset, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_not_found, link_not_found_dropped, link_row_not_imported, linkedin_held, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, size_band_invalid, tag_created, tag_name_invalid, tag_new, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, value_refused, value_unreadable]
+      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_pipeline_fixed, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_not_found, link_not_found_dropped, link_row_not_imported, linkedin_held, lost_reason_missing, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.'
     CreateImportRunRequest:
       type: object
@@ -8947,6 +8971,8 @@ components:
         object: {$ref: '#/components/schemas/ImportObject'}
         rows_read: {type: integer, minimum: 0}
         disposition: {$ref: '#/components/schemas/ImportRunDisposition'}
+        closed_won: {type: integer, minimum: 1, description: 'Deals of a deals file that land already won, as closed history. Absent when none does.'}
+        closed_lost: {type: integer, minimum: 1, description: 'Deals of a deals file that land already lost, as closed history. Absent when none does.'}
     ImportRunReport:
       type: object
       description: |-

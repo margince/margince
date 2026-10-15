@@ -716,8 +716,9 @@ fe-typecheck-composed: composition
 ## `ci` aggregate), and a type error therefore still fails the merge. What the
 ## two share is `build:bundle`, so the app this suite exercises cannot quietly
 ## become a different artefact from the one that ships.
+## E2E_ARGS reaches `playwright test`; CI passes `--shard=i/n` there.
 frontend-e2e:
-	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
+	cd frontend && pnpm install --frozen-lockfile && pnpm e2e $(E2E_ARGS)
 
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
 ## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run

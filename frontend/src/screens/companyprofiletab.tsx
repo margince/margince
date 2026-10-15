@@ -138,6 +138,7 @@ export function CompanyProfileForm({
               <SidecarFieldRow
                 key={field}
                 companyId={company.id}
+                anchor={company.is_anchor === true}
                 fields={fields}
                 // A pending or failed read is not the same claim as "this
                 // field has no row": editing on that guess sends no If-Match
@@ -162,6 +163,7 @@ export function CompanyProfileForm({
           stating a field, and needs the same write state this form derived. */}
       <CompanyFactsPanel
         companyId={company.id}
+        anchor={company.is_anchor === true}
         canEdit={canEdit}
         reasonId={reason ? reasonId : undefined}
         onOpenHistory={onOpenHistory}

@@ -228,7 +228,7 @@ so your edits stay when you start it again and when you update.
 Windows installation is made with `UTC`, and you must correct the value once.
 
 For a real model, open **Settings → AI** in the running app. Bind each tier, and put the provider's key under
-**Model provider keys**. You need both: a key for a provider that no tier uses changes nothing. A stored binding that
+**AI models → Providers**. You need both: a key for a provider that no tier uses changes nothing. A stored binding that
 can serve comes before the stand-in model of the launcher. So it works without a new start, within the
 time the routes take to read it, and there is no file to place. See
 [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md).
@@ -287,7 +287,7 @@ start and stop only; each service writes its own file.
 | Windows SmartScreen blocks the first start | The build is not signed. "More info" → "Run anyway" |
 | Windows: `"VCRUNTIME140.dll was not found"` | The Microsoft Visual C++ files in [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe) are not installed, and the bundle does not include it |
 | Attachments or logos fail | The launcher cannot write to `data/blobs`, or the place that `MARGINCE_BLOBSTORE_*` names cannot be reached. Check that setting, or remove it to use the default |
-| AI answers look canned | No tier has a model, or the provider of that model has no key. So the stand-in model of the launcher runs the AI features. Open **Settings → AI**: bind each tier, and put the provider's key under **Model provider keys** |
+| AI answers look canned | No tier has a model, or the provider of that model has no key. So the stand-in model of the launcher runs the AI features. Open **Settings → AI**: bind each tier, and put the provider's key under **AI models → Providers** |
 | `"no licence is configured and this installation is production"` | `MARGINCE_ENV` was set to `production` in `margince.env` with no `MARGINCE_LICENSE` beside it. Give the token, or remove that line so the default `dev` mode applies |
 | Dates and times look wrong on Windows | The first run set the time zone to `UTC`. Set `timezone` in `margince.yaml` |
 

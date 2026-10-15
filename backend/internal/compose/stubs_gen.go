@@ -2443,6 +2443,10 @@ func (stubs) PutOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request, pa
 	httperr.NotImplemented(w, r, "PutOnboardingState")
 }
 
+func (stubs) GetAgentOpenAPIDocument(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAgentOpenAPIDocument")
+}
+
 func (stubs) ListPartners(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPartnersParams) {
 	httperr.NotImplemented(w, r, "ListPartners")
 }

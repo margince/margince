@@ -17,6 +17,7 @@ package compose
 import (
 	"context"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
@@ -36,6 +37,8 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
 		report.Objects[i].Warnings = append(report.Objects[i].Warnings, p.warnings...)
 		report.Objects[i].WillDuplicate += p.duplicates
+		report.Objects[i].ClosedWon += p.closedWon
+		report.Objects[i].ClosedLost += p.closedLost
 	}
 	return withPredictedLinks(ctx, source, writers, report, p.absent)
 }
@@ -127,6 +130,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				return prediction{}, err
 			}
 			if p.tally(object, row, outcome, problem) {
+				p.countClosedDeal(writers.dealStages, object, row, outcome)
 				writers.links.markPending(object, row.ExternalID)
 				if object == migration.ObjectCompany {
 					fields := textFields(row.Fields)
@@ -178,6 +182,22 @@ func (p *prediction) tally(object string, row migration.Row, outcome predictedOu
 	return true
 }
 
+// countClosedDeal tallies a deal that will be created on a won or lost stage,
+// which the commit writes as closed history.
+func (p *prediction) countClosedDeal(stages dealStages, object string, row migration.Row, outcome predictedOutcome) {
+	if object != migration.ObjectDeal || (outcome != predictCreate && outcome != predictCollides) {
+		return
+	}
+	choice, named, _ := stages.stageOf(textFields(row.Fields))
+	switch {
+	case !named:
+	case choice.semantic == crmcontracts.StageSemanticWon:
+		p.closedWon++
+	case choice.semantic == crmcontracts.StageSemanticLost:
+		p.closedLost++
+	}
+}
+
 // collisionWordingFor names two reasons. The disclosure is for a row that lands
 // beside a record the estate holds. The skip is for a row the run leaves alone.
 //
@@ -212,4 +232,6 @@ type prediction struct {
 	// duplicates counts the same rows. It is reported to the human as its own
 	// number ("100 companies, 94 duplicates") and never summed with the four.
 	duplicates int
+	// closedWon and closedLost count the new deals that land already closed.
+	closedWon, closedLost int
 }

@@ -123,6 +123,7 @@ function frame(
       )}
       <CompanyFactsPanel
         companyId={COMPANY}
+        anchor={false}
         canEdit={canEdit}
         reasonId={reasonId}
       />

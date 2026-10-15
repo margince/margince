@@ -55,6 +55,7 @@ function verdict(routes: RouteMap = {}) {
       <StoryProviders>
         <EvidenceVerdict
           companyId={COMPANY}
+          anchor={false}
           claim={profileFieldClaim(COMPANY, EXTRACTED)}
           canEdit
         />
@@ -219,6 +220,7 @@ export const SetByAnAgent: Story = {
       <StoryProviders>
         <EvidenceVerdict
           companyId={COMPANY}
+          anchor={false}
           claim={profileFieldClaim(COMPANY, { ...EXTRACTED, source: "agent" })}
           canEdit
         />

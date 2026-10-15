@@ -1,25 +1,17 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings → AI. The page header's pair of readings, the providers list and
+/* Settings → AI models. The providers status line, the providers list and
  * its sheet, and the tier line that reports one binding under its health dot. */
 
-/* The header: the sentence that names the page, then the two readings an
- * operator opens it for. */
-.ai-settings-head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+/* The providers status: its facts on one line, a dot between each. */
+.ai-providers-status {
+  margin: 0;
 }
 
-/* Two readings side by side, wrapping to one column before either is squeezed
- * to a width its figure cannot sit on. `auto-fit` rather than two fixed columns
- * so the pair centres itself on a wide page instead of stranding the second
- * card against the gutter. */
-.ai-settings-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--space-3);
+.ai-providers-status > span + span::before {
+  content: " · ";
+  color: var(--textSecondary);
 }
 
 /* The half of the providers reading that is bad news, in the tone the rest of
@@ -167,15 +159,12 @@
   gap: var(--space-3);
 }
 
-/* Under the lanes: what the model lists are as of, and the way to move them on.
- * One line, because the sentence and the button are one thought — a date with
- * no way past it is just bad news. */
+/* Under the lanes: what the model lists are as of, then the installation
+ * profile that limits which providers a tier may name. */
 .ai-sheet-age {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 /* The provider select with its lane's preset beside it. The select keeps the
@@ -262,15 +251,6 @@
 
 .ai-health-dot-idle {
   background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
-}
-
-/* The Provider -> Tier -> Task strip: three marked words, each with its gloss,
- * on one wrapping line. */
-.ai-term-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 
 .ai-panel-title {

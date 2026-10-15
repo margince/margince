@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -90,6 +91,10 @@ type csvWriters struct {
 	tagNames *tagResolver
 	// cols is the part's custom fields, read before any row transaction opens.
 	cols importColumns
+	// dealStages checks a deal part's stage and close date; read once per run.
+	dealStages dealStages
+	// deals is the store a deal part's rows land through.
+	deals *deals.Store
 	// columns is the part's mapping, file header → target.
 	columns map[string]string
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
@@ -112,7 +117,9 @@ func newCSVWriters(
 		contacts: contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithGrantCarrier(identity.NewServiceFor(db)),
+			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithInstallationRenamer(installationRenamer(db.Pool())),
+		deals:            dealsStoreOver(db),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,
@@ -200,7 +207,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	if link.skip {
 		return skippedWithProblem(link.problem), nil
 	}
-	landed, err := w.ensureRow(ctx, object, row, typed)
+	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {
 		landed.Problem = cmp.Or(link.problem, unknownOwner)
 	}
@@ -287,6 +294,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 		return w.createCompany(ctx, row, typed)
 	case migration.ObjectContact:
 		return w.createContact(ctx, row, typed)
+	case migration.ObjectDeal:
+		return w.createDeal(ctx, row, typed)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -294,6 +303,9 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 
 // reconcile brings an already-landed record up to what the file now says.
 func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	if w.object == migration.ObjectDeal {
+		return w.reconcileDeal(ctx, id, row, typed)
+	}
 	current, err := w.read(ctx, id)
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -381,40 +393,6 @@ func (w *csvWriters) apply(
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}
-}
-
-// errImportReplayed aborts a landing that wrote nothing: the store answered
-// with a record that already existed under its natural key. Rolling back keeps
-// the identity row out of the map — adopting a record this run did not create
-// would make the next attempt resolve it as already-imported, turning a
-// one-shot disclosure into none.
-var errImportReplayed = errors.New("import: the record replayed under its natural key")
-
-func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	in := leadCreateFrom(textFields(row.Fields), typed, w.sourceSystem, row.ExternalID, w.provenanceOf(row.ExternalID))
-	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
-		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
-			return ids.UUID{}, err
-		}
-		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in, w.cols.store)
-		if err != nil {
-			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
-		}
-		if !created {
-			return ids.UUID{}, errImportReplayed
-		}
-		return ids.UUID(lead.Id), nil
-	})
-	if errors.Is(err, errImportReplayed) {
-		return skippedFor(naturalKeyTakenWhy), nil
-	}
-	if linkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
-	}
-	if err != nil {
-		return migration.EnsureResult{}, err
-	}
-	return migration.EnsureResult{Created: true}, nil
 }
 
 // different input builder, a different store call, a different emptiness to

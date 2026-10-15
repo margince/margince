@@ -64,6 +64,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		parts = append(parts, crmcontracts.ImportPartReport{
 			File: partFileOf(run, o), Object: crmcontracts.ImportObject(o.Object),
 			RowsRead: rowsRead, Disposition: d,
+			ClosedWon: countOrAbsent(o.ClosedWon), ClosedLost: countOrAbsent(o.ClosedLost),
 		})
 		appendIssues(&out.Issues, seen, issueKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
@@ -415,4 +416,13 @@ func withSkippedLines(report migration.Report, object string, skipped []migratio
 		}
 	}
 	return report
+}
+
+// countOrAbsent is a count the part reports only when it is not zero, so a part
+// that holds no closed deal says nothing about them.
+func countOrAbsent(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
 }

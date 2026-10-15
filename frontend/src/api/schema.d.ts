@@ -520,6 +520,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/openapi.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+         * @description The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+         *     Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+         *     address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+         *     both read it: the document says what a passport may call and holds no record data.
+         */
+        get: operations["getAgentOpenAPIDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/consent-request": {
         parameters: {
             query?: never;
@@ -1764,7 +1787,13 @@ export interface paths {
         delete: operations["archiveCompany"];
         options?: never;
         head?: never;
-        /** Update a company (partial). */
+        /**
+         * Update a company (partial).
+         * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         */
         patch: operations["updateCompany"];
         trace?: never;
     };
@@ -9275,7 +9304,8 @@ export interface paths {
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-         *     later one. This is a HUMAN write: every field is stamped
+         *     later one. Its `display_name` is the installation's name: the same transaction writes it to
+         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
          *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
          *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
          *     theirs, and a later agent read-back will not overwrite it.
@@ -19886,6 +19916,11 @@ export interface paths {
          *
          *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
+         *
+         *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -20415,7 +20450,11 @@ export interface components {
          *     changed only by admin/ops.
          */
         InstallationSettings: {
-            /** @description The company's display name. */
+            /**
+             * @description The company's display name. An administrator saving the anchor company's `display_name`
+             *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+             *     transaction; before the first save it is the name the installation was configured with.
+             */
             name: string;
             /**
              * @description IANA zone name every reporting period boundary is computed in (not a user's own
@@ -20537,7 +20576,12 @@ export interface components {
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
-            /** @description Rename the company. */
+            /**
+             * @deprecated
+             * @description Accepted only when it equals the stored name, so an older client that resends the whole
+             *     form still saves. Any other value is refused with `422 set_on_company_profile`: the
+             *     installation's name is the anchor company's display name, changed through `PUT /company`.
+             */
             name?: string;
             /**
              * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
@@ -23967,6 +24011,10 @@ export interface components {
          *
          *     `company` creates companies.
          *
+         *     `deal` creates deals, after the companies and contacts of the same
+         *     upload. A deal row needs a `ref`, and names its pipeline and stage by
+         *     name.
+         *
          *     `lead` and `contact` are two answers to one question about a file of
          *     humans, and the caller picks the one that matches where the file came
          *     from.
@@ -23990,7 +24038,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "company" | "lead" | "contact";
+        ImportObject: "company" | "lead" | "contact" | "deal";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -24105,7 +24153,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
          * @enum {string}
          */
-        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_read_tags" | "cannot_write_type" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_unnamed" | "currency_unset" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "linkedin_held" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "tag_created" | "tag_name_invalid" | "tag_new" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_pipeline_fixed" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "linkedin_held" | "lost_reason_missing" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -24356,6 +24404,10 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             rows_read: number;
             disposition: components["schemas"]["ImportRunDisposition"];
+            /** @description Deals of a deals file that land already won, as closed history. Absent when none does. */
+            closed_won?: number;
+            /** @description Deals of a deals file that land already lost, as closed history. Absent when none does. */
+            closed_lost?: number;
         };
         /**
          * @description The same shape before and after approval: a dry run reports what the
@@ -38513,6 +38565,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
+            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -46335,7 +46388,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
         PayloadTooLarge: {
             headers: {
                 [name: string]: unknown;
@@ -47310,6 +47363,29 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAgentOpenAPIDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The OpenAPI 3.1 document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getConsentRequest: {
@@ -49376,6 +49452,7 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
@@ -75008,7 +75085,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];
