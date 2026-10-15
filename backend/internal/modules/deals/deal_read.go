@@ -424,8 +424,7 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 		return clause, nil
 	}
 	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope,
-	), nil
+		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope), nil
 }
 
 // partnerAttributionFilterClause narrows to what a partner did for the deal,
@@ -455,6 +454,5 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 		return clause, nil
 	}
 	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope,
-	), nil
+		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
 }

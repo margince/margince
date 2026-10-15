@@ -43,8 +43,7 @@ func settle(
 		return approvalID
 	}
 	if err := e.store.RecordProgressionDecided(
-		e.asDealWriter(), approvalID, outcome, nil, false,
-	); err != nil {
+		e.asDealWriter(), approvalID, outcome, nil, false); err != nil {
 		t.Fatalf("recording %s: %v", outcome, err)
 	}
 	return approvalID
@@ -54,8 +53,7 @@ func settle(
 func reportFor(t *testing.T, e *configEnv, fromID ids.StageID) []TransitionRates {
 	t.Helper()
 	got, err := e.store.ReadStageAutomationReport(
-		e.as(), pipelineOf(t, e, fromID), reportWindow,
-	)
+		e.as(), pipelineOf(t, e, fromID), reportWindow)
 	if err != nil {
 		t.Fatalf("reading the report: %v", err)
 	}
@@ -376,8 +374,7 @@ func TestAnAutomaticMoveDoesNotDiluteTheHumanRates(t *testing.T) {
 		auto := ids.NewV7()
 		proposeOutcome(t, e, dealID, fromID, toID, auto)
 		if err := e.store.RecordProgressionDecided(
-			e.asDealWriter(), auto, ProgressionAutoApplied, nil, false,
-		); err != nil {
+			e.asDealWriter(), auto, ProgressionAutoApplied, nil, false); err != nil {
 			t.Fatalf("recording the automatic move: %v", err)
 		}
 	}
@@ -412,8 +409,7 @@ func TestADecisionIsInTheWindowEvenWhenItsCardIsOlderThanIt(t *testing.T) {
 	backdateCreation(t, e, approvalID, 60*24*time.Hour)
 
 	got, err := e.store.ReadStageAutomationReport(
-		e.as(), pipelineOf(t, e, fromID), 30*24*time.Hour,
-	)
+		e.as(), pipelineOf(t, e, fromID), 30*24*time.Hour)
 	if err != nil {
 		t.Fatalf("reading the report: %v", err)
 	}

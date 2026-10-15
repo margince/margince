@@ -137,8 +137,7 @@ func (h Handlers) RevertStageProgression(
 	approvalID openapi_types.UUID, _ crmcontracts.RevertStageProgressionParams,
 ) {
 	deal, err := h.store.RevertStageProgression(
-		r.Context(), pathID[ids.DealKind](id), ids.UUID(approvalID),
-	)
+		r.Context(), pathID[ids.DealKind](id), ids.UUID(approvalID))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

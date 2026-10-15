@@ -182,23 +182,19 @@ func (p TransitionPolicy) withholds(r TransitionRates) string {
 	case r.Reviewed < p.MinReviewed:
 		return fmt.Sprintf(
 			"only %d of the %d reviewed proposals this transition needs before it may move deals itself",
-			r.Reviewed, p.MinReviewed,
-		)
+			r.Reviewed, p.MinReviewed)
 	case r.ObservationDays < p.MinObservationDays:
 		return fmt.Sprintf(
 			"observed for %d of the %d days this transition needs — a record earned in a few days is not a record",
-			r.ObservationDays, p.MinObservationDays,
-		)
+			r.ObservationDays, p.MinObservationDays)
 	case r.CleanAcceptanceRate() < p.CleanAcceptanceThreshold:
 		return fmt.Sprintf(
 			"contacts accept this move as proposed %.0f%% of the time, below the %.0f%% this transition asks for",
-			r.CleanAcceptanceRate()*100, p.CleanAcceptanceThreshold*100,
-		)
+			r.CleanAcceptanceRate()*100, p.CleanAcceptanceThreshold*100)
 	case r.UnsafeRate() > p.CorrectionReversalThreshold:
 		return fmt.Sprintf(
 			"%.1f%% of these moves were undone or corrected, above the %.1f%% ceiling",
-			r.UnsafeRate()*100, p.CorrectionReversalThreshold*100,
-		)
+			r.UnsafeRate()*100, p.CorrectionReversalThreshold*100)
 	}
 	return ""
 }

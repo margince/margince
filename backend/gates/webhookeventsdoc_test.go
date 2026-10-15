@@ -32,10 +32,8 @@ type eventSchema struct {
 	Description string                    `yaml:"description"`
 	EventType   string                    `yaml:"x-event-type"`
 	EntityType  string                    `yaml:"x-entity-type"`
-	Version     int                       `yaml:"x-version"`
 	Required    []string                  `yaml:"required"`
 	Properties  map[string]eventFieldSpec `yaml:"properties"`
-	Ref         string                    `yaml:"$ref"`
 }
 
 type eventFieldSpec struct {
@@ -231,12 +229,8 @@ func typeName(t any) string {
 
 func refName(ref string) string { return ref[strings.LastIndex(ref, "/")+1:] }
 
-func versionOf(s eventSchema) int {
-	if s.Version == 0 {
-		return 1
-	}
-	return s.Version
-}
+// versionOf reads the version from the generated map that owns it.
+func versionOf(s eventSchema) int { return crmcontracts.PublicEventVersions[s.EventType] }
 
 // oneLine flattens a contract description for a table cell; the contract's
 // em dashes become commas, as the docs prose bar asks.

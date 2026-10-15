@@ -311,8 +311,7 @@ func (s *Store) buildReversalPatch(
 		applied, ok := after[field]
 		if ok && !jsonEqual(applied, current[field]) {
 			return &CorrectionReversalError{Reason: fmt.Sprintf(
-				"%s has been changed since this correction, so taking it back would overwrite that", field,
-			)}
+				"%s has been changed since this correction, so taking it back would overwrite that", field)}
 		}
 		if field == provisionalField && pastDate {
 			continue

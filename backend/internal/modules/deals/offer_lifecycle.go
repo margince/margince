@@ -148,6 +148,15 @@ func offerSentPayload(current crmcontracts.Offer, rate string) crmcontracts.Publ
 	}
 }
 
+// offerAcceptedPayload builds the offer.accepted wire payload; the amount
+// travels with its currency so a receiver can print it.
+func offerAcceptedPayload(current crmcontracts.Offer) crmcontracts.PublicEventOfferAccepted {
+	return crmcontracts.PublicEventOfferAccepted{
+		OfferId: current.Id, DealId: current.DealId, Revision: current.Revision,
+		GrossMinor: current.GrossMinor, Currency: &current.Currency,
+	}
+}
+
 // sendSnapshots captures the buyer and issuer legal blocks at send time:
 // the sent document stays truthful even when the company or workspace is
 // later renamed.
@@ -226,10 +235,7 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err != nil {
 			return fmt.Errorf("audit offer accept: %w", err)
 		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOfferAccepted{
-			OfferId: current.Id, DealId: current.DealId, Revision: current.Revision,
-			GrossMinor: current.GrossMinor, Currency: &current.Currency,
-		}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, offerAcceptedPayload(current)); err != nil {
 			return fmt.Errorf("emit offer.accepted: %w", err)
 		}
 		// The paired deal.updated carries the FULL set of deal columns the sync

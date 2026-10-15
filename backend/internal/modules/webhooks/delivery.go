@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
@@ -69,7 +70,7 @@ type Deliverer struct {
 // WithPublicBaseURL sets the origin that record links in a delivery start
 // from. Without it a delivery carries no link.
 func (d *Deliverer) WithPublicBaseURL(baseURL string) *Deliverer {
-	d.publicBaseURL = baseURL
+	d.publicBaseURL = strings.TrimRight(baseURL, "/")
 	return d
 }
 
@@ -107,11 +108,6 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 		return err
 	}
 	wsCtx := d.systemContext(ctx, ws.UUID)
-	d.humanize(wsCtx, &wire)
-	body, err := json.Marshal(wire)
-	if err != nil {
-		return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
-	}
 	cands, err := d.store.matchingSubscriptions(wsCtx, env.Type)
 	if err != nil {
 		return fmt.Errorf("webhooks: matching subscriptions for %s: %w", env.Type, err)
@@ -134,6 +130,14 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 		}
 		if ok {
 			visible = append(visible, c)
+		}
+	}
+	// The body, and the name read it needs, only once some owner is due it.
+	var body []byte
+	if len(visible) > 0 {
+		d.humanize(wsCtx, &wire)
+		if body, err = json.Marshal(wire); err != nil {
+			return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
 		}
 	}
 	rows := renderFor(visible, body)

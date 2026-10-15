@@ -150,8 +150,7 @@ func maskableDealFields() []string {
 // withheldDealColumns matches any column a deal mask withholds. Whole words, so
 // partner_company_id is not read as a mention of company_id.
 var withheldDealColumns = regexp.MustCompile(
-	`\b(` + strings.Join(slices.Sorted(maps.Keys(dealWithholders)), "|") + `)\b`,
-)
+	`\b(` + strings.Join(slices.Sorted(maps.Keys(dealWithholders)), "|") + `)\b`)
 
 // withheldDealFilters is the census both directions walk: the filters whose SQL
 // reads a column the deal can withhold.

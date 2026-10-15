@@ -207,8 +207,7 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 		return false, err
 	}
 	var id ids.UUID
-	err = tx.QueryRow(
-		ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO deal_suggestion (company_id, pipeline_id, proposed_stage_id, name_hint,
 		       proposed_amount_minor, currency, confidence, fingerprint, evidence_count,
 		       evidence_through, captured_by)

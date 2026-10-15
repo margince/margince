@@ -53,8 +53,7 @@ func pacedBasis(remainingStages int) string {
 	}
 	return fmt.Sprintf(
 		"Based on how long deals like this usually take, with %d stages still to go.",
-		remainingStages,
-	)
+		remainingStages)
 }
 
 // QuietNames maps the counterparty on each side of ReadQuietFacts to a display

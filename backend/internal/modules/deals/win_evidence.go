@@ -91,8 +91,7 @@ type WonReasonDetailTooLongError struct{ Length int }
 func (e *WonReasonDetailTooLongError) Error() string {
 	return fmt.Sprintf(
 		"won_without_contract_detail is %d characters and may be at most %d — say what it was in a sentence",
-		e.Length, maxWonReasonDetail,
-	)
+		e.Length, maxWonReasonDetail)
 }
 
 // FieldFault names the field the caller must shorten.

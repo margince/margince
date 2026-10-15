@@ -6,59 +6,51 @@ package webhooks
 import (
 	"context"
 	"errors"
-	"maps"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // recordRoutes is the app's hash route for each record type that has a page,
-// a mirror of frontend/src/lib/entity.ts ENTITY that
-// gates/webhookrecordroutes_test.go holds to it.
+// a mirror of frontend/src/lib/entity.ts ENTITY that recordroutes_test.go
+// holds to it.
 var recordRoutes = map[string]string{
-	recordContact: "contacts",
-	recordCompany: "companies",
-	recordDeal:    "deals",
-	recordLead:    "leads",
-	recordProject: "projects",
+	string(datasource.RecordContact): "contacts",
+	string(datasource.RecordCompany): "companies",
+	string(datasource.RecordDeal):    "deals",
+	string(datasource.RecordLead):    "leads",
+	string(datasource.RecordProject): "projects",
 }
-
-// The record types a delivery can link to, as an event's entity names them.
-const (
-	recordContact = "contact"
-	recordCompany = "company"
-	recordDeal    = "deal"
-	recordLead    = "lead"
-	recordProject = "project"
-)
 
 // namedRecords are the record types whose name a delivery carries, with the
-// table and column that hold it; each table bears its record type's name.
-// Contacts and leads are left out: their name would stay in stored
-// deliveries past an erasure, and the link is enough.
+// table and column that hold it. Contacts and leads are left out: their name
+// would stay in stored deliveries past an erasure, and the link is enough.
+//
+// Not the attention-names labels (compose/attentionnames.go): those read live
+// records only, and an archive event still has to say what was archived.
 var namedRecords = map[string]struct{ table, column string }{
-	recordDeal:    {recordDeal, "name"},
-	recordCompany: {recordCompany, "display_name"},
-	recordProject: {recordProject, "name"},
+	string(datasource.RecordDeal):    {tableDeal, "name"},
+	string(datasource.RecordCompany): {tableCompany, "display_name"},
+	string(datasource.RecordProject): {tableProject, "name"},
 }
 
-// RecordRoutes returns a copy of the record routes, for the gate that holds
-// them to the frontend's.
-func RecordRoutes() map[string]string {
-	return maps.Clone(recordRoutes)
-}
+const (
+	tableDeal    = "deal"
+	tableCompany = "company"
+	tableProject = "project"
+)
 
 // recordURL links a record to its page, or nil when the type has no page or
-// the installation has no public base URL.
+// the installation has no public base URL. baseURL carries no trailing slash.
 func recordURL(baseURL, entityType string, id ids.UUID) *string {
 	route, ok := recordRoutes[entityType]
 	if !ok || baseURL == "" || id.IsZero() {
 		return nil
 	}
-	link := strings.TrimRight(baseURL, "/") + "/#/" + route + "/" + id.String()
+	link := baseURL + "/#/" + route + "/" + id.String()
 	return &link
 }
 

@@ -91,6 +91,5 @@ func MeetingIsOverSQL(alias, asOf string) string {
 func meetingStillStandingSQL(alias string) string {
 	return fmt.Sprintf(
 		`(%[1]s.meeting_status IS NULL OR %[1]s.meeting_status NOT IN ('canceled', 'no_show', 'held'))`,
-		alias,
-	)
+		alias)
 }

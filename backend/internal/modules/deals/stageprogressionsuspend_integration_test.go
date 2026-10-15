@@ -58,8 +58,7 @@ func settleOne(
 	id := ids.NewV7()
 	proposeOutcome(t, e, dealID, ref.FromStageID, ref.ToStageID, id)
 	if err := e.store.RecordProgressionDecided(
-		e.asDealWriter(), id, ProgressionApprovedClean, nil, false,
-	); err != nil {
+		e.asDealWriter(), id, ProgressionApprovedClean, nil, false); err != nil {
 		t.Fatalf("settling a proposal: %v", err)
 	}
 	return id
@@ -157,8 +156,7 @@ func TestASafetyDefectSuspendsImmediatelyWithoutWaitingForVolume(t *testing.T) {
 	}
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectCrossTenant,
-	); err != nil {
+		e.as(), ref, DefectCrossTenant); err != nil {
 		t.Fatalf("suspending for a safety defect: %v", err)
 	}
 
@@ -186,8 +184,7 @@ func TestOnlyAKnownSafetyDefectSuspendsARule(t *testing.T) {
 	ruleOn(t, e, ref)
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, SafetyDefect("looked_wrong"),
-	); err == nil {
+		e.as(), ref, SafetyDefect("looked_wrong")); err == nil {
 		t.Fatal("an unknown defect suspended a rule, so any string is a safety stop")
 	}
 	if off, _ := suspensionOf(t, e, ref); off {
@@ -205,8 +202,7 @@ func TestASafetyDefectOnAnUngovernedTransitionIsNotAnError(t *testing.T) {
 	ref := transitionOf(t, e, fromID, toID)
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectAuthorization,
-	); err != nil {
+		e.as(), ref, DefectAuthorization); err != nil {
 		t.Fatalf("a defect on a transition with no rule answered an error: %v", err)
 	}
 }
@@ -229,8 +225,7 @@ func TestASuspendedRuleStillProposesButNeverApplies(t *testing.T) {
 	}
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectEvidenceLink,
-	); err != nil {
+		e.as(), ref, DefectEvidenceLink); err != nil {
 		t.Fatalf("suspending: %v", err)
 	}
 
@@ -264,8 +259,7 @@ func TestSuspensionIsAuditedAndAnnounced(t *testing.T) {
 	rule := ruleOn(t, e, ref)
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectProtectedField,
-	); err != nil {
+		e.as(), ref, DefectProtectedField); err != nil {
 		t.Fatalf("suspending: %v", err)
 	}
 
@@ -314,15 +308,13 @@ func TestASecondSuspensionKeepsTheReasonThatStoppedTheRule(t *testing.T) {
 	ruleOn(t, e, ref)
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectCrossTenant,
-	); err != nil {
+		e.as(), ref, DefectCrossTenant); err != nil {
 		t.Fatalf("first suspension: %v", err)
 	}
 	_, first := suspensionOf(t, e, ref)
 
 	if err := e.store.SuspendForSafetyDefect(
-		e.as(), ref, DefectProtectedField,
-	); err != nil {
+		e.as(), ref, DefectProtectedField); err != nil {
 		t.Fatalf("second suspension: %v", err)
 	}
 	_, second := suspensionOf(t, e, ref)

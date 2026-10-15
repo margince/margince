@@ -82,8 +82,7 @@ func orderByReadableCompanyName(column string) func(context.Context, func(any) i
 		// The column is one of this map's own keys, never a caller's string.
 		return storekit.SQLf(
 			"(SELECT company_sort.display_name FROM company company_sort WHERE company_sort.id = deal.%s%s)",
-			column, scope,
-		), nil
+			column, scope), nil
 	}
 }
 

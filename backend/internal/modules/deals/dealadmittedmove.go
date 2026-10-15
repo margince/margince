@@ -75,8 +75,7 @@ func refuseAMoveTheGateDidNotAdmit(
 		"A stage changed while this move ran, so the deal was not moved. "+
 			"The move now goes from a stage marked %s to one marked %s. "+
 			"Read the pipeline's stages again, then repeat the call if the move still applies.",
-		source, target,
-	)}
+		source, target)}
 }
 
 // lockedMoveSemantics reads both endpoints' semantics under FOR SHARE, which is

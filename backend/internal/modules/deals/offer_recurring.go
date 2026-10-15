@@ -107,8 +107,7 @@ func OfferRecurringTotals(lines []RecurringLineInput) (RecurringFigures, error) 
 				// means a writer bypassed the constraint. Refusing beats
 				// dividing by zero or quietly annualizing at some default.
 				return RecurringFigures{}, fmt.Errorf(
-					"line %d is recurring with no billing interval", i+1,
-				)
+					"line %d is recurring with no billing interval", i+1)
 			}
 			// 12 / interval_months is exact for every admitted cadence, so
 			// the annual figure needs no rounding of its own — it is a whole

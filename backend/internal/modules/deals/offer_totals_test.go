@@ -250,8 +250,7 @@ func TestOfferTotalsReconcileToGroundTruth(t *testing.T) {
 			}
 			net := roundedIntDiv(
 				new(big.Int).Mul(big.NewInt(price), new(big.Int).Mul(big.NewInt(qtyMilli), big.NewInt(10_000-discountCenti))),
-				big.NewInt(10_000_000),
-			) // 1000 (milli) × 10000 (centi-pct)
+				big.NewInt(10_000_000)) // 1000 (milli) × 10000 (centi-pct)
 			tax := roundedIntDiv(new(big.Int).Mul(big.NewInt(net), big.NewInt(taxCenti)), big.NewInt(10_000))
 			wantNet += net
 			wantTax += tax

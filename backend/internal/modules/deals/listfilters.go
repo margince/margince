@@ -56,15 +56,12 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 		in.TagMode = mode
 	}),
 	filterCompanyID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.CompanyID) { in.CompanyID = id },
-	),
+		func(in *ListDealsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListDealsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterPartnerCompanyID: storekit.FilterID(
-		func(in *ListDealsInput, id *ids.CompanyID) { in.PartnerCompanyID = id },
-	),
+		func(in *ListDealsInput, id *ids.CompanyID) { in.PartnerCompanyID = id }),
 	filterPartnerAttribution: storekit.FilterWord(
-		func(in *ListDealsInput, v *string) { in.PartnerAttribution = v },
-	),
+		func(in *ListDealsInput, v *string) { in.PartnerAttribution = v }),
 	filterPartnerSourced: storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.PartnerSourced = v }),
 	filterPipelineID:     storekit.FilterID(func(in *ListDealsInput, id *ids.PipelineID) { in.PipelineID = id }),
 	filterProjectID:      storekit.FilterID(func(in *ListDealsInput, id *ids.ProjectID) { in.ProjectID = id }),
@@ -72,15 +69,12 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStalled:        storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.Stalled = v }),
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
 	filterForecastCategory: storekit.FilterWord(
-		func(in *ListDealsInput, v *string) { in.ForecastCategory = v },
-	),
+		func(in *ListDealsInput, v *string) { in.ForecastCategory = v }),
 	filterCommercialMotion: storekit.FilterWord(
-		func(in *ListDealsInput, v *string) { in.CommercialMotion = v },
-	),
+		func(in *ListDealsInput, v *string) { in.CommercialMotion = v }),
 	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
 	filterAcquisitionSource: storekit.FilterWord(
-		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v },
-	),
+		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.
