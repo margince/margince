@@ -95,9 +95,11 @@ func decode(raw []byte) (Bootstrap, map[string]bool, error) {
 	if err := yaml.Unmarshal(raw, &keys); err != nil {
 		return Bootstrap{}, nil, err
 	}
+	// A null root (`seeds:` with its block commented out) is unwritten, as
+	// config.Load reads a null key.
 	written := map[string]bool{}
 	for root := range Roots() {
-		if _, ok := keys[root]; ok {
+		if node, ok := keys[root]; ok && node.Tag != "!!null" {
 			written[root] = true
 		}
 	}

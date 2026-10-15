@@ -92,3 +92,18 @@ func TestTheShippedDevFileSeedsTheDevBinding(t *testing.T) {
 		t.Error("the dev file's seeds.ai_routing did not reach the bootstrap")
 	}
 }
+
+// A config file whose seeds block is commented out leaves `seeds:` null, and
+// the base file's seeds still apply.
+func TestANullRootInTheConfigFileKeepsTheBases(t *testing.T) {
+	base := writeTemp(t, "version: 1\nseeds:\n  booking_page: false\n")
+	for _, over := range []string{"seeds:\n", "seeds: null\n", "seeds: ~\n  # ai_routing: ...\n"} {
+		boot, err := LoadBootstrapFiles(base, writeTemp(t, over))
+		if err != nil {
+			t.Fatalf("%q: %v", over, err)
+		}
+		if bp := boot.Seeds.BookingPage; bp == nil || *bp {
+			t.Errorf("%q: the base's seeds.booking_page: false was dropped by a null seeds root", over)
+		}
+	}
+}
