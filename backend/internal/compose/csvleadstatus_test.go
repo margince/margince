@@ -47,8 +47,8 @@ func TestALeadStatusTheStoreOnlyReachesByAnActionIsRefusedWithTheAllowedList(t *
 }
 
 func TestTheStatusTheFileCarriesIsTheStoresOwnOpenVocabulary(t *testing.T) {
-	// The store refuses the terminal pair on create and edit; the file's list
-	// is that same list, so a status added to the ladder reaches the file.
+	// The store refuses the terminal pair on create and edit. The file's list
+	// is the same list, so a status added to the ladder reaches the file.
 	for _, status := range terminalLeadStatuses {
 		if slices.Contains(contacts.OpenLeadStatuses(), status) {
 			t.Errorf("%s is on the open ladder, so the file's terminal list is stale", status)
@@ -73,4 +73,37 @@ func TestAnEmptyStatusBoxIsNeverAnUpdate(t *testing.T) {
 	if _, ok := changed["status"]; !ok {
 		t.Fatal("a different status is not an update")
 	}
+}
+
+// leadRoundTrip is the lead arm of TestEveryImportTargetRoundTripsThroughCreateAndUpdate:
+// which targets reach the create input and which reach the patch.
+func leadRoundTrip(fields map[string]string, typed map[string]any) (created, patched map[string]bool) {
+	// The status cell is typed by the row's check before it is written.
+	typed["status"] = "engaged"
+	in := leadCreateFrom(fields, typed, "import:csv", "ext-1", "src")
+	up := leadUpdateFrom(fields, typed)
+	created = map[string]bool{
+		"full_name":    in.FullName != nil,
+		"email":        in.Email != nil,
+		"phone":        in.Phone != nil,
+		"title":        in.Title != nil,
+		"company_name": in.CompanyName != nil,
+		"linkedin_url": in.LinkedInURL != nil,
+		"author":       in.Author.AuthorName != nil,
+		"owner_email":  in.OwnerID != nil,
+		"cf_tier":      in.CustomFields["cf_tier"] != nil,
+		"status":       in.Status == "engaged",
+	}
+	patched = map[string]bool{
+		"status":       up.Status != nil,
+		"full_name":    up.FullName != nil,
+		"email":        up.Email != nil,
+		"phone":        up.Phone != nil,
+		"title":        up.Title != nil,
+		"company_name": up.CompanyName != nil,
+		"linkedin_url": up.LinkedInURL != nil,
+		"owner_email":  up.OwnerID != nil,
+		"cf_tier":      up.CustomFields["cf_tier"] != nil,
+	}
+	return created, patched
 }

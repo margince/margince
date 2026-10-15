@@ -53,8 +53,8 @@ func TestADealLinkIsNeverResolvedAsACompanyName(t *testing.T) {
 	}
 }
 
-// A row this run skipped is not in the CRM, so a link to it follows the run's
-// broken-link policy and says the row was skipped, not that it never existed.
+// A row this run skipped is not in the CRM. A link to it follows the run's
+// broken-link policy and says the row was skipped.
 func TestALinkToARowThisRunSkippedFollowsTheBrokenLinkPolicy(t *testing.T) {
 	contactID := ids.NewV7()
 	row := migration.Row{ExternalID: "A-1", Line: 4, Fields: map[string]any{

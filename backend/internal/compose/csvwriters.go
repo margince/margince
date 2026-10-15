@@ -203,14 +203,14 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 // not create, then a row with a cell the store would refuse. A contact whose
 // company link finds no single company follows the run's policy.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
-	landed, err := w.ensure(ctx, object, row)
+	landed, err := w.ensureOne(ctx, object, row)
 	if err == nil && landed.Skipped {
 		w.links.markRefused(object, row.ExternalID)
 	}
 	return landed, err
 }
 
-func (w *csvWriters) ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return skippedWithProblem(refused), nil
 	}

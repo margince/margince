@@ -75,8 +75,8 @@ func (w *csvWriters) Reverse(
 	return nil
 }
 
-// keptCause answers the refusals that leave a row in place on purpose as
-// kept rows with their reason, and any other error as it is.
+// keptCause answers a refusal that leaves a row in place as a kept row with
+// its reason, and any other error as it is.
 func keptCause(err error) error {
 	if wrapsA[*contacts.HumanTouchedError](err) || wrapsA[*deals.HumanTouchedError](err) ||
 		wrapsA[*activities.HumanTouchedError](err) {

@@ -19,6 +19,12 @@ const (
 	ReasonUndoStillReferenced ReasonCode = "undo_still_referenced"
 )
 
+// Parameter names of the still-referenced reason.
+const (
+	paramDeals    = "deals"
+	paramContacts = "contacts"
+)
+
 // withUndoReasons adds the undo reasons to the catalog the other reasons
 // declare, and answers it.
 func withUndoReasons(catalog map[ReasonCode]reasonEntry) map[ReasonCode]reasonEntry {
@@ -32,7 +38,7 @@ var undoReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Jemand hat diesen Datensatz nach dem Import geändert, daher blieb er bestehen.",
 		textlang.Vietnamese: "Hồ sơ này đã được sửa sau khi nhập nên được giữ nguyên.",
 	}},
-	ReasonUndoStillReferenced: {params: []string{"deals", "contacts"}, text: map[textlang.Lang]string{
+	ReasonUndoStillReferenced: {params: []string{paramDeals, paramContacts}, text: map[textlang.Lang]string{
 		textlang.English:    "Live deals or contacts still name this company (deals: {deals}, contacts: {contacts}), so it was left in place.",
 		textlang.German:     "Aktive Deals oder Kontakte nennen dieses Unternehmen noch (Deals: {deals}, Kontakte: {contacts}), daher blieb es bestehen.",
 		textlang.Vietnamese: "Vẫn còn deal hoặc liên hệ đang dùng công ty này (deal: {deals}, liên hệ: {contacts}) nên công ty được giữ nguyên.",

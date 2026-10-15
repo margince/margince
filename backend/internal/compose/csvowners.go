@@ -147,8 +147,9 @@ func ownerFrom(fields map[string]string, typed map[string]any) *ids.UserID {
 }
 
 // collapseUnknownOwners folds the unknown-owner warnings of one file that name
-// one address into a single issue, placed on the first row that names it and
-// carrying how many rows do. Every row still lands with the importer as owner.
+// one address into a single issue. It sits on the first row that names the
+// address and carries how many rows do. Every row still lands with the
+// importer as owner.
 func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.ImportRowIssue {
 	first := map[string]int{}
 	counts := map[string]int{}

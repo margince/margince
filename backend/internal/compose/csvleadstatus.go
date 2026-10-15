@@ -12,12 +12,15 @@ import (
 	"slices"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
 // terminalLeadStatuses are the statuses a lead reaches through its own actions.
-var terminalLeadStatuses = []string{"promoted", "disqualified"}
+var terminalLeadStatuses = []string{
+	string(crmcontracts.LeadStatusPromoted), string(crmcontracts.LeadStatusDisqualified),
+}
 
 // checkLeadStatus types a mapped status cell as one of the open statuses, in
 // any case. An empty cell says nothing: a new lead starts as new and a stored
