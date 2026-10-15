@@ -260,28 +260,36 @@ func seedBulkCapturedMail(t *testing.T, e *integration.Env, from, subject string
 func seedMail(t *testing.T, e *integration.Env, from, subject string, bulkAttested bool) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
+	var batch pgx.Batch
+	queueMail(&batch, id, from, subject, bulkAttested)
+	sendSeed(t, e, &batch, "seeding the captured mail")
+	return id
+}
+
+// queueMail queues the rows capture writes for one inbound message: the activity
+// and the provider original. Without the original the redaction test asserts zero
+// raw_capture rows where zero always existed, so it could never fail.
+func queueMail(batch *pgx.Batch, id ids.UUID, from, subject string, bulkAttested bool) {
+	batch.Queue(`
 			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id, source, captured_by, counterparty_email, bulk_mail_attested)
 			VALUES ($1, 'email', $2, 'the message body', '{"headers":"…"}'::jsonb, 'inbound',
 			        'gmail', $3, 'gmail:'||$3, 'connector:gmail', $4, $5)`,
-			id, subject, "vrd-"+id.String(), from, bulkAttested)
-		if err != nil {
-			return err
-		}
-		// The provider original, exactly as capture writes it. Without this the
-		// redaction test asserts zero raw_capture rows where zero always
-		// existed — a test that cannot fail.
-		_, err = tx.Exec(context.Background(), `
+		id, subject, "vrd-"+id.String(), from, bulkAttested)
+	batch.Queue(`
 			INSERT INTO raw_capture (source_system, source_id, payload)
 			VALUES ('gmail', $1, '{"headers":"…","body":"the message body"}'::jsonb)`,
-			"vrd-"+id.String())
-		return err
+		"vrd-"+id.String())
+}
+
+// sendSeed runs a queued seed in one workspace transaction and one round trip.
+func sendSeed(t *testing.T, e *integration.Env, batch *pgx.Batch, what string) {
+	t.Helper()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.SendBatch(context.Background(), batch).Close()
 	})
 	if err != nil {
-		t.Fatalf("seeding the captured mail: %v", err)
+		t.Fatalf("%s: %v", what, err)
 	}
-	return id
 }
 
 // seedPendingDisposition writes the ledger row capture would have written when
