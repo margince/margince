@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { AskMarginceModal } from "./corpusask";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AskMarginceModal } from "./corpusask";
 
 // Ask your documents: the one question box in the product whose search is
 // BOUNDED, which is what lets it refuse instead of guessing.
@@ -46,10 +46,12 @@ const SET: Corpus = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   coverage: {
     documents_total: 12,
     chunks_total: 1_180,
     chunks_embedded: 1_180,
+    embed_state: "complete",
   },
   created_at: "2026-08-01T00:00:00Z",
 };
@@ -128,7 +130,12 @@ const NOT_COVERED_UNWRITTEN: Answer = {
 const NOT_READY: Answer = {
   ...NOT_COVERED_UNWRITTEN,
   outcome: "not_ready",
-  coverage: { documents_total: 12, chunks_total: 1_180, chunks_embedded: 407 },
+  coverage: {
+    documents_total: 12,
+    chunks_total: 1_180,
+    chunks_embedded: 407,
+    embed_state: "indexing",
+  },
 };
 
 const RETRIEVAL_UNAVAILABLE: Answer = {

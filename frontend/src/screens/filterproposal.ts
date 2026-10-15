@@ -16,7 +16,7 @@ import {
   type Leaf,
   type Node,
   rootGroup,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
 
 /** A proposal on screen: what was asked, the tree before it, and what it added. */
 export type Proposal = Readonly<{

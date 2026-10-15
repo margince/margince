@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
-import { TeamPlanReview } from "./brief.teamplan";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TeamPlanReview } from "./brief.teamplan";
 
 // What a lead sees of a teammate's week, opened from the team board's own
 // verb. Every instant is FIXED: a plan built from `new Date()` documents

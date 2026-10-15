@@ -62,10 +62,11 @@ Any real activity clears the mark; opening the record does not. If the deal was 
 To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group). Then choose the pipeline in the list.
 1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100).
 2. A new open stage goes after the other open stages.
-3. To change a stage, choose **Edit stage** on its row.
+3. To change a stage, open the **…** menu on its row and choose **Edit stage**.
 4. To reorder, drag an open stage by its handle, or select the handle and press the up or down arrow.
 5. The order is saved when you let go, and **Undo** in the confirmation puts it back. Won and Lost always stay last.
-6. To delete a stage, choose **Remove** → **Remove stage**. Move its deals off it first.
+6. To delete a stage, open the **…** menu on its row and choose **Remove** → **Remove stage**. Move its deals off it first. While it holds deals you can see, **Remove** cannot be chosen and says how many.
+7. To see what a deal must show to leave a stage, press the arrow at the end of its row. It opens the stage's **Exit criteria** under the row. **Add criterion** adds one, here or in the **…** menu. A condition of the kind **Legal approved** holds a deal at the stage until legal approves it; see [Legal review](legal-review.md).
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only. Your role cannot change pipelines or stages."
 
@@ -140,6 +141,8 @@ or lost stage asks first:
 
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
+
+If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 

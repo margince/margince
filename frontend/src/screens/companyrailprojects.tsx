@@ -1,11 +1,11 @@
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { routeHash } from "../lib/router";
 // The row shape this file draws (co-row-meta) is the record page's,
 // defined in company360.css. Imported HERE for the same reason
 // companyraildeals.tsx does: this file renders wherever it is mounted, and a
@@ -69,7 +69,6 @@ export function ProjectsSection({
   return (
     <Disclosure
       className="co-sect"
-      open
       summary={
         <SectionSummary title={t("co.rail.projects.title")} count={count} />
       }

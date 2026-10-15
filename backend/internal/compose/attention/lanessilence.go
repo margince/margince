@@ -51,6 +51,9 @@ type RiskyDeal struct {
 	// QuietDays is how long the deal has been idle, which is the number the
 	// card says out loud. Zero for a deal admitted only by its close date.
 	QuietDays int
+	// LastTouchedAt is the moment the idle count runs from, which a Done on
+	// the row is held against.
+	LastTouchedAt time.Time
 	// CloseOverdue is set when the expected close date has already passed.
 	CloseOverdue      bool
 	ExpectedCloseDate *time.Time

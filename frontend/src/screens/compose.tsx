@@ -15,6 +15,7 @@ import { INTL_LOCALE } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRichTextLabels } from "../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import { StaleThreadNotice } from "./compose.notices";
 import {
@@ -80,7 +81,6 @@ import { ConversationChoices, ThreadPane } from "./composethread";
 import { useVoiceDraft, type VoiceDraft } from "./composevoicedraft";
 import type { Transport } from "./contacttransports";
 import { useProjectRecord } from "./projectrecord";
-import { useRichTextLabels } from "./richtextlabels";
 import { SendMark, SendPermission } from "./sendpermission";
 import { SendRefusal } from "./sendrefusal";
 import { useVoiceProfile } from "./voice-profile";
@@ -773,6 +773,7 @@ export function ComposeModal({
   entityType,
   entityId,
   contactId,
+  followUp,
   recordAddress,
   kind,
   transports = NO_TRANSPORTS,
@@ -783,17 +784,17 @@ export function ComposeModal({
   onClose,
   onSent,
 }: Readonly<{
-  // Absent means this is an ACCOUNT-STARTED send: a new conversation with no
-  // prior message to anchor to (ADR-0087 §1). It is the same send either way —
-  // only the origin differs — so the drafting, consent, refusal and provenance
-  // behaviour below is shared rather than forked. A reply keeps threading and
-  // inherits its links; an account-started message roots its own thread and
-  // files itself under the record it was started from.
+  // Absent means an ACCOUNT-STARTED send: a new conversation (ADR-0087).
+  // Drafting, consent, refusal and provenance are shared with a reply. A
+  // reply keeps threading and inherits its links. A new message files itself
+  // under the record it started from.
   initialMessage?: Readonly<{ subject: string; body: string }>;
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** A meeting follow-up: further recipients and the meeting it follows up. */
+  followUp?: Parameters<typeof useVoiceDraft>[0]["followUp"];
   /**
    * The record's own email address, for a FIRST message to it — a lead or a
    * contact nobody has written to yet, where there is no thread to resolve a
@@ -824,10 +825,8 @@ export function ComposeModal({
   /** Which of them to open on — the transport the conversation a caller named
    *  is ON, rather than the record's own lead. The reader may still change it. */
   initialTransportId?: string;
-  /** The conversation the caller named cannot be answered any more: a channel
-   *  disconnected, an address removed, a message off the end of the window. The
-   *  composer opens on the default AND says so, because falling back silently
-   *  would have the reader writing into a conversation they did not choose. */
+  /** The named conversation cannot be answered any more. The composer opens
+   *  on the default AND says so, rather than fall back silently. */
   staleThread?: boolean;
   /** What the caller wants the draft to be ABOUT. A moment action knows why it
    *  fired — "their reply is overdue", "the meeting needs an agenda" — and that
@@ -943,6 +942,7 @@ export function ComposeModal({
     answering,
     entityType,
     entityId,
+    followUp,
     projectId,
     groundable,
     thread,

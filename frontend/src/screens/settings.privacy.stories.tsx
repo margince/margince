@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { GrantSpec } from "../app/mefixture";
-import { PrivacyLanes } from "./settings.privacy";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PrivacyLanes } from "./settings.privacy";
 
 // The whole Privacy and retention page, every lane populated, in the order an
 // officer works them.

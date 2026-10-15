@@ -364,7 +364,7 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Firmenname")).toHaveCount(0);
+  await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await expect(
     page.getByPlaceholder("https://meet.google.com/abc-defg-hij"),
   ).toBeVisible();
@@ -449,9 +449,13 @@ test("calendar setup enables booking with the existing Account name", async ({
   await page
     .getByRole("button", { name: de["scheduling.resume"], exact: true })
     .click();
+  // The booking link panel is the one surface that states it.
   await expect(
     page.getByText(de["scheduling.active"], { exact: true }),
-  ).toHaveCount(2);
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: de["scheduling.pause"], exact: true }),
+  ).toBeVisible();
   expect(writes).toHaveLength(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",

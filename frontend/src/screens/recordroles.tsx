@@ -3,7 +3,6 @@
 
 import { type FormEvent, useState } from "react";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -23,11 +22,13 @@ import {
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { useSinglePress } from "../design-system/presslatch";
+import { QueryStates } from "../design-system/querystates";
 import { Switch } from "../design-system/switch";
 import { INTL_LOCALE } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryStates } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
 import { vocabMenuColumn } from "./leadvocab.rows";
 import {
   type AssignmentRecordType,

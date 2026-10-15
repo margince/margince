@@ -360,7 +360,7 @@ Available tools:
 // other direction too — the frame states nothing about a member the compaction
 // leaves in place.
 const surfaceSchemaRules = "- An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.\n" +
-	"- A tool that LISTS `" + mcp.ReservedIdempotencyKeyArg + "` accepts it as an optional string. " +
+	"- A tool that LISTS `" + mcp.ReservedIdempotencyKeyArg + "` takes it as a string you choose, and a retry without it may repeat the write. " +
 	mcp.ReservedIdempotencyKeyRule + "\n"
 
 // SystemFrameTokens is what the system prompt costs BEFORE any tool is listed:

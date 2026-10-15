@@ -24,18 +24,20 @@ Margince has an export of the whole company: a ZIP with one CSV for each record 
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
-To import contacts, companies or leads from a spreadsheet, save it as CSV and open **Settings → Data import**. Then choose **Start import**.
-1. Choose **Start import** under **Import CSV file**.
-2. Pick the **Row type**: **Prospects** (leads), **Companies** or **Contacts**.
-3. Choose **Choose file** and pick the CSV.
-4. In **Column mapping**, pick a **Field** for each column, or **Do not import**.
-5. Choose **Preview import**, check the **Import preview**, then choose **Import {rows} rows**.
+To import contacts, companies or prospects, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
+1. Drop the file on **Upload your data**, or fill in the file from **Download template** first.
+2. On **Check your files**, check **Import as** for each file, then choose **Next: map {count} files**.
+3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
+4. Choose **Run test**, read the **Test run**, then choose **Import {count} rows**.
+5. **Importing** shows each file as it goes, and **Result** shows what was written.
 Only an admin or ops user can import. Nothing is written before you confirm.
-Also called: upload a CSV, bulk import, Excel import.
+Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
-To undo a CSV import in Margince, open **Settings → Data import** and choose **Undo import ({rows} rows)** on the import result.
-Undo archives the records that import created (a lead is disqualified), unless someone edited them since. Those are listed under "Kept because they were edited after the import:". Records the import only updated are not changed back. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
+To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
+Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Kept because they were edited after the import:".
+
+Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 
 Also called: reverse an import, roll back an upload.
 
@@ -150,7 +152,7 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
-Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly with **Data retention (seconds)** in **Settings → System health**. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
+Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
 ### One window nobody can change
 

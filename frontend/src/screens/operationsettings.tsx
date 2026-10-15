@@ -2,14 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { useInstallationSettings } from "../app/uploadlimit";
+import { Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
-import { useT } from "../i18n";
-import { problemMessageOf, QueryGate } from "./common";
+import { boundsText } from "../format/bounds";
+import { formatNumber } from "../format/format";
+import { formatInterval } from "../format/interval";
+import { useLocale, usePlural, useT, type Words } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
+import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
@@ -90,6 +95,68 @@ const PACING_ROWS: readonly OperationRow[] = [
   { property: "send_max_age_hours", copy: "sendMaxAge" },
 ];
 
+type Unit = "seconds" | "hours";
+
+// The wire property names its unit; a count such as the send limit has none.
+function unitOf(row: OperationRow): Unit | undefined {
+  if (row.property.endsWith("_hours")) return "hours";
+  if (row.property.endsWith("_seconds")) return "seconds";
+  return undefined;
+}
+
+const UNIT_SECONDS: Record<Unit, number> = { seconds: 1, hours: 3_600 };
+
+// The box holds the wire's unit. The line under it names that unit and, where
+// it differs, the span in words ("86,400 seconds = 1 day").
+function unitReading(
+  unit: Unit,
+  typed: number,
+  { t, plural, locale }: Words,
+): string {
+  const count = formatNumber(typed, locale);
+  const amount =
+    unit === "hours"
+      ? plural("operations.unit.hours", typed, { count })
+      : plural("operations.unit.seconds", typed, { count });
+  const interval = formatInterval(typed * UNIT_SECONDS[unit], locale);
+  return amount === interval
+    ? interval
+    : t("operations.reading", { amount, interval });
+}
+
+function inWords(
+  row: OperationRow,
+  words: Words,
+): ((typed: number) => string) | undefined {
+  const unit = unitOf(row);
+  if (unit === undefined) {
+    return undefined;
+  }
+  return (typed) =>
+    typed === 0 && row.lowestOn !== undefined
+      ? words.t("operations.off")
+      : unitReading(unit, typed, words);
+}
+
+// The range is said only once a typed value breaks it, in the row's own unit.
+function refusalOf(row: OperationRow, { t, locale }: Words): string {
+  const bounds = OPERATION_BOUNDS[row.property];
+  const range = boundsText(
+    { min: row.lowestOn ?? bounds.min, max: bounds.max },
+    locale,
+  );
+  const unit = unitOf(row);
+  if (unit === "hours") {
+    return t("operations.refusal.hours", range);
+  }
+  if (unit === undefined) {
+    return t("operations.refusal.count", range);
+  }
+  return row.lowestOn === undefined
+    ? t("operations.refusal.seconds", range)
+    : t("operations.refusal.secondsOrOff", range);
+}
+
 // One card over a slice of the installation's operating values. The page opens
 // on `job_health:read`, which a custom role can hold without
 // `installation_settings:read`; a card narrower than its page withholds itself
@@ -98,8 +165,18 @@ function OperationsCard({
   title,
   sub,
   rows,
-}: Readonly<{ title: string; sub: string; rows: readonly OperationRow[] }>) {
+  fold,
+}: Readonly<{
+  title: string;
+  sub: string;
+  rows: readonly OperationRow[];
+  /** Folds the rows behind this summary, for values seldom changed. */
+  fold?: string;
+}>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const words = { t, plural, locale };
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
@@ -107,32 +184,45 @@ function OperationsCard({
   if (!canRead) {
     return null;
   }
+  const listOf = (operations: Operations) => (
+    <SettingList bleed={fold ? undefined : "settings"}>
+      {rows.map((row) => (
+        <NumberSettingRow
+          key={row.property}
+          label={t(`operations.${row.copy}.label`)}
+          description={t(`operations.${row.copy}.help`)}
+          testId={`operation-${row.property}`}
+          value={operations[row.property]}
+          {...OPERATION_BOUNDS[row.property]}
+          lowestOn={row.lowestOn}
+          refusal={refusalOf(row, words)}
+          reading={inWords(row, words)}
+          disabled={!canManage || update.isPending}
+          onCommit={(next) => update.mutate({ [row.property]: next })}
+        />
+      ))}
+    </SettingList>
+  );
+  // The gate stands outside the fold, so a failed read shows while it is shut.
+  const gated = (
+    <QueryGate query={query} pendingLabel={title}>
+      {(settings) =>
+        fold ? (
+          <Disclosure summary={fold}>{listOf(settings.operations)}</Disclosure>
+        ) : (
+          listOf(settings.operations)
+        )
+      }
+    </QueryGate>
+  );
   return (
     <Panel title={title}>
       <PanelBody className="form-stack">
         <PanelIntro>{sub}</PanelIntro>
         {!canManage && <PanelIntro>{t("operations.adminOnly")}</PanelIntro>}
+        {fold && gated}
       </PanelBody>
-      <QueryGate query={query} pendingLabel={title}>
-        {(settings) => (
-          <SettingList bleed="settings">
-            {rows.map((row) => (
-              <NumberSettingRow
-                key={row.property}
-                label={t(`operations.${row.copy}.label`)}
-                description={t(`operations.${row.copy}.help`)}
-                testId={`operation-${row.property}`}
-                value={settings.operations[row.property]}
-                {...OPERATION_BOUNDS[row.property]}
-                lowestOn={row.lowestOn}
-                refusal={t("operations.refusal")}
-                disabled={!canManage || update.isPending}
-                onCommit={(next) => update.mutate({ [row.property]: next })}
-              />
-            ))}
-          </SettingList>
-        )}
-      </QueryGate>
+      {!fold && gated}
       {update.isError && (
         <PanelBody>
           <Callout
@@ -149,7 +239,7 @@ function OperationsCard({
 }
 
 // How often each background pass runs, and how far ahead a mail subscription
-// is renewed.
+// is renewed. Folded, because an operator sets these once and reads them rarely.
 export function BackgroundSchedulesCard() {
   const t = useT();
   return (
@@ -157,6 +247,7 @@ export function BackgroundSchedulesCard() {
       title={t("operations.schedules.title")}
       sub={t("operations.schedules.sub")}
       rows={SCHEDULE_ROWS}
+      fold={t("operations.schedules.fold")}
     />
   );
 }

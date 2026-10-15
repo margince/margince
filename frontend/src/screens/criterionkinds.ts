@@ -17,6 +17,7 @@ export const CRITERION_KIND_LABEL: Readonly<Record<CriterionKind, MessageKey>> =
     role_identified: "stage.criteria.kindRoleIdentified",
     terms_accepted: "stage.criteria.kindTermsAccepted",
     custom: "stage.criteria.kindCustom",
+    legal_reviewed: "stage.criteria.kindLegalReviewed",
   };
 
 // The report types a kind as a plain string, so a kind this build does not know still reads as words.

@@ -55,7 +55,7 @@ Sales and data settings in Margince each have one page.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
 - The price list, rate card and offer templates: **Products and offers**.
 - Upload a document set to ask questions of: **Knowledge**.
-- Import a CSV of companies, contacts or prospects: **Data import**.
+- Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
 
 ### Which settings page do I need for AI and governance?
 AI and governance settings in Margince each have one page.
@@ -102,7 +102,7 @@ The rest of Margince settings is six groups after **You**. Which pages you see, 
 
 The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
-**Installation** and **Currency** hold the company's name, time zone and base currency, which Admin and Ops change.
+The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change.
 
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
@@ -198,7 +198,7 @@ When someone sets a higher allowance, three kinds of waiting work run on the nex
 
 Look at a preview of an allowance or model change before you save it. Margince refuses a save if the stored setting has changed after your preview, so you never save against an answer you did not see.
 
-**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
+**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". **AI usage** also holds the agent passport allowances, and how much each user's agents used. [Agents and passports](agents-and-passports.md#allowances-per-window) says how they work. Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
 
 ## Knowledge
 
@@ -233,9 +233,9 @@ All the detail is in [What is kept, what is destroyed](retention-exports-and-del
 
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
-- **Import file**, on **Data import**: a CSV of prospects (leads), companies or
-  contacts, up to 10 MB unless the installation sets another limit. Nothing is
-  written until you check the preview.
+- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
+  prospects (leads) and deals, up to 10 MB unless the installation sets another.
+  Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the
   AI finds.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner.
@@ -260,33 +260,80 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ## Data import
 
-The Data import page in Settings (group **Data**) brings in a CSV of prospects, companies or contacts. Only an admin or ops user can import. Starting an import and undoing one are in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+The Data import page in Settings (group **Data**) brings in companies, contacts, prospects and deals from a ZIP of CSV files, or from one CSV. Only an admin or ops user can import. Undoing an import is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
-### What does the import preview tell me?
-The Margince **Import preview** counts what the import will do with each row: **Create**, **Update**, **Unchanged** and **Skipped**. The four add up to the rows in the file, and "{rows} rows read, identified by {column}." names the column that tells rows apart. Rows that cannot be imported are listed with their line number. Fix them in the file and choose **Preview import** again. Nothing is written until you choose **Import {rows} rows**.
-Also called: test run, check an import, import report.
+### What is in the template?
+**Download template** on **Data import** gives a ZIP with one CSV for each record type: `companies.csv`, `contacts.csv`, `leads.csv` and `deals.csv`. Each file has a column for each field the import takes. A custom field has its label as the column name.
+
+The `README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column, or choose it, to see what goes in it, an example, and if a new row needs it.
+Also called: import template, column help, import format.
+
+### How does Margince know which file is which?
+In a ZIP, the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv` or `deals.csv`. On **Check your files**, change the type in **Import as**, or choose **Skip this file**. Each type takes one file. Files whose name gives no type are listed under **Files left out**. One CSV starts as the type its name gives, or as **Prospects**.
+Also called: file types, wrong record type, skip a file.
+
+### What is the source name?
+**Source name** keeps the records of one source together. Upload the same export again with the same source name, and Margince updates the records it made the first time. A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none.
+Also called: re-import a ZIP, upload the export again.
+
+### What does the test run tell me?
+**Test run** counts, for each record type, the rows that are new, the rows that update a record, and the rows that stay the same. It lists each problem with its file, row and column. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list.
+
+A row with a value its field does not take is skipped: fix it in the file and choose **Fix and re-upload**. Nothing is written until you choose **Import {count} rows**.
+Also called: import preview, check an import, import report.
+
+### How do I import deals?
+A `deals.csv` row is one deal. Each row needs a `ref`, your own key for the deal, because two deals can share a name. A new deal also needs a `name` and a `stage`.
+
+| Column | What goes in it |
+|---|---|
+| `pipeline` | The pipeline's name. Empty means the default pipeline. |
+| `stage` | The stage's name in that pipeline. Case does not matter. |
+| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. |
+| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. |
+| `company_ref` | The deal's company, found as a contact's is. |
+| `contact_ref` | A contact on the deal, by `ref`, email or Margince ID. The contact becomes a stakeholder. |
+| `lost_reason` | Needed when the stage is a lost one. Written only when the row creates the deal. |
+
+A deal on a won or lost stage is imported as closed history. The test run says how many deals land that way. Imported deal changes start no automation and earn no commission. Webhooks still receive them, marked as imported.
+
+A row is skipped, with its reason, in these cases:
+- its stage is not in the pipeline;
+- it moves a deal to another pipeline;
+- it changes a deal that is already closed;
+- an open deal's close date is in the past.
+
+Companies and contacts land before deals, so a deal can link to either in the same ZIP.
+Also called: import opportunities, import closed deals, import pipeline history.
+
+### What if a link is broken?
+A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. Tick the box to bring those rows in without the link. The test runs again, and the button says **Import anyway**.
+Also called: missing company, link not found, keep rows with broken links.
 
 ### What happens if I import the same file again?
-Importing the same file again in Margince updates the records that file made the first time, and does not copy them. The screen names the column that tells rows apart: the company name for companies, the email for contacts and prospects. A row whose values did not change counts as **Unchanged**, so a file you already imported reports no work.
+Importing the same file again with the same source name updates the records that file made the first time, and does not copy them. A row whose values did not change counts as the same, so a file you already imported reports no work.
 Also called: re-import, upload again, update from a spreadsheet.
 
 ### What happens to a company I already have?
-A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. To change companies you already have, correct them by their ID instead. A company you cannot see is not counted or named in the preview.
+A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. To change companies you already have, correct them by their ID instead. A company you cannot see is not counted or named in the test run.
 Also called: duplicates on import, import made copies.
 
 ### How do I correct companies with a spreadsheet?
 To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
 1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.
-2. Edit the file, then choose **Start import** in **Settings → Data import**, with **Row type** **Companies**.
-3. In **Column mapping**, map **id** to **id**, and the name column to **display_name**.
-4. Choose **Preview import**.
+2. Edit the file, then drop it on **Upload your data** in **Settings → Data import**.
+3. On **Check your files**, set **Import as** to **Companies**, and choose **Next: map 1 file**.
+4. In **Map columns**, map **id** to **id**, and the name column to **display_name**.
+5. Choose **Run test**.
 An empty ID creates a company. An ID that matches no company is skipped and named.
 Also called: bulk edit companies, update companies from Excel, fix company data.
 
 Undo never puts back the old values of a company an import corrected. It only archives the companies that import created.
 
 ### What if an import stops partway?
-When a Margince import stops partway, the result says **Import stopped partway** and how many rows it read. Choose **Resume import** to go on from that row, not from the start. **Tag for this import** puts every record the import creates under one tag, so you can find them later. Records it only updates keep their own tags.
+An import runs on its own once it starts. You can leave the page: **Recent imports** shows when it is done, and its file name opens it again.
+
+When an import stops partway, it says **Import stopped partway** and why. Choose **Resume import** to go on from that row, not from the start. **Tag for this import** puts every record the import creates under one tag, so you can find them later. Records it only updates keep their own tags.
 Also called: import failed, import stopped, continue an import.
 
 ---

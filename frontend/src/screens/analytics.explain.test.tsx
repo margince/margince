@@ -495,6 +495,22 @@ describe("drill-through money", () => {
     expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
   });
 
+  // The two project measures are named `_minor` and are already folded into
+  // the base currency. The name says native and the declaration says
+  // converted.
+  //
+  // The declaration is the one that is right. A row carrying a currency beside
+  // them would otherwise stamp it on a converted total.
+  it("writes a converted measure named _minor in the base currency", () => {
+    const row = { open_deal_value_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("open_deal_value_minor", row, "EUR")).toBe(
+      "EUR",
+    );
+    expect(derivationCellCurrency("won_deal_value_minor", row, "EUR")).toBe(
+      "EUR",
+    );
+  });
+
   // A row that names no currency has nothing to write the figure in. Falling
   // back to the base currency would be a guess presented as a fact.
   it("names no currency for an unconverted measure on a row without one", () => {

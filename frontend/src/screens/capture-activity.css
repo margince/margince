@@ -14,69 +14,35 @@
   min-width: 0;
 }
 
-/* The log's own column, inside the stacked SettingRow that names it. A
- * stacked row's control half is a flex ROW, so the count line, the list and
- * the Load-more button would otherwise sit side by side; this is what stacks
- * them and owns the ONE gap between them. `align-items: flex-start` keeps the
- * button its own width — a stretched Load-more reads as a banner — and the
- * list asks for the full width itself, below. */
-.capture-activity__log {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-/* A ruled list, not a stack of separated cards. The gap was 8px and every row
- * drew a `border-bottom`, so each hairline floated in the middle of the space
- * between two rows instead of dividing them — and the last row drew one with
- * nothing under it, because there was no `:last-child` reset. A rule that
- * divides has to touch what it divides. */
-.capture-activity__list {
-  display: flex;
-  flex-direction: column;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-
-/* One row per message, read left to right as when → where → what happened.
- * It folds to a stack rather than scrolling sideways: this is a settings
- * surface inside a column, and a horizontally scrolling list of one's own mail
- * is a worse answer than a taller one. */
-/* `border-top` with the first row exempt, which is `PanelRow`'s shape and the
- * house spelling: N rows draw N-1 rules, and the list cannot end on a hairline
- * pointing at nothing. */
-.capture-activity__row + .capture-activity__row {
-  border-top: 1px solid var(--borderSubtle);
-}
-.capture-activity__outcome {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+/* The message column takes the spare width and truncates, so the table never
+ * widens. Not DataTable's `grow`: it holds a long reason caption on one line. */
+.table td:has(> .capture-activity__content) {
+  inline-size: 100%;
 }
 .capture-activity__content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
+  display: block;
+  inline-size: 0;
+  min-inline-size: 100%;
 }
-
-.capture-activity__from,
-.capture-activity__subject {
+.capture-activity__content > .cell-stack {
+  align-items: stretch;
+}
+.capture-activity__line {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* "content not stored" is a statement about the installation's posture, not a
- * missing value, so it reads as prose rather than as an empty field. */
-.capture-activity__content--absent {
+/* A time and a transport name are short; the message column gives way first. */
+.capture-activity__nowrap {
+  white-space: nowrap;
+}
+
+/* "No sender recorded" is a statement about this message, not a value. */
+.capture-activity__absent {
   font-style: italic;
 }
+
 /* The funnel slots are filters. A pressed button rather than a Switch: a
  * Switch IS the action it names, and narrowing a list is not an action on the
  * data — it changes what this reader is looking at and nothing else.
@@ -97,40 +63,6 @@
   margin: 0;
   max-width: 60ch;
 }
-/* The row is one button carrying the grid, so the whole row is the target and
- * the keyboard reaches it. `all: unset` first, because a button's own chrome
- * would otherwise fight the row's rhythm on every theme. */
-.capture-activity__open {
-  all: unset;
-  align-items: baseline;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: grid;
-  gap: var(--space-2);
-  grid-template-columns: minmax(9rem, auto) minmax(6rem, auto) minmax(
-      12rem,
-      1fr
-    ) 2fr auto;
-  padding: var(--space-2) 0;
-  width: 100%;
-}
-
-.capture-activity__open:hover {
-  background: var(--bgHover);
-}
-
-.capture-activity__open:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
-}
-
-@media (max-width: 48rem) {
-  .capture-activity__open {
-    gap: var(--space-1);
-    grid-template-columns: 1fr;
-  }
-}
-
 .capture-activity__drawer-sub,
 .capture-activity__drawer-transport {
   margin: 0 0 var(--space-3);

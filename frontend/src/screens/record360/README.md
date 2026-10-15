@@ -15,8 +15,11 @@ Every record page reads in the same order, and the parts are here:
   the sentence it rests on, and then what the call was read from.
 - `today.tsx`: the "Needs attention" panel (`TodayPanel`) and its two row shapes. One is the move
   the agent is asking for (`FoundMove`); the other is a to-do the record already has (`TodoRow`).
+- `setaside.ts`: the "Not now" a move carries and the Undo after it (`useSetAside`). Each page hands
+  in its own two calls, so the deal, contact and company moves are put off the same way.
 - `spine.tsx` and `timelinespine.ts`: the thread. `timelinespine.ts` reads its source from a bare
-  timeline page, for the records that have no composite read.
+  timeline page, for the records that have no composite read. `lastcontact.ts` dates the "Last
+  contact" stop and the gap after it from one reading.
 
 A record page hands in its own answers (which standing, which rows), and owes the reader the same
 shape as the record next to it.

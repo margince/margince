@@ -1,16 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { rosterOwnerNaming } from "../components/entityref";
 import { Badge, Button } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { rosterOwnerNaming } from "./entityref";
-import { useMemberNames } from "./membernames";
-import { useOpenEmail } from "./openemail";
+import { useMemberNames } from "../lib/membernames";
+import { useOpenEmail } from "../lib/openemail";
+import { problemCodeOf } from "../lib/problem";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useWorklistAddress } from "./worklist.address";
 import {
   bandSections,
@@ -189,16 +190,6 @@ function QueueRows({
             onOpenEmail={onOpenEmail}
             pick={pickFor(item, picks)}
             onReview={() => onFilter(reviewFilter(item))}
-            // The ORDER the Brief's card reads in, on every row of the queue:
-            // the set-asides lead, the prepared move closes. The queue is a
-            // list of rows a reader answers one at a time, which is the same
-            // act the card is shaped for — and the two surfaces drawing one
-            // row's verbs in two orders is what sent a rep looking for the
-            // answer at a different x depending on where they opened it.
-            //
-            // The ORDER only. No card frames these rows, so they keep their
-            // own captions, the way to their record, and the pin.
-            acts="triage"
           />
         </li>
       ))}
@@ -631,7 +622,18 @@ export function WorklistScreen({
   // rows already loaded are still true, so the surface stays ready and the
   // control below says the request failed.
   const lostTheDay = day.isError && day.data === undefined;
-  const state = day.isPending ? "loading" : lostTheDay ? "failed" : "ready";
+  // A refusal is not a failure. A named owner this reader has no reach over
+  // answers 403, and "did not load. Retry" invites a retry that can only
+  // refuse again.
+  const refused =
+    lostTheDay && problemCodeOf(day.error) === "permission_denied";
+  const state = day.isPending
+    ? "loading"
+    : refused
+      ? "withheld"
+      : lostTheDay
+        ? "failed"
+        : "ready";
   // The FIRST page carries the day's own figures — summary, counts, reach,
   // scope options. Those describe the assembled day and do not change as the
   // reader pages, so they are read from page one rather than from the latest
@@ -655,7 +657,7 @@ export function WorklistScreen({
           to load and the body — the owner picker with it — never renders.
           Without this the reader is stranded on a page whose only control is
           gone, and reloading is the way out. */}
-      {owner !== "" && state === "failed" && (
+      {owner !== "" && (state === "failed" || state === "withheld") && (
         <Button onClick={() => setOwner("")}>
           {t("worklist.owner.backToMine")}
         </Button>
@@ -664,7 +666,11 @@ export function WorklistScreen({
         state={state}
         emptyLabel={t("worklist.clear")}
         loadingLabel={t("worklist.loading")}
-        detail={{ onRetry: () => void day.refetch() }}
+        detail={
+          refused
+            ? { withheldReason: t("worklist.owner.refused") }
+            : { onRetry: () => void day.refetch() }
+        }
       >
         {first && (
           <WorklistBody

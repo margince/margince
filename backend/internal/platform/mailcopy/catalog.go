@@ -106,133 +106,6 @@ func inviteLines(line writeLine) {
 		"Nếu bạn không mong đợi điều này, bạn có thể bỏ qua email này.")
 }
 
-// weeklyLines is the Monday retrospective: what the week did, and then what a
-// reader does next with it. Split where the mail itself changes subject — the
-// counted figures above, the movement and the two links below — because the
-// list is one call per line and grows every time the mail says something new.
-func weeklyLines(line writeLine) {
-	weeklyFigureLines(line)
-	weeklyMovementLines(line)
-}
-
-// weeklyFigureLines are the counted outcomes: what was delivered, won, lost,
-// moved, decided, and how much of the morning queue was answered.
-func weeklyFigureLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklySubject },
-		"Your week: ",
-		"Deine Woche: ",
-		"Tuần của bạn: ")
-	line(func(c *Copy) *string { return &c.WeeklyHeading },
-		"Your week of ",
-		"Deine Woche ab ",
-		"Tuần của bạn từ ")
-	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
-		"Tasks delivered",
-		"Aufgaben erledigt",
-		"Việc cần làm đã hoàn tất")
-	line(func(c *Copy) *string { return &c.WeeklyOfDue },
-		"%d of %d",
-		"%d von %d",
-		"%d trên %d")
-	line(func(c *Copy) *string { return &c.WeeklyDealsWon },
-		"Won",
-		"Gewonnen",
-		"Thắng")
-	line(func(c *Copy) *string { return &c.WeeklyDealsLost },
-		"Lost",
-		"Verloren",
-		"Thua")
-	line(func(c *Copy) *string { return &c.WeeklyMoved },
-		"Moved",
-		"Bewegt",
-		"Đã chuyển")
-	line(func(c *Copy) *string { return &c.WeeklyDecided },
-		"Proposals decided",
-		"Entschiedene Vorschläge",
-		"Đề xuất đã có quyết định")
-	weeklyDecisionLines(line)
-}
-
-// weeklyDecisionLines is the retrospective's second half: what the reader did
-// with their queue, and how each thing turned out.
-//
-// Split from weeklyLines, which had grown past the function ceiling. The seam
-// is the one the mail itself has — the top of the message reports the week's
-// numbers, and from here down it reports the reader's own decisions — so the
-// two are edited for different reasons and read as two blocks on the page.
-func weeklyDecisionLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyYes },
-		"yes",
-		"ja",
-		"đồng ý")
-	line(func(c *Copy) *string { return &c.WeeklyNo },
-		"no",
-		"nein",
-		"từ chối")
-	weeklyQueueLines(line)
-	weeklyClosingLines(line)
-}
-
-// weeklyQueueLines is the retrospective's middle: what the morning list did
-// with the week, and what it carried into the next one.
-func weeklyQueueLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyQueue },
-		"Morning brief items",
-		"Einträge im Morgenbericht",
-		"Việc trong Bản tin sáng")
-	line(func(c *Copy) *string { return &c.WeeklyActed },
-		"acted",
-		"bearbeitet",
-		"đã xử lý")
-	line(func(c *Copy) *string { return &c.WeeklyDismissed },
-		"dismissed",
-		"weggeklickt",
-		"đã bỏ qua")
-	line(func(c *Copy) *string { return &c.WeeklyCarried },
-		"Carried over",
-		"Übertragen",
-		"Chuyển sang tuần sau")
-}
-
-// weeklyMovementLines are what actually moved, the way on to the rest of it,
-// and the words a single row's outcome is written with.
-func weeklyMovementLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyWhatMoved },
-		"What moved:",
-		"Was sich bewegt hat:",
-		"Những gì đã chuyển động:")
-	line(func(c *Copy) *string { return &c.WeeklyAndMore },
-		"… and %d more, on Home",
-		"… weitere auf Home: %d",
-		"… và %d mục nữa, trên Home")
-}
-
-// weeklyClosingLines is what the retrospective asks for once it has reported:
-// next week's plan, the archive behind it, and the outcome words the movement
-// list is written in.
-func weeklyClosingLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"This week’s commitments",
-		"Zusagen dieser Woche",
-		"Cam kết tuần này")
-	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
-		"The full week, and the ones before it:",
-		"Die ganze Woche, und die davor:",
-		"Cả tuần, và những tuần trước:")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeWon },
-		"won",
-		"gewonnen",
-		"thắng")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeLost },
-		"lost",
-		"verloren",
-		"thua")
-	line(func(c *Copy) *string { return &c.WeeklyOutcomeMoved },
-		"moved",
-		"bewegt",
-		"đã chuyển")
-}
-
 // morningLines is the daily brief.
 func morningLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MorningSubject },
@@ -249,7 +122,7 @@ func morningLines(line writeLine) {
 		"Bắt đầu với:")
 	line(func(c *Copy) *string { return &c.MorningAndMore },
 		"and %d more on Home",
-		"und %d weitere auf der Startseite",
+		"und %d weitere auf der Home-Seite",
 		"và %d mục khác trên Trang chủ")
 	line(func(c *Copy) *string { return &c.MorningQuiet },
 		"Nothing is waiting on you this morning.",
@@ -285,7 +158,7 @@ func notificationLines(line writeLine) {
 		"Một phê duyệt đang chờ bạn quyết định.")
 	line(func(c *Copy) *string { return &c.NotificationOpen },
 		"Open your worklist",
-		"Arbeitsliste öffnen",
+		"Worklist öffnen",
 		"Mở danh sách công việc")
 }
 
@@ -308,7 +181,7 @@ func digestLines(line writeLine) {
 	// part of a message a reader checks against the clock.
 	line(func(c *Copy) *string { return &c.DigestSubject },
 		"What is waiting on your worklist",
-		"Das wartet auf deiner Arbeitsliste",
+		"Das wartet in deiner Worklist",
 		"Những việc đang chờ trong danh sách công việc của bạn")
 	// STILL WAITING, not "since yesterday", and the window is why. The pass
 	// reaches back two local-day labels and skips nothing a reader has left
@@ -318,7 +191,7 @@ func digestLines(line writeLine) {
 	// waiting.
 	line(func(c *Copy) *string { return &c.DigestIntro },
 		"Here is what is still waiting on your worklist.",
-		"Das wartet noch auf deiner Arbeitsliste.",
+		"Das wartet noch in deiner Worklist.",
 		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
 	// THE COUNT LAST IN GERMAN, like the retrospective's tail above: this line
 	// is reached with one, and a German adjective inflects for the count — a
@@ -329,7 +202,7 @@ func digestLines(line writeLine) {
 		"…và %d mục khác")
 	line(func(c *Copy) *string { return &c.DigestOpen },
 		"Open your worklist:",
-		"Arbeitsliste öffnen:",
+		"Worklist öffnen:",
 		"Mở danh sách công việc:")
 }
 
@@ -355,7 +228,7 @@ func confirmAskLines(line writeLine) {
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
-		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
+		"Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
 		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",

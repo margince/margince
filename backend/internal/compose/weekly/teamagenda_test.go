@@ -10,36 +10,39 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// TestTheAgendaOrderIsTheOrderTheRulesAreTried is what stops the agenda's
-// ranking becoming a second, quietly different copy of focusFor's rule order.
-//
-// The two are written apart because a switch cannot be asked for an order and a
-// list cannot pick a focus, so the only thing holding them together is this: it
-// drives focusFor through focusRules — one case per rule, in the order the
-// switch tries them — and asks whether what came back IS focusPriority. A rule
-// that moved, or a rank that did, fails here rather than re-ordering a meeting.
+// retiredFocusKinds are ranked and never written: snapshots frozen while they
+// were still carry them.
+var retiredFocusKinds = []string{FocusDealsAtRisk}
+
+// TestTheAgendaOrderIsTheOrderTheRulesAreTried stops the agenda's ranking
+// drifting from patternsFor's rule order. It fires each rule alone, in the
+// order focusRules lists them. The result must be focusPriority without the
+// kinds no longer written.
 func TestTheAgendaOrderIsTheOrderTheRulesAreTried(t *testing.T) {
 	t.Parallel()
 	fired := make([]string, 0, len(focusRules))
 	for _, rule := range focusRules {
-		kind, _ := focusFor(rule.counts, rule.help, rule.recovery)
+		kind, _ := focusFor(rule.counts, rule.help, rule.deals)
 		fired = append(fired, kind)
 	}
-	if !slices.Equal(fired, focusPriority) {
-		t.Errorf("focusFor fires %v and the agenda ranks %v: one of the two moved, and the meeting would "+
-			"then take the week in an order the review did not decide", fired, focusPriority)
+	written := slices.DeleteFunc(slices.Clone(focusPriority), func(kind string) bool {
+		return slices.Contains(retiredFocusKinds, kind)
+	})
+	if !slices.Equal(fired, written) {
+		t.Errorf("patternsFor fires %v and the agenda ranks %v: one of the two moved, and the meeting would "+
+			"then take the week in an order the review did not decide", fired, written)
 	}
 }
 
-// TestEveryDeclaredFocusIsRanked is the census half: a focus kind added to the
-// switch without a rank sorts LAST by agendaRank's fallback, which is a real
-// order and therefore a silent one — the new rule would be raised after the
-// quiet weeks with nothing failing.
+// TestEveryDeclaredFocusIsRanked is the census of the declared vocabulary.
+// It is kept apart from the one derived from patternsFor, so a kind no longer
+// produced is still ranked: older snapshots carry it.
 func TestEveryDeclaredFocusIsRanked(t *testing.T) {
 	t.Parallel()
 	declared := []string{
-		FocusHelpRequested, FocusLeadsBreached, FocusCommitmentsMissed,
-		FocusDealsAtRisk, FocusMeetingsWithoutNextStep, FocusStrongWeek, FocusQuietWeek,
+		FocusHelpRequested, FocusLeadsBreached, FocusCommitmentsMissed, FocusDealsAtRisk,
+		FocusForecastDowngrades, FocusStageRegressions, FocusCloseDatesProvisional,
+		FocusNoNextStepCoverage, FocusMeetingsWithoutNextStep, FocusStrongWeek, FocusQuietWeek,
 	}
 	for _, kind := range declared {
 		if slices.Index(focusPriority, kind) < 0 {
@@ -48,7 +51,7 @@ func TestEveryDeclaredFocusIsRanked(t *testing.T) {
 		}
 	}
 	if len(focusPriority) != len(declared) {
-		t.Errorf("focusPriority ranks %d kinds and %d are declared: a rank for a focus nobody produces is "+
+		t.Errorf("focusPriority ranks %d kinds and %d are declared: a rank for a focus nobody declares is "+
 			"an order over nothing", len(focusPriority), len(declared))
 	}
 }

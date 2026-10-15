@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
-import { meFixture } from "./mefixture";
+import { meFixture } from "../testing/mefixture";
 import { NotificationBell } from "./notificationbell";
 
 // The chrome's notification centre: the count a reader sees without opening
@@ -655,7 +655,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell />, "de");
 
     const bell = await screen.findByRole("button", {
-      name: "Meldungen, 2 offen",
+      name: "Benachrichtigungen, 2 offen",
     });
     await user.click(bell);
 

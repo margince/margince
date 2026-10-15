@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package migration
+
+// A commit and an undo run in the worker, apart from the request that started
+// them. These transitions keep such a run movable when its work dies. A failed run is
+// resumable by approve, and an undoing run by undo.
+//
+// Only `running` is ever moved to `failed` here. An `undoing` run is already
+// resumable, and failing it would make approve re-run the commit over a
+// half-undone run.
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// FailStaleRunning fails every running import old code started whose last
+// checkpoint is older than idle, and answers how many. A run a queued job works
+// is the sweep's resume rules' to settle, so this one never touches it.
+func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
+	return s.failStale(ctx, StatusRunning, idle, cause)
+}
+
+func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duration, cause string) (int, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	failed := 0
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			UPDATE import_run SET status = $1, error = $2, updated_at = now()
+			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
+			   AND `+legacyRow+`
+			RETURNING id`, StatusFailed, cause, from, ConnectorCSV, idle.Seconds())
+		if err != nil {
+			return fmt.Errorf("failing stale %s import runs: %w", from, err)
+		}
+		stale, err := pgx.CollectRows(rows, pgx.RowTo[RunID])
+		if err != nil {
+			return fmt.Errorf("failing stale %s import runs: %w", from, err)
+		}
+		for _, id := range stale {
+			if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
+				map[string]any{auditFieldStatus: from}, map[string]any{auditFieldStatus: StatusFailed}); err != nil {
+				return err
+			}
+		}
+		failed = len(stale)
+		return nil
+	})
+	return failed, err
+}
+
+// ClaimUndo moves a complete run to undoing, or opens a new attempt of one
+// already undoing, and queues that attempt's job in the same transaction. It
+// refuses while a slice of the run holds its write lock.
+func (s *RunStore) ClaimUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
+		return Run{}, err
+	}
+	release, err := s.acquireRunWrites(ctx, id)
+	if err != nil {
+		return Run{}, err
+	}
+	defer release()
+	return s.beginUndo(ctx, id, enqueue)
+}

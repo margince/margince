@@ -65,6 +65,10 @@ const (
 	KindDimension FieldKind = "dimension"
 	// KindMeasure is something to aggregate: an amount, an age, a count.
 	KindMeasure FieldKind = "measure"
+	// KindFilter is something to narrow by and nothing else. A threshold like
+	// `stalled` groups every row into two buckets whose names answer no
+	// question a reader asked, so it is filterable without being groupable.
+	KindFilter FieldKind = "filter"
 )
 
 // Entity is one population a question can be asked about.
@@ -115,6 +119,21 @@ func (e Entity) FieldNames(kind FieldKind) []string {
 		if field.Kind == kind {
 			out = append(out, name)
 		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// FilterableNames lists every field a filter may name, in a stable order.
+//
+// Every kind is filterable. A dimension narrows to one of its values, a
+// measure compares against a number, and a filter does the one thing it is
+// for. So this is the whole vocabulary rather than one kind of it, and it
+// answers an unknown filter name.
+func (e Entity) FilterableNames() []string {
+	out := make([]string, 0, len(e.Fields))
+	for name := range e.Fields {
+		out = append(out, name)
 	}
 	sort.Strings(out)
 	return out

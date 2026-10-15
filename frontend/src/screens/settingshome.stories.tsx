@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { settingsReach } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The settings address with NO page segment, and the two things it answers when
 // the segment it does carry names no page this reader can open.

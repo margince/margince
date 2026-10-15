@@ -123,8 +123,23 @@ func toContractHeldThread(t capture.HeldThread) crmcontracts.HeldThread {
 	if t.ActivityID != nil {
 		id := openapi_types.UUID(*t.ActivityID)
 		out.ActivityId = &id
+		parties := make([]crmcontracts.HeldThreadParticipant, 0, len(t.Participants))
+		for _, party := range t.Participants {
+			parties = append(parties, toContractHeldThreadParticipant(party))
+		}
+		count := t.ParticipantCount
+		out.Participants, out.ParticipantCount = &parties, &count
 	}
 	out.OccurredAt = t.OccurredAt
+	return out
+}
+
+func toContractHeldThreadParticipant(party capture.HeldThreadParticipant) crmcontracts.HeldThreadParticipant {
+	out := crmcontracts.HeldThreadParticipant{Address: party.Address}
+	if party.ContactID != nil {
+		contact := openapi_types.UUID(*party.ContactID)
+		out.ContactId = &contact
+	}
 	return out
 }
 
@@ -166,6 +181,12 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 		Address:      d.Address,
 		Overruled:    d.Overruled(),
 		RecordExists: d.RecordExists,
+		MessageCount: d.MessageCount,
+		LastSeenAt:   d.LastSeenAt,
+	}
+	if d.ContactID != nil {
+		contact, name := openapi_types.UUID(*d.ContactID), d.ContactName
+		out.ContactId, out.ContactName = &contact, &name
 	}
 	if !d.DeletesAt.IsZero() {
 		at := d.DeletesAt

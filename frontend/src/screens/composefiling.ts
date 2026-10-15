@@ -10,7 +10,7 @@ import {
   type PickableProject,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { useCompany360 } from "./company360";
 import { useThreadProject } from "./composeanchor";
 import { recipientSuggestions } from "./composehead";

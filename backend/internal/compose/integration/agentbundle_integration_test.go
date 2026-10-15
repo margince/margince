@@ -5,8 +5,9 @@
 
 package integration
 
-// The skill download through the real router. A signed-in human gets the ZIP
-// and a passport is refused it. The ZIP and the passport list name one address.
+// The skill download and its JSON contract through the real router. A signed-in
+// human gets the ZIP and a passport is refused it; a passport reads the JSON.
+// The ZIP, the JSON and the passport list name one address.
 
 import (
 	"archive/zip"
@@ -55,6 +56,44 @@ func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
 	bearer := apptest.PassportBearer(t, e, "skill download probe", "read")
 	if status, _, _ := getRaw(t, e, "/v1/agent-bundle", bearer); status != http.StatusForbidden {
 		t.Errorf("passport GET /v1/agent-bundle → %d, want 403: the download is human-only", status)
+	}
+}
+
+func TestAPassportReadsTheOpenAPIDocumentAndNoCredentialIsRefused(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	bearer := apptest.PassportBearer(t, e, "contract probe", "read")
+	status, header, body := getRaw(t, e, "/v1/openapi.json", bearer)
+	if contentType := header.Get("Content-Type"); status != http.StatusOK || contentType != "application/json" {
+		t.Fatalf("passport GET /v1/openapi.json → %d %s, want 200 application/json", status, contentType)
+	}
+	var doc struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("decoding GET /v1/openapi.json: %v", err)
+	}
+	if len(doc.Servers) != 1 || doc.Servers[0].URL != "https://mail.example.test/v1" {
+		t.Errorf("servers = %+v, want the one address the skill names", doc.Servers)
+	}
+
+	// The harness client carries the signed-in human's cookie jar; a copy without it holds no credential.
+	anonymous := *e.Client
+	anonymous.Jar = nil
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.TS.URL+"/v1/openapi.json", nil)
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	resp, err := anonymous.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
+	if err != nil {
+		t.Fatalf("anonymous GET /v1/openapi.json: %v", err)
+	}
+	defer apptest.CloseBody(t, resp)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("anonymous GET /v1/openapi.json → %d, want 401", resp.StatusCode)
 	}
 }
 

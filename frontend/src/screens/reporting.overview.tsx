@@ -2,24 +2,27 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
-import { replaceDial, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
+import { FilterBar } from "../design-system/filterbar";
+import { QueryGate } from "../design-system/querystates";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
-import { problemCodeOf, QueryGate, unwrap } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import {
+  type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
@@ -220,7 +223,27 @@ function OverviewBody({
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
-      <div className="reporting-controlbar">
+      <FilterBar
+        label={t("analytics.filters")}
+        actions={
+          <>
+            {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                onClick={() => setSaving(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.save")}
+              </Button>
+            )}
+          </>
+        }
+        caption={
+          validPeriod
+            ? resultsThrough(query.data, locale, t)
+            : t("reporting.chooseDates")
+        }
+      >
         {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
@@ -266,16 +289,7 @@ function OverviewBody({
             setEvidence(null);
           }}
         />
-        <div className="reporting-header-actions">
-          {query.data && <ReportingExportButton evaluation={query.data} />}
-          {canSave && (
-            <Button onClick={() => setSaving(true)} disabled={!query.isSuccess}>
-              {t("reporting.save")}
-            </Button>
-          )}
-        </div>
-      </div>
-      {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
+      </FilterBar>
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
@@ -284,18 +298,6 @@ function OverviewBody({
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
-              {evaluation.context.interval.end_at ===
-                evaluation.context.evaluated_at && (
-                <p className="t-caption" role="status">
-                  {t("reporting.resultsThrough", {
-                    at: formatDateTime(
-                      evaluation.context.interval.end_at,
-                      locale,
-                      evaluation.context.timezone,
-                    ),
-                  })}
-                </p>
-              )}
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
@@ -333,4 +335,26 @@ function OverviewBody({
 
 function validDateRange(period: string, start: string, end: string): boolean {
   return period !== "custom" || !!(start && end);
+}
+
+// "Results through" only while the period is still running: a closed period
+// ends where it says it does, and the line would only repeat it.
+function resultsThrough(
+  evaluation: ReportingEvaluation | undefined,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  if (
+    !evaluation ||
+    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
+  ) {
+    return undefined;
+  }
+  return t("reporting.resultsThrough", {
+    at: formatDateTime(
+      evaluation.context.interval.end_at,
+      locale,
+      evaluation.context.timezone,
+    ),
+  });
 }

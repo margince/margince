@@ -43,7 +43,9 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"(execute.go). The terminal states are what a window would take, and how long a failed send " +
 		"stays debuggable is the operator's call",
 	"import_run": "one row per migration run, holding the report a resumed run reads to avoid " +
-		"understating a one-way cutover. A window has to outlive the cutover it describes",
+		"understating a one-way cutover. A window has to outlive the cutover it describes. The " +
+		"profile of sample cells goes at approval, and the uploaded file at release; only a " +
+		"stopped commit keeps its file, for its resume",
 	"report_run": "one row per report generation. The edition it produced has its own retention " +
 		"ladder, so this is the attempt rather than the artefact",
 	"workflow_run": "one row per automation tick, and auth.LiveIntakeTaskClause reads the planned " +
@@ -67,6 +69,8 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"a retry reads",
 	"activity_meeting_rsvp_backfill": "one row per RSVP backfill settled. The settle stamp is the " +
 		"only column, so a window is the whole question",
+	"activity_calendar_method_backfill": "one row per calendar-method re-read settled. The check " +
+		"stamp is the only column, so a window is the whole question",
 	"webhook_delivery": "one row per delivery attempt, holding the dead-letter stamp and the retry " +
 		"schedule. The retry path reads it, so a window must clear the longest backoff",
 })

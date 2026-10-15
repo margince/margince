@@ -138,7 +138,7 @@
 
 /*
  * The trust fold takes the shared `.disclosure` atom exactly as it ships — a
- * summary with its chevron on the left edge — because the column it sits in is
+ * summary with its chevron at the end — because the column it sits in is
  * left-aligned like the form the atom was built for. It is cut to the FIELD's
  * measure rather than the column's, so its hairline reads as belonging to the
  * question above it rather than to the whole stage.

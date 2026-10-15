@@ -39,6 +39,9 @@ const maxDescriptionRunes = 3000
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
 	spec := t.Spec()
+	if rt, isRouter := t.(router); isRouter {
+		spec = r.routedSpec(rt)
+	}
 	if spec.Name == "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a tool with no name")
@@ -169,11 +172,17 @@ func envelopedSpec(spec mcp.ToolSpec) mcp.ToolSpec {
 // (runner.surfaceSchemaRules), so it is the catalogue that pays for the sentence
 // and not every turn of every run.
 //
+// The LEAD-IN states what omitting the key costs. The schema's `required` array
+// already carries whether the member is optional, so a model weighing one more
+// argument is owed the consequence rather than the permission. The verb is
+// hedged because a tool carrying `if_version` refuses a keyless retry as skew
+// instead of writing twice.
+//
 // The SENTENCE is mcp.ReservedIdempotencyKeyRule, not a literal here: the
 // runner's frame states the same rule once for the whole listing, and two
 // hand-written copies of it would drift with nothing failing.
 const retryKeyProperty = `{"type":"string","maxLength":255,` +
-	`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}`
+	`"description":"A retry without it may repeat the write. ` + mcp.ReservedIdempotencyKeyRule + `"}`
 
 // unitOwned reports whether an extension unit shipped this tool's handler,
 // rather than the core tree. mcp.UnitScopedTool is the one declaration of that

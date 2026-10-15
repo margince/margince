@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { taskWriteKeys } from "./activitykeys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { taskWriteKeys } from "../lib/activitykeys";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   TaskCompleteCheck,
   TaskDetailModal,
@@ -80,7 +84,12 @@ const TRANSCRIPT = Array.from({ length: 40 }, (_, turn) =>
 function DetailModal({
   emailRequest = false,
   meetingSource = false,
-}: Readonly<{ emailRequest?: boolean; meetingSource?: boolean }>) {
+  filed = false,
+}: Readonly<{
+  emailRequest?: boolean;
+  meetingSource?: boolean;
+  filed?: boolean;
+}>) {
   installFetchStub({
     "GET /activities/m-1": () =>
       jsonResponse({
@@ -107,7 +116,18 @@ function DetailModal({
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
         assignee_id: "u-1",
+        // The account first on the wire; the panel names the deal first.
+        links: filed
+          ? [
+              { entity_type: "company", entity_id: "o-1" },
+              { entity_type: "deal", entity_id: "d-1" },
+            ]
+          : [],
       }),
+    "GET /deals/d-1": () =>
+      jsonResponse({ id: "d-1", name: "Brandt renewal 2027" }),
+    "GET /companies/o-1": () =>
+      jsonResponse({ id: "o-1", display_name: "Brandt Automotive" }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
@@ -134,6 +154,11 @@ function DetailModalBody() {
 }
 
 export const DetailOpen: Story = { render: () => <DetailModal /> };
+
+// Filed under a deal and its account: the deal, the more specific, leads.
+export const FiledUnderDeal: Story = {
+  render: () => <DetailModal filed />,
+};
 
 export const CapturedEmailRequest: Story = {
   render: () => <DetailModal emailRequest />,

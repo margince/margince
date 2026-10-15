@@ -85,7 +85,7 @@ describe("the duplicate card", () => {
     await press(root, "Merge into the existing record");
     expect(calls).toEqual([
       {
-        tool: "merge_records",
+        tool: "resolve_duplicates",
         args: {
           record_type: "contact",
           source_id: "0195c3a0-0000-7000-8000-000000000002",
@@ -112,7 +112,7 @@ describe("the duplicate card", () => {
     const root = mount();
     await press(root, "Not the same");
     expect(calls[0]).toEqual({
-      tool: "decide_duplicate",
+      tool: "resolve_duplicates",
       args: {
         candidate_id: "0195c3a0-0000-7000-8000-0000000000aa",
         decision: "not_the_same",
@@ -121,7 +121,7 @@ describe("the duplicate card", () => {
     expect(root.textContent).toContain("Marked as not the same.");
     await press(root, "Undo");
     expect(calls[1]).toEqual({
-      tool: "decide_duplicate",
+      tool: "resolve_duplicates",
       args: {
         candidate_id: "0195c3a0-0000-7000-8000-0000000000aa",
         decision: "reopen",
@@ -183,8 +183,9 @@ describe("the tag offer", () => {
     await press(root, "Tag it");
     expect(calls).toEqual([
       {
-        tool: "apply_tag",
+        tool: "change_tags",
         args: {
+          action: "apply",
           record_type: "contact",
           record_id: "0195c3a0-0000-7000-8000-000000000002",
           tag_id: existing.tag_id,
@@ -193,7 +194,10 @@ describe("the tag offer", () => {
     ]);
     expect(root.textContent).toContain("Tagged “K5 Conference 2026”.");
     await press(root, "Undo");
-    expect(calls[1].tool).toBe("remove_tag");
+    expect(calls[1]).toMatchObject({
+      tool: "change_tags",
+      args: { action: "remove" },
+    });
     expect(root.textContent).toContain("Not tagged.");
   });
 
@@ -204,8 +208,11 @@ describe("the tag offer", () => {
     );
     expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
     await press(root, "Add the tag and tag it");
-    expect(calls.map((c) => c.tool)).toEqual(["create_tag", "apply_tag"]);
-    expect(calls[0].args).toEqual({ name: "Fair" });
+    expect(calls.map((c) => c.args.action)).toEqual(["create", "apply"]);
+    expect(calls[0]).toEqual({
+      tool: "change_tags",
+      args: { action: "create", name: "Fair" },
+    });
     expect(calls[1].args.tag_id).toBe("t9");
   });
 
@@ -221,10 +228,10 @@ describe("the tag offer", () => {
     await press(root, "Add the tag and tag it");
     expect(labels(root)).toEqual(["Tag it", "No thanks"]);
     await press(root, "Tag it");
-    expect(calls.map((c) => c.tool)).toEqual([
-      "create_tag",
-      "apply_tag",
-      "apply_tag",
+    expect(calls.map((c) => c.args.action)).toEqual([
+      "create",
+      "apply",
+      "apply",
     ]);
     expect(calls[2].args.tag_id).toBe("t9");
     expect(root.textContent).toContain("Tagged “Fair”.");
@@ -342,6 +349,8 @@ describe("a create that filed more than one pair", () => {
     });
     await press(root, "Merge into the existing record");
     expect(labels(root)).toEqual([]);
-    expect(calls.filter((c) => c.tool === "merge_records")).toHaveLength(1);
+    expect(calls.filter((c) => c.tool === "resolve_duplicates")).toHaveLength(
+      1,
+    );
   });
 });

@@ -7,7 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { ProviderHealthCard } from "./providerhealth";
 import { jsonResponse, render } from "./settings.testkit";
@@ -29,7 +29,11 @@ type Entry = {
   retry_after?: string;
 };
 
-function stubBackend(providers: Entry[], allow: GrantSpec = DIAGNOSER) {
+function stubBackend(
+  providers: Entry[],
+  allow: GrantSpec = DIAGNOSER,
+  configured: string[] | "absent" = ["gemini", "openai"],
+) {
   const sent: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -39,7 +43,10 @@ function stubBackend(providers: Entry[], allow: GrantSpec = DIAGNOSER) {
       const path = new URL(req.url).pathname.replace(/^\/v1/, "");
       sent.push(path);
       if (path === "/me") return jsonResponse(meFixture({ allow }));
-      if (path === "/ai/provider-health") return jsonResponse({ providers });
+      if (path === "/ai/provider-health")
+        return jsonResponse(
+          configured === "absent" ? { providers } : { configured, providers },
+        );
       if (path === "/ai/provider-keys")
         return jsonResponse({
           providers: [
@@ -94,6 +101,64 @@ describe("ProviderHealthCard", () => {
     expect(
       await screen.findByText("All AI providers are answering."),
     ).toBeInTheDocument();
+  });
+
+  it("does not call an installation with no provider healthy", async () => {
+    stubBackend([], DIAGNOSER, []);
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("All AI providers are answering."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists a failing provider even when none is configured here", async () => {
+    stubBackend(
+      [{ provider: "openai", health: "down", since: "2026-10-05T11:00:00Z" }],
+      DIAGNOSER,
+      [],
+    );
+    render(<ProviderHealthCard />);
+    const notice = await screen.findByTestId("ai-provider-health-openai");
+    expect(within(notice).getByText("Unreachable")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  // A server older than the `configured` field answers with failures alone.
+  it("reads a reply without the configured list as none configured", async () => {
+    stubBackend([], DIAGNOSER, "absent");
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("lists failures from a reply without the configured list", async () => {
+    stubBackend(
+      [
+        {
+          provider: "openai",
+          health: "degraded",
+          since: "2026-10-05T11:00:00Z",
+        },
+      ],
+      DIAGNOSER,
+      "absent",
+    );
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByTestId("ai-provider-health-openai"),
+    ).toHaveTextContent("Degraded");
   });
 
   it.each([

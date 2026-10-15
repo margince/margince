@@ -11,8 +11,12 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { navigate } from "../app/router";
+import {
+  EntityRef,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
 import {
   Badge,
   Button,
@@ -25,18 +29,15 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
-import {
-  EntityRef,
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
+import type { EntityKind } from "../lib/entity";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import {
   ApprovalRequiredError,

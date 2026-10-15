@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { AddressBlock } from "./composehead";
-import { StoryProviders } from "./story-utils";
 
 // The mail head's address block: To and Cc standing, Bcc a button until it is
 // asked for, and — under the addresses, because it is about the ones standing
@@ -77,4 +77,10 @@ export const RecipientBouncing: Story = {
 export const RecipientBouncingDark: Story = {
   globals: { theme: "dark" },
   render: () => <Head deadRecipients={["ada@brandt.example"]} />,
+};
+
+export const Narrow: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

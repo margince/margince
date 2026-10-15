@@ -3,15 +3,11 @@
 
 package compose
 
-// The REST door's half of the eight commands whose operand is a SECOND path
-// parameter or a second path segment, not the route's own {id}
-// (margince/margince#928 task 5): a company fact or profile
-// field, a custom field's retire/options actions, and a project stakeholder.
-// The decoding shape is the same one archiveCommand/patchCommand set in
-// agentcommand.go — parse {id} as the existence-hiding 404 (routedID, shared
-// with them), decode the rest, hand the typed command to its resolver
-// (modules/agents/commandsidecar.go, commandaction.go) — split out here
-// because the family carries a SECOND path operand those two never had to.
+// The REST door's half of the commands with a second path operand beyond the
+// route's own {id}. They act on a company fact or profile field, or on a
+// project stakeholder. Each parses {id} as the existence-hiding
+// 404 (routedID), decodes the second operand, and hands the typed command to
+// its resolver (modules/agents/commandsidecar.go, commandaction.go).
 
 import (
 	"encoding/json"
@@ -122,24 +118,6 @@ func updateProfileFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Requ
 		return nil, err
 	}
 	return agents.NewUpdateProfileFieldCall(deps.records, deps.language, agents.UpdateProfileFieldCommand{ID: id, Field: field}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func retireCustomFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewRetireCustomFieldCall(deps.records, deps.language, agents.RetireCustomFieldCommand{ID: id}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func updateCustomFieldOptionsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewUpdateCustomFieldOptionsCall(deps.records, deps.language, agents.UpdateCustomFieldOptionsCommand{ID: id}), nil
 }
 
 // setStakeholderCommand decodes PUT /v1/projects/{id}/stakeholders, whose

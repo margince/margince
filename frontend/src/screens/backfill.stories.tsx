@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BackfillPanel } from "./backfill";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // BackfillPanel stories for the fe-uat render gate — one per honest branch
 // the panel now covers: the ordinary setup/running/done/error/cancelled run
@@ -222,9 +226,9 @@ export const Narrowing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Start the import/ }),
+      await canvas.findByRole("button", { name: "Start import" }),
     );
-    await canvas.findByText(/only be widened/i);
+    await canvas.findByText(/already went back further/i);
   },
 };
 

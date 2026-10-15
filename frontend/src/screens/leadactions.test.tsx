@@ -10,9 +10,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { LeadScreen } from "./leads";
 
 // Explicit outreach controls remain available without inventing work.
@@ -162,9 +162,9 @@ describe("the lead header's Log activity and Add task", () => {
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     await user.click(await screen.findByRole("button", { name: "Add task" }));
-    expect((await screen.findByLabelText("Type")).textContent).toContain(
-      "Task",
-    );
+    const drawer = await screen.findByRole("dialog", { name: "Add task" });
+    expect(within(drawer).getByLabelText("Due date")).toBeTruthy();
+    expect(within(drawer).queryByLabelText("Type")).toBeNull();
   });
 
   it("refuses both verbs with the same reason the header's Email verb reads on a terminal lead", async () => {

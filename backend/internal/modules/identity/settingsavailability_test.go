@@ -51,30 +51,31 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 	}
 }
 
-// /me reports the reindex surface it was injected with, and absent when nothing
-// injected one — a role that wired no embeddings lane must not offer its settings.
+// /me reports the reindex surface as the injected read answers it on that
+// request, and absent when nothing injected one.
 func TestMeReportsTheEmbedReindexAvailabilityItWasGiven(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		h    Handlers
-		want bool
-	}{
-		{"nothing injected", NewHandlers(&Service{}), false},
-		{"injected available", NewHandlers(&Service{}).WithEmbedReindexAvailable(true), true},
-		{"injected unavailable", NewHandlers(&Service{}).WithEmbedReindexAvailable(false), false},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.h.meResponse(context.Background(), Identity{})
-			if got.SettingsAvailability == nil {
-				t.Fatal("/me carries no settings_availability")
-			}
-			if got.SettingsAvailability.EmbeddingReindex != tt.want {
-				t.Errorf("embedding_reindex = %v, want %v", got.SettingsAvailability.EmbeddingReindex, tt.want)
-			}
-			if got.SettingsAvailability.CompanyContext {
-				t.Error("injecting the reindex surface leaked into company_context")
-			}
-		})
+	read := func(h Handlers) bool {
+		t.Helper()
+		got := h.meResponse(context.Background(), Identity{})
+		if got.SettingsAvailability == nil {
+			t.Fatal("/me carries no settings_availability")
+		}
+		if got.SettingsAvailability.CompanyContext {
+			t.Error("injecting the reindex surface leaked into company_context")
+		}
+		return got.SettingsAvailability.EmbeddingReindex
+	}
+	if read(NewHandlers(&Service{})) {
+		t.Error("nothing injected, yet /me offers the reindex surface")
+	}
+	bound := false
+	live := NewHandlers(&Service{}).WithEmbedReindexAvailable(func() bool { return bound })
+	if read(live) {
+		t.Error("no lane bound, yet /me offers the reindex surface")
+	}
+	bound = true
+	if !read(live) {
+		t.Error("a lane bound after the handlers were built, yet /me still withholds the reindex surface")
 	}
 }
 

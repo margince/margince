@@ -1,11 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation } from "./reporting.scenarios";
 import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Forecast graphs" };
 export default meta;

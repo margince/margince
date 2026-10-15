@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { screen, userEvent } from "storybook/test";
+import { StoryProviders } from "../testing/story-utils";
 import { ScheduleDialog } from "./composeschedule";
-import { StoryProviders } from "./story-utils";
 // The dialog's rows and hour buttons are styled by the composer's stylesheet,
 // which compose.tsx loads in the product; the story mounts the dialog alone.
 import "./compose.css";

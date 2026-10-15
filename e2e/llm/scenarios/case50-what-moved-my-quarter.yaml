@@ -27,15 +27,19 @@ prompt: |
   week's forecast freeze. What moved it, deal by deal, and by how much?
 
 must_call:
-  - forecast_readings
-  - forecast_movement
+  - read_forecast
+
+must_call_with:
+  - read_forecast.view=readings
+  - read_forecast.view=movement
+
 may_call:
   - search_records
   - read_record
   - list_records
   - resolve_entities
   - query_workspace
-  - forecast_input_checks
+  - read_input_checks
 
 must_mention:
   - "Vorort"

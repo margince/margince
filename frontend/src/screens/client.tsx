@@ -13,7 +13,7 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Row } from "../design-system/stack";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import "./client.css";
 
 // Client surfaces (B-EP09.13a): the rail-less extension chrome — the fixed

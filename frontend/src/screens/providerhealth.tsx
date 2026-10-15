@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCan } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { PanelBody, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import { useProviderHealth } from "./ai-provider-health";
 import { ProviderHealthNotice } from "./ai-provider-health-notice";
 import { providerName } from "./ai-provider-names";
@@ -25,26 +25,29 @@ export function ProviderHealthCard() {
       withheld={t("providerHealth.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={() => null}
     >
-      {({ providers }) =>
-        providers.length === 0 ? (
-          // A finding, not an absence: the empty list is the endpoint's way of
-          // saying every provider answered.
-          <EmptyState>{t("providerHealth.healthy")}</EmptyState>
-        ) : (
-          <SettingList>
-            {providers.map((entry) => (
-              <SettingRow
-                key={entry.provider}
-                label={providerName(entry.provider, t)}
-                layout="stack"
-                control={<ProviderHealthNotice entry={entry} />}
-              />
-            ))}
-          </SettingList>
-        )
-      }
+      {({ providers, configured }) => {
+        // The worker can report a provider this process has no binding for.
+        if (providers.length === 0) {
+          return (
+            <PanelBody>
+              <EmptyState>
+                {t(
+                  (configured ?? []).length === 0
+                    ? "providerHealth.noneConfigured"
+                    : "providerHealth.healthy",
+                )}
+              </EmptyState>
+            </PanelBody>
+          );
+        }
+        return providers.map((entry) => (
+          <PanelRow record key={entry.provider}>
+            <p className="t-name">{providerName(entry.provider, t)}</p>
+            <ProviderHealthNotice entry={entry} />
+          </PanelRow>
+        ));
+      }}
     </HealthCard>
   );
 }

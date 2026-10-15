@@ -216,7 +216,7 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "contract.pdf" });
-    expect(screen.getByText("Contract")).toBeTruthy();
+    expect(screen.getByText("SOW/Contract")).toBeTruthy();
   });
 
   it("names a channel file as a message attachment, not an email one", async () => {
@@ -257,7 +257,7 @@ describe("the contact's files tab", () => {
     await screen.findByRole("link", { name: "scan.pdf" });
     // No category was set: the row omits the badge rather than printing an
     // "uncategorised" placeholder for a fact the record never asserted.
-    expect(screen.queryByText("Contract")).toBeNull();
+    expect(screen.queryByText("SOW/Contract")).toBeNull();
     expect(screen.queryByText("Other")).toBeNull();
   });
 

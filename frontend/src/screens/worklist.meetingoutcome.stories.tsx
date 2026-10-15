@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
 // The line the verbs stand on belongs to the ROW rather than to the screen, so
 // a story mounting them without it draws a bare inline flow with no gap.

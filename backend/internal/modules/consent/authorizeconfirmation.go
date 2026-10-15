@@ -138,13 +138,23 @@ func validateOptOutAcknowledgement(
 	// by purpose here would refuse the acknowledgement a narrow objection
 	// equally owes, under-serving the subject Art. 16 exists to protect.
 	var standing bool
+	// An unsubscribe press writes no suppression, only marketing withdrawals.
+	// So a standing marketing-class withdrawal is evidence too; no other class is.
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		    SELECT 1 FROM communication_suppression
 		    WHERE contact_id = $1
 		      AND kind = ANY($2)
 		      AND revoked_at IS NULL
-		)`, subject.ID, acknowledgeableKinds()).Scan(&standing); err != nil {
+		) OR EXISTS (
+		    SELECT 1 FROM contact_consent cc
+		      JOIN consent_purpose cp ON cp.id = cc.purpose_id
+		    WHERE cc.contact_id = $1
+		      AND cc.state = 'withdrawn'
+		      AND cp.archived_at IS NULL
+		      AND cp.class = ANY($3)
+		)`, subject.ID, acknowledgeableKinds(),
+		classesCovering(commsauthz.CategoryMarketing)).Scan(&standing); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the stop this would acknowledge: %w", err)
 	}
 	if !standing {

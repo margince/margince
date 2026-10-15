@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AssistantPanel } from "./assistant";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // "Ask about this company" as it stands in the company overview's column: the
 // same header band as the readings above and below it, with the disclosure

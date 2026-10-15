@@ -121,9 +121,9 @@ type Handlers struct {
 	// rollout lives in the composition root and identity may not import it —
 	// the same shape as dataResetAvailable above, and for the same reason.
 	companyContextAvailable bool
-	// embedReindexAvailable is whether an embeddings model is bound, so the
-	// reindex routes serve rather than 501. Injected for the same reason.
-	embedReindexAvailable bool
+	// embedReindexAvailable reports whether an embeddings model is bound now,
+	// so the reindex routes serve rather than 501. Injected for the same reason.
+	embedReindexAvailable func() bool
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
 
@@ -140,6 +140,9 @@ type Handlers struct {
 	// agentAPIBase answers where a passport calls the API, for the Settings
 	// card's snippet. Nil answers "".
 	agentAPIBase func(*http.Request) string
+	// passportUsage reads each live passport's running window. Nil lists
+	// passports without usage.
+	passportUsage PassportUsageReader
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the

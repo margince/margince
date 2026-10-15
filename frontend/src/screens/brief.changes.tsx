@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRecordZone } from "../app/recordzone";
+import { EntityRef } from "../components/entityref";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { sameCalendarDay } from "../format/calendarday";
@@ -12,7 +12,7 @@ import {
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { EntityRef } from "./entityref";
+import { useRecordZone } from "../lib/recordzone";
 import { listReadState } from "./worklist.listread";
 import { useHandledForYou } from "./worklist.queries";
 import { receiptSummary } from "./worklist.receiptcopy";

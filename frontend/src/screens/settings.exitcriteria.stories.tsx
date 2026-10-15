@@ -4,18 +4,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { StageExitCriteria } from "./settings.exitcriteria";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { StageExitCriteria } from "./settings.exitcriteria";
 
 // What a stage asks for before a deal may leave it, as the pipelines card draws
-// it inside one stage's row. Three states are worth a picture: the standing
-// notice about who evidence has to come from, the read that failed, and a
-// terminal stage, which asks for nothing and says so.
+// it inside one stage's row. Two states are worth a picture: the standing
+// notice about who evidence has to come from, and the read that failed.
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -63,7 +62,7 @@ function Served({
 export const BuyerEvidence: Story = {
   render: () => (
     <Served answer={() => jsonResponse({ data: [criterion({})] })}>
-      <StageExitCriteria stageId={STAGE_ID} semantic="open" canEdit />
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
     </Served>
   ),
 };
@@ -86,16 +85,7 @@ export const Unreadable: Story = {
         )
       }
     >
-      <StageExitCriteria stageId={STAGE_ID} semantic="open" canEdit />
-    </Served>
-  ),
-};
-
-/** Won and lost are where a deal stops, so there is nothing to configure. */
-export const TerminalStage: Story = {
-  render: () => (
-    <Served answer={() => jsonResponse({ data: [] })}>
-      <StageExitCriteria stageId={STAGE_ID} semantic="won" canEdit />
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
     </Served>
   ),
 };

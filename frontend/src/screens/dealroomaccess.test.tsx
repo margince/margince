@@ -7,8 +7,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 type DealRoom = components["schemas"]["DealRoom"];
 

@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
-import { IntroAsksPanel } from "./introasks";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { IntroAsksPanel } from "./introasks";
 
 // The asks in flight about a contact. The pane says different things to each
 // side of an ask, so both sides are stories: the colleague being asked is

@@ -16,7 +16,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { StrengthMeter } from "../design-system/strengthmeter";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { useViewerId } from "./common";
+import { useViewerId } from "../lib/session";
 import "./contactnetwork.css";
 
 type Graph = components["schemas"]["ContactGraph"];

@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { DealStatusCardPanel } from "./dealstatus";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealStatusCardPanel } from "./dealstatus";
 
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";

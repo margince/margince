@@ -3,7 +3,7 @@
 
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-
+import type { PickedTag } from "../components/bulktag";
 import { Callout } from "../design-system/callout";
 import {
   ListPopover,
@@ -11,10 +11,9 @@ import {
 } from "../design-system/listpopover";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
-import type { PickedTag } from "./bulktag";
-import { problemMessageOf } from "./common";
-import type { RecordTag, TaggableType } from "./tags.queries";
-import { useApplyTag, useTagVocabulary } from "./tags.queries";
+import { problemMessageOf } from "../lib/problem";
+import type { RecordTag, TaggableType } from "../lib/tags.queries";
+import { useApplyTag, useTagVocabulary } from "../lib/tags.queries";
 
 /**
  * The add-tag verb: pick a word the workspace already has.

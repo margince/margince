@@ -18,16 +18,17 @@ import { ifMatch, requireVersion } from "../api/version";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { CreateField, FormRows } from "../components/create";
+import { splitMultiselectValue } from "../components/create";
+import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
-import type { CreateField, FormRows } from "./create";
-import { splitMultiselectValue } from "./create";
 
 type Company = components["schemas"]["Company"];
 type CreateCompanyRequest = components["schemas"]["CreateCompanyRequest"];
@@ -37,11 +38,11 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Merge-target search (P-2): mirrors searchContactsTargets (contacts.tsx) — the
-// caller filters out the source row.
+// Merge-target search (P-2): mirrors searchContactsTargets
+// (contactrecordactions.tsx), with the primary domain as the detail line.
 export async function searchCompanyTargets(
   q: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<RecordPickerCandidate[]> {
   const data = unwrap(
     await api.GET("/companies", {
       params: { query: { q, limit: 10 } },
@@ -50,6 +51,7 @@ export async function searchCompanyTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
+    detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
   }));
 }
 
@@ -81,7 +83,7 @@ function mapDomainRowsReplaceSet(rows: FormRows): DomainPatch {
   return (rows.domains ?? [])
     .filter((row) => (row.domain ?? "").trim().length > 0)
     .map((row) => ({
-      domain: row.domain.trim().toLowerCase(),
+      domain: (row.domain ?? "").trim().toLowerCase(),
       is_primary: row.is_primary === "true",
     }));
 }
@@ -106,7 +108,7 @@ export function mapCompanyBody(
   rows: FormRows,
 ): CreateCompanyRequest {
   return {
-    display_name: values.display_name.trim(),
+    display_name: (values.display_name ?? "").trim(),
     legal_name: values.legal_name?.trim() || undefined,
     industry: values.industry?.trim() || undefined,
     size_band: asSizeBand(values.size_band),

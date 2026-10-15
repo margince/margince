@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { StoryProviders } from "../../testing/story-utils";
 import type { CompanyFieldName } from "../onboarding";
-import { StoryProviders } from "../story-utils";
 import type { ReviewRow } from "./company-review-state";
 import { DigestLine } from "./profile-digest-lines";
 import "./profile-digest.css";

@@ -1,26 +1,32 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
-import { Badge } from "../design-system/atoms";
-import { useToast } from "../design-system/toast";
-import { normalizeProfileUrl } from "../format/profileurl";
-import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { useBulkSelection } from "./bulkverbs";
-import { unwrap, useViewerId } from "./common";
-import { contactCreateFields, mapContactBody } from "./contactformfields";
-import { CreateAction, type CreateField, type FormRows } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
-import { EntityRef } from "./entityref";
-import { searchCompanies } from "./filterreference";
+import { useBulkSelection } from "../components/bulkverbs";
+import {
+  CreateAction,
+  type CreateField,
+  type FormRows,
+} from "../components/create";
+import { useObjectCustomFields } from "../components/customfields.form";
+import { EntityRef } from "../components/entityref";
 import {
   type ListPage,
   type ListQuery,
   ListTable,
   listFetchLimit,
   useListQuery,
-} from "./listquery";
+} from "../components/listquery";
+import { Badge } from "../design-system/atoms";
+import { useToast } from "../design-system/toast";
+import { normalizeProfileUrl } from "../format/profileurl";
+import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
+import { listQueryParams } from "../lib/tagfilter";
+import { contactCreateFields, mapContactBody } from "./contactformfields";
+import { searchCompanies } from "./filterreference";
 import {
   createdColumn,
   lastActivityColumn,
@@ -31,7 +37,6 @@ import {
   useOwnerTagChips,
 } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { listQueryParams } from "./tagfilter";
 import { VCardImportAction, VCardImportPage } from "./vcard-import";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its

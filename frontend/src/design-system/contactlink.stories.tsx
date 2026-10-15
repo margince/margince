@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Mail, Phone } from "lucide-react";
-import { WriteToProvider } from "../screens/writeto";
+import { WriteToProvider } from "../lib/writeto";
 import { ContactLink } from "./contactlink";
 
 // An address or a number the reader can act on. The stories document the one

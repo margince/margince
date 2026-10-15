@@ -7,7 +7,6 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { EvidenceMark } from "../design-system/evidencemark";
@@ -16,7 +15,8 @@ import { PanelRow } from "../design-system/panel";
 import { provenanceLabel } from "../design-system/trust";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { settleFacts } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
@@ -49,12 +49,14 @@ const FACT_SUSPECT_LABELS: Record<FactSuspectReason, MessageKey> = {
  */
 export function FactRow({
   companyId,
+  anchor,
   fact,
   label,
   canEdit,
   onOpenHistory,
 }: Readonly<{
   companyId: string;
+  anchor: boolean;
   fact: CompanyFact;
   label?: string;
   canEdit: boolean;
@@ -104,6 +106,7 @@ export function FactRow({
       <span className="meta-row-action">
         <EvidenceVerdict
           companyId={companyId}
+          anchor={anchor}
           claim={factClaim(companyId, fact)}
           canEdit={canEdit}
         />
@@ -124,6 +127,7 @@ export function FactRow({
       {removing && (
         <RemoveFactConfirm
           companyId={companyId}
+          anchor={anchor}
           fact={fact}
           canEdit={canEdit}
           onClose={() => setRemoving(false)}
@@ -135,11 +139,13 @@ export function FactRow({
 
 function RemoveFactConfirm({
   companyId,
+  anchor,
   fact,
   canEdit,
   onClose,
 }: Readonly<{
   companyId: string;
+  anchor: boolean;
   fact: CompanyFact;
   // Re-read at CONFIRM time, not only at open time. A grant can be withdrawn
   // while this dialog stands, and a confirm that fired on the answer from
@@ -167,7 +173,7 @@ function RemoveFactConfirm({
       );
     },
     onSuccess: async () => {
-      await settleFacts(queryClient, companyId);
+      await settleFacts(queryClient, { id: companyId, is_anchor: anchor });
       onClose();
     },
   });

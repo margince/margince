@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ChannelReplyAction } from "./compose.reply";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The reply affordance for one captured conversation. Three facts about it and
 // no more, which is the whole component:

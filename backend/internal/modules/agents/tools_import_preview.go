@@ -22,11 +22,16 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-type previewImport struct{ imports Imports }
+// previewImport stages a run's test and waits for its report.
+type previewImport struct {
+	imports Imports
+	wait    importWait
+}
 
 func (t previewImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -35,30 +40,44 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		Instead:       previewImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
-		InputSchema: schema(`{"type":"object","required":["object","csv"],"properties":{
-			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
+		InputSchema: schema(`{"type":"object","properties":{
+			"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
+			"files":{"type":"array","minItems":1,"maxItems":` + strconv.Itoa(len(importObjectEnum)) + `,
+			  "description":"Several files as one run, in place of object, csv and mapping.",
+			  "items":{"type":"object","required":["name","object","csv"],"properties":{
+				"name":{"type":"string"},
+				"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
+				"csv":{"type":"string","description":"The file's contents, header row first."},
+				"mapping":{"type":"object","additionalProperties":{"type":"string"},"description":"As mapping, for this file."}},
+				"additionalProperties":false}},
+			"source_name":{"type":"string","description":"The system the files came from. A later import under the same name updates the rows it landed."},
+			"on_broken_link":{"type":"string","enum":["` + importOnBrokenLinkSkipRow + `","` + importOnBrokenLinkDropLink + `"],
+			  "description":"A link naming no record: skip_row (default) leaves the row out, drop_link lands it unlinked."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
 			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: map[string]string{
-			"$.mapping": "the mapping is keyed by the uploaded file's own column headers",
+			"$.mapping":             "the mapping is keyed by the uploaded file's own column headers",
+			"$.files.items.mapping": "each file's mapping is keyed by that file's own column headers",
 		},
 		OutputSchema: schemaFor[ImportPreviewResult](),
 	}
 }
 
 func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		Object      string            `json:"object"`
-		CSV         string            `json:"csv"`
-		Mapping     map[string]string `json:"mapping"`
-		OnDuplicate string            `json:"on_duplicate"`
-	}
+	var args previewArgs
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
+	}
+	if len(args.Files) > 0 {
+		if args.Object != "" || args.CSV != "" || args.Mapping != nil {
+			return nil, &BadArgsError{Cause: errors.New(
+				"`files` replaces `object`, `csv` and `mapping`; send one shape or the other")}
+		}
+		return t.previewFiles(ctx, args)
 	}
 	if err := refuseUnimportableObject(args.Object); err != nil {
 		return nil, err
@@ -95,36 +114,22 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 		Connector: crmcontracts.CreateImportRunRequestConnector(importConnectorCSV),
 		Object:    profile.Object,
 		SourceRef: profile.SourceRef,
-		Mapping:   mapping,
+		Mapping:   &mapping,
 	}
-	if args.OnDuplicate != "" {
-		policy := crmcontracts.ImportOnDuplicate(args.OnDuplicate)
-		req.OnDuplicate = &policy
-	}
+	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// NOT discarded. Staging persists its run before it validates, and a
-		// run that failed validation is resumable from its SourceRef — so
-		// deleting the file here would turn a run somebody can fix into one
-		// nobody can. The orphan on this path is the pre-existing cost of a
-		// tool call that stores before it can know, and it is a different
-		// change from this one.
-		return nil, err
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
-	return json.Marshal(ImportPreviewResult{
-		Run:      importRunResult(run),
+	return t.answered(ctx, run, ImportPreviewResult{
 		Mapping:  mapping,
 		Columns:  columnNames(profile),
 		Unmapped: unmappedColumns(profile, mapping),
 	})
 }
 
-// discarding removes the stored source behind a call that is about to fail, and
-// returns the failure unchanged.
-//
-// Only for a refusal BEFORE anything is staged. Past that point a run exists
-// that references the source and can be resumed from it, and deleting the file
-// would turn a run somebody can fix into one nobody can.
+// discarding cancels the draft of a call about to fail before its test, which
+// releases the stored source. It returns the failure unchanged.
 //
 // The refusal is what the caller needs to read, so a failure to clean up cannot
 // replace it: an orphan blob is a cost, and the wrong error is a wrong answer.
@@ -144,6 +149,45 @@ func discarding(ctx context.Context, imports Imports, ref string, cause error) e
 	return cause
 }
 
+// busyRunCopy is what a busy refusal tells the caller to do with the run it
+// names, by the refusal's code.
+var busyRunCopy = map[string]string{
+	httperr.SourceBusyCode: "import run %s of this source_name is still writing. read_import that run " +
+		"until its state is complete or failed, then preview again",
+	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
+		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
+		"then preview again",
+}
+
+// stagingRefused answers a refused StageRun. A refusal for this agent's other
+// test discards the draft. The caller is told to preview again, so a looping
+// caller would leave one upload per call. Any other refused draft is kept.
+// createImportRun on its source_ref tests it again, and the sweep cancels one
+// nobody returns to.
+func stagingRefused(ctx context.Context, imports Imports, ref string, err error) error {
+	if busy, ok := errors.AsType[*httperr.DetailedError](err); ok && busy.Code == httperr.AgentBusyCode {
+		err = discarding(ctx, imports, ref, err)
+	}
+	return namingTheBusyRun(err)
+}
+
+// namingTheBusyRun points a busy refusal at the run it names, when the caller
+// may read that run.
+func namingTheBusyRun(err error) error {
+	busy, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok {
+		return err
+	}
+	detail, known := busyRunCopy[busy.Code]
+	runID, named := busy.Details["run_id"].(string)
+	if !known || !named {
+		return err
+	}
+	return &httperr.DetailedError{
+		Status: busy.Status, Code: busy.Code, Details: busy.Details, Detail: fmt.Sprintf(detail, runID),
+	}
+}
+
 // discardTimeout bounds the cleanup. It outlives the request on purpose, and a
 // store that has not answered in this long is not going to.
 const discardTimeout = 10 * time.Second
@@ -151,31 +195,22 @@ const discardTimeout = 10 * time.Second
 // proposalCoversTheFile refuses a proposal that places some of the file's
 // columns and not others, when the caller sent no mapping of their own.
 //
-// The proposal matches NAMES, and nothing more (migration.SuggestMapping); the
-// timidity is right for the screen, which draws an unplaced column as a blank
-// the contact fills. A tool caller has no blanks. Handed a proposal that maps
-// `id` and drops `Company`, `City`, `Country` and `Band`, they get something
-// plausible that validates clean and commits an update with no changed fields
-// — an import that reports success and writes nothing. A partial answer that
-// looks whole is worse than no answer, so this is the refusal that says which
-// columns it could not place and what the object can receive.
-//
-// Only when the caller named NO column — whether the member was omitted or sent
-// as `{}`, which are the same thing to ask about: a mapping that names nothing
-// is not a choice about the columns, it is the absence of one, and what would
-// be used either way is the proposal. A caller who named even one column HAS
-// made a choice about the rest, and the result's `unmapped` list reports it.
+// The proposal matches names only, and a tool caller has no blanks to fill.
+// A partial proposal could commit an import that writes nothing. A caller who
+// named one column chose the rest, and `unmapped` reports it.
 func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map[string]string) error {
 	unplaced := unmappedColumns(profile, mapping)
 	if len(unplaced) == 0 {
 		return nil
 	}
-	// Both LISTS ride in Guidance, which is not bounded. The cause is echoed
-	// through echoSafe's 200 bytes, and the fixed prose alone is most of that —
-	// so a list put there is cut off partway through, which on a wide file
-	// means the refusal stops naming the very columns it is about. What is left
-	// in the cause is the sentence that is the same length whatever the file
-	// holds.
+	// Both lists ride in Guidance, which is not bounded. The cause is echoed
+	// through echoSafe's 200 bytes, so a list there would be cut off on a wide
+	// file.
+	object := importObjectName(profile.Object)
+	takes := "read_import with view format lists the columns a " + object + " takes"
+	if len(profile.Targets) > 0 {
+		takes = fmt.Sprintf("A %s takes: %s", object, strings.Join(profile.Targets, ", "))
+	}
 	return &BadArgsError{
 		Cause: fmt.Errorf(
 			"the proposal places %d of this file's %d columns, so importing it would leave the "+
@@ -183,9 +218,8 @@ func proposalCoversTheFile(profile crmcontracts.ImportSourceProfile, mapping map
 			len(mapping), len(mapping)+len(unplaced)),
 		Guidance: fmt.Sprintf(
 			"it could not place %s, because they match no %s field by name. Send a mapping "+
-				"that says what each column is. A %s takes: %s",
-			strings.Join(quoted(unplaced), ", "), profile.Object,
-			profile.Object, strings.Join(profile.Targets, ", ")),
+				"that says what each column is. %s",
+			strings.Join(quoted(unplaced), ", "), object, takes),
 	}
 }
 

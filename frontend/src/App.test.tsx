@@ -4,7 +4,6 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { meFixture } from "./app/mefixture";
 import { pickOption } from "./design-system/select-testing";
 import { LocaleProvider } from "./i18n";
 import {
@@ -12,6 +11,7 @@ import {
   sessionOnlyFetch,
   wizardRow,
 } from "./testing/appharness";
+import { meFixture } from "./testing/mefixture";
 
 // B-EP09.17: the locale switch flips the whole UI between DE and EN. With the
 // browser asking for a language we don't ship, the app mounts in the A100
@@ -219,7 +219,7 @@ describe("the custom-fields admin, at its address inside settings", () => {
 // crash, and not the "not built yet" copy, which would be a different (and
 // false) claim about the same URL.
 //
-// The composed half of the pair is app/extensions.test.ts, which hands the
+// The composed half of the pair is lib/extensions.test.ts, which hands the
 // generator's own descriptor shape to the same lookup. Rendering a composed
 // unit here is not possible without build/composition/ existing, and this
 // suite must pass in a tree where it does not.

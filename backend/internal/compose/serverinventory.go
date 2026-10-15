@@ -419,16 +419,14 @@ type Server struct {
 	// reports no license section at all.
 	licensePosture func() licensecheck.Posture
 
-	// volumeMeter is the MCP-SESS-READS bound this role enforces on agent
-	// the five MCP-SESS-* counters, shared by everything that must agree about
-	// them: the admission gate that REFUSES on them, both doors' registries that
-	// CHARGE them, the approvals service that WIDENS one when a lender says
-	// continue, and the model path that charges the soft cost share.
+	// volumeMeter holds the MCP-SESS-* counters. The admission gate refuses on them
+	// and both registries charge them. The approvals service widens one when a lender
+	// says continue, and the model path charges the soft cost share.
 	//
-	// Always non-nil (newServer constructs it unconditionally, fail-closed
-	// with no Redis), and WithAgentVolume Rebinds this ONE pointer to the live
-	// Redis-backed meter at boot — so no option order can leave the gate
-	// enforcing a different counter from the one the registry pays into.
+	// It is always non-nil. newServer builds it fail-closed with no Redis, and
+	// WithAgentVolume rebinds this one pointer to the live meter at boot. No option
+	// order can then leave the gate enforcing a different counter from the one the
+	// registry pays into.
 	volumeMeter *agentvolume.Meter
 	// retrievalEmbedder is this role's embed lane for REQUEST-TIME ranking —
 	// the same ModelPath.Embedder the background reindex and drift sweep use,

@@ -62,7 +62,7 @@ var mergeTagsCopy = toolCopy{
 	Limits: "NOT UNDOABLE once approved: the source is retired, its name is released — links " +
 		"to it stop working and someone may coin it again — and no pointer home is kept, " +
 		"unlike a contact or company merge. The TARGET is the word that survives; read both " +
-		"with get_tag first. Needs the tag.update grant.",
+		"with read_tags first. Needs the tag.update grant.",
 }
 
 var updateTagCopy = toolCopy{
@@ -72,4 +72,32 @@ var updateTagCopy = toolCopy{
 		"it is on. LAST WRITE WINS: this tool sends no version, so an edit made between your " +
 		"read and your write is overwritten without a conflict. Read with get_tag immediately " +
 		"before editing. A name another word already holds is a conflict.",
+}
+
+var readTagsCopy = toolCopy{
+	Purpose: "Read the workspace's tags. list: every word, with the tag_id the other tag calls " +
+		"take. get: one tag and how many contacts, companies, deals and leads carry it — the " +
+		"records themselves come from list_records. record: " +
+		"the tags on one contact, company, deal or lead, with who applied each and when.",
+	Limits: "list returns archived words only with include_archived, and they cannot be applied; " +
+		"`truncated` means a word missing from the list may still exist. In record, `withheld` " +
+		"true means the vocabulary is hidden from this caller, NOT that the record has no tags — " +
+		"never report it as none.",
+	Retain: "A word the user says fits a contact you are creating goes to create_record as " +
+		"offer_tag, which offers it without applying it.",
+}
+
+var changeTagsCopy = toolCopy{
+	Purpose: "Change the workspace's tags. apply and remove put one tag on, or take it off, one " +
+		"contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that " +
+		"already exists. create coins a new word. update renames, recolours or describes one; " +
+		"fields left out are unchanged.",
+	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
+		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
+		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
+		"together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update " +
+		"sends no version, so read the tag right before editing; it changes what a word is " +
+		"called, never what carries it. Removing a tag that is not there succeeds.",
+	Instead: "Use merge_tags to fold a duplicate word into the one kept, and archive_record on a " +
+		"tag to retire it for every record.",
 }

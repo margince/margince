@@ -6,6 +6,7 @@ import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { type MeetingDay, MeetingWeek } from "../design-system/meetingslots";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { stable } from "../format/collate";
 import { dateTileParts } from "../format/datetile";
 import {
@@ -18,7 +19,6 @@ import { dayInZone, startOfDayInZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { useInviteAvailability } from "./booking-availability";
 import { BookingZone } from "./booking-common";
-import { QueryGate } from "./common";
 import { minutesOf, type useWorkingHours } from "./working-hours";
 
 export type BookingMode = "propose" | "invite" | "link";

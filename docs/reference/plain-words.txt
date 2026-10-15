@@ -417,7 +417,6 @@ directive
 directory
 disable
 disagree
-disarmed
 discarded
 disclose
 discovery
@@ -440,7 +439,6 @@ download
 downstream
 draft
 drain
-draws
 drift
 drive
 driven

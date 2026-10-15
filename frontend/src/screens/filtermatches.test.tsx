@@ -7,10 +7,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { type Group, newGroup, newLeaf } from "../lib/segmentpredicate";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { FilterOutcome } from "./filtermatches";
-import { type Group, newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
   cleanup();

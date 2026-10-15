@@ -11,9 +11,13 @@
 // fieldLabel, not a second set — and converts at the boundary: the draft holds
 // stored values, the controls speak strings.
 
+import {
+  type CreateField,
+  fieldControl,
+  fieldLabel,
+} from "../components/create";
 import { Field } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { type CreateField, fieldControl, fieldLabel } from "./create";
 
 export function ContractCustomFields({
   fields,

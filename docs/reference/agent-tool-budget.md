@@ -8,7 +8,80 @@ transcript: the frame, the tool listing and the step schema. Token counts use th
 ~4-bytes-per-token estimate the window itself uses, over what the runner's own
 renderer produces (`runner.FixedStepCost`).
 
-## Why this page exists
+## In short
+
+A scheduled agent pays for its whole tool menu on every step of every run, before it reads
+anything. This page shows what each declared agent pays, how much room that leaves, and
+what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
+[mcp-info.md](mcp-info.md#index).
+
+The heaviest menu is `overnight_at_risk_sweep`: 5497 of the window's 32768 tokens per step (16%).
+
+## The declared agents
+
+| Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `morning_brief` | 5 | 5 of 56 | 1917 | 1315 | 3830 | 11% | 19380 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 56 | 2915 | 1985 | 5497 | 16% | 17713 | 5 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 56 |  | 24735 |  |  | 75% |  |  |  |
+
+### `morning_brief`
+
+```text
+Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items
+are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for
+those items, then call annotate_brief with one concise narrative and grounded findings: why each
+item matters, what changed and the next move. An item with a previous_rank was already on this queue
+on the run's previous_local_day: say what has changed since then rather than reporting it as new. An
+item without one may simply not have ranked that day, so do not call it new either. Use each
+returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the
+existing order. If there are no items, finish without inventing a brief. A tool refusal means the
+findings were not saved: correct it before claiming completion.
+```
+
+Attaches 5 tools and pays 3830 tokens on every step (1917 listing, 1315 step schema), leaving
+19380 of its budget and 28938 tokens of the
+window for the goal, the grounding and everything it reads.
+
+- `annotate_brief`
+- `catch_me_up_on`
+- `list_records`
+- `read_brief`
+- `read_record`
+
+### `overnight_at_risk_sweep`
+
+```text
+Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone
+quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals
+across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so
+do not read or log on it before that list. Then read each listed deal and log ONE note activity per
+at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance
+stages, send anything, or archive anything.
+```
+
+Attaches 7 tools and pays 5497 tokens on every step (2915 listing, 1985 step schema), leaving
+17713 of its budget and 27271 tokens of the
+window for the goal, the grounding and everything it reads.
+
+- `at_risk_relationships`
+- `catch_me_up_on`
+- `list_records`
+- `log_activity`
+- `read_record`
+- `review_commitments`
+- `whats_slipping_this_week`
+
+**5 dangling cross-references**: this agent's own tool copy points at tools it
+cannot call, so a run may spend a step discovering the refusal:
+
+- at_risk_relationships → read_relationships
+- log_activity → draft_outbound
+- log_activity → relink_activity
+- log_activity → send_outbound
+- whats_slipping_this_week → draft_outbound
+
+## Why a tool is paid for twice
 
 A scheduled agent's tool listing is written into the system prompt of **every step**
 of its run, and each tool's input schema rides every step a second time, as its branch
@@ -45,77 +118,11 @@ listing budget above; whether each attached tool is one its goal needs is a revi
 judgement. An MCP client connecting from outside is served the whole catalog by
 `tools/list`, but that is its own agent's window rather than a run of this engine.
 
-Before any tool is listed the frame itself costs **586 tokens**: the output contract,
+Before any tool is listed the frame itself costs **597 tokens**: the output contract,
 the rules and the prompt fence. It is shown here because moving a rule from each
 tool's schema into the frame costs one sentence per run instead of one per tool.
 It is part of every agent's per-step figure below, so a frame that grows a paragraph
 spends it on every run of every agent.
-
-## The declared agents
-
-| Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29825 |  |  | 91% |  |  |  |
-
-### `morning_brief`
-
-```text
-Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items
-are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for
-those items, then call annotate_brief with one concise narrative and grounded findings: why each
-item matters, what changed and the next move. An item with a previous_rank was already on this queue
-on the run's previous_local_day: say what has changed since then rather than reporting it as new. An
-item without one may simply not have ranked that day, so do not call it new either. Use each
-returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the
-existing order. If there are no items, finish without inventing a brief. A tool refusal means the
-findings were not saved: correct it before claiming completion.
-```
-
-Attaches 5 tools and pays 3810 tokens on every step (1913 listing, 1311 step schema), leaving
-19400 of its budget and 28958 tokens of the
-window for the goal, the grounding and everything it reads.
-
-- `annotate_brief`
-- `catch_me_up_on`
-- `list_records`
-- `read_brief`
-- `read_record`
-
-### `overnight_at_risk_sweep`
-
-```text
-Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone
-quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals
-across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so
-do not read or log on it before that list. Then read each listed deal and log ONE note activity per
-at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance
-stages, send anything, or archive anything.
-```
-
-Attaches 7 tools and pays 5292 tokens on every step (2818 listing, 1888 step schema), leaving
-17918 of its budget and 27476 tokens of the
-window for the goal, the grounding and everything it reads.
-
-- `at_risk_relationships`
-- `catch_me_up_on`
-- `list_records`
-- `log_activity`
-- `read_record`
-- `review_commitments`
-- `whats_slipping_this_week`
-
-**7 dangling cross-references**: this agent's own tool copy points at tools it
-cannot call, so a run may spend a step discovering the refusal:
-
-- at_risk_relationships → intro_path_to
-- at_risk_relationships → who_knows
-- log_activity → draft_email
-- log_activity → relink_activity
-- log_activity → send_email
-- log_activity → send_message
-- whats_slipping_this_week → draft_follow_ups_for
 
 ## How to read the two derived columns
 
@@ -144,104 +151,9 @@ expected step. A weight of 5 does not mean a model went wrong five times; it mea
 scenarios name a tool on this menu as the reach to avoid. The measurement that
 would replace it is sampling real runs for chosen-vs-wanted.
 
-## What each tool costs, largest first
-
-Median 292 tokens, mean 354, across 84 served tools.
-
-Each row is one tool rendered alone, so the rows do not add up to the catalog total:
-every row carries its own rounding, and the catalog figure divides the whole rendered
-listing once. Read a row as what that tool costs a menu.
-
-| Tool | Tokens | Named as the wrong reach in |
-|---|---:|---:|
-| `run_report` | 1023 |  |
-| `send_company_email` | 823 |  |
-| `list_records` | 817 | 2 scenarios |
-| `bulk_update_records` | 809 |  |
-| `compose_analytics_report` | 772 |  |
-| `send_email` | 754 |  |
-| `read_lists` | 744 |  |
-| `preview_import` | 725 |  |
-| `log_activity` | 701 | 3 scenarios |
-| `create_record` | 667 |  |
-| `send_message` | 603 |  |
-| `change_lists` | 592 |  |
-| `update_record` | 581 |  |
-| `forecast_readings` | 553 |  |
-| `read_reporting` | 535 |  |
-| `query_workspace` | 530 |  |
-| `run_analytics_query` | 506 |  |
-| `progress_deal` | 505 |  |
-| `resolve_entities` | 493 |  |
-| `search_records` | 456 |  |
-| `advance_deal` | 446 |  |
-| `forecast_movement` | 443 |  |
-| `annotate_brief` | 417 | 2 scenarios |
-| `advance_project_phase` | 416 |  |
-| `review_commitments` | 401 |  |
-| `attach_document` | 397 |  |
-| `prep_for_meeting` | 394 |  |
-| `enrich` | 390 |  |
-| `draft_email` | 385 |  |
-| `describe_report_vocabulary` | 349 |  |
-| `catch_me_up_on` | 348 | 2 scenarios |
-| `describe_record_fields` | 345 |  |
-| `book_meeting` | 344 |  |
-| `search_context` | 344 |  |
-| `check_availability` | 342 |  |
-| `search_report_evidence` | 335 |  |
-| `decide_approval` | 332 |  |
-| `forecast_input_checks` | 324 |  |
-| `demote_lead` | 317 |  |
-| `promote_lead` | 304 |  |
-| `relink_activity` | 303 |  |
-| `merge_records` | 293 |  |
-| `read_record` | 292 | 2 scenarios |
-| `archive_record` | 289 |  |
-| `describe_analytics_vocabulary` | 286 |  |
-| `draft_follow_ups_for` | 279 |  |
-| `whats_slipping_this_week` | 269 |  |
-| `list_approvals` | 268 |  |
-| `prepare_handoff` | 267 |  |
-| `describe_query_vocabulary` | 266 |  |
-| `invite_meeting` | 264 |  |
-| `relink_activities` | 259 |  |
-| `company_coverage` | 246 |  |
-| `describe_report_blocks` | 245 |  |
-| `relink_thread` | 240 |  |
-| `commit_import` | 236 |  |
-| `decide_approval_bundle` | 235 |  |
-| `qualify_lead` | 229 |  |
-| `apply_tag` | 226 |  |
-| `create_task` | 221 |  |
-| `at_risk_relationships` | 209 |  |
-| `disqualify_lead` | 209 |  |
-| `list_input_checks` | 209 |  |
-| `read_brief` | 205 |  |
-| `update_tag` | 205 |  |
-| `decide_duplicate` | 203 |  |
-| `merge_tags` | 198 |  |
-| `who_knows` | 197 |  |
-| `data_coverage` | 195 |  |
-| `list_colleagues` | 193 |  |
-| `create_tag` | 191 |  |
-| `list_pipelines` | 191 |  |
-| `intro_path_to` | 187 |  |
-| `list_documents` | 180 |  |
-| `list_channel_providers` | 174 |  |
-| `remove_tag` | 166 |  |
-| `read_project_360` | 156 |  |
-| `read_approval` | 154 |  |
-| `get_record_tags` | 144 |  |
-| `whoami` | 129 |  |
-| `list_tags` | 95 |  |
-| `get_tag` | 88 |  |
-| `read_import_report` | 77 |  |
-| `read_import_run` | 67 |  |
-
 ## Related
 
-- [mcp-info.md](mcp-info.md): the whole served surface as a client receives it,
-  including the output schemas a run is never charged for.
-- [agent-tools.md](agent-tools.md): the governed catalog: what each tool is, what it
-  costs in passport scope, and whether a human must approve it.
+- [agent-tools.md](agent-tools.md): the tool catalog. What each tool is, its scope, and
+  whether a human must approve it.
+- [mcp-info.md](mcp-info.md): each tool's description as a client receives it.
+- [ai-certification.md](ai-certification.md): the scenarios behind the temptation weight.

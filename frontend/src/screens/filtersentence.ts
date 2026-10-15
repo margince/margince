@@ -7,7 +7,6 @@
 // reader meets one wording for one filter wherever it appears.
 // filtersentence.census.test.ts fails any other module spelling an operator.
 
-import { useCan } from "../app/capability";
 import { formatDateAbbrev, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
@@ -20,14 +19,15 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { fieldLabel, type VocabularyField } from "./filterdata";
+import { useCan } from "../lib/capability";
+import { fieldLabel, type VocabularyField } from "../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
   isRelativeDate,
   type Leaf,
   type Node,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
 import { useTagCatalog } from "./tagadmin.queries";
 
 /**

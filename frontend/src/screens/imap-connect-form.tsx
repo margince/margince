@@ -10,9 +10,9 @@ import { Heading } from "../design-system/heading";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import { CaptureNotice } from "./capture-notice";
-import { problemCodeOf, problemMessageOf, unwrap } from "./common";
-import "./common.css";
+import "../design-system/querystates.css";
 import "./imap-connect-form.css";
 
 // The IMAP connect flavor (RC-8/Task 6): the credential providers' first-

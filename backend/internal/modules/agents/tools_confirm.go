@@ -228,7 +228,7 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
 		Instead:       promoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},
@@ -322,7 +322,7 @@ func (t mergeRecords) Spec() mcp.ToolSpec {
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
 		Description:   mergeRecordsCopy.render(),
 		Instead:       mergeRecordsCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "mergeContact/mergeCompany",
 		InputSchema: schema(`{"type":"object","required":["record_type","source_id","target_id"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company"]},

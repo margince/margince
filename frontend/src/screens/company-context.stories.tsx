@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CompanyContextCard } from "./company-context";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyContextCard } from "./company-context";
 
 // CompanyContextCard sits above the rollout gate: it renders null once the
 // capability answer comes back `read_enabled: false`, so a granted rollout has

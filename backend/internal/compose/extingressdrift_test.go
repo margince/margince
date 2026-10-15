@@ -55,6 +55,9 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
 		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
+	"SenderAuthentication": "a receiving server's verdict read from the raw message, which a unit does not hand over. " +
+		"A unit able to state it could vouch for a From it never saw authenticated, and capture would read a forged colleague's mail as ours. " +
+		"The zero value authenticates nobody, which is the safe answer",
 	"WithheldParties": "the list the participant cap refused, from which capture binds the workspace's seats on an ATTESTED list only. " +
 		"A unit's record is never attested, so a withheld list it supplied would bind nobody; the field stays the core connectors' own",
 	"participantsAreProviderAttested": "the attestation that a PROVIDER enumerated the party list, which is what lets capture bind an invited colleague's user_id from it. " +
@@ -121,6 +124,11 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"core's MIME walk saw in a raw RFC822 message; a unit hands over an already-normalized " +
 		"record with no parts to walk, so it carried no calendar payload for anyone to have read. " +
 		"Publishing it would let a unit assert a parse it never performed",
+	"CalendarMethod": "empty is the right answer for a unit, for the reason HasCalendarPart's is: the method " +
+		"is read from a calendar part of a raw RFC822 message, and a unit hands over no parts to read it from",
+	"SentByColleague": "zero is the right answer for a unit. The sink sets it itself, from a From address " +
+		"that exactly matches a seat; a unit stating it would name a colleague as the author of a message " +
+		"the core never checked against its seats",
 })
 
 // TestThePublishedActivityMirrorsTheCoreOne is the same rule one level in. The

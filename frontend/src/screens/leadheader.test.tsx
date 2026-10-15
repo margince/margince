@@ -9,9 +9,9 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { LeadScreen } from "./leads";
 
 // The lead page's head, read the way contactpage.test.tsx reads the contact's:
@@ -136,6 +136,21 @@ describe("the lead page's head", () => {
     expect(within(strip).getByText("Webinar signup")).toBeTruthy();
     // The owner's Assign control stays reachable from the strip.
     expect(within(strip).getByRole("button", { name: "Assign" })).toBeTruthy();
+  });
+
+  it("names an imported lead's upload as its source, never the stamp", async () => {
+    stubLead({
+      source: "mirror:csv:pipedrive-export:lead:l-7",
+      source_label: null,
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    const strip = document.querySelector(".record-facts") as HTMLElement;
+    expect(
+      within(strip).getByText("Imported from pipedrive-export"),
+    ).toBeTruthy();
+    expect(strip.textContent).not.toMatch(/mirror/i);
   });
 
   it("puts a terminal status in its own tone", async () => {

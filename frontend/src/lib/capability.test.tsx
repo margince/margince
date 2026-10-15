@@ -1,0 +1,489 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../testing/mefixture";
+import {
+  grants,
+  type RbacAction,
+  type RbacObject,
+  useCan,
+  useCanMutate,
+  useCanUpsert,
+  useCanWrite,
+  useCanWriteRecord,
+  useHoldsOperatorSeat,
+  useRecordWriteRefusal,
+} from "./capability";
+import { useMe } from "./session";
+
+// useCan is the single place a permission question is answered, so every way
+// it can be wrong is a whole class of wrong buttons. The cases below are the
+// ones that would otherwise fail silently: an absent snapshot reading as
+// permission, a grant on one object leaking to another, and a grant on one
+// action leaking to its siblings.
+
+function stubMe(body: unknown, status = 200) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { "Content-Type": "application/json" },
+        }),
+    ),
+  );
+}
+
+function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
+// Waits for /me to SETTLE before reading the answer. Waiting on the answer
+// itself would be vacuous — useCan denies while loading, and `false` is a
+// perfectly good boolean, so a naive wait would read the pre-fetch value and
+// report every grant as absent.
+async function can(object: RbacObject, action: RbacAction): Promise<boolean> {
+  const { result } = renderHook(
+    () => ({ me: useMe(), allowed: useCan(object, action) }),
+    { wrapper },
+  );
+  await waitFor(() => {
+    expect(result.current.me.isPending).toBe(false);
+  });
+  return result.current.allowed;
+}
+
+// The three-axis answer for ONE record, asked the same way.
+async function canWriteRecord(
+  object: RbacObject,
+  record: { readonly writable?: boolean } | undefined,
+): Promise<boolean> {
+  const { result } = renderHook(
+    () => ({ me: useMe(), allowed: useCanWriteRecord(object, record) }),
+    { wrapper },
+  );
+  await waitFor(() => {
+    expect(result.current.me.isPending).toBe(false);
+  });
+  return result.current.allowed;
+}
+
+// The seat answer, asked the same way — the licensing axis on its own.
+async function mutate(): Promise<boolean> {
+  const { result } = renderHook(
+    () => ({ me: useMe(), allowed: useCanMutate() }),
+    { wrapper },
+  );
+  await waitFor(() => {
+    expect(result.current.me.isPending).toBe(false);
+  });
+  return result.current.allowed;
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("grants — the pure predicate the hook and the catalog share", () => {
+  // The hook is now a one-line wrapper over `grants`, and these cases are here
+  // because the settings catalog calls the same function OUTSIDE React. If the
+  // two ever diverge, the rail, the palette and search stop agreeing about which
+  // settings pages exist — which they demonstrably did when the company-page
+  // check was spelled twice.
+  //
+  // Every case drives the pure function directly. A hook test cannot prove the
+  // non-React caller sees the same answer, because it never exercises that path.
+
+  it("grants what the snapshot grants", () => {
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "read")).toBe(true);
+  });
+
+  it("denies an action the snapshot does not carry", () => {
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "update")).toBe(false);
+  });
+
+  it("denies an object absent from the snapshot", () => {
+    // The index signature types a miss as PRESENT, so this is the case that
+    // proves the optional chain rather than the type system is doing the work.
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "deal", "read")).toBe(false);
+  });
+
+  it("denies while /me has not resolved", () => {
+    // The state every surface is in on first paint. Answering true here would
+    // flash a settings entry and then withdraw it.
+    expect(grants(undefined, "contact", "read")).toBe(false);
+  });
+
+  it("gives the hook and the pure call the same answer", async () => {
+    // The claim the split exists to keep true, asserted rather than assumed:
+    // the hook goes through React and /me, the pure call does not, and both
+    // must land on the same boolean for the same snapshot.
+    const me = meFixture({ allow: { pipeline: ["read"], deal: ["update"] } });
+    stubMe(me);
+
+    for (const [object, action] of [
+      ["pipeline", "read"],
+      ["pipeline", "update"],
+      ["deal", "update"],
+      ["deal", "read"],
+    ] as const) {
+      expect(await can(object, action)).toBe(grants(me, object, action));
+    }
+  });
+});
+
+describe("useCan", () => {
+  it("grants exactly the action named, and none of its siblings", async () => {
+    // Same object, one action granted. A screen that asked for `delete` when
+    // it meant `update` — the custom-field archive trap — fails here.
+    stubMe(meFixture({ allow: { custom_field: ["update"] } }));
+
+    expect(await can("custom_field", "update")).toBe(true);
+    expect(await can("custom_field", "create")).toBe(false);
+    expect(await can("custom_field", "delete")).toBe(false);
+    expect(await can("custom_field", "read")).toBe(false);
+  });
+
+  it("does not leak a grant across objects", async () => {
+    // Divergence in the other axis. The seeded roles give admin and ops the
+    // same posture on nearly everything, so a fixture that granted both
+    // objects would pass even for a screen wired to the wrong one.
+    stubMe(
+      meFixture({
+        allow: { automation: ["update"], webhook_subscription: ["read"] },
+      }),
+    );
+
+    expect(await can("automation", "update")).toBe(true);
+    expect(await can("webhook_subscription", "update")).toBe(false);
+    expect(await can("webhook_subscription", "read")).toBe(true);
+    expect(await can("automation", "read")).toBe(false);
+  });
+
+  it("denies an object the snapshot never mentions", async () => {
+    // The server omits objects a role was never granted rather than sending
+    // an all-false grant. An absent key must deny, not read as unrestricted.
+    stubMe(meFixture({ allow: { automation: ["update"] } }));
+
+    expect(await can("webhook_subscription", "read")).toBe(false);
+  });
+
+  it("denies while /me is still loading", async () => {
+    // A hook that answered `true` before the snapshot arrived would flash
+    // every affordance on first paint and retract them a moment later.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+
+    const { result } = renderHook(() => useCan("automation", "update"), {
+      wrapper,
+    });
+
+    expect(result.current).toBe(false);
+  });
+
+  it("denies when the server sends no authorization at all", async () => {
+    // An older server, or one that failed to resolve the principal's grants.
+    // Absence is not permission.
+    const { authorization: _dropped, ...withoutAuthorization } = meFixture({
+      allow: { automation: ["update"] },
+    });
+    stubMe(withoutAuthorization);
+
+    expect(await can("automation", "update")).toBe(false);
+  });
+
+  it("denies when /me itself fails", async () => {
+    stubMe({ title: "Unauthorized" }, 401);
+
+    expect(await can("automation", "update")).toBe(false);
+  });
+});
+
+describe("useCanUpsert — the grant an upsert control can honestly ask for", () => {
+  // The rate sheets are one endpoint that inserts OR replaces, so the server
+  // admits on create-or-update and demands the specific verb inside the
+  // transaction. A control asking for `create` alone would hide the editor
+  // from a principal the server would have admitted.
+  async function upsert(object: RbacObject): Promise<boolean> {
+    const { result } = renderHook(
+      () => ({ me: useMe(), allowed: useCanUpsert(object) }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.allowed;
+  }
+
+  it("admits a principal holding only update, which create alone would hide", async () => {
+    stubMe(meFixture({ allow: { fx_rate: ["update"] } }));
+
+    expect(await upsert("fx_rate")).toBe(true);
+  });
+
+  it("admits a principal holding only create", async () => {
+    stubMe(meFixture({ allow: { ai_model_rate: ["create"] } }));
+
+    expect(await upsert("ai_model_rate")).toBe(true);
+  });
+
+  it("refuses a principal holding neither, however much else it reads", async () => {
+    stubMe(
+      meFixture({ allow: { fx_rate: ["read"], ai_model_rate: ["read"] } }),
+    );
+
+    expect(await upsert("fx_rate")).toBe(false);
+    expect(await upsert("ai_model_rate")).toBe(false);
+  });
+
+  it("still clamps on the licensing seat — unlike the nav predicate", async () => {
+    // This one DOES fold the seat in: it gates a mutating control, not a page.
+    stubMe(
+      meFixture({ seat: "read", allow: { fx_rate: ["create", "update"] } }),
+    );
+
+    expect(await upsert("fx_rate")).toBe(false);
+  });
+});
+
+describe("useCanMutate / useCanWrite — the licensing seat", () => {
+  // The seat is a SECOND axis the server clamps on the HTTP method, before
+  // RBAC. A grant alone is not permission to write, and folding the two into
+  // one answer is wrong in both directions.
+  async function write(object: RbacObject, action: RbacAction) {
+    const { result } = renderHook(
+      () => ({ me: useMe(), allowed: useCanWrite(object, action) }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.allowed;
+  }
+
+  it("permits mutation only on a full seat", async () => {
+    stubMe(meFixture({ seat: "full" }));
+    expect(await mutate()).toBe(true);
+  });
+
+  it("refuses a read seat even where the grant allows the action", async () => {
+    stubMe(meFixture({ seat: "read", allow: { automation: ["update"] } }));
+
+    // The grant is genuinely held — this is the seat denying, not RBAC.
+    expect(await can("automation", "update")).toBe(true);
+    expect(await mutate()).toBe(false);
+    expect(await write("automation", "update")).toBe(false);
+  });
+
+  it("refuses a seat the snapshot never states", async () => {
+    // Dropping a required field must not buy the ability to mutate.
+    const me = meFixture({ allow: { automation: ["update"] } });
+    const { seat_type: _dropped, ...authorization } = me.authorization ?? {
+      seat_type: "full" as const,
+      objects: {},
+    };
+    stubMe({ ...me, authorization });
+
+    expect(await mutate()).toBe(false);
+    expect(await write("automation", "update")).toBe(false);
+  });
+
+  it("refuses a seat it does not recognize", async () => {
+    const me = meFixture({ allow: { automation: ["update"] } });
+    stubMe({
+      ...me,
+      authorization: { ...me.authorization, seat_type: "enterprise" },
+    });
+
+    expect(await mutate()).toBe(false);
+  });
+
+  it("still requires the grant on a full seat", async () => {
+    stubMe(meFixture({ seat: "full", allow: { automation: ["read"] } }));
+
+    expect(await mutate()).toBe(true);
+    expect(await write("automation", "update")).toBe(false);
+  });
+});
+
+describe("useHoldsOperatorSeat — the Admin settings section's gate", () => {
+  // The one predicate that decides whether a reader is offered the installation's
+  // configuration at all, so both of its answers are worth pinning: an operator is
+  // admin OR ops, and every other seeded role is outside it. A role list is text
+  // the server sends, so "does this set contain an operator" is exactly the kind
+  // of question that fails silently when it drifts — the section would simply
+  // appear for a rep, and no other assertion in the app would move.
+  //
+  // The consent predicate that used to be asked alongside this one is gone: it
+  // was interim, waiting for `consent_config` to reach the shipped vocabulary,
+  // and the purposes card asks `useCan("consent_config", "create")` now.
+  async function operator(): Promise<boolean> {
+    const { result } = renderHook(
+      () => ({
+        me: useMe(),
+        seat: useHoldsOperatorSeat(),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.seat;
+  }
+
+  it("admits an admin", async () => {
+    stubMe(meFixture({ roles: ["admin"] }));
+
+    expect(await operator()).toBe(true);
+  });
+
+  it("admits an ops seat, which the server serves the same operator surfaces", async () => {
+    stubMe(meFixture({ roles: ["ops"] }));
+
+    expect(await operator()).toBe(true);
+  });
+
+  it.each(["manager", "rep", "read_only"])(
+    "refuses a seeded %s, however much it is granted",
+    async (role) => {
+      // Grants deliberately present: the seat is not a grant question, and a
+      // predicate that consulted the objects would admit all three — every seeded
+      // role holds `automation:read`, which is what used to open the AI page for
+      // them.
+      stubMe(meFixture({ roles: [role], allow: { automation: ["read"] } }));
+
+      expect(await operator()).toBe(false);
+    },
+  );
+
+  it("refuses a principal the server sends no role for at all", async () => {
+    // Absence is not authority, and what this gates is the installation's own
+    // configuration — the one place where reading an empty list as permissive
+    // would be worst.
+    stubMe(meFixture({ roles: [] }));
+
+    expect(await operator()).toBe(false);
+  });
+});
+
+describe("useCanWriteRecord", () => {
+  // Each case holds the object grant AND a full seat, so the only thing moving
+  // is the row. A test that varied two axes at once could not say which one
+  // produced the answer.
+  const granted = { allow: { company: ["read", "update"] } } as const;
+
+  it("admits a record the server marked writable", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("company", { writable: true })).toBe(true);
+  });
+
+  it("refuses a record the server marked not writable, grant and seat notwithstanding", async () => {
+    // The case the whole field exists for: a rep holds company.update on
+    // the OBJECT and still may not edit a colleague's company.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("company", { writable: false })).toBe(false);
+  });
+
+  it("refuses a record carrying no writable flag at all", async () => {
+    // A server too old to send it, or a projection that does not carry it.
+    // Absence is not authority — the same fail-closed answer every predicate
+    // in this file gives.
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("company", {})).toBe(false);
+  });
+
+  it("refuses while the record has not arrived", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await canWriteRecord("company", undefined)).toBe(false);
+  });
+
+  it("refuses a writable record when the OBJECT grant is missing", async () => {
+    // The row half cannot buy the object half. A seat with no
+    // company.update writes no company, however the row is marked.
+    stubMe(meFixture({ allow: { company: ["read"] } } as const));
+
+    expect(await canWriteRecord("company", { writable: true })).toBe(false);
+  });
+});
+
+describe("useRecordWriteRefusal — the sentence a record page's verbs share", () => {
+  const granted = { allow: { deal: ["read", "update"] } } as const;
+  const reasons = {
+    archived: "This deal is archived.",
+    notYours: "You cannot change this deal.",
+  };
+
+  async function refusal(
+    record: Parameters<typeof useRecordWriteRefusal>[1],
+  ): Promise<string | undefined> {
+    const { result } = renderHook(
+      () => ({
+        me: useMe(),
+        reason: useRecordWriteRefusal("deal", record, reasons),
+      }),
+      { wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.me.isPending).toBe(false);
+    });
+    return result.current.reason;
+  }
+
+  it("refuses nothing on a live record the caller may write", async () => {
+    stubMe(meFixture(granted));
+
+    expect(
+      await refusal({ writable: true, archived_at: null }),
+    ).toBeUndefined();
+  });
+
+  it("names the archive first, whatever the caller's authority", async () => {
+    // The reason a reader can act on wins over the one they cannot.
+    stubMe(meFixture(granted));
+
+    expect(
+      await refusal({ writable: false, archived_at: "2026-07-01T00:00:00Z" }),
+    ).toBe(reasons.archived);
+  });
+
+  it("refuses a colleague's record with the ownership sentence", async () => {
+    // The case the whole hook exists for: the grant is held on the object and
+    // the row is somebody else's, which only the server's flag can say.
+    stubMe(meFixture(granted));
+
+    expect(await refusal({ writable: false })).toBe(reasons.notYours);
+  });
+
+  it("refuses a writable row when the object grant is missing", async () => {
+    stubMe(meFixture({ allow: { deal: ["read"] } } as const));
+
+    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+  });
+
+  it("refuses a writable row on a read seat", async () => {
+    stubMe(meFixture({ ...granted, seat: "read" }));
+
+    expect(await refusal({ writable: true })).toBe(reasons.notYours);
+  });
+
+  it("refuses a record carrying no writable flag, failing closed", async () => {
+    stubMe(meFixture(granted));
+
+    expect(await refusal({})).toBe(reasons.notYours);
+  });
+});

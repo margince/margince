@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
@@ -19,12 +19,26 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "../lib/undoableremoval";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
 // contact reads, an address they forward from.
@@ -77,30 +91,87 @@ function useAddIdentity() {
   });
 }
 
-function useRemoveIdentity() {
+// The way back from one removal is the id it took away.
+type Withdrawal = Readonly<{ id: string }>;
+
+// The server words these for an API reader; the reader gets the catalog's.
+const RESTORE_REFUSALS = new Map<string, MessageKey>([
+  ["not_found", "ownerIdentities.restoreGone"],
+  ["removal_moved_on", "ownerIdentities.restoreMovedOn"],
+  ["identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+]);
+
+// On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
+function useRemoveIdentity(outcome: MutationOutcome<Withdrawal | null>) {
   const queryClient = useQueryClient();
   return useMutation({
-    // The id is a VARIABLE, so the press belongs to the render the reader saw
-    // (frontend/AGENTS.md, mutation-variable-coverage).
-    mutationFn: async (id: string) => {
+    mutationFn: async (identity: OwnerIdentity): Promise<Withdrawal> => {
       unwrap(
         await api.DELETE("/capture/owner-identities/{id}", {
-          params: { path: { id } },
+          params: { path: { id: identity.id } },
         }),
       );
-      return id;
+      return { id: identity.id };
     },
-    onSuccess: () => {
+    onError: outcome.onError,
+    onSuccess: (withdrawal) => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onSuccess(withdrawal);
     },
   });
+}
+
+function useRestoreIdentity(outcome: MutationOutcome<Withdrawal>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (withdrawal: Withdrawal) => {
+      unwrap(
+        await api.POST("/capture/owner-identities/{id}/restore", {
+          params: { path: { id: withdrawal.id } },
+        }),
+      );
+    },
+    // A refusal can mean the address is already back, so the list reads again.
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onError(error);
+    },
+    onSuccess: (_, withdrawal) => {
+      queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onSuccess(withdrawal);
+    },
+  });
+}
+
+function useIdentityRemoval(removed: string) {
+  const t = useT();
+  const toasts = useUndoableRemoval<Withdrawal>({
+    removed,
+    restored: t("ownerIdentities.restoredToast"),
+    restoreRefused: (error) => {
+      const key = RESTORE_REFUSALS.get(problemCodeOf(error) ?? "");
+      return key ? t(key) : problemMessageOf(error, t);
+    },
+  });
+  const restore = useRestoreIdentity(toasts.restored);
+  return useRemoveIdentity(
+    toasts.removed((withdrawal) => restore.mutate(withdrawal)),
+  );
 }
 
 export function OwnerIdentitiesCard() {
   const t = useT();
   const query = useOwnerIdentities();
-  const remove = useRemoveIdentity();
+  const removeTyped = useIdentityRemoval(t("ownerIdentities.removedToast"));
+  // A withdrawn delivered-to alias is refused from then on, and the notice says so.
+  const removeLearned = useIdentityRemoval(
+    t("ownerIdentities.removedLearnedToast"),
+  );
+  const removing = [removeTyped, removeLearned].find(
+    (removal) => removal.isPending,
+  )?.variables?.id;
   const [declaring, setDeclaring] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   return (
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
@@ -111,7 +182,7 @@ export function OwnerIdentitiesCard() {
           label={t("ownerIdentities.addLabel")}
           description={t("ownerIdentities.addDescription")}
           control={
-            <Button onClick={() => setDeclaring(true)}>
+            <Button ref={addVerb} onClick={() => setDeclaring(true)}>
               {t("ownerIdentities.add")}
             </Button>
           }
@@ -126,22 +197,17 @@ export function OwnerIdentitiesCard() {
         {(list) => (
           <IdentityRows
             list={list.data}
-            pending={remove.isPending}
-            onRemove={(id) => remove.mutate(id)}
+            removing={removing}
+            landing={() => addVerb.current}
+            onRemove={(identity) =>
+              (identity.source === "delivered_to"
+                ? removeLearned
+                : removeTyped
+              ).mutate(identity)
+            }
           />
         )}
       </QueryGate>
-      {remove.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("ownerIdentities.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
       {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );
@@ -172,21 +238,19 @@ function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
 }
 
 /**
- * One declared address per row: what it names on the left, whether it is an
- * address or a whole domain as the row's answer, and the verb that withdraws it
- * at the right.
- *
- * The same row language the exclusions card uses, because a reader auditing
- * what binds their mailbox travels one column across both.
+ * One declared address per row, with its kind and date under it. The verb at
+ * the end withdraws it.
  */
 function IdentityRows({
   list,
-  pending,
+  removing,
+  landing,
   onRemove,
 }: Readonly<{
   list: OwnerIdentity[];
-  pending: boolean;
-  onRemove: (id: string) => void;
+  removing: string | undefined;
+  landing: () => HTMLElement | null;
+  onRemove: (identity: OwnerIdentity) => void;
 }>) {
   const t = useT();
   if (list.length === 0) {
@@ -200,27 +264,56 @@ function IdentityRows({
   }
   return (
     <SettingList bleed="records" testId="owner-identities-list">
-      {list.map((identity) => {
-        const learned = learnedNote(identity.source);
-        return (
-          <SettingRow
-            key={identity.id}
-            label={identity.value}
-            description={learned === null ? undefined : t(learned)}
-            value={t(kindLabel[identity.kind])}
-            control={
-              <IconAction
-                variant="ghost"
-                disabled={pending}
-                label={t("ownerIdentities.remove", { value: identity.value })}
-                icon={<Trash2 aria-hidden />}
-                onClick={() => onRemove(identity.id)}
-              />
-            }
-          />
-        );
-      })}
+      {list.map((identity) => (
+        <IdentityRow
+          key={identity.id}
+          identity={identity}
+          pending={removing === identity.id}
+          landing={landing}
+          onRemove={onRemove}
+        />
+      ))}
     </SettingList>
+  );
+}
+
+function IdentityRow({
+  identity,
+  pending,
+  landing,
+  onRemove,
+}: Readonly<{
+  identity: OwnerIdentity;
+  pending: boolean;
+  landing: () => HTMLElement | null;
+  onRemove: (identity: OwnerIdentity) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const verbs = useRowHandoff(landing);
+  const learned = learnedNote(identity.source);
+  return (
+    <SettingRow
+      label={identity.value}
+      description={
+        <span className="owner-identity-caption">
+          <span>{t(kindLabel[identity.kind])}</span>
+          <span>{formatDate(identity.created_at, locale, viewerZone())}</span>
+          {learned !== null && <span>{t(learned)}</span>}
+        </span>
+      }
+      control={
+        <span className="cell-actions" ref={verbs}>
+          <IconAction
+            variant="ghost"
+            pending={pending}
+            label={t("ownerIdentities.remove", { value: identity.value })}
+            icon={<Trash2 aria-hidden />}
+            onClick={() => onRemove(identity)}
+          />
+        </span>
+      }
+    />
   );
 }
 

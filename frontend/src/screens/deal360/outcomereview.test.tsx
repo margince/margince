@@ -4,8 +4,8 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import { OutcomeReviewPanel } from "./outcomereview";
 
 // The rule this panel turns on is WHICH closing a review is about, and it is

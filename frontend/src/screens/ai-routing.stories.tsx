@@ -4,12 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { AdapterFields, EmbeddingWidthField } from "./ai-routing-fields";
 import { TiersTable } from "./ai-routing-lane";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's tier→model binding: which vendor serves each cost rung,
 // and the egress posture that constrains what a rung may be bound to.
@@ -150,10 +154,13 @@ function story(
   vendors: Record<string, unknown> = VENDOR_LIST,
   aiStatus: unknown = status,
   health: components["schemas"]["AiHealth"] = HEALTH,
+  served: string[] = ["gemini", "ollama"],
 ) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
+      "GET /ai/provider-health": () =>
+        jsonResponse({ providers: [], configured: served }),
       "GET /ai/routing": () => {
         const response = jsonResponse(routing);
         response.headers.set("ETag", '"routing-v1"');
@@ -205,13 +212,13 @@ function story(
   };
 }
 
-const meta: Meta<typeof AiRoutingCard> = {
+const meta = {
   title: "Settings/AI/AI models/Model tiers",
   component: AiRoutingCard,
   subcomponents: { AdapterFields, EmbeddingWidthField, TiersTable },
-};
+} satisfies Meta<typeof AiRoutingCard>;
 export default meta;
-type Story = StoryObj<typeof AiRoutingCard>;
+type Story = StoryObj<typeof meta>;
 
 // Every rung bound, mixing a local provider on the cheapest one — the shape a
 // working installation is in, and the one where tier ORDER matters: the ladder
@@ -328,15 +335,40 @@ export const UnkeyedAndFailing: Story = {
   },
 };
 
+// The same unkeyed tiers on a process that fell back to the offline fake.
+// They answer with test text, so the note says so instead of "cannot answer".
+export const AnsweringFromTestProvider: Story = {
+  render: story(
+    {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+        local_large: { provider: "anthropic", model: "claude-opus-4-1" },
+      },
+    },
+    MANAGER,
+    VENDOR_LIST,
+    status,
+    HEALTH,
+    ["fake"],
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      "Tiers answer from the test provider",
+    );
+  },
+};
+
 // One lane's editor, open: provider, model and the vendor's own list. It owns
 // that one binding and saves it alone.
 export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      (await canvas.findAllByRole("button", { name: /^edit\b/i }))[0],
-    );
+    const [edit] = await canvas.findAllByRole("button", { name: /^edit\b/i });
+    if (!edit) throw new Error("no lane offers an edit");
+    await userEvent.click(edit);
   },
 };
 

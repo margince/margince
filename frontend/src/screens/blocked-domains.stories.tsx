@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { BlockedDomainsCard } from "./blocked-domains";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BlockedDomainsCard } from "./blocked-domains";
 
 // The three sources side by side, because telling them apart is the card's whole
 // job: a model verdict, a heuristic, and a contact who deliberately let a domain
@@ -18,6 +19,8 @@ const BY_VERDICT = {
   domain: "substack.example",
   admission: "suppressed",
   reason: "a newsletter platform, not a customer",
+  reason_code: "bulk_sender",
+  sender_kind: "newsletter",
   source: "verdict",
   decided_at: "2026-07-30T09:12:00Z",
   company_id: null,
@@ -26,6 +29,7 @@ const BY_HEURISTIC = {
   domain: "expensify.example",
   admission: "suppressed",
   reason: "bulk sender: no reply address, list-unsubscribe header",
+  reason_code: "bulk_sender",
   source: "heuristic",
   decided_at: "2026-08-02T14:40:00Z",
   company_id: null,
@@ -34,9 +38,23 @@ const BY_HUMAN = {
   domain: "mckinsey.example",
   admission: "admitted",
   reason: "they became a client in July",
+  reason_code: "stated",
+  note: "They became a client in July, after the newsletter publisher was acquired by a group we already sell to.",
   source: "human",
   decided_at: "2026-08-11T07:05:00Z",
   company_id: "018f3a1b-0000-7000-8000-00000000c001",
+  company_name: "McKinsey and Company",
+};
+// A colleague made the company by hand, which let the domain in.
+const BY_COLLEAGUE = {
+  domain: "a-very-long-registrable-domain-for-a-client.example",
+  admission: "admitted",
+  reason: "a company was created on this domain",
+  reason_code: "company_created",
+  source: "human",
+  decided_at: "2026-08-12T10:00:00Z",
+  company_id: "018f3a1b-0000-7000-8000-00000000c002",
+  company_name: "Brandt Automotive Zulieferteile GmbH und Co. KG",
 };
 // The two open questions that reach this list: the ones belonging to nobody.
 // Nothing decided them, their retry cursor is cleared, and no colleague's queue
@@ -47,6 +65,7 @@ const UNEVIDENCED = {
   admission: "undecided",
   reason:
     "Nothing on the site named a company, and the sender's name did not explain the domain.",
+  reason_code: "unevidenced",
   source: "unevidenced",
   decided_at: "2026-08-14T11:20:00Z",
   company_id: null,
@@ -56,6 +75,7 @@ const STALE = {
   admission: "undecided",
   reason:
     "The newest mail from this domain is too old to trust today's site as evidence about it.",
+  reason_code: "stale_evidence",
   source: "stale_evidence",
   decided_at: "2026-08-15T06:40:00Z",
   company_id: null,
@@ -93,7 +113,29 @@ export default meta;
 type Story = StoryObj<typeof BlockedDomainsCard>;
 
 export const Populated: Story = {
-  render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN], 3, OPS),
+  render: story([BY_VERDICT, BY_HEURISTIC, BY_HUMAN, BY_COLLEAGUE], 4, OPS),
+};
+
+// The row's verbs sit behind one menu at a fixed place; an open question
+// offers only a re-ask.
+export const RowMenu: Story = {
+  render: story([UNEVIDENCED, BY_HUMAN], 2, OPS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for pwc.example" }),
+    );
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Ask again",
+      }),
+    ).toBeVisible();
+    await expect(
+      within(canvasElement.ownerDocument.body).queryByRole("button", {
+        name: "Allow",
+      }),
+    ).toBeNull();
+  },
 };
 
 // Decisions and ownerless open questions in one list, which is the case the card
@@ -128,5 +170,5 @@ export const ReadOnly: Story = {
 export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([UNEVIDENCED, BY_HEURISTIC, BY_HUMAN], 3, OPS),
+  render: story([UNEVIDENCED, BY_HEURISTIC, BY_HUMAN, BY_COLLEAGUE], 4, OPS),
 };

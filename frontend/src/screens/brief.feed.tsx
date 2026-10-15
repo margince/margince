@@ -3,16 +3,17 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { identity, Triage } from "./brief.focus";
+import { laneUnread } from "./brief.readings.honesty";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { worklistLaneHref } from "./worklist.header";
 import {
   type Worklist,
@@ -57,9 +58,7 @@ export function BriefFeed({
   );
   const lead = rows[at];
   const partial = Boolean(
-    !day?.focus ||
-      day?.readings?.more_available ||
-      day?.sources_unavailable?.length,
+    !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
     <section id="brief-today">

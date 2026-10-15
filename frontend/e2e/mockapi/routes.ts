@@ -10,6 +10,7 @@ import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
 import {
+  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -21,13 +22,17 @@ import {
   automationCatalog,
   brandt,
   captureActivity,
+  captureHealth,
+  extensionIngestHealth,
   installationJurisdiction,
   jobHealth,
   knowledgeCorpora,
   passports,
+  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
+import { importRoutes } from "./imports";
 import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
@@ -44,6 +49,7 @@ const empty = reply(page([]));
 // above any prefix row that would also match it.
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
+  ...importRoutes,
   { path: "/me/working-hours", handle: reply(session.workingHours) },
   {
     method: "GET",
@@ -98,6 +104,12 @@ export const routes: readonly MockRoute[] = [
   { path: "/leads/l-new", handle: reply(records.createdLead) },
   { method: "POST", path: "/deals", handle: records.createDeal },
   { path: "/contacts/p-anna", handle: reply(anna) },
+  { path: "/contacts/p-imported", handle: reply(records.importedContact) },
+  {
+    method: "GET",
+    path: "/contacts/p-imported/360",
+    handle: reply(records.importedContact360),
+  },
   {
     method: "GET",
     path: /^\/contacts\/[^/]+\/360$/,
@@ -124,6 +136,12 @@ export const routes: readonly MockRoute[] = [
     handle: reply({ state: [], events: [] }),
   },
   { method: "GET", path: "/companies", handle: reply(page([brandt])) },
+  {
+    method: "GET",
+    path: "/companies/o-imported/360",
+    handle: reply(records.importedCompany360),
+  },
+  { path: "/companies/o-imported", handle: reply(records.importedCompany) },
   {
     method: "GET",
     path: /^\/companies\/[^/]+\/360$/,
@@ -197,6 +215,11 @@ export const routes: readonly MockRoute[] = [
     method: "POST",
     path: (path) => path.startsWith("/approvals/"),
     handle: work.decideApproval,
+  },
+  {
+    method: "GET",
+    path: "/activities/a-quarterly",
+    handle: reply(insight.quarterlyReview),
   },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {
@@ -288,6 +311,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },
@@ -296,6 +320,12 @@ export const routes: readonly MockRoute[] = [
   { method: "GET", path: "/ai/task-overrides", handle: reply({}) },
   { path: "/ai/routing/schema", handle: reply({}) },
   { path: "/admin/job-health", handle: reply(jobHealth) },
+  { path: "/admin/capture-health", handle: reply(captureHealth) },
+  { path: "/admin/recovery-health", handle: reply(recoveryHealth) },
+  {
+    path: "/admin/extension-ingest-health",
+    handle: reply(extensionIngestHealth),
+  },
   { path: "/capture/settings", handle: capture.captureSettings },
   { path: "/capture/senders", handle: capture.senders },
   {

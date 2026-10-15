@@ -41,7 +41,7 @@
       // paths are in the merged contract above and nowhere else. So a screen
       // for a unit whose fragment did not merge does not typecheck HERE — the
       // route half of the ordering constraint, enforced at compile time (the
-      // RBAC-object half is not; see src/app/capability.ts).
+      // RBAC-object half is not; see src/lib/capability.ts).
       "@composition/screens": ["../build/composition/frontend/extscreens.gen"],
       "@composition/copy": ["../build/composition/frontend/extlocales.gen"],
       // Every enabled unit's screen package, by the name the generated registry

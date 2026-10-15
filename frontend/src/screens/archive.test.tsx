@@ -12,8 +12,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { throwProblem } from "../lib/problem";
 import { ArchiveAction } from "./archive";
-import { throwProblem } from "./common";
 
 // The shared archive confirm. A refused archive leaves the dialog exactly as it
 // was apart from one line of red text, so that line is the only thing that

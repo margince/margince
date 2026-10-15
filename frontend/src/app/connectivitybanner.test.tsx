@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { type Connectivity, subscribeConnectivity } from "./connectivity";
+import { type Connectivity, subscribeConnectivity } from "../lib/connectivity";
 import { ConnectivityBanner, ConnectivityNotice } from "./connectivitybanner";
 import { createQueryClient } from "./queryclient";
 

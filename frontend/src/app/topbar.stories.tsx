@@ -6,17 +6,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Card } from "../design-system/atoms";
-import { LIVE_ID, liveList } from "../screens/lists.fixtures";
-import { LISTS_KEY, type List } from "../screens/lists.queries";
+import { LISTS_KEY, type List } from "../lib/lists.queries";
+import type { Route } from "../lib/router";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
   WithInstallationBrand,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import type { NavCounts, NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
-import type { Route } from "./router";
 import { PageTitle, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
 

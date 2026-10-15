@@ -3,7 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 /**
  * Every pipeline, stages included, in the server's order.

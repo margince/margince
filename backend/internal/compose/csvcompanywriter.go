@@ -3,7 +3,7 @@
 
 package compose
 
-// The company object's own claimed-key check.
+// The company object's own claimed-key checks, and the LinkedIn one a lead shares.
 //
 // A domain names ONE company across the estate, the same way an email names one
 // contact, so the preview has to answer the same question the contact path does:
@@ -11,13 +11,16 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // companyDomainAlreadyHeld answers whether the estate already holds this row's
@@ -50,6 +53,40 @@ func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration
 			domain).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)
+	}
+	return held, nil
+}
+
+// linkedInClaimed reports whether the store refused a write because another
+// live company or lead holds its LinkedIn URL.
+func linkedInClaimed(err error) bool {
+	if _, ok := errors.AsType[*contacts.DuplicateCompanyLinkedInError](err); ok {
+		return true
+	}
+	_, ok := errors.AsType[*contacts.DuplicateLeadLinkedInError](err)
+	return ok
+}
+
+// linkedInAlreadyHeld is linkedInClaimed asked before the write, so the
+// preview skips the row the commit will. A contact's handle is not a key.
+func (w *csvWriters) linkedInAlreadyHeld(ctx context.Context, typed map[string]any) (bool, error) {
+	url, ok := typed[fieldLinkedIn].(string)
+	if !ok || w.object == migration.ObjectContact {
+		return false, nil
+	}
+	var held bool
+	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if w.object == migration.ObjectLead {
+			var err error
+			_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL)`,
+			url).Scan(&held)
+	})
+	if err != nil {
+		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
 	}
 	return held, nil
 }

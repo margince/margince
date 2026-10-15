@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { meFixture } from "../../src/app/mefixture";
+import { defaultAgentAllowances } from "../../src/screens/agentallowances.fixtures";
 import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
+import { meFixture } from "../../src/testing/mefixture";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
 import { type Handler, notFound } from "./server";
 
@@ -99,6 +100,7 @@ export const installationSettings = {
   max_upload_bytes: 25_000_000,
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
+  agent_allowances: defaultAgentAllowances,
   // One provider in each state, so the sign-in methods card draws both rows.
   sign_in_providers: [
     { key: "google", label: "Google", enabled: true },

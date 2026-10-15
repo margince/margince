@@ -10,10 +10,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { objectLabel } from "../format/rbacobjects";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ExtensionAccessCard, objectLabel } from "./extension-access";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { ExtensionAccessCard } from "./extension-access";
 import { rolesKey } from "./roles.queries";
 
 // The extension-access card renders the composed unit inventory and one
@@ -31,10 +32,9 @@ import { rolesKey } from "./roles.queries";
 // STRING the header carries.
 
 // The SPA's generated registry, stubbed at the alias rather than at
-// app/extensions: the lookup under test IS findExtension, and the vanilla
-// registry this suite compiles against is empty by construction, so the "unit
-// has a page" case can only be reached by handing the registry the shape the
-// generator emits.
+// lib/extensions, because the lookup under test is findExtension. The vanilla
+// registry this suite compiles against is empty by construction. So the "unit
+// has a page" case needs the registry handed the shape the generator emits.
 //
 // Three units, and the three cases are deliberately different. `notes` has a
 // descriptor and operations, so it has a page. `quiet` has a descriptor and NO
@@ -881,15 +881,6 @@ describe("ExtensionAccessCard unit identity", () => {
 });
 
 describe("ExtensionAccessCard object matrices", () => {
-  it("names an object by its key less the unit's prefix, in sentence case", () => {
-    expect(objectLabel("openchannel", "ext_openchannel_endpoint")).toBe(
-      "Endpoint",
-    );
-    expect(objectLabel("notes", "ext_notes_signing_key")).toBe("Signing key");
-    expect(objectLabel("notes", "ext_other_thing")).toBe("Other thing");
-    expect(objectLabel("notes", "ext_notes_")).toBe("Notes");
-  });
-
   it("warns once per unit, naming every object no role can read", async () => {
     vi.stubGlobal(
       "fetch",

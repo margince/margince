@@ -60,8 +60,8 @@ func TestANestedCreateNamesTheRecordItHangsOff(t *testing.T) {
 
 // A flat create has no parent, and inventing one would be worse than silence.
 func TestAFlatCreateNamesNoParent(t *testing.T) {
-	pol := agentPolicy{Op: "createCustomField", Tool: "create_record", RecordType: recordTypeCustomField}
-	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/custom-fields"), []byte(`{"key":"industry"}`))
+	pol := agentPolicy{Op: "createProduct", Tool: "create_record", RecordType: recordTypeProduct}
+	got := restSummary(inEnglish, pol, summaryRequest("POST", "/v1/products"), []byte(`{"name":"Onboarding package"}`))
 	if strings.Contains(got, "under=") {
 		t.Errorf("summary %q claims a parent a top-level create does not have", got)
 	}

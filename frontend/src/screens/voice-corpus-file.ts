@@ -117,7 +117,7 @@ function wordBodyText(xml: string): string {
   const out: string[] = [];
   let textStart = -1;
   for (const tag of xml.matchAll(WORD_TEXT_TAG)) {
-    const [whole, closing, name, selfClosing] = tag;
+    const [whole, closing, name = "", selfClosing] = tag;
     if (name !== "w:t") {
       out.push(breakFor(name, closing === "/"));
       continue;

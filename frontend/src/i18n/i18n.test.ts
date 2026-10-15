@@ -27,6 +27,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
+  // Audit filter examples in the stored spelling the filter matches.
+  "settings.auditActorExample",
+  "settings.auditEntityExample",
+  // A file name the server sends, so every catalog shows the same one.
+  "import.result.problemsFile",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
@@ -83,6 +88,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Temporary, with the badge that renders it: app/betabadge.tsx names this
   // entry among the things its deletion takes.
   "shell.beta",
+  // "Core" is the product's name for the shared codebase, which every catalog
+  // already uses as a term of art (ob.core.*).
+  "shell.coreVersion",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.
@@ -190,6 +198,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "auth.title",
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
+  "board.count_one",
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
@@ -238,6 +247,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.rail.email",
   "history.field.email",
   "settings.voice.register.email",
+  "settings.voice.kind.email",
   "product.sku",
   "compose.cc",
   "compose.bcc",
@@ -261,7 +271,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
   "aicalls.ms",
-  "voice.history.versionRow",
+  "operations.reading",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
   "share.ceiling.post",

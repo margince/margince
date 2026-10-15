@@ -1,6 +1,6 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf } from "./common";
+import { problemCodeOf } from "../lib/problem";
 
 // The retention-authoring screen's pure half: the authorable vocabulary, the
 // three states a stored policy can be in, and the two server refusals this
@@ -27,7 +27,7 @@ export type RetentionPolicy = components["schemas"]["RetentionPolicy"];
 // would accept. SCOPE_LABEL_KEYS below IS an exhaustive Record over the same
 // union, and retention.logic.test.ts asserts this array covers its keys — that
 // test is the gate, not this comment.
-export const RETENTION_SCOPES: readonly RetentionScope[] = [
+export const RETENTION_SCOPES = [
   "lead/unconverted",
   "activity",
   "activity/transcript",
@@ -38,7 +38,7 @@ export const RETENTION_SCOPES: readonly RetentionScope[] = [
   "raw_capture",
   "deal_risk_day",
   "report_edition",
-];
+] as const satisfies readonly RetentionScope[];
 
 // Ordered by how much they take away — archive keeps the record, erase does
 // not. The order is the reader's warning.

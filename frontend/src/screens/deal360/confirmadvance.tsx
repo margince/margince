@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { components } from "../../api/schema";
-import { useAgentTierMap, verbTier } from "../../app/autonomy";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { problemFieldErrorsOf } from "../common";
+import { useAgentTierMap, verbTier } from "../../lib/autonomy";
+import { problemFieldErrorsOf } from "../../lib/problem";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
+import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -100,6 +101,9 @@ export function ConfirmAdvanceModal({
   const [wonReason, setWonReason] = useState<WonReason | "">("");
   const [wonDetail, setWonDetail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Read only while a close is being asked about; every move this dialog
+  // confirms is to a won or lost stage.
+  const closeTasks = useCloseTasks(pending?.dealId ?? null);
   // The deal this dialog has been told has no contract behind it, pinned to the
   // exact attempt that was refused.
   //
@@ -127,6 +131,7 @@ export function ConfirmAdvanceModal({
     setWonReason("");
     setWonDetail("");
     setRefusedDealId(null);
+    closeTasks.reset();
     onClose();
   };
 
@@ -140,11 +145,26 @@ export function ConfirmAdvanceModal({
     pending?.toStage.semantic === "won" && refusedDealId === pending.dealId;
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
+  // Said beside Confirm rather than left to a grey button: the reader is told
+  // which answer the close still needs.
+  const unanswered = (() => {
+    if (needsLostReason && lostReason.trim() === "") {
+      return t("deals.lostReasonNeeded");
+    }
+    if (needsWonReason && wonReason === "") {
+      return t("deals.winReasonNeeded");
+    }
+    return needsWonReason && detailMissing
+      ? t("deals.winDetailNeeded")
+      : undefined;
+  })();
+  const refusal = unanswered ?? closeTasks.refusal;
 
   const confirm = async (asked: PendingAdvance) => {
     setSubmitting(true);
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
+    const tasksToComplete = closeTasks.chosen;
     const why = closeReason({
       wonAsked: needsWonReason,
       lost: lostReason,
@@ -169,8 +189,18 @@ export function ConfirmAdvanceModal({
       }
     } else {
       onClosed?.(result, why);
+      // Only after the close landed: a refused close completes nothing.
+      void closeTasks.complete(tasksToComplete);
     }
     dismiss();
+  };
+
+  // Enter in a reason field closes the deal only when Confirm would.
+  const submit = (event?: FormEvent) => {
+    event?.preventDefault();
+    if (pending && refusal === undefined && !submitting) {
+      void confirm(pending);
+    }
   };
 
   return (
@@ -182,48 +212,46 @@ export function ConfirmAdvanceModal({
       }
       tier={verbTier("progress_deal", tierMap)}
       confirmLabel={t("deals.confirm")}
-      confirmDisabled={
-        (needsLostReason && lostReason.trim() === "") ||
-        (needsWonReason && (wonReason === "" || detailMissing))
-      }
+      confirmReason={refusal}
       pending={submitting}
-      onConfirm={() => {
-        if (pending) {
-          void confirm(pending);
-        }
-      }}
+      onConfirm={submit}
     >
       {shown && (
         <>
           <p className="t-caption">
             {t("deals.confirmTerminal", { status: shown.toStage.semantic })}
           </p>
-          {needsLostReason && (
-            <Field label={t("deals.lostReason")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={lostReason}
-                  onChange={(event) => setLostReason(event.target.value)}
+          {(needsLostReason || needsWonReason) && (
+            <form className="form-stack" onSubmit={submit}>
+              {needsLostReason && (
+                <Field label={t("deals.lostReason")}>
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      value={lostReason}
+                      onChange={(event) => setLostReason(event.target.value)}
+                    />
+                  )}
+                </Field>
+              )}
+              {needsWonReason && (
+                <WonReasonFields
+                  reason={wonReason}
+                  detail={wonDetail}
+                  onReason={(next) => {
+                    setWonReason(next);
+                    // A detail kept behind a hidden field is one the reader
+                    // cannot correct.
+                    if (next !== WON_REASON_NEEDING_DETAIL) {
+                      setWonDetail("");
+                    }
+                  }}
+                  onDetail={setWonDetail}
                 />
               )}
-            </Field>
+            </form>
           )}
-          {needsWonReason && (
-            <WonReasonFields
-              reason={wonReason}
-              detail={wonDetail}
-              onReason={(next) => {
-                setWonReason(next);
-                // A detail kept behind a hidden field is one the reader
-                // cannot correct.
-                if (next !== WON_REASON_NEEDING_DETAIL) {
-                  setWonDetail("");
-                }
-              }}
-              onDetail={setWonDetail}
-            />
-          )}
+          <CloseTasksQuestion state={closeTasks} />
         </>
       )}
     </ConfirmModal>
@@ -249,6 +277,15 @@ function wonAnswer(active: boolean, reason: WonReason | "", detail: string) {
     wonWithoutContractReason: reason,
     wonWithoutContractDetail: explained ? detail.trim() : undefined,
   };
+}
+
+// The advance failure the screen behind the dialog shows. An open dialog
+// answers the missing-evidence refusal itself; once closed, the screen says it.
+export function advanceErrorBehind(
+  error: unknown,
+  dialogOpen: boolean,
+): unknown {
+  return dialogOpen && winEvidenceRefused(error) ? null : error;
 }
 
 // Whether a failed advance is the server asking how a contract-less deal was

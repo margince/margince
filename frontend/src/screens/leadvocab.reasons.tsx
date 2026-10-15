@@ -5,13 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
+import { QueryStates } from "../design-system/querystates";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import {
@@ -22,7 +22,8 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   type LeadDisqualifyReason,

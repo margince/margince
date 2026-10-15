@@ -12,8 +12,9 @@
 import type { components } from "../api/schema";
 import { isMessageKey, type useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemDetails } from "../lib/problembody";
+import type { FilterOp } from "../lib/segmentpredicate";
 import type { Reference } from "./filterreference";
-import type { FilterOp } from "./segmentpredicate";
 
 export type AnalyticsQuery = components["schemas"]["AnalyticsQuery"];
 export type AnalyticsAnswer = components["schemas"]["AnalyticsAnswer"];
@@ -387,10 +388,6 @@ export type Refusal = Readonly<{
   message: string;
 }>;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function isRefusalKind(kind: unknown): kind is RefusalKind {
   return typeof kind === "string" && Object.hasOwn(REFUSAL_KEY, kind);
 }
@@ -402,10 +399,11 @@ function isRefusalKind(kind: unknown): kind is RefusalKind {
  * reads as an ordinary error.
  */
 export function refusalOf(problem: unknown): Refusal | null {
-  if (!isRecord(problem) || !isRecord(problem.details)) {
+  const details = problemDetails(problem);
+  if (details === null) {
     return null;
   }
-  const { kind, suggest, message } = problem.details;
+  const { kind, suggest, message } = details;
   if (!isRefusalKind(kind)) {
     return null;
   }

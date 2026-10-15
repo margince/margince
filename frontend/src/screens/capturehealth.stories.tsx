@@ -2,10 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CaptureHealthCard } from "./capturehealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Whether mail capture keeps up, for an administrator who may not see the mail.
 // The states worth a picture: every pass keeping up, passes that need
@@ -14,12 +19,12 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type Health = components["schemas"]["CaptureHealth"];
 
-const meta: Meta<typeof CaptureHealthCard> = {
+const meta = {
   title: "Settings/Governance/System health/Mail capture checks",
   component: CaptureHealthCard,
-};
+} satisfies Meta<typeof CaptureHealthCard>;
 export default meta;
-type Story = StoryObj<typeof CaptureHealthCard>;
+type Story = StoryObj<typeof meta>;
 
 function story(health: Health, roles: string[] = ["admin"]) {
   return () => {
@@ -76,9 +81,21 @@ const KEEPING_UP: Health = {
   ],
 };
 
-// Nothing waits anywhere and every pass ran on time. The empty mailbox line is
-// a finding, not a gap.
-export const KeepingUp: Story = { render: story(KEEPING_UP) };
+// Nothing waits anywhere and every pass ran on time. The count says no mailbox
+// waits, so neither the mailbox table nor the state column is drawn.
+export const KeepingUp: Story = {
+  render: story(KEEPING_UP),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Mailboxes with something waiting");
+    await expect(
+      canvas.queryByRole("heading", { name: "Mailboxes" }),
+    ).toBeNull();
+    await expect(
+      canvas.queryByRole("columnheader", { name: "State" }),
+    ).toBeNull();
+  },
+};
 
 // One pass per warning: a failure with its class, a pass skipped behind a
 // failed stage, and a pass stopped at its bound. Two mailboxes carry backlogs.
@@ -150,3 +167,13 @@ export const NeverRun: Story = {
 // A reader without the grant. The card keeps its place and says the reading is
 // not theirs; an absent card would read as "capture keeps up".
 export const Withheld: Story = { render: story(KEEPING_UP, ["rep"]) };
+
+export const NeedsAttentionAtPhoneWidth: Story = {
+  ...NeedsAttention,
+  tags: ["uat-phone"],
+};
+
+export const NeedsAttentionDark: Story = {
+  ...NeedsAttention,
+  globals: { theme: "dark" },
+};

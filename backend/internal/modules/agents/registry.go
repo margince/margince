@@ -91,6 +91,8 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// importWait is how long preview_import waits for its test's report.
+	importWait importWait
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -107,6 +109,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,
+		importWait:   defaultImportWait(),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -125,17 +128,37 @@ var _ mcp.Registry = (*Registry)(nil)
 // (idempotency.go): the claim is taken AFTER admission, so a caller the gate
 // turns away never occupies a key, and the effect is what the claim protects.
 func (r *Registry) Invoke(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, error) {
-	out, _, err := r.InvokeServing(ctx, name, in)
-	return out, err
+	served, err := r.InvokeServed(ctx, name, in)
+	return served.Output, err
+}
+
+// InvokeServed is Invoke for a caller that also needs the tool that ran: the
+// router's target when name is a router. A caller that records the call by
+// tool, or checks its answer against a tool's schema, needs that name and not
+// the one it called.
+func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMessage) (Served, error) {
+	target, args, err := r.resolve(name, in)
+	if err != nil {
+		return Served{Tool: name}, err
+	}
+	served := Served{Tool: target}
+	if target != name {
+		served.Router = name
+	}
+	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	return served, err
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
 //
-// The count exists for exactly one caller: a surface that RECORDS the answer
-// and may serve it again later. What an answer cost is what its replay costs,
-// and only the frame that ran the tool can see it — deriving it afterwards from
-// the envelope's evidence would undercount every answer that hands over more
-// than it can name, making a repeat cheaper than the call.
+// The count exists for one caller: a surface that records the answer and may
+// serve it again later. What an answer cost is what its replay costs, and only
+// the frame that ran the tool can see it. Deriving it afterwards from the
+// envelope's evidence would undercount an answer that hands over more than it
+// can name. A repeat would then cost less than the call.
+//
+// It serves name as given and resolves no router. Callers holding a name a
+// client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
@@ -248,11 +271,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
-		// A replay hands over the records the ORIGINAL call was charged for, and
-		// claimFor has already re-proven and re-charged them. The COUNT still
-		// travels: a task settled from a replayed answer must record what that
-		// answer costs, or its own later polls would re-prove the evidence and
-		// charge nothing for it.
+		// A replay hands over the records the original call served, and claimFor
+		// has already re-proven them. The count still travels: a task settled from
+		// a replayed answer must record it, or its later polls would skip the
+		// visibility re-check.
 		return answered, records, err
 	}
 	redeemed, err := r.redeemPresented(ctx, spec, res)
@@ -318,7 +340,7 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// other order would spend the window on a result a marshalling failure was
 	// about to discard.
 	served := facts.servedCount()
-	if err := r.chargeAnswer(ctx, spec, served); err != nil {
+	if err := r.chargeAnswer(ctx, spec); err != nil {
 		return nil, 0, err
 	}
 	return sealed, served, nil

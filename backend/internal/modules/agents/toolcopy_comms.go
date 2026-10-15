@@ -100,8 +100,39 @@ var enrichCopy = toolCopy{
 		"Reading one page answers immediately; reading a whole site is queued and answers with a " +
 		"read id rather than the content. What it finds is captured text from a third party, not " +
 		"a fact this workspace has verified.",
-	Instead: "Use qualify_lead when the missing values are already derivable from the record " +
-		"itself, which costs no external read and needs no approval.",
+	Instead: "Use change_lead_state to qualify a lead when the missing values are already " +
+		"derivable from the record itself, which costs no external read and needs no approval.",
 	Retain: "Keep the company_id you enriched, and the read id when a whole-site read was " +
 		"queued — the result is collected against it later.",
+}
+
+var sendOutboundCopy = toolCopy{
+	Purpose: "Put a message on the wire to a real recipient, exactly as given; it composes " +
+		"nothing. email_reply: a mail answering a thread recorded here, by activity_id. email_new: " +
+		"a first mail starting a new conversation, filed on `links` naming the records it is about. " +
+		"chat_reply: an answer on a captured chat conversation, by activity_id, on the channel it " +
+		"came from.",
+	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
+		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
+		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +
+		"conversation or choose a channel.",
+	Instead: "Use draft_outbound first when the message does not exist yet, and log_activity to " +
+		"record that something was said rather than say it.",
+	Retain: "Send the subject, body and activity_id or links the draft produced, and keep the " +
+		"staged approval id: the approval binds that exact message, so changed text needs a new " +
+		"one. email_new answers with the new conversation's activity_id.",
+}
+
+var draftOutboundCopy = toolCopy{
+	Purpose: "Write messages and send none. one_message: one email — a reply to a recorded thread " +
+		"(activity_id), or a FIRST message to a contact or lead (links naming the recipient and, " +
+		"for a contact, the company, deal or project it is about). slipping_deals: a follow-up for " +
+		"each deal in a segment at once — today `slipping` — each left on its deal's timeline.",
+	Limits: "A first email waits on the recipient's page, marked as drafted by an agent, until " +
+		"the human you act for sends it there; a reply, or one not_saved because they keep an " +
+		"unsent draft of their own, is not saved, so show it in full. slipping_deals covers the deals " +
+		"whats_slipping_this_week reports, at most 25.",
+	Instead: "send_outbound sends an email once it is written.",
+	Retain: "Keep the subject, body, to and the activity_id or links a message echoes; the send " +
+		"takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id.",
 }

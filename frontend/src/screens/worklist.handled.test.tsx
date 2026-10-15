@@ -6,9 +6,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { HandledForYouPanel } from "./worklist.handled";
 
 afterEach(() => {

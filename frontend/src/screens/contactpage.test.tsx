@@ -10,6 +10,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactPageV2 } from "./contactpage";
 import {
   type ContactConsentGuardEntry,
@@ -17,13 +24,6 @@ import {
   view,
 } from "./contactpage.testkit";
 import { CONTACT_TABS } from "./contacttab";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 // Every tab of the contact record was a placeholder panel once, and the way
 // that regresses is silent: a tab whose content stops rendering looks exactly
@@ -782,7 +782,7 @@ describe("logging an activity", () => {
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "Send the renewal quote",
     );
-    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
@@ -893,7 +893,7 @@ describe("logging an activity", () => {
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "Chase the signed order",
     );
-    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({

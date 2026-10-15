@@ -2317,13 +2317,6 @@
   border-radius: 0;
 }
 
-/* The atom's chevron is the caret, turned where a caret turns. The item used
-   to draw a second one of its own — two disclosures on one screen, disagreeing
-   about their own arrow, which is exactly what the shared atom prevents. */
-.ob-triage-fact-type[open] > .disclosure-summary .disclosure-chevron {
-  transform: rotate(90deg);
-}
-
 /* The accordion's name holds the type and its count on one line; the stretch
    that keeps the count at the far end is `.disclosure-label`'s own. */
 .ob-triage-fact-type > .disclosure-summary > .disclosure-label {

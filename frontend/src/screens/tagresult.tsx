@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 
 import { api } from "../api/client";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -14,7 +13,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import "./tagresult.css";
 
 /**
@@ -38,14 +38,15 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const { locale } = useLocale();
   const tag = useQuery({
     queryKey: ["tag", tagID],
-    enabled: Boolean(tagID),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/tags/{id}", {
-          params: { path: { id: tagID as string } },
-        }),
-      );
-    },
+    queryFn: tagID
+      ? async () => {
+          return unwrap(
+            await api.GET("/tags/{id}", {
+              params: { path: { id: tagID } },
+            }),
+          );
+        }
+      : skipToken,
   });
 
   if (!tagID || tag.isPending) {

@@ -4,16 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ComposeModal } from "./compose";
-import { RelinkModal } from "./composerelink";
-import type { Transport } from "./contacttransports";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ComposeModal } from "./compose";
+import { RelinkModal } from "./composerelink";
+import type { Transport } from "./contacttransports";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
 // the same fixture shapes compose.test.tsx exercises — never a live call. The
@@ -211,11 +211,6 @@ export const Empty: Story = {
 // "Draft with AI" fills To/Subject/Body from the returned EmailDraft and
 // discloses it: the AI provenance notice, the voice version that styled it, and
 // the provisional label its profile currently carries.
-//
-// The disclosure is the house card in its machine-authored tone — indigo edge,
-// indigo head band, its title the disclosure's own — rather than the drawer's
-// own indigo box, so the one mark of machine authorship in the product is drawn
-// by the one component that owns it.
 export const Drafted: Story = {
   render: composeStory({
     "GET /voice-profiles": () => jsonResponse(VOICE_PROFILE),

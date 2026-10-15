@@ -1,13 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   type SettingControlProps,
   SettingList,
@@ -16,10 +16,11 @@ import {
 import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
-import { VOICE_MIN_WORDS } from "./voice-intake-core";
 import { useVoiceProfile } from "./voice-profile";
+import { bandLabel, useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
   ActiveVoiceInsights,
   VoiceChangeLog,
@@ -28,27 +29,6 @@ import {
 import "./voice-dna.css";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
-type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];
-type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-
-type CorpusManifest = {
-  sources: VoiceCorpusSource[];
-  summary: VoiceCorpusSummary;
-};
-
-function useVoiceSources(profileId: string) {
-  return useQuery({
-    queryKey: ["voice-sources", profileId],
-    queryFn: async (): Promise<CorpusManifest> => {
-      const data = unwrap(
-        await api.GET("/voice-profiles/{id}/sources", {
-          params: { path: { id: profileId } },
-        }),
-      );
-      return { sources: data.data, summary: data.summary };
-    },
-  });
-}
 
 // What every mutation on this card does with a failure, spelled once: state it
 // in words written for the reader. Keeping the raw failure readable is the
@@ -74,21 +54,6 @@ function reportFailure(
 // in (VoiceProfile.maturity); these only phrase the distance to the next one.
 const VOICE_FIRST_BUILD_WORDS = 800;
 const VOICE_FULL_BUILD_WORDS = 4000;
-
-// bandFor mirrors the server's §B1.4 thresholds so the removal warning can
-// predict a drop before it happens; the server remains the authority.
-function bandFor(totalWords: number): string {
-  if (totalWords < 8000) {
-    return "thin";
-  }
-  if (totalWords < 20000) {
-    return "good";
-  }
-  if (totalWords < 30000) {
-    return "rich";
-  }
-  return "sharp";
-}
 
 // The "…later in Settings" surface the onboarding Voice step promises: the
 // owner's own profile, its corpus, and its builds. A profile that does not
@@ -138,24 +103,6 @@ export function VoiceDnaCard() {
   );
 }
 
-function bandLabel(
-  t: ReturnType<typeof useT>,
-  band: string | undefined,
-): string {
-  switch (band) {
-    case "thin":
-      return t("settings.voice.bandThin");
-    case "good":
-      return t("settings.voice.bandGood");
-    case "rich":
-      return t("settings.voice.bandRich");
-    case "sharp":
-      return t("settings.voice.bandSharp");
-    default:
-      return band ?? "";
-  }
-}
-
 // A profile that exists answers three questions, so it is three cards: what
 // the voice IS (its state, what the last build learned, the preferences that
 // steer it), what it is BUILT FROM, and what its builds have DONE. Five cards
@@ -193,7 +140,11 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
             <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
           )}
           <div className="vdna-status">
-            <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
+            {/* Ready is the normal reading, so only a profile that wants
+                something carries a badge. */}
+            {profile.status !== "ready" && (
+              <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
+            )}
             {profile.quality_band && (
               <span className="t-caption">
                 {bandLabel(t, profile.quality_band)}
@@ -243,63 +194,45 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       </Panel>
 
       <Panel title={t("settings.voice.corpusLabel")}>
-        <PanelBody>
-          <SettingList>
-            {/* The manifest is the subject of this card, not an answer to a
-                question beside it, so it takes the full width and stays in the
-                card. A modal would hide the list a reader came here to audit. */}
-            <SettingRow
-              label={t("settings.voice.corpusRowLabel")}
-              layout="stack"
-              control={
-                <CorpusManifest
-                  profileId={profile.id}
-                  canEdit={canEdit}
-                  onChanged={invalidate}
-                />
-              }
+        {/* The samples are the card's subject, so they stand in it as a table
+            rather than behind a modal that would hide what a reader audits. */}
+        <VoiceSamples
+          profileId={profile.id}
+          canEdit={canEdit}
+          onChanged={invalidate}
+        />
+        {canEdit && (
+          <SettingList bleed="settings">
+            <VoiceCorpusIntake
+              profileId={profile.id}
+              onChanged={invalidate}
+              onBusyChange={setIntakeBusy}
             />
-            {canEdit && (
-              <VoiceCorpusIntake
-                profileId={profile.id}
-                onChanged={invalidate}
-                onBusyChange={setIntakeBusy}
-              />
-            )}
           </SettingList>
-        </PanelBody>
+        )}
       </Panel>
 
       <Panel title={t("settings.voice.buildsTitle")}>
-        <PanelBody>
-          <SettingList>
-            {/* A build started while a sample is still arriving would describe
-                a corpus that no longer exists by the time it finishes. */}
-            <BuildControls
-              profile={profile}
-              canEdit={canEdit}
-              onBuilt={invalidate}
-              intakeBusy={intakeBusy}
-            />
-            <SettingRow
-              label={t("voice.history.label")}
-              layout="stack"
-              control={
-                <VoiceHistory
-                  profileId={profile.id}
-                  canEdit={canEdit}
-                  onChanged={invalidate}
-                />
-              }
-            />
-            {/* Diagnostic: version-to-version deltas answer "why did it
-                change", which is a question a reader asks occasionally and
-                never on arrival. */}
-            <Disclosure summary={t("voice.history.deltasLabel")}>
-              <VoiceChangeLog profileId={profile.id} />
-            </Disclosure>
-          </SettingList>
-        </PanelBody>
+        <SettingList bleed="settings">
+          {/* A build started while a sample is still arriving would describe
+              a corpus that no longer exists by the time it finishes. */}
+          <BuildControls
+            profile={profile}
+            canEdit={canEdit}
+            onBuilt={invalidate}
+            intakeBusy={intakeBusy}
+          />
+        </SettingList>
+        <VoiceHistory
+          profileId={profile.id}
+          canEdit={canEdit}
+          onChanged={invalidate}
+        />
+        {/* Diagnostic: the deltas answer "why did it change", which a reader
+            asks occasionally and never on arrival. */}
+        <Disclosure summary={t("voice.history.deltasLabel")}>
+          <VoiceChangeLog profileId={profile.id} />
+        </Disclosure>
       </Panel>
     </>
   );
@@ -389,208 +322,6 @@ function PersonalityEditor({
         </div>
       )}
     </div>
-  );
-}
-
-// The corpus a profile already holds: the meter, its register mix, and the
-// removable rows. Only a caller that HAS a profile renders it — before that
-// there is no corpus to read, and asking for one would be a request against an
-// id nobody has minted yet.
-function CorpusManifest({
-  profileId,
-  canEdit,
-  onChanged,
-}: Readonly<{
-  profileId: string;
-  canEdit: boolean;
-  onChanged: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const sources = useVoiceSources(profileId);
-  const [error, setError] = useState<string | null>(null);
-
-  const remove = useMutation({
-    mutationFn: async (sourceId: string) => {
-      unwrap(
-        await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
-          params: { path: { id: profileId, sourceId } },
-        }),
-      );
-    },
-    onSuccess: () => {
-      setError(null);
-      onChanged();
-    },
-    onError: reportFailure(setError, t),
-  });
-
-  return (
-    <div className="vdna-manifest settingrow-measure">
-      <QueryGate query={sources} pendingLabel={t("settings.voice.title")}>
-        {(manifest) => (
-          <div>
-            <p className="t-caption">
-              {t("settings.voice.meter", {
-                count: formatNumber(manifest.summary.total_words, locale),
-                target: formatNumber(manifest.summary.target_words, locale),
-              })}
-            </p>
-            {/* The meter above tracks the 30,000-word quality target, which
-                says nothing about when a first build becomes possible. Below
-                the floor, the distance that actually matters is the 800. */}
-            {manifest.summary.total_words < VOICE_MIN_WORDS && (
-              <FloorMeter words={manifest.summary.total_words} />
-            )}
-            <RegisterMix summary={manifest.summary} />
-            {manifest.sources.length === 0 ? (
-              <p>{t("settings.voice.corpusEmpty")}</p>
-            ) : (
-              <ul className="vdna-list">
-                {manifest.sources.map((s) => (
-                  <SourceRow
-                    canEdit={canEdit}
-                    key={s.id}
-                    source={s}
-                    summary={manifest.summary}
-                    pending={remove.isPending}
-                    onRemove={() => remove.mutate(s.id)}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </QueryGate>
-      {error && <ErrorLine>{error}</ErrorLine>}
-    </div>
-  );
-}
-
-// How far the corpus still is from the server's first-build floor. It renders
-// only below the floor: once a build is possible, the distance to it is no
-// longer the question the reader is asking.
-function FloorMeter({ words }: Readonly<{ words: number }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <p className="t-caption vdna-floor">
-      <progress
-        value={Math.min(words, VOICE_MIN_WORDS)}
-        max={VOICE_MIN_WORDS}
-        aria-label={t("settings.voice.floorLabel", {
-          min: formatNumber(VOICE_MIN_WORDS, locale),
-        })}
-      />
-      <span>
-        {t("settings.voice.floorProgress", {
-          words: formatNumber(words, locale),
-          min: formatNumber(VOICE_MIN_WORDS, locale),
-        })}
-      </span>
-    </p>
-  );
-}
-
-// registerLabel names one closed-vocabulary register; an unknown value (a
-// newer server) renders verbatim rather than crashing the card.
-function registerLabel(t: ReturnType<typeof useT>, register: string): string {
-  switch (register) {
-    case "email":
-      return t("settings.voice.register.email");
-    case "social":
-      return t("settings.voice.register.social");
-    case "long_form":
-      return t("settings.voice.register.long_form");
-    case "spoken":
-      return t("settings.voice.register.spoken");
-    case "general":
-      return t("settings.voice.register.general");
-    default:
-      return register;
-  }
-}
-
-// RegisterMix shows where the corpus words come from; spoken sources are the
-// highest-signal gap to name.
-function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
-  const t = useT();
-  const entries = Object.entries(summary.register_words).filter(
-    ([, words]) => words > 0,
-  );
-  if (entries.length === 0 || summary.total_words === 0) {
-    return null;
-  }
-  return (
-    <p className="t-caption vdna-regmix">
-      {entries
-        .map(
-          ([register, words]) =>
-            `${registerLabel(t, register)} ${Math.round((words / summary.total_words) * 100)}%`,
-        )
-        .join(" · ")}
-    </p>
-  );
-}
-
-// Removing a source is armed-then-confirmed when it would drop the quality
-// band: the warning names the drop before anything is deleted.
-function SourceRow({
-  source,
-  canEdit,
-  summary,
-  pending,
-  onRemove,
-}: Readonly<{
-  canEdit: boolean;
-  source: VoiceCorpusSource;
-  summary: VoiceCorpusSummary;
-  pending: boolean;
-  onRemove: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [armed, setArmed] = useState(false);
-  const bandAfter = bandFor(
-    Math.max(0, summary.total_words - source.word_count),
-  );
-  const drops = source.included && bandAfter !== summary.quality_band;
-  const handleRemove = () => {
-    if (drops && !armed) {
-      setArmed(true);
-      return;
-    }
-    onRemove();
-  };
-  return (
-    <li className="vdna-row">
-      <span>
-        {source.source_label} · {formatNumber(source.word_count, locale)}
-        <span className="vdna-register">
-          {registerLabel(t, source.register)}
-        </span>
-        {!source.included && ` · ${t("settings.voice.excluded")}`}
-      </span>
-      {armed && drops && (
-        <ErrorLine inline>
-          {t("settings.voice.bandDrop", {
-            from: bandLabel(t, summary.quality_band),
-            to: bandLabel(t, bandAfter),
-          })}
-        </ErrorLine>
-      )}
-      {canEdit && (
-        <button
-          type="button"
-          className="iconbtn vdna-row-verb"
-          aria-label={t("settings.voice.removeSource")}
-          disabled={pending}
-          onClick={handleRemove}
-        >
-          <Trash2 aria-hidden />
-        </button>
-      )}
-    </li>
   );
 }
 

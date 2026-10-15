@@ -8,6 +8,21 @@
   gap: var(--space-3);
 }
 
+/* The readings strip measures its own width as a container, so it has no
+   content width to shrink to: in this flex-start column it must be stretched
+   or every card collapses to nothing. */
+.import__counts {
+  align-self: stretch;
+}
+
+/* The progress panel sits in a flex-start column and holds a strip that
+   measures its own width, so it spans the column or each part collapses. */
+.import--fill {
+  align-items: stretch;
+  align-self: stretch;
+  width: 100%;
+}
+
 .import__hint {
   margin: 0;
 }
@@ -65,35 +80,96 @@
   font-style: italic;
 }
 
-.import__outcome {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.import__outcomeTitle {
-  margin: 0;
-  color: var(--textPrimary);
-}
-
-.import__counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  margin: 0;
-}
-
-.import__count dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
 .import__issues {
   margin: 0;
   padding-left: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+/* The hub's two ways in sit side by side, and stack once the pane is narrow. */
+.import-hub__ways {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.import-hub__way {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.import-hub__verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.import-hub__order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.import-hub__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.import-template__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.import-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.import-guide p {
+  margin: 0;
+}
+
+.import-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--gapActions);
+}
+
+.import__target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.import__part {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.import__partHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
 }

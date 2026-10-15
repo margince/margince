@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
-import { AgentToolsCard } from "./settings-agenttools";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AgentToolsCard } from "./settings-agenttools";
 
 // Served descriptions end with the governance clause the server appends, so the
 // fixtures carry it. The clamped line and the opened one both have to hold it.
@@ -18,8 +18,7 @@ const TOOLS = [
   {
     name: "search_records",
     title: "Search records",
-    description:
-      'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+    description: "Find contacts, companies, deals, leads and projects by name.",
     required_scope: "read",
     tier: "auto_execute",
     egress: false,

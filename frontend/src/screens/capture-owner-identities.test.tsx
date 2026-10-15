@@ -1,13 +1,25 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+} from "../testing/story-utils";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
 // Where a claim came from is only worth saying when the seat did not make it.
 //
@@ -28,7 +40,12 @@ function render(ui: ReactNode) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -44,10 +61,11 @@ function identity(over: Record<string, unknown>) {
   };
 }
 
-function showing(identities: Record<string, unknown>[]) {
+function showing(identities: Record<string, unknown>[], routes: RouteMap = {}) {
   installFetchStub({
     "GET /me": meRoute({}),
     "GET /capture/owner-identities": () => jsonResponse({ data: identities }),
+    ...routes,
   });
   render(<OwnerIdentitiesCard />);
 }
@@ -136,4 +154,122 @@ it("says what an address must look like when the server refuses it", async () =>
     await screen.findByText(en["captureValue.refusedAddress"]),
   ).toBeTruthy();
   expect(screen.queryByText(/give one email address/)).toBeNull();
+});
+
+it("shows when each address was declared, under the address", async () => {
+  showing([identity({})]);
+
+  const list = await screen.findByTestId("owner-identities-list");
+  expect(
+    within(list).getByText(en["ownerIdentities.kind.address"]),
+  ).toBeTruthy();
+  expect(within(list).getByText(/2026/)).toBeTruthy();
+});
+
+function removeVerb() {
+  return screen.findByRole("button", {
+    name: "Remove founder@previous-employer.example",
+  });
+}
+
+// Restoring the withdrawn row is the exact inverse, learned or typed alike. A
+// learned alias is refused from then on, and its notice says so.
+it.each([
+  ["user", "ownerIdentities.removedToast"],
+  ["delivered_to", "ownerIdentities.removedLearnedToast"],
+] as const)(
+  "removes a %s address at once and puts that same row back through Undo",
+  async (source, notice) => {
+    const user = userEvent.setup();
+    const removed = vi.fn(() => new Response(null, { status: 204 }));
+    const restored = vi.fn(() => jsonResponse(identity({ source })));
+    showing([identity({ source })], {
+      "DELETE /capture/owner-identities/oi-1": removed,
+      "POST /capture/owner-identities/oi-1/restore": restored,
+    });
+
+    await user.click(await removeVerb());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const said = await screen.findByRole("status");
+    await waitFor(() => expect(said.textContent).toContain(en[notice]));
+    expect(removed).toHaveBeenCalledTimes(1);
+
+    await user.click(
+      await within(said).findByRole("button", { name: en["common.undo"] }),
+    );
+    await waitFor(() => expect(restored).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(en["ownerIdentities.restoredToast"]),
+    ).toBeTruthy();
+  },
+);
+
+// Each refusal says what became of the address, in the reader's language.
+it.each([
+  [404, "not_found", "ownerIdentities.restoreGone"],
+  [409, "removal_moved_on", "ownerIdentities.restoreMovedOn"],
+  [409, "identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+] as const)(
+  "words a %i %s refusal of the Undo for the reader",
+  async (status, code, copy) => {
+    const user = userEvent.setup();
+    const listed = vi.fn(() => jsonResponse({ data: [identity({})] }));
+    showing([identity({})], {
+      "GET /capture/owner-identities": listed,
+      "DELETE /capture/owner-identities/oi-1": () =>
+        new Response(null, { status: 204 }),
+      "POST /capture/owner-identities/oi-1/restore": () =>
+        jsonResponse(
+          { code, status, detail: "An English sentence for the API." },
+          status,
+        ),
+    });
+
+    await user.click(await removeVerb());
+    const undo = await screen.findByRole("button", { name: en["common.undo"] });
+    await waitFor(() => expect(listed).toHaveBeenCalledTimes(2));
+    await user.click(undo);
+
+    expect(await screen.findByText(en[copy])).toBeTruthy();
+    expect(screen.queryByText(/An English sentence/)).toBeNull();
+    // The list reads again, so a row already back shows as back.
+    await waitFor(() => expect(listed).toHaveBeenCalledTimes(3));
+  },
+);
+
+// The removed row takes its verb with it, so focus moves on to the next one.
+it("hands focus to the next address once one is gone", async () => {
+  const user = userEvent.setup();
+  const rows = [
+    identity({ source: "delivered_to" }),
+    identity({ id: "oi-2", value: "me@side-project.example" }),
+  ];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(await removeVerb());
+  const next = screen.getByRole("button", {
+    name: "Remove me@side-project.example",
+  });
+  await waitFor(() => expect(document.activeElement).toBe(next));
+});
+
+it("returns focus to the add verb once the last address is gone", async () => {
+  const user = userEvent.setup();
+  const rows = [identity({})];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(await removeVerb());
+  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
+  const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
+  await waitFor(() => expect(document.activeElement).toBe(add));
 });

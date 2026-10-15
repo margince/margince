@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,6 +22,7 @@ type recordingReleaser struct {
 	passport ids.UUID
 	counter  agentvolume.Counter
 	bucket   int64
+	length   time.Duration
 	calls    int
 	err      error
 	// widened is what the real meter answers: false when the window the human
@@ -30,7 +32,8 @@ type recordingReleaser struct {
 	widened bool
 }
 
-func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64) (bool, error) {
+func (r *recordingReleaser) Release(_ context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error) {
+	r.length = length
 	r.calls++
 	r.ws, r.passport, r.counter, r.bucket = ws, passport, c, bucket
 	return r.widened, r.err
@@ -60,7 +63,7 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 	meter := &recordingReleaser{widened: true}
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
-		Counter: agentvolume.Reads, Observed: 2431, Limit: 2000, Bucket: "42", Tool: "search_records",
+		Counter: agentvolume.Writes, Observed: 241, Limit: 200, Bucket: "42", Tool: "update_record",
 	})
 
 	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
@@ -70,11 +73,14 @@ func TestAReleaseWidensTheAgentsWindowAndNotTheApproversContext(t *testing.T) {
 	if meter.passport != passport {
 		t.Errorf("released passport %s, want the one the staging was stamped with (%s)", meter.passport, passport)
 	}
+	if meter.length != agentvolume.DefaultWindow {
+		t.Errorf("a proposal staged without a length released under %v, want the default window", meter.length)
+	}
 	if meter.ws != ws {
 		t.Errorf("released workspace %s, want %s", meter.ws, ws)
 	}
-	if meter.counter != agentvolume.Reads || meter.bucket != 42 {
-		t.Errorf("released %s in window %d, want reads in 42", meter.counter, meter.bucket)
+	if meter.counter != agentvolume.Writes || meter.bucket != 42 {
+		t.Errorf("released %s in window %d, want writes in 42", meter.counter, meter.bucket)
 	}
 }
 
@@ -86,17 +92,17 @@ func TestAReleaseThatWidenedNothingIsNotAnError(t *testing.T) {
 	meter := &recordingReleaser{widened: false} // the rolled-window answer
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
 	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err != nil {
 		t.Errorf("a release into a rolled window reported an error: %v", err)
 	}
 }
 
-// A payload naming a volume budget no human can release is refused. It matters because
-// the staged payload is EDITABLE — the modify-then-approve arm pins entity
-// references, and this payload has none — so "egress" is a value an approver
-// can type into a question that was asked about reads.
+// A payload naming a counter no human can release is refused. The staged payload
+// is editable, and the modify-then-approve arm pins entity references that this
+// payload does not have. An approver could therefore type "egress" into a
+// question that was asked about writes.
 func TestAnEditedPayloadCannotTurnAStepUpIntoAHardStopRelease(t *testing.T) {
 	meter := &recordingReleaser{}
 	svc := NewService(nil).WithVolumeReleaser(meter)
@@ -123,7 +129,7 @@ func TestAStagedWindowThatIsNotAWindowReleasesNothing(t *testing.T) {
 	meter := &recordingReleaser{}
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "not-a-window"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "not-a-window"})
 
 	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
 		t.Error("an unreadable window was released against whatever window happened to be current")
@@ -139,7 +145,7 @@ func TestAStagedWindowThatIsNotAWindowReleasesNothing(t *testing.T) {
 func TestAStepUpWithNoPassportIsRefusedRatherThanReleasedAgainstTheApprover(t *testing.T) {
 	meter := &recordingReleaser{}
 	svc := NewService(nil).WithVolumeReleaser(meter)
-	raw, err := json.Marshal(agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
+	raw, err := json.Marshal(agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +167,7 @@ func TestAStepUpWithNoPassportIsRefusedRatherThanReleasedAgainstTheApprover(t *t
 func TestApprovingAStepUpWithNoMeterComposedFails(t *testing.T) {
 	svc := NewService(nil)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
 	if err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a); err == nil {
 		t.Error("a service with no meter reported a release it could not have made")
@@ -175,7 +181,7 @@ func TestAMeterFailureReachesTheDecidingHuman(t *testing.T) {
 	meter := &recordingReleaser{err: errors.New("redis is unreachable")}
 	svc := NewService(nil).WithVolumeReleaser(meter)
 	a := stepUpRow(t, ids.New[ids.PassportKind]().UUID,
-		agentvolume.ReleaseProposal{Counter: agentvolume.Reads, Bucket: "1"})
+		agentvolume.ReleaseProposal{Counter: agentvolume.Writes, Bucket: "1"})
 
 	err := svc.applyVolumeRelease(releaseCtx(ids.New[ids.WorkspaceKind]().UUID), a)
 
@@ -232,5 +238,24 @@ func TestAStepUpWithNoLenderIsDecidableByNobody(t *testing.T) {
 
 	if got {
 		t.Error("a step-up recorded for nobody was decidable by whoever asked")
+	}
+}
+
+// A release names the length its bucket was counted under. So a window that
+// ended at a length change cannot be widened by a bucket number from another.
+func TestAReleasePassesOnTheLengthItsWindowWasCountedUnder(t *testing.T) {
+	ws, passport := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.PassportKind]().UUID
+	meter := &recordingReleaser{widened: true}
+	svc := NewService(nil).WithVolumeReleaser(meter)
+	a := stepUpRow(t, passport, agentvolume.ReleaseProposal{
+		Counter: agentvolume.Writes, Bucket: "42", WindowSeconds: "43200", Tool: "update_record",
+	})
+
+	if err := svc.applyVolumeRelease(releaseCtx(ws), a); err != nil {
+		t.Fatal(err)
+	}
+
+	if meter.length != 12*time.Hour {
+		t.Errorf("released under %v, want the 12h the proposal names", meter.length)
 	}
 }

@@ -181,7 +181,10 @@ asks "is this diff good?", and runs because a diff exists.
 | SonarCloud quality gate | daily | The stored gate of `main`, read through the API (no new scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
 | backend lane | daily | The backend gate, always | A docs-only commit after a breaking one matches no classifier scope. Every gate skips, and the run reports green over a broken tree. |
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
+| every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
+| backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
 | PERF-3/PERF-7 budgets | weekly | `make bench-perf-check`: the budgets on the SMB tier (10,000 test contacts), writing no record | Weekly is enough for a budget that no merge needs. |
+| vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
 
 Notes on the jobs:
@@ -190,9 +193,20 @@ Notes on the jobs:
   does not trust the classifier of the gate.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
+- Many backend test files read the wall clock, and
+  `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
+  against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
+  runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
+- Every step that needs the network ends before the clock moves, because 200 days ends the TLS
+  certificates those steps check. The clock is set back even on failure, so the runner does not
+  return to the pool 200 days later.
+- `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
+  weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips, and does not fail, when `ANTHROPIC_API_KEY` is
   missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not
   set up" where a red one says "broken".
+- The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked"
+  and opens one issue that says so. That issue never closes the failure issue, because no call ran.
 - The model lane does not give the same result each time: it runs each scenario three times, and
   passes at two. It uploads each transcript as an artifact, because the result line names the failed
   scenario, and only the transcript shows what the model did.

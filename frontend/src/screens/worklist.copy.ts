@@ -3,8 +3,6 @@ import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
 
-import { ENTITY, recordRoute } from "../app/entity";
-import { routeHash } from "../app/router";
 import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import { floorFigure } from "../format/figure";
 import {
@@ -16,6 +14,8 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { isMessageKey, translatePlural } from "../i18n";
+import { ENTITY, recordRoute } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -23,6 +23,7 @@ import {
 } from "./contactpage.address";
 import { caseHref } from "./privacy.caselink";
 import { settingsHref } from "./settingsrouting";
+import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
@@ -32,7 +33,7 @@ import type {
   WorklistReason,
   WorklistValue,
 } from "./worklist.queries";
-import { known } from "./worklist.reasoncensus";
+import { daysValued, known } from "./worklist.reasoncensus";
 
 type T = ReturnType<typeof useT>;
 
@@ -165,9 +166,9 @@ function valueText(
   }
 }
 
-// Reasons that read with an amount or a moment, needing no plural rule (counts
-// are DAYS_VALUED_REASONS). A set, since a key composed for a reason whose
-// sentence has nowhere to put an arrived value would not exist.
+// Reasons that read with an amount or a moment, needing no plural rule (day
+// counts are the census's DAYS_VALUED_REASONS). A set, since a key composed for
+// a reason whose sentence has nowhere to put an arrived value would not exist.
 const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
@@ -181,21 +182,6 @@ type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
   return kind in VALUED_REASONS;
-}
-
-// The valued reasons whose figure is a DAY COUNT rather than a currency
-// amount. "1 days" is a different kind of wrong from "1 day" — a count needs
-// the reader's own plural rule, which a money figure never does.
-const DAYS_VALUED_REASONS = {
-  waiting_days: true,
-  quiet_days: true,
-  earlier_requests: true,
-} as const;
-
-function daysValued(
-  kind: WorklistReason["kind"],
-): kind is keyof typeof DAYS_VALUED_REASONS {
-  return kind in DAYS_VALUED_REASONS;
 }
 
 // The comparators this build can name, for the same reason.
@@ -358,14 +344,6 @@ export function comparisonText(
   });
 }
 
-// What happens if the reader does nothing.
-export function consequenceText(item: WorklistItem, t: T): string | null {
-  if (item.consequence === "none") {
-    return null;
-  }
-  return t(`worklist.consequence.${item.consequence}` as const);
-}
-
 // The deal's own figures, in one line: what it is worth, and when it closes.
 //
 // The concept's sharpest example was a €160,100 deal reduced to "no contact for
@@ -484,9 +462,9 @@ function momentText(
 
 // Where the row's suggested step leads.
 //
-// The RECORD the thread belongs to, not the message: an activity is a timeline
-// entry with no page of its own — `app/entity.ts` says so in as many words —
-// so `#/activities/<id>` would be a control that goes nowhere.
+// The record the thread belongs to, not the message. An activity is a timeline
+// entry with no page of its own (`lib/entity.ts` says so), so
+// `#/activities/<id>` would be a control that goes nowhere.
 //
 // A `draft_reply` row whose subject is a CONTACT opens the composer, through
 // `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything
@@ -660,7 +638,10 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // Typed as a plural base, so a batch kind the catalog carries no pair for
     // fails the build; only the incident sentence reads `cause`.
     const base = `worklist.batch.${item.batch.key}` as const;
-    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    const cause =
+      item.batch.label ??
+      connectionName(item, t) ??
+      t("worklist.batch.unnamedCause");
     // A kind from a newer server has no pair here: its own label, else the
     // generic group name, rather than a lookup that throws.
     if (!isMessageKey(`${base}_other`)) {
@@ -681,7 +662,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
   }
-  const title = t(`worklist.untitled.${item.source}` as const);
+  const title = t(
+    connectionTitleKey(item) ?? (`worklist.untitled.${item.source}` as const),
+  );
   return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
 

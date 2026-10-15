@@ -29,24 +29,56 @@
 }
 /* Beside a growing column every other cell keeps its line: the growth is taken
    from the bar, never from a name folded onto two lines to make room for it. A
-   table too wide for its box scrolls inside it instead. An opened detail is
-   prose and wraps. */
+   table too wide for its box scrolls inside it instead. An opened detail and
+   a fold-only line are prose and wrap. */
 .table:has(.datatable-grow)
   > *
   > tr:not(.datatable-detail)
-  > :is(th, td):not(.datatable-grow) {
+  > :is(th, td):not(.datatable-grow, .datatable-fold-only) {
   white-space: nowrap;
+}
+
+/* reorder: the grip column shrinks to the grip, whose 32px square is the touch
+   target, and leaves the spare width to the text columns. */
+.table .datatable-grip {
+  inline-size: 1px;
+  padding-block: 0;
+  padding-inline-end: 0;
+}
+/* While a row is carried the table is the gesture's, rows that open included. */
+.table.is-sorting {
+  user-select: none;
+}
+.table.is-sorting > tbody > tr,
+.table.is-sorting > tbody > tr.rowlink,
+.table.is-sorting .sortable-handle {
+  cursor: grabbing;
+}
+/* The carried row wears the tint a chosen row wears. `:hover` outranks the
+   folded row's own hover, which the pointer always is over. */
+.table.is-sorting > tbody > tr.is-lifted,
+.table.is-sorting > tbody > tr.is-lifted:hover,
+.table.is-sorting > tbody > tr.is-lifted > td {
+  background: var(--accentLight);
 }
 
 .table > tbody > tr.datatable-detail[hidden] {
   display: none;
 }
+/* A detail still closing keeps its row joined to the one above. */
 .table > tbody > tr.datatable-open > td,
+.table > tbody > tr:has(+ tr.datatable-detail:not([hidden])) > td,
 .table > tbody > tr:has(+ tr.datatable-detail[hidden]:last-child) > td {
   border-bottom: 0;
 }
+/* The cell's block padding moves inside the fold, so a shut fold is 0 tall. */
 .table > tbody > tr.datatable-detail > td {
-  padding-block-start: 0;
+  padding-block: 0;
+}
+.datatable-detail-body {
+  padding-block-end: var(--tableCellPadBlock);
+  /* Zero intrinsic width: an opened detail spans every column, so its content must not re-divide them. */
+  contain: inline-size;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
@@ -64,7 +96,12 @@
     container-type: inline-size scroll-state;
   }
 }
-.table-scroll-sticky > .table > tbody > tr.datatable-detail > td > * {
+.table-scroll-sticky
+  > .table
+  > tbody
+  > tr.datatable-detail
+  > td
+  > .datatable-detail-fold {
   --detailInset: var(--space-3);
   position: sticky;
   inset-inline-start: var(--detailInset);
@@ -76,7 +113,7 @@
   > tbody
   > tr.datatable-detail
   > td
-  > * {
+  > .datatable-detail-fold {
   --detailInset: var(--padPanel);
 }
 
@@ -88,7 +125,14 @@
 .table-scroll-fold .datatable-folded {
   display: none;
 }
+/* Absent, not empty, so an unfolded table draws no column and spends no width. */
+.table-scroll-fold .datatable-fold-only {
+  display: none;
+}
 @container table-fold (width < 36rem) {
+  .table-scroll-fold > .table > thead > tr > th.datatable-fold-only {
+    display: table-cell;
+  }
   .table-scroll-fold .datatable-unfolded {
     display: none;
   }
@@ -102,7 +146,14 @@
   /* Out of sight, still read: each folded cell is announced by its heading,
      and an empty cell keeps its place so the next one keeps its heading. */
   .table-scroll-fold > .table > thead,
-  .table-scroll-fold > .table > tbody > tr > :is(:empty, [data-fold="hide"]),
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > :is(
+      :empty:not([data-fold="lead"], [data-fold="trail"]),
+      [data-fold="hide"]
+    ),
   .table-scroll-fold > .table > tbody > tr > td:has(> .sr-only:only-child) {
     position: absolute;
     inline-size: 1px;
@@ -144,7 +195,21 @@
   .table-scroll-fold [data-fold="title"] {
     flex: 1 1 0%;
   }
-  .table-scroll-fold [data-fold="end"] {
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > :is([data-fold="lead"], [data-fold="trail"]) {
+    flex: none;
+    min-inline-size: var(--controlHeight);
+    min-block-size: var(--controlHeight);
+  }
+  /* The folded row is the box that tints; a translucent tint on its cells too
+     would show twice. */
+  .table-scroll-fold > .table.is-sorting > tbody > tr.is-lifted > td {
+    background: transparent;
+  }
+  .table-scroll-fold :is([data-fold="end"], [data-fold="trail"]) {
     flex: none;
     order: 1;
   }
@@ -155,19 +220,30 @@
   }
   /* Not row-gap: it falls on both sides of the line break, doubling the space
      under line one. */
-  .table-scroll-fold [data-fold="rest"] {
+  .table-scroll-fold :is([data-fold="rest"], [data-fold="only"]) {
     order: 3;
     margin-block-start: var(--space-1);
     font: var(--fontBodySmall);
     color: var(--textSecondary);
   }
+  .table-scroll-fold > .table > tbody > tr > td.datatable-fold-only {
+    display: block;
+    flex-basis: 100%;
+  }
 }
 
 @container table-fold (width < 36rem) {
   .table-scroll-fold > .table > tbody > tr.datatable-detail {
-    padding-block-start: 0;
+    padding-block: 0;
+  }
+  .table-scroll-fold .datatable-detail-body {
+    padding-block-end: var(--space-3);
   }
   .table-scroll-fold > .table > tbody > tr.datatable-open,
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr:has(+ tr.datatable-detail:not([hidden])),
   .table-scroll-fold
     > .table
     > tbody

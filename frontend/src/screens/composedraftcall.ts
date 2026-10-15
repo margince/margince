@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { ProjectScope } from "../design-system/projectpicker";
 import type { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import type { RelinkKind } from "./composerelink";
 import { stripEveryKeyTag, withSubjectTag } from "./projectrecord";
 
@@ -71,6 +71,8 @@ export type DraftAsk = Readonly<{
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
+  // A contact-started draft's further recipients and the record it follows up.
+  followUp?: FollowUp;
   intent: string;
   epoch: number;
   body: string;
@@ -197,6 +199,22 @@ function steering(intent: string, rewriteOf: string) {
   };
 }
 
+// A follow-up after a meeting: everyone else it was with, and the meeting
+// itself, which the server reads first.
+export type FollowUp = Readonly<{
+  alsoTo: readonly string[];
+  aboutActivityId?: string;
+}>;
+
+function followUpBody(followUp: FollowUp | undefined) {
+  return {
+    ...(followUp?.alsoTo.length ? { also_to: [...followUp.alsoTo] } : {}),
+    ...(followUp?.aboutActivityId
+      ? { about_activity_id: followUp.aboutActivityId }
+      : {}),
+  };
+}
+
 // The lead-started draft. A lead carries its own address, so there is no
 // recipient to name and no deal or project to pick.
 async function draftFromLead({
@@ -219,12 +237,14 @@ async function draftFromLead({
 // chosen project scopes the grounding read.
 async function draftFromContact({
   entityId,
+  followUp,
   projectId,
   intent,
   rewriteOf,
   t,
 }: Readonly<{
   entityId: string;
+  followUp?: FollowUp;
   projectId: string;
   intent: string;
   rewriteOf: string;
@@ -235,6 +255,7 @@ async function draftFromContact({
     {
       params: { path: { id: entityId } },
       body: {
+        ...followUpBody(followUp),
         ...(projectId ? { project_id: projectId } : {}),
         ...steering(intent, rewriteOf),
       },
@@ -248,6 +269,7 @@ async function draftFromContact({
 async function draftFromAccount({
   entityType,
   entityId,
+  followUp,
   recipientId,
   dealId,
   projectId,
@@ -257,6 +279,7 @@ async function draftFromAccount({
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
+  followUp?: FollowUp;
   recipientId: string;
   dealId: string;
   projectId: string;
@@ -269,7 +292,14 @@ async function draftFromAccount({
     return draftFromLead({ entityId, intent, t });
   }
   if (entityType === "contact") {
-    return draftFromContact({ entityId, projectId, intent, rewriteOf, t });
+    return draftFromContact({
+      entityId,
+      followUp,
+      projectId,
+      intent,
+      rewriteOf,
+      t,
+    });
   }
   // A deal has no draft route: writing to a contact of a nearby account would
   // start a conversation the rep never chose.
@@ -328,6 +358,7 @@ export function useDraftMutation({
       return draftFromAccount({
         entityType,
         entityId: ask.entityId,
+        followUp: ask.followUp,
         ...grounding,
         intent: intentOf,
         rewriteOf,

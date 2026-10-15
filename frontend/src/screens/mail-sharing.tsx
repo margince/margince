@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
-import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 
 // The workspace mail-sharing posture: ON by default, captured mail is
 // readable by every colleague who can see the contact — the thing that makes
@@ -267,32 +268,28 @@ export function MailSharingPostureRow() {
   const shared = query.data?.mail_sharing ?? false;
   return (
     <Panel title={t("mailSharing.title")}>
-      <PanelBody>
-        {/* A fact, not a setting: a definition list rather than SettingRow,
-            which requires a control because every row of it is something a
-            reader can operate. This one is operated on Capture rules. */}
-        <dl className="settings-facts">
-          <dt>{t("mailSharing.label")}</dt>
-          <dd>
-            {/* The stored answer in words. `query.data` is absent while the read
-                is in flight, and an absent answer says nothing rather than
-                claiming the narrower one — a wrong statement about who can read
-                somebody's mail is worse than a moment with no statement. */}
-            {query.isSuccess
+      <SettingList bleed="settings">
+        <SettingRow
+          testId="mail-sharing-posture"
+          label={t("mailSharing.label")}
+          // Absent while the read is in flight: a wrong statement about who can
+          // read somebody's mail is worse than a moment with none.
+          description={
+            query.isSuccess
               ? t(
                   shared
                     ? "mailSharing.posture.shared"
                     : "mailSharing.posture.private",
                 )
-              : null}
-          </dd>
-        </dl>
-        {canChangeIt && (
-          <p>
-            <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
-          </p>
-        )}
-      </PanelBody>
+              : undefined
+          }
+          control={
+            canChangeIt && (
+              <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
+            )
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }

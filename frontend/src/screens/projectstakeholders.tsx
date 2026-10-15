@@ -31,7 +31,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { projectRoleLabel } from "./record360";
 
 type SetProjectStakeholderRequest =
@@ -42,7 +42,10 @@ type ProjectStakeholderRole = SetProjectStakeholderRequest["role"];
 // roles a project inherits, then the four a body of work running past close
 // needs. Typed as the request's own role, so a role the contract drops stops
 // compiling here rather than earning a 422 in front of a reader.
-const PROJECT_STAKEHOLDER_ROLES: readonly ProjectStakeholderRole[] = [
+const PROJECT_STAKEHOLDER_ROLES: readonly [
+  ProjectStakeholderRole,
+  ...ProjectStakeholderRole[],
+] = [
   "champion",
   "economic_buyer",
   "blocker",

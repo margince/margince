@@ -9,7 +9,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { ListScreen } from "./listpage";
 import {
   LIVE_ID,
   listsMe,
@@ -19,9 +18,14 @@ import {
   shortlist,
   TEAM_ID,
   teamsPage,
-} from "./lists.fixtures";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ListScreen } from "./listpage";
 import { ListSettingsAction } from "./listsettings";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
   cleanup();
@@ -30,6 +34,10 @@ afterEach(() => {
 });
 
 const empty = { data: [], page: { has_more: false } };
+
+// Edit list and Archive list sit behind the list's own ⋯ menu.
+const moreFor = (name: string) =>
+  en["filters.library.rowMore"].replace("{name}", name);
 
 describe("changing a list from its page", () => {
   it("saves a new name, purpose and sharing against the version it opened", async () => {
@@ -51,7 +59,10 @@ describe("changing a list from its page", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: en["lists.settings"] }),
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["lists.settings"] }),
     );
     const name = screen.getByRole("textbox", { name: en["lists.name"] });
     await user.clear(name);
@@ -97,7 +108,10 @@ describe("changing a list from its page", () => {
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: en["lists.settings"] }),
+      await screen.findByRole("button", { name: moreFor(liveList.name) }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["lists.settings"] }),
     );
     await user.click(
       screen.getByRole("combobox", { name: en["lists.teamLabel"] }),
@@ -185,6 +199,9 @@ describe("changing a list from its page", () => {
       await screen.findByRole("button", {
         name: en["lists.ownerless.takeOver"],
       }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: moreFor(shortlist.name) }),
     );
     await user.click(screen.getByRole("button", { name: en["lists.archive"] }));
     expect(await screen.findByText("MiTek")).toBeInTheDocument();

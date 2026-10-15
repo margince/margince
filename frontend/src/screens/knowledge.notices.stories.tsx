@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  IngestFailure,
-  ReindexingNotice,
-  UploadRefusals,
-} from "./knowledge.notices";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
+import { ReindexingNotice, UploadRefusals } from "./knowledge.notices";
 
 // What the document-sets card says about itself. The refusal list is the one
 // worth reading side by side with the rest: it is a single heading over a list
@@ -26,15 +22,6 @@ export const Reindexing: Story = {
   render: () => (
     <StoryProviders>
       <ReindexingNotice />
-    </StoryProviders>
-  ),
-};
-
-/** Why one filed document could not be read into passages. */
-export const IngestFailed: Story = {
-  render: () => (
-    <StoryProviders>
-      <IngestFailure detail="No text could be extracted: the pages are scanned images." />
     </StoryProviders>
   ),
 };

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 
 // The custom-fields admin sub-components rendered with direct props so the
 // fe-uat render lane exercises them without a network round-trip. FieldBuilder
@@ -141,10 +141,12 @@ export const BuilderPicklist: Story = {
     await userEvent.type(canvas.getByLabelText("Label"), "Stage reason");
     await userEvent.click(canvas.getByRole("button", { name: "Picklist" }));
     const [first] = await canvas.findAllByLabelText("Option label");
+    if (first === undefined) throw new Error("the picklist drew no option");
     await userEvent.type(first, "Budget");
     await userEvent.click(canvas.getByRole("button", { name: "Add option" }));
-    const rows = await canvas.findAllByLabelText("Option label");
-    await userEvent.type(rows[rows.length - 1], "Timing");
+    const added = (await canvas.findAllByLabelText("Option label")).at(-1);
+    if (added === undefined) throw new Error("Add option drew no option");
+    await userEvent.type(added, "Timing");
   },
 };
 
@@ -328,6 +330,7 @@ const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
     canvas.getByRole("button", { name: "Multiple choice" }),
   );
   const [first] = await canvas.findAllByLabelText("Option label");
+  if (first === undefined) throw new Error("the choice list drew no option");
   await userEvent.type(first, "Fit, scope");
 };
 

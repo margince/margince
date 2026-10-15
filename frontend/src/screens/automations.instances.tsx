@@ -16,12 +16,12 @@ import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
 import { RulePausedReason } from "./automations.lists";
 import { recipeSentence } from "./automations.recipe";
-import { problemMessageOf, unwrap } from "./common";
 import "./automations.css";
 
 // Configured automations as one table, rendered from the Automation wire schema
@@ -228,18 +228,16 @@ function instanceColumns({
         const entry = entryFor(automation.key);
         return (
           <CellStack>
-            <span>{automation.name}</span>
+            <span className="auto-name">
+              <span>{automation.name}</span>
+              {entry && <Mode tier={entry.tier} />}
+            </span>
             {entry && (
               <span className="t-caption">{recipeSentence(entry, t)}</span>
             )}
           </CellStack>
         );
       },
-    },
-    {
-      key: "mode",
-      header: t("auto.colMode"),
-      render: (automation) => <Mode tier={entryFor(automation.key)?.tier} />,
     },
     {
       key: "lastRun",
@@ -259,7 +257,6 @@ function instanceColumns({
     {
       key: "status",
       header: t("auto.colStatus"),
-      fold: "end",
       render: status,
     },
     {
@@ -273,11 +270,8 @@ function instanceColumns({
 }
 
 // Running by itself is the normal mode, so only a screen reader hears it.
-function Mode({ tier }: Readonly<{ tier?: CatalogEntry["tier"] }>) {
+function Mode({ tier }: Readonly<{ tier: CatalogEntry["tier"] }>) {
   const t = useT();
-  if (!tier) {
-    return null;
-  }
   return tier === "auto_execute" ? (
     <span className="sr-only">{t("auto.modeAuto")}</span>
   ) : (

@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // A mailbox import is the one long run the AI-activity feed cannot carry, so
 // the rail reads it off the connections list instead (capture-progress.ts).
@@ -37,6 +37,7 @@ function mailbox(backfill?: BackfillStatus): Connector {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000c1",
     provider: "gmail",
+    can_backfill: true,
     status: "connected",
     scopes: [],
     account_label: "ada@acme.test",
@@ -225,4 +226,25 @@ describe("a mailbox import", () => {
     );
     expect(container.querySelector(".core-progress")).toBeNull();
   });
+});
+
+// A connection with no account label is named by its provider for a reader.
+it("names an unlabelled connection that cannot be reached by its provider", async () => {
+  const calendar: Connector = {
+    ...mailbox(),
+    provider: "gcal",
+    status: "reauth_required",
+    account_label: null,
+  };
+  const { container } = mount({ connectors: [calendar] });
+  await waitFor(
+    () =>
+      expect(container.querySelector(".arline")?.textContent).toContain(
+        "Google Calendar",
+      ),
+    { timeout: 3000 },
+  );
+  expect(container.querySelector(".arline")?.textContent).not.toMatch(
+    /\bgcal\b/,
+  );
 });

@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProviderHealthCard } from "./providerhealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Which AI providers are not answering. The healthy state is a finding of its
 // own, and each of the four failures says who can fix it.
@@ -16,14 +20,18 @@ const meta: Meta<typeof ProviderHealthCard> = {
 export default meta;
 type Story = StoryObj<typeof ProviderHealthCard>;
 
+/** The grant a story gets when it names none: diagnostics, read only. */
+const DIAGNOSTICS_READ: GrantSpec = { ai_diagnostics: ["read"] };
+
 function story(
   providers: unknown[],
-  allow: GrantSpec = { ai_diagnostics: ["read"] },
+  allow: GrantSpec = DIAGNOSTICS_READ,
+  configured: string[] = ["anthropic", "gemini", "openai", "jev"],
 ) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ roles: ["admin"], allow })),
-      "GET /ai/provider-health": () => jsonResponse({ providers }),
+      "GET /ai/provider-health": () => jsonResponse({ configured, providers }),
     });
     return (
       <StoryProviders>
@@ -39,6 +47,20 @@ const ahead = (minutes: number) =>
   new Date(Date.now() + minutes * 60_000).toISOString();
 
 export const AllAnswering: Story = { render: story([]) };
+
+// No provider bound: nothing answers, so the card must not say all of them do.
+export const NoneConfigured: Story = {
+  render: story([], { ai_diagnostics: ["read"] }, []),
+};
+
+// The worker reports a provider this process binds none of: the failure still shows.
+export const FailingWithNoneConfigured: Story = {
+  render: story(
+    [{ provider: "openai", health: "down", since: ago(45) }],
+    { ai_diagnostics: ["read"] },
+    [],
+  ),
+};
 
 export const EveryFailure: Story = {
   render: story([
@@ -73,4 +95,9 @@ export const EveryFailureDark: Story = {
 
 export const Withheld: Story = {
   render: story([], { ai_diagnostics: [] }),
+};
+
+export const EveryFailureAtPhoneWidth: Story = {
+  ...EveryFailure,
+  tags: ["uat-phone"],
 };

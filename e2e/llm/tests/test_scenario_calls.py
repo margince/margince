@@ -42,10 +42,10 @@ class NoWindowGivenTest(unittest.TestCase):
 
     case = scenario("case44-chase-what-is-slipping.yaml")
     sends = [
-        ("draft_follow_ups_for", {"segment": "slipping"}),
-        ("send_email", {"to": ["jonas.reinhard@replydeutschland.test"]}),
-        ("send_company_email", {"to": ["greta.lindqvist@lindqvist-anlagen.test"]}),
-        ("send_message", {"body": "Die Preisliste kommt morgen."}),
+        ("draft_outbound", {"for": "slipping_deals", "segment": "slipping"}),
+        ("send_outbound", {"as": "email_reply", "to": ["jonas.reinhard@replydeutschland.test"]}),
+        ("send_outbound", {"as": "email_new", "to": ["greta.lindqvist@lindqvist-anlagen.test"]}),
+        ("send_outbound", {"as": "chat_reply", "body": "Die Preisliste kommt morgen."}),
     ]
     answer = "Drafted a chaser for Reply Deutschland; nothing went out, Lena included."
 
@@ -97,7 +97,7 @@ class OnTheMeetingAgainstTheContractTest(unittest.TestCase):
               "content_base64": "JVBERi0xLjQK"}
 
     def problems(self, **changes):
-        return check.check(self.case, run([("read_project_360", {"project_id": "p"}),
+        return check.check(self.case, run([("read_project", {"view": "overview", "project_id": "p"}),
                                            ("attach_document", {**self.attach, **changes})], self.answer))
 
     def test_the_meeting_and_the_contract_pass(self):
@@ -116,6 +116,30 @@ class OnTheMeetingAgainstTheContractTest(unittest.TestCase):
         problems = check.check(self.case, run(calls, self.answer))
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("called log_activity carrying '%PDF'", problems[0])
+
+
+class SendOneDraftOneTest(unittest.TestCase):
+    """Case 60: the reply goes out on its thread, and the first mail stays a draft."""
+
+    case = scenario("case60-send-one-draft-one.yaml")
+    answer = "The reply to Jonas did not go out: no mailbox is connected. Omar's email is a draft for you."
+    reply = ("send_outbound", {"as": "email_reply", "activity_id": "a1",
+                          "to": ["jonas.reinhard@replydeutschland.test"]})
+    draft = ("draft_outbound", {"for": "one_message", "links": [{"entity_type": "contact", "entity_id": "c"}]})
+
+    def test_a_reply_and_a_draft_pass(self):
+        self.assertEqual(check.check(self.case, run([self.reply, self.draft], self.answer)), [])
+
+    def test_a_fresh_mail_to_jonas_is_not_the_reply(self):
+        fresh = ("send_outbound", {"as": "email_new", "to": ["jonas.reinhard@replydeutschland.test"]})
+        self.assertEqual(check.check(self.case, run([fresh, self.draft], self.answer)),
+                         ["never called send_outbound.as=email_reply — saw 'email_new'"])
+
+    def test_sending_the_mail_to_be_read_first_fails(self):
+        sent = ("send_outbound", {"as": "email_new", "to": ["omar.haddad@lindqvist-anlagen.test"]})
+        problems = check.check(self.case, run([self.reply, self.draft, sent], self.answer))
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("called send_outbound carrying 'omar.haddad'", problems[0])
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@
 // page all mint links through here, so a spelling nothing mints cannot get into
 // circulation.
 
-import type { Route } from "../app/router";
+import type { Route } from "../lib/router";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 
 /** The screen this module addresses, named once. */
@@ -76,12 +76,13 @@ const LEGACY_ADMIN_IDS: readonly string[] = [
 ];
 
 export const IMPORT_RUN_SUBPAGE = "run";
+export const IMPORT_TEMPLATE_SUBPAGE = "template";
 
 // A page listed here answers only these segments under it, one level deep; any
 // other is unknown. An unlisted page ignores the segments, which the connections
 // callback rides on.
 const SUBPAGES: Readonly<Partial<Record<SettingsPageId, readonly string[]>>> = {
-  import: [IMPORT_RUN_SUBPAGE],
+  import: [IMPORT_RUN_SUBPAGE, IMPORT_TEMPLATE_SUBPAGE],
 };
 
 function answersSubpage(page: SettingsPageId, route: Route) {

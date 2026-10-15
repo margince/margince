@@ -2,36 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { EmptyState } from "../design-system/atoms";
+import { EmptyState, StatCard } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { formatNumber } from "../format/format";
-import type { Locale, PluralBase, PluralTranslator } from "../i18n";
-import { QueryGate, type QueryLike, useMe } from "./common";
+import { QueryGate, type QueryLike } from "../design-system/querystates";
+import { StatStrip } from "../design-system/statstrip";
+import { useT } from "../i18n";
+import { useMe } from "../lib/session";
+import type { HealthReading } from "./systemhealthreadings";
 
-// The shell every Settings → System health card wears.
-//
-// Three cards read an operational report — background jobs, capture's judgement
-// queues, and what the core refused from a connector — and each was growing its
-// own copy of the same four decisions: probe /me before deciding the grant is
-// absent, withhold rather than disappear, keep one card's throw inside one
-// card, and date the reading only when there is one.
-//
-// They are not stylistic. WITHHELD RATHER THAN ABSENT: a missing card on a page
-// a non-admin reaches for its other sections reads as "nothing is queued" or
-// "nothing was refused", which is a claim about the installation that nobody
-// made. THE PROBE ITSELF: every capability predicate reads false while /me is
-// in flight, so branching on the answer alone tells every administrator the
-// card is not theirs until the session lands. THE STAMP BEHIND THE GRANT: a
-// cache outlives a grant, so a footer under a withheld body would date a
-// reading the card is no longer showing.
+// Withheld, not absent: a missing card reads as "nothing is queued". The /me
+// probe comes first because every grant reads false while /me is in flight.
 export function HealthCard<Data>({
   title,
   sub,
   withheld,
   canSee,
   query,
-  footer,
+  lead,
   children,
 }: Readonly<{
   title: string;
@@ -42,74 +30,88 @@ export function HealthCard<Data>({
   /** Whether this reader holds the grant the endpoint asks for. */
   canSee: boolean;
   query: QueryLike<Data>;
-  /** The card's trailing fact — when the report was read. */
-  footer: (data: Data) => ReactNode;
+  /** What the report says first, in the intro's own band. */
+  lead?: (data: Data) => ReactNode;
   children: (data: Data) => ReactNode;
 }>) {
   const me = useMe();
+  const report = canSee ? query.data : undefined;
 
-  let body: ReactNode;
+  let opening: ReactNode = null;
   if (!canSee) {
     // Behind the probe, so the notice states a settled denial rather than the
     // absence of an answer: while /me is in flight nobody holds any role yet.
-    body = (
+    opening = (
       <QueryGate query={me} pendingLabel={title}>
         {() => <EmptyState>{withheld}</EmptyState>}
       </QueryGate>
     );
-  } else {
-    // No `empty` predicate on the gate: on these cards an empty report is a
-    // FINDING — the queue is idle, nothing was refused — and the generic copy
-    // would understate the one thing the card exists to say, so the body owns
-    // that rung.
-    body = (
-      <QueryGate query={query} pendingLabel={title}>
-        {children}
-      </QueryGate>
-    );
+  } else if (report !== undefined && lead) {
+    opening = lead(report);
   }
 
-  const report = canSee ? query.data : undefined;
-
-  // No bottom margin: `.settings-stack` owns the gap between cards, and a card
-  // that adds its own gets two.
+  // The body stands straight in the panel so a report's table bleeds; each
+  // body wraps its own prose in a `PanelBody`.
   return (
-    <Panel title={title} footer={report && footer(report)}>
+    <Panel title={title}>
       <PanelBody>
         <PanelIntro>{sub}</PanelIntro>
-        {/* One card's throw stays inside one card. These bodies derive every
-            line from a payload a background system writes, so they have more
-            ways to give out than the panels beside them — and without a
-            boundary the whole Maintenance tab, navigation rail included, goes
-            with them. */}
-        <CardBoundary>{body}</CardBoundary>
+        <CardBoundary>{opening}</CardBoundary>
       </PanelBody>
+      {/* One card's throw stays inside one card: a body derived from a payload
+          a background system writes must not take the Maintenance tab with it.
+          No `empty` predicate on the gate: an empty report is a FINDING the
+          body states in its own words. */}
+      {canSee && (
+        <CardBoundary>
+          <QueryGate query={query} pendingLabel={title}>
+            {children}
+          </QueryGate>
+        </CardBoundary>
+      )}
     </Panel>
   );
 }
 
-// How long the oldest item in a queue has waited, in the largest whole unit: a
-// job on the job card, a contact or a meeting on the capture card. `format.ts`'s
-// formatDuration cannot answer this: it floors anything under an hour to "0 hr",
-// and a queue that jammed five minutes ago is the reading an operator opens for.
-// A count of one takes the singular key, the house `.one`/`.other` pattern — a
-// queue that jammed sixty-one minutes ago read "waited 1 hours".
-export function formatWaitedFor(
-  seconds: number,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  const [unit, count] =
-    seconds >= 86_400
-      ? (["Days", Math.floor(seconds / 86_400)] as const)
-      : seconds >= 3_600
-        ? (["Hours", Math.floor(seconds / 3_600)] as const)
-        : seconds >= 60
-          ? (["Minutes", Math.floor(seconds / 60)] as const)
-          : (["Seconds", seconds] as const);
-  // Annotated so an unknown unit is a compile error rather than a base the
-  // catalog silently echoes back. Which FORM the base takes is the plural
-  // helper's business, not this function's.
-  const base: PluralBase = `jobs.waited${unit}`;
-  return plural(base, count, { count: formatNumber(count, locale) });
+export type HealthSlot = Readonly<{
+  key: string;
+  label: string;
+  reading: HealthReading;
+}>;
+
+/**
+ * The page's readings in one row. Each states its answer in words and tone,
+ * and says more only when the answer is not clean. A reading the reader may
+ * not see has no slot; its card below says why.
+ */
+export function HealthStrip({
+  slots,
+  stamp,
+}: Readonly<{ slots: readonly HealthSlot[]; stamp?: string }>) {
+  const t = useT();
+  const shown = slots.flatMap(({ key, label, reading }) =>
+    reading.card ? [{ key, label, card: reading.card }] : [],
+  );
+  if (shown.length === 0) {
+    return null;
+  }
+  return (
+    <StatStrip
+      label={t("systemHealth.strip")}
+      density="compact"
+      floor={stamp && t("systemHealth.asOf", { time: stamp })}
+    >
+      {shown.map(({ key, label, card }) => (
+        <StatCard
+          key={key}
+          narrow="row"
+          label={label}
+          value={card.value}
+          tone={card.tone}
+          detail={card.detail}
+          href={card.href}
+        />
+      ))}
+    </StatStrip>
+  );
 }

@@ -11,9 +11,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiRoutingCard } from "./ai-routing";
 import { withProvider } from "./ai-routing-fields";
 
@@ -257,7 +257,7 @@ describe("a gemini_vertex lane", () => {
     ).toHaveTextContent("eu");
   });
 
-  it("points at the provider keys when no service-account key is held", async () => {
+  it("points at Providers when no service-account key is held", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -280,9 +280,7 @@ describe("a gemini_vertex lane", () => {
     render(<AiRoutingCard />);
 
     const lane = await openLane(user, "ai-routing-embeddings");
-    const notes = await within(lane).findAllByText(
-      /add it under model provider keys/i,
-    );
+    const notes = await within(lane).findAllByText(/add it under providers/i);
     // Both fields say it: the location list and the model list are each
     // blocked on the same missing key.
     expect(notes).toHaveLength(2);

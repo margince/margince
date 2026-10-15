@@ -1,17 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { ArrowRight, RefreshCw, ShieldCheck } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePublishSelection } from "../app/attention";
-import { useCanUpsert, useHoldsAdminRole } from "../app/capability";
-import { navigate } from "../app/router";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import {
   Badge,
   Button,
   Checkbox,
-  Disclosure,
   Field,
   Modal,
   Radio,
@@ -24,32 +26,28 @@ import {
   DrawerFoot,
   DrawerHead,
 } from "../design-system/drawerbands";
-import {
-  EvidenceMark,
-  type EvidenceMarkSource,
-} from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { WriteRefused } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { confidenceLevel, FieldDiff } from "../design-system/trust";
+import { FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  coldFieldLabel,
-  problemMessageOf,
-  provenanceOf,
-  QueryGate,
-  type QueryLike,
-  throwProblem,
-  unwrap,
-  useMe,
-  WriteRefused,
-} from "./common";
-import { ReadWarnings, SavedNotice } from "./company-context.notices";
+import { useCanUpsert, useHoldsAdminRole } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
+import { coldFieldLabel } from "./coldfieldlabels";
+import { ReadWarnings } from "./company-context.notices";
+import { CompanyFactsCard, PROFILE_GROUPS } from "./companycontextfacts";
 import { CompanyMark } from "./companymark";
-import { storeCompany, useCompany } from "./installationcompany";
+import {
+  companySaveMessage,
+  storeCompany,
+  useCompany,
+} from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -73,48 +71,6 @@ const EMPTY_COMPANY_INPUT: CompanyInput = {
   offer_summary: "",
   icp: "",
 };
-
-const PROFILE_GROUPS = [
-  {
-    title: "settings.companyEssentials",
-    fields: ["display_name", "offer_summary", "icp"],
-  },
-  {
-    title: "settings.companyPositioning",
-    fields: [
-      "value_proposition",
-      "usp",
-      "customer_pains",
-      "desired_outcomes",
-      "buying_center",
-      "buying_intents",
-      "common_objections",
-      "sales_motion",
-    ],
-  },
-  {
-    title: "settings.companyIdentity",
-    fields: [
-      "legal_name",
-      "registered_address",
-      "register_vat",
-      "industry",
-      "history",
-    ],
-  },
-] as const satisfies readonly {
-  title: MessageKey;
-  fields: readonly (keyof CompanyInput)[];
-}[];
-
-// The three the save DEMANDS, and the two groups that say more.
-//
-// The distinction is the server's, not a presentation choice: `requiredComplete`
-// below is exactly this first group, so the essentials are the rows the card
-// shows standing open and the rest are what a reader unfolds when they have
-// something to add. All three groups are still one form — see the dialog, where
-// they are the sections of it — because the profile is written by ONE PUT.
-const [ESSENTIALS, ...ELABORATIONS] = PROFILE_GROUPS;
 
 // Joins comparison keys into the one string the default selection is keyed on.
 // A NUL can appear in no key the server mints, so no key can ever split into
@@ -173,11 +129,8 @@ export function ManualCompanySetup() {
     },
   });
   return (
-    // One Panel, in the ONE lead tone, where a gradient with a decorative
-    // circle and two bespoke boxes used to be. The heading is the panel's own
-    // title rather than a bare h2: preflight leaves an unclassed heading at
-    // body size, so the page's lead sentence used to render as body text
-    // inside a gradient.
+    // The heading is the panel's own title rather than a bare h2: preflight
+    // leaves an unclassed heading at body size.
     <div className="wrap narrow">
       <Panel
         tone="accent"
@@ -227,7 +180,7 @@ export function ManualCompanySetup() {
           {save.isError && (
             <WriteRefused
               titleKey="settings.companySaveFailed"
-              error={save.error}
+              message={companySaveMessage(save.error, t)}
             />
           )}
         </PanelBody>
@@ -402,32 +355,24 @@ export function CompanyContextCard() {
 
   const siteRead = useQuery({
     queryKey: ["company-context-refresh", readID],
-    enabled: readID !== null,
-    queryFn: async (): Promise<SiteRead> => {
-      return unwrap(
-        await api.GET("/company/site-reads/{readId}", {
-          params: { path: { readId: readID ?? "" } },
-        }),
-      );
-    },
+    queryFn:
+      readID !== null
+        ? async (): Promise<SiteRead> =>
+            unwrap(
+              await api.GET("/company/site-reads/{readId}", {
+                params: { path: { readId: readID } },
+              }),
+            )
+        : skipToken,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === "queued" || status === "reading" ? 900 : false;
     },
   });
 
-  // What the reviewer starts from, as ONE comparable string, and the effect
-  // below seeds from it rather than from the array.
-  //
-  // The poll re-fetches this read every 900ms while the crawl is still running
-  // and hands back a new array each time. Keyed on the array's identity, the
-  // seed therefore ran on every tick: it rebuilt the default Set roughly
-  // once a second and wiped whatever the reviewer had ticked or cleared in the
-  // meantime — a change they had deliberately deselected reappeared under their
-  // cursor, and the box they ticked was gone by the time they read the next
-  // row. What the seed is really about is the ARRIVAL of a set of proposals,
-  // which is what this names: two polls that propose the same changes produce
-  // the same string and the effect does not run again.
+  // What the reviewer starts from, as one comparable string. The poll returns
+  // a new array every 900ms. The seed effect must run only when new proposals
+  // arrive, or it resets the reviewer's ticks.
   const defaultSelection = (siteRead.data?.comparisons ?? [])
     .filter(
       (item) =>
@@ -526,17 +471,20 @@ export function CompanyContextCard() {
     return null;
   }
 
+  // Waits for the /me probe, so a reader who may edit never sees it flash.
+  const readOnly = me.isSuccess && !canEdit;
+
   return (
     <div className="company-context-shell">
+      {/* The company's face first: what a reader recognises at a glance. */}
+      {company.data && !company.isError && form && (
+        <CompanyMark profile={company.data} canEdit={canEdit} />
+      )}
       <CompanyFactsCard
         company={company}
-        rollout={capabilities.data?.rollout}
         form={form}
         canEdit={canEdit}
-        // The posture is a fact about the READER, so it waits for the probe
-        // that answers it: a reader who may edit never sees this flash while
-        // /me is in flight.
-        readOnly={me.isSuccess && !canEdit}
+        readOnly={readOnly}
         saved={save.isSuccess}
         onEdit={setEditing}
       />
@@ -555,7 +503,7 @@ export function CompanyContextCard() {
           form={form}
           focus={editing}
           pending={save.isPending}
-          error={save.isError ? problemMessageOf(save.error, t) : null}
+          error={save.isError ? companySaveMessage(save.error, t) : null}
           onChange={setForm}
           onClose={() => setEditing(null)}
           onSubmit={() => save.mutate(trimCompanyInput(form))}
@@ -583,140 +531,12 @@ export function CompanyContextCard() {
           }
           canApply={canEdit}
           confirming={confirm.isPending}
-          error={confirm.error ? problemMessageOf(confirm.error, t) : undefined}
+          error={
+            confirm.error ? companySaveMessage(confirm.error, t) : undefined
+          }
         />
       )}
     </div>
-  );
-}
-
-/**
- * WHAT we hold, as one row per fact.
- *
- * What stood here was a form dump: an eyebrow repeating the title, a recessed
- * plate carrying two unrelated facts, a website field with a button beside it,
- * then seventeen inputs under three heading levels with a provenance chip
- * floating under each. Now every fact a reader can change is a ROW — named on
- * the left, what it currently says on the right, and the editing behind one
- * verb, because ONE PUT writes all of them. Where the site read a value rather
- * than a contact typing it, the value carries the design system's own provenance
- * mark instead of a chip of its own.
- */
-function CompanyFactsCard({
-  company,
-  rollout,
-  form,
-  canEdit,
-  readOnly,
-  saved,
-  onEdit,
-}: Readonly<{
-  company: QueryLike<CompanyProfile | null>;
-  /** Which rollout stage this installation is on, once the probe has answered. */
-  rollout?: Capabilities["rollout"];
-  form: CompanyInput | null;
-  canEdit: boolean;
-  readOnly: boolean;
-  saved: boolean;
-  onEdit: (field: keyof CompanyInput) => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const confirmed = company.data?.fields?.length ?? 0;
-  return (
-    <Panel
-      tone="accent"
-      title={
-        <>
-          <Sparkles aria-hidden size={16} />
-          {t("settings.companyTitle")}
-        </>
-      }
-      // The two facts that belong to the WHOLE card, in the band that reports
-      // rather than acts: how much of this profile somebody has confirmed, and
-      // which rollout stage this installation is on. Neither is a decision, so
-      // neither is a row. The plate that used to carry the count paired it with
-      // the sentence about website text never becoming instructions — a promise
-      // about the READ, which is the card below.
-      footer={
-        company.data ? (
-          <>
-            <span className="company-context-count">
-              {plural("settings.companyConfirmed", confirmed, {
-                count: formatNumber(confirmed, locale),
-              })}
-            </span>
-            {rollout && <Badge>{rollout}</Badge>}
-          </>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <PanelIntro>{t("settings.companySub")}</PanelIntro>
-        {/* The surface keeps its place and states its posture ONCE. This is a
-            PERMISSION, which is why it speaks at all — the rollout flag returns
-            null instead, because a capability this installation does not have
-            is not a fact about the reader. */}
-        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
-        {/* The company's FACE, above the statements about it: the one thing
-            here a reader recognises at a glance, and the sidebar's too. */}
-        {company.data && !company.isError && form && (
-          <CompanyMark profile={company.data} canEdit={canEdit} />
-        )}
-      </PanelBody>
-      <QueryGate
-        query={company}
-        pendingLabel={t("settings.companySourceTitle")}
-      >
-        {(profile) =>
-          profile !== null &&
-          form && (
-            <>
-              <SettingList bleed="settings">
-                {ESSENTIALS.fields.map((field) => (
-                  <CompanyFactRow
-                    key={field}
-                    field={field}
-                    value={String(form[field] ?? "")}
-                    profile={profile}
-                    canEdit={canEdit}
-                    onEdit={() => onEdit(field)}
-                  />
-                ))}
-                {/* Closed, so thirteen optional facts do not bury the three
-                    the save requires. */}
-                {ELABORATIONS.map((group) => (
-                  <Disclosure key={group.title} summary={t(group.title)}>
-                    <SettingList>
-                      {group.fields.map((field) => (
-                        <CompanyFactRow
-                          key={field}
-                          field={field}
-                          value={String(form[field] ?? "")}
-                          profile={profile}
-                          canEdit={canEdit}
-                          onEdit={() => onEdit(field)}
-                        />
-                      ))}
-                    </SettingList>
-                  </Disclosure>
-                ))}
-              </SettingList>
-              {/* The dialog closes on save, so the confirmation lands here; a
-                  refusal stays in the dialog beside the fields it refused. */}
-              {saved && (
-                <PanelBody>
-                  <div className="settings-panel-commit">
-                    <SavedNotice />
-                  </div>
-                </PanelBody>
-              )}
-            </>
-          )
-        }
-      </QueryGate>
-    </Panel>
   );
 }
 
@@ -809,85 +629,6 @@ function CompanySourceCard({
 }
 
 /**
- * What we hold for one field, as a row: the fact named, what it says, and the
- * verb that changes it.
- *
- * The value is the row's ANSWER rather than an input, which is what the whole
- * card gained: a reader auditing this profile travels one column instead of
- * reading seventeen boxes to find out which of them are empty.
- */
-function CompanyFactRow({
-  field,
-  value,
-  profile,
-  canEdit,
-  onEdit,
-}: Readonly<{
-  field: keyof CompanyInput;
-  value: string;
-  profile: CompanyProfile;
-  canEdit: boolean;
-  onEdit: () => void;
-}>) {
-  const t = useT();
-  const label = coldFieldLabel(field, t);
-  const stored = profile.fields?.find((item) => item.field === field);
-  return (
-    <SettingRow
-      label={label}
-      // An empty field says so, in the words every other surface uses for it.
-      // A blank right column is indistinguishable from a row that failed to
-      // render its answer.
-      value={
-        <EvidenceMark
-          value={value.trim() === "" ? t("field.unset") : value}
-          source={stored ? derivedSource(stored) : undefined}
-        />
-      }
-      control={
-        canEdit ? (
-          <Button
-            variant="ghost"
-            // Named by the fact it changes, not "Edit": seventeen rows offering
-            // seventeen identically-named buttons make a screen reader's user
-            // count them to find out which one they are on.
-            aria-label={t("settings.companyEditField", { field: label })}
-            onClick={onEdit}
-          >
-            {t("settings.companyEdit")}
-          </Button>
-        ) : null
-      }
-    />
-  );
-}
-
-/**
- * Where a value came from, when a contact did not type it.
- *
- * A human-entered value gets no mark, which is the record page's rule and the
- * reason the mark means anything: this profile is mostly typed by contacts, and
- * underlining all of it would say only "this is a value". What the mark carries
- * is deliberately not a date — the surrounding surface is a settings page with
- * no record zone of its own, and a timestamp rendered in some other zone is
- * worse than none.
- */
-function derivedSource(
-  stored: components["schemas"]["CompanyProfileField"],
-): EvidenceMarkSource | undefined {
-  const provenance = provenanceOf(stored.captured_by);
-  if (provenance.kind === "human") {
-    return undefined;
-  }
-  return {
-    provenance,
-    confidence: confidenceLevel(stored.confidence) ?? undefined,
-    snippet: stored.evidence_snippet,
-    sourceUrl: stored.source_url,
-  };
-}
-
-/**
  * The one form every row's Edit verb opens. One drawer, because ONE PUT writes
  * the profile: a dialog per group would commit the others' unsaved drafts.
  */
@@ -925,7 +666,7 @@ function CompanyProfileDialog({
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
-          {t("settings.companyTitle")}
+          {t("settings.companyContextTitle")}
         </Heading>
       </DrawerHead>
       <DrawerBody>

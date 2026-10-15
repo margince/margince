@@ -4,11 +4,11 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { type GrantSpec, meFixture } from "./app/mefixture";
 import { createQueryClient } from "./app/queryclient";
-import { parseHash, routeHash } from "./app/router";
 import { LocaleProvider } from "./i18n";
+import { parseHash, routeHash } from "./lib/router";
 import { memoryStorage, wizardRow } from "./testing/appharness";
+import { type GrantSpec, meFixture } from "./testing/mefixture";
 
 // Two places decide, on their own, where a session belongs when the
 // installation has not described itself, and each rewrites the hash to say so:

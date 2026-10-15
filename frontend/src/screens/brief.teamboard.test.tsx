@@ -2,8 +2,8 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { BriefTeamBoard } from "./brief.teamboard";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 

@@ -4,15 +4,19 @@
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { useUpdateRecord } from "../components/edit";
+import {
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/roster";
 import {
   ListPopover,
   type ListPopoverOption,
 } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { useUpdateRecord } from "./edit";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import type { Project } from "./projects.form";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./roster";
 
 // Hands a project directly to a named colleague. The Owner select beside
 // this (projects.form.ts) only ever offers keep-current/Me/Unassign; naming

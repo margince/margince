@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useShowDetails } from "../../app/pageaside";
+import { useShowDetails } from "../../components/pageaside";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";

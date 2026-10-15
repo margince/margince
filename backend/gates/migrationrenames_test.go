@@ -78,7 +78,23 @@ func buildRenames() map[string]string {
 // withCurrentNames rewrites migration SQL so every renamed identifier reads
 // under the name the database has today. A gate scanning the result sees the
 // schema it is actually judging rather than the one the baseline first built.
+//
+// Remembered per input: the schema gates rewrite the same migrations, and the rename
+// map cannot change during a run.
 func withCurrentNames(sql string) string {
+	if done, ok := currentNameRewrites.Load(sql); ok {
+		if rewritten, isString := done.(string); isString {
+			return rewritten
+		}
+	}
+	rewritten := rewriteToCurrentNames(sql)
+	currentNameRewrites.Store(sql, rewritten)
+	return rewritten
+}
+
+var currentNameRewrites sync.Map // migration SQL -> withCurrentNames of it
+
+func rewriteToCurrentNames(sql string) string {
 	renames := currentNames()
 	if len(renames) == 0 {
 		return sql
@@ -95,7 +111,7 @@ func withCurrentNames(sql string) string {
 		if !strings.Contains(sql, old) {
 			continue
 		}
-		sql = regexp.MustCompile(`\b`+regexp.QuoteMeta(old)+`\b`).ReplaceAllString(sql, renames[old])
+		sql = compiledPattern(`\b`+regexp.QuoteMeta(old)+`\b`).ReplaceAllString(sql, renames[old])
 	}
 	return sql
 }

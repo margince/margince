@@ -335,6 +335,13 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 // meter is built by the caller rather than here, because the model path needs
 // the same pointer to charge MCP-SESS-COST against — two meters would count one
 // agent's spend in two windows, neither of them the one the gate reads.
+// newVolumeMeter is the meter judged by the allowances an admin saved, counted
+// in rdb. A role whose rdb is nil gets the fail-closed meter New builds.
+func newVolumeMeter(rdb *redis.Client, pool *pgxpool.Pool) *agentvolume.Meter {
+	return agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow).
+		WithPolicySource(compose.NewAgentAllowanceSource(pool))
+}
+
 func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 	return []compose.Option{compose.WithAgentVolume(volumeMeter)}
 }
@@ -458,6 +465,9 @@ func workerHandoffOptions(
 		// table. Its relay, vault and public origin arrive on their own
 		// options; whichever lands last completes the lane.
 		compose.WithControllerMail(sendInserter),
+		// An approved import commits, and an undo reverses, in the worker: the
+		// move and its job are one transaction, so the 202 means work is queued.
+		compose.WithImportJobs(sendInserter),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)

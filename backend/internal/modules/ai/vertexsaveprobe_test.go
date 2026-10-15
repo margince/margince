@@ -40,7 +40,7 @@ func TestSavingRefusesAVertexModelItsLocationDoesNotServe(t *testing.T) {
 	}{
 		"not served":      {allCloudKeys(t), vertexRouting("eu"), []string{"tier premium", `"gemini-3.5-flash"`, `"eu"`, "does not serve"}},
 		"no key held":     {noCloudKeys(), vertexRouting("europe-west4"), []string{"tier premium", "holds no service-account key"}},
-		"an unusable key": {cloudKeyFor(providerGeminiVertex, "not json"), vertexRouting("europe-west4"), []string{"tier premium", "not usable", "Provider keys"}},
+		"an unusable key": {cloudKeyFor(providerGeminiVertex, "not json"), vertexRouting("europe-west4"), []string{"tier premium", "not usable", "under Providers"}},
 		"unserved embedder": {allCloudKeys(t), func() RoutingConfig {
 			cfg := vertexRouting("europe-west4")
 			cfg.Embeddings.Model = "gemini-embedding-000"

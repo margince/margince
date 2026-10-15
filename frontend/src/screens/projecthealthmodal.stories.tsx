@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProjectHealthModal } from "./projecthealthmodal";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Recording how a delivery is going, and correcting a reading that was wrong.
 //

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
-import type { GrantSpec } from "../../src/app/mefixture";
+import type { GrantSpec } from "../../src/testing/mefixture";
 import type { MockProject } from "../projectmock";
 
 // The booked meeting the contact record offers a brief for. Its id is the one
@@ -578,6 +578,28 @@ export const seededViews: components["schemas"]["SavedView"][] = [
   },
 ];
 
+const usageCounter = (used: number, limit: number) => ({
+  used,
+  limit,
+  released: 0,
+});
+
+// One user's agents this window, for Settings › AI usage › Agent usage by user.
+export const agentUsageByUser = {
+  resets_at: "2026-07-06T00:00:00Z",
+  data: [
+    {
+      user_id: "u1",
+      display_name: "Lena Fischer",
+      passport_count: 1,
+      writes: usageCounter(37, 200),
+      egress: usageCounter(2, 20),
+      calls: usageCounter(160, 1_000),
+      state: "ok",
+    },
+  ],
+};
+
 export const passports = [
   {
     id: "pp-1",
@@ -676,6 +698,7 @@ export const aiProviderKeys = {
 // health card in their failing state rather than only the empty one.
 // `retry_after` is omitted for a degraded provider only.
 export const aiProviderHealth = {
+  configured: ["gemini", "anthropic"],
   providers: [
     {
       provider: "gemini",
@@ -919,7 +942,8 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
     documents: [
       {
         id: "mitarbeiterinformation",
-        title: "Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz",
+        title:
+          "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz",
         language: "de",
         audience: "employee",
         kind: "template",
@@ -932,8 +956,9 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
 // A queue with something waiting, a dispatcher beside it, and one dead job.
 // The dead count raises the card's alert, which an all-zero fixture would
 // leave unmeasured.
-export const jobHealth = {
+export const jobHealth: components["schemas"]["JobHealth"] = {
   generated_at: "2026-07-05T06:20:00Z",
+  dead_window_hours: 24,
   kinds: [
     {
       kind: "capture_ingest",
@@ -943,6 +968,7 @@ export const jobHealth = {
       running: 2,
       retrying: 1,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: 195,
     },
     {
@@ -953,6 +979,7 @@ export const jobHealth = {
       running: 0,
       retrying: 0,
       dead: 2,
+      dead_recent: 2,
       oldest_waiting_age_seconds: null,
     },
     {
@@ -963,6 +990,7 @@ export const jobHealth = {
       running: 1,
       retrying: 0,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: null,
     },
   ],
@@ -986,6 +1014,82 @@ export const jobHealth = {
   ],
 };
 
+// A mailbox with a backlog and every sweep on schedule, so the sweeps measure
+// the card's tables rather than its failed read.
+export const captureHealth: components["schemas"]["CaptureHealth"] = {
+  generated_at: "2026-07-05T06:20:00Z",
+  mailboxes: [
+    {
+      user_id: "u1",
+      display_name: "Lena Fischer",
+      contacts_awaiting_decision: 3,
+      oldest_contact_age_seconds: 7_200,
+      threads_awaiting_verdict: 0,
+      oldest_thread_age_seconds: null,
+    },
+  ],
+  classifier: { pending: 0, unsure: 0, exhausted: 0 },
+  held_meetings: { count: 0 },
+  sweeps: [
+    {
+      sweep: "settled_thread_verdicts",
+      cadence_seconds: 3_600,
+      last_succeeded_at: "2026-07-05T06:00:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:00:00Z",
+        processed: 14,
+        cap_hit: false,
+      },
+    },
+    {
+      sweep: "stranded_contacts",
+      cadence_seconds: 3_600,
+      last_succeeded_at: "2026-07-05T06:05:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:05:00Z",
+        processed: 3,
+        cap_hit: false,
+      },
+    },
+    {
+      sweep: "filed_meeting_holds",
+      cadence_seconds: 900,
+      last_succeeded_at: "2026-07-05T06:15:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:15:00Z",
+        processed: 0,
+        cap_hit: false,
+      },
+    },
+  ],
+};
+
+export const recoveryHealth: components["schemas"]["RecoveryHealth"] = {
+  generated_at: "2026-07-05T06:20:00Z",
+  recovery_target_seconds: 14_400,
+  data_loss_target_seconds: 3_600,
+  last_drill: {
+    started_at: "2026-07-01T02:00:00Z",
+    finished_at: "2026-07-01T03:10:00Z",
+    restored_to: "2026-07-01T01:45:00Z",
+    outcome: "passed",
+    operator: "Lena Fischer",
+    notes: null,
+    recovery_seconds: 4_200,
+    data_loss_seconds: 900,
+  },
+};
+
+export const extensionIngestHealth: components["schemas"]["ExtensionIngestHealth"] =
+  {
+    generated_at: "2026-07-05T06:20:00Z",
+    window_days: 7,
+    units: [],
+  };
+
 export const publicSlots = [
   { start: "2026-07-06T09:00:00Z", end: "2026-07-06T09:30:00Z" },
   { start: "2026-07-06T10:00:00Z", end: "2026-07-06T10:30:00Z" },
@@ -1007,6 +1111,7 @@ export const knowledgeCorpora = {
         documents_total: 42,
         chunks_total: 1_180,
         chunks_embedded: 1_180,
+        embed_state: "complete",
       },
       created_at: "2026-08-01T00:00:00Z",
     },

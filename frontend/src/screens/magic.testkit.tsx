@@ -27,7 +27,8 @@ export function jsonResponse(body: unknown, status = 200): Response {
 // also answer anything nested under it, and a panel reading a body meant for a
 // sibling route throws inside React's render, where no assertion sees it.
 function isMagicRead(url: string): boolean {
-  return url.split("?")[0].endsWith("/magic");
+  const [path = ""] = url.split("?");
+  return path.endsWith("/magic");
 }
 
 /** The receipt, and an empty page for every other read the panel does not make. */

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
@@ -18,11 +18,19 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+// A mailbox's posture lives in the drawer its row's chevron opens.
+async function openMailboxPosture(page: Page) {
+  await page.getByRole("button", { name: /^Gmail.* öffnen$/ }).click();
+  const row = page.getByTestId("connector-gmail-mail-posture");
+  await expect(row).toBeVisible();
+  return row;
+}
+
 test("AC-mailbox-1: a mailbox says who may read it, and refuses shared without the opt-in", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const row = page.getByTestId("connector-gmail-mail-posture");
+  const row = await openMailboxPosture(page);
   await expect(row).toBeVisible();
 
   // The stored posture, and the sentence saying what it does.
@@ -49,11 +57,13 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const row = page.getByTestId("connector-gmail-mail-posture");
+  const row = await openMailboxPosture(page);
   await row.getByRole("combobox").click();
   await page.getByRole("option", { name: "Immer zurückgehalten" }).click();
 
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", {
+    name: "Auf erfasste E-Mails anwenden?",
+  });
   await expect(dialog).toContainText("Auf erfasste E-Mails anwenden?");
   // One question and one modifier, never two rival verbs: the German labels do
   // not both fit the compact confirm, and a clipped primary button is what the
@@ -88,23 +98,38 @@ test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async (
   await expect(page.getByText(/Margince prüft das nicht/)).toBeVisible();
 });
 
+// A sender's verbs sit in its row's menu, named by the address.
+async function openRowMenu(page: Page, address: string) {
+  await page
+    .getByRole("button", {
+      name: de["table.rowActions"].replace("{name}", address),
+    })
+    .click();
+}
+
 test("AC-mailbox-4: the Senders page shows every decision and takes an overrule", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  const senders = page
+    .locator(".panel", { hasText: de["senders.title"] })
+    .first();
   await expect(senders).toBeVisible();
   await expect(senders).toContainText(de["senders.kind.contact"]);
   await expect(senders).toContainText(de["senders.kind.newsletter"]);
   await expect(senders).toContainText(de["senders.kind.personal"]);
 
   const row = senders.locator("tr", { hasText: "news@substack.com" });
-  await row.getByRole("button", { name: "Geschäftlich" }).click();
+  await openRowMenu(page, "news@substack.com");
+  await page
+    .getByRole("button", { name: de["senders.markBusiness"], exact: true })
+    .click();
   // An overruled row says whose answer stands, because the reader auditing this
   // list needs to tell their own decisions from the classifier's.
   await expect(row).toContainText(de["senders.byYou"]);
+  await openRowMenu(page, "news@substack.com");
   await expect(
-    row.getByRole("button", { name: "Rückgängig machen" }),
+    page.getByRole("button", { name: de["senders.withdraw"], exact: true }),
   ).toBeVisible();
 });
 
@@ -112,10 +137,13 @@ test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
-  await senders
-    .locator("tr", { hasText: "anne@hotmail.com" })
-    .getByRole("button", { name: "Ausschließen" })
+  const senders = page
+    .locator(".panel", { hasText: de["senders.title"] })
+    .first();
+  await expect(senders).toContainText("anne@hotmail.com");
+  await openRowMenu(page, "anne@hotmail.com");
+  await page
+    .getByRole("button", { name: de["senders.keepOut"], exact: true })
     .click();
 
   const dialog = page.getByRole("dialog");

@@ -23,7 +23,7 @@ registry, so nothing else has to keep them in line.
 
 Most verbs that change data run on their own (🟢). `enrich` stages for approval (🟡), because the model
 names the URL the server fetches. The reason, and how an installation sets a verb back to 🟡, is in
-[authorization.md](authorization.md#autonomy-tiers--how-agent-actions-are-governed--).
+[authorization.md](authorization.md#autonomy-tiers--how-agent-actions-are-governed---).
 
 A passport is also a REST Bearer credential, and REST governs it as MCP does. On REST too, 🟢 changes
 run on their own and 🟡 ones stage for approval. Both stay inside the current seat and RBAC of the human
@@ -36,6 +36,17 @@ headers become the tool's `idempotency_key` and `approval_id` (`internal/compose
 the write routes that declare them. The key is then the tool's, held per caller and tool rather than
 per path. So one key on two records of one tool answers `409`, and a key spent over MCP replays on
 REST.
+
+**Routers.** A client counts tools against one budget for every server it connects, so look-alike tools
+are published as one. A router (`internal/modules/agents/router.go`) is a listed tool that runs as one of
+several hidden tools, picked by an argument: `change_lead_state` with `action: promote` runs as
+`promote_lead`. `Registry.InvokeServed` picks the hidden tool before anything else runs.
+
+So the gate, the approval and its later use, retry keys and MCP Tasks all see the name of the hidden
+tool. That name is the approval kind and the contract verb, and a router changes neither. A hidden tool
+still runs when a client calls it by name; `tools/list` leaves it out. Two are hidden with no router:
+`progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
+`TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP
 (`list_documents`, `attach_document`) or over REST (`listAttachments`, `listCompanyDocuments`,

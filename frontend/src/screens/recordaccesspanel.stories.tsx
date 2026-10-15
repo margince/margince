@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { WhoCanSeePanel } from "./recordaccesspanel";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 type RecordAccess = components["schemas"]["RecordAccess"];
 type Member = components["schemas"]["RecordAccessMember"];
@@ -41,7 +45,7 @@ const lead = member("0a02", "Sam Lead", {
   can_change: true,
   change_reasons: [{ code: "same_team_as_owner" }],
 });
-const colleagues = [
+const colleagues: [Member, Member, Member] = [
   lead,
   member("0a03", "Kim Rep", {}),
   member("0a04", "Noor Rep", {}),

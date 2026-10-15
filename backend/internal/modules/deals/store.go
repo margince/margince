@@ -65,6 +65,8 @@ type Store struct {
 
 	// suggestionEffects are an accepted suggestion's writes outside this module.
 	suggestionEffects SuggestionEffects
+	// reviewDocs lists the documents a legal review pack carries.
+	reviewDocs LegalReviewDocuments
 }
 
 // InstallationValue resolves ONE installation-identity value inside a
@@ -252,26 +254,20 @@ type CustomColumns struct {
 }
 
 // ErrCustomFieldsNeedTheStoresOwnTransaction refuses custom-field values on a
-// caller-opened create.
+// caller-opened create whose caller read no catalog.
 //
-// The catalog those values are matched against is read in a transaction of its
-// own, so a caller-opened write cannot obtain it without taking the second
-// connection these seams exist to avoid — and a write that dropped the values
-// silently would be worse than one that refuses: the deal would come back
-// created, missing what the caller sent, with nothing saying why. The
-// store-opened entry point beside it carries custom fields exactly as before.
+// The catalog is read in a transaction of its own, so only the caller can read
+// it, before it opens the write. A create that dropped the values instead would
+// come back created and missing what the caller sent, with nothing saying why.
 var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
-	"deals: a caller-opened create cannot carry custom fields — the store-opened entry point reads the catalog before it opens its transaction")
+	"deals: a caller-opened create carrying custom fields needs the active columns its caller read before opening the transaction")
 
-// ActiveDealColumns is the caller-side half of UpdateDealTx: a caller that
-// opens the transaction itself does this read BEFORE opening it, then threads
-// the answer in. That is the same order every store-opened entry point uses;
-// it is exported only because the caller of a tx-accepting seam is outside
-// this package.
+// ActiveDealColumns is the caller-side half of UpdateDealTx and CreateDealTx.
+// A caller that opens the transaction itself does this read before opening it,
+// the order every store-opened entry point uses.
 //
-// Unlike contacts's twin it takes no grant of its own: its one caller is the
-// extraction accept-write, which has already taken deal:update before it
-// reaches the write phase, and deal:read is not what that seat holds this for.
+// Unlike contacts's twin it takes no grant of its own. Its one caller, the
+// extraction accept-write, has already taken deal:update before the write.
 func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {
 	cols, err := s.activeColumns(ctx)
 	if err != nil {

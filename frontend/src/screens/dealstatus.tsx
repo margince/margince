@@ -3,12 +3,14 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useDealSignals } from "./dealsignals";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -21,6 +23,7 @@ import {
   SignalStrip,
   type StandingTone,
   TodayPanel,
+  useSetAside,
   WrittenBy,
 } from "./record360";
 import "./dealstatus.css";
@@ -71,9 +74,10 @@ const VERDICT_TONE: Record<string, StandingTone> = {
 // must show, and colouring it green would report an unreadable word as good
 // news in the loudest element on the page.
 function verdictTone(standing: string): StandingTone {
-  return Object.hasOwn(VERDICT_TONE, standing)
+  const tone = Object.hasOwn(VERDICT_TONE, standing)
     ? VERDICT_TONE[standing]
-    : "unknown";
+    : undefined;
+  return tone ?? "unknown";
 }
 
 // The card's read, shared. Deal360 draws the briefing from it and the email
@@ -397,6 +401,8 @@ function Move({
   // wrote, and stays one: a close date inside the week is a fact about the
   // deal, not a row to open.
   const { sources, prose } = fromDealMove(move.evidence);
+  const notNow = useDealMoveSetAside(dealId);
+  const fingerprint = move.fingerprint;
   return (
     <FoundMove
       title={move.reason}
@@ -415,10 +421,45 @@ function Move({
         ) : undefined
       }
       action={
-        hasMoveControl(move) ? (
-          <MoveButton dealId={dealId} move={move} />
+        hasMoveControl(move) || notNow.failure ? (
+          <>
+            {hasMoveControl(move) && <MoveButton dealId={dealId} move={move} />}
+            {notNow.failure && <ErrorLine error={notNow.failure} inline />}
+          </>
         ) : undefined
       }
+      // A move with no verb of its own still has a way off the card. The
+      // server stamps each move a reader may set aside with its fingerprint.
+      defer={fingerprint ? notNow.deferOf(fingerprint) : undefined}
     />
   );
+}
+
+// The deal card's "Not now": set aside for this reader until the card names a
+// different move, with the Undo every record page's move carries.
+function useDealMoveSetAside(dealId: string) {
+  const t = useT();
+  const client = useQueryClient();
+  return useSetAside<string>({
+    setAside: async (fingerprint) => {
+      unwrap(
+        await api.POST("/deals/{id}/move/dismiss", {
+          params: { path: { id: dealId } },
+          body: { fingerprint },
+        }),
+        t,
+      );
+    },
+    restore: async (fingerprint) => {
+      unwrap(
+        await api.DELETE("/deals/{id}/move/dismiss", {
+          params: { path: { id: dealId }, query: { fingerprint } },
+        }),
+        t,
+      );
+    },
+    refresh: () =>
+      client.invalidateQueries({ queryKey: ["deal-status", dealId] }),
+    idOf: (fingerprint) => fingerprint,
+  });
 }

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { Users } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import type { MessageKey } from "../i18n/en";
+import { isScreen, parseHash } from "../lib/router";
 import {
   buildRegistry,
   CUSTOM_SCREEN,
@@ -16,7 +17,6 @@ import {
   findCustomScreen,
   resolveCustomLabel,
 } from "./custom";
-import { isScreen, parseHash } from "./router";
 import { navEntryHref } from "./subnav";
 
 // The fork seam, from both ends.
@@ -68,13 +68,11 @@ describe("upstream ships the seam empty", () => {
 
 // The reading half, driven over a registry a fork would produce.
 //
-// The registry itself cannot be faked: `import.meta.glob` is resolved by Vite at
-// build time from a literal, so there is no way to point it at a fixture. What
-// the readers take instead is the registry as an argument — the shape
-// app/extensions.ts uses, and for its stated reason: upstream's is empty by
-// construction, so a reader closed over the module binding could only ever be
-// exercised on its miss path, and every answer it gave a fork would be one
-// nothing here had ever run.
+// The registry itself cannot be faked. `import.meta.glob` is resolved by Vite at
+// build time from a literal, so it cannot point at a fixture. The readers take
+// the registry as an argument instead, as lib/extensions.ts does. Upstream's
+// registry is empty by construction. A reader closed over the module binding
+// could only run its miss path, so its answers to a fork would be untested.
 describe("a fork's screen reaches the rail, the palette and the router", () => {
   const warranty: CustomNavScreen & CustomPaletteScreen = {
     key: "warranty",

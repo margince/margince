@@ -1,7 +1,15 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
 import { Badge, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { KeyedName } from "../design-system/keyedname";
@@ -11,18 +19,11 @@ import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
-import { unwrap, useMe } from "./common";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
 import "./listsection.css";
 
 type Product = components["schemas"]["Product"];
@@ -246,7 +247,7 @@ export function ProductsAdmin() {
     return unwrap(
       await api.POST("/products", {
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           sku: values.sku?.trim() || null,
           description: values.description?.trim() || null,
           unit: values.unit?.trim() || null,

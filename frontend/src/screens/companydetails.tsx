@@ -1,8 +1,12 @@
 import { useCallback } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
+import { joinMultiselectValue } from "../components/create";
+import { prefillRowsFromRecord } from "../components/edit.prefill";
+import { useEntityName } from "../components/entityref";
+import { RecordFields, rawRecord } from "../components/recordfields";
 import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import {
   ADDRESS_FIELDS,
   addressFrom,
@@ -10,11 +14,7 @@ import {
   mapCompanyUpdate,
 } from "./companyform";
 import { CompanyTagsSection } from "./companyrailtags";
-import { joinMultiselectValue } from "./create";
-import { prefillRowsFromRecord } from "./edit.prefill";
-import { useEntityName } from "./entityref";
 import { saveRecordEdit } from "./recordedit";
-import { RecordFields, rawRecord } from "./recordfields";
 import { searchCompanyReferences, useRecordOwners } from "./recordreferences";
 
 type Company = components["schemas"]["Company"];
@@ -102,7 +102,7 @@ export function CompanyDetails({
                 opened,
               ).domains ?? []
             ).map((domain) => ({
-              domain: domain.domain,
+              domain: domain.domain ?? "",
               is_primary: domain.is_primary === "true",
             })),
           ),

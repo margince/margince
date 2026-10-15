@@ -4,8 +4,14 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
-import { throwProblem, useMe } from "./common";
+import type { MessageKey } from "../i18n/en";
+import { useHoldsAdminRole } from "../lib/capability";
+import {
+  problemFieldErrorsOf,
+  problemMessageOf,
+  throwProblem,
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 
@@ -43,6 +49,24 @@ export function storeCompany(
 ): void {
   client.setQueryData(["company"], profile);
   void client.invalidateQueries({ queryKey: ["me"] });
+}
+
+// A site-read confirm nests the profile, so its name is `profile.display_name`.
+const COMPANY_NAME_FIELDS = new Set(["display_name", "profile.display_name"]);
+
+// The name is the installation's too, so the server caps its length. That
+// refusal reads in the reader's language; any other keeps the server's words.
+export function companySaveMessage(
+  error: unknown,
+  t: (key: MessageKey) => string,
+): string {
+  const tooLong = problemFieldErrorsOf(error).some(
+    (fault) =>
+      COMPANY_NAME_FIELDS.has(fault.field) && fault.code === "too_long",
+  );
+  return tooLong
+    ? t("settings.companyNameTooLong")
+    : problemMessageOf(error, t);
 }
 
 // Whether the installation has described itself, or undefined until that is

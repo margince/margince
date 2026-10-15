@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
@@ -176,6 +177,14 @@ func WithBlobstore(store blobstore.Store) Option {
 	}
 }
 
+// WithImportJobs queues an import's commit and undo for the worker role,
+// through the insert-only runner, in the transaction that moves the run.
+func WithImportJobs(inserter *jobs.Runner) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.queue = &importEnqueuer{runner: inserter}
+	}
+}
+
 // WithKeyvault wires the secret store: it feeds the /readyz probe and backs
 // the capture connector-credential path (Authenticate seals the credential
 // bundle, Sync resolves it). Without it a role that persists or resolves
@@ -293,7 +302,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 // what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
+		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool)))
 	}
 }
 

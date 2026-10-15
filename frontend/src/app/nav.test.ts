@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { parseHash, routeHash } from "../lib/router";
 import {
   NAV,
   RAIL_LESS_SCREENS,
@@ -9,7 +10,6 @@ import {
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
-import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
   // The product's own destinations, and no group an installation can add to.
@@ -90,7 +90,7 @@ describe("the filter builder's address", () => {
   // With the work, not among the record types it slices: writing a filter is
   // an authoring surface somebody sits down at — it produces a dynamic list, a
   // saved view or an export — rather than a kind of record the workspace keeps.
-  // Nothing on the screen aggregates either, so it is not Intelligence.
+  // Nothing on the screen aggregates either, so it is not Insights.
   it("stands among the work destinations", () => {
     expect(workRows().map((item) => item.id)).toContain("filters");
   });

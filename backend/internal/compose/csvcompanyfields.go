@@ -57,20 +57,22 @@ func storedPrimaryDomain(current map[string]json.RawMessage) json.RawMessage {
 // comparison that can be made without inventing a type the file never declared.
 // An absent field renders empty, which no non-empty import value equals.
 
-func companyCreateFrom(fields map[string]string, source string) contacts.CreateCompanyInput {
-	sourceSystem := csvSourceSystem()
+func companyCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, source string) contacts.CreateCompanyInput {
 	in := contacts.CreateCompanyInput{
 		DisplayName:  strings.TrimSpace(fields[fieldDisplayName]),
 		Source:       source,
 		SourceSystem: &sourceSystem,
 		Author:       authorFrom(fields),
+		OwnerID:      ownerFrom(fields, typed),
 	}
 	in.LegalName = importString(fields, "legal_name")
 	in.Description = importString(fields, "description")
 	in.Industry = importString(fields, fieldIndustry)
 	in.SizeBand = importString(fields, "size_band")
 	in.Domains = companyDomainsFrom(fields)
+	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Address = addressFrom(fields)
+	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
 
@@ -89,14 +91,17 @@ func companyCreateFrom(fields map[string]string, source string) contacts.CreateC
 // gets false must leave the record's address alone rather than send nil, which
 // the patch builder cannot distinguish from "no address given".
 
-func companyUpdateFrom(changed map[string]string) contacts.UpdateCompanyInput {
+func companyUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateCompanyInput {
 	in := contacts.UpdateCompanyInput{
-		DisplayName: importString(changed, fieldDisplayName),
-		LegalName:   importString(changed, "legal_name"),
-		Description: importString(changed, "description"),
-		Industry:    importString(changed, fieldIndustry),
-		SizeBand:    importString(changed, "size_band"),
-		Address:     addressFrom(changed),
+		DisplayName:  importString(changed, fieldDisplayName),
+		LegalName:    importString(changed, "legal_name"),
+		Description:  importString(changed, "description"),
+		Industry:     importString(changed, fieldIndustry),
+		SizeBand:     importString(changed, "size_band"),
+		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
+		OwnerID:      ownerFrom(changed, typed),
+		Address:      addressFrom(changed),
+		CustomFields: customFieldsFrom(changed, typed),
 	}
 	// The replace-set behind a pointer: nil leaves the stored domains alone, an
 	// empty slice CLEARS them. Taken only when the column actually carried a

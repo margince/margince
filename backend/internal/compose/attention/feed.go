@@ -139,10 +139,11 @@ type Service struct {
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
-	// pinned is what THIS request's reader put at the top, resolved once by
-	// readingPins onto a copy of the service. Nil on the shared service, which
-	// is what keeps one reader's override off another's page.
+	// pinned is this request's reader's own pins, resolved once by readingPins
+	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool
+	// marked is the Done store, and on a request's copy what its reader marked.
+	marked doneState
 	// bounces is OPTIONAL and per-user exactly as the two above it.
 	bounces Bounces
 	// undelivered is OPTIONAL and per-user for the same reasons: mail that

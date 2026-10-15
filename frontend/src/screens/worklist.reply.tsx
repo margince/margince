@@ -155,18 +155,18 @@ function replyIntent(
 }
 
 /**
- * Following up after a meeting: a FRESH message to the contact the reader met.
- * A meeting is not a message, so there is nothing to thread a reply onto; the
- * composer is told what to write instead.
+ * Following up after a meeting: a FRESH message to everyone the reader met.
+ * A meeting is not a message to answer, so there is nothing to thread a reply
+ * onto; the composer is told what to write instead.
  */
-// Filed to the CONTACT, never the row's subject. A meeting on a deal names the
-// deal, and a deal cannot be drafted to. The message has to reach the contact
-// for the reminder to clear.
+// Filed to the first CONTACT, never the row's subject. A meeting on a deal
+// names the deal, and a deal cannot be drafted to. The message has to reach an
+// attendee for the reminder to clear.
 function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<number | null>(null);
-  const contact = item.contact?.id;
+  const [contact, ...alsoTo] = followUpRecipients(item);
   if (!contact) {
     return null;
   }
@@ -182,6 +182,7 @@ function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
           entityType="contact"
           entityId={contact}
           contactId={contact}
+          followUp={{ alsoTo, aboutActivityId: item.id }}
           kind="email"
           intent={intentAbout(
             t("contact.composer.intentFollowUp"),
@@ -196,4 +197,14 @@ function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
       )}
     </>
   );
+}
+
+// Everyone the follow-up goes to, best first. A server that sends no list
+// still names the one contact on `contact`.
+function followUpRecipients(item: WorklistItem): string[] {
+  const listed = item.recipients?.map((recipient) => recipient.id) ?? [];
+  if (listed.length > 0) {
+    return listed;
+  }
+  return item.contact ? [item.contact.id] : [];
 }

@@ -24,15 +24,15 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, unwrap } from "./common";
 import {
   type FilterResource,
   fieldLabel,
   type VocabularyField,
-} from "./filterdata";
+} from "../lib/filterdata";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { decode, type Group, rootGroup } from "../lib/segmentpredicate";
 import type { FilterDraftAction } from "./filterdraft";
 import { type Proposal, proposedCount } from "./filterproposal";
-import { decode, type Group, rootGroup } from "./segmentpredicate";
 
 export type FilterProposal = components["schemas"]["FilterProposal"];
 export type UnusedPhrase = components["schemas"]["FilterProposalUnsupported"];

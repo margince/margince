@@ -14,3 +14,14 @@
   flex: 1;
   min-inline-size: 0;
 }
+
+.compose-address-field {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+.compose-address-field > :not(label) {
+  grid-column: 2;
+  min-inline-size: 0;
+}

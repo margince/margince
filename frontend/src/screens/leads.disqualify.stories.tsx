@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DisqualifyDialog } from "./leads.disqualify";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type Lead = components["schemas"]["Lead"];
 

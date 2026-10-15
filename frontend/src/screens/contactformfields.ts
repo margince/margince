@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { CreateField, FormRows } from "../components/create";
 import { normalizeProfileUrl } from "../format/profileurl";
 import type { useT } from "../i18n";
 import { addressPatch } from "./companyform";
-import type { CreateField, FormRows } from "./create";
 
 // Creation and Details share the field definitions and collection mappers.
 // The update mapper sends only fields submitted by the active editor.
@@ -35,7 +35,7 @@ function contactEmailInputs(rows: FormRows) {
   return (rows.emails ?? [])
     .filter((row) => (row.email ?? "").trim().length > 0)
     .map((row, index) => ({
-      email: row.email.trim(),
+      email: (row.email ?? "").trim(),
       email_type: asEmailType(row.email_type),
       is_primary: row.is_primary === "true",
       position: index,
@@ -47,7 +47,7 @@ function contactPhoneInputs(rows: FormRows) {
   return (rows.phones ?? [])
     .filter((row) => (row.phone ?? "").trim().length > 0)
     .map((row, index) => ({
-      phone: row.phone.trim(),
+      phone: (row.phone ?? "").trim(),
       phone_type: asPhoneType(row.phone_type),
       is_primary: row.is_primary === "true",
       position: index,
@@ -66,7 +66,7 @@ export function mapContactBody(
   const emails = contactEmailInputs(rows);
   const phones = contactPhoneInputs(rows);
   return {
-    full_name: values.full_name.trim(),
+    full_name: (values.full_name ?? "").trim(),
     first_name: values.first_name?.trim() || undefined,
     last_name: values.last_name?.trim() || undefined,
     title: values.title?.trim() || undefined,
@@ -151,6 +151,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       label: "create.email",
       type: "repeatable",
       addLabel: "field.addEmail",
+      editLabel: "field.editEmails",
       rowFields: [
         {
           key: "email",
@@ -178,6 +179,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       label: "create.phone",
       type: "repeatable",
       addLabel: "field.addPhone",
+      editLabel: "field.editPhones",
       rowFields: [
         { key: "phone", label: "create.phone", required: true },
         {

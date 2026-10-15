@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
+import { UndoConfirm, UndoErrors } from "./import.notices";
 
 // What a reversal says about itself. Both frames need a run that has already
 // been committed and then half undone, which is three presses and a stubbed
@@ -34,15 +34,6 @@ const ERRORED = [
   },
 ];
 
-/** The reversal halted, and continuing picks up where it stopped. */
-export const Interrupted: Story = {
-  render: () => (
-    <StoryProviders>
-      <UndoInterruptedNotice interrupted />
-    </StoryProviders>
-  ),
-};
-
 /** The rows that could not be put back, named with why. */
 export const RowsLeftStanding: Story = {
   render: () => (
@@ -62,12 +53,27 @@ export const RowsLeftStandingDark: Story = {
   ),
 };
 
-/** A clean reversal says neither thing. */
+/** A clean reversal names no row. */
 export const Quiet: Story = {
   render: () => (
     <StoryProviders>
-      <UndoInterruptedNotice interrupted={false} />
       <UndoErrors rows={[]} />
+    </StoryProviders>
+  ),
+};
+
+/** What an undo will do, asked before it starts, in reverse import order. */
+export const UndoAsked: Story = {
+  render: () => (
+    <StoryProviders>
+      <UndoConfirm
+        open
+        order={["company", "contact", "lead"]}
+        pending={false}
+        error={null}
+        onClose={() => undefined}
+        onConfirm={() => undefined}
+      />
     </StoryProviders>
   ),
 };

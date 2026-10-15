@@ -93,11 +93,6 @@ AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
-**Creating or changing a custom field.** This changes the fields everyone can use.
-
-**Creating or changing a webhook subscription.** This decides where your events
-are sent.
-
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.
 
@@ -128,7 +123,7 @@ installation whether that floor is set. Ask; do not guess.
 The **Autonomy tiers** card in **Settings → Agents** states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
-"Enrichment, custom fields, webhooks, tag merges: wait in Approvals."
+"Enrichment and tag merges: wait in Approvals."
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -161,8 +156,9 @@ in these cases:
   action and the other approve it, and nobody would have looked.
 - An agent may approve its own proposal only in a narrow case. The change must
   be one that would have applied by itself if a human had not edited the record
-  first, and could be put back. That leaves out closing a deal, relinking, merging tags, changing a custom
-  field, sending, and anything your installation always holds for a human.
+  first, and could be put back. That leaves out closing a deal, relinking,
+  merging tags, sending, and anything your installation always holds for a
+  human.
   Any of the colleague's passports may approve such a proposal. That includes
   the one that proposed it, and a connected agent.
 - Anything else an agent proposed is approved by the colleague in the app, or
@@ -195,9 +191,13 @@ question box works over a named set of documents rather than over everything.
 a deal" approval is judged against. An agent that could edit the ladder could
 change the meaning of the approval it was asking for.
 
-For consent, document sets and pipeline settings, Margince does not let an
-agent's passport sign in at all. Approvals work in another way: the passport is
-let in, and the check happens on the card itself.
+**Custom fields, webhooks, saved views and sharing.** These are settings for
+members, and an agent can neither read nor change them. It can still read which
+custom fields exist, so it can search on them.
+
+For these and for consent, document sets and pipeline settings, a passport
+cannot sign in at all. Approvals work in another way: the passport is let in,
+and the check happens on the card itself.
 
 **New actions that change data.** Agents cannot use a new action that changes
 data until it is given a label. A missing label means the agent cannot do it,
@@ -231,9 +231,10 @@ and booking a meeting. A passport without it cannot do any of them, no matter
 the tier. **Change records** does not include **Send messages**. Each
 permission must be ticked on its own.
 
-**A fixed limit on calls that go out.** Each passport gets a fixed allowance of
-calls that leave Margince per 24 hours. The read and write allowances can be
-widened by approving a card; this one cannot. It ends when the window ends.
+**A fixed limit on calls that go out.** Each passport gets an allowance of
+calls that leave Margince in each window, 20 by default. The allowance for
+changes can be widened by approving a card; this one cannot. It ends when
+the window ends.
 
 ## Human edits win, field by field
 
@@ -324,21 +325,37 @@ the work**, and you do the same thing.
 Nobody can do this for you, and no agent can do it for itself. An agent
 that could grant itself lasting authority would be deciding its own rights.
 
-### Daily allowances
+### Allowances per window
 
-Each passport gets a fixed allowance per 24-hour window: records read, changes
-made, calls that go out, and total calls. One more count shows how many AI
-tokens the agent used; it is only for you to see, and limits nothing.
+Each passport gets an allowance per window: changes made, calls that go out,
+and total calls. Every call counts once, a read too. A long list is still one
+call. By default the window is 24 hours, and the allowances are 200
+changes, 20 calls that go out and 1,000 calls in total. An administrator
+changes them under **Settings › AI usage › Agent passport allowances**: press
+**Edit allowances**, change the values, and press **Save**. One more count shows
+how many AI tokens the agent used; it is only for you to see, and limits
+nothing.
 
-The allowances work differently when they run out. For reading and writing,
-the agent is refused, and a card goes to whoever approved the connection.
-Their approval widens the window by one more allowance. Calls that go out and
-total calls are fixed stops. No approval raises them, and only the end of the
-window clears them.
+A connected app's passports share one allowance: a renewed passport goes on
+counting where the last one stopped.
 
-The window is fixed, not rolling, so every allowance in an installation starts
-over at the same moment. That is why a refusal says "when the window rolls"
-rather than naming a number of hours.
+The allowances work differently when they run out. For changes, the agent is
+refused, and a card goes to whoever approved the connection. Their approval
+widens the window by one more allowance. Calls that go out and total calls are
+fixed stops. No approval raises them, and only the end of the window clears
+them. An agent that only reads can still reach the total and stop.
+
+The window is fixed, not rolling, so every allowance starts over at the same
+moment. A changed allowance applies within a minute, in the window that is
+running. Raise one, and a stopped agent can go on. Lower one, and an agent
+already past it is refused on its next call. A new window size waits for the
+next reset, so no agent starts over early; the card says when it starts.
+
+**Settings › Agent passports** shows, per passport and connected app, the
+allowance closest to running out; open a row to see all three. Revoked passports
+are hidden; the button under the list shows them. **AI usage › Agent usage by
+user** shows how much each user's agents used, never which passport or what it
+read. Administrators, Management and operations users see it.
 
 Only whoever approved the connection can answer a request to widen it. An
 administrator cannot, and neither can the owner of the company. An agent's

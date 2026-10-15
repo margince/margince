@@ -11,7 +11,12 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
-import { downloadBytes } from "./download";
+import { downloadBytes } from "../lib/download";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingExportButton } from "./reporting.export";
 import { ReportingOverview } from "./reporting.overview";
@@ -29,9 +34,8 @@ import {
   reportingStoryScope,
 } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-vi.mock("./download", () => ({ downloadBytes: vi.fn() }));
+vi.mock("../lib/download", () => ({ downloadBytes: vi.fn() }));
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();

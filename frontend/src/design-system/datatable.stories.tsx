@@ -4,7 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { Badge, Button, EmptyState, SectionHeader, TableScroll } from "./atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+  SectionHeader,
+  TableScroll,
+} from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Meter } from "./readings";
@@ -339,7 +346,9 @@ const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
   },
 ];
 
-function MembersPanel() {
+function MembersPanel({
+  columns = MEMBER_COLUMNS,
+}: Readonly<{ columns?: DataTableColumn<DemoMember>[] }>) {
   return (
     <Panel title="Members">
       <PanelBody>
@@ -349,7 +358,7 @@ function MembersPanel() {
         fold
         bleed
         label="Members"
-        columns={MEMBER_COLUMNS}
+        columns={columns}
         rows={DEMO_MEMBERS}
         rowKey={(member) => member.id}
       />
@@ -381,6 +390,7 @@ export const FoldedRecordsPhone: Story = {
     await expect(head?.height).toBeLessThanOrEqual(1);
     for (const row of canvasElement.querySelectorAll("tbody tr")) {
       const [title] = cellBox(row, '[data-fold="title"]');
+      if (title === undefined) throw new Error("a folded row drew no title");
       for (const end of cellBox(row, '[data-fold="end"]')) {
         await expect(end.top).toBeLessThan(title.bottom);
         await expect(end.left).toBeGreaterThanOrEqual(title.right);
@@ -392,7 +402,7 @@ export const FoldedRecordsPhone: Story = {
       for (const [index, rest] of rests.entries()) {
         const before = rests[index - 1];
         if (before && rest.top >= before.bottom) {
-          await expect(rest.left).toBe(rests[0].left);
+          await expect(rest.left).toBe(rests[0]?.left);
         }
       }
     }
@@ -407,6 +417,7 @@ export const FoldedRecordsWide: Story = {
     const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
     await expect(head?.height).toBeGreaterThan(1);
     const [row] = canvasElement.querySelectorAll("tbody tr");
+    if (row === undefined) throw new Error("the members table drew no row");
     const tops = cellBox(row, "td").map((cell) => Math.round(cell.top));
     await expect(new Set(tops).size).toBe(1);
     const heading = canvasElement.querySelector("th");
@@ -416,6 +427,54 @@ export const FoldedRecordsWide: Story = {
     }
     const inset = Number.parseFloat(getComputedStyle(heading).paddingLeft);
     await expect(name.left).toBe(heading.getBoundingClientRect().left + inset);
+  },
+};
+
+// `fold: "only"`: the address under a name is a line of its own once the row
+// folds. Unfolded it has no heading and no cell, so it takes no width.
+const WITH_REACH: DataTableColumn<DemoMember>[] = [
+  ...MEMBER_COLUMNS,
+  {
+    key: "reach",
+    header: "Reached through",
+    fold: "only",
+    render: (member) => `Reached through ${member.email}`,
+  },
+];
+
+export const FoldOnlyLineWide: Story = {
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    const headings = [...canvasElement.querySelectorAll("th")].filter(
+      (heading) => heading.getBoundingClientRect().width > 0,
+    );
+    await expect(headings.map((heading) => heading.textContent)).not.toContain(
+      "Reached through",
+    );
+    for (const cell of canvasElement.querySelectorAll(".datatable-fold-only")) {
+      await expect(cell.getBoundingClientRect().width).toBe(0);
+    }
+  },
+};
+
+export const FoldOnlyLinePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    for (const row of canvasElement.querySelectorAll("tbody tr")) {
+      const [line] = cellBox(row, '[data-fold="only"]');
+      const others = cellBox(row, 'td:not([data-fold="only"])');
+      if (!line) throw new Error("the row draws no fold-only line");
+      for (const other of others) {
+        const beside = other.top < line.bottom && other.bottom > line.top;
+        await expect(beside).toBe(false);
+      }
+    }
   },
 };
 
@@ -507,8 +566,11 @@ export const PinnedFirstColumn: Story = {
     box.scrollLeft = box.scrollWidth;
     await waitFor(() => expect(box.scrollLeft).toBeGreaterThan(0));
     const edge = box.getBoundingClientRect().left;
-    const [row] = box.querySelectorAll("tbody tr");
-    const [first, second] = row.querySelectorAll("td");
+    const [first, second] =
+      box.querySelector("tbody tr")?.querySelectorAll("td") ?? [];
+    if (first === undefined || second === undefined) {
+      throw new Error("the pinned table drew no first row");
+    }
     await expect(Math.round(first.getBoundingClientRect().left)).toBe(
       Math.round(edge),
     );
@@ -517,71 +579,6 @@ export const PinnedFirstColumn: Story = {
     );
     await expect(getComputedStyle(first).backgroundImage).not.toBe("none");
   },
-};
-
-type DemoRun = { id: string; rule: string; when: string; result: string };
-const RUNS: DemoRun[] = [
-  {
-    id: "r1",
-    rule: "Welcome new leads",
-    when: "Today, 09:12",
-    result: "Sent 3 emails",
-  },
-  {
-    id: "r2",
-    rule: "Nudge a quiet deal",
-    when: "Yesterday, 17:40",
-    result: "Skipped: deal was won",
-  },
-  {
-    id: "r3",
-    rule: "Tag inbound replies",
-    when: "Yesterday, 08:05",
-    result: "Tagged 12 messages",
-  },
-];
-
-function RunsPanel() {
-  return (
-    <Panel title="Rule runs">
-      <DataTable<DemoRun>
-        bleed
-        fold
-        label="Rule runs"
-        rows={RUNS}
-        rowKey={(run) => run.id}
-        columns={[
-          { key: "rule", header: "Rule", render: (run) => run.rule },
-          { key: "when", header: "When", render: (run) => run.when },
-        ]}
-        detail={{
-          header: "Detail",
-          toggleLabel: (run) => `Show the run of ${run.rule}`,
-          render: (run) => <p>{run.result}</p>,
-        }}
-      />
-    </Panel>
-  );
-}
-
-export const RowDetail: Story = {
-  render: () => <RunsPanel />,
-  play: async ({ canvasElement }) => {
-    const toggle = await within(canvasElement).findByRole("button", {
-      name: "Show the run of Welcome new leads",
-    });
-    await userEvent.click(toggle);
-    await expect(toggle.getAttribute("aria-expanded")).toBe("true");
-  },
-};
-export const RowDetailDark: Story = {
-  ...RowDetail,
-  globals: { theme: "dark" },
-};
-export const RowDetailPhone: Story = {
-  ...RowDetail,
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
 };
 
 // A pinned table that scrolls, with a row open. The detail spans every column,
@@ -620,7 +617,7 @@ export const PinnedWithDetailOpen: Story = {
       ".table-scroll-sticky",
     );
     const text = canvasElement.querySelector<HTMLElement>(
-      "tr.datatable-detail:not([hidden]) td > p",
+      "tr.datatable-detail:not([hidden]) .datatable-detail-body > p",
     );
     if (box === null || text === null) {
       throw new Error("the pinned table drew no open detail");
@@ -672,4 +669,160 @@ export const FoldedFigurePhone: Story = {
   },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+type LadderStage = {
+  id: string;
+  name: string;
+  odds: number;
+  closing?: boolean;
+};
+const LADDER: LadderStage[] = [
+  { id: "q", name: "Qualified", odds: 10 },
+  { id: "d", name: "Discovery", odds: 25 },
+  { id: "p", name: "Proposal", odds: 50 },
+  { id: "n", name: "Negotiation", odds: 75 },
+  { id: "w", name: "Won", odds: 100, closing: true },
+  { id: "l", name: "Lost", odds: 0, closing: true },
+];
+
+function StageLadder() {
+  const [stages, setStages] = useState(LADDER);
+  const [opened, setOpened] = useState("");
+  return (
+    <Panel title="Stages">
+      <PanelBody>
+        <PanelIntro>
+          <span id="ladder-hint">
+            Drag a grip, or focus it and press ↑ or ↓. Won and Lost stay last.
+          </span>
+          {opened && ` Opened ${opened}.`}
+        </PanelIntro>
+      </PanelBody>
+      <DataTable<LadderStage>
+        bleed
+        fold
+        label="Stages"
+        rows={stages}
+        rowKey={(stage) => stage.id}
+        rowTestId={(stage) => `stage-${stage.id}`}
+        onRowClick={(stage) => setOpened(stage.name)}
+        columns={[
+          { key: "name", header: "Stage", render: (stage) => stage.name },
+          {
+            key: "odds",
+            header: "Win odds",
+            align: "end",
+            render: (stage) => `${stage.odds}%`,
+            folded: (stage) => `${stage.odds}% win odds`,
+          },
+          {
+            key: "verbs",
+            header: "Actions",
+            headerHidden: true,
+            fold: "end",
+            render: (stage) => (
+              <OverflowMenu label={`Actions for ${stage.name}`}>
+                <Button>Edit</Button>
+              </OverflowMenu>
+            ),
+          },
+        ]}
+        detail={{
+          header: "Exit criteria",
+          toggleLabel: (stage) => `Show exit criteria for ${stage.name}`,
+          has: (stage) => !stage.closing,
+          render: (stage) => (
+            <p>{`Leave ${stage.name} once the buyer agrees.`}</p>
+          ),
+        }}
+        reorder={{
+          header: "Order",
+          hintId: "ladder-hint",
+          can: (stage) => !stage.closing,
+          labels: {
+            handle: (stage, position, count) =>
+              `Move ${stage.name}, step ${position} of ${count}`,
+            moved: (stage, position, count) =>
+              `${stage.name} is now step ${position} of ${count}`,
+          },
+          onReorder: (keys) =>
+            setStages(
+              keys.flatMap((key) => LADDER.filter((s) => s.id === key)),
+            ),
+        }}
+      />
+    </Panel>
+  );
+}
+
+// A grip leads each row that moves; Won and Lost keep an empty cell of the
+// grip's width and stay last. A row still opens from anywhere but its grip.
+export const Reorderable: Story = {
+  render: () => <StageLadder />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const grip = await canvas.findByRole("button", {
+      name: "Move Proposal, step 3 of 4",
+    });
+    grip.focus();
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(
+      canvas.getByRole("button", { name: "Move Proposal, step 2 of 4" }),
+    ).toHaveFocus();
+    await expect(
+      canvas.getByText("Proposal is now step 2 of 4"),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
+    await expect(
+      canvas.getByRole("button", { name: "Move Proposal, step 4 of 4" }),
+    ).toHaveFocus();
+    const order = [...canvasElement.querySelectorAll("tbody tr[data-testid]")];
+    await expect(order.map((row) => row.getAttribute("data-testid"))).toEqual([
+      "stage-q",
+      "stage-d",
+      "stage-n",
+      "stage-p",
+      "stage-w",
+      "stage-l",
+    ]);
+  },
+};
+
+export const ReorderableDark: Story = {
+  ...Reorderable,
+  globals: { theme: "dark" },
+};
+
+// Folded at a phone's width, the grip stays at the start of line one. A fixed
+// row's empty grip cell holds its title on the same edge. Its empty toggle slot
+// holds its menu on the edge of the menus on rows that open.
+export const ReorderablePhone: Story = {
+  render: () => <StageLadder />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const grip = await canvas.findByRole("button", {
+      name: "Move Qualified, step 1 of 4",
+    });
+    const root = document.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+    const title = (id: string) =>
+      canvas
+        .getByTestId(`stage-${id}`)
+        .querySelector('[data-fold="title"]')
+        ?.getBoundingClientRect();
+    const name = title("q");
+    const gripBox = grip.getBoundingClientRect();
+    await expect(gripBox.right).toBeLessThanOrEqual(name?.left ?? 0);
+    await expect(gripBox.top).toBeLessThan(name?.bottom ?? 0);
+    await expect(gripBox.width).toBe(32);
+    await expect(title("w")?.left).toBe(name?.left);
+    const menuEnd = (stage: string) =>
+      canvas
+        .getByRole("button", { name: `Actions for ${stage}` })
+        .getBoundingClientRect().right;
+    await expect(menuEnd("Won")).toBe(menuEnd("Qualified"));
+  },
 };

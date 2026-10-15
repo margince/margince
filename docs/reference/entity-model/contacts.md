@@ -71,6 +71,8 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_geocode_status_check`: `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
 - `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'customer', 'former_customer', 'disqualified'])))`
 - `company_linkedin_url_shape`: `CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$')))`
+- `company_logo_icon_names_its_origin`: `CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))`
+- `company_logo_names_its_origin`: `CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))`
 - `company_name_source_check`: `CHECK ((name_source = ANY (ARRAY['human', 'dossier', 'signature', 'domain'])))`
 - `company_not_own_parent`: `CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))`
 - `company_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
@@ -490,6 +492,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_pkey`: `unique, btree (id)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
@@ -1059,6 +1062,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_name_trgm`: `gin (f_fold_apostrophes(lower(((COALESCE(full_name, '') || ' ') || COALESCE(company_name, '')))) gin_trgm_ops)`
 - `idx_lead_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_lead_project`: `btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))`
+- `idx_lead_promoted_contact`: `btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)`
 - `idx_lead_qualified_deal`: `btree (qualified_deal_id) WHERE (qualified_deal_id IS NOT NULL)`
 - `idx_lead_score`: `btree (score DESC) WHERE ((archived_at IS NULL) AND (status = ANY (ARRAY['new', 'contacted', 'engaged'])))`
 - `idx_lead_search`: `gin (search_tsv)`

@@ -5,7 +5,7 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   memberAnchorId,
   memberMutationKey,

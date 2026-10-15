@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
-import { problemCodeOf } from "../common";
+import { problemCodeOf } from "../../lib/problem";
 import type { RefusalRetry } from "./artifact";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];

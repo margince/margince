@@ -1,4 +1,4 @@
-# Counts a Go source's CODE and COMMENT lines, for the two comment gates.
+# Counts a Go or TypeScript source's CODE and COMMENT lines, for the comment gates.
 #
 # Spliced after scripts/lib-commentscan.awk, which owns the one reading of where
 # a comment starts: `awk -f lib-commentscan.awk -f lib-commentcount.awk`. A third
@@ -41,8 +41,14 @@ MODE == "diff" && /^--- / { next }
 
 MODE == "diff" && /^\+\+\+ / {
 	path = substr($0, 7)
-	want = (path ~ /\.go$/) && (path !~ /_gen\.go$/) &&
+	# The scanner reads FILENAME to choose Go or TypeScript string rules, and a
+	# diff on stdin has none, so the header's path stands in for it.
+	SRCPATH = path
+	goSrc = (path ~ /\.go$/) && (path !~ /_gen\.go$/) &&
 		(path !~ /\.gen\.go$/) && (path !~ /(^|\/)doc\.go$/)
+	tsSrc = (path ~ /\.tsx?$/) && (path !~ /\.d\.ts$/) && (path !~ /\.gen\.ts$/) &&
+		(path !~ /(^|\/)src\/api\/public-events\.ts$/)
+	want = goSrc || tsSrc
 	resetBlock()
 	next
 }

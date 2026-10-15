@@ -69,12 +69,12 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (where stri
 
 func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
 	where, args := filterFor(unscopedCtx(), t, "company")
-	if !strings.Contains(where, "EXISTS (") {
-		t.Fatalf("company filter is not an EXISTS: %s", where)
+	if !strings.Contains(where, "a.id IN (SELECT reach.activity_id") {
+		t.Fatalf("company filter is not a membership test against the account's reach: %s", where)
 	}
 	for _, arm := range []string{
 		"l.company_id = $1", "d.company_id = $1", "r.company_id = $1",
-		"emp.company_id = $1",
+		"e0.company_id = $1",
 	} {
 		if !strings.Contains(where, arm) {
 			t.Errorf("company filter misses the %q arm: %s", arm, where)
@@ -122,12 +122,21 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	}
 }
 
-// The per-company shape is the bound walk with the enclosing company's column
-// where the bind was: every arm, compared against the row the outer query is on.
-func TestThePerCompanyWalkIsTheBoundWalkCorrelated(t *testing.T) {
-	bound := strings.ReplaceAll(CompanyLinkedActivityExists(1), "$1", OuterCompanyAlias+".id")
-	if got := CompanyLinkedActivityExistsPerCompany(); got != bound {
-		t.Errorf("the per-company walk drifted from the bound one:\n got %s\nwant %s", got, bound)
+// The set form is the predicate's walk split by arm. Every link branch carries
+// the shared arms verbatim. The participant branch decides with the predicate's
+// own arm, bound to the account the branch started from.
+func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
+	set := CompanyReachedActivities(1)
+	if got := strings.Count(set, companyArms); got != 3 {
+		t.Errorf("the reached set carries the shared arms %d times, want one per link branch:\n%s", got, set)
+	}
+	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
+		if !strings.Contains(set, column+" = ANY($1)") {
+			t.Errorf("the reached set has no branch on %s:\n%s", column, set)
+		}
+	}
+	if !strings.Contains(set, sprintf(participantEmployerArm, "e0.company_id")) {
+		t.Errorf("the reached set's participant branch is not the predicate's own arm:\n%s", set)
 	}
 }
 
@@ -367,7 +376,7 @@ func TestTheWaitingQueryNeverNullMatchesThreadKeys(t *testing.T) {
 // threadless unjudged row would turn a hand-logged note into a standing
 // obligation on the deal.
 func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
-	if strings.Contains(owedSQL("$1", neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
+	if strings.Contains(owedSQL("$1", neverRelaxed, neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
 		t.Fatal("the obligation asks a message for a thread key, so a customer's threadless " +
 			"mail cannot be judged and stays invisible")
 	}
@@ -376,7 +385,7 @@ func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
 	}
 	// Every reader of the waiting query asks the same obligation, because the
 	// query carries it rather than taking it from its caller.
-	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s")) {
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s")) {
 		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
 }

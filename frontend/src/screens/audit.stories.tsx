@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { AuditEntryLine } from "./audit";
-import { StoryProviders } from "./story-utils";
 
 // ActorTag / AuditEntryLine: the shared audit attribution line, rendered by
 // every audit surface (the settings compliance log, the custom-fields change

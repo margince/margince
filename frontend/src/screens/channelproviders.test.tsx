@@ -95,6 +95,18 @@ describe("useProviderLabel", () => {
     await waitFor(() => expect(result.current("dispact")).toBe("dispact"));
   });
 
+  it("names a capture connector that no transport claims", async () => {
+    stubDirectory({ data: [] });
+
+    const { result } = renderHook(() => useProviderLabel(), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current("gmail")).toBe("Gmail"));
+    expect(result.current("imap")).toBe("IMAP mailbox");
+    expect(result.current("test_mailbox")).toBe("Test mailbox");
+  });
+
   // The defect this closes: a unit's channel messages resolved to "Dispact"
   // while the same unit's mail — landed on no channel, so its connector is the
   // natural key's source system — sat beside them as the raw

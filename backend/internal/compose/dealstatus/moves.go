@@ -110,6 +110,11 @@ func (s *Service) CachedMoves(
 		if err != nil {
 			return err
 		}
+		// A move this reader set aside on the deal page is off their queue too.
+		setAside, err := MovesSetAside(ctx, tx, found)
+		if err != nil {
+			return err
+		}
 		for dealID, move := range found {
 			named, ok := NamedActivity(move)
 			if ok && !readable[named] {
@@ -118,7 +123,7 @@ func (s *Service) CachedMoves(
 				// would still say a message exists and is unanswered.
 				continue
 			}
-			if !everyNamedContactStillFileable(move, contactsFileable) {
+			if !everyNamedContactStillFileable(move, contactsFileable) || setAside[dealID] {
 				continue
 			}
 			out[dealID] = move
@@ -127,6 +132,9 @@ func (s *Service) CachedMoves(
 	})
 	if err != nil {
 		return nil, fmt.Errorf("read the cached deal moves: %w", err)
+	}
+	if err := s.dropSettledFollowUps(ctx, out); err != nil {
+		return nil, fmt.Errorf("recheck the cached follow-ups: %w", err)
 	}
 	return out, nil
 }
@@ -273,7 +281,7 @@ func NamedContacts(move crmcontracts.DealStatusCardMove) []ids.UUID {
 	if args == nil {
 		return nil
 	}
-	raw, present := (*args)["links"]
+	raw, present := (*args)[argLinks]
 	if !present {
 		return nil
 	}

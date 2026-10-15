@@ -1,6 +1,6 @@
 import type { components } from "../api/schema";
-import { useUrlParams } from "../app/urlstate";
 import { useT } from "../i18n";
+import { useUrlParams } from "../lib/urlstate";
 import { ContactBriefCard } from "./contactbrief";
 import {
   ContactCommercialCard,
@@ -15,8 +15,8 @@ import { ContactToday, hasContactWork } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
 
-// Where the relationship brief stands on the page: the standing chip in the
-// head leads here (app/reveal), so the id is one constant the two share.
+// Where the relationship brief stands on the page. The standing chip in the
+// head leads here (lib/reveal), so the id is one constant the two share.
 export const BRIEF_ANCHOR = "contact-relationship-brief";
 
 export function ContactOverview({
@@ -67,7 +67,7 @@ export function ContactOverview({
       {commitments && (
         <ContactCommitmentsCard
           view={view}
-          firstName={view.contact.full_name.split(" ")[0]}
+          firstName={view.contact.full_name.split(" ")[0] ?? ""}
           includeTasks={false}
         />
       )}
@@ -88,7 +88,7 @@ export function ContactOverview({
       {hasMatters(view) && (
         <ContactMattersCard
           view={view}
-          firstName={view.contact.full_name.split(" ")[0]}
+          firstName={view.contact.full_name.split(" ")[0] ?? ""}
         />
       )}
     </div>

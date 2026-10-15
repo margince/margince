@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
 import {
   type BoardDocument,
   type DealRoomThread,

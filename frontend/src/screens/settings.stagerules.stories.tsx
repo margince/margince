@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { within } from "storybook/test";
 import type { components } from "../api/schema";
-import { StageRulesCard } from "./settings.stagerules";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { StageRulesCard } from "./settings.stagerules";
 
 // What each transition is allowed to do. The states worth a picture are the
 // three a reader cannot reach by clicking: a rule the PRODUCT stopped, which

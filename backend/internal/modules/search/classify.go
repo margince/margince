@@ -26,9 +26,9 @@ func (r *Retriever) Classify(ctx context.Context, q retrieval.ClassifyQuery) (re
 // verdict is one record's answer to the match expression.
 type verdict struct {
 	matched bool
-	// judgeable is false for a record with no searchable text, which matches
-	// nothing — and "matches nothing" read as "does not match" would count it
-	// against a claim it says nothing about.
+	// judgeable is false for a record with no searchable text and no matching
+	// identifier. Such a record matches nothing, and reading that as "does not
+	// match" would count it against a claim it says nothing about.
 	judgeable bool
 }
 
@@ -79,12 +79,12 @@ func judge(ctx context.Context, tx pgx.Tx, branch searchBranch, query string, wi
 	if err != nil || !admitted {
 		return map[ids.UUID]verdict{}, err
 	}
-	tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
+	matched := branch.ownMatch("t", matchExpression(branch.entity, headPos, tailPos, hasFragment), bindIdentifier(query, arg))
 	sql := fmt.Sprintf(
-		`SELECT t.id, coalesce(t.search_tsv @@ %s, false), coalesce(length(t.search_tsv) > 0, false)
-		 FROM %s t
-		 WHERE t.id = ANY($%d) AND t.archived_at IS NULL`,
-		tsquery, branch.table, arg(within))
+		`SELECT t.id, coalesce(%[1]s, false), coalesce(length(t.search_tsv) > 0, false) OR coalesce(%[1]s, false)
+		 FROM %[2]s t
+		 WHERE t.id = ANY($%[3]d) AND t.archived_at IS NULL`,
+		matched, branch.table, arg(within))
 	if narrowing := branch.narrowing("t"); narrowing != "" {
 		sql += " AND " + narrowing
 	}

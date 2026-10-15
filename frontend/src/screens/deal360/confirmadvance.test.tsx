@@ -3,13 +3,19 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { holdExits } from "../../design-system/presence-testing";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import { ConfirmAdvanceModal, type PendingAdvance } from "./confirmadvance";
+import { ProblemError } from "../../lib/problem";
+import {
+  advanceErrorBehind,
+  ConfirmAdvanceModal,
+  type PendingAdvance,
+} from "./confirmadvance";
 
 afterEach(() => {
   cleanup();
@@ -37,7 +43,7 @@ const WON: components["schemas"]["Stage"] = {
 it("keeps naming the stage it asked about while the dialog animates out", () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const exits = holdExits();
   const client = new QueryClient();
@@ -68,7 +74,7 @@ it("keeps naming the stage it asked about while the dialog animates out", () => 
 it("holds the dialog through a write and closes it on the answer", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const user = userEvent.setup();
   const client = new QueryClient();
@@ -91,6 +97,12 @@ it("holds the dialog through a write and closes it on the answer", async () => {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  // Confirm waits for the deal's task read before it takes a press.
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await user.keyboard("{Escape}");
   expect(onClose).not.toHaveBeenCalled();
@@ -106,7 +118,7 @@ it("holds the dialog through a write and closes it on the answer", async () => {
 it("lets go of the dialog when the write rejects instead of holding it busy", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const user = userEvent.setup();
   const client = new QueryClient();
@@ -126,6 +138,12 @@ it("lets go of the dialog when the write rejects instead of holding it busy", as
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  // Confirm waits for the deal's task read before it takes a press.
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await act(async () => {
     refuse(new Error("network down"));
@@ -135,4 +153,107 @@ it("lets go of the dialog when the write rejects instead of holding it busy", as
   expect(
     screen.getByRole("button", { name: "Confirm" }).getAttribute("aria-busy"),
   ).toBeNull();
+});
+
+function openOn(
+  toStage: components["schemas"]["Stage"],
+  onConfirm: (input: unknown) => Promise<unknown>,
+) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ConfirmAdvanceModal
+          pending={{ dealId: "deal-a", version: 3, toStage }}
+          onClose={() => {}}
+          onConfirm={onConfirm}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+// The sentence a refused Confirm points at, or null when it names none.
+function confirmRefusal(): string | null {
+  const ids = screen
+    .getByRole("button", { name: "Confirm" })
+    .getAttribute("aria-describedby");
+  const said = (ids ?? "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ")
+    .trim();
+  return said === "" ? null : said;
+}
+
+it("says a lost deal needs a reason, and sends the reason on Enter", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi.fn(async () => undefined);
+  openOn(LOST, onConfirm);
+
+  await waitFor(() =>
+    expect(confirmRefusal()).toBe("Enter why the deal was lost."),
+  );
+  await user.click(screen.getByRole("textbox", { name: "Lost reason" }));
+  await user.keyboard("{Enter}");
+  expect(onConfirm).not.toHaveBeenCalled();
+
+  await user.keyboard("Budget cut{Enter}");
+  expect(onConfirm).toHaveBeenCalledTimes(1);
+  expect(onConfirm).toHaveBeenCalledWith(
+    expect.objectContaining({ lostReason: "Budget cut" }),
+  );
+});
+
+const WIN_EVIDENCE_REFUSAL = new ProblemError({
+  code: "validation_error",
+  details: {
+    errors: [
+      {
+        field: "won_without_contract_reason",
+        code: "win_evidence_required",
+        message: "a won deal needs a signed contract",
+      },
+    ],
+  },
+});
+
+// An open dialog asks how the deal was won, so the screen behind it stays
+// quiet. Once the reader cancels, the screen says why the deal did not move.
+it("leaves the win-evidence refusal to the open dialog and shows it once closed", () => {
+  expect(advanceErrorBehind(WIN_EVIDENCE_REFUSAL, true)).toBeNull();
+  expect(advanceErrorBehind(WIN_EVIDENCE_REFUSAL, false)).toBe(
+    WIN_EVIDENCE_REFUSAL,
+  );
+  const conflict = new ProblemError({ code: "version_skew" });
+  expect(advanceErrorBehind(conflict, true)).toBe(conflict);
+});
+
+it("says a win marked Other needs details, and sends them on Enter", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi
+    .fn<(input: unknown) => Promise<unknown>>()
+    .mockRejectedValueOnce(WIN_EVIDENCE_REFUSAL)
+    .mockResolvedValue(undefined);
+  openOn(WON, onConfirm);
+  await waitFor(() => expect(confirmRefusal()).toBeNull());
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+  const how = await screen.findByRole("combobox", { name: "How was it won?" });
+  expect(confirmRefusal()).toBe("Pick how the deal was won.");
+  await pickOption(user, how, "Other");
+  expect(confirmRefusal()).toBe("Describe how the deal was won.");
+
+  await user.click(screen.getByRole("textbox", { name: "Details" }));
+  await user.keyboard("Signed on a napkin{Enter}");
+  expect(onConfirm).toHaveBeenCalledTimes(2);
+  expect(onConfirm).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      wonWithoutContractReason: "other",
+      wonWithoutContractDetail: "Signed on a napkin",
+    }),
+  );
 });

@@ -5,14 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
-import { ProblemError, throwProblem } from "../screens/common";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
+import { ENTITY_NAME_KEY } from "../components/entityref";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
   watchConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
+import { ProblemError, throwProblem } from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
@@ -98,6 +98,11 @@ describe("the query client defaults", () => {
   // each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["company", "o-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1", "employer"] })).toBe(
+      false,
+    );
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 

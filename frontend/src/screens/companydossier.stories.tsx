@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DossierPanel } from "./companydossier";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What the company IS, read from its own recorded facts (see companydossier.tsx's
 // own doc comment). Fixture mirrors companydossier.test.tsx's DESCRIBED — a

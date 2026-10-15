@@ -4,12 +4,9 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite, useRecordWriteRefusal } from "../app/capability";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
-import { useRecordZone } from "../app/recordzone";
-import { scrollPageToTop } from "../app/reveal";
-import { navigate } from "../app/router";
-import { useUrlParams } from "../app/urlstate";
+import { EntityRef, useEntityName } from "../components/entityref";
+import { PageAsideToggle, usePageAside } from "../components/pageaside";
+import { RecordFields } from "../components/recordfields";
 import {
   Badge,
   Button,
@@ -21,8 +18,8 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
   type RecordTimeline,
@@ -39,15 +36,15 @@ import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite, useRecordWriteRefusal } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { scrollPageToTop } from "../lib/reveal";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
+import { useUrlParams } from "../lib/urlstate";
 import { useClaimRecord } from "./claimrecord";
-import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useMe,
-} from "./common";
-import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
 import { LeadBrief } from "./leadbrief";
@@ -71,12 +68,11 @@ import { LeadManualSignals } from "./leadsignals";
 import { leadStanding } from "./leadstanding";
 import { leadTodoRows } from "./leadtoday";
 import { LogActivityAction } from "./logactivity";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { RecordReading, TimelineThread, TodayPanel } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordEmailVerb } from "./recordemail";
-import { RecordFields } from "./recordfields";
 import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
 import "./leads.css";
@@ -99,8 +95,8 @@ import { sourcePickOptions, useLeadSources } from "./leadsources";
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
+import { leadKey, leadScoreKey, leadWriteKeys } from "../lib/leadkeys";
 import { AddToShortlistAction } from "./addtoshortlist";
-import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { RecordListsPanel } from "./recordlists";
 import { useAddressedTab } from "./recordtab";
 import { WorklistReturnLink } from "./worklist.return";
@@ -1167,7 +1163,6 @@ function LeadActions({
           askedKind={
             drawer === "task" ? "task" : askedToLogCall ? "call" : undefined
           }
-          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
           openOnMount
           onLogged={onLogged}
           onClose={() => setDrawer(null)}

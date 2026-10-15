@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -35,13 +37,25 @@ func waitingContactRank(contact string) string {
 }
 
 // filedUnderALiveContactSQL drops a message once every contact the reader can
-// see it filed under is archived; a restore brings it back. Read over wl, the
-// visibility-gated join, so a contact the reader may not see never decides
-// whether the row shows. A HAVING over rows already grouped adds no lookup per
-// candidate and still runs before the cap. No hidden figure counts it, as none
-// counts an archived message.
-const filedUnderALiveContactSQL = `(NOT coalesce(bool_or(wl.contact_id IS NOT NULL), false)
-	     OR coalesce(bool_or(ownerContact.id IS NOT NULL AND ownerContact.archived_at IS NULL), false))`
+// see it filed under is archived; a restore brings it back. The links are
+// aliased wl and gated by the visibility clause in slot 3. So a contact the
+// reader may not see never decides whether the row shows. It tests one message,
+// so it runs before the cap like every other rule. No hidden figure counts it,
+// as none counts an archived message.
+const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
+	         WHERE wl.activity_id = a.id AND wl.contact_id IS NOT NULL AND (%[3]s))
+	     OR EXISTS (SELECT 1 FROM activity_link wl
+	         JOIN contact liveContact ON liveContact.id = wl.contact_id
+	        WHERE wl.activity_id = a.id AND liveContact.archived_at IS NULL AND (%[3]s)))`
+
+// withinWaitingHorizonSQL is whether message a is young enough for the queue.
+// Age retires every wait unless a human kept the request; old mail stays on the
+// timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
+// Cheap tests come first, so most rows never reach the settlement subqueries.
+func withinWaitingHorizonSQL(asOf, days string) string {
+	return `(a.occurred_at >= ` + asOf + ` - make_interval(days => ` + days + `)
+	     OR (` + heldRequestSQL() + ` AND ` + requestOpenSQL + `))`
+}
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
 // sales link, colleagues and the reader's set-asides. Requests survive replies and
@@ -201,6 +215,12 @@ var waitingRepliesSQL = `
 	                    WHERE ownerContact.id = wl.contact_id OFFSET 0) ownerContact ON true
 	  LEFT JOIN LATERAL (SELECT ownerCompany.id, ownerCompany.owner_id FROM company ownerCompany
 	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true
+	 -- The cap is taken over the messages themselves, before any link is joined.
+	 -- Every rule below reads one message, so Postgres walks the newest first
+	 -- and stops at the cap instead of judging the whole horizon. An ARRAY,
+	 -- built once, so the primary key fetches the capped set; as a join or an
+	 -- IN, the planner joined the whole table first and filtered afterwards.
+	 WHERE a.id = ANY (ARRAY(SELECT a.id FROM activity a
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -233,12 +253,7 @@ var waitingRepliesSQL = `
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid))))
-	   -- Age retires every wait, a classified request and mail on an open deal
-	   -- included, unless a human kept the request. Old mail stays on the
-	   -- record's timeline; the queue is for current work. requestOpenSQL, not
-	   -- requestUnsettledSQL: owedSQL below is the one relaxable not-sales gate.
-	   AND ((` + requestOpenSQL + ` AND ` + heldRequestSQL() + `)
-	     OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d))
+	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.
 	   --
 	   -- The rule that was missing: this read used to answer "somebody wrote and
@@ -283,7 +298,7 @@ var waitingRepliesSQL = `
 	   -- newsletter somebody recognised does not arrive as fresh work. Slots 11
 	   -- and 17 relax the not-sales and informs_us judgements for their hidden
 	   -- figures.
-	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s") + `
+	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was
@@ -295,23 +310,12 @@ var waitingRepliesSQL = `
 	   -- get today's judgements over that day's messages, and nothing does.
 	   --
 	   -- A snooze lifts on whatever it named: its own moment, the counterparty
-	   -- writing back, or a meeting being over. The row comes back when that
-	   -- happens rather than waiting for somebody to remember it.
-	   --
-	   -- not_mine carries no moment and does not lift at all. Ending it when the
-	   -- linked record changes hands would be the kinder rule, and it is not
-	   -- implemented: a message reaches its owner through a contact, an
-	   -- company, a deal or a lead, so the re-arm is a consumer over four
-	   -- ownership events rather than a clause here. Until that exists the
-	   -- judgement stands until its reader withdraws it, and the contract says
-	   -- so rather than promising the re-arm.
-	   AND (%[20]s OR NOT EXISTS (
-	         SELECT 1 FROM activity_reader_state mine
-	          WHERE mine.activity_id = a.id
-	            AND mine.reader_id = $%[9]d
-	            AND (mine.state = 'not_mine'
-	              OR (mine.state = 'snoozed' AND NOT %[15]s))))
-	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
+	   -- writing back, or a meeting being over. not_mine lifts when the linked
+	   -- record changes hands, through the re-arm in notmineownership.go, which
+	   -- deletes the state row. handled lifts only by undo; the customer's next
+	   -- message is a new row with no state.
+	   AND (%[20]s OR NOT ` + readerSetAsideSQL("$%[9]d", "%[15]s") + `)
+		   AND ` + filedUnderALiveContactSQL + ` %[18]s
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -331,9 +335,42 @@ var waitingRepliesSQL = `
 	 -- is a public-suffix question rather than a LIKE — so the caller filters
 	 -- what survives and asks for another page when too much of it went. The
 	 -- cap bounds ONE page; the caller bounds how many it will ask for.
-	 HAVING ` + filedUnderALiveContactSQL + ` %[18]s
-	 ORDER BY a.occurred_at DESC
-	 LIMIT %[4]d`
+		 ORDER BY a.occurred_at DESC
+	 LIMIT %[4]d))
+	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
+	 ORDER BY a.occurred_at DESC`
+
+// planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres
+// plans it at each Bind with the values. A reused named statement turns generic
+// after five runs, and the generic plan walks the whole horizon instead of
+// stopping at the cap.
+func planEachBind(args []any) []any {
+	return append([]any{pgx.QueryExecModeDescribeExec}, args...)
+}
+
+// waitingListArgs is planEachBind for the activity list, which carries the walk
+// only when it is filtered to messages waiting for a reply.
+func waitingListArgs(in ListActivitiesInput, args []any) []any {
+	if in.WaitingReplyAsOf == nil {
+		return args
+	}
+	return planEachBind(args)
+}
+
+// readerSetAsideSQL is whether one reader has set message `a` aside: marked it
+// not theirs or handled, or snoozed it and the snooze has not lifted.
+//
+// Every read that hides set-aside work embeds this, so a new reader state is
+// added in one place. TestEveryReaderSetAsideReadIsTheSharedPredicate in
+// backend/gates holds that no other statement filters on the table.
+//
+// reader is the SQL naming the reader, and wake a messageSnoozeLiftedSQL.
+func readerSetAsideSQL(reader, wake string) string {
+	return `EXISTS (SELECT 1 FROM activity_reader_state mine
+	          WHERE mine.activity_id = a.id AND mine.reader_id = ` + reader + `
+	            AND (mine.state IN ('` + stateNotMine + `', '` + stateHandled + `')
+	              OR (mine.state = '` + stateSnoozed + `' AND NOT ` + wake + `)))`
+}
 
 // messageSnoozeLiftedSQL is whether a reader's snooze on one waiting message is
 // over, as a boolean expression the waiting query embeds.

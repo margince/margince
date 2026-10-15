@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { WriteRefused } from "./common";
+import { WriteRefused } from "../design-system/querystates";
+import { StoryProviders } from "../testing/story-utils";
 import { LookupRunning } from "./contactprovider.notices";
-import { StoryProviders } from "./story-utils";
 
 // What the bought-contact-data panel says about itself. The two halves of a
 // running lookup are worth reading together: "asking" has no answer yet, and

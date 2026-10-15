@@ -131,6 +131,10 @@ type ranked struct {
 	waitingRank int
 	strength    int
 	occurredAt  time.Time
+	// newestMember is a folded group's newest member moment, and subjectMovedAt
+	// the lane's subject_moved_at. Both bring a row marked done back (done.go).
+	newestMember   time.Time
+	subjectMovedAt time.Time
 	// asOf is the one instant every row in the same page was classified
 	// against, carried onto the row rather than threaded through every step
 	// signature. The occurrence step reads it to turn occurredAt into how many
@@ -252,8 +256,7 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// which of its verbs is the step. Stamped here rather than by each
 		// classifier, so a source added later carries a primary action by
 		// arriving in this loop instead of by its author remembering to.
-		if item.Source == sourceWaiting {
-			offered := waitingDispositions(row.threaded)
+		if offered := dispositionsFor(row, reader); offered != nil {
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)

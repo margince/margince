@@ -85,3 +85,59 @@ func Open(filename string) ([]byte, bool) {
 	}
 	return content, true
 }
+
+// Title is a page's own heading: its first `# ` line outside a code fence or an
+// HTML comment. It is "" when this build does not ship the page, and
+// handbook_test.go requires one on every shipped page.
+func Title(filename string) string {
+	content, ok := Open(filename)
+	if !ok {
+		return ""
+	}
+	return firstHeading(string(content))
+}
+
+// firstHeading skips fences and comments, where a `# ` line is code or a note.
+func firstHeading(markdown string) string {
+	var fence string
+	var commented bool
+	for line := range strings.SplitSeq(markdown, "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case commented:
+			commented = !strings.Contains(trimmed, "-->")
+		case fence != "":
+			if closesFence(trimmed, fence) {
+				fence = ""
+			}
+		case fenceOpening(trimmed) != "":
+			fence = fenceOpening(trimmed)
+		case strings.HasPrefix(trimmed, "<!--"):
+			commented = !strings.Contains(trimmed, "-->")
+		default:
+			if heading, found := strings.CutPrefix(line, "# "); found {
+				return strings.TrimSpace(heading)
+			}
+		}
+	}
+	return ""
+}
+
+// fenceOpening is the run of three or more backticks or tildes that opens a
+// CommonMark code fence, or "" when the line opens none.
+func fenceOpening(trimmed string) string {
+	if trimmed == "" || (trimmed[0] != '`' && trimmed[0] != '~') {
+		return ""
+	}
+	run := len(trimmed) - len(strings.TrimLeft(trimmed, trimmed[:1]))
+	if run < 3 {
+		return ""
+	}
+	return trimmed[:run]
+}
+
+// closesFence holds CommonMark's rule: only the opening character, at least as
+// many of it, and nothing else on the line.
+func closesFence(trimmed, fence string) bool {
+	return len(trimmed) >= len(fence) && strings.Trim(trimmed, fence[:1]) == ""
+}

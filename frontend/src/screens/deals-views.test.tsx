@@ -13,9 +13,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { SEARCH_DEBOUNCE_MS } from "../components/listquery";
 import { LocaleProvider } from "../i18n";
 import { DealsScreen } from "./deals";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 
 // What narrowed the pipeline has to be readable ON the surface that is
 // narrowed.
@@ -280,6 +280,16 @@ describe("a saved view over the deals board", () => {
     await waitFor(() =>
       expect(dealUrls.at(-1)?.includes("include_archived=true")).toBe(true),
     );
+  });
+
+  // A filter narrowed to one deal is when the count is read most closely. The
+  // head and the column both say "deal".
+  it("counts a single deal in the singular", async () => {
+    vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
+    render(<DealsScreen />);
+
+    expect(await screen.findAllByText("1 deal")).toHaveLength(2);
+    expect(screen.queryByText("1 deals")).toBeNull();
   });
 
   // The Display menu's dials describe COLUMNS and ROW HEIGHT, and the board

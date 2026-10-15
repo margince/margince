@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { storyCensus } from "../../scripts/lib/story-files";
+import { SRC_ROOT, screenFiles } from "../testing/screenfiles";
 
 // Fitness function for a stylesheet a component BORROWS.
 //
@@ -25,11 +25,10 @@ import { storyCensus } from "../../scripts/lib/story-files";
 // that starts drawing one of these classes tomorrow is covered the day it is
 // written. A hand-kept list is the shape of gate that reports PASS over a
 // smaller tree than it thinks it is reading.
-const dir = dirname(fileURLToPath(import.meta.url));
 
 /** The stylesheet that defines the shared record shapes. */
 const SHARED_SHEET = "company360.css";
-const storyFiles = new Set(storyCensus(resolve(dir, "../..")).files);
+const storyFiles = new Set(storyCensus(resolve(SRC_ROOT, "..")).files);
 
 /**
  * The classes only `company360.css` defines.
@@ -39,26 +38,6 @@ const storyFiles = new Set(storyCensus(resolve(dir, "../..")).files);
  * import for it would be noise.
  */
 const BORROWED = ["co-rowlink", "co-row-meta", "co-card"];
-
-/** Every `.tsx` under screens/, excluding tests and stories. */
-function sourceFiles(base: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    const path = join(base, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...sourceFiles(path));
-      continue;
-    }
-    if (
-      entry.name.endsWith(".tsx") &&
-      !entry.name.endsWith(".test.tsx") &&
-      !storyFiles.has(path)
-    ) {
-      out.push(path);
-    }
-  }
-  return out;
-}
 
 // A class name inside a className string, not merely the characters somewhere
 // in the file: `co-row-meta` is a substring of nothing else here, but a prose
@@ -85,7 +64,9 @@ function importsSharedSheet(source: string): boolean {
 
 describe("a screen that draws the record's shared shapes imports them", () => {
   it("leaves no screen relying on a sibling to have loaded company360.css", () => {
-    const offenders = sourceFiles(resolve(dir))
+    const offenders = screenFiles()
+      .map((file) => resolve(SRC_ROOT, file))
+      .filter((path) => !storyFiles.has(path))
       .filter((path) => {
         const source = readFileSync(path, "utf8");
         if (!drawsBorrowedClass(source)) {
@@ -93,7 +74,7 @@ describe("a screen that draws the record's shared shapes imports them", () => {
         }
         return !importsSharedSheet(source);
       })
-      .map((path) => path.slice(resolve(dir).length + 1));
+      .map((path) => path.slice(SRC_ROOT.length + 1));
 
     expect(
       offenders,

@@ -3,11 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import type { VocabularyField } from "../lib/filterdata";
+import { isGroup, type Node, newGroup, newLeaf } from "../lib/segmentpredicate";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
 import { ClauseRow } from "./filterclause";
-import type { VocabularyField } from "./filterdata";
-import { isGroup, type Node, newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The predicate builder: a tree of clauses, each offering only what the server's
 // vocabulary admits for the field it names.

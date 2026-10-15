@@ -11,40 +11,56 @@ package attention
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The ways a row can be set aside, spelled as the contract spells them.
 const (
+	disposeHandled  = "handled"
 	disposeSnooze   = "snooze"
 	disposeNotMine  = "not_mine"
 	disposeNotSales = "not_sales"
 )
 
-// waitingDispositions are the judgements a rep may make about an unanswered
-// message. Only this source offers them: every other row leaves by the verb its
-// own surface owns — an approval is decided, a task completed, a duplicate
-// merged — and an unanswered message has no such verb.
+// waitingDispositions are the judgements a reader may make about an unanswered
+// message. Only this source offers them, because only here can a row be dealt
+// with off the surface that owns it. `handled` leads: it says the work is
+// finished, by phone, in a meeting, or with no reply owed.
 //
-// TWO OF THE THREE ARE KEYED ON THE THREAD, and a message can reach this queue
-// without one — a first contact from an unknown address, or a provider handing
-// over no chain to root on:
+// Two of the four are keyed on the thread, and a message can reach this queue
+// without one. A first contact from an unknown address has none, and so does
+// a provider that hands over no chain to root on:
 //
-//   - `not_sales` judges the THREAD, and resolving it refuses a row without one.
-//   - `snooze` wakes on a later message with the SAME thread_key, plain
-//     equality, which a NULL never satisfies; a threadless row would hide
-//     permanently even once the customer wrote back.
+//   - `not_sales` judges the thread, and resolving it refuses a row without one.
+//   - `snooze` wakes on a later message with the same thread_key. A NULL never
+//     equals anything, so a threadless row would stay hidden after a reply.
 //
 // The equality stays: matching NULL thread keys would let one unthreaded
-// outbound silence every unthreaded question in the workspace. `not_mine` is
-// per-reader and keyed on the activity, so it survives and leaves a threadless
-// row something to do rather than nothing.
-func waitingDispositions(threaded bool) []crmcontracts.WorklistItemDispositions {
-	if !threaded {
-		return []crmcontracts.WorklistItemDispositions{disposeNotMine}
+// outbound silence every unthreaded question in the workspace. `handled` and
+// `not_mine` are per-reader and keyed on the activity, so they survive.
+//
+// `not_mine` is withheld from the row's own owner. It means "somebody else
+// must still see this", and on the owner's row there is nobody else.
+func waitingDispositions(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
+	offered := []crmcontracts.WorklistItemDispositions{disposeHandled}
+	if row.threaded {
+		offered = append(offered, disposeSnooze)
 	}
-	return []crmcontracts.WorklistItemDispositions{
-		disposeSnooze, disposeNotMine, disposeNotSales,
+	if !namesReaderAsOwner(row, reader) {
+		offered = append(offered, disposeNotMine)
 	}
+	if row.threaded {
+		offered = append(offered, disposeNotSales)
+	}
+	return offered
+}
+
+// namesReaderAsOwner reports whether a row positively names the reader as the
+// one who owes it. A row naming nobody, or an owner this lane could not read,
+// is not the reader's by this test.
+func namesReaderAsOwner(row ranked, reader ids.UUID) bool {
+	named, ok := answersTo(row)
+	return ok && named == reader
 }
 
 // primaryActionFor is the one verb a row is FOR, out of the several it offers,

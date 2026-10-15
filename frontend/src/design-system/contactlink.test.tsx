@@ -4,7 +4,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WriteToProvider } from "../screens/writeto";
+import { WriteToProvider } from "../lib/writeto";
 import { ContactLink } from "./contactlink";
 
 afterEach(cleanup);

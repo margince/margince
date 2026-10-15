@@ -17,6 +17,7 @@
 }
 
 .table {
+  --tableCellPadBlock: 10px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -26,7 +27,7 @@
   border-bottom: 1px solid var(--borderStrong);
 }
 .table td {
-  padding: 10px 12px;
+  padding: var(--tableCellPadBlock) 12px;
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
@@ -48,11 +49,63 @@
   background: var(--bgHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
-   so the first column lines up with a PanelBody's text. */
-.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+   so the first column lines up with a PanelBody's text. A table opened from a
+   disclosure that bleeds spans the pane with it. */
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel > .table-scroll-bleed > .table > * > tr > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child {
   padding-inline-start: var(--padPanel);
 }
-.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+.panel > .table-scroll-bleed > .table > * > tr > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child {
   padding-inline-end: var(--padPanel);
 }
 /* The pinned first column is opaque because the rest scrolls under it. Any
@@ -261,6 +314,8 @@
   inset-inline-end: var(--space-4);
   /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
   z-index: 2;
+  display: flex;
+  gap: var(--gapActions);
 }
 
 /* The dialog's first line stops short of the control drawn over it. A heading
@@ -283,7 +338,17 @@
   > .drawer-head
   > :first-child
   > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+/* An expandable drawer has Expand beside the X, and its title clears both. A
+   phone hides Expand, so there the corner is the X alone. */
+@media (min-width: 721px) {
+  .modal:has(> .modal-close > :nth-child(2)) {
+    --modal-corner: calc(var(--controlHeight) * 2 + var(--gapActions));
+  }
 }
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
@@ -391,6 +456,12 @@
   flex-direction: column;
   padding: 0;
 }
+/* An expanded drawer takes the window less the gap it floats in, whatever its
+   intent's width. After the intents' widths, which it replaces, and before the
+   phone sheet, which replaces it. */
+.modal-drawer-window {
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+}
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
@@ -475,6 +546,11 @@
      exactly the two dimensions it would spend, so the sheet takes the glass. */
   .overlay-right {
     padding: 0;
+  }
+  /* The sheet is the whole window already, so Expand has nothing to give. The
+     X is the corner's last control, and everything before it is Expand. */
+  .modal-close > :not(:last-child) {
+    display: none;
   }
   /* A confirm stays a card over the scrim: it asks one question about the
      page it covers, and the page has to stay in view for that. */
@@ -973,6 +1049,15 @@
 .recordpicker-option {
   width: 100%;
   text-align: left;
+  /* The name with its detail line beneath it, both from the left edge. */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding-block: var(--space-1);
+}
+.recordpicker-option-detail {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .recordpicker-option[aria-pressed="true"] {
   border-color: var(--accent);
@@ -989,6 +1074,11 @@
   border-radius: var(--r-sm);
   background: var(--accentLight);
   color: var(--textPrimary);
+}
+.recordpicker-selected-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .recordpicker-selected-check {
   color: var(--accentText);
@@ -1494,10 +1584,81 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
+/* The end edge shades while columns lie past it and clears at the end. Drawn
+   above the cells, so a hovered or opaque cell cannot hide it. */
+@property --table-scroll-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes table-scroll-end {
+  from {
+    --table-scroll-end: var(--space-8);
+  }
+  to {
+    --table-scroll-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  /* The shade shares the table's grid cell, and sticks to the visible end. */
+  .table-scroll {
+    display: grid;
+  }
+  .table-scroll > :first-child {
+    grid-area: 1 / 1;
+  }
+  /* A table with no width of its own keeps it, as it would in a block. */
+  .table-scroll > table:first-child {
+    justify-self: start;
+  }
+  /* Clear of the inset focus ring, which the shade would otherwise cover. */
+  .table-scroll:focus-visible::after {
+    inset-inline-end: 2px;
+  }
+  .table-scroll::after {
+    --table-scroll-toward: to left;
+    content: "";
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--table-scroll-end);
+    pointer-events: none;
+    background-image: linear-gradient(
+      var(--table-scroll-toward),
+      var(--borderStrong) 1px,
+      color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
+      transparent
+    );
+    /* A box that fits has no scroll timeline, so the shade stays at zero. */
+    animation: table-scroll-end linear both;
+    animation-timeline: scroll(nearest inline);
+    animation-range: calc(100% - var(--space-8)) 100%;
+  }
+  .table-scroll:dir(rtl)::after {
+    --table-scroll-toward: to right;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .table-scroll::after {
+      animation-timing-function: step-end;
+    }
+  }
+  @media (forced-colors: active) {
+    .table-scroll::after {
+      background-image: linear-gradient(
+        var(--table-scroll-toward),
+        CanvasText 1px,
+        transparent 1px
+      );
+    }
+  }
+}
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open
-   and closed leaves the reader unsure whether the click did anything. */
+   and closed leaves the reader unsure whether the click did anything. It turns
+   with `.expander-chevron`, at the end of the row. */
 .disclosure {
   border-top: 1px solid var(--borderSubtle);
   padding-top: var(--space-3);
@@ -1535,14 +1696,10 @@ span.error-line {
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
-.disclosure-chevron {
+.disclosure-summary > .expander-chevron {
   width: 14px;
   height: 14px;
   flex: none;
-  transition: transform var(--dur-state);
-}
-.disclosure[open] .disclosure-chevron {
-  transform: rotate(90deg);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1568,6 +1725,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
@@ -1575,25 +1738,25 @@ span.error-line {
   padding-top: var(--space-3);
 }
 
-/* The chevron on a control that opens something which is NOT a `<details>` —
-   the next table row, a panel below the button. `Disclosure` owns its own; this
-   is for the two screens that had each written the turn as an inline
-   `style={{ transform: expanded ? "rotate(180deg)" : undefined }}`, which is
-   the open state spelled twice per call site: once for the reader who sees the
-   glyph and once, separately, for the one who hears `aria-expanded`. Keyed off
-   that attribute instead, the two cannot disagree.
-
-   The turn is unconditional — a reader who asked for less motion still needs
-   the chevron to point at an opened row — and only the tween is conditional. */
+/* Keyed off `aria-expanded`, so the glyph and a screen reader agree. Reduced
+   motion keeps the turn and drops the tween, which runs on the fold's time. */
 .expander-chevron {
-  transition: transform var(--dur-state) var(--ease-in-out);
+  transition: transform var(--dur-move) var(--ease-in-out);
 }
 [aria-expanded="true"] > .expander-chevron,
 [aria-expanded="true"] .expander-chevron {
   transform: rotate(180deg);
 }
+/* In-out: a fold travels between two resting places. Clipped on the block axis
+   only, so a focus ring inside keeps its sides. */
+[data-folding] {
+  box-sizing: border-box;
+  overflow: visible clip;
+  transition: height var(--dur-move) var(--ease-in-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .expander-chevron {
+  .expander-chevron,
+  [data-folding] {
     transition: none;
   }
 }
@@ -1647,6 +1810,18 @@ span.error-line {
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
+}
+/* A menu opened from inside a dialog stands above that dialog's overlay and
+   below a popover. The panel is portalled out of the dialog, so on the layer
+   above, the dialog would cover its own menu. */
+.overflow-menu-items[data-layer="dialog"] {
+  z-index: 60;
+}
+/* Under a dialog opened after its own, it sinks under the scrim as a menu
+   outside any dialog does. A panel follows its own dialog in the body, so a
+   later overlay is a dialog on top, and the top dialog's menu stays above. */
+.overflow-menu-items[data-layer="dialog"]:has(~ .overlay) {
+  z-index: 35;
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
    so without this the closed menu stays open — the whole point of folding the

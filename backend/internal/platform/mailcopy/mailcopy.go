@@ -183,6 +183,16 @@ type Copy struct {
 	WeeklyOutcomeWon   string
 	WeeklyOutcomeLost  string
 	WeeklyOutcomeMoved string
+	// What a figure says in place of a count its source did not fully measure.
+	// They are the panel's words, with {date} and {value} kept as placeholders.
+	WeeklyNotRecorded   string
+	WeeklyRecordedFrom  string
+	WeeklyNoRecords     string
+	WeeklyPartialFrom   string
+	WeeklyPartialValue  string
+	WeeklyBeforeHistory string
+	// WeeklyUnavailable stands where Won would be when its bookings were not read.
+	WeeklyUnavailable string
 
 	// The two links the installation sends as ITSELF rather than on a rep's
 	// behalf: the confirm-details link and the double-opt-in link.

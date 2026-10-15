@@ -32,7 +32,7 @@ func importContactFile(t *testing.T, e *apptest.AppEnv, file string) (string, im
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 	var report importReportDTO

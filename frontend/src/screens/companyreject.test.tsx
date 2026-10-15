@@ -11,10 +11,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CompanyRejectAction } from "./companyreject";
 
 const confirmButton = () =>
@@ -117,6 +117,8 @@ const rejected = () =>
         domain: "mail.expensify.test",
         admission: "suppressed",
         reason: "a tool we use",
+        reason_code: "stated",
+        note: "a tool we use",
         source: "human",
         decided_at: "2026-09-08T10:00:00Z",
       },

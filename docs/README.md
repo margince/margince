@@ -110,6 +110,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
+- [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
+  has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
@@ -144,8 +146,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   of the product.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
-- [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
-- [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
+- [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
+  that go with it.
+- [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
+- [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
@@ -166,6 +170,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you

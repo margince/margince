@@ -6,11 +6,12 @@
 // and the search, pill and archived toggle in the address.
 
 import { useEffect, useMemo, useState } from "react";
-import type { UrlParams } from "../app/urlstate";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
-import { type FilterResource, useFilterVocabulary } from "./filterdata";
+import { type FilterResource, useFilterVocabulary } from "../lib/filterdata";
+import { useLists } from "../lib/lists.queries";
+import type { UrlParams } from "../lib/urlstate";
 import { LIBRARY_TYPES } from "./filtersaddress";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import {
@@ -23,7 +24,6 @@ import {
   treeOf,
   withFound,
 } from "./library";
-import { useLists } from "./lists.queries";
 import { useAllSavedViews } from "./savedviews.queries";
 
 export const SEARCH_PARAM = "q";

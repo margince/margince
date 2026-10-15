@@ -4,19 +4,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { useOwnToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { contactLeadKey, LEAD_LIST_KEY } from "../lib/leadkeys";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
   unwrap,
-  useMe,
-} from "./common";
-import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
+} from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -29,7 +29,12 @@ type Lead = components["schemas"]["Lead"];
  */
 export function WorkAsLeadAction({
   contactId,
-}: Readonly<{ contactId: string }>) {
+  reasonId,
+}: Readonly<{
+  contactId: string;
+  // The page's sentence for a contact that takes no changes, by id.
+  reasonId?: string;
+}>) {
   const t = useT();
   const me = useMe();
   const canCreate = useCanWrite("lead", "create");
@@ -95,6 +100,7 @@ export function WorkAsLeadAction({
   return (
     <Button
       disabled={create.isPending || !me.data || worked.isPending}
+      reasonId={reasonId}
       onClick={() =>
         create.mutate({ contact: contactId, owner: me.data?.user.id })
       }

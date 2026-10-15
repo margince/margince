@@ -191,9 +191,8 @@ func TestCreateOfferStagesNoIDThroughStageRefusal(t *testing.T) {
 // The behaviour change registering these six in restCommands buys over
 // the route-walk fallback: Guards now runs, for the one family the record
 // seam actually serves — createOffer refuses a DEAL the caller cannot see.
-// The other five (list, tag, offer) have no such proof: the seam has never
-// served those types, so there is no read for Guards to skip, the same
-// bound task 5's custom_field commands stand on.
+// The other five (list, tag, offer) have no such proof. The seam has never
+// served those types, so there is no read for Guards to skip.
 func TestANestedCommandOfAnUnseeableParentStagesNothing(t *testing.T) {
 	cases := []struct {
 		name string

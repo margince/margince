@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { routeHash } from "../lib/router";
 import type { SpokenLine } from "./ai-activity-speak";
-import { routeHash } from "./router";
 
 /**
  * One of the rail's lines, with the record it names as the way to that record.

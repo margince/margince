@@ -102,6 +102,20 @@ export function usePresence({
   return { mounted: open || closing, state: closing ? "closing" : "open" };
 }
 
+/**
+ * The last non-null subject a dialog was opened for. A closing dialog keeps
+ * naming it through its exit, where the caller's own state is already null.
+ */
+export function useLastSubject<Subject>(
+  subject: Subject | null,
+): Subject | null {
+  const [last, setLast] = useState(subject);
+  if (subject !== null && subject !== last) {
+    setLast(subject);
+  }
+  return subject ?? last;
+}
+
 // Whether an animation is one this can wait for at all.
 //
 // The subtree walk is indiscriminate on purpose — it is how the scrim and the

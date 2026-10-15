@@ -21,14 +21,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { RecordZoneProvider } from "../app/recordzone";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { RecordZoneProvider } from "../lib/recordzone";
+import { meFixture } from "../testing/mefixture";
 import { LogActivity, LogActivityAction } from "./logactivity";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):

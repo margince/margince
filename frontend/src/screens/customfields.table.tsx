@@ -11,7 +11,7 @@ import {
   Type,
 } from "lucide-react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
+import { EntityRef } from "../components/entityref";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -20,10 +20,10 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { CfObject, CfType } from "../lib/customfields.logic";
+import { useRecordZone } from "../lib/recordzone";
 import { AuditEntryLine } from "./audit";
 import { objectLabels } from "./customfields.labels";
-import type { CfObject, CfType } from "./customfields.logic";
-import { EntityRef } from "./entityref";
 import "./customfields.css";
 
 export type CustomField = components["schemas"]["CustomField"];

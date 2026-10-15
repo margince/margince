@@ -2,16 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { ProblemError } from "../common";
-import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
+import { ProblemError } from "../../lib/problem";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 
-// The confirm a terminal stage move goes through, in the three shapes it
-// takes: a loss, which asks for a reason; an ordinary win, which is one press;
-// and the win the server refuses for naming no evidence, which is the only
-// refusal that keeps this dialog open rather than closing it.
+// The confirm a terminal stage move goes through. A loss asks for a reason.
+// A loss on a deal with open tasks also asks what happens to them. An ordinary
+// win is one press. A win naming no evidence keeps this dialog open.
 //
 // `Modal` portals to document.body, so the story canvas holds nothing and the
 // dialog is queried off the document. Each play is what proves the dialog drew
@@ -53,15 +56,44 @@ const WIN_EVIDENCE_REFUSAL = new ProblemError({
   },
 });
 
+// Two open tasks on the deal, the shape the close asks about.
+const OPEN_TASKS = {
+  data: [
+    {
+      id: "t-invoice",
+      kind: "task",
+      subject: "Send the final invoice",
+      is_done: false,
+      version: 2,
+      occurred_at: "2026-10-01T09:00:00Z",
+    },
+    {
+      id: "t-device",
+      kind: "task",
+      subject: "Return the loan device",
+      is_done: false,
+      version: 1,
+      occurred_at: "2026-10-02T09:00:00Z",
+    },
+  ],
+  page: { has_more: false },
+};
+
 function advance(
-  args: Readonly<{ stage: Stage; onConfirm: () => Promise<unknown> }>,
+  args: Readonly<{
+    stage: Stage;
+    onConfirm: () => Promise<unknown>;
+    tasks?: unknown;
+  }>,
 ) {
   return () => {
-    // The autonomy dot beside the title reads the agent-tool tiers; nothing
-    // else on this dialog asks the network.
+    // The autonomy dot beside the title reads the agent-tool tiers, and the
+    // deal's own tasks are read for the question about them.
     installFetchStub({
       "GET /agent-tools": () =>
         jsonResponse({ data: [{ name: "progress_deal", tier: "confirm" }] }),
+      "GET /activities": () =>
+        jsonResponse(args.tasks ?? { data: [], page: { has_more: false } }),
     });
     return (
       <StoryProviders>
@@ -107,6 +139,31 @@ export const ClosingWon: Story = {
   },
 };
 
+const lostWithTasks = advance({
+  stage: terminal("Lost", "lost"),
+  onConfirm: () => Promise.resolve(SAVED),
+  tasks: OPEN_TASKS,
+});
+
+// A loss on a deal with open tasks: they are listed, and Confirm waits for
+// Complete all or Keep as well as for the reason.
+async function askedAboutTheTasks() {
+  const dialog = within(await screen.findByRole("dialog"));
+  await dialog.findByText("Send the final invoice");
+  await dialog.findByRole("radio", { name: /Complete all/ });
+}
+
+export const ClosingLostWithOpenTasks: Story = {
+  render: lostWithTasks,
+  play: askedAboutTheTasks,
+};
+
+export const ClosingLostWithOpenTasksDark: Story = {
+  globals: { theme: "dark" },
+  render: lostWithTasks,
+  play: askedAboutTheTasks,
+};
+
 const refusedWin = advance({
   stage: terminal("Won", "won"),
   onConfirm: () => Promise.resolve(WIN_EVIDENCE_REFUSAL),
@@ -117,6 +174,10 @@ const refusedWin = advance({
 // the reader can answer right here.
 async function askedHowItWasWon() {
   const dialog = within(await screen.findByRole("dialog"));
+  // Confirm takes a press once the deal's open tasks have been read.
+  await waitFor(() =>
+    expect(dialog.getByRole("button", { name: "Confirm" })).toBeEnabled(),
+  );
   await userEvent.click(dialog.getByRole("button", { name: "Confirm" }));
   await dialog.findByText(/Record how the deal was won/);
 }

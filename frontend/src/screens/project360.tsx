@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
-import { usePageAside } from "../app/pageaside";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "../components/customfields.form";
+import { EditAction } from "../components/edit";
+import { usePageAside } from "../components/pageaside";
 import { OverflowMenu } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { QueryGate } from "../design-system/querystates";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -19,18 +21,19 @@ import {
 import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { groupChronology } from "../design-system/timelinegroups";
 import { useLocale, useT } from "../i18n";
-import { taskWriteKeys } from "./activitykeys";
+import { taskWriteKeys } from "../lib/activitykeys";
+import { useCan } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
-import { QueryGate, unwrap, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "./customfields.form";
-import { EditAction } from "./edit";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectIdentityFacts } from "./projectheaderfacts";
@@ -75,7 +78,6 @@ import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 import "./projects.css";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn in the

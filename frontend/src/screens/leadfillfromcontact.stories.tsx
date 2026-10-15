@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { LeadScreen } from "./leads";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { LeadScreen } from "./leads";
 
 // "Fill from a contact" under a lead's Details: the way an unnamed lead,
 // created against a company, gets its name from a contact the CRM holds.

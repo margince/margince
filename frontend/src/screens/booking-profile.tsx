@@ -3,7 +3,6 @@ import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { CompanyLogo } from "../design-system/companylogo";
@@ -12,10 +11,12 @@ import { ErrorLine } from "../design-system/errorline";
 import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./booking-profile.css";
 
@@ -130,9 +131,14 @@ function ProfileForm({
           </div>
           {copy.notice}
           <div className="book-actions">
+            {/* The refusal rides the button, so at 390 it stays beside the
+                verb it explains rather than under the next one. */}
             <Button
-              disabled={
-                save.isPending || (!profile.enabled && !profile.provider)
+              disabled={save.isPending}
+              reason={
+                !profile.enabled && !profile.provider
+                  ? t("scheduling.calendarSetupNeeded")
+                  : undefined
               }
               onClick={() => save.mutate({ enabled: !profile.enabled })}
             >
@@ -145,9 +151,6 @@ function ProfileForm({
               {t("scheduling.replace")}
             </Button>
           </div>
-          {!profile.enabled && !profile.provider && (
-            <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
-          )}
           {embedded && <BookingIdentity profile={profile} />}
           <ConfirmModal
             open={replace}

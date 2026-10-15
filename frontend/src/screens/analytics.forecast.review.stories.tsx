@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ForecastReview } from "./analytics.forecast.review";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ForecastReview } from "./analytics.forecast.review";
 
 // What should be checked before the forecast call: the coverage line first and
 // apart, then a table of findings in the server's order, severity first. The

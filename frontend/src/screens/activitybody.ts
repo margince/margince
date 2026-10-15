@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { EntityKind } from "../app/entity";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import type { EntityKind } from "../lib/entity";
 
 // One drafted entry and the wire body it becomes: the shape the composer holds
 // and the `POST /activities` payload it projects to. The React form that edits
@@ -28,6 +28,18 @@ export type ActivityDraft = {
   // note or meeting is not held by a colleague — so it only reaches the wire on
   // a task, the same way `day` only becomes a due date there.
   assigneeId: string;
+};
+
+// Who was in a meeting or call besides whoever logs it: contacts on
+// their side, colleagues on ours.
+export type MeetingAttendees = {
+  contacts: readonly RecordPickerCandidate[];
+  colleagueIds: readonly string[];
+};
+
+export const NO_ATTENDEES: MeetingAttendees = {
+  contacts: [],
+  colleagueIds: [],
 };
 
 // A meeting and a call are WITH A CONTACT, and the server refuses either one
@@ -74,10 +86,10 @@ export function activityRequestBody(
   entityType: EntityKind,
   entityId: string,
   recordZone: string,
-  // Who was in the room, when the form is open on a company and the kind is one
-  // that needs a contact. Null everywhere else.
-  attendee: RecordPickerCandidate | null,
+  // Who was in the room. Read only for the kinds in KINDS_WITH_A_CONTACT.
+  attendees: MeetingAttendees,
 ) {
+  const withAttendees = KINDS_WITH_A_CONTACT.has(input.kind);
   // source_system: transcript is what routes the body through the
   // server's ADR-0058 normalizer and what the activity/transcript
   // retention scope keys its sweep on (see backend logActivity's
@@ -110,19 +122,33 @@ export function activityRequestBody(
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
-    // The attendee REPLACES the company link rather than joining it. The
-    // server refuses a company link on a meeting or a call whichever
-    // else are present, and the company still reaches the activity: the
-    // employer walk carries it there through the contact who was named.
-    //
-    // Only for the kinds that ask for one. The picker stops rendering when the
-    // reader switches to a note or a task, but the contact they had already
-    // chosen stays in state — and filing a company note against that contact
-    // takes it off the company screen it was written on.
-    links:
-      attendee && KINDS_WITH_A_CONTACT.has(input.kind)
-        ? [{ entity_type: "contact" as const, entity_id: attendee.id }]
-        : [{ entity_type: entityType, entity_id: entityId }],
+    // Only for the kinds that ask who attended. Switching to a note hides the
+    // fields but keeps their picks in state. A note must not be filed against them.
+    links: withAttendees
+      ? meetingLinks(entityType, entityId, attendees.contacts)
+      : [{ entity_type: entityType, entity_id: entityId }],
+    ...(withAttendees && attendees.colleagueIds.length > 0
+      ? { attendee_user_ids: [...attendees.colleagueIds] }
+      : {}),
     source: "manual",
   };
+}
+
+// One contact link per attendee, beside the open record. On a company the
+// attendees REPLACE its link, which the server refuses on a meeting or a call.
+// The company still reaches the entry through each attendee's employer. With
+// nobody named the record link stands alone; on a company, Save is disabled.
+function meetingLinks(
+  entityType: EntityKind,
+  entityId: string,
+  contacts: readonly RecordPickerCandidate[],
+): { entity_type: EntityKind; entity_id: string }[] {
+  const record = { entity_type: entityType, entity_id: entityId };
+  const links = entityType === "company" ? [] : [record];
+  for (const contact of contacts) {
+    if (!(entityType === "contact" && contact.id === entityId)) {
+      links.push({ entity_type: "contact", entity_id: contact.id });
+    }
+  }
+  return links.length > 0 ? links : [record];
 }

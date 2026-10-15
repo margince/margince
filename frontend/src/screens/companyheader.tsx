@@ -3,25 +3,26 @@ import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { rosterOwnerName, useRoster } from "../components/entityref";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { InlineChoice } from "../design-system/inlinechoice";
+import { useT } from "../i18n";
 import {
   useCanWrite,
   useCanWriteRecord,
   useRecordWriteRefusal,
-} from "../app/capability";
-import { navigate } from "../app/router";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
-import { InlineChoice } from "../design-system/inlinechoice";
-import { useT } from "../i18n";
+} from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { unwrap, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterOwnerName, useRoster } from "./entityref";
-import { useMemberName } from "./membernames";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 
@@ -113,8 +114,8 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // reason, and folding them in again would answer "no grant" as though it were
   // a fact about the record.
   const mine = company.writable ?? false;
-  // Archived first: no grant or owner lifts it, since nothing unarchives. Ownership
-  // comes last: somebody else's company is who owns it, not a problem to solve.
+  // Archived first: no grant or owner lifts it; only undoing the archive from
+  // History does. Ownership comes last: somebody else's company is who owns it.
   if (company.archived_at) {
     return t("record.archivedReadOnly");
   }
@@ -311,13 +312,9 @@ export function CompanyActionBadges({
   archivedReasonId?: string;
 }>) {
   const t = useT();
-  // An archived record is read-only: the backend rejects edit/merge/archive
-  // on a non-live row (there is no unarchive path). The verbs stay VISIBLE
-  // and refused rather than disappearing (STATE-4a) — a control blocked by
-  // the record's STATE says why, because the reason is the information and a
-  // missing button reads as a build without the feature. Its history stays
-  // readable — what happened to a record is exactly what a reader wants after
-  // it has been put away.
+  // An archived record is read-only: the backend rejects edit, merge and
+  // archive on it until History undoes the archive. The verbs stay visible and
+  // refused (STATE-4a), because a missing button reads as a missing feature.
   //
   // Undefined on a live account, which is what leaves those verbs pressable.
   // See companyheaderactions.tsx's CompanyHeaderActions: the id is an

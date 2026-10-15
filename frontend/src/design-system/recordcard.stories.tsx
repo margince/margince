@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
-import { WriteToProvider } from "../screens/writeto";
+import { WriteToProvider } from "../lib/writeto";
 import { Badge } from "./atoms";
 import { AvatarStack } from "./avatarstack";
 import { RecordCard } from "./recordcard";

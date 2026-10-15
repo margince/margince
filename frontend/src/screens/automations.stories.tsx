@@ -3,20 +3,20 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { AutomationsAdmin } from "./automations";
-import {
-  AUTOMATION_CATALOG,
-  configuredAutomations,
-} from "./automations.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AutomationsAdmin } from "./automations";
+import {
+  AUTOMATION_CATALOG,
+  configuredAutomations,
+} from "./automations.fixtures";
 
-// The whole automations card: the configured rules as one table, then the
-// starter library, each a group of the one pane.
+// The whole automations page: the configured rules, then the starter library,
+// each in a pane of its own.
 
 const meta: Meta = {
   title: "Settings/AI/Automations/Automations",
@@ -36,11 +36,21 @@ const CARD_ROUTES = {
     }),
 };
 
-function Card({ readOnly = false }: Readonly<{ readOnly?: boolean }>) {
+function Card({
+  readOnly = false,
+  none = false,
+}: Readonly<{ readOnly?: boolean; none?: boolean }>) {
+  const routes = none
+    ? {
+        ...CARD_ROUTES,
+        "GET /automations": () =>
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+      }
+    : CARD_ROUTES;
   installFetchStub(
     readOnly
-      ? { ...CARD_ROUTES, "GET /me": meRoute({ automation: ["read"] }) }
-      : CARD_ROUTES,
+      ? { ...routes, "GET /me": meRoute({ automation: ["read"] }) }
+      : routes,
   );
   return (
     <StoryProviders>
@@ -64,6 +74,14 @@ export const AdminCardDark: Story = {
   globals: { theme: "dark" },
   play: cardRendered,
   render: () => <Card />,
+};
+
+// Nothing configured yet: the intro and one empty line share one body.
+export const NoneConfigured: Story = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByTestId("template-no_activity_reminder");
+  },
+  render: () => <Card none />,
 };
 
 export const AdminCardPhone: Story = {

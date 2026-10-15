@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { ReportingCharts } from "./reporting.charts";
 import { reportingStoryEvaluation } from "./reporting.story-fixtures";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Graph layout",
@@ -58,10 +58,10 @@ export const LongStageNames: Story = {
                   ...chart,
                   points: chart.points.map((point, index) => ({
                     ...point,
-                    label: [
-                      "Procurement, legal and security approval",
-                      "Technical pilot and stakeholder alignment",
-                    ][index % 2],
+                    label:
+                      index % 2 === 0
+                        ? "Procurement, legal and security approval"
+                        : "Technical pilot and stakeholder alignment",
                   })),
                 }
               : chart,

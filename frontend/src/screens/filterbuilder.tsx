@@ -20,9 +20,7 @@ import { Fragment, useId } from "react";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { useT } from "../i18n";
 import "./filterbuilder.css";
-import { ClauseRow, firstClause } from "./filterclause";
-import type { VocabularyField } from "./filterdata";
-import { ownGroup } from "./filterproposal";
+import type { VocabularyField } from "../lib/filterdata";
 import {
   addToGroup,
   type Group,
@@ -32,7 +30,9 @@ import {
   removeNode,
   rootGroup,
   toggleJoin,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
+import { ClauseRow, firstClause } from "./filterclause";
+import { ownGroup } from "./filterproposal";
 
 export type FilterBuilderProps = Readonly<{
   tree: Node;

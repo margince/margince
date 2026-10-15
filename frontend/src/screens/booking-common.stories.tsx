@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { UTC_ZONE } from "../format/timezone";
+import { StoryProviders } from "../testing/story-utils";
 import { BookingFooter, BookingZone } from "./booking-common";
-import { StoryProviders } from "./story-utils";
 import "./book.css";
 
 const meta: Meta = {

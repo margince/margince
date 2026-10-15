@@ -71,9 +71,9 @@ prompt: |
   taking that account from now on.
 
 must_call:
-  - merge_records
+  - resolve_duplicates
   - archive_record
-  - list_colleagues
+  - read_directory
   - update_record
 
 # record_type on every write verb. Each serves several record types from one
@@ -86,7 +86,8 @@ must_call:
 # record survives is therefore judged from the answer, which is also where the
 # user asked for it.
 must_call_with:
-  - merge_records.record_type=company
+  - resolve_duplicates.record_type=company
+  - read_directory.list=colleagues
   - archive_record.record_type=company
   # CRITERION 3, AND THE HALF THE NAME ALONE CANNOT HOLD. "Lena Fischer" below
   # is satisfied by the sentence that says the handover did NOT happen — "handing
@@ -107,7 +108,7 @@ may_call:
   - list_records
   - resolve_entities
   - catch_me_up_on
-  - who_knows
+  - read_relationships
   - whoami
 
 must_mention:

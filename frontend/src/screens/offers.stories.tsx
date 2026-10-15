@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { OfferScreen } from "./offers";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OfferScreen } from "./offers";
 
 const meta: Meta = {
   title: "Records/Offers/Page",

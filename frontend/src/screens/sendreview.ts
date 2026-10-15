@@ -15,7 +15,8 @@
 // and a button that fails when pressed is worse than one that is absent,
 // because the rep has been told they may do something they may not.
 
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
+import { problemDetails } from "../lib/problembody";
 
 // SendReview is the work a refusal left behind, as a surface needs it.
 export type SendReview = Readonly<{
@@ -50,7 +51,7 @@ export function sendReviewOf(error: unknown): SendReview | null {
   if (!(error instanceof ProblemError)) {
     return null;
   }
-  const details = detailsOf(error.problem);
+  const details = problemDetails(error.problem);
   if (!details) {
     return null;
   }
@@ -59,25 +60,6 @@ export function sendReviewOf(error: unknown): SendReview | null {
     return null;
   }
   return { reviewId, actions: actionsIn(details.available_actions) };
-}
-
-// detailsOf reaches the problem's own details object without trusting its
-// shape. The value arrives as `unknown` from the transport and a body that
-// disagrees with the contract is a body this surface must survive rather than
-// throw on: a rep whose send was refused should not also see a crash.
-function detailsOf(problem: unknown): Record<string, unknown> | null {
-  if (typeof problem !== "object" || problem === null) {
-    return null;
-  }
-  const details = (problem as { details?: unknown }).details;
-  if (
-    typeof details !== "object" ||
-    details === null ||
-    Array.isArray(details)
-  ) {
-    return null;
-  }
-  return details as Record<string, unknown>;
 }
 
 // actionsIn keeps the actions this build can draw, in the server's own order.

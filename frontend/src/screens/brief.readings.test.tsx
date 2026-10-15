@@ -3,11 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { RecordZoneProvider } from "../lib/recordzone";
 import {
   boundedDecisions,
   boundedLeads,
@@ -469,7 +469,7 @@ describe("the brief readings strip", () => {
       [wholeMeetings(3)],
       { urgent: 4 },
     );
-    day.sources_unavailable = [{ source: "calendar", reason: "failed" }];
+    day.sources_unavailable = [{ source: "waiting", reason: "failed" }];
     drawDay(day);
 
     // All three worklist slots, LEADS INCLUDED — a fallback wired to two of

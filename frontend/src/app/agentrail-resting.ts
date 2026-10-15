@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { formatNumber } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { Screen } from "../lib/router";
 import { IDLE_ORDER, type IdleKind, TIPS } from "./agentrail-copy";
 import { aroundTheName, plain, type SpokenLine } from "./ai-activity-speak";
 import { paletteHotkeyCaps } from "./palette";
-import type { Screen } from "./router";
 
 // What the agent section says while it is at rest, and how long each thing gets
 // to say it.
@@ -270,9 +270,14 @@ export function useRestingLine(
   }, [span, onTip, tick]);
   if (onTip) {
     const pass = Math.floor(tick / span);
-    return tips[pass % tips.length] ?? tips[0];
+    const tip = tips[pass % tips.length] ?? tips[0];
+    if (tip !== undefined) return tip;
   }
   // Both lists can shorten under it when a read answers, so the index is clamped
   // rather than trusted.
-  return readings[at] ?? readings[0];
+  const reading = readings[at] ?? readings[0];
+  if (reading === undefined) {
+    throw new Error("useRestingLine needs at least one reading or tip");
+  }
+  return reading;
 }

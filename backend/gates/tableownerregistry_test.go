@@ -158,6 +158,7 @@ var tableOwners = map[string]string{
 	// compose's hourly deal_scout pass through deals.RecordSuggestionTx, and
 	// decided by a rep through the deals store.
 	"deal_suggestion":          "internal/modules/deals",
+	"legal_review":             "internal/modules/deals",
 	"tag_suggestion":           "internal/modules/collections",
 	"tag_suggestion_evidence":  "internal/modules/collections",
 	"deal_suggestion_evidence": "internal/modules/deals",
@@ -191,6 +192,13 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement": "internal/modules/activities",
+	// Which owed mails had their stored original re-read for a calendar method.
+	// Its candidates are owedSQL, which this module owns, so the marker is here
+	// rather than beside the compose-owned markers of the meeting passes.
+	"activity_calendar_method_backfill": "internal/modules/activities",
+	// The waiting horizon the worker pass measured, one row for the installation.
+	// The queue's own predicates are what read it, and they live in this module.
+	"activity_waiting_horizon": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the
@@ -202,6 +210,7 @@ var tableOwners = map[string]string{
 	"activity_review_template": "internal/modules/activities",
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
+	"worklist_done":            "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -279,23 +288,25 @@ var tableOwners = map[string]string{
 	// INSERT of the shipped defaults is not a store.
 	"retention_policy": "internal/modules/privacy",
 	// capture
-	"raw_capture":                  "internal/modules/capture",
-	"capture_connection":           "internal/modules/capture",
-	"capture_sync_state":           "internal/modules/capture",
-	"capture_backfill":             "internal/modules/capture",
-	"capture_backfill_creation":    "internal/modules/capture",
-	"workspace_email_domain":       "internal/modules/capture",
-	"capture_sender_override":      "internal/modules/capture",
-	"capture_exclusion":            "internal/modules/capture",
-	"capture_owner_identity":       "internal/modules/capture",
-	"capture_alias_sighting":       "internal/modules/capture",
-	"capture_import":               "internal/modules/capture",
-	"capture_thread_verdict":       "internal/modules/capture",
-	"capture_counterparty_hold":    "internal/modules/capture",
-	"capture_digest":               "internal/modules/capture",
-	"capture_auto_enrich_state":    "internal/modules/capture",
-	"capture_pending_counterparty": "internal/modules/capture",
-	"capture_auto_enrich_budget":   "internal/modules/capture",
+	"raw_capture":                      "internal/modules/capture",
+	"capture_connection":               "internal/modules/capture",
+	"capture_sync_state":               "internal/modules/capture",
+	"capture_backfill":                 "internal/modules/capture",
+	"capture_backfill_creation":        "internal/modules/capture",
+	"workspace_email_domain":           "internal/modules/capture",
+	"capture_sender_override":          "internal/modules/capture",
+	"capture_exclusion":                "internal/modules/capture",
+	"capture_owner_identity":           "internal/modules/capture",
+	"capture_alias_sighting":           "internal/modules/capture",
+	"capture_alias_refused":            "internal/modules/capture",
+	"capture_owner_identity_withdrawn": "internal/modules/capture",
+	"capture_import":                   "internal/modules/capture",
+	"capture_thread_verdict":           "internal/modules/capture",
+	"capture_counterparty_hold":        "internal/modules/capture",
+	"capture_digest":                   "internal/modules/capture",
+	"capture_auto_enrich_state":        "internal/modules/capture",
+	"capture_pending_counterparty":     "internal/modules/capture",
+	"capture_auto_enrich_budget":       "internal/modules/capture",
 	// What the QC-only test_mailbox connector has sent and whether its own
 	// Sync has echoed it back yet — internal bookkeeping, not audited;
 	// rows are retained rather than swept.
@@ -455,13 +466,17 @@ var tableOwners = map[string]string{
 	// a weekly row on brief_run would become "the latest brief" to the reader
 	// that decides the next morning's overnight window, and weekly content on
 	// brief_item would be cascaded away by deleting a deal.
-	"weekly_review":              "internal/compose/weekly",
-	"team_weekly_review":         "internal/compose/weekly",
-	"team_weekly_review_outlook": "internal/compose/weekly",
-	"team_weekly_review_rep":     "internal/compose/weekly",
-	"assurance_run_finding":      "internal/modules/assurance",
-	"assurance_run":              "internal/modules/assurance",
-	"assurance_source_coverage":  "internal/modules/assurance",
+	"weekly_review":                  "internal/compose/weekly",
+	"team_weekly_review":             "internal/compose/weekly",
+	"team_weekly_review_coverage":    "internal/compose/weekly",
+	"team_weekly_review_member":      "internal/compose/weekly",
+	"team_weekly_review_outlook":     "internal/compose/weekly",
+	"team_weekly_review_rep":         "internal/compose/weekly",
+	"team_weekly_review_rep_funnel":  "internal/compose/weekly",
+	"team_weekly_review_rep_pattern": "internal/compose/weekly",
+	"assurance_run_finding":          "internal/modules/assurance",
+	"assurance_run":                  "internal/modules/assurance",
+	"assurance_source_coverage":      "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to
 	// that pass's task. They belong to assurance because a cycle is a window
 	// over its own findings; the TASK is an ordinary activity the caller mints
@@ -505,6 +520,12 @@ var tableOwners = map[string]string{
 	// this one records a completed JUDGEMENT about whether the meeting is off,
 	// which neither marker above answers.
 	"activity_meeting_rsvp_backfill": "internal/compose",
+	// Which received emails have been re-read for whether the seat wrote them
+	// from another address of theirs. The same bookkeeping, owned here for the
+	// same reason.
+	"activity_own_sent_mail_repair": "internal/compose",
+	// The one-row bound on that pass: mail captured before its migration ran.
+	"activity_own_sent_mail_repair_cutoff": "internal/compose",
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",
@@ -523,7 +544,8 @@ var tableOwners = map[string]string{
 	// two above, and the same ruling: derived content, regenerable from the
 	// records at any time, readable by nobody but the user it was written
 	// for.
-	"deal_status_card": "internal/compose/dealstatus",
+	"deal_status_card":    "internal/compose/dealstatus",
+	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other

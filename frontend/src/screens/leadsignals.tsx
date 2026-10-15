@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -15,9 +16,8 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
-import { EntityRef } from "./entityref";
-import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
+import { leadManualSignalsKey, leadWriteKeys } from "../lib/leadkeys";
+import { unwrap } from "../lib/problem";
 import "./leadsignals.css";
 
 type SetSignalRequest = components["schemas"]["SetLeadManualSignalRequest"];

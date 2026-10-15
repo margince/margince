@@ -3,12 +3,14 @@ import { LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { forgetHashCredential, takeHashCredential } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { forgetHashCredential, takeHashCredential } from "../lib/router";
 import { BuyerBoard } from "./buyerroomboard";
 import {
   BuyerFrame,
@@ -24,19 +26,18 @@ import {
   SessionRefusedError,
   writeSession,
 } from "./buyerroomsession";
-import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside contact ever
 // reaches in this app, drawn like the front of a small, well-made site: a
 // hero, the documents as a gallery with the conversation under each, and the
 // contact beside them. Anonymous: no seat, no cookie. The invitation link lands
-// on `#/room?c=<credential>`; the router takes the credential off the hash
-// (app/router.tsx's takeHashCredential, ahead of every gate that can render
-// instead of this screen) and this screen exchanges it for a room session the
-// tab keeps in sessionStorage and presents as a Bearer on every call. A dead
-// link, a paused room and an expired one each get an honest screen and a way
-// back, none naming anything the link did not.
+// on `#/room?c=<credential>`. The router takes the credential off the hash
+// (lib/router.tsx's takeHashCredential, ahead of every gate that can render
+// instead of this screen). This screen exchanges it for a room session the tab
+// keeps in sessionStorage and presents as a Bearer on every call. A dead link,
+// a paused room and an expired one each get a plain screen and a way back.
+// None names anything the link did not.
 
 type BuyerRoomView = components["schemas"]["BuyerRoomView"];
 
@@ -264,7 +265,7 @@ function RoomBody({
   );
 }
 
-const ACCESS_TITLE: Record<string, MessageKey> = {
+const ACCESS_TITLE: Record<"paused" | "expired", MessageKey> = {
   paused: "buyer.pausedTitle",
   expired: "buyer.expiredTitle",
 };

@@ -59,7 +59,7 @@ func SafeVoiceBuildFailure(err error) string {
 	// on its FIRST build and on every retry after, which is exactly the case
 	// the default message cost an operator an hour of retrying.
 	if errors.Is(err, ErrUnconfiguredModel) {
-		return "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under Model provider keys, then build again."
+		return "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under AI models → Providers, then build again."
 	}
 	// A burst limit, not an empty account: the same build succeeds shortly,
 	// and telling this operator to go raise a spending limit would send them

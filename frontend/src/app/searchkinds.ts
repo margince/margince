@@ -3,9 +3,9 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { ENTITY, type EntityKind, isEntityKind } from "../lib/entity";
+import type { Route } from "../lib/router";
 import { settingsHref } from "../screens/settingsrouting";
-import { ENTITY, type EntityKind, isEntityKind } from "./entity";
-import type { Route } from "./router";
 
 // What a search hit IS to the two surfaces that draw one — the ⌘K palette and
 // the results screen — spelled once.
@@ -156,11 +156,9 @@ export const SEARCH_HIT_KIND_KEY: Readonly<Record<SearchHitType, MessageKey>> =
  *     honest destination and not the ideal one; a per-record address for a
  *     product is worth having and is not this change.
  *
- * An ACTIVITY returns null: it is a link rather than a thing links hang off,
- * and the results screen draws it as the canonical email row instead. Where
- * that activity IS a message, searchEmailRoute below is its destination — a
- * question about the hit rather than about its type, which is why it is not
- * an arm of this one.
+ * An ACTIVITY returns null: it has no page, and opens in a panel on the
+ * results screen instead. Which panel is a question about the hit rather than
+ * about its type, so searchHitDestination below answers it.
  */
 export function searchHitRoute(type: SearchHitType, id: string): Route | null {
   if (isEntityKind(type)) {
@@ -194,16 +192,32 @@ export function searchHitRoute(type: SearchHitType, id: string): Route | null {
  * slot. No routing change, and no app-level owner of "which email is open".
  */
 export function searchEmailRoute(query: string, activityId: string): Route {
-  return { screen: "search", id: query, id2: activityId };
+  return { screen: "search", id: querySegment(query), id2: activityId };
+}
+
+// The query as a path segment. routeHash joins segments as given and the
+// search route decodes `id` once, so a "/" or "%" in a query must arrive encoded.
+function querySegment(query: string): string {
+  return encodeURIComponent(query);
+}
+
+// The third segment that opens the activity panel rather than the email one.
+// The email address keeps its two segments, so a link to a message still works.
+export const SEARCH_ACTIVITY_SEGMENT = "activity";
+
+/** Where a meeting, call, note or task hit goes: the results, with it open. */
+export function searchActivityRoute(query: string, activityId: string): Route {
+  return {
+    screen: "search",
+    id: querySegment(query),
+    id2: activityId,
+    id3: SEARCH_ACTIVITY_SEGMENT,
+  };
 }
 
 /**
- * Where this HIT goes, as against where its TYPE lives.
- *
- * The difference is the whole of #3850: an `activity` has no page, so
- * searchHitRoute answers null for the type — but an activity that carries an
- * `email_summary` is a message, and a message has a destination. Asking about
- * the hit rather than about the type is what lets the palette offer one.
+ * Where this HIT goes, as against where its TYPE lives: a message opens the
+ * email panel, any other activity the activity panel.
  *
  * Here rather than in the palette because the palette is one of two surfaces
  * that draw a hit, and the last time each answered this for itself the two
@@ -219,6 +233,9 @@ export function searchHitDestination(
 ): Route | null {
   if (hit.email_summary) {
     return searchEmailRoute(query, hit.email_summary.activity_id);
+  }
+  if (hit.type === "activity") {
+    return searchActivityRoute(query, hit.id);
   }
   return searchHitRoute(hit.type, hit.id);
 }

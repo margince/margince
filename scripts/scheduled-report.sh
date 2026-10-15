@@ -389,6 +389,54 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
+if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]]; then
+  report "the backend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
+"\`make backend-clock-drift\` failed on the scheduled run of \`main\` at +200 days: $RUN_URL
+
+The suite passes today and fails 200 days from now, so at least one test asserts
+against an instant something compares to \`now\` to decide a state. It will start
+failing on its own, on a commit that touches nothing near it — the confirmed
+instance was a task seeded seven days out, asserted to group as \`later\`, coming
+back \`this_week\` on a Thursday.
+
+READ THE FAILURES BEFORE FIXING THEM, because this lane has two failure modes and
+they are not the same finding:
+
+- A fixture whose claim depends on the day. Fix it at the fixture: assert the
+  thing no calendar can move (overdue or not, rather than which bucket), or take
+  the base instant from \`clocktest.Now(t)\` so the offset reaches it.
+- The lane's own. If the clock did not actually move, or a time service
+  re-synced mid-run, \`scripts/clock-drift-host.sh\` says so and the run is void
+  rather than a finding about the tree. A red that blames the tree for the lane
+  is what teaches a reader to ignore a scheduled lane, so rule this out first.
+
+Reproduce locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`.
+Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and
+stored column \`DEFAULT\`s keep the real date under that applier."\
+    || unreported=1
+elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
+  resolve "the backend suite's verdict depends on the calendar"
+fi
+
+if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
+  report "a story does not render clean on main" "priority: normal,area: ci-tests,bug" \
+"\`make fe-uat ARGS=--all-stories\` failed on the scheduled run of \`main\`: $RUN_URL
+
+On a branch, \`make fe-uat\` renders only the stories the diff reaches, so a story
+that fails on \`main\` stays hidden until some change reaches it, and then reads
+as that change's fault. The run's \`fe-uat-failures\` artifact holds the manifest, which
+names each failing story and its errors, and the capture of each one.
+
+No manifest in the artifact means the lane failed before it rendered: the install,
+the app build, the Chromium download or the Storybook build. The step log names
+which.
+
+Reproduce locally with \`make fe-uat ARGS=--all-stories\`."\
+    || unreported=1
+elif [[ "${STORIES_RESULT:-}" = "success" ]]; then
+  resolve "a story does not render clean on main"
+fi
+
 if [[ "${TREND_RESULT:-}" = "failure" ]]; then
   report "the weekly slop trend could not run" "priority: low,area: ci-tests,bug" \
 "\`make slop-trend\` failed on the scheduled run: $RUN_URL
@@ -427,6 +475,67 @@ Inspect without deleting anything: \`DRY_RUN=1 scripts/reap-build-caches.sh\`."\
 elif [[ "${CACHE_RESULT:-}" = "success" ]]; then
   resolve "the Actions build-cache reaper is failing"
 fi
+
+# The vendor live check. Four outcomes: `ok`, `drift` and `refused` are
+# verdicts, and `not-checked` means no key, which is none. A failed job with no
+# outcome broke before the call answered, and is filed as `no-verdict`.
+#
+# The detail is matched against the shapes the test prints and dropped
+# otherwise. The body is built from these fields alone, so no key or vendor
+# text can reach the public tracker through it.
+readonly SURFE_FAILED_TITLE="Surfe live check failed: GET /v1/credits"
+readonly SURFE_NO_KEY_TITLE="Surfe live check has no key"
+surfe_detail="${VENDOR_LIVE_DETAIL:-}"
+if ! [[ "$surfe_detail" =~ ^(status=([0-9]{3}|unreachable)|missing=[A-Za-z0-9_,]+|negative=[a-z_]+)$ ]]; then
+  surfe_detail="unrecognised"
+fi
+surfe_outcome="${VENDOR_LIVE_OUTCOME:-}"
+if [[ -z "$surfe_outcome" ]] && [[ "${VENDOR_LIVE_RESULT:-}" = "failure" ]]; then
+  surfe_outcome="no-verdict"
+  surfe_detail="no-verdict"
+fi
+case "$surfe_outcome" in
+drift | refused | no-verdict)
+  surfe_why="The answer no longer matches what the adapter expects. Compare it with
+\`backend/internal/modules/integrations/surfe/testdata/vendor-wire.json\` and fix the adapter."
+  if [[ "$surfe_outcome" = "refused" ]]; then
+    surfe_why="Surfe refused the key. It may have expired or been revoked: renew the
+\`SURFE_LIVE_KEY\` repository secret with a low-limit key."
+  elif [[ "$surfe_outcome" = "no-verdict" ]]; then
+    surfe_why="The job failed before the call gave an answer, so nothing is known about
+Surfe's API today. The job log names the step that failed."
+  fi
+  report "$SURFE_FAILED_TITLE" "priority: high,area: capture" \
+"The daily live check of a data vendor failed on \`main\`: $RUN_URL
+
+- Vendor: Surfe
+- Call: \`GET /v1/credits\`, through the production adapter
+- Outcome: \`$surfe_outcome\`
+- Detail: \`$surfe_detail\`
+
+$surfe_why
+
+Reproduce with \`MARGINCE_SURFE_LIVE_KEY=<key> make vendor-live\`." ||
+    unreported=1
+  ;;
+ok)
+  resolve "$SURFE_FAILED_TITLE"
+  resolve "$SURFE_NO_KEY_TITLE"
+  ;;
+not-checked)
+  # Opened once and never commented on: a missing key is a standing fact, and a
+  # daily "still no key" adds nothing. It never retracts a failure either.
+  if [[ -z "$(lookup "$SURFE_NO_KEY_TITLE")" ]]; then
+    report "$SURFE_NO_KEY_TITLE" "priority: normal,area: capture" \
+"The daily live check of Surfe did not run on \`main\`, because the
+\`SURFE_LIVE_KEY\` repository secret is not set: $RUN_URL
+
+Surfe is unchecked until the secret holds a low-limit Surfe API key. Not
+checked is not a pass: a change to Surfe's API goes unseen until then." ||
+      unreported=1
+  fi
+  ;;
+esac
 
 # --- main-health.yml -----------------------------------------------------------
 #

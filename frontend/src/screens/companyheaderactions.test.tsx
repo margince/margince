@@ -1,13 +1,20 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { routeHash } from "../lib/router";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   type ActivityDrawer,
   CompanyHeaderActions,
@@ -141,6 +148,16 @@ describe("Log activity and Add task, gated on the create grant", () => {
     // one does not open a form the store would refuse anyway.
     await user.click(log);
     expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Booking needs the same grant, and says so in the booking screen's words.
+    const book = screen.getByRole("button", {
+      name: en["scheduling.bookContact"],
+    });
+    expect(book.hasAttribute("disabled")).toBe(true);
+    expect(
+      document.getElementById(book.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(en["scheduling.bookRefused"]);
   });
 
   it("presses both, with the grant", async () => {
@@ -166,6 +183,11 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const task = await screen.findByRole("button", { name: "Add task" });
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: en["scheduling.bookContact"] })
+        .hasAttribute("disabled"),
+    ).toBe(true);
     expect(
       screen.queryByText(
         "You do not have permission to log activities on this record.",
@@ -210,4 +232,127 @@ it("draws the Email verb icon-only, with its name on hover", async () => {
 
   const email = await screen.findByRole("button", { name: "Email" });
   expect(email.textContent?.trim()).toBe("");
+});
+
+type Posted = { path: string; body: unknown };
+type Asked = { posted: Posted[]; read: URL[] };
+
+// A seat that may log, one contact at the account, and every POST kept for
+// the assertions: the company verbs below reach /contacts and /activities.
+function stubWritableAccount({ posted, read }: Asked) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      const { pathname } = url;
+      let body: unknown = {
+        data: [],
+        page: { has_more: false, next_cursor: null },
+      };
+      if (pathname.endsWith("/me")) {
+        body = meFixture({ allow: { activity: ["create"] } });
+      } else if (pathname.endsWith("/contacts")) {
+        read.push(url);
+        body = {
+          data: [{ id: "c-ines", full_name: "Ines Brandt" }],
+          page: { has_more: false, next_cursor: null },
+        };
+      } else if (request.method === "POST") {
+        const sent: unknown = await request.json();
+        posted.push({ path: pathname, body: sent });
+        body = { id: "a-new" };
+      } else {
+        read.push(url);
+      }
+      return new Response(JSON.stringify(body), {
+        status: request.method === "POST" ? 201 : 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+  );
+}
+
+describe("Add task writes only tasks", () => {
+  it("offers no Type, names its own verb, and saves a task due on a later day", async () => {
+    const posted: Posted[] = [];
+    stubWritableAccount({ posted, read: [] });
+    const user = userEvent.setup();
+    renderActions();
+
+    await user.click(await screen.findByRole("button", { name: "Add task" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(
+      within(drawer).getByRole("heading", { name: "Add task" }),
+    ).toBeTruthy();
+    expect(within(drawer).queryByLabelText(en["log.kind"])).toBeNull();
+    const due = within(drawer).getByLabelText<HTMLInputElement>("Due date");
+    expect(due.max).toBe("");
+    fireEvent.change(due, { target: { value: "2099-03-16" } });
+    await user.type(within(drawer).getByLabelText("Subject *"), "Demo prep");
+    await user.click(within(drawer).getByRole("button", { name: "Add task" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]?.path).toMatch(/\/activities$/);
+    expect(posted[0]?.body).toMatchObject({
+      kind: "task",
+      subject: "Demo prep",
+    });
+    expect(posted[0]?.body).toHaveProperty(
+      "due_at",
+      expect.stringMatching(/^2099-03-1[56]T/),
+    );
+  });
+
+  it("keeps Type on Log activity, and says why a later day is greyed out", async () => {
+    stubWritableAccount({ posted: [], read: [] });
+    const user = userEvent.setup();
+    renderActions();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Log activity" }),
+    );
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByLabelText(en["log.kind"])).toBeTruthy();
+    expect(within(drawer).getByText(en["log.dateHint"])).toBeTruthy();
+    expect(
+      within(drawer).getByRole("button", { name: en["log.save"] }),
+    ).toBeTruthy();
+  });
+});
+
+describe("Book a meeting from the account", () => {
+  afterEach(() => {
+    globalThis.location.hash = "";
+  });
+
+  it("asks which of the account's contacts, then opens that contact's booking screen", async () => {
+    const read: URL[] = [];
+    stubWritableAccount({ posted: [], read });
+    const user = userEvent.setup();
+    renderActions();
+
+    // The picker is drawn once `/me` allows it; before that the face is a
+    // disabled stand-in.
+    const book = () =>
+      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
+    await user.click(book());
+    await user.type(
+      await screen.findByRole("combobox", {
+        name: en["scheduling.bookPickContact"],
+      }),
+      "Ines",
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Ines Brandt" }),
+    );
+
+    expect(globalThis.location.hash).toBe(
+      routeHash({ screen: "book", id: "contact-c-ines" }),
+    );
+    const contactsAsked = read.find((url) =>
+      url.pathname.endsWith("/contacts"),
+    );
+    expect(contactsAsked?.searchParams.get("company_id")).toBe(COMPANY.id);
+  });
 });

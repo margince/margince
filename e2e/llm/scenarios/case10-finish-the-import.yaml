@@ -11,21 +11,13 @@
 # So the two cases are the two halves of one honest rule: check first when
 # nobody has looked, follow through when they have.
 #
-# WHY read_import_report IS REQUIRED. commit_import's own answer carries the run
-# state and a checkpoint — not the counts. The report is the only thing that
-# says how many rows landed and what was skipped, it is the same shape before
-# and after the commit, and the asker wanted both numbers. The tool's own
-# description puts it more plainly: read the report first, nobody should approve
-# what they have not read.
-#
-# WHY read_import_run IS NOT REQUIRED, stated rather than bolted on. The commit
-# runs inside the request (compose/csvimport.go commitRun: the engine runs and
-# the final run is returned), so commit_import already answers with the state a
-# separate read would go and fetch. Requiring it would score a run for making a
-# call the product made unnecessary — a tick bought from the prompt rather than
-# from the product. It stays permitted, because an assistant confirming a
-# long-running commit is doing a sensible thing, and the coverage page reports a
-# permitted tool as permitted rather than as driven.
+# WHY read_import IS REQUIRED. commit_import answers at once with the run
+# `running`: the write goes on after the call, so its answer carries the state
+# and not the counts. read_import with view report answers the run's state and,
+# once validated, its report. The report is the only thing that says how many
+# rows landed and what was skipped, it is the same shape before and after the
+# commit, and the asker wanted both numbers. So one tool both waits for the run
+# to finish and reads what it did.
 name: case10_finish_the_import
 criteria: [1, 2]
 
@@ -50,11 +42,9 @@ prompt: |
 
 must_call:
   - preview_import
-  - read_import_report
+  - read_import
   - commit_import
 may_call:
-  # Where the run got to. Permitted and not required — see the header.
-  - read_import_run
   # Confirming the companies are really there afterwards is a reasonable thing
   # to do and a different way to answer the same question; neither is the test.
   - search_records
@@ -72,6 +62,7 @@ may_call:
 # run_id is not pinned: it is minted by the preview inside the run itself, so
 # there is nothing a scenario file could compare it to.
 must_call_with:
+  - read_import.view=report
   - preview_import.object=company
 
 must_mention:
@@ -107,8 +98,8 @@ must_mention:
   # übersprungen", failed one half of one criterion pair and passed the other.
   - "(?:\bno\b|\bnone\b|nothing|\bzero\b|\b0\b|\bkeine\b|nichts)[^\n]{0,40}(?:skipp|fail|unusable|reject|error|issue|problem|übersprung|ausgelassen|verworfen|fehlgeschlag|Fehler|Problem)|(?:skipp\w*|fail\w*|unusable|issues?|errors?|problems?|übersprung\w*|ausgelassen|verworfen|fehlgeschlagen|Fehler|Probleme?)[^\n]{0,30}(?:\bnone\b|nothing|\bzero\b|\bkeine\b|nichts|:\s*0\b|=\s*0\b|\b0\b)"
   # CRITERION 1, WHICH NOTHING ABOVE COULD FAIL. The two counts are the same
-  # before the commit and after it — that is exactly why read_import_report is
-  # the tool for both — so a run that stopped at the dry run and reported "4
+  # before the commit and after it — that is exactly why read_import's report is
+  # the view for both — so a run that stopped at the dry run and reported "4
   # companies, 0 skipped" satisfied every assertion this case had while
   # doing the one thing it exists to catch. The forbidden half below only sees
   # an answer that ASKS; an answer that simply stops asks nothing.
@@ -158,6 +149,15 @@ must_not_mention:
   # cannot commit. It can; the run is created awaiting approval and commit_import
   # is the door.
   - "(?:cannot|can not|can't|unable to|not able to)[^\n]{0,25}(?:commit|complete|finish) (?:the |this )?import|import[^\n]{0,30}(?:has to|have to|must) be (?:committed|completed|finished|approved) in the (?:web )?app"
+
+
+# What landed, read from the world once the committed import has stopped
+# running: each company once, with the file's size in the field it belongs in.
+must_end_with:
+  - company "Weserbergland Antriebe GmbH" size_band=51-200
+  - company "Lausitzer Sensorik AG" size_band=11-50
+  - company "Fraenkische Prueftechnik GmbH" size_band=11-50
+  - company "Uckermark Automation GmbH" size_band=201-500
 
 runs: 3
 pass_at: 2

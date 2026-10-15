@@ -17,7 +17,7 @@ import { paragraphsFrom } from "../design-system/richtext";
 import { type Toast, useOwnToast, useToast } from "../design-system/toast";
 import { replySubject } from "../format/replysubject";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, problemMessageOf, throwProblem } from "../lib/problem";
 import type { RelinkKind } from "./composerelink";
 import { stripEveryKeyTag } from "./projectrecord";
 

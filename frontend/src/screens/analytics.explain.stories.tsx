@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { CellExplain, ExplainFrame } from "./analytics.explain";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CellExplain, ExplainFrame } from "./analytics.explain";
 
 // One row's "Explain this number" drawer, opened from its trigger the way a
 // reader opens it. The body is the same one the report card's panel draws, so

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
-import { jsonResponse, StoryProviders } from "./story-utils";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 // The row's own layout, the same way every surface that mounts these rows picks
 // it up — worklist.tsx, brief.feed.tsx and worklist.hidden.tsx each import it.
@@ -79,6 +79,16 @@ export default meta;
 
 type Story = StoryObj<typeof WorklistRow>;
 
+// The row's menu, opened. Its name ends with the row's title, so it is found by
+// the start of it.
+const openTheRowMenu: Story["play"] = async ({ canvasElement }) => {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: (name) => name.startsWith("More actions for "),
+    }),
+  );
+};
+
 const baseArgs = {
   position: 1,
   owner: "",
@@ -88,7 +98,7 @@ const baseArgs = {
 };
 
 // A notice, and the one verb the row draws inline rather than as a link — see
-// NoticeAcknowledge in worklist.row.tsx for why.
+// NoticeAcknowledge in worklist.acknowledge.tsx for why.
 export const ANoticeToSettle: Story = {
   args: { ...baseArgs, item: noticeItem() },
   render: (args) => {
@@ -196,9 +206,8 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
 
 // A task nobody has taken, with the date it is due and how it is put down.
 //
-// Three states the row gained at once: the due moment drawn, "no owner"
-// said out loud, and the spans behind the snooze's caret — opened here, because
-// a popover closed is a story that shows nothing about what it holds.
+// The due moment drawn and "no owner" said out loud. The row's menu is opened on
+// its snooze spans, because a closed menu shows nothing about what it holds.
 export const ATaskNobodyOwnsBeingPutDown: Story = {
   args: {
     ...baseArgs,
@@ -219,12 +228,7 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
     stubRow(false);
     return <WorklistRow {...args} />;
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Snooze duration" }),
-    );
-  },
+  play: openTheRowMenu,
 };
 
 // The same row on a phone.
@@ -243,18 +247,9 @@ export const ATaskOnAPhone: Story = {
   play: undefined,
 };
 
-// EVERY VERB A ROW CAN CARRY, on one right-aligned line, the answer LAST.
-//
-// The row that has the most of them: a buyer waiting on a reply carries the
-// reply itself, the way into the record, the reader's pin and the three
-// judgements the server offers. Drawn because this is the state the layout was
-// rebuilt for and the one a screenshot has to be checked in — seven controls
-// is where the line WRAPS, so it is the only width at which the order can be
-// seen to hold: the answer on the trailing edge, the glyphs among the words.
-//
-// The snooze's chooser is OPEN, because the split control is the other half of
-// the change: the press means tomorrow, the caret means "not tomorrow", and a
-// closed caret is a story showing neither.
+// The row with the most verbs: a buyer waiting on a reply. The line holds Done,
+// the prepared move and Reply, then the row's menu. The menu is opened here on
+// the snooze spans, the pin and the judgements that hand the row back.
 export const AWaitingBuyerWithEveryVerb: Story = {
   args: {
     ...baseArgs,
@@ -268,7 +263,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
       detail: "“Can you confirm the lead time before Friday?”",
       because: [{ kind: "waiting_days", value: { kind: "days", days: 4 } }],
       actions: ["open", "reply"],
-      dispositions: ["snooze", "not_mine", "not_sales"],
+      dispositions: ["handled", "snooze", "not_mine", "not_sales"],
       subject: {
         type: "deal",
         id: "01a05500-0000-7000-8000-0000000000bb",
@@ -284,20 +279,14 @@ export const AWaitingBuyerWithEveryVerb: Story = {
     stubRow(false);
     return <WorklistRow {...args} />;
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Snooze duration" }),
-    );
-  },
+  play: openTheRowMenu,
 };
 
 // The hand-off, opened.
 //
-// Closed it is a glyph, which is the whole reason it fits on a row that already
-// carries six controls; opened it is the picker and its confirm, and the two
-// states are checked by looking at both. Only a task can be handed on — a group
-// row names no single activity to move.
+// It is a line of the row's menu, and pressing it opens the picker and its
+// confirm on the row. Only a task can be handed on: a group row names no single
+// activity to move.
 export const ATaskBeingHandedOn: Story = {
   args: {
     ...baseArgs,
@@ -317,10 +306,10 @@ export const ATaskBeingHandedOn: Story = {
     stubRow(false);
     return <WorklistRow {...args} />;
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async (context) => {
+    await openTheRowMenu(context);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Reassign" }),
+      await within(document.body).findByRole("button", { name: "Reassign" }),
     );
   },
 };
@@ -453,8 +442,34 @@ export const AMailboxThatStopped: Story = {
       source: "capture_health",
       category: "system",
       level: 6,
-      consequence: "data_drifts",
-      title: "A mailbox stopped syncing",
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      detail: "lena.fischer@margince.test",
+      cause_label: "lena.fischer@margince.test",
+      connection: { provider: "gmail", medium: "mailbox" },
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A calendar is never called a mailbox. Its title, eyebrow and cost come from
+// the connection's medium and provider; it has no account to name.
+export const ACalendarThatStopped: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "sh2",
+      source: "capture_health",
+      category: "system",
+      level: 6,
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      connection: { provider: "gcal", medium: "calendar" },
       because: [],
       actions: [],
     },

@@ -79,12 +79,17 @@ var dailyFlows = []dailyFlow{
 	{Name: "worklist", ID: "PERF-8", Budget: Perf8Budget, PerCall: true, Calls: worklistCalls},
 	{Name: "home", ID: "PERF-8", Budget: Perf8Budget, PerCall: true, Calls: homeCalls},
 	{Name: "palette_search", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: paletteCalls},
-	{Name: "palette_search_prefix", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Allow422: true, Calls: prefixCalls},
+	{Name: "palette_search_prefix", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: prefixCalls},
 	{Name: "results_search", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: resultsCalls},
 	{Name: "lists", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: listCalls},
 	{Name: "record_open", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Calls: recordOpenCalls},
 	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
 		return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
+	}},
+	// The company screen loads its whole page through this one read, every
+	// section included; search_to_company times only the record beside it.
+	{Name: "company_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
+		return []dailyCall{{Path: "/v1/companies/" + in.CompanyID + "/360"}}
 	}},
 	{Name: "search_to_deal", Journey: true, Calls: func(in dailyInput) []dailyCall {
 		page := "/v1/deals/" + in.DealID

@@ -2,30 +2,35 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { Disclosure } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Panel } from "../design-system/panel";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { VoiceChangeLog, VoiceHistory } from "./voice-versions";
 
 // Every build this profile has had, and what each one changed. A `candidate`
 // is a finished build waiting for a human to accept or reject it — the state
 // that makes this surface actionable rather than a log.
-//
-// Neither component titles itself any more: in the Builds card the version list
-// is a stacked `SettingRow` and the delta log sits behind a `Disclosure`, so the
-// row and the summary are what name them. These stories draw that composition
-// rather than the bare list, because a list with no label is not a state the
-// product has.
+const SUPERSEDED = {
+  id: "vv-2",
+  profile_version: 2,
+  status: "superseded",
+  reason: "manual",
+  source_count: 5,
+  created_at: "2026-07-12T10:00:00Z",
+};
+
 const ACTIVE = {
   id: "vv-3",
   profile_version: 3,
   status: "active",
+  reason: "automatic",
+  source_count: 7,
   created_at: "2026-07-30T10:00:00Z",
 };
 
@@ -33,6 +38,8 @@ const CANDIDATE = {
   id: "vv-4",
   profile_version: 4,
   status: "candidate",
+  reason: "manual",
+  source_count: 9,
   created_at: "2026-08-12T09:15:00Z",
 };
 
@@ -40,9 +47,13 @@ const DELTA = {
   id: "vd-1",
   from_version: 3,
   to_version: 4,
-  classification: "refinement",
-  activation_outcome: "pending",
+  classification: "material",
+  activation_outcome: "review_required",
+  words_added: 2_140,
+  created_at: "2026-08-12T09:15:00Z",
 };
+
+const LAST_PAGE = { next_cursor: null, has_more: false };
 
 const LEARNING = {
   drafted: 6,
@@ -60,8 +71,10 @@ function stub(
 ) {
   installFetchStub({
     "GET /me": meRoute({ voice_profile: ["read", "update"] }),
-    "GET /voice-profiles/vp-1/versions": () => jsonResponse({ data: versions }),
-    "GET /voice-profiles/vp-1/deltas": () => jsonResponse({ data: deltas }),
+    "GET /voice-profiles/vp-1/versions": () =>
+      jsonResponse({ data: versions, page: LAST_PAGE }),
+    "GET /voice-profiles/vp-1/deltas": () =>
+      jsonResponse({ data: deltas, page: LAST_PAGE }),
     "GET /voice-profiles/vp-1/learning": () => jsonResponse(LEARNING),
   });
 }
@@ -76,26 +89,16 @@ function story(
     return (
       <StoryProviders>
         <Panel title="Builds">
-          <PanelBody>
-            <SettingList>
-              <SettingRow
-                label="Versions and learning"
-                layout="stack"
-                control={
-                  <VoiceHistory
-                    profileId="vp-1"
-                    canEdit={canEdit}
-                    onChanged={() => undefined}
-                  />
-                }
-              />
-              {/* Open here, closed in the product: a story that draws a shut
-                  disclosure catalogues the chevron and nothing else. */}
-              <Disclosure summary="What changed" open>
-                <VoiceChangeLog profileId="vp-1" />
-              </Disclosure>
-            </SettingList>
-          </PanelBody>
+          <VoiceHistory
+            profileId="vp-1"
+            canEdit={canEdit}
+            onChanged={() => undefined}
+          />
+          {/* Open here, closed in the product: a shut disclosure catalogues
+              the chevron and nothing else. */}
+          <Disclosure summary="What changed" open>
+            <VoiceChangeLog profileId="vp-1" />
+          </Disclosure>
         </Panel>
       </StoryProviders>
     );
@@ -110,7 +113,34 @@ export default meta;
 type Story = StoryObj<typeof VoiceHistory>;
 
 export const CandidateWaiting: Story = {
-  render: story([CANDIDATE, ACTIVE], true),
+  render: story([CANDIDATE, ACTIVE, SUPERSEDED], true),
+};
+
+export const CandidateWaitingAtPhoneWidth: Story = {
+  ...CandidateWaiting,
+  tags: ["uat-phone"],
+};
+
+export const CandidateWaitingDark: Story = {
+  ...CandidateWaiting,
+  globals: { theme: "dark" },
+};
+
+// A rollback is one press away from replacing the active voice, so it asks.
+export const RollbackConfirm: Story = {
+  render: story([ACTIVE, SUPERSEDED], true),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Actions for Version 2",
+      }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      page.getByRole("button", { name: "Roll back to version 2" }),
+    );
+    await page.findByRole("dialog");
+  },
 };
 
 export const OnlyActive: Story = {
@@ -120,5 +150,5 @@ export const OnlyActive: Story = {
 // The history is a read this seat keeps; accepting or rolling back a build is
 // not. The rows stay and the verbs go.
 export const ReadOnly: Story = {
-  render: story([CANDIDATE, ACTIVE], false),
+  render: story([CANDIDATE, ACTIVE, SUPERSEDED], false),
 };

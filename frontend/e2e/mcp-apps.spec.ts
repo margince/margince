@@ -289,7 +289,7 @@ test("the duplicate card asks its host for exactly the tools it declares and rea
   );
   expect(calls).toEqual([
     {
-      name: "merge_records",
+      name: "resolve_duplicates",
       args: {
         record_type: "contact",
         source_id: "0195c3a0-0000-7000-8000-000000000002",

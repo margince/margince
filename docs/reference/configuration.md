@@ -39,7 +39,7 @@ The api and the worker follow the same rules, and each reads only the values it 
 [The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
 
 **Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
-retention, starter automations, booking page, `ai_routing`). The api writes them in one transaction
+retention, starter automations, booking page, legal review, `ai_routing`). The api writes them in one transaction
 when it boots on a database with no company. Without `bootstrap_admin` it prints a one-time setup
 token instead. The user who claims the installation enters the company and the first admin, and
 the `seeds.*` values still apply.
@@ -52,6 +52,16 @@ code in small letters. It is also seeded into an existing installation that has 
 Boot refuses a code with no compiled-in pack, in the api and in the worker. After the first seed, the
 Jurisdiction settings page changes it. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
 `seeds.*` again from the current file. Every other section of the file is read at each boot.
+
+`workspace.name` is the company's name only until an admin saves the company profile. From then on
+the profile's company name is the name, and each save of it writes the `installation.name` setting in
+the same transaction. `PATCH /installation/settings` refuses a different `name`.
+
+**Legal review.** Legal review on deals is on by default, as the setting `deals.legal_review_enabled`.
+`seeds.legal_review: false` starts a new installation with it off. An admin changes it later under
+Settings → Pipelines, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
+queue and the `legal_reviewed` criterion kind, and a stage stops waiting for legal. Reviews already
+recorded are kept.
 
 **Settings.** Most settings get no row at bootstrap, so the default applies until an admin saves a
 value. When a value fails the check of its setting, the save gets a 422 that names the setting. Editing
@@ -1093,6 +1103,7 @@ resolve their other flags from the `MARGINCE_*` values above. The steps that use
 | `MARGINCE_AICERT_STALE_ONLY` | `1` | `make e2e-ai` | `0` measures again a model whose committed record is already current for this build. Any other value skips it before any call that costs money, so a full run pays only for what is missing or old. "Current" means what `make e2e-ai-report` prints. Set through make as `STALE_ONLY=`, on by default. |
 | `MARGINCE_ANTHROPIC_KEY` | — | `ai` package smoke test | BYOK Anthropic key for the live Anthropic smoke test. It is separate from `ANTHROPIC_API_KEY`, which the **runtime** reads for an `anthropic` provider in a binding. |
 | `MARGINCE_VERTEX_SA_FILE` | — | `ai` package smoke test (`-tags livesmoke`) | path to a Google service account key file for the live Vertex smoke test; the run fails, and does not skip, without it. It is separate from `GEMINI_VERTEX_SA_JSON`, which the **runtime** reads, and which holds what is in the file, not a path. |
+| `MARGINCE_SURFE_LIVE_KEY` | — | `make vendor-live` (`-tags vendorlive`) | a Surfe API key for the live `GET /v1/credits` check; the run fails, and does not skip, without it. The scheduled job fills it from the repository secret `SURFE_LIVE_KEY`. |
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The `bench-record`/`bench-capture`/`bench-mobile` targets, run by hand, need no switch, since only a human runs them. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
@@ -1603,7 +1614,7 @@ Margince still reads a `model_pricing:` key that an older file still has, does n
 writes a warning at boot; remove it.
 
 Model credentials (BYOK cloud tiers) live in the **key vault**. An admin puts them there under
-Settings → AI → Model provider keys. No binary flag holds one, and the binding does not either: a
+Settings → AI → AI models → Providers. No binary flag holds one, and the binding does not either: a
 binding names providers and never a credential.
 
 The normal environment variable of a provider is a **seed** for a role the vault backs. A boot that

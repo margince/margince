@@ -31,6 +31,7 @@ const ladder: Feature = {
   ],
 };
 const blocked = (...names: string[]): Providers => ({
+  configured: ["gemini", "anthropic"],
   providers: names.map((provider) => ({
     provider,
     health: "out_of_credit",
@@ -50,6 +51,7 @@ describe("taskDot", () => {
 
   it("does not count a degraded provider as blocked", () => {
     const degraded: Providers = {
+      configured: ["gemini"],
       providers: [
         {
           provider: "gemini",

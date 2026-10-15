@@ -34,6 +34,8 @@ name: scheduled
 #                        catch that, because the change that breaks it is the
 #                        CALENDAR rather than a diff — and it sat red on main for
 #                        a month behind the classifier skipping the frontend jobs.
+#   every story        — fe-uat renders only the stories a diff reaches, so a story
+#                        red on main stays hidden until a change fans out to it.
 #   perf budgets       — PERF-3/PERF-7 rode the integration lane at the SMB tier
 #                        until it stopped being worth 37.9s of every merge gate
 #                        for a claim it could not make: the SLO binds at
@@ -44,6 +46,10 @@ name: scheduled
 #                        mid-market does not finish inside a CI budget (see
 #                        bench-perf-check), and an alarm that cannot finish files
 #                        a breach it never measured.
+#
+#   vendor live        — one real call to each data vendor, daily. The offline
+#                        tests read a recording of the vendor's API, which stays
+#                        green when the vendor changes it.
 #
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
@@ -274,6 +280,69 @@ jobs:
       - name: Backend merge gate (make check-backend)
         working-directory: .
         run: make check-backend
+
+  # The backend's counterpart to fe-clock-drift: the suite's verdict must not
+  # depend on the calendar. It moves the runner's own clock, and
+  # scripts/clock-drift-host.sh says why no other shift reaches both Go and
+  # Postgres.
+  #
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
+  backend-clock-drift:
+    # The DAILY cadence, spelled per job for the reason backend-lane states: a
+    # job with no `if` runs on every trigger the workflow has.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: backend clock drift (main, +200 days)
+    runs-on: ubuntu-latest
+    # Longer than backend-lane's 45: this runs the integration lane too, on one
+    # runner rather than across the six shards ci.yml splits it into.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      BACKEND_CLOCK_SKEW: machine:200
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # rbacbaselineerafixture_test.go reads the migration baseline commit and
+          # fails rather than degrades on a shallow checkout.
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Install the pinned gate binaries
+        run: make tools
+      - name: Gate binaries onto PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      # Every step that needs the network has finished by here.
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: Compile the suites at the real date
+        run: make -C backend build
+      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
+      # The restore below is the copy that matters: raising the skew here and
+      # leaving a literal there hands the runner back with its clock in the
+      # past, which is the poisoning that step exists to prevent.
+      - name: Move the runner's clock forward
+        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
+      - name: The backend suites at the moved clock
+        run: make backend-clock-drift
+      # The clock goes back even when the suites failed. A runner handed back to
+      # the pool 200 days ahead poisons whatever runs on it next, and that
+      # failure would surface in someone else's lane with nothing to point at.
+      - name: Restore the clock
+        if: always()
+        run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
@@ -716,6 +785,57 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: make fe-clock-drift
 
+  fe-all-stories:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: every story renders (main)
+    runs-on: ubuntu-latest
+    # Every story takes about half an hour on four local workers, plus builds; a runner is slower.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install the Playwright Chromium browser
+        uses: ./.github/actions/install-playwright-chromium
+      - name: Render every story (make fe-uat ARGS=--all-stories)
+        env:
+          # The runner is this job's alone, so every core captures.
+          FE_UAT_WORKERS: "4"
+        run: make fe-uat ARGS=--all-stories
+      - name: Collect the manifest and the failing captures
+        if: failure()
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/fe-uat-failures"
+          manifest=.tmp/fe-uat/manifest.json
+          mkdir -p "$out"
+          [ -f "$manifest" ] || exit 0
+          cp "$manifest" "$out/"
+          jq -r '.stories[] | select(.pass | not) | .png // empty' "$manifest" |
+            while IFS= read -r png; do cp "$png" "$out/"; done
+      - uses: ./.github/actions/upload-artifact-retried
+        if: failure()
+        with:
+          name: fe-uat-failures
+          path: ${{ runner.temp }}/fe-uat-failures
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Delete the build caches nothing can restore. The go-build key ends in the
   # commit sha and falls back through restore-keys to the newest entry sharing
   # its deps hash, so within one deps hash only the newest is ever read — and one
@@ -756,12 +876,105 @@ jobs:
           REPO: ${{ github.repository }}
         run: ./scripts/reap-build-caches.sh
 
+  # One real call to each data vendor, through the production adapter, so a
+  # vendor that changed its API is found before a customer's enrichment breaks.
+  # The offline pin in surfe/testdata/vendor-wire.json cannot see that change.
+  # The credit read costs nothing. Never a required check: a vendor outage must
+  # block no merge.
+  vendor-live:
+    # Daily, and on main only: a dispatch can run from any branch, and a branch
+    # must not spend the vendor key or file issues about main.
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      && (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *')
+    name: vendor live check (Surfe credits)
+    outputs:
+      outcome: ${{ steps.funded.outputs.outcome || steps.live.outputs.outcome }}
+      detail: ${{ steps.live.outputs.detail }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A step, not a job `if`, because `jobs.<id>.if` cannot read `secrets`
+      # (see llm-use-cases). No key is "not checked", which is no verdict.
+      - name: Is there a Surfe key?
+        id: funded
+        env:
+          KEY: ${{ secrets.SURFE_LIVE_KEY }}
+        run: |
+          if [ -z "${KEY:-}" ]; then
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "outcome=not-checked" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Surfe: not checked, no key. This is not a pass"
+              echo
+              echo "\`SURFE_LIVE_KEY\` is not set for this repository, so nothing read"
+              echo "Surfe's API today. Add a low-limit Surfe key as that secret."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.funded.outputs.configured == 'yes'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.funded.outputs.configured == 'yes'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      # The test prints one line, `VENDOR_LIVE surfe credits <outcome> [detail]`,
+      # and nothing from the response. No line means the check broke before a
+      # verdict, and the reporter files that as `no-verdict`.
+      - name: Read Surfe's credit balance (make vendor-live)
+        id: live
+        if: steps.funded.outputs.configured == 'yes'
+        env:
+          MARGINCE_SURFE_LIVE_KEY: ${{ secrets.SURFE_LIVE_KEY }}
+        run: |
+          set -o pipefail
+          status=0
+          make vendor-live 2>&1 | tee vendor-live.log || status=$?
+          lines="$(grep -c -E '^VENDOR_LIVE surfe credits ' vendor-live.log || true)"
+          line="$(grep -m1 -E '^VENDOR_LIVE surfe credits ' vendor-live.log || true)"
+          # Exactly one verdict line counts; two are no verdict at all.
+          [ "$lines" = 1 ] || line=""
+          verdict="${line#VENDOR_LIVE surfe credits }"
+          outcome="${verdict%% *}"
+          detail=""
+          [ "$verdict" != "$outcome" ] && detail="${verdict#* }"
+          case "$status/$outcome" in
+          0/ok)
+            # A pass carries no detail, so `ok` with anything after it is not one.
+            if [ -n "$line" ] && [ -z "$detail" ]; then
+              echo "outcome=ok" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::make vendor-live gave no verdict that matches its exit status"
+              status=1
+            fi
+            ;;
+          [1-9]*/drift | [1-9]*/refused)
+            echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+            echo "detail=$detail" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error::make vendor-live gave no verdict that matches its exit status"
+            [ "$status" -ne 0 ] || status=1
+            ;;
+          esac
+          exit "$status"
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend, vendor-live]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -805,6 +1018,8 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
+          BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
+          STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
@@ -813,4 +1028,7 @@ jobs:
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
           TREND_RESULT: ${{ needs['slop-trend'].result }}
+          VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
+          VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
+          VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
         run: ./scripts/scheduled-report.sh

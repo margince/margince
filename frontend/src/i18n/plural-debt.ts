@@ -58,10 +58,6 @@ const STANDALONE: readonly string[] = [
   "deals.bulkFailed",
   "embedreindex.workspacePending",
   "extIngest.refusalCount",
-  "jobs.count.dead",
-  "jobs.count.retrying",
-  "jobs.count.running",
-  "jobs.count.waiting",
   "lead.bulkFailed",
   "lead.bulkSelected",
   "license.seats.left",
@@ -101,7 +97,6 @@ const STANDALONE: readonly string[] = [
 // would be worth less than no entry at all. So they say only what is certainly
 // true. These are the debt. Reading one and converting it deletes its line.
 const PENDING: readonly string[] = [
-  "board.count",
   "brief.deck.bundleMembers",
   "brief.deck.bundleSummary",
   "brief.digestCommitmentCount",

@@ -3,14 +3,19 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   AUTOMATION_CATALOG,
   configuredAutomations,
 } from "./automations.fixtures";
 import { ConfiguredAutomations } from "./automations.instances";
 import { RulePausedReason } from "./automations.lists";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Settings/AI/Automations/Configured automations",
@@ -19,6 +24,27 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+type AutomationRun = components["schemas"]["AutomationRun"];
+
+const RENEWAL_RUNS: AutomationRun[] = [
+  {
+    id: "r-1",
+    automation_id: "au-2",
+    occurred_at: "2026-07-14T10:00:00Z",
+    outcome: "fired",
+    tier: "auto_execute",
+    trigger_evidence: "renewal date in 30 days",
+    action_result: "task created",
+  },
+  {
+    id: "r-2",
+    automation_id: "au-2",
+    occurred_at: "2026-07-13T10:00:00Z",
+    outcome: "failed",
+    tier: "auto_execute",
+    reason: "the owner has no mailbox connected",
+  },
+];
 
 const entryFor = (key: string) =>
   AUTOMATION_CATALOG.find((entry) => entry.key === key);
@@ -27,12 +53,14 @@ function Table({ canEdit = true }: Readonly<{ canEdit?: boolean }>) {
   installFetchStub({
     "GET /automations/au-1/runs": () =>
       jsonResponse({ data: [], page: { next_cursor: null } }),
+    "GET /automations/au-2/runs": () =>
+      jsonResponse({ data: RENEWAL_RUNS, page: { next_cursor: null } }),
     "POST /automations/au-1/preview": () =>
       jsonResponse({ matches_now: 8, would_have_fired: 21, window_days: 30 }),
   });
   return (
     <StoryProviders>
-      <Panel title="Automations">
+      <Panel title="Configured automations">
         <ConfiguredAutomations
           automations={configuredAutomations(Date.now())}
           entryFor={entryFor}
@@ -49,6 +77,7 @@ const rendersTable: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByRole("switch", { name: "Renewal reminder is enabled" });
   await expect(canvas.getByText("Never")).toBeVisible();
+  await expect(canvas.getByText("Needs approval")).toBeVisible();
 };
 
 export const Outcomes: Story = {
@@ -83,7 +112,8 @@ export const ReadOnly: Story = {
   render: () => <Table canEdit={false} />,
 };
 
-// The run history opens under the table, headed by the rule it belongs to.
+// The run history opens under its rule as a plain body: an empty one is a
+// single line, with no outcome dial over nothing.
 export const RunHistoryOpen: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
@@ -95,8 +125,35 @@ export const RunHistoryOpen: Story = {
     );
     const body = within(canvasElement.ownerDocument.body);
     await user.click(await body.findByRole("button", { name: "Runs" }));
-    await canvas.findByRole("heading", { name: "Run history" });
+    await canvas.findByText("This automation has not fired yet.");
+    await expect(canvas.queryByRole("combobox")).toBeNull();
   },
+  render: () => <Table />,
+};
+
+const openRenewalRuns: NonNullable<Story["play"]> = async ({
+  canvasElement,
+}) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", {
+      name: "Run history of Renewal reminder",
+    }),
+  );
+  await canvas.findByText("the owner has no mailbox connected");
+};
+
+// A rule that has fired: its runs read down under the row, under an outcome
+// dial. The columns above keep their widths.
+export const RunHistoryPopulated: Story = {
+  play: openRenewalRuns,
+  render: () => <Table />,
+};
+
+export const RunHistoryPopulatedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: openRenewalRuns,
   render: () => <Table />,
 };
 
@@ -113,9 +170,13 @@ export const PausedReason: Story = {
       /Restoring the list does not resume it/,
     );
   },
-  render: () => (
-    <StoryProviders>
-      <RulePausedReason automation={configuredAutomations(Date.now())[5]} />
-    </StoryProviders>
-  ),
+  render: () => {
+    const automation = configuredAutomations(Date.now())[5];
+    if (!automation) throw new Error("the fixtures hold no sixth automation");
+    return (
+      <StoryProviders>
+        <RulePausedReason automation={automation} />
+      </StoryProviders>
+    );
+  },
 };

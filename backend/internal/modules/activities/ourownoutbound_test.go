@@ -62,7 +62,7 @@ func TestTheClauseSetBindsBothAliases(t *testing.T) {
 		"mine.channel_provider IS NOT DISTINCT FROM theirs.channel_provider",
 		"mine.direction = 'outbound'",
 		"mine.counterparty_email = theirs.counterparty_email",
-		"mine.counterparty_outbound_attested",
+		"mine.counterparty_outbound_attested OR mine.sent_by_colleague IS NOT NULL",
 		"mine.archived_at IS NULL",
 	} {
 		if !strings.Contains(got, want) {

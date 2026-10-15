@@ -4,11 +4,11 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { profileFieldLabel } from "./companies";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
@@ -138,6 +138,7 @@ export function CompanyProfileForm({
               <SidecarFieldRow
                 key={field}
                 companyId={company.id}
+                anchor={company.is_anchor === true}
                 fields={fields}
                 // A pending or failed read is not the same claim as "this
                 // field has no row": editing on that guess sends no If-Match
@@ -162,6 +163,7 @@ export function CompanyProfileForm({
           stating a field, and needs the same write state this form derived. */}
       <CompanyFactsPanel
         companyId={company.id}
+        anchor={company.is_anchor === true}
         canEdit={canEdit}
         reasonId={reason ? reasonId : undefined}
         onOpenHistory={onOpenHistory}

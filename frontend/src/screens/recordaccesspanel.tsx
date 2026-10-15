@@ -24,12 +24,13 @@ import {
   PanelGroupHead,
   PanelRow,
 } from "../design-system/panel";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryGate, throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];
@@ -74,14 +75,14 @@ const GROUP_TITLE: Record<Exclude<Group, "everyone">, MessageKey> = {
   team_shared: "whoCanSee.group.teamShared",
 };
 
-type Words = Readonly<{
+type ReasonWords = Readonly<{
   t: ReturnType<typeof useT>;
   date: (iso: string) => string;
 }>;
 
 // One phrase per reason, the same on a colleague's row and on the reader's own
 // line.
-function reasonPhrase(reason: Reason, { t, date }: Words): string {
+function reasonPhrase(reason: Reason, { t, date }: ReasonWords): string {
   const until = reason.expires_at
     ? ` ${t("whoCanSee.until", { date: date(reason.expires_at) })}`
     : "";
@@ -107,14 +108,14 @@ function reasonPhrase(reason: Reason, { t, date }: Words): string {
   }
 }
 
-function phrases(reasons: Reason[], words: Words): string {
+function phrases(reasons: Reason[], words: ReasonWords): string {
   return [...new Set(reasons.map((r) => reasonPhrase(r, words)))].join(", ");
 }
 
 function MemberRow({
   member,
   words,
-}: Readonly<{ member: Member; words: Words }>) {
+}: Readonly<{ member: Member; words: ReasonWords }>) {
   const { t } = words;
   return (
     <PanelRow className="who-can-see-row">
@@ -142,7 +143,11 @@ function YouLine({
   answer,
   kind,
   words,
-}: Readonly<{ answer: RecordAccessAnswer; kind: AccessKind; words: Words }>) {
+}: Readonly<{
+  answer: RecordAccessAnswer;
+  kind: AccessKind;
+  words: ReasonWords;
+}>) {
   const { t } = words;
   const you = answer.you;
   const verdict = you.can_change
@@ -169,14 +174,15 @@ function AccessBody({
 }: Readonly<{
   pages: RecordAccessAnswer[];
   kind: AccessKind;
-  words: Words;
+  words: ReasonWords;
   more: ReactNode;
 }>) {
   const { t } = words;
   const plural = usePlural();
   const { locale } = useLocale();
   const count = (n: number) => ({ count: formatNumber(n, locale) });
-  const answer = pages[0];
+  const [answer] = pages;
+  if (answer === undefined) return null;
   const rows = pages.flatMap((page) => page.data);
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
@@ -286,7 +292,10 @@ export function WhoCanSeePanel({
     return () => clearTimeout(timer);
   }, [refreshAt, readAt, kind, recordId, queryClient]);
 
-  const words: Words = { t, date: (iso) => formatDate(iso, locale, zone) };
+  const words: ReasonWords = {
+    t,
+    date: (iso) => formatDate(iso, locale, zone),
+  };
   return (
     <Panel title={t("whoCanSee.title")}>
       <QueryGate query={query} pendingLabel={t("whoCanSee.title")}>

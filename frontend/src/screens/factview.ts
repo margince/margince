@@ -38,9 +38,9 @@ export function canonical(value: string): string {
 
 /** FACT_FIELD_LABELS names every fact field in the reader's language.
  *
- * The profile-field map in common.tsx covers a different vocabulary, so a fact
- * field fell through its fallback and rendered as raw English snake_case —
- * "served industry", "company size" — inside an otherwise German page.
+ * The profile-field map in coldfieldlabels.ts covers a different vocabulary.
+ * So a fact field fell through its fallback and rendered as raw English
+ * snake_case ("served industry", "company size") inside an otherwise German page.
  */
 export const FACT_FIELD_LABELS: Record<FactField, MessageKey> = {
   founded_year: "co.factField.founded_year",
@@ -216,10 +216,9 @@ export function groupFacts(
 // half is the one that is easy to get half right:
 //
 //   - The field sorts by its TRANSLATED LABEL, not by the wire identifier. The
-//     row draws `t(factFieldLabelKey(field))`, so comparing `employee_range`
-//     against `founded_year` orders by words the reader never sees — in German
-//     "Mitarbeitende" comes after "Gegründet" while the identifiers go the
-//     other way, and the list reads as unsorted.
+//     row draws `t(factFieldLabelKey(field))`, so identifier order is an order
+//     in words the reader never sees. In German, "Kontakt-E-Mail" sorts after
+//     "Gegründet", the other way round from `contact_email` and `founded_year`.
 //   - Both halves go through `forReader`, because code-unit order puts every
 //     accented vowel after Z: "Ähnliche Marken" below "Zielgruppe".
 //

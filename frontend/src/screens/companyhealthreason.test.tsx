@@ -5,8 +5,8 @@
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { LocaleProvider } from "../i18n";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { useHealthReason } from "./companylookups";
 
 // The server rates relationship and commercial health and names a reason code
@@ -32,7 +32,7 @@ describe("useHealthReason", () => {
         reason_code: "quiet",
         reason_params: { days: 77 },
       }),
-    ).toBe("Seit 77 Tagen keine Antwort und kein Treffen.");
+    ).toBe("Seit 77 Tagen keine Antwort und kein Termin.");
   });
 
   it("counts the sentence by its number", () => {

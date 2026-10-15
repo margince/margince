@@ -1,5 +1,5 @@
 import type { MessageKey } from "../i18n/en";
-import { problemFieldErrors } from "./common";
+import { problemFieldErrors } from "../lib/problem";
 
 export type DsrStatus = "open" | "in_progress" | "fulfilled" | "rejected";
 export type DsrKind = "access" | "rectify" | "erasure";

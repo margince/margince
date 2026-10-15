@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { useUrlParams } from "../app/urlstate";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
+import { useUrlParams } from "../lib/urlstate";
 import { type TeamWeekReach, useTeams } from "./teamweekly.queries";
 
 /** Which teams a picker lists: every team, or the ones the reader is on. */
@@ -49,7 +49,7 @@ export function BriefTeamSelect({
   const chosen = options.some((option) => option.value === asked)
     ? asked
     : !asked && options.length === 1
-      ? options[0].value
+      ? options[0]?.value
       : undefined;
   return (
     <SurfaceState

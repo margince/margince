@@ -5,7 +5,11 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test } from "vitest";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { TaskDetailModal } from "./taskactions";
 
 afterEach(cleanup);
@@ -304,4 +308,49 @@ test("a task a colleague typed carries no AI mark", async () => {
   openTask();
   await screen.findByText(/committed to this in the meeting transcript/);
   expect(screen.queryByText("AI-assisted")).toBeNull();
+});
+
+// The record a task is filed under, named and reachable from the panel.
+
+function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Send the renewal paperwork",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        links,
+      }),
+    "GET /deals/deal-1": () =>
+      jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
+    "GET /companies/co-1": () =>
+      jsonResponse({ id: "co-1", display_name: "Brandt Automotive" }),
+  });
+}
+
+test("a task filed under a deal and its company names the deal first", async () => {
+  // The company first on the wire, so the order on screen is the panel's own.
+  stubFiledTask([
+    { entity_type: "company", entity_id: "co-1" },
+    { entity_type: "deal", entity_id: "deal-1" },
+  ]);
+  openTask();
+
+  const deal = await screen.findByRole("link", { name: "Brandt renewal 2027" });
+  await screen.findByRole("link", { name: "Brandt Automotive" });
+  const names = screen.getAllByRole("link").map((link) => link.textContent);
+  expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
+  // Opened in place: following the record is leaving the panel for it.
+  expect(deal.getAttribute("href")).toBe("#/deals/deal-1");
+  expect(deal.getAttribute("target")).toBeNull();
+});
+
+test("a task filed under nothing names no record", async () => {
+  stubFiledTask([]);
+  openTask();
+
+  await screen.findByText(/^Logged/);
+  expect(screen.queryByRole("link")).toBeNull();
 });

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -169,5 +170,55 @@ func TestNoLiveStopOwesNoAcknowledgement(t *testing.T) {
 	if got.Supported {
 		t.Error("a contact with no live stop resolved SUPPORTED for an opt-out acknowledgement — " +
 			"there is no refusal on record for this message to confirm")
+	}
+}
+
+// withdrawThroughThePress seeds a purpose of the given class and withdraws it
+// the way an unsubscribe press does, which writes no suppression.
+func withdrawThroughThePress(t *testing.T, e *resolveEnv, key string, class Class) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (key, label, class) VALUES ($1, $1, $2)`, key, string(class)); err != nil {
+		t.Fatalf("seeding the purpose: %v", err)
+	}
+	writer := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	withdrawn, err := e.store.PublicWithdrawAll(writer, e.contact, []string{key})
+	if err != nil || len(withdrawn) != 1 {
+		t.Fatalf("withdrawing %q answered %v, %v", key, withdrawn, err)
+	}
+}
+
+// TestAWithdrawnMarketingPurposeOwesAnAcknowledgement. An unsubscribe press
+// withdraws a marketing purpose and records no suppression, and Decree 91
+// Art. 16 owes it an acknowledgement all the same.
+func TestAWithdrawnMarketingPurposeOwesAnAcknowledgement(t *testing.T) {
+	e := setupResolve(t)
+	withdrawThroughThePress(t, e, "press-newsletter", ClassMarketing)
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation})
+
+	if !got.Supported {
+		t.Fatalf("a withdrawn marketing purpose resolved unsupported (%q)", got.Reason)
+	}
+}
+
+// TestAWithdrawnCorrespondencePurposeOwesNoAcknowledgement. Replies to the
+// contact's own enquiries are not advertising, so withdrawing them is no
+// refusal the acknowledgement could confirm.
+func TestAWithdrawnCorrespondencePurposeOwesNoAcknowledgement(t *testing.T) {
+	e := setupResolve(t)
+	withdrawThroughThePress(t, e, "press-replies", ClassBusinessCorrespondence)
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation})
+
+	if got.Supported {
+		t.Error("a withdrawn correspondence purpose resolved SUPPORTED for an opt-out acknowledgement")
 	}
 }

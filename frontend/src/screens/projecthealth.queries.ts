@@ -1,7 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // How a project is going, as somebody judged it on a day.
 //
@@ -20,17 +25,18 @@ export function projectHealthKey(projectId: string) {
 export function useProjectHealth(projectId: string | undefined) {
   return useQuery({
     queryKey: projectHealthKey(projectId ?? ""),
-    enabled: Boolean(projectId),
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/projects/{id}/health-assessments",
-        { params: { path: { id: projectId as string } } },
-      );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
+    queryFn: projectId
+      ? async () => {
+          const { data, error, response } = await api.GET(
+            "/projects/{id}/health-assessments",
+            { params: { path: { id: projectId } } },
+          );
+          if (error || !response.ok) {
+            throwProblem(error);
+          }
+          return data.data;
+        }
+      : skipToken,
   });
 }
 

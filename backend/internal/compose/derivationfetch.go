@@ -257,6 +257,12 @@ func derivationFrame(ctx context.Context, tx pgx.Tx, plan derivationPlan) (repor
 	if !plan.asOf.IsZero() {
 		frame.AsOf = plan.asOf
 	}
+	// The same override, one field over. Without it the detail converts at
+	// whatever base the installation holds now. A handle minted under EUR and
+	// reopened under USD then answers USD figures, beside an EUR label.
+	if plan.baseCurrency != "" {
+		frame.BaseCurrency = plan.baseCurrency
+	}
 	return frame, nil
 }
 

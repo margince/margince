@@ -5,14 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ComposeModal } from "./compose";
-import { ThreadPane } from "./composethread";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ComposeModal } from "./compose";
+import { ThreadPane } from "./composethread";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
@@ -103,10 +103,7 @@ export const SelectedReply: StoryObj = {
   },
 };
 
-// A machine-written reply beside the thread it answers. The form column is a
-// height-bounded scroller here, and the AI card clips its own overflow — so
-// the frame shows the card whole, the steer and its verb included, rather
-// than squeezed to its head while the column around it has room to scroll.
+// A long draft keeps room for writing while the thread and send controls stay available.
 export const DraftedBesideThread: StoryObj = {
   render: () => {
     installFetchStub({
@@ -114,7 +111,13 @@ export const DraftedBesideThread: StoryObj = {
       "POST /activities/message-0/draft-email": () =>
         jsonResponse({
           subject: "Re: Delivery window",
-          body: "Thanks, Ada — the week of 14 September works for us.",
+          body: [
+            "Hi Ada,",
+            "The week of 14 September works for us. We can start with the planning session on Monday and review the first delivery together on Friday.",
+            "For the planning session, please bring the current requirements and a list of reviewers. We will bring the delivery plan and a first estimate for each phase.",
+            "Before we confirm the second phase, we should agree on the review dates and who can approve any changes to the scope.",
+            "Could you confirm whether Monday morning suits your team?",
+          ].join("\n\n"),
           to: ["ada@example.test"],
           ai_generated: true,
           ai_disclosure: "Drafted with AI assistance. Review before sending.",
@@ -129,13 +132,42 @@ export const DraftedBesideThread: StoryObj = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Draft reply with AI" }),
     );
-    const title = await dialog.findByText("AI-assisted draft");
-    // Geometry, not toBeVisible: a control clipped by its card's overflow is
-    // still "visible" to the DOM, so only its box can say it is on screen.
-    const card = title.closest(".panel")?.getBoundingClientRect();
-    const verb = dialog
-      .getByRole("button", { name: "Draft reply with AI" })
+    await dialog.findByText("AI-assisted draft");
+    const editor = dialog.getByRole("textbox", { name: "Body" });
+    editor.scrollIntoView({ block: "nearest" });
+    const body = editor.getBoundingClientRect();
+    const send = dialog
+      .getByRole("button", { name: "Send" })
       .getBoundingClientRect();
-    await expect(card?.bottom).toBeGreaterThanOrEqual(verb.bottom);
+    await expect(body.height).toBeGreaterThanOrEqual(
+      window.innerHeight <= 512 ? 60 : 280,
+    );
+    await expect(body.top).toBeGreaterThanOrEqual(0);
+    const toolbar = dialog
+      .getByRole("button", { name: "Bold" })
+      .getBoundingClientRect();
+    await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
+    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
+    await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      window.innerWidth,
+    );
   },
+};
+
+export const DraftedBesideThreadDark: StoryObj = {
+  ...DraftedBesideThread,
+  globals: { theme: "dark" },
+};
+
+export const DraftedOnPhone: StoryObj = {
+  ...DraftedBesideThread,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const DraftedOnLandscapePhone: StoryObj = {
+  ...DraftedBesideThread,
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
 };

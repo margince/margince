@@ -92,7 +92,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 		ClaimKey:            openTaskKey,
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
 		RuleVersion:         new(ruleVersion),
-		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task),
+		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task) + dueMarker(task.DueAt),
 		Headline:            openPromiseHeadline(ctx, task, subject),
 		WhyNow:              openPromiseWhyNow(now, task),
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
@@ -137,6 +137,16 @@ func heldMarker(ctx context.Context, task crmcontracts.Activity) string {
 		return ":theirs"
 	}
 	return ":ours"
+}
+
+// dueMarker carries the task's due date into the fingerprint. The evidence is
+// dated by when the task was filed. Without the due date, a promise moved to
+// today would stay hidden behind a set-aside made while it was far off.
+func dueMarker(due *time.Time) string {
+	if due == nil {
+		return ":undated"
+	}
+	return ":due=" + due.UTC().Format(time.RFC3339)
 }
 
 // heldByAnother reports whether a named colleague, and not the reader, holds

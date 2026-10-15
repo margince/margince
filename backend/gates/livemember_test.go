@@ -103,6 +103,7 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
+	"internal/modules/capture/sentbycolleague.go":   "names the seat who wrote a mail another seat holds a copy of; most colleagues are invited and never sign in, and a departed one's reply was still the workspace's answer, while an archived row is gone",
 	"internal/modules/consent/noticeacquisition.go": "names the seat that recorded the acquisition a disclosure duty rests on; a deactivated colleague still labels what they recorded, and an archived row is gone, as identity's SeatNames answers",
 	"internal/modules/dealrooms/preview.go":         "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
 	"internal/modules/identity/actoridentity.go":    "resolves the display name and address of whoever performed a past action; the actor of an audit row does not stop having a name",

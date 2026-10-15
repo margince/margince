@@ -21,10 +21,10 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import { downloadBytes, filenameFromDisposition } from "./download";
-import type { FilterResource } from "./filterdata";
-import { encode, isComplete, type Node } from "./segmentpredicate";
+import { downloadBytes, filenameFromDisposition } from "../lib/download";
+import type { FilterResource } from "../lib/filterdata";
+import { throwProblem } from "../lib/problem";
+import { encode, isComplete, type Node } from "../lib/segmentpredicate";
 
 /** The formats the contract offers. Closed — the server enumerates these two. */
 const FORMATS = ["csv", "json"] as const;

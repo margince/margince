@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { parseHash, type Route } from "./router";
+import { parseHash, type Route } from "../lib/router";
 import { PageTitle, Shell } from "./shell";
 import {
   fixtureSection,
@@ -583,6 +583,8 @@ describe("Shell", () => {
     // report sections, and a settings-like page of stacked choices.
     ["#/worklist", true],
     ["#/filters", true],
+    // An opened list carries an id but is no record, and it reads down.
+    ["#/lists/L1", true],
     ["#/analytics", true],
     // Analytics' old address parses to the same screen, so it inherits the
     // same column: a bookmark cannot land on a differently laid-out page.

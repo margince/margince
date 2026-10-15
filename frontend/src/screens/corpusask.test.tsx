@@ -11,8 +11,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AskMarginceModal } from "./corpusask";
 
 // Ask AI → Ask your documents.
@@ -55,8 +55,14 @@ const SET = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   created_at: "2026-08-01T00:00:00Z",
-  coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
+  coverage: {
+    documents_total: 1,
+    chunks_total: 4,
+    chunks_embedded: 4,
+    embed_state: "complete",
+  },
 };
 
 // A second set, so the picker exists at all: it is offered only where there is
@@ -550,7 +556,12 @@ describe("AskMarginceModal", () => {
           outcome: "not_ready",
           summary: undefined,
           claims: [],
-          coverage: { documents_total: 2, chunks_total: 9, chunks_embedded: 4 },
+          coverage: {
+            documents_total: 2,
+            chunks_total: 9,
+            chunks_embedded: 4,
+            embed_state: "indexing",
+          },
         }),
       }).fetchMock,
     );

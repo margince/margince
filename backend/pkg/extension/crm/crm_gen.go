@@ -447,6 +447,9 @@ type Activity struct {
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
 
+	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
+	ColleagueIds *[]string `json:"colleague_ids,omitempty"`
+
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 	CreatedAt    time.Time             `json:"created_at"`
@@ -553,7 +556,10 @@ type ActivityLinkEntityType string
 // CreateActivityRequest defines model for CreateActivityRequest.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
-	Body       *string `json:"body,omitempty"`
+
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
+	Body            *string   `json:"body,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns

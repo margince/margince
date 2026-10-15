@@ -62,6 +62,7 @@ var questions = []question{
 		{"lists", "A list of 50 records", screen},
 		{"record_open", "Opening a record", screen},
 		{"contact_360", "A contact's whole story", screen},
+		{"company_360", "A company's whole page", screen},
 	}},
 	{"How fast is the analytics screen?", []moment{
 		{"analytics", "The analytics screen", screen},

@@ -3,18 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
-import type { Route } from "../app/router";
 import { PageTitle, SettingsRail } from "../app/shell";
 import { en } from "../i18n/en";
-import { SETTINGS_SCREEN, useSettingsSection } from "./settingsnav";
+import type { Route } from "../lib/router";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
   WithInstallationBrand,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { SETTINGS_SCREEN, useSettingsSection } from "./settingsnav";
 import "./settings.css";
 
 // The sidebar's settings level as the shell mounts it, built by

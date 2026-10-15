@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
 
@@ -71,13 +71,17 @@ function ReadOnlyText({
 }
 
 // The edit verb beside a value its caller draws as something to follow.
+// `text` replaces "Change {field}" where the editor does more than change one
+// value, as a list's does.
 export function InlineEditVerb({
   label,
+  text,
   disabled,
   onClick,
   ref,
 }: Readonly<{
   label: string;
+  text?: string;
   disabled?: boolean;
   onClick: () => void;
   ref?: Ref<HTMLButtonElement>;
@@ -91,7 +95,7 @@ export function InlineEditVerb({
       disabled={disabled}
       onClick={onClick}
     >
-      {t("inlineChoice.change", { field: label })}
+      {text ?? t("inlineChoice.change", { field: label })}
     </Button>
   );
 }

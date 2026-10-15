@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { WriteRefused } from "./common";
+import { WriteRefused } from "../design-system/querystates";
+import { StoryProviders } from "../testing/story-utils";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
-import { StoryProviders } from "./story-utils";
 
 // The three bands the company-context card says about itself, side by side,
 // which is the one view the card itself never gives: the shared refusal, the

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 /**
  * Who a reply to this anchor goes to, resolved without drafting.
@@ -24,14 +24,16 @@ export function useReplyRecipient(anchor: string | undefined): {
 } {
   const query = useQuery({
     queryKey: ["compose-reply-recipient", anchor],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/activities/{id}/reply-recipient", {
-          params: { path: { id: anchor ?? "" } },
-        }),
-      );
-    },
-    enabled: anchor !== undefined,
+    queryFn:
+      anchor !== undefined
+        ? async () => {
+            return unwrap(
+              await api.GET("/activities/{id}/reply-recipient", {
+                params: { path: { id: anchor } },
+              }),
+            );
+          }
+        : skipToken,
   });
   // A failed refetch keeps the last answer in `data`; a read that failed is
   // not one to prefill a To field from.

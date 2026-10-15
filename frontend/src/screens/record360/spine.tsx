@@ -16,8 +16,6 @@
 // waiting itself, at a size that reads before the words around it.
 
 import { type ReactNode, useRef } from "react";
-
-import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
 import { PanelBody } from "../../design-system/panel";
 import {
@@ -35,12 +33,9 @@ import {
 } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  CALLED_OFF_MEETING,
-  EXCHANGE_KINDS,
-  type ExchangeKind,
-  isExchange,
-} from "./exchangekinds";
+import { useRecordZone } from "../../lib/recordzone";
+import { EXCHANGE_KINDS, type ExchangeKind, isExchange } from "./exchangekinds";
+import { isContactBy, lastContactAt, waitingSince } from "./lastcontact";
 import "./spine.css";
 
 /**
@@ -74,6 +69,9 @@ export type SpineSource = {
       overdue?: boolean | null;
     }[];
   } | null;
+  // The newest contact the server found, over every page of the timeline.
+  // Only the account read sends it.
+  last_contact?: { at: string } | null;
   activities?: {
     data: readonly {
       // The row's own id, which is what a stop opens when the conversation is
@@ -344,39 +342,10 @@ function withToday(stops: readonly Stop[], ctx: Ctx): Stop[] {
 // It is the only stop with no record behind it, and it is the reason this
 // component exists: an account nobody has heard from is a fact no row on the
 // page states, because it is the ABSENCE of rows. The count is calendar days
-// from the last conversation, which is what a contact means by "days".
-//
-// Never drawn on an account we heard from more recently than we wrote: that
-// is a conversation in progress, not a silence.
-// The instant the waiting is counted from: the last thing WE sent.
-//
-// Not the last meeting, which is a different question. An account we met in
-// June and wrote to in July has been waiting since July, and counting from
-// the meeting would report six weeks of silence that did not happen. The
-// meeting date is only the fallback, for an account whose outbound is
-// withheld or has none.
-//
-// One reading, shared by the stop that dates the thread's head and the gap
-// that measures from it — two copies let the thread say one date above a gap
-// counted from another.
-function silenceSince(view: SpineSource): string | undefined {
-  return view.last_outbound_at ?? view.health?.last_meeting_at ?? undefined;
-}
-
-// Whether they have answered the last thing we sent.
-//
-// Compared against our own last outbound rather than against whatever
-// `silenceSince` fell back to: a reply that came BEFORE our latest message
-// does not answer it, and an account whose last word is ours is waiting on
-// them however long ago they last wrote.
+// from the last contact, which is what a contact means by "days".
 function silence(view: SpineSource, ctx: Ctx): Stop | undefined {
-  // Our own last message, never the meeting `silenceSince` falls back to. A
-  // gap is time spent WAITING FOR A REPLY, and a meeting is not something a
-  // reply is owed to: an account we met in June and never wrote to is not
-  // ignoring us, and drawing "nobody has written back" over it invents a
-  // slight that did not happen.
-  const since = view.last_outbound_at;
-  if (!since || (view.last_inbound_at && view.last_inbound_at > since)) {
+  const since = waitingSince(view);
+  if (!since) {
     return undefined;
   }
   const days = calendarDaysBetween(new Date(since), new Date(view.as_of));
@@ -490,7 +459,7 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
   // reader cannot check.
   const cut = view.activities?.page?.has_more === true;
   if (conversations.length === 0) {
-    const at = silenceSince(view);
+    const at = lastContactAt(view);
     const stops: Stop[] = at
       ? [
           {
@@ -508,11 +477,10 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
   // record has more history than the thread draws.
   const shown = conversations.slice(0, PAST_STOPS).reverse();
   const earlier = conversations.length - shown.length;
-  // Our last word, when it is later than every conversation the thread could
-  // name: a message with no subject, or one whose content this reader may not
-  // see. The gap below is counted from it, so it takes the head's label and
-  // its own date — otherwise the thread dates "You last spoke" at one
-  // conversation while the gap beneath counts from another.
+  // The last contact, when it is later than every conversation the thread
+  // can name. That is a message or meeting with no subject, or one this reader
+  // may not see. The gap below counts from it, so it takes the head's label.
+  // Otherwise "Last contact" dates one conversation and the gap counts from another.
   const unnamed = unnamedLastWord(view, shown.at(-1), ctx);
   const stops = shown.map((conversation, index) =>
     pastStop(conversation, !unnamed && index === shown.length - 1, ctx),
@@ -526,14 +494,14 @@ function pastStops(view: SpineSource, ctx: Ctx): Stop[] {
   return stops;
 }
 
-// The stop for a last word the thread cannot name, or undefined when the
-// newest drawn conversation already IS our last word.
+// The stop for a last contact the thread cannot name, or undefined when the
+// newest drawn conversation already is the last contact.
 function unnamedLastWord(
   view: SpineSource,
   newest: Exchange | undefined,
   ctx: Ctx,
 ): Stop | undefined {
-  const spoke = silenceSince(view);
+  const spoke = lastContactAt(view);
   if (!spoke || !newest) {
     return undefined;
   }
@@ -566,10 +534,11 @@ function earlierStop(
 ): Stop {
   const cut = view.activities?.page?.has_more === true;
   const folded = conversations.slice(conversations.length - earlier);
+  const latest = conversations.at(-1);
   return {
     key: "earlier",
     tone: "past",
-    when: cut ? "" : on(conversations[conversations.length - 1].at, ctx),
+    when: cut || latest === undefined ? "" : on(latest.at, ctx),
     title: cut
       ? ctx.t("co.spine.earlierMore")
       : // Through the catalog's own plural rule rather than an if: which
@@ -645,22 +614,8 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
   const conversations = new Map<string, Exchange>();
   for (const entry of view.activities?.data ?? []) {
     const subject = bareSubject(entry.subject);
-    const at = Date.parse(entry.occurred_at ?? "");
-    if (
-      !isExchange(entry.kind) ||
-      CALLED_OFF_MEETING.has(entry.meeting_status ?? "") ||
-      !subject ||
-      // Already happened, as of the read the rest of the card describes: an
-      // `occurred_at DESC` list sorts a meeting booked for next week to the
-      // top, and it has not been said yet. Compared as instants: the same
-      // moment is written with any offset, and comparing the strings would
-      // read 08:30-02:00 as earlier than 09:00Z when it is ninety minutes
-      // later. NaN from a malformed date fails both tests and drops the row,
-      // which is the only safe reading of a timestamp nothing can order.
-      Number.isNaN(at) ||
-      Number.isNaN(asOf) ||
-      at > asOf
-    ) {
+    // `isExchange` again only to narrow the kind; `isContactBy` is the rule.
+    if (!isExchange(entry.kind) || !isContactBy(entry, asOf) || !subject) {
       continue;
     }
     // The two key spaces never meet: a provider whose thread ids look like our

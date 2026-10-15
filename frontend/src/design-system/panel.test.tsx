@@ -3,6 +3,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
 import {
@@ -157,6 +159,70 @@ describe("PanelRow separates the hairline from the press", () => {
   });
 });
 
+type OpeningRowProps = { opened: string[]; pressed: string[] };
+
+describe("PanelRow onOpen opens on a press that lands on no control", () => {
+  function OpeningRow({ opened, pressed }: Readonly<OpeningRowProps>) {
+    return (
+      <PanelRow record onOpen={() => opened.push("Pricing playbook")}>
+        <span>Pricing playbook</span>
+        <button type="button" onClick={() => pressed.push("menu")}>
+          Actions for Pricing playbook
+        </button>
+        {createPortal(
+          <div role="menu">
+            <span>Archive set</span>
+          </div>,
+          document.body,
+        )}
+      </PanelRow>
+    );
+  }
+
+  it("opens the row on a press on its text, and marks it with the pointer", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    const { container } = render(<OpeningRow opened={opened} pressed={[]} />);
+    await user.click(screen.getByText("Pricing playbook"));
+    expect(opened).toEqual(["Pricing playbook"]);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-opens"),
+    ).toBe(true);
+  });
+
+  it("leaves a press on a button inside the row to that button", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    const pressed: string[] = [];
+    render(<OpeningRow opened={opened} pressed={pressed} />);
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Pricing playbook" }),
+    );
+    expect(pressed).toEqual(["menu"]);
+    expect(opened).toEqual([]);
+  });
+
+  // React bubbles a portal's click through the row, though the menu is not in its DOM.
+  it("ignores a press inside a menu the row portalled out", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(<OpeningRow opened={opened} pressed={[]} />);
+    await user.click(within(screen.getByRole("menu")).getByText("Archive set"));
+    expect(opened).toEqual([]);
+  });
+
+  it("draws no pointer on a row without onOpen", () => {
+    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-opens"),
+    ).toBe(false);
+  });
+});
+
 // A deleted rule body still parses and still paints, so the stylesheet is
 // asserted on directly rather than trusting the class list above: the hover
 // fill has to exist, and it has to hang on the interactive class alone.
@@ -177,9 +243,9 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     }
   });
 
-  // A record list reads as a table: its rows' rules reach the pane's edges, and
-  // so does the seam under its last row.
-  it("runs a record row's hairline and the seam under it edge to edge", () => {
+  // A record list reads as a table, so its rows' rules reach the pane's edges.
+  // Every seam between two bands does too, whatever band stands above it.
+  it("runs a record row's hairline and every seam edge to edge", () => {
     const rules = cssRules(panelCss());
     const insetOf = (selector: string) =>
       rules
@@ -188,16 +254,21 @@ describe("panel.css keeps the row's hover on its two variants", () => {
         .filter((value) => value !== undefined)
         .at(-1);
     expect(insetOf(".panel-row-record::before")).toBe("0 0 auto");
-    for (const lead of [
-      ".panel-row-record",
-      ".panel > .settinglist-bleed",
-      ".panel > .table-scroll-bleed",
-    ]) {
-      expect(insetOf(`${lead} + .panel-body::before`)).toBe("0 0 auto");
-    }
-    expect(insetOf(".panel-body + .panel-body::before")).toBe(
-      "0 var(--padPanel) auto",
+    expect(insetOf(".panel > :not(.panel-row) + .panel-row::before")).toBe(
+      "0 0 auto",
     );
+    const seams = rules.filter((rule) =>
+      / \+ \.panel-body::before$/.test(rule.selector),
+    );
+    expect(seams.length).toBeGreaterThanOrEqual(4);
+    for (const seam of seams) {
+      const content = declaredValue(seam.block, "content");
+      if (content === "none") continue;
+      expect(content, seam.selector).toBe('""');
+      expect(declaredValue(seam.block, "inset"), seam.selector).toBe(
+        "0 0 auto",
+      );
+    }
   });
 
   it("rules the boundary between a bleeding list and a bleeding table", () => {
@@ -467,7 +538,7 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-describe("the panel head is one band, fixed at the height every panel shares", () => {
+describe("the panel head is one band at the height every panel shares, wider than a phone", () => {
   it("takes its height from the house token rather than a floor of its own", () => {
     const head = bandRules(panelCss()).find(
       (rule) => rule.selector === ".panel-head",
@@ -485,15 +556,27 @@ describe("the panel head is one band, fixed at the height every panel shares", (
 
   // One value at every viewport, like the band it is. A touch arm that raised
   // it would give the same panel two heights on one machine.
-  it("keeps the band at one height on every viewport", () => {
+  it("declares the band's height token once, for every viewport", () => {
     const declarations = tokensCss().match(/--panel-head-h:/g) ?? [];
     expect(declarations).toHaveLength(1);
   });
 
-  // The band's height is a constant, not a function of what the head holds. A
-  // `:has()` rule is how that stops being true without anyone editing the
-  // height: the band grows for one kind of content and a page of panels goes
-  // ragged.
+  it("drops a verb under the title on a phone, and wraps a title too long to fit", () => {
+    const phone =
+      /@media \(max-width: 720px\)\s*\{\s*\.panel-head\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phone, "flex-wrap")).toBe("wrap");
+    expect(declaredValue(phone, "min-height")).toBe("var(--panel-head-h)");
+    const phoneTitle =
+      /@media \(max-width: 720px\)\s*\{[^@]*?\.panel-head \.panel-title\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phoneTitle, "white-space")).toBe("normal");
+  });
+
+  // The band's height is constant: a `:has()` rule would grow it for one kind
+  // of content, and a page of panels would go ragged.
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });

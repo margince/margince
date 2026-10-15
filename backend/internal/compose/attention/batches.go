@@ -18,6 +18,8 @@ package attention
 // it has in common with the rest.
 
 import (
+	"time"
+
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -335,9 +337,13 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 	}
 	// The oldest member's moment, so a batch sorts where its work would have.
 	occurred := members[0].occurredAt
+	var newest time.Time
 	for _, member := range members {
 		if member.occurredAt.Before(occurred) {
 			occurred = member.occurredAt
+		}
+		if member.item.OccurredAt != nil && member.item.OccurredAt.After(newest) {
+			newest = *member.item.OccurredAt
 		}
 	}
 	// Whether the night had seen this group, from the members it stands for.
@@ -357,8 +363,9 @@ func batchRow(key crmcontracts.WorklistBatchKey, cause string, members []ranked,
 		foldedFrom: from,
 		// The members' own identities, so a walk freezes THEM rather than the
 		// synthetic id above: this row exists only while the fold produces it.
-		members:    memberIdentities(members),
-		occurredAt: occurred,
+		members:      memberIdentities(members),
+		occurredAt:   occurred,
+		newestMember: newest,
 		// The group's own answer, from the members it stands for. A fold is one
 		// row in place of many, so it can only name an owner where the many
 		// AGREE — a pile of duplicate pairs nobody holds is unassigned, and a

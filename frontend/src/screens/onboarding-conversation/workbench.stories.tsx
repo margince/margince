@@ -2,15 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../../app/mefixture";
-import { configuredAiProfile } from "../onboarding.stories.fixtures";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
+import { configuredAiProfile } from "../onboarding.stories.fixtures";
 import { initialConversationState } from "./conversation-machine";
 import type { ConversationState } from "./conversation-types";
 import { ConversationWorkbench, WorkbenchEntranceScope } from "./workbench";

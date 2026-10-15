@@ -154,6 +154,9 @@ func (s *Service) worklistIn(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	if withPins, err = withPins.readingDone(ctx, day); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	withPins = withPins.readingWalk(walk, walking)
 	// The night's scores, on the same per-read copy the pins and the walk ride.
 	// They are read by the classifier, which runs inside the projection below,
@@ -182,6 +185,20 @@ func (s *Service) worklistIn(
 		}
 	}
 	return out, nil
+}
+
+// stampSources files each missing source under its category and says whether
+// it is a lane. Only a side read marks itself, so every unmarked entry is one.
+func stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+		if missing[i].ContributesRows == nil {
+			lane := true
+			missing[i].ContributesRows = &lane
+		}
+	}
+	return missing
 }
 
 // worklistFrom projects an already-assembled day, so a test can drive the
@@ -224,20 +241,6 @@ func (s *Service) worklistFrom(
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
-	// One deal is ONE row: a deal the night surfaced and the day also found
-	// arrives twice, and the row that survives keeps the brief's id and score.
-	//
-	// LAST of the folds, and the three comments above say why. Each of those
-	// drops rows of a source none of the others reads, so their order among
-	// themselves does not matter. This one is different: it attaches the brief's
-	// id to a row the others may then REMOVE. Run earlier, a deal that is both in
-	// the night's brief and has an unanswered message lost its brief verbs
-	// entirely — the at-risk row took the id and dropDealsAlreadyWaiting then
-	// deleted that row, and the waiting row it was absorbed into inherits the
-	// deal's figures and reasons but not the brief's id. So this runs against
-	// whatever actually survives.
-	rows = foldBriefIntoRisk(rows)
-
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -248,6 +251,16 @@ func (s *Service) worklistFrom(
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
 	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	// One deal is one row. A deal both the night and the day found arrives
+	// twice, and the surviving row keeps the brief's id and score.
+	//
+	// This runs after the drops above, because they may remove the row that
+	// took the brief's id. It runs after the scope, because the brief is the
+	// acting reader's. A named owner's page drops every brief row first.
+	rows = foldBriefIntoRisk(rows)
+	// Before anything is counted, so a row the reader marked done is gone from
+	// the figures as well as from the list.
+	rows = dropDone(rows, s.marked, day.AsOf)
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	// The same rule for the who-is-waiting source, and for the same reason it
@@ -278,7 +291,8 @@ func (s *Service) worklistFrom(
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
 	// Focus is independent of queue filters and pins, so it always folds routine work.
-	focusRows := foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
+		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
 	// eligibility, including when this reader has saved pins on the queue.
@@ -299,11 +313,16 @@ func (s *Service) worklistFrom(
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
 	if !opensTheDeck(filter) {
-		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+		rows = dropDone(s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth), s.marked, day.AsOf)
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
+	}
+	// A Done being checked asks which rows this day draws, not for a page.
+	if s.marked.probe != nil {
+		s.marked.probe(rows)
+		return crmcontracts.Worklist{}
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
 	// then slicing left the last returned row comparing itself against a row the
@@ -340,11 +359,7 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
-	for i := range missing {
-		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
-		missing[i].Category = &category
-	}
-	missing = withRosterRefusal(missing, scoped)
+	missing = withRosterRefusal(stampSources(missing), scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(

@@ -168,12 +168,17 @@ export async function rowMenu(
 const ADMIN_USER_ADMIN: Record<string, string[]> = {
   user_admin: ["read", "create", "update", "delete"],
 };
+type BackendPrincipal = { roles: string[]; allow?: Record<string, string[]> };
+
+/** The signed-in admin a caller gets when it names no principal. */
+const ADMIN_PRINCIPAL: BackendPrincipal = {
+  roles: ["admin"],
+  allow: ADMIN_USER_ADMIN,
+};
+
 export function backend(
   calls: { method: string; url: string; body?: unknown }[],
-  me: { roles: string[]; allow?: Record<string, string[]> } = {
-    roles: ["admin"],
-    allow: ADMIN_USER_ADMIN,
-  },
+  me: BackendPrincipal = ADMIN_PRINCIPAL,
 ) {
   const allow = me.allow ?? {};
   const objects: Record<string, Record<string, boolean>> = {};

@@ -69,6 +69,11 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   the rank into `[0, 1)` and adds 1 when the record holds that word whole, not stemmed, in any field
   it indexes. A whole-word hit then ranks above every hit that only the prefix finds. So a cap of
   three per type cannot drop Philip when two ids tie.
+- **A pasted address or domain finds its record.** The `search_tsv` of a contact holds no email
+  address, and that of a company holds no domain. So the contact and company branches also match
+  `storekit.ContactEmails` and `storekit.CompanyDomains`. They compare the whole query, in lower
+  case, with a live row. The contact and company lists match the same two tables. A hit found this way
+  gets the 1 a whole word adds, and it passes the same row scope as a name hit.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a

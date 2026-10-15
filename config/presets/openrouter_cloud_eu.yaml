@@ -2,6 +2,17 @@
 # config/presets/openrouter_cloud_eu.yaml — every lane, chat and embeddings, on
 # Mistral's EU endpoint.
 #
+# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
+# certification records do not grade every one of those bindings as certified.
+# Which tasks, and how badly, is in docs/reference/ai-certification.md under
+# this file's name. Read it before binding this preset to a workspace whose
+# confidentiality decisions matter: a task graded `supported_degraded` or
+# `not_supported` answers wrongly often enough to have been measured doing so.
+#
+# No task list here on purpose. The bands move when a prompt is fixed or the
+# corpus grows, and a list in this comment would read as true long after it
+# stopped being.
+#
 # Every lane here is served under an EU-region endpoint in `only:`, which the
 # provider's `upstream` names once for all of them. Without it the broker serves a model from any
 # region — including a model with no EU endpoint at all, which it then serves

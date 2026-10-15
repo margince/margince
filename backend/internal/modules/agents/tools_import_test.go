@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -43,6 +44,17 @@ func TestACommitRefusesARunThatHasNotBeenDryRun(t *testing.T) {
 	}
 }
 
+// A commit that stopped part-way resumes at its checkpoint without a human.
+// Only an approved run was ever committed, so the dry run still came first.
+func TestACommitResumesAFailedCommit(t *testing.T) {
+	approved := time.Date(2026, 10, 13, 9, 0, 0, 0, time.UTC)
+	if err := refuseUncommittableRun(crmcontracts.ImportRun{
+		Id: openapi_types.UUID(ids.NewV7()), Status: failedCommit, ApprovedAt: &approved,
+	}); err != nil {
+		t.Errorf("a failed commit was refused: %v", err)
+	}
+}
+
 // A column nothing reads is reported, not dropped in silence.
 //
 // A caller who mistyped a field name would otherwise get a clean report and a
@@ -67,19 +79,19 @@ func TestUnmappedColumnsAreNamedRatherThanDroppedSilently(t *testing.T) {
 	}
 }
 
-// `object` takes company, contact or lead. Not deal, and not activity.
+// `object` takes company, contact, lead or deal. Not activity.
 //
 // The refused set is what has no import WRITER: offering it would advertise a
 // door that answers an error. The accepted set has to match the REST contract's
 // own enum, which is what TestEveryToolEnumMatchesTheContractItMirrors holds it
 // to.
-func TestOnlyTheThreeImportableObjectsAreAccepted(t *testing.T) {
-	for _, object := range []string{"deal", "activity", ""} {
+func TestOnlyTheImportableObjectsAreAccepted(t *testing.T) {
+	for _, object := range []string{"activity", ""} {
 		if err := refuseUnimportableObject(object); err == nil {
 			t.Errorf("`object` accepted %q; nothing imports it", object)
 		}
 	}
-	for _, object := range []string{importObjectLead, importObjectCompany, importObjectContact} {
+	for _, object := range []string{importObjectLead, importObjectCompany, importObjectContact, importObjectDeal} {
 		if err := refuseUnimportableObject(object); err != nil {
 			t.Errorf("`object` refused %q: %v", object, err)
 		}
@@ -132,15 +144,38 @@ type recordingImports struct {
 	discarded *[]string
 	stageErr  error
 	sawLive   *bool
+	staged    *crmcontracts.CreateImportRunRequest
+	profile   crmcontracts.ImportSourceProfile
+	format    crmcontracts.ImportFormat
+	run       crmcontracts.ImportRun
+	report    *crmcontracts.ImportRunReport
 }
 
 func (r recordingImports) StageRun(
-	_ context.Context, _ crmcontracts.CreateImportRunRequest,
+	_ context.Context, req crmcontracts.CreateImportRunRequest,
 ) (crmcontracts.ImportRun, error) {
+	if r.staged != nil {
+		*r.staged = req
+	}
 	if r.stageErr != nil {
 		return crmcontracts.ImportRun{}, r.stageErr
 	}
 	return crmcontracts.ImportRun{}, nil
+}
+
+func (r recordingImports) ProfileFiles(context.Context, []ImportFile) (crmcontracts.ImportSourceProfile, error) {
+	if r.stored != nil {
+		*r.stored = true
+	}
+	return r.profile, nil
+}
+
+func (r recordingImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+	return r.format, nil
+}
+
+func (r recordingImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return r.run, r.report, nil
 }
 
 func (r recordingImports) DiscardSource(ctx context.Context, ref string) error {
@@ -162,9 +197,10 @@ func (r recordingImports) ProfileSource(
 	if r.stored != nil {
 		*r.stored = true
 	}
+	imported := crmcontracts.ImportObject(object)
 	profile := crmcontracts.ImportSourceProfile{
 		SourceRef:        "ws/import-source/stored",
-		Object:           crmcontracts.ImportObject(object),
+		Object:           &imported,
 		SuggestedMapping: r.suggested,
 		Targets:          r.targets,
 	}
@@ -223,8 +259,8 @@ func TestARunWhoseReportCannotBeReadStagesNoApproval(t *testing.T) {
 
 type reportlessImports struct{ stubImports }
 
-func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
-	return crmcontracts.ImportRunReport{}, errors.New("the report is gone")
+func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return crmcontracts.ImportRun{}, nil, errors.New("the report is gone")
 }
 
 // TestAProposalThatPlacesOnlySomeColumnsIsRefused is the shape a partial
@@ -356,12 +392,8 @@ func TestAnEmptyMappingIsTheSameQuestionAsNoMapping(t *testing.T) {
 	}
 }
 
-// A staging failure keeps its file, because a run already references it.
-//
-// stageRun persists its run before it validates, and a run that failed
-// validation is resumable from its SourceRef — so discarding here would turn a
-// run somebody can fix into one nobody can. The refusal BEFORE staging is the
-// only one where the file is provably unreferenced.
+// A staging failure keeps its draft and file. A refused test returns the run
+// to its draft, and createImportRun on that source_ref tests it again.
 func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 	var discarded []string
 	_, err := previewImport{imports: recordingImports{
@@ -376,7 +408,7 @@ func TestAStagingFailureKeepsTheFileItsRunStillNeeds(t *testing.T) {
 		t.Fatal("a staging failure was reported as success")
 	}
 	if len(discarded) != 0 {
-		t.Errorf("discarded = %v, and a failed run is resumable from that source", discarded)
+		t.Errorf("discarded = %v, and a refused draft is tested again from that source", discarded)
 	}
 }
 

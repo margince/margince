@@ -57,6 +57,13 @@ type pdfLabels struct {
 	gross     string
 	totals    string
 	terms     string
+	// cadence holds one phrase per admitted billing interval, keyed by its
+	// months. A cadence the schema does not admit prints nothing rather than a
+	// guess at its name.
+	cadence   map[int]string
+	committed string
+	periods   string
+	months    string
 }
 
 // resolvePDFLabels maps a locale to its label set: de-DE (and the empty
@@ -76,6 +83,12 @@ func resolvePDFLabels(locale string) pdfLabels {
 			gross:     "Gesamtbetrag",
 			totals:    "Summe",
 			terms:     "Bedingungen",
+			cadence: map[int]string{
+				1: "pro Monat", 3: "pro Quartal", 6: "pro Halbjahr", 12: "pro Jahr",
+			},
+			committed: "Vertragswert",
+			periods:   "Laufzeit",
+			months:    "Monate",
 		}
 	}
 	return pdfLabels{
@@ -89,6 +102,12 @@ func resolvePDFLabels(locale string) pdfLabels {
 		gross:     "Total",
 		totals:    "Totals",
 		terms:     "Terms",
+		cadence: map[int]string{
+			1: "per month", 3: "per quarter", 6: "per half-year", 12: "per year",
+		},
+		committed: "Committed",
+		periods:   "Term",
+		months:    "months",
 	}
 }
 
@@ -232,10 +251,62 @@ func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontrac
 	for _, li := range lines {
 		pdf.Cell(0, 5, tr(fmt.Sprintf("%d. %s", li.Position, li.Description)))
 		pdf.Ln(5)
-		pdf.Cell(0, 5, tr(fmt.Sprintf("%s x %s", pdfFormatQuantity(li.Quantity), pdfFormatMinor(li.UnitPriceMinor, currency))))
+		price := fmt.Sprintf("%s x %s", pdfFormatQuantity(li.Quantity), pdfFormatMinor(li.UnitPriceMinor, currency))
+		if cadence := pdfLineCadence(li, labels); cadence != "" {
+			price += " " + cadence
+		}
+		pdf.Cell(0, 5, tr(price))
 		pdf.Ln(5)
+		if commitment := pdfLineCommitment(li, currency, labels); commitment != "" {
+			pdf.Cell(0, 5, tr(commitment))
+			pdf.Ln(5)
+		}
 	}
 	pdf.Ln(2)
+}
+
+// pdfLineCadence is how often a recurring line's price repeats, "" for a line
+// that does not repeat or has not been classified.
+//
+// A nil billing model is not one_time. Nobody has said what the price does, so
+// printing a cadence would answer a question the offer leaves open.
+//
+// An interval outside the four the schema admits prints nothing, for that
+// reason.
+func pdfLineCadence(li crmcontracts.OfferLineItem, labels pdfLabels) string {
+	if li.BillingModel == nil || *li.BillingModel != crmcontracts.OfferLineItemBillingModelRecurring {
+		return ""
+	}
+	if li.BillingIntervalMonths == nil {
+		return ""
+	}
+	return labels.cadence[int(*li.BillingIntervalMonths)]
+}
+
+// pdfLineCommitment is the term a recurring line is committed for and what it
+// is worth across that term, "" where either is unsettled.
+//
+// A recurring line with no interval_count has no committed total yet, the same
+// answer NetTcvMinor gives it: nothing is committed until somebody says how
+// long.
+//
+// The multiplication is CommittedNetMinor's, which is where the offer's own
+// total gets it, so this figure comes from one spelling of that arithmetic.
+//
+// A figure that cannot be computed prints the term alone. An offer handed to a
+// buyer with one line missing its total reads worse than one showing the term
+// by itself.
+func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) string {
+	if pdfLineCadence(li, labels) == "" || li.IntervalCount == nil || li.LineNetMinor == nil {
+		return ""
+	}
+	term := fmt.Sprintf("%s: %d x %d %s", labels.periods, *li.IntervalCount,
+		int(*li.BillingIntervalMonths), labels.months)
+	committed, err := CommittedNetMinor(*li.LineNetMinor, *li.IntervalCount)
+	if err != nil {
+		return term
+	}
+	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency)
 }
 
 // writeOfferPDFTotals writes the money summary straight off o's already-

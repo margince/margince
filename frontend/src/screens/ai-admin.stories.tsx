@@ -2,11 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { focusManager } from "@tanstack/react-query";
+import { expect, userEvent, within } from "storybook/test";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiBudgetCard } from "./ai-admin";
 import { allowance, feature, status } from "./ai-admin.testkit";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 function story(
   band: "normal" | "degraded" | "queued",
@@ -58,12 +63,12 @@ function story(
     );
   };
 }
-const meta: Meta<typeof AiBudgetCard> = {
+const meta = {
   title: "Settings/AI/AI usage/Allowance",
   component: AiBudgetCard,
-};
+} satisfies Meta<typeof AiBudgetCard>;
 export default meta;
-type Story = StoryObj<typeof AiBudgetCard>;
+type Story = StoryObj<typeof meta>;
 export const Degraded: Story = { render: story("degraded") };
 export const Normal: Story = { render: story("normal") };
 export const OverAllowance: Story = { render: story("queued") };
@@ -73,7 +78,17 @@ export const DegradedDark: Story = {
   globals: { theme: "dark" },
   render: story("degraded"),
 };
-export const Phone: Story = { tags: ["uat-phone"], render: story("queued") };
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story("queued"),
+};
+// The normal band carries no callout: the meter already says the month is fine.
+export const NormalPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story("normal"),
+};
 export const Preview: Story = {
   render: story("degraded"),
   play: async ({ canvasElement }) => {
@@ -87,10 +102,60 @@ export const Preview: Story = {
   },
 };
 
+// Another admin saved while this one edited: the editor says so and offers the
+// saved values back.
+export const ChangedWhileEditing: Story = {
+  render: () => {
+    let reads = 0;
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { ai_budget: ["read", "update"] } })),
+      "GET /ai/budget": () => {
+        reads += 1;
+        return jsonResponse(
+          reads === 1
+            ? allowance
+            : {
+                ...allowance,
+                config: {
+                  tokens_per_full_user: 15000000,
+                  company_monthly_tokens: null,
+                },
+                revision: "budget-v2",
+              },
+        );
+      },
+    });
+    return (
+      <StoryProviders>
+        <div className="settings-stack">
+          <AiBudgetCard />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit allowance" }),
+    );
+    // A window coming back into focus reads the allowance again.
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await expect(
+      await canvas.findByRole("button", { name: "Reload values" }),
+    ).toBeInTheDocument();
+    focusManager.setFocused(undefined);
+  },
+};
+
 // Decision-first rows lead and carry their marker; a task that declares a
 // decision form it cannot use follows; a two-rung ladder opens to the rungs
 // behind its lead.
 const [lead] = feature.effective_candidates;
+if (!lead) {
+  throw new Error("the feature fixture carries no candidate to lead with");
+}
 const mixedFeatures = [
   { ...feature, task: "summarize" },
   {

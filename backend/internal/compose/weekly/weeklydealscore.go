@@ -126,4 +126,5 @@ const dealScoreSQL = `
 		      AND o.expected_close_date >= (timezone($%[9]d, $%[2]d))::date),
 		  (SELECT count(*) FROM cat WHERE %[6]s > %[7]s),
 		  (SELECT count(*) FROM cat WHERE %[6]s < %[7]s),
-		  (SELECT count(*) FROM week_end WHERE unreconstructible)`
+		  (SELECT count(*) FROM week_end WHERE unreconstructible),
+		  (SELECT count(*) FROM open_deals o WHERE o.close_date_provisional)`

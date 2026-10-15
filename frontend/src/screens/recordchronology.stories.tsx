@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { ChronologyFilter, type TimelineFilter } from "./recordchronology";
-import { StoryProviders } from "./story-utils";
 
 // The row of cuts sitting above a record's chronology: All first, because
 // that is where a reader starts. Conversations is opt-in per page rather than

@@ -6,13 +6,14 @@
 // and the time, in columns the whole list shares. Who acted, why, and why a
 // change cannot be put back are the line's detail: on hover, and read out.
 
-import { ENTITY, isEntityKind } from "../app/entity";
-import { routeHash } from "../app/router";
 import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { ENTITY, isEntityKind } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import { approvalHref } from "./approvaldrawer";
 import { approvalKindLabel } from "./approvalkind";
 import {
@@ -352,14 +353,15 @@ function recordHref(line: MagicLine): string | undefined {
   return routeHash(ENTITY[entity.type].route(entity.id));
 }
 
-/**
- * A proposal's kind as the reader names it. The wire carries the kind's code
- * (`capture_counterparty`), which is vocabulary, not a sentence.
- */
+// A proposal's kind and a connector's provider arrive as codes, not words.
 function readableValues(
   values: Readonly<Record<string, string>> | undefined,
   t: Translator,
 ): Record<string, string> | undefined {
-  if (!values?.kind) return values;
-  return { ...values, kind: approvalKindLabel(values.kind, t) };
+  if (!values) return values;
+  return {
+    ...values,
+    ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
+    ...(values.provider && { provider: providerName(values.provider, t) }),
+  };
 }

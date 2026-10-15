@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { parseHash, routeHash } from "../app/router";
 import { translate } from "../i18n";
+import { parseHash, routeHash } from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import { SettingsScreen } from "./settings";
 import {
   jsonResponse,

@@ -67,6 +67,7 @@ func insertScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, card Sco
 		// reserved for scorecards frozen before the reconstruction existed, so a
 		// block measured now always writes a number.
 		add("deal_unreconstructible", d.Unreconstructible)
+		add("deal_close_date_provisional", d.CloseDateProvisional)
 	}
 
 	_, err := tx.Exec(ctx, fmt.Sprintf(
@@ -90,7 +91,7 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 	// Every nullable column scans through a pointer, because a block's absence
 	// is exactly what NULL means here.
 	var la, ld, lp, lat, lb, mb, mh, mn, mp *int
-	var da, dr, dns, do, dmt, dcd, dfu, dfd, dun *int
+	var da, dr, dns, do, dmt, dcd, dfu, dfd, dun, dcp *int
 	err := tx.QueryRow(ctx, `
 		SELECT has_lead_block, lead_advanced, lead_disqualified, lead_promoted,
 		       lead_answered_in_target, lead_breached, meetings_booked,
@@ -98,11 +99,12 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 		       has_deal_block, deal_advances, deal_regressions,
 		       deal_median_days_in_stage, deal_with_next_step, deal_open,
 		       deal_multi_threaded, deal_close_date_sound,
-		       deal_forecast_up, deal_forecast_down, deal_unreconstructible
+		       deal_forecast_up, deal_forecast_down, deal_unreconstructible,
+		       deal_close_date_provisional
 		  FROM weekly_review_scorecard WHERE weekly_review_id = $1`, reviewID).
 		Scan(&hasLead, &la, &ld, &lp, &lat, &lb, &mb, &mh, &mn, &mp,
 			&hasDeal, &da, &dr, &d.MedianDaysInStage, &dns, &do, &dmt, &dcd, &dfu, &dfd,
-			&dun)
+			&dun, &dcp)
 	if errors.Is(err, pgx.ErrNoRows) {
 		//nolint:nilnil // a review written before scorecards existed HAS none; the panel draws nothing rather than the read failing.
 		return nil, nil
@@ -128,6 +130,7 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 		// claim those old weeks were rebuilt completely when they were never
 		// rebuilt at all.
 		d.Unreconstructible = dun
+		d.CloseDateProvisional = dcp
 		card.Deal = &d
 	}
 	return &card, nil

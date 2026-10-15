@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -8,7 +8,7 @@ import {
   type MarkdownHighlightOutcome,
 } from "../design-system/markdown";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The document half of the ask dialog: the file a citation points at, with the
 // quoted passage marked in it.
@@ -23,21 +23,23 @@ type Claim = components["schemas"]["KnowledgeClaim"];
 // The document's own bytes, as the answer's citation points at them.
 function useDocumentText(documentId: string | undefined) {
   return useQuery({
-    enabled: documentId !== undefined,
     queryKey: ["knowledge-document-text", documentId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/knowledge/documents/{id}", {
-        params: { path: { id: documentId ?? "" } },
-        // The body is the document, not a document to parse: this endpoint
-        // serves the file's own bytes, and JSON.parse over a markdown page
-        // would throw on the first heading.
-        parseAs: "text",
-      });
-      if (error !== undefined || data === undefined) {
-        throwProblem(error);
-      }
-      return data;
-    },
+    queryFn:
+      documentId !== undefined
+        ? async () => {
+            const { data, error } = await api.GET("/knowledge/documents/{id}", {
+              params: { path: { id: documentId } },
+              // The body is the document, not a document to parse. This
+              // endpoint serves the file's own bytes, and JSON.parse over a
+              // markdown page would throw on the first heading.
+              parseAs: "text",
+            });
+            if (error !== undefined || data === undefined) {
+              throwProblem(error);
+            }
+            return data;
+          }
+        : skipToken,
   });
 }
 

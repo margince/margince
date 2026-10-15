@@ -161,6 +161,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
+    "scheduling.guestRecovery",
+    "scheduling.deliveryUnknown",
+    "scheduling.personalGuest",
+    "scheduling.unavailable",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "settings.group.people",
@@ -174,6 +178,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
     "lead.notYoursToChange",
+    // The same refusal as the two above, for a colleague's queue.
+    "worklist.owner.refused",
     "lists.audience.ownerTeams",
     "lists.team.allOwners",
     "ob.conv.team.body",
@@ -330,19 +336,24 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "worklist.because.champion_unknown",
     "worklist.because.no_champion",
     "worklist.disposition.done.not_mine",
+    "worklist.disposition.hint.not_mine",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
-    "captureHealth.classifier",
+    "captureHealth.fact.pending",
+    "captureHealth.fact.unsure",
+    "captureHealth.fact.exhausted",
+    "captureActivity.col.message",
+    "senders.byYou",
     "compose.derivedReply",
     "log.attendee",
+    "log.otherAttendees",
+    "activity.detail.attendees",
     "book.attendee",
     "followUpSettings.daysHint",
-    "followUpSettings.sub",
     "scheduling.cancelConfirm",
     "pipeline.reason.answered_on_the_company",
     "pipeline.reason.no_site_identified",
-    "senders.emptyTitle",
     "sendPermission.unproven",
     "sendPermission.reason.ambiguous",
     "sendPermission.reason.askedUsToStop",

@@ -7,7 +7,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -20,16 +20,18 @@ import { DateInput, isISODate } from "../design-system/dateinput";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Markdown } from "../design-system/markdown";
+import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { problemCodeOf, provenanceOf, unwrap } from "./common";
-import { EntityRef } from "./entityref";
+import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
-import { useActivity } from "./activityread";
+import { useActivity } from "../lib/activityread";
 import { useCompleteTask } from "./taskcomplete";
 import { refetchAfterWrite } from "./taskwritefollowup";
 
@@ -109,7 +111,9 @@ export function snoozedDueAt(
     return null;
   }
   const today = calendarDay(new Date(dueAt), zone);
-  const [year, month, day] = today.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = today
+    .split("-")
+    .map(Number);
   // Through UTC parts, which is a pure calendar step: no zone reading happens
   // here, so no DST transition can shorten or lengthen the day being counted.
   const next = new Date(Date.UTC(year, month - 1, day + 1))
@@ -171,10 +175,8 @@ export function TaskQuickActions({
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
   // Whether the reader may name a day, rather than only step the due date on.
-  // OFF by default, and the default is the point: this is a per-row action slot
-  // on the 360 next-steps lists, where a date box in every row is heavier than
-  // the surface intends. The detail modal opts in, because that is where a
-  // reader already came to work on one task.
+  // Off by default, since a date box in every next-steps row is too heavy.
+  // The detail modal opts in: a reader came there to work on one task.
   showDuePicker?: boolean;
 }>) {
   const t = useT();
@@ -221,12 +223,8 @@ export function TaskQuickActions({
 
 // Moving a task to a day the reader names.
 //
-// Beside the snooze rather than instead of it, because they answer different
-// questions. Snooze is "not yet" and takes one press; this is "Tuesday",
-// which no number of presses reaches — and the snooze cannot reach it in
-// principle, not just in clicks: it adds a day to the task's OWN due date, so
-// a task three days overdue snoozes to two days overdue and the reader presses
-// it four times to mean tomorrow.
+// Beside the snooze, not instead of it. Snooze adds a day to the task's own due
+// date, so a task three days overdue only moves to two days overdue.
 //
 // It is offered on an UNDATED task too, where the snooze is not. A task with no
 // day has nothing to move but is exactly the one a rep wants to put a date on,
@@ -265,17 +263,10 @@ function TaskDueDatePick({
           onChange={(event) => {
             const day = event.target.value;
             // Narrowed with the control's own guard, not merely tested for
-            // empty. A `type="date"` box clears itself for anything it cannot
-            // parse — `2026-02-30` arrives as "" — but HTML permits a year of
-            // FOUR OR MORE digits, so `10000-09-15` is a value the element
-            // reports happily and `dueInstant` throws a RangeError on. A year
-            // typo would have reached an uncaught exception with nothing on
-            // screen to say the date was refused.
-            //
-            // isISODate requires exactly four, which refuses that and the
-            // cleared box in one question — and clearing IS a case to refuse:
-            // it is the browser's own empty state, not a request to undate the
-            // task.
+            // empty. HTML permits a year of four or more digits, so
+            // `10000-09-15` reaches here and `dueInstant` throws on it.
+            // isISODate requires four, and also refuses the cleared
+            // box: the browser's empty state, not a request to undate the task.
             if (!isISODate(day)) {
               return;
             }
@@ -339,6 +330,13 @@ export function TaskDetailModal({
               </div>
             )}
             <div className="t-caption task-detail-meta">
+              {/* In the same tab: the reader opened the panel to learn what the
+                  task is about, and following its record is leaving for it. */}
+              {task.links && task.links.length > 0 && (
+                <span>
+                  <RecordLinks links={mostSpecificFirst(task.links)} />
+                </span>
+              )}
               {task.due_at ? (
                 <span>
                   {t("co.next.due", {

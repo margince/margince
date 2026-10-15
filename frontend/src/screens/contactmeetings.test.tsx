@@ -13,21 +13,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { RecordZoneProvider } from "../app/recordzone";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { formatDayMonth } from "../format/format";
 import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, translate } from "../i18n";
-import { bookingProfile, bookingProposals, bookingSlots } from "./book.testkit";
-import { proposalEmailBody } from "./booking-proposal-message";
-import { ContactMeetingsTab } from "./contactmeetings";
+import { RecordZoneProvider } from "../lib/recordzone";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { bookingProfile, bookingProposals, bookingSlots } from "./book.testkit";
+import { proposalEmailBody } from "./booking-proposal-message";
+import { ContactMeetingsTab } from "./contactmeetings";
 
 type Proposal = components["schemas"]["MeetingProposal"];
 

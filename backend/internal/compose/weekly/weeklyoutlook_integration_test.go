@@ -50,10 +50,10 @@ func (s *stubForecast) CloseWeek(
 
 func (s *stubForecast) CloseTeamWeek(
 	_ context.Context, _ pgx.Tx, teamID ids.UUID, _, _ time.Time,
-) ([]Outlook, []Movement, []Driver, error) {
+) (TeamClose, error) {
 	s.teamCalls++
 	s.teamID = teamID
-	return s.outlooks, s.movements, s.drivers, nil
+	return TeamClose{Outlooks: s.outlooks, Movements: s.movements, Drivers: s.drivers}, nil
 }
 
 func oneHorizon(openingID, closingID ids.UUID) *stubForecast {

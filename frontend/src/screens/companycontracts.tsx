@@ -2,8 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -16,7 +15,9 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { ContractForm } from "./contractform";
 import {
   ContractCancelModal,
@@ -27,7 +28,6 @@ import {
 import { ContractPaper } from "./contractpaperchip";
 import { ContractTerm, ContractTerms } from "./contractterms";
 import { CustomFieldsPanel } from "./customfields.card";
-import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

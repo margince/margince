@@ -214,6 +214,10 @@ var catalog = map[string]struct {
 	// about it, and a consumer counting edits to correspondence must not read a
 	// rep clearing their queue as the customer's mail being rewritten.
 	"activity.disposition_recorded": {activityStreamEntity, 1},
+	// One reader marked a waiting message done. A type of its own because
+	// disposition_recorded's enum is closed at v1, and a new value would break
+	// subscribers that validate it.
+	"activity.marked_handled": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them
@@ -268,8 +272,9 @@ var catalog = map[string]struct {
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
-	"approval.requested": {approvalStreamEntity, 1},
-	"approval.decided":   {approvalStreamEntity, 1},
+	"approval.requested":            {approvalStreamEntity, 1},
+	"approval.decided":              {approvalStreamEntity, 1},
+	"approval.failure_acknowledged": {approvalStreamEntity, 1},
 
 	"capture.received":   {captureStreamEntity, 1},
 	"capture.normalized": {captureStreamEntity, 1},
@@ -325,6 +330,12 @@ var catalog = map[string]struct {
 	"deal_suggestion.accepted":   {dealStreamEntity, 1},
 	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
 	"deal_suggestion.superseded": {dealStreamEntity, 1},
+
+	// A deal's legal review: asked for, answered, taken back. Internal only,
+	// and entity-less for the reason api/internal-events.yaml gives.
+	"legal_review.requested": {dealStreamEntity, 1},
+	"legal_review.decided":   {dealStreamEntity, 1},
+	"legal_review.withdrawn": {dealStreamEntity, 1},
 
 	// The tag scout's suggestions and the decisions on them. Internal only, and
 	// entity-less for the reason api/internal-events.yaml gives. Tags ride the

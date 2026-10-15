@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { AuditDetail } from "./settings-audit.detail";
 import type { AuditLogEntry } from "./settings-audit.format";
-import { StoryProviders } from "./story-utils";
 
 const UPDATE: AuditLogEntry = {
   id: "al-1",
@@ -97,5 +97,12 @@ export const UnknownRule: Story = {
 
 export const UpdateDark: Story = {
   globals: { theme: "dark" },
+  args: { entry: UPDATE },
+};
+
+// On a phone each fact stacks its term over its value, a diff included.
+export const UpdatePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   args: { entry: UPDATE },
 };

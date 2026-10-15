@@ -9,8 +9,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
 const summary = {
@@ -333,18 +333,16 @@ it("marks a failed call with one outcome badge and expands the attempt and paylo
   expect(screen.getByText("Export certification scenario")).toBeTruthy();
 });
 
-// The filter is a settings row now: the row draws the label and the Select is
-// named BY it, so the combobox still says what it narrows while carrying no
-// second name of its own — one visible label naming one control is the whole
-// reason `control` is a function here.
-it("names the task filter from its row, and stacks the trace under its own label", async () => {
+// The page already names the log, so the trace carries no heading of its own.
+// The task dial stands in a bar above it, and the table keeps its name.
+it("puts the task filter in a bar above the trace, and repeats no page heading", async () => {
   mount();
   const filter = await screen.findByRole("combobox", { name: "Task" });
-  expect(filter.getAttribute("aria-label")).toBeNull();
-  expect(filter.getAttribute("aria-labelledby")).toBeTruthy();
-  // The trace is the subject of its row, not an answer beside it, so it stacks
-  // under a label of its own rather than sharing the filter's.
-  expect(screen.getByText("Recent calls")).toBeTruthy();
+  const bar = filter.closest("fieldset");
+  expect(bar).not.toBeNull();
+  const trace = await screen.findByRole("table", { name: "Recent calls" });
+  expect(bar?.contains(trace)).toBe(false);
+  expect(screen.queryByRole("heading")).toBeNull();
 });
 
 // A task row on the models page links here with the task on the address, so the
@@ -505,7 +503,7 @@ it("distinguishes capture disabled from a call without payload", async () => {
 
 it("withholds the trace from a principal without the diagnostics read, and asks the server for nothing", async () => {
   // Withheld, not absent: an absent trace claims the installation made no model
-  // calls. The card keeps its title and says whose record this is — and the list
+  // calls. The card says whose record this is, offers no dial, and the list
   // read never fires, because the denial is already known.
   const { seen } = mount(true, true, { automation: ["read", "update"] });
 
@@ -514,7 +512,7 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
       /only an administrator or operations user can read the call trace/i,
     ),
   ).toBeTruthy();
-  expect(screen.getByText("AI call trace")).toBeTruthy();
+  expect(screen.queryByRole("combobox", { name: "Task" })).toBeNull();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
 });
 

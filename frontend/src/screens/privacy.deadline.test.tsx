@@ -11,9 +11,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
 

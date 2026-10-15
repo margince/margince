@@ -1,10 +1,10 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RbacObject } from "../app/capability";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { navGroupNames } from "../app/testing/shellharness";
 import { translate } from "../i18n";
+import type { RbacObject } from "../lib/capability";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   expectNavSettlesTo,
   floorPlus,
@@ -109,10 +109,10 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   ai_routing: ["read", "update"],
   automation: ["read", "create", "update"],
   ai_diagnostics: ["read"],
-  // What ModelCostsCard writes. AI usage opens on `ai_diagnostics` and is ACTED
-  // on through the rate table beside it, so a fixture meaning "every page" needs
-  // both.
+  // What the model prices panel on AI models writes.
   ai_model_rate: ["read", "create", "update"],
+  // AI usage opens on `ai_diagnostics` and is acted on through the allowance.
+  ai_budget: ["read", "update"],
   contact: ["read"],
   // What opens Privacy & retention now that `contact:read` does not.
   retention_policy: ["read", "create", "update"],
@@ -197,10 +197,8 @@ const SEEDED_READS: GrantSpec = {
 // migration 0261 grants to admin and ops and to nobody else — is what opens
 // Seats & license.
 //
-// `ai_model_rate` opens AI usage and NOT Model calls, which is the two entries
-// differing rather than a gap in this fixture: AI usage unions the model prices
-// with `ai_diagnostics:read` because a rate-sheet author belongs on the page
-// carrying the table, and Model calls asks `ai_diagnostics:read` alone.
+// `ai_model_rate` opens AI models, where the model prices panel sits. AI usage
+// asks `ai_diagnostics:read` or `ai_budget:read`; the call log asks the first.
 const SEEDED_OPS_READS: GrantSpec = {
   ...SEEDED_READS,
   ai_model_rate: ["read"],
@@ -278,7 +276,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "capture",
   "integrations",
   "knowledge",
-  "usage",
+  "models",
   "automations",
   "privacy",
   // The installation_settings update ops holds, which also opens Company.

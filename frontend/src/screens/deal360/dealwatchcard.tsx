@@ -11,15 +11,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { DEAL_COMMITMENTS_KEY } from "../activitykeys";
+import { DEAL_COMMITMENTS_KEY } from "../../lib/activitykeys";
+import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { DismissClaimButton } from "../claimdismiss";
-import { unwrap } from "../common";
 import "./deal360.css";
 
 type DealCommitments = components["schemas"]["DealCommitments"];

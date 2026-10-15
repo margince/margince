@@ -1,21 +1,27 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { type CreateField, CreateRecordModal } from "../components/create";
+import { EditAction } from "../components/edit";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { type CreateField, CreateRecordModal } from "./create";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   CRITERION_KIND_LABEL,
   CRITERION_KINDS,
   type CriterionKind,
   criterionKindOf,
 } from "./criterionkinds";
-import { EditAction } from "./edit";
+import { useLegalReviewAvailable } from "./legalreviews.queries";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -35,27 +41,19 @@ const BUYER_KINDS: readonly CriterionKind[] = [
   "terms_accepted",
 ];
 
-/**
- * A stage's exit criteria, inside the stage's row on the pipelines card.
- *
- * Terminal stages are the interesting case: won and lost are where a deal
- * stops, so the section says so and offers no Add. That is the server's rule
- * too, and asking it first would still be right — but a control that only
- * exists to be refused is worse than one that is never drawn.
- */
+/** A stage's exit criteria, inside the stage's row on the pipelines card. */
 export function StageExitCriteria({
   stageId,
-  semantic,
+  stageName,
   canEdit,
 }: Readonly<{
   stageId: string;
-  semantic: components["schemas"]["Stage"]["semantic"];
+  stageName: string;
   canEdit: boolean;
 }>) {
   const t = useT();
-  const terminal = semantic === "won" || semantic === "lost";
   const query = useQuery({
-    queryKey: ["stage-exit-criteria", stageId],
+    queryKey: criteriaKey(stageId),
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/stages/{id}/exit-criteria", {
@@ -64,13 +62,8 @@ export function StageExitCriteria({
       );
       return data.data;
     },
-    // A terminal stage can hold none, so the read is not worth a round trip.
-    enabled: !terminal,
   });
 
-  if (terminal) {
-    return <p>{t("stage.criteria.terminal")}</p>;
-  }
   // Sorted here as well as in the query, exactly as PipelineRow sorts its
   // stages: position is what the reader is promised, and a list that depended
   // on the server's order would reorder itself the day a caching layer or a
@@ -121,7 +114,7 @@ export function StageExitCriteria({
           />
         ))}
       </ul>
-      {canEdit && <CriterionCreate stageId={stageId} />}
+      {canEdit && <CriterionCreate stageId={stageId} stageName={stageName} />}
     </div>
   );
 }
@@ -136,10 +129,11 @@ function CriterionRow({
   canEdit: boolean;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   return (
     <li className="criterion-row">
       <span className="criterion-label">{criterion.label}</span>
-      <span className="t-caption">{criterion.key}</span>
+      <span className="t-caption criterion-key">{criterion.key}</span>
       <Badge>{t(CRITERION_KIND_LABEL[criterion.kind])}</Badge>
       <Badge tone={criterion.required ? "warning" : undefined}>
         {criterion.required
@@ -149,11 +143,11 @@ function CriterionRow({
       {canEdit && (
         <span className="criterion-verbs">
           <EditAction<Criterion>
-            label={t("stage.criteria.edit")}
+            label={t("stage.criteria.editOf", { name: criterion.label })}
             savedMessage={(saved) =>
               t("record.saveDone", { name: saved.label })
             }
-            invalidate="stage-exit-criteria"
+            invalidate="pipelines"
             recordKey="stage"
             record={{
               id: criterion.id,
@@ -163,9 +157,9 @@ function CriterionRow({
               required: String(criterion.required),
               hint: criterion.hint ?? "",
             }}
-            fields={criterionEditFields(t)}
+            fields={criterionEditFields(t, criterion.kind)}
             update={async (values, _rows, opened) => {
-              return unwrap(
+              const saved = unwrap(
                 await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
                   params: {
                     path: { id: stageId, criterion_id: criterion.id },
@@ -179,6 +173,9 @@ function CriterionRow({
                   body: criterionEditBody(values),
                 }),
               );
+              // The edit form refreshes the pipelines; this list is read apart.
+              queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
+              return saved;
             }}
           />
           <CriterionRemove criterion={criterion} stageId={stageId} />
@@ -188,18 +185,54 @@ function CriterionRow({
   );
 }
 
-function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
+function CriterionCreate({
+  stageId,
+  stageName,
+}: Readonly<{ stageId: string; stageName: string }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const stageNameId = useId();
+  return (
+    <>
+      <span id={stageNameId} className="sr-only">
+        {stageName}
+      </span>
+      <Button
+        data-testid={`new-criterion-${stageId}`}
+        aria-describedby={stageNameId}
+        onClick={() => setOpen(true)}
+      >
+        {t("stage.criteria.add")}
+      </Button>
+      <CriterionCreateDialog
+        stageId={stageId}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+/** The new-criterion form on its own, for a verb that lives outside the editor. */
+export function CriterionCreateDialog({
+  stageId,
+  open,
+  onClose,
+}: Readonly<{ stageId: string; open: boolean; onClose: () => void }>) {
+  const t = useT();
   const queryClient = useQueryClient();
+  const legalReview = useLegalReviewAvailable();
   const mutation = useMutation({
-    mutationFn: async (values: Record<string, string>) => {
+    mutationFn: async (
+      draft: Readonly<{ stageId: string; values: Record<string, string> }>,
+    ) => {
+      const { values } = draft;
       return unwrap(
         await api.POST("/stages/{id}/exit-criteria", {
-          params: { path: { id: stageId } },
+          params: { path: { id: draft.stageId } },
           body: {
-            key: values.key,
-            label: values.label,
+            key: values.key ?? "",
+            label: values.label ?? "",
             kind: criterionKindOf(values.kind),
             required: values.required !== "false",
             ...(values.hint ? { hint: values.hint } : {}),
@@ -207,29 +240,24 @@ function CriterionCreate({ stageId }: Readonly<{ stageId: string }>) {
         }),
       );
     },
-    onSuccess: () => {
-      setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["stage-exit-criteria"] });
+    onSuccess: (_created, draft) => {
+      onClose();
+      refreshCriteria(queryClient, draft.stageId);
     },
   });
   return (
-    <>
-      <Button
-        data-testid={`new-criterion-${stageId}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.criteria.add")}
-      </Button>
-      <CreateRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("stage.criteria.add")}
-        fields={criterionCreateFields(t)}
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        onSubmit={(values) => mutation.mutate(values)}
-      />
-    </>
+    <CreateRecordModal
+      open={open}
+      onClose={() => {
+        mutation.reset();
+        onClose();
+      }}
+      title={t("stage.criteria.add")}
+      fields={criterionCreateFields(t, legalReview === true)}
+      pending={mutation.isPending}
+      error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      onSubmit={(values) => mutation.mutate({ stageId, values })}
+    />
   );
 }
 
@@ -244,24 +272,28 @@ function CriterionRemove({
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (target: Criterion) => {
       unwrap(
         await api.DELETE("/stages/{id}/exit-criteria/{criterion_id}", {
           params: {
-            path: { id: stageId, criterion_id: criterion.id },
-            ...ifMatch(requireVersion(criterion.version)),
+            path: { id: stageId, criterion_id: target.id },
+            ...ifMatch(requireVersion(target.version)),
           },
         }),
       );
     },
     onSuccess: () => {
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["stage-exit-criteria"] });
+      refreshCriteria(queryClient, stageId);
     },
   });
   return (
     <>
-      <Button variant="ghost" onClick={() => setOpen(true)}>
+      <Button
+        variant="ghost"
+        aria-label={t("stage.criteria.removeOf", { name: criterion.label })}
+        onClick={() => setOpen(true)}
+      >
         {t("stage.criteria.remove")}
       </Button>
       <ConfirmModal
@@ -270,7 +302,7 @@ function CriterionRemove({
         title={t("stage.criteria.removeTitle")}
         confirmLabel={t("stage.criteria.remove")}
         confirmVariant="danger"
-        onConfirm={() => mutation.mutate()}
+        onConfirm={() => mutation.mutate(criterion)}
         pending={mutation.isPending}
         error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
       >
@@ -280,8 +312,24 @@ function CriterionRemove({
   );
 }
 
-function kindOptions(t: ReturnType<typeof useT>) {
-  return CRITERION_KINDS.map((kind) => ({
+// Not under ["pipelines"]: every stage reorder would refetch each open editor.
+function criteriaKey(stageId: string) {
+  return ["stage-exit-criteria", stageId] as const;
+}
+
+// A criterion write also moves the counts the stage table reads.
+function refreshCriteria(queryClient: QueryClient, stageId: string) {
+  queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+  queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
+}
+
+// The server keeps a criterion from turning into, or out of, legal_reviewed,
+// and offers the kind only while legal review is switched on.
+function kindOptions(
+  t: ReturnType<typeof useT>,
+  admits: (kind: CriterionKind) => boolean,
+) {
+  return CRITERION_KINDS.filter(admits).map((kind) => ({
     value: kind,
     label: t(CRITERION_KIND_LABEL[kind]),
   }));
@@ -294,7 +342,10 @@ function requiredOptions(t: ReturnType<typeof useT>) {
   ];
 }
 
-function criterionCreateFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionCreateFields(
+  t: ReturnType<typeof useT>,
+  legalReview: boolean,
+): CreateField[] {
   return [
     {
       key: "key",
@@ -305,29 +356,39 @@ function criterionCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         KEY_SHAPE.test(value) ? undefined : t("stage.criteria.keyHint"),
     },
     { key: "label", label: "stage.criteria.label", required: true },
-    ...criterionShapeFields(t),
+    ...criterionShapeFields(
+      t,
+      (kind) => legalReview || kind !== "legal_reviewed",
+    ),
   ];
 }
 
 // The edit form omits `key`: evidence matches a criterion by key across an
 // edit, so renaming one would orphan every claim already recorded under it.
 // The contract has no key field on the PATCH body either.
-function criterionEditFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionEditFields(
+  t: ReturnType<typeof useT>,
+  current: CriterionKind,
+): CreateField[] {
+  const legal = current === "legal_reviewed";
   return [
     { key: "label", label: "stage.criteria.label", required: true },
-    ...criterionShapeFields(t),
+    ...criterionShapeFields(t, (kind) => (kind === "legal_reviewed") === legal),
   ];
 }
 
 // The three fields both forms share, spelled once.
-function criterionShapeFields(t: ReturnType<typeof useT>): CreateField[] {
+function criterionShapeFields(
+  t: ReturnType<typeof useT>,
+  admits: (kind: CriterionKind) => boolean,
+): CreateField[] {
   return [
     {
       key: "kind",
       label: "stage.criteria.kind",
       type: "select",
       required: true,
-      options: kindOptions(t),
+      options: kindOptions(t, admits),
     },
     {
       key: "required",

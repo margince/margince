@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { ConfirmSubmissionsPanel } from "./privacy.corrections";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConfirmSubmissionsPanel } from "./privacy.corrections";
 
 // WHAT CONTACTS TYPED INTO THE LINK WE MAILED THEM, and who decides it.
 //
@@ -106,10 +106,11 @@ export const DecidingOne: Story = {
     // Every waiting row carries the verb, so the press names WHICH one: the
     // correction, because the pair of answers it opens is the subject here and
     // the removal's read differently. A bare role lookup finds two and rejects.
-    const decide = await canvas.findAllByRole("button", {
+    const [decide] = await canvas.findAllByRole("button", {
       name: /^Decide on request from/,
     });
-    await userEvent.click(decide[0]);
+    if (!decide) throw new Error("no waiting request offers a decision");
+    await userEvent.click(decide);
   },
 };
 

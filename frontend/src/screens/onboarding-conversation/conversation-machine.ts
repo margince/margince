@@ -287,9 +287,10 @@ function applyEvent(
           entry.kind === "narration" &&
           entry.id.slice(entry.id.indexOf(":") + 1) === event.entry.id,
       );
-      if (index !== -1) {
+      const prior = state.thread[index];
+      if (prior !== undefined) {
         const thread = [...state.thread];
-        thread[index] = { ...event.entry, id: state.thread[index].id };
+        thread[index] = { ...event.entry, id: prior.id };
         return { ...state, thread };
       }
       return withEntries(state, {}, [event.entry]);

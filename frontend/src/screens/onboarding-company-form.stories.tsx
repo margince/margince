@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import {
   type CompanyDraft,
   type CompanyFieldName,
   EMPTY_DRAFT,
 } from "./onboarding";
 import { CompanyStep } from "./onboarding-company-form";
-import { StoryProviders } from "./story-utils";
 import "./onboarding.css";
 
 // The reviewable company form: the field groups at the house rhythm, the

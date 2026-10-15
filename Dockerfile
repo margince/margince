@@ -296,6 +296,10 @@ ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION
 # environment is the build's and the browser only ever sees the bundle.
 ARG MARGINCE_RELEASE_VERSION=dev
 ENV MARGINCE_RELEASE_VERSION=$MARGINCE_RELEASE_VERSION
+# The core release an instance pins, compiled into the bundle for the account
+# menu. Empty on a core-only build.
+ARG MARGINCE_CORE_VERSION=""
+ENV MARGINCE_CORE_VERSION=$MARGINCE_CORE_VERSION
 RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
     pnpm gen:composed-types && pnpm gen:events:composed && pnpm build:composed
 
@@ -366,7 +370,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── web: runtime ──────────────────────────────────────────────────────────────
 # nginx-unprivileged runs as a non-root user (uid 101) and listens on 8080.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:b54ac358b83fc6c965793fd271839b4ea4cdb6e99895bb19618cbc2ca152d972 AS web
+FROM nginxinc/nginx-unprivileged:alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434 AS web
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/frontend/dist /usr/share/nginx/html

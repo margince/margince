@@ -74,6 +74,9 @@ type LogActivityInput struct {
 	RemindAt      *time.Time
 	AssigneeID    *ids.UserID
 	HostUserID    *ids.UserID
+	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
+	// whoever logged it; each is stamped as an our-side participant.
+	AttendeeUserIDs []ids.UserID
 	// ClaimsHostSlot marks a meeting that HOLDS its host's hour, which is what
 	// activity_meeting_no_overlap refuses a second of. Only BookMeeting sets
 	// it: a booking door takes a slot on somebody's calendar, and taking one

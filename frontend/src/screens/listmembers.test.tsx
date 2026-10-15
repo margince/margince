@@ -4,12 +4,17 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { ListScreen } from "./listpage";
 import {
   LIVE_ID,
   listsMe,
@@ -18,8 +23,13 @@ import {
   members,
   SHORTLIST_ID,
   shortlist,
-} from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ListScreen } from "./listpage";
 
 // A list's members are acted on as explicit records: the reader ticks them, or
 // selects every member the list shows them, and the bulk dialog previews the
@@ -66,8 +76,25 @@ function openList(listID: string, routes: Routes) {
 }
 
 const selectMiTek = en["bulk.selectRow"].replace("{name}", "MiTek");
+const selectAll42 = en["lists.members.selectAll_other"].replace(
+  "{count}",
+  "42",
+);
 
 describe("acting on a list's members", () => {
+  it("draws the members table as the Members panel's own content, with Select all in its head", async () => {
+    openList(LIVE_ID, {});
+    await screen.findByText("MiTek");
+    const region = screen.getByRole("region", {
+      name: en["lists.members.title"],
+    });
+    expect(region.querySelector(":scope > .lt")).not.toBeNull();
+    expect(region.querySelector(".panel-body .lt")).toBeNull();
+    expect(
+      within(region).getByRole("button", { name: selectAll42 }),
+    ).toBeInTheDocument();
+  });
+
   it("offers the bulk verbs over a ticked member, and no Shortlist removal on a Live List", async () => {
     const user = userEvent.setup();
     openList(LIVE_ID, {});
@@ -161,11 +188,7 @@ describe("acting on a list's members", () => {
       },
     });
     await screen.findByText("MiTek");
-    await user.click(
-      screen.getByRole("button", {
-        name: en["lists.members.selectAll_other"].replace("{count}", "42"),
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: selectAll42 }));
     expect(
       await screen.findByText(en["lists.members.selectAllCappedTitle"]),
     ).toBeInTheDocument();
@@ -204,11 +227,7 @@ describe("acting on a list's members", () => {
       },
     });
     await screen.findByText("MiTek");
-    await user.click(
-      screen.getByRole("button", {
-        name: en["lists.members.selectAll_other"].replace("{count}", "42"),
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: selectAll42 }));
     const selected = (n: number) =>
       en["bulk.selected_other"].replace("{count}", String(n));
     expect(await screen.findByText(selected(500))).toBeInTheDocument();

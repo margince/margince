@@ -111,7 +111,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -138,13 +138,22 @@ help: ## List targets with their descriptions (the default goal)
 #
 # A phase that fails is never closed, so a table only ever describes a run that
 # got to the end.
+#
+# CHECK_LEGS are the passes the fan-out runs. CI splits them over two jobs, so
+# lint and the unit tests each get a whole runner: `deterministic-gates` passes
+# CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
+# gates/checklegsplit_test.go fails if the two stop covering every leg.
+TEST_LEGS   := test test-extensions
+STATIC_LEGS := lint vet arch-lint
+CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
+
 check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
 	@bash ../scripts/phase-timer.sh start "backend: build (host + windows)"
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
-	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
-	$(MAKE) -j4 test lint vet arch-lint test-extensions
+	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
+	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -153,6 +162,9 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
+
+check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
+	$(MAKE) -j3 $(STATIC_LEGS)
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
@@ -765,6 +777,11 @@ GOVULNCHECK ?= $(call resolve-gate-tool,govulncheck,golang\.org/x/vuln,$(GOVULNC
 vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 	$(GOVULNCHECK) ./...
 
+# -v because the scheduled lane reads the VENDOR_LIVE line, and go test hides a
+# passing test's output without it. The key comes from MARGINCE_SURFE_LIVE_KEY.
+vendor-live: ## Read Surfe's credit balance through the production adapter (network; needs MARGINCE_SURFE_LIVE_KEY; fails without it)
+	$(GO) test -count=1 -v -tags vendorlive ./internal/modules/integrations/surfe/ -run TestSurfeLiveCreditRead
+
 # Fresh-machine bootstrap. golangci-lint is the one gate binary `make check`
 # runs from an install rather than a pinned `go run`; the lint target
 # resolves it out of GOPATH/bin itself (see GOLANGCI_LINT above), so no
@@ -799,7 +816,7 @@ tools: ## Install every gate binary at its pinned version (fresh-machine bootstr
 
 # `git rev-parse --git-path hooks` honors core.hooksPath, so this works
 # both on a plain clone (.git/hooks) and after the root `make hooks`
-# switched the repo to .githooks/ for the pre-push craft gate.
+# switched the repo to .githooks/.
 hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 	install -m 0755 ../scripts/pre-commit "$$(git rev-parse --git-path hooks)/pre-commit"
 

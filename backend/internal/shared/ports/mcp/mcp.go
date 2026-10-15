@@ -115,6 +115,10 @@ type ToolSpec struct {
 	// RequiredScope are meaningless on a HumanOnly spec and must be left at
 	// their zero value by whatever registers one.
 	HumanOnly bool
+	// Unlisted marks a tool that is never offered: a router fronts it, or a
+	// listed tool replaces it. It still runs when called by name. Its name is
+	// the approval kind it stages and the key of its tier floor and retry claims.
+	Unlisted bool
 	// ConfirmsInConversation marks a tool whose confirmation happens in the
 	// conversation that asked for it, never in the approval inbox. An exhausted
 	// volume budget refuses such a call outright instead of asking the connecting
@@ -200,8 +204,9 @@ const (
 // searching for a string that was no longer anywhere and passing on nothing.
 //
 // It reads as a bare clause rather than a sentence so each surface can frame it
-// in its own voice: the schema prefixes "Optional.", the frame names the
-// argument and its type first.
+// in its own voice. Both frames lead with what omitting the key costs, which is
+// the fact a caller deciding whether to send one needs. The schema states it
+// before this clause, and the frame names the argument and its type first.
 const ReservedIdempotencyKeyRule = "Same key, same result; a key reused with other arguments is refused."
 
 // ConflictingSourcesRule is what a model does when two things it was given

@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-
-import { ImportContextTag, ImportContextTagSummary } from "./import";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ImportContextTag, ImportContextTagSummary } from "./import.contexttag";
 
 // The import wizard's two tag surfaces, catalogued apart from the wizard: the
 // flow past the first step needs a real file drop, which a story cannot

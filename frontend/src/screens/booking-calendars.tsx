@@ -1,8 +1,9 @@
 import { Field } from "../design-system/atoms";
+import { QueryGate } from "../design-system/querystates";
 import { MultiSelect, Select } from "../design-system/select";
+import { providerName } from "../format/connectorprovider";
 import { useT } from "../i18n";
 import { useBookingCalendar } from "./booking-calendar-state";
-import { QueryGate } from "./common";
 import { missingCalendarWriteGrant } from "./connector-status";
 
 export function BookingCalendars({
@@ -55,9 +56,7 @@ export function BookingCalendars({
     <div className="book-form">
       <p>
         {t("scheduling.calendarConnected", {
-          account:
-            connection?.account_label ??
-            (provider === "gcal" ? "Google Calendar" : "Microsoft Outlook"),
+          account: connection?.account_label ?? providerName(provider, t),
         })}
       </p>
       <QueryGate query={query} pendingLabel={t("common.loading")}>

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { OwnDomainsCard } from "./own-domains";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OwnDomainsCard } from "./own-domains";
 
 // Which domains are OURS — the posture the two capture judgements below it read.
 const ADMIN_ENTERED = {

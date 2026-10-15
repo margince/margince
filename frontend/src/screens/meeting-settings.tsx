@@ -2,23 +2,24 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SaveBar } from "../design-system/savebar";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingProfileScreen } from "./booking-profile";
-import { QueryGate, throwProblem, unwrap, useMe } from "./common";
 import { useConnectors } from "./connectors";
 import {
   CalendarSection,
   DefaultFields,
   LimitFields,
-  QuickLink,
   SetupChecklist,
 } from "./meeting-settings-sections";
 import { useSchedulingProfile } from "./scheduling-profile-query";
@@ -122,7 +123,6 @@ function MeetingSettingsForm({
       (calendar.needsCalendar && (!ready || !selected?.writable)));
   return (
     <div className="book-form">
-      <QuickLink profile={profile} />
       <SetupChecklist
         calendar={ready && !!selected?.writable}
         hours={chosen}
@@ -354,7 +354,7 @@ function useMeetingCalendar(form: Profile, baseline: Profile) {
         (item.provider === "gcal" || item.provider === "graphcal") &&
         item.status !== "disconnected",
     ) ?? [];
-  const sole = providers.length === 1 ? providers[0].provider : "";
+  const sole = providers.length === 1 ? (providers[0]?.provider ?? "") : "";
   const provider = providers.some((item) => item.provider === form.provider)
     ? form.provider
     : sole === "gcal" || sole === "graphcal"

@@ -2,7 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { stable } from "../format/collate";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 // The companies a deals board names, resolved to the names and marks its
 // cards draw.
@@ -86,7 +86,7 @@ export function useCompanyMarks(
     queries: batches.map((batch) => ({
       queryKey: ["companies", "marks", batch],
       queryFn: async (): Promise<Map<string, CompanyMark>> => {
-        // A refused read is held as an error, as screens/entityref.tsx does. Each
+        // A refused read is held as an error, as components/entityref.tsx does. Each
         // card it covers then says its company did not load, not drawing none.
         const data = unwrap(
           await api.GET("/companies", {

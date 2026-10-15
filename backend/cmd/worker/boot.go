@@ -70,6 +70,7 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	cfg.listsEnabled = deployCfg.Lists.Enabled
 	cfg.ratesFx = deployCfg.Rates.Fx
 	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
+	cfg.csvImportCap = deployCfg.EffectiveUploads().CSVImport
 	return deployCfg, nil
 }
 

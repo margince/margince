@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CaptureActivityTab } from "./capture-activity";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The states worth seeing side by side are the ones that differ in what the
 // surface may HONESTLY say: content it holds, content it deliberately does not,
@@ -176,6 +180,31 @@ export const WithPayloadCapture: Story = {
   }),
 };
 
+// A long address and subject truncate inside their column instead of widening
+// the table. At 390px the row folds to two lines.
+const LONG = {
+  ...WINDOW,
+  payload_capture_enabled: true,
+  data: [
+    {
+      ...ENTRIES[0],
+      counterparty:
+        "maximilian.oberstleutnant-von-hohenzollern@procurement.example",
+      subject:
+        "Quarterly procurement review: revised framework agreement, annex C pricing schedule and open questions from legal",
+    },
+    { ...ENTRIES[1], counterparty: "colleague@acme.com", subject: "Lunch?" },
+  ],
+};
+
+export const LongPayloads: Story = { render: story(LONG) };
+
+export const LongPayloadsPhone: Story = {
+  render: story(LONG),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 // A manager holds capture_trace, so the shared-channel toggle appears. A rep
 // never sees it — hidden rather than disabled, because a control you cannot use
 // is an invitation to ask why.
@@ -207,19 +236,14 @@ export const WithPayloadCaptureDark: Story = {
   globals: { theme: "dark" },
 };
 
-// A counter used as a filter. The count line then states BOTH numbers, at the
-// head of the log's own row: the strip counts the whole window and the filter
-// narrows what has been loaded, so "1" under a counter reading 6 has to say
-// which of the two it is.
+// A counter used as a filter. The line above the table names both the rows
+// loaded and the window's count.
 export const Filtered: Story = {
   render: story(WINDOW),
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
-    // The log is behind a disclosure now, so the story opens it first: the
-    // count line this story exists to show sits inside it, and a click with
-    // nothing visible behind it demonstrates the opposite of the point.
-    await user.click(await canvas.findByText("Messages"));
+    await canvas.findByRole("table", { name: "Messages" });
     await user.click(await canvas.findByRole("button", { name: /^internal/i }));
   },
 };

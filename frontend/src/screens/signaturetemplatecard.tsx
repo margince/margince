@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCanWrite } from "../app/capability";
 import { Button, Field, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { SIGN_OFF_QUERY, useSignOff } from "./composesignoff";
 import { SignatureHtml } from "./signaturehtml";
 
@@ -51,6 +53,8 @@ function useSaveSignatureTemplate() {
 export function SignatureTemplateCard() {
   const t = useT();
   const canEdit = useCanWrite("installation_settings", "update");
+  // The read-only line waits for /me, so a reader who may edit never sees it.
+  const readOnly = useMe().isSuccess && !canEdit;
   const query = useSignatureTemplate();
   const save = useSaveSignatureTemplate();
   const [draft, setDraft] = useState<string | null>(null);
@@ -64,6 +68,7 @@ export function SignatureTemplateCard() {
     <Panel title={t("signatureTemplate.title")}>
       <PanelBody>
         <PanelIntro>{t("signatureTemplate.sub")}</PanelIntro>
+        {readOnly && <p>{t("installationSettings.readOnly")}</p>}
         <QueryGate query={query} pendingLabel={t("signatureTemplate.title")}>
           {(stored) => {
             const shown = draft ?? stored.template;
@@ -89,17 +94,19 @@ export function SignatureTemplateCard() {
                 </Field>
                 <p className="t-caption">{t("signatureTemplate.hint")}</p>
                 <ErrorLine error={save.isError ? save.error : undefined} />
-                <div className="actions">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={!canEdit || shown === stored.template}
-                    pending={save.isPending}
-                    busyLabel={t("settings.signatureSaving")}
-                  >
-                    {t("record.save")}
-                  </Button>
-                </div>
+                {canEdit && (
+                  <div className="actions">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={shown === stored.template}
+                      pending={save.isPending}
+                      busyLabel={t("settings.signatureSaving")}
+                    >
+                      {t("record.save")}
+                    </Button>
+                  </div>
+                )}
                 {preview?.html ? (
                   <SignatureHtml
                     html={preview.html}

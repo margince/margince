@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -106,7 +107,9 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
+			Calendar:     slices.Contains(calendarProviders, concern.Provider),
 			FailingSince: concern.FailingSince,
+			LastSyncedAt: concern.LastSyncedAt,
 		})
 	}
 	return out, nil

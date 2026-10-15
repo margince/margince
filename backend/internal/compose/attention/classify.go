@@ -16,6 +16,7 @@ package attention
 // right ones.
 
 import (
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -65,7 +66,12 @@ func appendLane(
 		return rows
 	}
 	for _, item := range *lane {
-		rows = append(rows, classify(item, asOf))
+		row := classify(item, asOf)
+		// Read by no classifier, so carried here once for every lane.
+		if item.SubjectMovedAt != nil {
+			row.subjectMovedAt = *item.SubjectMovedAt
+		}
+		rows = append(rows, row)
 	}
 	return rows
 }
@@ -94,6 +100,7 @@ func base(
 		// label is what the group says. Forwarding only the first is how the
 		// client came to interpolate an identity into a sentence.
 		CauseLabel: item.CauseLabel,
+		Connection: item.Connection,
 		Subject:    item.Subject,
 		// Carried so the worklist's duty dialog shows what the deadline rests on.
 		Acquisition: item.Acquisition,
@@ -140,6 +147,7 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
 	}
+	row.Because = appendReadOnly(row)
 	return ranked{
 		ownerRef:   ownedByWhoeverIsReading(),
 		item:       row,
@@ -261,6 +269,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if item.AssigneeId == nil {
 		row.Because = append(row.Because, reason("unassigned", nil))
 	}
+	row.Because = appendReadOnly(row)
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -292,4 +301,13 @@ func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
 	default:
 		return nil
 	}
+}
+
+// appendReadOnly says why a task or a promise offers no Done. The reader may
+// read the record and not change it, so the verb that finishes it is withheld.
+func appendReadOnly(row crmcontracts.WorklistItem) []crmcontracts.WorklistReason {
+	if slices.Contains(row.Actions, crmcontracts.WorklistItemActionsComplete) {
+		return row.Because
+	}
+	return append(row.Because, reason("read_only", nil))
 }

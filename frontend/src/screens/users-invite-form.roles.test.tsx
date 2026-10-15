@@ -7,10 +7,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { meFixture } from "../testing/mefixture";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
 // The invite form's role: it starts on the ordinary seat when the reader may

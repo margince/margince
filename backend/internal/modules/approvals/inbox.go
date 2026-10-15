@@ -69,13 +69,15 @@ type row struct {
 	// reader is shown. Nil on every row whose effect ran.
 	EffectFailedAt *time.Time
 	EffectFailure  *string
+	// EffectRanAt is when the released work last ran to the end.
+	EffectRanAt *time.Time
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
 	target_entity_type, target_entity_id, target_version,
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
-	bundle_id, evidence, effect_failed_at, effect_failure`
+	bundle_id, evidence, effect_failed_at, effect_failure, effect_ran_at`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
@@ -83,7 +85,7 @@ func scan(r pgx.Row) (row, error) {
 		&a.TargetType, &a.TargetID, &a.TargetVersion,
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
-		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure)
+		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure, &a.EffectRanAt)
 	return a, err
 }
 
@@ -340,7 +342,7 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if in.failedDecider != nil {
-		terms = append(terms, fmt.Sprintf("effect_failed_at IS NOT NULL AND decided_by = $%d", arg(*in.failedDecider)))
+		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing))
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

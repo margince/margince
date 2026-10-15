@@ -1,14 +1,15 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Button, EmptyState } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
-import { MayBeDoneVerbs } from "./contactmaybedone";
-import { useMemberNames } from "./membernames";
+import { useMemberNames } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
+import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
 import { MoveButton } from "./movebutton";
 import {
   basisAddsARecord,
@@ -124,6 +125,7 @@ function MomentMove({
 }>) {
   const t = useT();
   const secondary = moment.secondary_actions ?? [];
+  const notNow = useMomentSetAside(view.contact.id);
   return (
     <FoundMove
       suggested
@@ -189,9 +191,13 @@ function MomentMove({
                 onAction={onAction}
               />
             ))}
+            {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
       }
+      // The may-be-done card carries its own "Not yet", which is this same
+      // dismissal, so a second verb beside it would offer one act twice.
+      defer={moment.may_be_done ? undefined : notNow.deferOf(moment)}
     />
   );
 }

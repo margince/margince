@@ -12,6 +12,21 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **Core release in the account menu.** An image built with `CORE_VERSION`
+  set shows two lines at the foot of the account menu: the instance release and
+  the core release. A build without it keeps the single version line.
+- **One jurisdiction per installation.** An admin chooses the law the
+  installation follows at first setup, in `workspace.country` in
+  `margince.yaml`, or on **Settings → Governance → Jurisdiction**. It sets how
+  long business mail is kept, the due date of a privacy request and the rules
+  for sales mail. The page shows what the choice changes and lists the pack's
+  documents to read and download; the German employee notices moved there from
+  `docs/compliance`. A privacy request filed by hand now gets its due date
+  worked out, and a later date than the law allows is refused. **On upgrade**,
+  a stored country is kept. An installation with no stored country and no
+  `workspace.country` in its file stays unset, keeping mail for the longest
+  built-in floor, until an admin chooses the law. Boot
+  refuses a stored jurisdiction the build carries no pack for.
 - **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
   shows two ways to use a passport. **In your AI tool** has **Download skill**,
   and **In your own code** has a curl, Python and JavaScript example that reads

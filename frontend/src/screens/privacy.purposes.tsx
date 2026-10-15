@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -21,8 +20,11 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { QueryStates, unwrap, useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
