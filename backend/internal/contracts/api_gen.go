@@ -37510,7 +37510,7 @@ type ImportPresetLinkType string
 // ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
 type ImportProblemKind string
 
-// ImportReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+// ImportReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 type ImportReasonCode string
 
 // ImportRowIssue One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
@@ -37533,7 +37533,7 @@ type ImportRowIssue struct {
 	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
 	Reason string `json:"reason"`
 
-	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 	ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 
 	// Value The cell value at fault, when one is, so a screen can group the rows that share it.
@@ -38015,7 +38015,7 @@ type ImportUndoReport struct {
 		// Reason What kept it from reversing, in terms the operator can act on — never a database or driver message.
 		Reason string `json:"reason"`
 
-		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"errored"`
 
@@ -38064,7 +38064,7 @@ type ImportUndoReport struct {
 		// Reason Why the row was left in place, in terms the operator can act on. Absent in a report written before kept rows carried one.
 		Reason *string `json:"reason,omitempty"`
 
-		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"kept"`
 
@@ -38099,7 +38099,7 @@ type ImportUnresolvedLink struct {
 	// Reason Why it was not applied, in the words of the contact who made the file.
 	Reason string `json:"reason"`
 
-	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 	ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 
 	// To What the file named as the other end — a company name, not an id, because no id was found.
