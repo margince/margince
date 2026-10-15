@@ -1304,8 +1304,8 @@ up)
     echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
   fi
   # The dev posture's own differences — the Reset data button among them — live
-  # in the TRACKED config/margince.dev.yaml, which MARGINCE_ENV=dev selects on
-  # top of the file above. They used to be appended here, which meant the most
+  # in the TRACKED config/margince.dev.yaml, which the api and the worker read
+  # as --config-file on top of the file above. They used to be appended here, which meant the most
   # destructive capability a dev stack has was armed by a heredoc no review ever
   # saw as a diff, in a file git does not track.
   # Report which deployment config the api + worker are using, and its AI
