@@ -80,10 +80,10 @@ type TagInterestAnswer struct {
 	TagIDs        []ids.UUID
 }
 
-// RecordTagInterestAnswersTx stores each answer, replacing an older one, unless
-// the activity was archived, restricted, erased or edited, or a linked contact
-// archived or anonymized, while the model read it. content renders the content
-// digest for an activity alias. System-only.
+// RecordTagInterestAnswersTx stores each answer, replacing an older one. It
+// skips an answer whose activity was archived, restricted, erased or edited
+// while the model read it, or whose linked contact was archived. content
+// renders the content digest for an activity alias. System-only.
 func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary string, content func(alias string) string, answers []TagInterestAnswer) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
