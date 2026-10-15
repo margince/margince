@@ -54,9 +54,9 @@ import (
 // human asked: the value was already this installation's, in a file.
 const routingSeedActor = "routing-seed"
 
-// ResolveRouting settles the binding this process runs on: whatever the
-// database holds, and nothing else. Every role that asks gets the same answer,
-// which is the property a file read per-process cannot offer.
+// ResolveRouting settles the binding this process runs on: the boot value when
+// a boot source sets one, else whatever the database holds. Every role that
+// asks gets the same answer, which a file read per process cannot offer.
 //
 // A zero RoutingConfig means unconfigured, which is not an error: an
 // installation that has bound no models runs with its AI lanes absent, exactly
@@ -132,9 +132,9 @@ func ResolveRouting(ctx context.Context, pool *pgxpool.Pool, routingPath string,
 // answer from the offline fake — plausibly, in canned text — with the one
 // screen that looks like the fix naming the file that was already ignored.
 //
-// INSERT-ONLY, through the same settings.SeedValue the bootstrap uses, so this
-// can run on every boot of every role: an installation that has a binding keeps
-// it, and an admin's later change is never reverted by a file. That is also why
+// INSERT-ONLY, through the same config.SeedTx the bootstrap uses. So it can
+// run on every boot of every role. An installation keeps the binding it has,
+// and a file never reverts an admin's later change. That is also why
 // it takes no decision about WHICH binding wins — there is no contest. Either
 // the row is absent and the file is the only answer anybody has given, or the
 // row is present and the file is not consulted.

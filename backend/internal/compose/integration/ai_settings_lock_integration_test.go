@@ -55,8 +55,6 @@ func TestAIRoutingSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	}
 }
 
-// The environment may spell a task reset to the product's values as {}, which
-// a save drops; the overrides read back still resend as a no-op.
 // A boot binding in the per-lane shape, which names a host on each lane, reads
 // back lifted onto its provider. That reading resends as a no-op, though it is
 // not the decoded boot value field for field.
@@ -78,6 +76,8 @@ func TestABootBindingInThePerLaneShapeResendsAsANoOp(t *testing.T) {
 	}
 }
 
+// The environment may spell a task reset to the product's values as {}, which
+// a save drops; the overrides read back still resend as a no-op.
 func TestAITaskOverridesSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{
 		`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"},"cold_start":{}}`,

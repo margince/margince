@@ -442,17 +442,19 @@ func refuseRenameTx(ctx context.Context, tx pgx.Tx, c *config.Config, next *stri
 	if *next == current {
 		return nil
 	}
-	return settings.InvalidValue{
+	return c.LockFirst(Name.Key(), settings.InvalidValue{
 		Setting: Name.Key(), Code: "set_on_company_profile",
 		Reason: "the installation's name is the company's name; change it on the company profile",
-	}
+	})
 }
 
 // changeCountryTx runs the country-change hook under the setting's write lock,
 // before the new value is written. So the hook reads the country being
 // replaced, and no second change interleaves.
 func (s *InstallationSettingsStore) changeCountryTx(ctx context.Context, tx pgx.Tx, next *string) error {
-	if next == nil {
+	// A boot-set country never changes, so its save alone decides: a no-op,
+	// or a refusal as locked whether or not the value sent is valid.
+	if _, locked := s.config.Locked(Country.Key()); next == nil || locked {
 		return nil
 	}
 	raw, err := json.Marshal(*next)

@@ -8,9 +8,9 @@ package compose
 // A declared binding that did NOT store must say so, and this is the one seed
 // where silence is dangerous.
 //
-// `setting` is not workspace-scoped, so a bootstrap over a database still
-// holding a previous installation's rows keeps the old binding — and ai.Routing
-// is installation identity, so a data reset spares it too. The operator's file
+// `setting` is not workspace-scoped, so a bootstrap over a previous
+// installation's rows keeps the old binding. ai.Routing survives a data reset,
+// so a reset keeps it too. The operator's file
 // can say `sovereign`, meaning zero egress, while the installation serves a
 // cloud vendor the previous installation chose. Nothing else in the boot would
 // mention it.

@@ -206,6 +206,19 @@ func LockedChange[T any](c *Config, s *Setting[T], same func(boot T) bool) (lock
 	return true, LockedError{Key: s.Key(), Origin: origin}
 }
 
+// LockFirst answers the lock of a boot-set key in place of err, a refusal of
+// the value sent for it. A locked field then reads as locked whether or not
+// the value sent is valid.
+func (c *Config) LockFirst(key string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if origin, locked := c.Locked(key); locked {
+		return LockedError{Key: key, Origin: origin}
+	}
+	return err
+}
+
 // requireStored refuses a boot-only setting, which has no row and no gate.
 func requireStored[T any](s *Setting[T]) error {
 	if !s.Stored() {

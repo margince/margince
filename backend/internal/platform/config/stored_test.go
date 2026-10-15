@@ -228,3 +228,24 @@ func TestLockedChangeJudgesTheBootValueByTheCallersRule(t *testing.T) {
 		t.Fatalf("another value: locked %v, %v", locked, err)
 	}
 }
+
+// A refusal of the value sent for a boot-set key reads as the lock. A locked
+// field then answers 409 whether or not the value is valid. An unlocked key
+// keeps its own refusal.
+func TestLockFirstAnswersTheLockInPlaceOfARefusal(t *testing.T) {
+	refused := errors.New("must be at least 1")
+	var locked config.LockedError
+	if err := lockedCap(t).LockFirst("test.cap", refused); !errors.As(err, &locked) || !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a refusal of a locked key = %v, want the LockedError", err)
+	}
+	unlocked, err := load(t, fixture{}, storedCap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := unlocked.LockFirst("test.cap", refused); !errors.Is(err, refused) {
+		t.Fatalf("a refusal of an unlocked key = %v, want it unchanged", err)
+	}
+	if err := lockedCap(t).LockFirst("test.cap", nil); err != nil {
+		t.Fatalf("no refusal = %v, want nil", err)
+	}
+}

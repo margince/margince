@@ -188,26 +188,22 @@ func (structType[T]) Name() string { return "object" }
 
 func (s structType[T]) Parse(text string) (T, error) { return s.DecodeJSON(json.RawMessage(text)) }
 
-// KnownFields makes YAML refuse an unknown field as JSON does.
-func (structType[T]) DecodeYAML(n *yaml.Node) (T, error) {
+// DecodeYAML reads the mapping as the JSON it spells, so a file and the
+// environment decode one value through one decoder, the type's own included.
+func (s structType[T]) DecodeYAML(n *yaml.Node) (T, error) {
 	var v T
 	if n.Kind != yaml.MappingNode {
 		return v, fmt.Errorf("want a mapping, got a %s", nodeKind(n))
 	}
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	if err := enc.Encode(n); err != nil {
-		return v, fmt.Errorf("re-encoding: %w", err)
-	}
-	if err := enc.Close(); err != nil {
-		return v, fmt.Errorf("re-encoding: %w", err)
-	}
-	dec := yaml.NewDecoder(&buf)
-	dec.KnownFields(true)
-	if err := dec.Decode(&v); err != nil {
+	var generic any //craft:ignore naked-any a YAML mapping of any shape, re-spelled as JSON for the type's own decoder
+	if err := n.Decode(&generic); err != nil {
 		return v, errStructFields
 	}
-	return v, nil
+	raw, err := json.Marshal(generic)
+	if err != nil {
+		return v, errStructFields
+	}
+	return s.DecodeJSON(raw)
 }
 
 func (structType[T]) DecodeJSON(raw json.RawMessage) (T, error) {

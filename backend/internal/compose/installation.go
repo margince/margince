@@ -418,9 +418,9 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	}
 	// A declaration that did not store is REPORTED, and this is the one seed
 	// where silence would be dangerous. `setting` is not workspace-scoped, so a
-	// bootstrap over a database still holding a previous installation's rows
-	// keeps the old binding — and ai.Routing is installation identity, so a
-	// data reset spares it too. The operator's file can say `sovereign`, meaning
+	// bootstrap over a previous installation's rows keeps the old binding.
+	// ai.Routing survives a data reset, so a reset keeps it too. The operator's
+	// file can say `sovereign`, meaning
 	// zero egress, while the installation serves a cloud vendor the previous
 	// one chose. That is text leaving for somewhere nobody chose, and nothing
 	// else in the boot would mention it.

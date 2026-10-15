@@ -145,6 +145,13 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		if current.Revision != change.ExpectedRevision {
 			return apperrors.ErrVersionSkew
 		}
+		// The lock comes before validation, so a locked allowance refuses any
+		// other value as locked. Resent, it reaches the no-op below, because
+		// the current snapshot reads the boot value.
+		sameBudget := func(boot BudgetConfig) bool { return boot.Revision() == change.Config.Revision() }
+		if _, err := config.LockedChange(s.cfg, BudgetSettings, sameBudget); err != nil {
+			return err
+		}
 		// Validate the submitted config strictly BEFORE the no-op short-circuit
 		// below, so resubmitting an over-cap config unchanged is refused exactly
 		// like a fresh submission would be — the observed snapshot it would
@@ -156,10 +163,6 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		}
 		if current.Revision == change.Config.Revision() {
 			return nil
-		}
-		sameBudget := func(boot BudgetConfig) bool { return boot.Revision() == change.Config.Revision() }
-		if locked, err := config.LockedChange(s.cfg, BudgetSettings, sameBudget); locked || err != nil {
-			return err
 		}
 		raw, err := json.Marshal(change.Config)
 		if err != nil {

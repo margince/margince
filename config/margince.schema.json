@@ -270,7 +270,8 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "tokens_per_full_user"
+            "tokens_per_full_user",
+            "company_monthly_tokens"
           ],
           "properties": {
             "tokens_per_full_user": {

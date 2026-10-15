@@ -49,7 +49,7 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 	}
 	next, err := ai.TaskOverridesFromWire(req, sentTask(r))
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, h.store.LockFirst(r.Context(), ai.TaskOverridesKey, err))
 		return
 	}
 	expected, err := routingPrecondition(r.Header)

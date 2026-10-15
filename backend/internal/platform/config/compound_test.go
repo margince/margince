@@ -4,6 +4,8 @@
 package config_test
 
 import (
+	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -116,4 +118,54 @@ func TestStructRefusesTrailingData(t *testing.T) {
 			t.Fatalf("trailing data must fail: %q", text)
 		}
 	}
+}
+
+// required refuses a document that omits its one field, as a type's own JSON
+// decoding may.
+type required struct {
+	Count int `json:"count"`
+}
+
+func (r *required) UnmarshalJSON(raw []byte) error {
+	var doc struct {
+		Count *int `json:"count"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return err
+	}
+	if doc.Count == nil {
+		return errors.New("count is required")
+	}
+	r.Count = *doc.Count
+	return nil
+}
+
+// A file and the environment decode one value through one decoder, so a
+// type's own JSON decoding holds a YAML value to the same bar.
+func TestStructDecodesYAMLThroughTheTypesJSONDecoding(t *testing.T) {
+	typ := config.Struct[required]()
+	for text, ok := range map[string]bool{"count: 3": true, "{}": false} {
+		var n yaml.Node
+		if err := yaml.Unmarshal([]byte(text), &n); err != nil {
+			t.Fatal(err)
+		}
+		got, err := typ.DecodeYAML(n.Content[0])
+		_, jsonErr := typ.Parse(yamlAsJSON(t, text))
+		if (err == nil) != ok || (jsonErr == nil) != ok || (ok && got.Count != 3) {
+			t.Errorf("%q: yaml %v %v, json %v; want ok=%v from both", text, got, err, jsonErr, ok)
+		}
+	}
+}
+
+func yamlAsJSON(t *testing.T, text string) string {
+	t.Helper()
+	var doc map[string]int
+	if err := yaml.Unmarshal([]byte(text), &doc); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
 }

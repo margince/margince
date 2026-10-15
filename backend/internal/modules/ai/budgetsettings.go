@@ -24,8 +24,8 @@ const MaxMonthlyTokens int64 = 1_000_000_000_000
 
 // BudgetConfig is a company pool, not a quota imposed on each member.
 type BudgetConfig struct {
-	TokensPerFullUser    int64  `json:"tokens_per_full_user" yaml:"tokens_per_full_user"`
-	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens" yaml:"company_monthly_tokens"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
 }
 
 // UnmarshalJSON distinguishes an explicit automatic allowance from an omitted field.

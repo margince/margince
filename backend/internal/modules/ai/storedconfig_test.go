@@ -5,6 +5,9 @@ package ai
 
 import (
 	"io/fs"
+	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -109,4 +112,41 @@ func TestEachKeyConstantNamesItsSetting(t *testing.T) {
 			t.Errorf("the constant %q names a setting keyed %q", constant, s.Key())
 		}
 	}
+}
+
+// A budget in margince.yaml and the same budget in the environment load alike,
+// so neither source admits a document the other refuses.
+func TestABudgetLoadsAlikeFromTheFileAndTheEnvironment(t *testing.T) {
+	for _, doc := range []string{
+		`{"tokens_per_full_user":5,"company_monthly_tokens":777}`,
+		`{"tokens_per_full_user":5}`,
+		`{"tokens_per_full_user":0,"company_monthly_tokens":null}`,
+	} {
+		fromFile, fileErr := loadBudget(t, "ai:\n  budget: "+doc+"\n", nil)
+		fromEnv, envErr := loadBudget(t, "", []string{"MARGINCE_AI_BUDGET=" + doc})
+		if (fileErr == nil) != (envErr == nil) || !reflect.DeepEqual(fromFile, fromEnv) {
+			t.Errorf("%s: file %+v %v, environment %+v %v; want one answer", doc, fromFile, fileErr, fromEnv, envErr)
+		}
+	}
+}
+
+func loadBudget(t *testing.T, file string, environ []string) (BudgetConfig, error) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(path, []byte(file), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := config.NewRegistry(ConfigSettings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(reg, config.Sources{Args: []string{"--config", path}, Environ: environ})
+	if err != nil {
+		return BudgetConfig{}, err
+	}
+	budget, ok := config.BootVal(cfg, BudgetSettings)
+	if !ok {
+		t.Fatalf("the budget %q / %v set no boot value", file, environ)
+	}
+	return budget, nil
 }
