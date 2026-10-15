@@ -196,6 +196,29 @@ func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
 	}
 }
 
+// A won or lost deal's close date is when it closed, so a past date is no
+// lateness. Only an open deal can be overdue.
+func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
+	for semantic, probability := range map[string]int{"won": 100, "lost": 0} {
+		t.Run(semantic, func(t *testing.T) {
+			e := Setup(t)
+			dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, time.Now().UTC().AddDate(0, 0, -30))
+			if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE stage SET semantic = $1, win_probability = $3 WHERE id = (SELECT stage_id FROM deal WHERE id = $2)`, semantic, dealID, probability); err != nil {
+				t.Fatalf("closing the deal's stage: %v", err)
+			}
+			rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+
+			figures, err := e.Deals.Figures(rep, []ids.UUID{dealID})
+			if err != nil {
+				t.Fatalf("reading the deal's figures: %v", err)
+			}
+			if got := figures[dealID]; got.CloseOverdue {
+				t.Fatalf("a %s deal with a past close date reads overdue", semantic)
+			}
+		})
+	}
+}
+
 // A close date that has not yet arrived — today's or later — is not overdue.
 // Today itself is the boundary this asserts: CloseIsOverdue is a calendar-date
 // comparison, and a deal due today is due today, not late.
