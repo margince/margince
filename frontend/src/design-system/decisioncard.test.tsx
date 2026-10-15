@@ -160,7 +160,7 @@ describe("DecisionCard — what the reader is being asked", () => {
 // What a kind that has DECLARED what it shows puts on the card, against the
 // generic reading that prints the payload's own keys.
 //
-// The declarations live on the screen side (screens/approvalkind.ts) and arrive
+// The declarations live on the screen side (features/automations/approvalkind.ts) and arrive
 // here already resolved, so these tests hand the primitive what that resolution
 // produces. They are about the drawing, not the vocabulary.
 describe("DecisionCard — a kind that says what it shows", () => {

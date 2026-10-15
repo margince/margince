@@ -38,7 +38,7 @@ for the frontend; the agent surface follows the same rule. Three things follow:
 The first raw call is the LinkedIn `Connections.csv` file send. It is a
 **`/v1` call the typed client cannot make**: the client cannot build a
 `multipart` body. Its file (`screens/linkedin-import.tsx`) says so in place, and a new exception of that kind
-needs the same note. The other raw call is `screens/connected-agents.tsx`
+needs the same note. The other raw call is `features/automations/connected-agents.tsx`
 reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
@@ -295,7 +295,7 @@ The old parts stay in two places, both by design:
   and states its trust as text, not as a bar.
 - **On the staging surfaces**, whose job is to set a proposal beside what is
   stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
-  `screens/approvalrow.tsx`). Then the confirm step of onboarding
+  `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
   (`screens/onboarding-conversation/confirm-card.tsx`,
   `screens/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a

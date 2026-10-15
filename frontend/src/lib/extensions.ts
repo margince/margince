@@ -61,7 +61,7 @@ export type ExtensionScreenRegistry = Readonly<
  * add a thirteenth: enabling a unit is not the product growing a destination.
  * A unit is OFFERED in Settings instead, on the page that already holds the
  * kind of credential it is configured with — see `unitsForSecretScope` below
- * and `screens/extension-units.tsx`.
+ * and `features/automations/extension-units.tsx`.
  *
  * `RAIL_LESS_SCREENS` was reviewed with it and is unchanged: a unit's screen
  * wants the rail like any other destination, and `nav.ts` marks Settings

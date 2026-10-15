@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { busyUsage } from "../features/automations/agentallowances.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { busyUsage } from "./agentallowances.fixtures";
 import { PassportCard } from "./settings-passports";
 
 // Three passports: one in use and stopped on a used-up allowance, and one

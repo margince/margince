@@ -6,11 +6,14 @@ import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { Stack } from "../design-system/stack";
+import { approvalKindLabel } from "../features/automations/approvalkind";
+import {
+  ApprovalRow,
+  useDecisionSink,
+} from "../features/automations/approvalrow";
+import { useTargetApprovals } from "../features/automations/approvals.queries";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { approvalKindLabel } from "./approvalkind";
-import { ApprovalRow, useDecisionSink } from "./approvalrow";
-import { useTargetApprovals } from "./approvals.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being
 // read. The count alone ("27 decisions waiting") told a reader that something

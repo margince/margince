@@ -1,0 +1,966 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { objectLabel } from "../../format/rbacobjects";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { rolesKey } from "../../screens/roles.queries";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { ExtensionAccessCard } from "./extension-access";
+
+// The extension-access card renders the composed unit inventory and one
+// role × CRUD matrix per registered object, and drives the grant seam. The
+// server stays the RBAC authority — this suite asserts the wire calls and the
+// states an operator reads, not the gate itself.
+//
+// The transport is stubbed at `fetch`, but the SHAPES below are now the ones
+// crm.yaml defines — /v1/roles and /v1/extensions have landed, and the fixtures
+// were re-checked against the generated types. Two fields spelled `version`
+// mean different things and are typed differently, which is the trap this
+// fixture set exists to hold still: `ComposedExtension.version` is the unit's
+// display string ("0.3.1"), while `Role.version` is an int64 RowVersion — the
+// one that rides out as `If-Match`, and therefore the one a test asserts as the
+// STRING the header carries.
+
+// The SPA's generated registry, stubbed at the alias rather than at
+// lib/extensions, because the lookup under test is findExtension. The vanilla
+// registry this suite compiles against is empty by construction. So the "unit
+// has a page" case needs the registry handed the shape the generator emits.
+//
+// Three units, and the three cases are deliberately different. `notes` has a
+// descriptor and operations, so it has a page. `quiet` has a descriptor and NO
+// operations — the jurisdiction-pack shape, whose generic page would draw a
+// heading over an empty list. `stale` is absent from the registry entirely,
+// which is the version skew the card has to name rather than swallow.
+vi.mock("@composition/extensions", () => ({
+  extensions: [
+    {
+      name: "notes",
+      verbs: [
+        {
+          operationId: "notesList",
+          route: "/ext/notes",
+          method: "GET",
+          title: "List demo notes",
+          version: "1.0.0",
+          rbacObject: "ext_notes_note",
+        },
+      ],
+    },
+    { name: "quiet", verbs: [] },
+  ],
+}));
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const EXTENSIONS = {
+  extensions: [
+    {
+      name: "notes",
+      version: "0.3.1",
+      description:
+        "Notes a rep can attach to a record, with their own signing key.",
+      rbac_objects: ["ext_notes_note", "ext_notes_signing_key"],
+      // One entry per OPERATION, sorted by path then method, exactly as the
+      // server composes it: /ext/notes/{id} carries both a GET and a DELETE,
+      // and the destructive verb must survive onto the screen rather than
+      // being deduplicated away behind the read on the same path.
+      routes: [
+        { method: "GET", path: "/ext/notes" },
+        { method: "POST", path: "/ext/notes" },
+        { method: "DELETE", path: "/ext/notes/{id}" },
+        { method: "GET", path: "/ext/notes/{id}" },
+      ],
+      jobs: ["ext_notes_digest"],
+    },
+    {
+      name: "quiet",
+      version: "1.0.0",
+      // A unit that contributes nothing: the jurisdiction-pack shape, which is
+      // the case the card renders compactly.
+      description:
+        "Statutory retention floors the core applies. Registers nothing.",
+      rbac_objects: [],
+      routes: [],
+      jobs: [],
+    },
+    {
+      // Composed by the running binary and absent from THIS bundle's registry:
+      // the version skew, which is a different fact from "has no page" and is
+      // said rather than silently omitted.
+      name: "stale",
+      version: "2.0.0",
+      description: "A unit this bundle predates.",
+      rbac_objects: [],
+      routes: [],
+      jobs: [],
+    },
+  ],
+};
+
+// Admin reads the note object; nobody reads the signing key — the exact state
+// that produces the confusing empty screen the card exists to explain.
+const ROLES = {
+  roles: [
+    {
+      key: "admin",
+      name: "Admin",
+      is_system: true,
+      version: 1,
+      objects: {
+        ext_notes_note: {
+          read: true,
+          create: true,
+          update: false,
+          delete: false,
+        },
+      },
+    },
+    {
+      key: "rep",
+      name: "Rep",
+      is_system: true,
+      version: 1,
+      // No key at all for either object: an object a role was never granted is
+      // absent from the map, and the matrix has to read that as a denial rather
+      // than as an unrestricted grant.
+      objects: {},
+    },
+  ],
+};
+
+type Call = {
+  method: string;
+  url: string;
+  body?: unknown;
+  // Null rather than undefined when the header is absent, so a test can tell
+  // "sent nothing" from "the stub forgot to record it".
+  ifMatch: string | null;
+};
+
+function backend(
+  calls: Call[],
+  opts: {
+    roles?: string[];
+    seat?: "full" | "read";
+    // Defaults to `extension_access:read`, the grant the card and its endpoint
+    // both ask for — a case about the inventory should not also have to argue
+    // its way past the gate, and one that wants it REFUSED says so with `{}`.
+    allow?: GrantSpec;
+    extensions?: unknown;
+    // A function so a test can change what the second read answers — the
+    // concurrent-edit case needs the re-read to bring back someone else's
+    // change, not the body the screen already holds.
+    rolesBody?: unknown | (() => unknown);
+    rolesStatus?: number;
+    patch?: { status: number; body: unknown };
+  } = {},
+) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req =
+      input instanceof Request ? input : new Request(String(input), init);
+    if (req.url.endsWith("/v1/me")) {
+      // The card makes TWO reads: `GET /v1/extensions` on `extension_access:read`
+      // and `GET /v1/roles` on `role_admin:read`. The default principal holds
+      // both, plus the `role_admin:update` the toggles write through, because
+      // that is the only principal the server answers this whole card for. A
+      // case asserting a refusal passes a narrower `allow`.
+      return jsonResponse(
+        meFixture({
+          roles: opts.roles ?? ["admin"],
+          seat: opts.seat ?? "full",
+          allow: opts.allow ?? {
+            extension_access: ["read"],
+            role_admin: ["read", "update"],
+          },
+        }),
+      );
+    }
+    if (req.url.endsWith("/v1/extensions")) {
+      return jsonResponse(opts.extensions ?? EXTENSIONS);
+    }
+    if (req.url.endsWith("/v1/roles") && req.method === "GET") {
+      // The gate the SERVER holds (identity/roles.go ListRoles), enforced here
+      // rather than assumed: a mock that answered 200 to a principal without
+      // `role_admin:read` described a world the API cannot produce, and it hid
+      // a card that opened on `extension_access:read` alone and then 403'd on
+      // this very request. A stub that admits everyone proves nothing about a
+      // gate.
+      const allow = opts.allow ?? {
+        extension_access: ["read"],
+        role_admin: ["read", "update"],
+      };
+      if (!allow.role_admin?.includes("read")) {
+        return jsonResponse({ title: "forbidden" }, 403);
+      }
+      const body =
+        typeof opts.rolesBody === "function"
+          ? (opts.rolesBody as () => unknown)()
+          : (opts.rolesBody ?? ROLES);
+      return jsonResponse(body, opts.rolesStatus ?? 200);
+    }
+    let body: unknown;
+    try {
+      body = await req.clone().json();
+    } catch {
+      body = undefined;
+    }
+    calls.push({
+      method: req.method,
+      url: req.url,
+      body,
+      ifMatch: req.headers.get("If-Match"),
+    });
+    if (opts.patch) {
+      return jsonResponse(opts.patch.body, opts.patch.status);
+    }
+    // The PATCH answers with the WHOLE updated role, which is what the card
+    // writes back into its cache — so the stub applies the write to the
+    // fixture role rather than returning a canned body that would agree with
+    // the assertion whatever was sent. The version moves on, exactly as a
+    // RowVersion does: the next write from this screen must carry the new one.
+    // /v1/roles/{key}/objects/{object}
+    const segments = new URL(req.url).pathname.split("/");
+    const roleKey = segments[3];
+    const object = segments[5];
+    const role = ROLES.roles.find((candidate) => candidate.key === roleKey);
+    if (!role) {
+      throw new Error(`patch against an unknown role: ${req.url}`);
+    }
+    return jsonResponse({
+      ...role,
+      version: role.version + 1,
+      objects: { ...role.objects, [object]: body },
+    });
+  });
+}
+
+const renderWith = (client: QueryClient, ui: ReactNode) =>
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+
+const render = (ui: ReactNode) =>
+  renderWith(
+    new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    ui,
+  );
+
+// The unit's one grid, by the name the card gives it.
+function notesMatrix(): HTMLElement {
+  return screen.getByRole("table", {
+    name: en["extAccess.matrixName"].replace("{unit}", "Notes"),
+  });
+}
+
+// One object's run of rows, found by the group row that names it.
+function matrixFor(object: string): HTMLElement {
+  const group = within(notesMatrix())
+    .getByRole("rowheader", { name: objectLabel("notes", object) })
+    .closest("tbody");
+  if (!(group instanceof HTMLElement)) {
+    throw new Error(`no group of rows for ${object}`);
+  }
+  return group;
+}
+
+// The role names heading a group's rows, without the group's own label.
+function roleHeads(object: string): string[] {
+  return within(matrixFor(object))
+    .getAllByRole("rowheader")
+    .filter((head) => head.getAttribute("scope") === "row")
+    .map((head) => head.textContent ?? "");
+}
+
+// One cell of the matrix. `role: "switch"` is load-bearing rather than
+// incidental: flipping a cell WRITES the grant, and a control that announced
+// itself as a checkbox would be telling a reader their next click is only an
+// intent something later submits. There is no later here.
+function cell(object: string, role: string, action: string) {
+  const control = within(matrixFor(object)).getByRole("switch", {
+    name: `Allow ${role} to ${action} ${objectLabel("notes", object)}`,
+  });
+  if (!(control instanceof HTMLButtonElement)) {
+    throw new Error(`the ${action} cell for ${role} is not a switch`);
+  }
+  return {
+    control,
+    on: control.getAttribute("aria-checked") === "true",
+    disabled: control.disabled,
+    describedBy: control.getAttribute("aria-describedby"),
+  };
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("ExtensionAccessCard", () => {
+  it("renders each composed unit, what it brings, and the matrix from the fetched grants", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+    expect(screen.getByText("Version 0.3.1")).toBeTruthy();
+    // What the unit brings, each family named rather than lumped together, and
+    // its objects by the names the grid uses.
+    const objects = screen
+      .getByText("Permission objects")
+      .closest(".factlist-row");
+    expect(
+      [...(objects?.querySelectorAll("li") ?? [])].map((item) => [
+        item.querySelector(".cell-stack > span")?.textContent,
+        item.querySelector("code")?.textContent,
+      ]),
+    ).toEqual([
+      ["Note", "ext_notes_note"],
+      ["Signing key", "ext_notes_signing_key"],
+    ]);
+    expect(screen.getByText("ext_notes_digest")).toBeTruthy();
+
+    // The grants, read straight off the fixture: admin reads and creates the
+    // note object and does neither of the other two verbs.
+    expect(cell("ext_notes_note", "Admin", "Read").on).toBe(true);
+    expect(cell("ext_notes_note", "Admin", "Create").on).toBe(true);
+    expect(cell("ext_notes_note", "Admin", "Update").on).toBe(false);
+    // An object absent from a role's map denies — never an unticked box that
+    // silently means "unknown".
+    expect(cell("ext_notes_note", "Rep", "Read").on).toBe(false);
+
+    // A unit that registers nothing says so instead of rendering an empty grid.
+    // Scoped to the unit, because more than one composed unit registers none —
+    // an unscoped query would pass on somebody else's sentence.
+    const quiet = screen.getByText("Quiet").closest("section.panel");
+    if (!(quiet instanceof HTMLElement)) {
+      throw new Error("no unit block rendered for quiet");
+    }
+    expect(
+      within(quiet).getByText(/registers no permission objects/i),
+    ).toBeTruthy();
+  });
+
+  it("gives every unit a card of its own, headed by the unit name", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // No lead card over the units: the page's own subtitle says what it is.
+    expect(
+      screen.queryByRole("heading", { name: /Extensions and access/i }),
+    ).toBeNull();
+
+    // Headed by the unit's readable name, never its key.
+    const unit = screen
+      .getByRole("heading", { name: "Notes" })
+      .closest("section.panel");
+    if (!(unit instanceof HTMLElement)) {
+      throw new Error("the notes unit is not a card of its own");
+    }
+    // Version and page link ride the card's heading row rather than its body.
+    expect(within(unit).getByText("Version 0.3.1")).toBeTruthy();
+    expect(
+      within(unit).getByRole("link", { name: "Go to Notes" }),
+    ).toBeTruthy();
+    expect(within(unit).getByText("What this unit adds")).toBeTruthy();
+    // One grid for the unit, its column heads said once, and each registered
+    // object a run of rows under a group row naming it.
+    expect(within(unit).getAllByRole("table")).toEqual([notesMatrix()]);
+    expect(roleHeads("ext_notes_note")).toEqual(["Admin", "Rep"]);
+    expect(roleHeads("ext_notes_signing_key")).toEqual(["Admin", "Rep"]);
+  });
+
+  it("links to the page of a unit the SPA registry resolves, naming the unit in the link", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // The accessible name carries the unit, not a bare "Open": several unit
+    // blocks sit on this one page, so a link found by name alone has to be
+    // unambiguous.
+    const link = screen.getByRole("link", { name: "Go to Notes" });
+    expect(link.getAttribute("href")).toBe("#/ext/notes");
+  });
+
+  it("says a unit is composed but unlinkable when this build's registry has never heard of it", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // `stale` comes back from /extensions — the binary composed it — and is
+    // absent from the mocked SPA registry, the exact shape of a bundle older
+    // than the server. No link is rendered, because #/ext/stale would land on
+    // the router's not-found card …
+    expect(screen.queryByRole("link", { name: /stale/i })).toBeNull();
+    // … and the reason is SAID, so "this unit has no page" cannot be confused
+    // with "the page is missing because the bundle is stale". `quiet` is the
+    // contrast: it has a descriptor and nothing to show, which is neither.
+    const unit = screen.getByText("Stale").closest("section.panel");
+    if (!(unit instanceof HTMLElement)) {
+      throw new Error("no unit block rendered for stale");
+    }
+    expect(
+      within(unit).getByText(
+        /Stale is installed on the API, but this app build/,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Quiet is installed on the API/)).toBeNull();
+    // And the resolvable unit says nothing of the kind.
+    expect(screen.queryByText(/Notes is installed on the API/)).toBeNull();
+  });
+
+  it("shows every route operation with its method, so a DELETE cannot hide behind a GET on the same path", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // Scoped to the unit: every unit block carries its own Routes row.
+    const unit = screen.getByText("Notes").closest("section.panel");
+    if (!(unit instanceof HTMLElement)) {
+      throw new Error("no unit block rendered for notes");
+    }
+    const routes = within(unit)
+      .getByText("Routes")
+      .closest(".factlist-row")
+      ?.querySelectorAll("li");
+    // The pair that shares a path is two lines, and the destructive one is named.
+    expect([...(routes ?? [])].map((item) => item.textContent)).toEqual([
+      "GET /ext/notes",
+      "POST /ext/notes",
+      "DELETE /ext/notes/{id}",
+      "GET /ext/notes/{id}",
+    ]);
+  });
+
+  it("PATCHes the whole grant for the toggled role and object", async () => {
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    await userEvent.click(cell("ext_notes_note", "Rep", "Read").control);
+
+    await waitFor(() => {
+      const patch = calls.find((call) => call.method === "PATCH");
+      expect(patch).toBeTruthy();
+      expect(patch?.url).toContain("/v1/roles/rep/objects/ext_notes_note");
+      // The whole grant rides the body, not a delta: the request states the
+      // grant the operator is looking at.
+      expect(patch?.body).toEqual({
+        read: true,
+        create: false,
+        update: false,
+        delete: false,
+      });
+      // And the version of the role the tick was READ from, so a write
+      // computed against a matrix someone else has since changed is refused
+      // rather than applied over them. Optional in the contract, always sent
+      // here.
+      expect(patch?.ifMatch).toBe("1");
+    });
+
+    // The server's answer repaints the row — no refetch, no locally invented
+    // grant.
+    await waitFor(() =>
+      expect(cell("ext_notes_note", "Rep", "Read").on).toBe(true),
+    );
+  });
+
+  // One `useSetGrant` serves the whole matrix, so an in-flight flag read
+  // straight off it belongs to no particular cell. Drawn that way, every switch
+  // for every role turns at once and announces `aria-busy` — each one claiming
+  // a write its reader never made, and refusing a press over it.
+  it("marks only the role whose grant is being written, not the whole matrix", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    // The PATCH never settles, so the in-flight state is a state to look at
+    // rather than a window this test has to race.
+    const reads = backend(calls);
+    vi.stubGlobal("fetch", (req: Request) =>
+      req.method === "PATCH" ? new Promise<Response>(() => {}) : reads(req),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    await user.click(cell("ext_notes_note", "Rep", "Read").control);
+
+    const busy = (role: string, action: string) =>
+      cell("ext_notes_note", role, action).control.getAttribute("aria-busy");
+    await waitFor(() => expect(busy("Rep", "Read")).toBe("true"));
+    // The whole ROLE row is honest — the write carries that role's entire
+    // grant record, so every action in it really is in flight.
+    expect(busy("Rep", "Create")).toBe("true");
+    // Another role is not, and this is the assertion the defect fails: nothing
+    // about Admin's grant ever left the browser.
+    expect(busy("Admin", "Read")).toBeNull();
+    // Held still rather than busy: a second write on one role would race its version.
+    expect(cell("ext_notes_note", "Admin", "Read").disabled).toBe(true);
+    expect(busy("Rep", "Read")).toBe("true");
+    expect(
+      cell("ext_notes_signing_key", "Rep", "Read").control.getAttribute(
+        "aria-busy",
+      ),
+    ).toBeNull();
+  });
+
+  it("re-reads and says who changed it when a concurrent edit refuses the write", async () => {
+    // Someone else granted Rep read on the note object between this screen's
+    // read and this write, so the PATCH's If-Match no longer matches: the
+    // server refuses with version_skew and the tick did NOT apply.
+    const calls: Call[] = [];
+    let skewed = false;
+    const ROLES_AFTER = {
+      roles: ROLES.roles.map((role) =>
+        role.key === "rep"
+          ? {
+              ...role,
+              version: 9,
+              objects: {
+                ext_notes_note: {
+                  read: true,
+                  create: false,
+                  update: false,
+                  delete: false,
+                },
+              },
+            }
+          : role,
+      ),
+    };
+    vi.stubGlobal(
+      "fetch",
+      backend(calls, {
+        rolesBody: () => (skewed ? ROLES_AFTER : ROLES),
+        patch: {
+          status: 409,
+          body: {
+            code: "version_skew",
+            title: "Conflict",
+            detail: "the role changed since it was read",
+          },
+        },
+      }),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    skewed = true;
+    await userEvent.click(cell("ext_notes_note", "Rep", "Delete").control);
+
+    // The message names the concurrent change rather than reading as a generic
+    // save failure — the point is that the operator's change did not happen.
+    await waitFor(() =>
+      expect(screen.getByText(/Another user changed this role/)).toBeTruthy(),
+    );
+    expect(screen.queryByText(/Could not load this view/)).toBeNull();
+
+    // The matrix was re-read, so it now shows the OTHER admin's grant …
+    await waitFor(() =>
+      expect(cell("ext_notes_note", "Rep", "Read").on).toBe(true),
+    );
+    // … and never the tick this operator made, which the server refused.
+    expect(cell("ext_notes_note", "Rep", "Delete").on).toBe(false);
+
+    // Exactly one write: a silent replay against the fresh version would apply
+    // an intent formed against grants the operator had not seen.
+    expect(calls.filter((call) => call.method === "PATCH").length).toBe(1);
+  });
+
+  it("says plainly when no role holds read on an object, and stops saying it once one does", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // The signing key: granted to nobody, which is exactly the state that
+    // renders the extension's own screens empty.
+    expect(
+      screen.getByText(/No role has read access to Signing key/),
+    ).toBeTruthy();
+    // The note object has a reader, so it carries no such warning.
+    expect(screen.queryByText(/No role has read access to Note/)).toBeNull();
+
+    // Granting read to a role clears the warning for that object.
+    await userEvent.click(cell("ext_notes_signing_key", "Rep", "Read").control);
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/No role has read access to Signing key/),
+      ).toBeNull(),
+    );
+  });
+
+  it("shows an admin-only notice and fetches nothing for a non-admin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({ roles: ["rep"] }));
+        }
+        // A non-admin must never reach the roster of roles — any other request
+        // is a regression, so fail loudly rather than serve fixture data.
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /requires permission to read installation extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText("Notes")).toBeNull();
+  });
+
+  // The inventory grant ALONE is not this card. `GET /v1/roles` asks for
+  // role_admin:read (identity/roles.go), and the card reads both behind one
+  // flag — so a reader holding only `extension_access:read` used to open the
+  // page, fire both requests, and take a 403 on the second. It is refused
+  // before either request now, which is the same answer the server gives.
+  it("fetches nothing for a reader who may see units but not roles", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              roles: ["ops"],
+              allow: { extension_access: ["read"] },
+            }),
+          );
+        }
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /requires permission to read installation extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  // And the mirror: holding both reads OPENS it, so the refusal above is about
+  // the missing grant rather than about a card nobody can open.
+  it("opens for a reader holding both the inventory and the role reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        allow: { extension_access: ["read"], role_admin: ["read"] },
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    // The matrix itself, by a row only it draws — `findByRole("table")` is
+    // ambiguous here because the card renders one per unit.
+    expect(await screen.findAllByRole("table")).not.toHaveLength(0);
+    expect(screen.getAllByText("Admin").length).toBeGreaterThan(0);
+  });
+
+  // `enabled: false` stops the next request; it does not forget the last one. A
+  // seat that held admin earlier in the session has the whole inventory and every
+  // role's grants sitting in the cache, and rendering a unit card from that cache
+  // after the role is gone discloses exactly what the notice above it refuses.
+  it("renders nothing from a cache the reader may no longer read", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    // What an admin visit leaves behind, seeded through the keys the screen reads.
+    client.setQueryData(
+      ["extension-access", "extensions"],
+      EXTENSIONS.extensions,
+    );
+    client.setQueryData(rolesKey(false), ROLES.roles);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({ roles: ["rep"] }));
+        }
+        throw new Error(`unexpected request: ${req.method} ${req.url}`);
+      }),
+    );
+    renderWith(client, <ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /requires permission to read installation extensions/i,
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByRole("heading", { name: "Notes" })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    // And the cache itself is emptied, so a later render cannot resurrect it.
+    expect(
+      client.getQueryData(["extension-access", "extensions"]),
+    ).toBeUndefined();
+    expect(client.getQueryData(rolesKey(false))).toBeUndefined();
+  });
+
+  it("disables every toggle for a read seat while still showing the grants", async () => {
+    vi.stubGlobal("fetch", backend([], { seat: "read" }));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // Once for the eye, in the block that holds the matrices — not on the card
+    // above them, where a reader looking at dead toggles had to leave the card
+    // to find out why.
+    expect(
+      screen.getAllByText(
+        "Your role can read this page. Changing a grant requires a full seat.",
+      )[0],
+    ).toBeTruthy();
+    const denied = cell("ext_notes_note", "Admin", "Read");
+    expect(denied.disabled).toBe(true);
+    // The state is still legible — a read seat sees what is granted.
+    expect(denied.on).toBe(true);
+    // And the refusal reaches a reader who lands on ONE cell: the sentence in
+    // the block above is for the eye, this is what a screen reader is handed
+    // with the control itself.
+    const reasonId = denied.describedBy;
+    expect(reasonId).toBeTruthy();
+    expect(document.getElementById(reasonId ?? "")?.textContent).toMatch(
+      /requires a full seat/i,
+    );
+  });
+
+  it("renders the loading state before either read answers", async () => {
+    // Both reads hang: the card must show the shared skeleton, not an empty
+    // inventory that reads as "no extensions installed".
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              roles: ["admin"],
+              allow: {
+                extension_access: ["read"],
+                role_admin: ["read", "update"],
+              },
+            }),
+          );
+        }
+        return new Promise<Response>(() => {});
+      }),
+    );
+    const { container } = render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0),
+    );
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText(/No extension units/i)).toBeNull();
+  });
+
+  it("reports a failed read with the server's own cause and a retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        rolesBody: {
+          title: "Forbidden",
+          detail: "role administration is admin-only",
+        },
+        rolesStatus: 403,
+      }),
+    );
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("role administration is admin-only"),
+      ).toBeTruthy(),
+    );
+    expect(screen.getByRole("button", { name: /retry/i })).toBeTruthy();
+  });
+
+  it("shows the empty state when nothing is composed in", async () => {
+    vi.stubGlobal("fetch", backend([], { extensions: { extensions: [] } }));
+    render(<ExtensionAccessCard />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/No extension units are installed/i),
+      ).toBeTruthy(),
+    );
+  });
+
+  it("labels every cell by role, verb and object, and associates it with both headers", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    const table = notesMatrix();
+    // The column headers are real scoped headers, so a cell can be traced to a
+    // verb by assistive tech rather than by position.
+    const columns = within(table)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(columns).toEqual(["Role", "Read", "Create", "Update", "Delete"]);
+    for (const header of within(table).getAllByRole("columnheader")) {
+      expect(header.getAttribute("scope")).toBe("col");
+    }
+    // Each group row heads its run; each role heads its own row.
+    expect(
+      within(table)
+        .getAllByRole("rowheader")
+        .map((header) => [header.textContent, header.getAttribute("scope")]),
+    ).toEqual([
+      ["Note", "rowgroup"],
+      ["Admin", "row"],
+      ["Rep", "row"],
+      ["Signing key", "rowgroup"],
+      ["Admin", "row"],
+      ["Rep", "row"],
+    ]);
+
+    // And each tick still names itself in full — the name a user hears when
+    // they tab straight onto it, with no surrounding context read out.
+    expect(cell("ext_notes_note", "Rep", "Delete")).toBeTruthy();
+  });
+
+  it("is operable from the keyboard alone", async () => {
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    const { control } = cell("ext_notes_note", "Rep", "Read");
+    control.focus();
+    expect(document.activeElement).toBe(control);
+    await userEvent.keyboard(" ");
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+  });
+});
+
+// The card lists every composed unit, including one that contributes nothing an
+// operator can grant. What it says about that unit is the whole question: a name
+// and three empty sections leave an admin deciding about "de" with no idea what
+// it is.
+describe("ExtensionAccessCard unit identity", () => {
+  it("says what each unit is for, from the unit's own declaration", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    expect(
+      await screen.findByText(
+        "Notes a rep can attach to a record, with their own signing key.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Statutory retention floors the core applies. Registers nothing.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("offers no reference section for a unit that brought nothing", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    await screen.findByText("Quiet");
+    // The unit that DOES bring something keeps its section, so this asserts the
+    // suppression rather than the absence of the feature.
+    const sections = screen.getAllByText(en["extAccess.brings.heading"]);
+    expect(sections).toHaveLength(1);
+  });
+
+  it("offers no page link for a unit this bundle has no screen and no operations for", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+
+    await screen.findByText("Quiet");
+    expect(
+      screen.queryByRole("link", {
+        name: en["extAccess.openUnit"].replace("{name}", "Quiet"),
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("ExtensionAccessCard object matrices", () => {
+  it("warns once per unit, naming every object no role can read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        rolesBody: {
+          roles: ROLES.roles.map((role) => ({ ...role, objects: {} })),
+        },
+      }),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    const warnings = screen.getAllByText(en["extAccess.nobodyReadsTitle"]);
+    expect(warnings).toHaveLength(1);
+    expect(
+      screen.getByText(/No role has read access to Note and Signing key/),
+    ).toBeTruthy();
+  });
+
+  it("marks only the kind of role that is fewer in the grid", async () => {
+    const custom = {
+      key: "partner_desk",
+      name: "Partner desk with a long descriptive role name",
+      is_system: false,
+      version: 1,
+      objects: {},
+    };
+    vi.stubGlobal(
+      "fetch",
+      backend([], { rolesBody: { roles: [...ROLES.roles, custom] } }),
+    );
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    expect(roleHeads("ext_notes_note")).toEqual([
+      "Admin",
+      "Rep",
+      `${custom.name}${en["extAccess.customRole"]}`,
+    ]);
+  });
+
+  it("stands the unit's grid straight in its pane with the role column pinned", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    const scroller = notesMatrix().parentElement;
+    expect([...(scroller?.classList ?? [])]).toEqual(
+      expect.arrayContaining(["table-scroll-bleed", "table-scroll-sticky"]),
+    );
+    expect(scroller?.parentElement?.classList.contains("panel")).toBe(true);
+  });
+});

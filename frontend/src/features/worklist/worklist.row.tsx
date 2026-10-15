@@ -10,8 +10,8 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
-import { ApprovalDecisionDrawer } from "../../screens/approvaldrawer";
 import { hasMoveControl, MoveButton } from "../../screens/movebutton";
+import { ApprovalDecisionDrawer } from "../automations/approvaldrawer";
 import {
   useAutomationRetry,
   useClaimSettle,

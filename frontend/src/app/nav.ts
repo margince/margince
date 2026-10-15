@@ -304,11 +304,11 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // destination, and the rail is the one surface where that distinction is
 // visible to every contact who uses the app.
 //
-// The unit's screen is still reachable at `#/ext/<unit>` — what changed is
-// where it is OFFERED: Settings, on the page that already holds the credential
-// the unit is configured with (see screens/extension-units.tsx). That is also
-// what makes the offer honest about permission, because the two settings pages
-// are already split by whose thing each surface is.
+// The unit's screen is still reachable at `#/ext/<unit>`. What changed is
+// where it is OFFERED: Settings, on the page that holds the unit's credential,
+// features/automations/extension-units.tsx. That also puts the offer under the
+// right permission, because the two settings pages are already split by whose
+// thing each surface is.
 // Which of the three headings a fork screen names, keyed by the heading it
 // declares. A fork says "records" and this is what that means to the rail — the
 // mapping lives here rather than in app/custom.ts because the group KEYS are

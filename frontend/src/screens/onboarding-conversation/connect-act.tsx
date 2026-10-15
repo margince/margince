@@ -1,6 +1,12 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
 import { ErrorLine } from "../../design-system/errorline";
+import {
+  forgetOvernightChoice,
+  rememberedOvernightChoice,
+  rememberOvernightChoice,
+  useSetAgentGrant,
+} from "../../features/automations/overnight-grant";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
@@ -14,12 +20,6 @@ import {
   OAuthReturnPanel,
   peekOAuthAttempt,
 } from "../onboarding-connect-panels";
-import {
-  forgetOvernightChoice,
-  rememberedOvernightChoice,
-  rememberOvernightChoice,
-  useSetAgentGrant,
-} from "../overnight-grant";
 import type { MailProvider } from "./connect-scene";
 import { ConnectScene } from "./connect-scene";
 import type {

@@ -394,7 +394,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a task's deadline reads the same day on the row and in the detail modal, which only says anything from a zone where the record's clock has already turned over.",
   },
   {
-    file: "screens/connected-agents.test.tsx",
+    file: "features/automations/connected-agents.test.tsx",
     why: "Proves the record/viewer split on one row, which only works by naming both zones and a boundary-straddling instant.",
   },
   {

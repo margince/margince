@@ -159,7 +159,9 @@ const ProjectsScreen = lazy(
 );
 const OAuthConsent = lazy(
   routed(() =>
-    import("./screens/oauthconsent").then((m) => ({ default: m.OAuthConsent })),
+    import("./features/automations/oauthconsent").then((m) => ({
+      default: m.OAuthConsent,
+    })),
   ),
 );
 const OfferScreen = lazy(

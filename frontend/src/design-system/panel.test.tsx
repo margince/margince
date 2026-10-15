@@ -970,8 +970,9 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect(
       swept.filter(
         (path) =>
-          path.endsWith(join("screens", "automationdetail.css")) ||
-          path.endsWith(join("design-system", "settingrow.css")),
+          path.endsWith(
+            join("features", "automations", "automationdetail.css"),
+          ) || path.endsWith(join("design-system", "settingrow.css")),
       ),
     ).toHaveLength(2);
 

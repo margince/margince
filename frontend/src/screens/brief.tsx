@@ -7,6 +7,7 @@ import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
+import { LinkedApprovalDrawer } from "../features/automations/approvaldrawer";
 import {
   TaskDetailModal,
   useTaskUpdate,
@@ -27,7 +28,6 @@ import { useLocale, useT } from "../i18n";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
-import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";

@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useNow } from "../../format/now";
+import { DecisionsSection } from "../../screens/brief.decisions";
+import { deckItems } from "../../screens/brief.decisions.items";
 import {
   type Approval,
   useBundleApprovals,
-} from "../../screens/approvals.queries";
-import { DecisionsSection } from "../../screens/brief.decisions";
-import { deckItems } from "../../screens/brief.decisions.items";
+} from "../automations/approvals.queries";
 
 export function ApprovalBundleReview({
   approval,

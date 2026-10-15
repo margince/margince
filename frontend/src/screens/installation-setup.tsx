@@ -18,6 +18,13 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
+import {
+  useOAuthApp,
+  useSetOAuthApp,
+  type Vendor,
+  vendorCopy,
+} from "../features/automations/oauth-app";
+import { RedirectUris } from "../features/automations/oauth-redirects";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
@@ -36,13 +43,6 @@ import {
   useRememberPlatformDeclined,
 } from "./installation-setup.decline";
 import { AiBindRefused } from "./installation-setup.notices";
-import {
-  useOAuthApp,
-  useSetOAuthApp,
-  type Vendor,
-  vendorCopy,
-} from "./oauth-app";
-import { RedirectUris } from "./oauth-redirects";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name

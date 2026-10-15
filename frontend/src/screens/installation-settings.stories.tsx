@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { DateFormatsProvider } from "../app/dateformats";
+import { defaultAgentAllowances } from "../features/automations/agentallowances.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { defaultAgentAllowances } from "./agentallowances.fixtures";
 import { InstallationSettingsCard } from "./installation-settings";
 import { defaultOperations } from "./operationsettings.fixtures";
 

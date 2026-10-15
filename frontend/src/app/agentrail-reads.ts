@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { usePendingApprovals } from "../features/automations/approvals.queries";
 import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -11,7 +12,6 @@ import type { MessageKey } from "../i18n/en";
 import { useCan, useHoldsAdminRole } from "../lib/capability";
 import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
 import { type LicensePosture, useLicensePosture } from "../lib/license-posture";
-import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
 
 // WHAT THE AGENT SECTION READS. The rail's row, the state it derives and the

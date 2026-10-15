@@ -8,14 +8,14 @@
 
 import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { approvalHref } from "../features/automations/approvaldrawer";
+import { approvalKindLabel } from "../features/automations/approvalkind";
 import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
 import { ENTITY, isEntityKind } from "../lib/entity";
 import { routeHash } from "../lib/router";
-import { approvalHref } from "./approvaldrawer";
-import { approvalKindLabel } from "./approvalkind";
 import {
   magicByKey,
   magicConsequenceKey,

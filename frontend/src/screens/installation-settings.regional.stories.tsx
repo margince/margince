@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../api/schema";
+import { defaultAgentAllowances } from "../features/automations/agentallowances.fixtures";
 import { StoryProviders } from "../testing/story-utils";
-import { defaultAgentAllowances } from "./agentallowances.fixtures";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 import { defaultOperations } from "./operationsettings.fixtures";
 

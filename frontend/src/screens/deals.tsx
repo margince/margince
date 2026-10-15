@@ -83,6 +83,8 @@ import { Select } from "../design-system/select";
 import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { approvalKindLabel } from "../features/automations/approvalkind";
+import { usePendingApprovals } from "../features/automations/approvals.queries";
 import { searchCompanies } from "../features/lists/filterreference";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import { TagsPanel } from "../features/lists/tagspanel";
@@ -113,8 +115,6 @@ import {
   type AcquisitionSource,
   useAcquisitionSources,
 } from "./acquisitionsources.queries";
-import { approvalKindLabel } from "./approvalkind";
-import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
 import {
   type ClosedDeal,

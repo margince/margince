@@ -25,6 +25,12 @@ import {
 } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
 import { QueryStates, WriteRefused } from "../design-system/querystates";
+import {
+  PassportUsageLine,
+  usePassportUsageDetail,
+} from "../features/automations/agentusage";
+import { usePassportRevoke } from "../features/automations/passport-revoke";
+import { usePassports } from "../features/automations/passports.queries";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -32,9 +38,6 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { resetToSignedOut } from "../lib/session";
-import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
-import { usePassportRevoke } from "./passport-revoke";
-import { usePassports } from "./passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
 import "./settings.css";
 import "./settings-agents.css";
