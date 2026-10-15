@@ -247,6 +247,51 @@
 .panel > .settinglist-bleed > :is(.empty, .callout) {
   margin-inline: var(--padPanel);
 }
+/* A list opened from a bleeding disclosure bleeds too. Its hairlines then run
+ * as wide as the outer list's, and its text keeps the same x. */
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist,
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :not(.empty, .callout),
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :not(.empty, .callout) {
+  padding-inline: var(--padPanel);
+}
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :is(.empty, .callout),
+.panel
+  > :is(.settinglist-bleed, .panel-body)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .settinglist
+  > :is(.empty, .callout) {
+  margin-inline: var(--padPanel);
+}
 
 /* bleed="records": one row per thing, so a row takes a table row's hover. */
 .panel > .settinglist-records > .settingrow {
@@ -254,6 +299,19 @@
 }
 .panel > .settinglist-records > .settingrow:hover {
   background: var(--bgHover);
+}
+
+/* The control yields and the naming keeps a floor, or a wide value squeezes the
+ * name to a letter a line. Inline rows only: stacked, a basis is a height. */
+@media (min-width: 641px) {
+  .settingrow:not(.settingrow-stack) > .settingrow-control {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .settingrow:not(.settingrow-stack) > .settingrow-naming {
+    flex: 1 0 10rem;
+  }
 }
 
 /* Narrow viewport: the two columns become one. A right-aligned control in a

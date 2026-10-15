@@ -182,36 +182,32 @@ func (s *Dispatcher) invokeReleased(ctx context.Context, task Task) Settlement {
 // would also be the cheapest bulk read on the surface: free, and repeatable for
 // the life of the handle.
 //
-// So a stored ENVELOPE is re-proven and re-charged through the registry's own
-// replay gate before it is rendered. A stored refusal is not: it names no
+// So a stored ENVELOPE is re-proven through the registry's own replay gate, and
+// every poll of it spends one call. A stored refusal is neither: it names no
 // records, so there is nothing to re-prove and nothing to bill.
 func (s *Dispatcher) serveRecorded(ctx context.Context, task Task) map[string]any {
 	if task.ServedRecords == nil {
 		return taskWire(task, s.now())
 	}
-	// An answer that handed over NO records is served as it stands, and this is
-	// the one place the task door parts from the idempotency door on purpose.
-	//
-	// That door refuses an evidence-free envelope because it cannot tell "this
-	// answer carried no records" from "this answer's evidence is missing", and
-	// serving on a parse-shaped doubt is what its gate exists to stop. Here the
-	// count is a POSITIVE fact recorded at execution time by the same pass that
-	// collects the evidence: zero means nothing left through the seam, so there
-	// is nothing to re-prove and nothing to re-charge. It is reachable —
-	// send_email answers an activity id and a status, naming no record — and
-	// refusing it would tell an agent its receipt was withdrawn for lost access
-	// that never existed.
+	// An answer that handed over no records is served as it stands. The
+	// idempotency door refuses an evidence-free envelope, because it cannot tell
+	// "no records" from "evidence missing". Here the count is a positive fact
+	// recorded at execution, so zero means nothing left through the seam and
+	// there is nothing to re-prove. send_email answers this way, and refusing it
+	// would withdraw a receipt for access that was never lost. The poll still
+	// spends its call.
+	var proven json.RawMessage
+	var err error
 	if *task.ServedRecords == 0 {
-		return taskWire(s.rendered(task), s.now())
+		proven, err = task.Result, s.registry.ChargeAdmittedRead(ctx)
+	} else {
+		proven, err = s.registry.ServeTaskResult(ctx, task.Tool, task.Result)
 	}
-	proven, err := s.registry.ServeRecorded(ctx, task.Tool, task.Result, *task.ServedRecords)
 	if err != nil {
-		// WHY it could not be served decides what the agent should do, and the
-		// three causes differ: a record it may no longer read is permanent and
-		// says so, while a read bound it has exhausted clears with the window
-		// and a store that hiccuped clears on the next poll. Telling the last
-		// two "do not repeat the call" would strand a document they could have
-		// had — so only the existence-hiding answer keeps the withheld wording.
+		// The cause decides what the agent should do. A record it may no longer
+		// read is permanent. An exhausted call ceiling clears with the window and
+		// a store hiccup on the next poll. Only the first keeps the withheld
+		// wording, or the others would strand a document the agent could have.
 		s.log.Warn("mcp: a completed task's recorded answer could not be served",
 			"task", task.ID, "tool", task.Tool, "err", err)
 		message := s.explain(task.Tool, err)
@@ -284,11 +280,9 @@ func (s *Dispatcher) settle(ctx context.Context, task Task, settlement Settlemen
 // rendered turns a task whose Result is a stored ENVELOPE into one whose Result
 // is the tool result a client reads.
 //
-// It is the fresh half of the pair serveRecorded completes. This one neither
-// re-proves nor re-charges, and both omissions are the point: the call has just
-// run under this very request, so its records were proven by the handler's own
-// row scope and charged by runAndSeal. Charging again here would bill a caller
-// twice for one answer.
+// It is the fresh half of the pair serveRecorded completes. It neither re-proves
+// nor charges. The call has just run under this request, so the
+// handler's row scope proved its records and its call was charged before it ran.
 func (s *Dispatcher) rendered(task Task) Task {
 	if task.ServedRecords == nil {
 		return task

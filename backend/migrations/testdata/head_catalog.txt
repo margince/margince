@@ -1053,6 +1053,7 @@ public.app_user.work_end_minute smallint gen=- def=-
 public.app_user.work_start_minute smallint gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval.acknowledged_effect_failed_at timestamp with time zone gen=- def=-
 public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
@@ -1076,6 +1077,7 @@ public.approval.decision_reason text gen=- def=-
 public.approval.diff_hash text NOT NULL gen=- def=-
 public.approval.effect_failed_at timestamp with time zone gen=- def=-
 public.approval.effect_failure text gen=- def=-
+public.approval.effect_ran_at timestamp with time zone gen=- def=-
 public.approval.evidence jsonb gen=- def=-
 public.approval.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.approval.id uuid NOT NULL gen=- def=uuidv7()
@@ -3487,6 +3489,17 @@ public.deal_forecast_history.deal_forecast_history_pkey PRIMARY KEY (id)
 public.deal_forecast_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_forecast_history.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_forecast_history_pkey CREATE UNIQUE INDEX deal_forecast_history_pkey ON public.deal_forecast_history USING btree (id)
+public.deal_move_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_move_dismissal.deal_id uuid NOT NULL gen=- def=-
+public.deal_move_dismissal.deal_move_dismissal_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_move_dismissal.deal_move_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
+public.deal_move_dismissal.deal_move_dismissal_pkey PRIMARY KEY (user_id, deal_id)
+public.deal_move_dismissal.deal_move_dismissal_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.deal_move_dismissal.dismissed_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_move_dismissal.fingerprint text NOT NULL gen=- def=-
+public.deal_move_dismissal.user_id uuid NOT NULL gen=- def=-
+public.deal_move_dismissal_deal_ix CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id)
+public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON public.deal_move_dismissal USING btree (user_id, deal_id)
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_risk_day.captured_by text NOT NULL gen=- def=-
@@ -8048,6 +8061,16 @@ public.workflow_run_by_automation CREATE INDEX workflow_run_by_automation ON pub
 public.workflow_run_pkey CREATE UNIQUE INDEX workflow_run_pkey ON public.workflow_run USING btree (id)
 public.workflow_run_troubled CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]))
 public.workflow_run_unique CREATE UNIQUE INDEX workflow_run_unique ON public.workflow_run USING btree (handler, idempotency_key)
+public.worklist_done acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.worklist_done.done_at timestamp with time zone NOT NULL gen=- def=-
+public.worklist_done.reader_id uuid NOT NULL gen=- def=-
+public.worklist_done.row_id text NOT NULL gen=- def=-
+public.worklist_done.set_by text NOT NULL gen=- def=-
+public.worklist_done.source text NOT NULL gen=- def=-
+public.worklist_done.worklist_done_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+public.worklist_done.worklist_done_pkey PRIMARY KEY (reader_id, source, row_id)
+public.worklist_done.worklist_done_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.worklist_done_pkey CREATE UNIQUE INDEX worklist_done_pkey ON public.worklist_done USING btree (reader_id, source, row_id)
 public.worklist_pin acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.worklist_pin.pinned_at timestamp with time zone NOT NULL gen=- def=now()
 public.worklist_pin.reader_id uuid NOT NULL gen=- def=-

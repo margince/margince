@@ -253,6 +253,7 @@ type FailedEffect struct {
 	// and the card offers `open` only when it did.
 	TargetType string
 	TargetID   ids.UUID
+	Retryable  bool // approving once more would run the work again
 }
 
 // DSRs reads the data-subject requests nobody has resolved, soonest legal

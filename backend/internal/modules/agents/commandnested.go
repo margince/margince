@@ -20,12 +20,9 @@ package agents
 // human-only (crm.yaml), so no agent reaches that route and a resolver for it
 // would answer for a door nobody can open.
 //
-// list, tag and offer are all outside the record seam's vocabulary
-// (servedByTheRecordSeam, command.go), the same bound six of the twelve
-// archivable types already stand on — so five of these six resolvers' Guards
-// stand down, reusing that check rather than a hand-restated opinion
-// (margince/margince#1021). deal IS served, so createOffer's Guards
-// perform a real read.
+// list, tag and offer are outside the record seam's vocabulary
+// (servedByTheRecordSeam, command.go), so the Guards on those resolvers stand
+// down through that check. deal is served, so createOffer's Guards read it.
 
 import (
 	"context"
@@ -39,12 +36,10 @@ import (
 
 const (
 	// tagRecordType names ApplyTagCommand's fixed target — a plain string,
-	// not datasource.EntityType, for the same reason customFieldRecordType
-	// (commandaction.go) is: the record seam has never served it.
+	// not datasource.EntityType, because the record seam has never served it.
 	tagRecordType = "tag"
 	// offerRecordType names the three offer-line-item commands' fixed
-	// target. An offer itself is one of the six archivable types the seam
-	// does not serve either.
+	// target. The seam does not serve an offer either.
 	offerRecordType = "offer"
 )
 

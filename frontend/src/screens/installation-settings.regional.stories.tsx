@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { StoryProviders } from "../testing/story-utils";
+import { defaultAgentAllowances } from "./agentallowances.fixtures";
 import { RegionalSettingsFields } from "./installation-settings.regional";
 import { defaultOperations } from "./operationsettings.fixtures";
 
@@ -20,6 +21,7 @@ function RegionalFields() {
     dead_work_banner_hours: 24,
     oauth_access_token_ttl_minutes: 43_200,
     operations: defaultOperations,
+    agent_allowances: defaultAgentAllowances,
     forecast_forward_measure: "commit_evidence",
     timezone: "Europe/Berlin",
     base_currency: "EUR",

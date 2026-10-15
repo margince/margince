@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -88,12 +89,28 @@ func (s *RunStore) FlushTestProgress(ctx context.Context, l Lease, p Progress, p
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	encoded, err := json.Marshal(p)
-	if err != nil {
-		return fmt.Errorf("encoding import run %s's progress: %w", l.Run, err)
-	}
 	ctx = database.Detached(ctx)
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		var priorProgress []byte
+		var dbNow time.Time
+		err := tx.QueryRow(ctx, `SELECT progress, now() FROM import_run`+fence, l.args()...).Scan(&priorProgress, &dbNow)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("import run %s attempt %d: %w", l.Run, l.Attempt, ErrSuperseded)
+		}
+		if err != nil {
+			return fmt.Errorf("reading import run %s's recorded progress: %w", l.Run, err)
+		}
+		var prior Progress
+		if len(priorProgress) > 0 {
+			if err := json.Unmarshal(priorProgress, &prior); err != nil {
+				return fmt.Errorf("decoding import run %s's recorded progress: %w", l.Run, err)
+			}
+		}
+		p.foldWindow(prior, dbNow)
+		encoded, err := json.Marshal(p)
+		if err != nil {
+			return fmt.Errorf("encoding import run %s's progress: %w", l.Run, err)
+		}
 		return execFenced(ctx, tx, l, `progress = $4, phase = $5, phase_object = $6,
 			progress_at = now(), heartbeat_at = now(), updated_at = now()`, encoded, nullable(phase), nullable(object))
 	})

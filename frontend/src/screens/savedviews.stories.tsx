@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { ListQuery } from "../components/listquery";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import type { ListQuery } from "./listquery";
 import { SaveViewAction } from "./savedviews";
 
 // A saved view is per-user list state, by name: saved beside a list's own

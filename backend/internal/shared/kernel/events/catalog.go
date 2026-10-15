@@ -272,8 +272,9 @@ var catalog = map[string]struct {
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
-	"approval.requested": {approvalStreamEntity, 1},
-	"approval.decided":   {approvalStreamEntity, 1},
+	"approval.requested":            {approvalStreamEntity, 1},
+	"approval.decided":              {approvalStreamEntity, 1},
+	"approval.failure_acknowledged": {approvalStreamEntity, 1},
 
 	"capture.received":   {captureStreamEntity, 1},
 	"capture.normalized": {captureStreamEntity, 1},

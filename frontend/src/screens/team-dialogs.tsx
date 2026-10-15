@@ -6,6 +6,7 @@ import { UserMinus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { RosterPartialNote } from "../components/roster";
 import { Avatar, Button, Field, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ComboBox } from "../design-system/combobox";
@@ -17,7 +18,6 @@ import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { RosterPartialNote } from "./roster";
 import "./users-access.css";
 
 export type TeamUser = components["schemas"]["User"];

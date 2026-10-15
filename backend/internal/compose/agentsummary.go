@@ -148,11 +148,9 @@ func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) s
 	if pol.Tool == "" {
 		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
 	}
-	// Some verbs cover two acts a reader must tell apart. `enrich` is both a
-	// one-page read and a whole-site crawl; `update_record` on a custom field
-	// is both retiring the field and changing what it offers. The verb cannot
-	// distinguish them — only the operation can, so where one is named here it
-	// wins.
+	// Some verbs cover two acts a reader must tell apart: `enrich` is both a
+	// one-page read and a whole-site crawl. Only the operation tells them apart,
+	// so a phrase named for it wins.
 	if phrase, named := acts.operations[pol.Op]; named {
 		return phrase
 	}
@@ -184,11 +182,9 @@ func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) s
 // be a second spelling of it. Held by TestNoTwoStageableActsShareAHeadline,
 // which fails when a new pair collides.
 var opPhrases = map[string]string{
-	opScrapeCompany:            "Read this company's website",
-	opDeepReadCompany:          "Read this company's whole site",
-	opTechnicalEnrichCompany:   "Look up what this company publicly runs",
-	opRetireCustomField:        "Retire a custom field",
-	opUpdateCustomFieldOptions: "Change a custom field's options",
+	opScrapeCompany:          "Read this company's website",
+	opDeepReadCompany:        "Read this company's whole site",
+	opTechnicalEnrichCompany: "Look up what this company publicly runs",
 	// "Merge tags" alone reads as reversible, which this is not, and the head is
 	// the half a triaging approver reads first. This head is the fallback line,
 	// used when the resolver has none. It cannot name the routed tag, the word
@@ -203,12 +199,10 @@ var opPhrases = map[string]string{
 // the generated policy table rather than trusted.
 // Held by: TestNoTwoStageableActsShareAHeadline (this package).
 const (
-	opScrapeCompany            = "scrapeCompany"
-	opDeepReadCompany          = "deepReadCompany"
-	opTechnicalEnrichCompany   = "technicalEnrichCompany"
-	opRetireCustomField        = "retireCustomField"
-	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
-	opMergeTags                = "mergeTags"
+	opScrapeCompany          = "scrapeCompany"
+	opDeepReadCompany        = "deepReadCompany"
+	opTechnicalEnrichCompany = "technicalEnrichCompany"
+	opMergeTags              = "mergeTags"
 )
 
 // The backing MCP tool verbs (agentPolicy.Tool values) of the record-write

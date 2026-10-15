@@ -108,7 +108,7 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 	if !present || actor.PassportID == (ids.UUID{}) {
 		return refusal
 	}
-	proposal := agentvolume.NewReleaseProposal(refusal.Reading, actor.PassportID, refusal.Tool)
+	proposal := agentvolume.NewReleaseProposal(refusal.Reading, actor.PassportID, actor.ConnectionID, refusal.Tool)
 	id, staged, err := r.approvals.StageVolumeRelease(ctx, VolumeReleaseRequest{
 		Proposal: proposal,
 		Summary:  stepUpSummary(summaryIn(ctx, r.language), proposal),
@@ -131,9 +131,5 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 // It states the volume, the ceiling and the consequence of saying yes, because a
 // human answering "continue?" with no numbers is answering nothing.
 func stepUpSummary(said summaryCopy, p agentvolume.ReleaseProposal) string {
-	sentence := said.stepUpRecords
-	if p.Counter != agentvolume.Reads {
-		sentence = said.stepUpChanges
-	}
-	return fmt.Sprintf(sentence, p.Observed, p.Limit, p.Tool, p.Allowance)
+	return fmt.Sprintf(said.stepUpChanges, p.Observed, p.Limit, p.Tool, p.Allowance)
 }

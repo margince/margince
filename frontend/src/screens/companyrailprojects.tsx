@@ -69,7 +69,6 @@ export function ProjectsSection({
   return (
     <Disclosure
       className="co-sect"
-      open
       summary={
         <SectionSummary title={t("co.rail.projects.title")} count={count} />
       }

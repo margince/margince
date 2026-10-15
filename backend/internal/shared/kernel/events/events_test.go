@@ -186,6 +186,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// the recording, and "lifted" alone would not say which of the two
 		// happened.
 		"override_lifted": true,
+		// A decider took a failed approval off their list. The verb carries its
+		// object because this stream also carries the decision itself. Alone,
+		// "acknowledged" would not say which of the two the reader saw.
+		"failure_acknowledged": true,
 	}
 
 	for _, typ := range Types() {

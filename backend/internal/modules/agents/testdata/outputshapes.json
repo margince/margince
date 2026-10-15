@@ -7665,7 +7665,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -7694,7 +7703,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -7798,6 +7816,9 @@
                           "type": "string"
                         },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },
@@ -8957,6 +8978,12 @@
                 "file": {
                   "type": "string"
                 },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
                 "object": {
                   "type": "string"
                 },
@@ -9020,7 +9047,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -9049,7 +9085,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -9153,6 +9198,9 @@
                           "type": "string"
                         },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },

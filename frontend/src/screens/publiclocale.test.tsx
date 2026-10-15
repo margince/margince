@@ -30,7 +30,9 @@ describe("the language a public link carries", () => {
   it("speaks the language the link named", async () => {
     renderAt("#/preferences/tok?lang=de");
     expect(
-      await screen.findByText("Wählen Sie, welche E-Mails Sie erhalten"),
+      await screen.findByText(
+        "Wählen Sie aus, welche E-Mails Sie erhalten möchten",
+      ),
     ).toBeDefined();
   });
 
@@ -39,7 +41,9 @@ describe("the language a public link carries", () => {
   // onto every other screen.
   it("does not store the link's language as the reader's own choice", async () => {
     renderAt("#/preferences/tok?lang=de");
-    await screen.findByText("Wählen Sie, welche E-Mails Sie erhalten");
+    await screen.findByText(
+      "Wählen Sie aus, welche E-Mails Sie erhalten möchten",
+    );
     expect(globalThis.localStorage.getItem("margince.locale")).toBeNull();
   });
 
@@ -49,7 +53,9 @@ describe("the language a public link carries", () => {
     // The stored pick still decides, rather than the page falling back to
     // English because the link said something unrecognised.
     expect(
-      await screen.findByText("Wählen Sie, welche E-Mails Sie erhalten"),
+      await screen.findByText(
+        "Wählen Sie aus, welche E-Mails Sie erhalten möchten",
+      ),
     ).toBeDefined();
   });
 
@@ -57,7 +63,9 @@ describe("the language a public link carries", () => {
     globalThis.localStorage.setItem("margince.locale", "de");
     renderAt("#/preferences/tok");
     expect(
-      await screen.findByText("Wählen Sie, welche E-Mails Sie erhalten"),
+      await screen.findByText(
+        "Wählen Sie aus, welche E-Mails Sie erhalten möchten",
+      ),
     ).toBeDefined();
     expect(globalThis.localStorage.getItem("margince.locale")).toBe("de");
   });

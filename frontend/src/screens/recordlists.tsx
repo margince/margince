@@ -13,9 +13,6 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { navigate } from "../lib/router";
-import { LiveExplanation } from "./listexplain";
-import { ListKindBadge } from "./listlibrary";
 import {
   type List,
   type ListedRecordType,
@@ -26,9 +23,12 @@ import {
   useRecordLists,
   useRemoveMember,
   useRestoreMember,
-} from "./lists.queries";
+} from "../lib/lists.queries";
+import { navigate } from "../lib/router";
+import { LiveExplanation } from "./listexplain";
+import { ListKindBadge } from "./listlibrary";
 import "./lists.css";
-import { useUndoableRemoval } from "./undoableremoval";
+import { useUndoableRemoval } from "../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 

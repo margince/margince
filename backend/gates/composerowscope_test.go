@@ -789,11 +789,8 @@ func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 }
 
 // namedColumn matches one column by name, optionally qualified by an alias.
-// Compiled per call rather than cached: the map is small, this runs once per
-// statement, and a cache keyed by column is a second place for the pattern to
-// be wrong.
 func namedColumn(column string) *regexp.Regexp {
-	return regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
+	return compiledPattern(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
 }
 
 // countedBytes marks the bytes inside a count(), which hands back a NUMBER.
@@ -879,7 +876,7 @@ func projectedBytes(sql string) []bool {
 // both halves of #632 were — a query that DISCOVERS references, keyed on
 // something other than the referenced record itself.
 func boundToCallerArgument(sql, column string) bool {
-	return regexp.MustCompile(
+	return compiledPattern(
 		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
 }
 

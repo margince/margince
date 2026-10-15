@@ -10,14 +10,14 @@ import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../lib/problem";
 import {
   type ListRecordType,
   useChangeMember,
   useCreateList,
   useLists,
   useListsAvailable,
-} from "./lists.queries";
+} from "../lib/lists.queries";
+import { problemMessageOf } from "../lib/problem";
 
 /** The Select value that means "a Shortlist named in the box below". */
 const NEW_LIST = "__new__";

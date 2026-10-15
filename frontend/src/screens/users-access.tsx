@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
+import {
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
 import { Button, EmptyState, OverflowMenu } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { Callout } from "../design-system/callout";
@@ -17,7 +22,6 @@ import type { MessageKey } from "../i18n/en";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import {
   membersOf,
   NewTeamAction,

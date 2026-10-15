@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { PageAsideProvider } from "../components/pageaside";
 import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
@@ -48,7 +49,6 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
-import { PageAsideProvider } from "./pageaside";
 import {
   headsItself,
   PAGE_SUB_KEYS,

@@ -7,6 +7,7 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -27,7 +28,6 @@ import { useLocale, useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { EntityRef } from "./entityref";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";

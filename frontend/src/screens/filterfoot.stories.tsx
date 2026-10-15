@@ -5,6 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { newGroup, newLeaf } from "../lib/segmentpredicate";
+import { listsMe, liveList } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,8 +15,6 @@ import {
 import { useFilterExport } from "./filterexport";
 import { FilterFoot, type FootMode } from "./filterfoot";
 import { SaveToListAction } from "./filterlistedit";
-import { listsMe, liveList } from "./lists.fixtures";
-import { newGroup, newLeaf } from "./segmentpredicate";
 
 // The filter Panel's footer band: what state the filter is in on the leading
 // edge, and the one emerald way to keep it on the trailing edge, with the rarer

@@ -1,6 +1,15 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
 import { Badge, OverflowMenu } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -10,15 +19,6 @@ import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
 import "./listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];

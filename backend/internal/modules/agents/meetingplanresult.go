@@ -102,11 +102,9 @@ type MeetingPlanGap struct {
 // Held by: TestCitationsReachesEveryFieldThatCanCarryEvidence
 // (backend/internal/modules/agents/meetingplanresult_test.go)
 //
-// The read bound charges what a tool call REACHED, and the plan reaches records
-// the sections do not — the arc walks a year of history the eight sections
-// never mention. Charging the sections alone would make the richest read the
-// cheapest one, which is the wrong way round for a budget that exists to bound
-// how much of a workspace one call can pull.
+// The evidence list names what a tool call reached. The plan reaches records
+// the sections do not: the arc walks a year of history they never mention.
+// Citing the sections alone would hide the richest part of the answer.
 func (p *MeetingPlanResult) Citations() []MeetingBriefCite {
 	if p == nil {
 		return nil

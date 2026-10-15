@@ -6,6 +6,12 @@ import { useId, useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import {
+  BulkChangeDialog,
+  type BulkChangeRequest,
+  type BulkRow,
+} from "../components/bulkchange";
+import type { PickedTag } from "../components/bulktag";
 import { Button, Checkbox, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
@@ -14,14 +20,8 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite, useCanWriteRecord } from "../lib/capability";
 import { throwProblem } from "../lib/problem";
-import {
-  BulkChangeDialog,
-  type BulkChangeRequest,
-  type BulkRow,
-} from "./bulkchange";
-import type { PickedTag } from "./bulktag";
+import { useApplyTag, useRecordTags } from "../lib/tags.queries";
 import { useEmployerSummary } from "./contactemployersummary";
-import { useApplyTag, useRecordTags } from "./tags.queries";
 
 // A tag on a contact and the same tag on their company are separate facts, and
 // users who tag one usually want the other. These offers ask once, right after

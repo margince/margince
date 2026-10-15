@@ -1,6 +1,6 @@
+import { EntityRef } from "../components/entityref";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
-import { EntityRef } from "./entityref";
 
 /**
  * MergedLeadPanel is what a merged-away lead's page is FOR.

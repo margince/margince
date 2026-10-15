@@ -17,11 +17,10 @@ package agents
 // makes, and this answers `ambiguous` however high the score. Merging stays 🟡
 // and goes through merge_records, with a human in it.
 //
-// WHAT THIS TOOL OWNS is the same half query_workspace owns: the resolver
-// answers ids over a workspace-wide ladder, and every one of them is READ BACK
-// through the datasource seam before it reaches the caller. That is where this
-// caller's own object RBAC and row scope are applied, where the trust tier is
-// stamped, and where the record is charged against MCP-SESS-READS.
+// This tool owns the same half query_workspace owns. The resolver answers ids
+// over a workspace-wide ladder, and each is read back through the datasource
+// seam before it reaches the caller. The seam applies this caller's object RBAC
+// and row scope, stamps the trust tier and counts the record as served.
 
 import (
 	"context"

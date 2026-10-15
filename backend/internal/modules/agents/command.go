@@ -354,20 +354,15 @@ func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo
 	}, nil
 }
 
-// Guards refuses, before anything is staged: a `fields` payload naming a key
-// the record type does not accept, a target the caller cannot see (the read
-// answers the row-scope miss as not-found), and a target whose authority
-// lives in another system of record.
+// Guards refuses before anything is staged: a `fields` key the record type does
+// not accept, or a target the caller cannot see. The read answers a row-scope
+// miss as not-found. It also refuses a target held in another system of record,
+// and a machine renaming the anchor company.
 //
-// Unlike create's, there is no standalone "verb does not serve this type"
-// refusal here — update_record's pre-#982 body never had one, and adding one
-// keyed on the same vocabulary the seam is keyed on would make the
-// servedByTheRecordSeam stand-down below unreachable: a type outside it would
-// already have been refused. The seam stands down instead, exactly as
-// archive's does, for the same reason: six of the thirteen patchable types
-// (custom_field, offer, offer_template, product, saved_view,
-// webhook_subscription) are patched by their own module rather than through
-// this seam.
+// Unlike create's, there is no "verb does not serve this type" refusal here.
+// One keyed on the seam's vocabulary would make the stand-down below
+// unreachable. The seam stands down instead, as archive's does: a type outside
+// servedByTheRecordSeam is patched by its own module.
 func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
 	if err := rejectUnknownFields(updateWriteShapes, cmd.RecordType, cmd.Fields); err != nil {
 		return err
@@ -379,22 +374,23 @@ func (p patchResolver) Guards(ctx context.Context, cmd PatchCommand) error {
 	if err != nil {
 		return err
 	}
-	return refuseStagingElsewhere(rec)
+	if err := refuseStagingElsewhere(rec); err != nil {
+		return err
+	}
+	return refuseAnchorRename(ctx, rec, cmd.Fields)
 }
 
 // servedByTheRecordSeam reports whether the record seam speaks this type at all.
 //
-// Half of the twelve types the REST door can archive — lists, offers, offer
-// templates, products, tags and saved views — have no row on the seam; they are
-// archived by their own module's handler. Asking the seam about one answers
+// Some types the REST door can archive have no row on the seam. Their own
+// module's handler archives them. Asking the seam about one answers
 // "not served here", which would refuse an ordinary archive, so the guards above
 // stand down for them. It is the archive_record TOOL's schema that is narrow,
 // not the operation, so the vocabulary is read from the seam that defines it
 // rather than restated here.
 //
-// Standing down is a BOUND, not a discharge, and the bound is uneven: three of
-// those six — list, offer and saved_view — carry real row scope in
-// approvals.targetProbes. An agent can still stage an archive of one it cannot
+// Standing down is a BOUND, not a discharge, and the bound is uneven: list and
+// offer carry real row scope in approvals.targetProbes. An agent can still stage an archive of one it cannot
 // see, and the human's yes is then spent on a call the handler answers 404.
 // Closing it needs a visibility question this seam cannot ask through the
 // record provider, which is why it is filed rather than patched here:

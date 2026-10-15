@@ -13,9 +13,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -57,6 +59,9 @@ type InstallationSettings struct {
 	EnabledOidcProviders []string
 	// Operations is the worker's operating values (installationoperations.go).
 	Operations OperationSettings
+	// AgentAllowances is what one agent passport may do per window
+	// (installationagentallowances.go).
+	AgentAllowances agentvolume.Policy
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -97,6 +102,8 @@ type InstallationPatch struct {
 	// Operations is the sparse patch of the worker's operating values; it
 	// checks its own completeness (installationoperations_test.go).
 	Operations OperationPatch
+	// AgentAllowances is the sparse patch of the agent allowances.
+	AgentAllowances AgentAllowancePatch
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -135,6 +142,8 @@ type InstallationSettingsStore struct {
 	settings *settings.Store
 	// onCountryChange runs inside the transaction that changes the country.
 	onCountryChange CountryChange
+	// now dates a window change, which takes over at the next reset after it.
+	now func() time.Time
 }
 
 // CountryChange is what else must commit with a change of jurisdiction. compose
@@ -153,7 +162,14 @@ func (s *InstallationSettingsStore) WithCountryChange(hook CountryChange) *Insta
 // NewInstallationSettings builds the store over the settings mechanism, on a
 // handle already bound to the workspace it serves.
 func NewInstallationSettings(db *database.DB, s *settings.Store) *InstallationSettingsStore {
-	return &InstallationSettingsStore{db: db, settings: s}
+	return &InstallationSettingsStore{db: db, settings: s, now: time.Now}
+}
+
+// WithClock replaces the clock a window change is scheduled against.
+func (s *InstallationSettingsStore) WithClock(now func() time.Time) *InstallationSettingsStore {
+	out := *s
+	out.now = now
+	return &out
 }
 
 // GetInstallation reads the settings and the base currency's lock state.
@@ -214,6 +230,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	allowances, err := s.readAgentPolicy(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:       fiscalStart,
@@ -223,6 +243,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
 		Operations:           operations,
+		AgentAllowances:      allowances,
 	}, nil
 }
 
@@ -325,7 +346,12 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append([]pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country}, operations...), nil
+	allowances, err := in.AgentAllowances.writes()
+	if err != nil {
+		return nil, err
+	}
+	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country}
+	return append(append(fields, operations...), allowances...), nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as
@@ -352,7 +378,13 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseRenameTx(ctx, tx, in.Name); err != nil {
+			return err
+		}
 		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
+			return err
+		}
+		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
 			return err
 		}
 		for _, w := range patch {
@@ -369,6 +401,29 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	return s.GetInstallation(ctx)
+}
+
+// refuseRenameTx admits only the name the installation already holds. The
+// anchor company's display name is that name, and a rename here would drift
+// from it. An older client resending the name it read still saves.
+func refuseRenameTx(ctx context.Context, tx pgx.Tx, next *string) error {
+	if next == nil {
+		return nil
+	}
+	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
+		return err
+	}
+	current, err := settings.GetTx(ctx, tx, Name)
+	if err != nil {
+		return err
+	}
+	if *next == current {
+		return nil
+	}
+	return settings.InvalidValue{
+		Setting: Name.Key(), Code: "set_on_company_profile",
+		Reason: "the installation's name is the company's name; change it on the company profile",
+	}
 }
 
 // changeCountryTx runs the country-change hook under the setting's write lock,

@@ -11,7 +11,7 @@
 // activity_audience_member, activity_meeting_history,
 // activity_retention_evidence, transcript_read, attachment_extraction,
 // deal_document_hide, activity_sales_state, activity_reader_state,
-// worklist_pin, activity_review_template, activity_review_response,
+// worklist_pin, worklist_done, activity_review_template, activity_review_response,
 // activity_request_settlement, activity_identity, mail_draft,
 // booking_page, meeting_invitation, meeting_proposal,
 // activity_calendar_method_backfill, activity_waiting_horizon.

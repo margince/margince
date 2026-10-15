@@ -89,27 +89,18 @@ func (r *Registry) chargeCall(ctx context.Context, spec mcp.ToolSpec, mayRefuse 
 
 // chargeAnswer records what one successful answer cost, at the one place every
 // tool's result passes through. Charging per TOOL instead would be a list to
-// maintain, and the tool added next is the one that forgets — which is exactly
-// how a densely-joined answer becomes the cheapest bulk read on the surface
-// (A139).
+// maintain, and the tool added next is the one that forgets.
 //
-// TWO CHARGES, because an answer can be two things at once. Every record that
-// leaves counts toward MCP-SESS-READS whatever tool produced it — a write that
-// returns the row it changed handed over a record — and the ACT counts toward
-// the counter its own kind names, derived by the same function the gate refuses
-// on so the two can never mean different things. A read-only tool's act IS its
-// records, so it is charged once.
+// Only the act is charged here, against the counter its own kind names, which
+// the gate also refuses on. A read-only tool's act is a call, which chargeCall
+// already paid.
 //
-// It charges only after a SUCCESSFUL answer: these counters measure what the
-// agent was actually given, and a handler that failed gave it none.
-func (r *Registry) chargeAnswer(ctx context.Context, spec mcp.ToolSpec, served int) error {
+// It charges only after a successful answer: a failed handler changed nothing.
+func (r *Registry) chargeAnswer(ctx context.Context, spec mcp.ToolSpec) error {
 	if r.volume == nil {
 		return nil
 	}
-	if err := r.charge(ctx, spec, agentvolume.Reads, served); err != nil {
-		return err
-	}
-	if act := agentvolume.CounterFor(spec); act != agentvolume.Reads {
+	if act := agentvolume.CounterFor(spec); act != agentvolume.Calls {
 		return r.charge(ctx, spec, act, agentvolume.ActsCharged(ctx))
 	}
 	return nil
@@ -222,33 +213,14 @@ func (r *Registry) ChargeAdmittedCall(ctx context.Context, spec mcp.ToolSpec) er
 	return r.chargeCall(ctx, spec, nothingHasHappenedYet)
 }
 
-// ChargeServedRecords records what ONE REST response handed over against
-// MCP-SESS-READS. It is the read twin of ChargeAdmittedCall and exists for the
-// same reason: the composition layer owns that door and this package may not
-// import it, so without a charge point here AdmitRead refuses on a counter
-// nothing increments and a credential reading only over /v1 is unbounded.
+// ChargeAdmittedRead is ChargeAdmittedCall for a call with no tool spec: a REST
+// read, or a poll of a finished task. One request is one call.
 //
-// It counts RECORDS, which is what the counter measures and what the MCP door
-// charges at chargeAnswer — a page of one and a page of two hundred are not the
-// same read, and a per-request charge would price them alike.
-//
-// It REPORTS a failed charge rather than deciding what it costs. That decision
-// is this file's one rule — refuse only while nothing has happened yet — and on
-// the REST door only the caller knows which side of it this response is on: a
-// read has committed nothing, while a mutation's body is written after its
-// effect landed.
-func (r *Registry) ChargeServedRecords(ctx context.Context, n int) error {
-	if r.volume == nil || n <= 0 {
-		return nil
-	}
-	if err := r.volume.Consume(ctx, agentvolume.Reads, n); err != nil {
-		slog.ErrorContext(ctx, "recording the records a REST response served against the read bound failed",
-			"counter", string(agentvolume.Reads), "records", n, "err", err)
-		return fmt.Errorf(
-			"crmagents: %d records could not be counted against this agent's read bound: %w",
-			n, apperrors.ErrBudgetExceeded)
-	}
-	return nil
+// It refuses what it cannot count, as chargeCall does. A read has committed
+// nothing. A charge lost to a Redis blip is lost for good, so serving the read
+// would raise the ceiling by one per blip.
+func (r *Registry) ChargeAdmittedRead(ctx context.Context) error {
+	return r.chargeCall(ctx, mcp.ToolSpec{Name: "this request"}, nothingHasHappenedYet)
 }
 
 // ChargeRedeemedCall is ChargeAdmittedCall for a call whose approval has
@@ -259,10 +231,8 @@ func (r *Registry) ChargeRedeemedCall(ctx context.Context, spec mcp.ToolSpec) {
 }
 
 // ChargeEffect records a completed mutating REST call against the counter its
-// kind names: one act, or the records a bulk change said it changed. It takes no
-// count of records served: the REST read path is charged
-// separately and per record where records leave that surface, and a mutation's
-// own read-back is not this call's to count twice.
+// kind names: one act, or the records a bulk change said it changed. A
+// read-only tool's act is a call, which ChargeAdmittedCall already paid.
 //
 // It never fails the caller. By the time it runs the effect has committed —
 // the handler has already answered — so an uncounted write is a small
@@ -273,7 +243,7 @@ func (r *Registry) ChargeEffect(ctx context.Context, spec mcp.ToolSpec) {
 		return
 	}
 	act := agentvolume.CounterFor(spec)
-	if act == agentvolume.Reads {
+	if act == agentvolume.Calls {
 		return
 	}
 	if err := r.volume.Consume(ctx, act, agentvolume.ActsCharged(ctx)); err != nil {

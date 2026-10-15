@@ -143,11 +143,11 @@ leave data outside its own constraint. A `picklist` always keeps one value or mo
 Changing the catalog is **owned by admins and operators**, and every role may read it, as with pipeline config. A
 field changes what the system stores for every user's records. The catalog is config shared
 by the workspace, with no `owner_id`. So the object grant is the whole authority question, and there is
-no row scope to compose. Creating a field is 🟡: an agent caller stages it for approval first, and a
-human's direct call is itself the approval.
+no row scope to compose. Creating, renaming, retiring or changing the options of a field is
+`human-only`: the gate refuses an agent principal. An agent reads the live catalog through
+`describe_query_vocabulary`.
 
-The field is put down to the human or, behind an agent, to the human who granted the agent
-(*agent ≤ human*). Changes to the catalog are **audit only**: the closed event catalog has no
+The field is put down to the human who changed it. Changes to the catalog are **audit only**: the closed event catalog has no
 `custom_field.*` type. A catalog change over many objects has no single event stream to go on.
 
 ## How record stores see `cf_*` columns

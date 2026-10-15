@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Marking several tasks and promises done at once, from the Worklist.
+// Marking several rows done at once, from the Worklist.
 //
-// Only a row whose own Done marks a task or a promise done takes a checkbox. A
-// waiting message, an approval and a system row are answered one at a time, so
-// a box on them would offer a verb the change refuses.
+// A row takes a checkbox when it offers Done. That is a task or a promise
+// ticked done, or a row whose Done takes it off the reader's own list. An
+// approval, and a row offering no Done, are answered one at a time.
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -67,6 +67,15 @@ const aSystemRow = row({
   category: "system",
   title: "Reconnect the mailbox",
   actions: ["complete"],
+});
+
+const aDealAtRisk = row({
+  id: "01a05500-0000-7000-8000-0000000000a6",
+  source: "deal_at_risk",
+  category: "deals_at_risk",
+  title: "Retrofit for the north plant",
+  actions: ["open"],
+  dispositions: ["handled"],
 });
 
 function theDay() {
@@ -304,6 +313,79 @@ describe("a queue that mixes rows that can be ticked with rows that cannot", () 
     expect(container.querySelectorAll(".worklist-row-pick-slot")).toHaveLength(
       0,
     );
+  });
+});
+
+describe("Mark done on rows that are not tasks", () => {
+  it("takes the ticked rows off the list in one call, beside the tasks", async () => {
+    const sent: { path: string; body: unknown }[] = [];
+    stub(
+      day({
+        queue: [aTask, aDealAtRisk, anApproval],
+        summary: { urgent: 0, due: 0, lower_priority: 3, total: 3 },
+      }),
+    );
+    const passthrough = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(
+          String(input instanceof Request ? input.url : input),
+        );
+        const done = url.pathname.endsWith("/worklist/done");
+        if (done || url.pathname.endsWith("/bulk/preview")) {
+          const body =
+            input instanceof Request
+              ? await input.clone().text()
+              : String(init?.body ?? "");
+          sent.push({ path: url.pathname, body: JSON.parse(body) });
+          return done
+            ? new Response(null, { status: 204 })
+            : jsonResponse({
+                record_type: "worklist_item",
+                verb: "complete",
+                count: 1,
+                affected: [aTask.id],
+                excluded: [],
+                sample: [],
+                requires_confirmation: false,
+              });
+        }
+        return passthrough(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await screen.findByText("Retrofit for the north plant");
+    expect(selectBox("Send the follow-up")).toBeNull();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.bulk.selectAll_other"].replace("{count}", "2"),
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.bulk.markDone"] }),
+    );
+
+    await waitFor(() => {
+      // Two writes, in no promised order: the dialog previews while the
+      // other rows leave.
+      expect([...sent].sort((a, b) => (a.path < b.path ? -1 : 1))).toEqual([
+        {
+          path: "/v1/bulk/preview",
+          body: {
+            record_type: "worklist_item",
+            verb: "complete",
+            items: [{ id: aTask.id, version: 3 }],
+          },
+        },
+        {
+          path: "/v1/worklist/done",
+          body: { rows: [{ source: "deal_at_risk", row_id: aDealAtRisk.id }] },
+        },
+      ]);
+    });
   });
 });
 

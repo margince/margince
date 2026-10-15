@@ -738,3 +738,123 @@ export const RailPanelMessageStates: StoryObj = {
     </>
   ),
 };
+
+type DaySpend = Readonly<{ task: string; calls: string }>;
+
+const SPEND: DaySpend[] = [
+  { task: "Triage", calls: "1,204" },
+  { task: "Drafts", calls: "312" },
+];
+
+const spendColumns = [
+  { key: "task", header: "Task", render: (row: DaySpend) => row.task },
+  {
+    key: "calls",
+    header: "Calls",
+    align: "end" as const,
+    render: (row: DaySpend) => row.calls,
+  },
+];
+
+function SyncRows() {
+  return (
+    <SettingList bleed="settings">
+      <SettingRow
+        label="Mail sync"
+        control={<Badge tone="success">On</Badge>}
+      />
+      <SettingRow label="History window" value="30 days" control={null} />
+    </SettingList>
+  );
+}
+
+// Every way a settings pane stacks its bands. Each boundary draws one line,
+// edge to edge like the head's, or none; `panelseams.test.tsx` holds the count.
+function BandsAndSeamsPanes() {
+  return (
+    <div style={{ display: "grid", gap: "var(--space-4)" }}>
+      <Panel title="Body after body">
+        <PanelBody>
+          <PanelIntro>
+            Messages from these domains are never captured.
+          </PanelIntro>
+        </PanelBody>
+        <PanelBody>Three domains, added by two members.</PanelBody>
+        <PanelBody>
+          <Disclosure summary="Change history">
+            <p>Renamed on Monday, added on Friday.</p>
+          </Disclosure>
+        </PanelBody>
+      </Panel>
+      <Panel title="Lists and bodies">
+        <SyncRows />
+        <PanelBody>
+          <p className="t-caption">Sync runs every five minutes.</p>
+        </PanelBody>
+        <SyncRows />
+      </Panel>
+      <Panel title="Spend">
+        <PanelGroupHead title="Spend by task" level="h3" />
+        <DataTable
+          bleed
+          label="Spend by task"
+          columns={spendColumns}
+          rows={SPEND}
+          rowKey={(row) => row.task}
+        />
+        <PanelBody>
+          <Disclosure summary="Show days" open>
+            <p>Twelve calls on Monday, four on Tuesday.</p>
+          </Disclosure>
+        </PanelBody>
+        <PanelGroupHead title="Spend by model" level="h3" />
+        <PanelBody>One model answered every call this month.</PanelBody>
+      </Panel>
+      <Panel title="Company">
+        <SettingList bleed="settings">
+          <SettingRow label="Name" value="Acme Pumps" control={null} />
+          <Disclosure summary="Market" open>
+            <SettingList>
+              <SettingRow
+                label="Sells"
+                value="Industrial pumps"
+                control={null}
+              />
+              <SettingRow label="Buyers" value="Water plants" control={null} />
+            </SettingList>
+          </Disclosure>
+        </SettingList>
+        <PanelRow>Rows run after the list</PanelRow>
+        <PanelRow>with their own inset rule between them</PanelRow>
+        <PanelBody>And a body closes the pane.</PanelBody>
+      </Panel>
+    </div>
+  );
+}
+
+async function groupHeadsReadUnderTheTitle(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const group = await canvas.findByRole("heading", { name: "Spend by task" });
+  const title = canvas.getByRole("heading", { name: "Spend" });
+  expect(group.tagName).toBe("H3");
+  expect(Number.parseFloat(getComputedStyle(group).fontSize)).toBeLessThan(
+    Number.parseFloat(getComputedStyle(title).fontSize),
+  );
+}
+
+export const BandsAndSeams: StoryObj = {
+  render: () => <BandsAndSeamsPanes />,
+  play: ({ canvasElement }) => groupHeadsReadUnderTheTitle(canvasElement),
+};
+
+export const BandsAndSeamsDark: StoryObj = {
+  globals: { theme: "dark" },
+  render: () => <BandsAndSeamsPanes />,
+  play: ({ canvasElement }) => groupHeadsReadUnderTheTitle(canvasElement),
+};
+
+export const BandsAndSeamsPhone: StoryObj = {
+  tags: ["uat-phone"],
+  render: () => <BandsAndSeamsPanes />,
+  play: ({ canvasElement }) => groupHeadsReadUnderTheTitle(canvasElement),
+};

@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -134,7 +133,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// takes it below so a model call charges the agent that caused it. This is
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
-	volumeMeter := agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow)
+	volumeMeter := newVolumeMeter(rdb, pool)
 	opts = append(opts, agentVolumeOptions(volumeMeter)...)
 
 	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)

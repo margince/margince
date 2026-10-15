@@ -13,9 +13,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { SEARCH_DEBOUNCE_MS } from "../components/listquery";
 import { LocaleProvider } from "../i18n";
 import { DealsScreen } from "./deals";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 
 // What narrowed the pipeline has to be readable ON the surface that is
 // narrowed.

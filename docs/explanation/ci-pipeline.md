@@ -216,7 +216,9 @@ What follows from this:
 ## Job graph
 
 ```
-changes ──┬─> deterministic-gates ──> craftsmanship
+changes ──┬─> deterministic-gates
+          ├─> backend-lint
+          ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
           │                     integration-unit-coverage ┴─> fan-in│
@@ -235,9 +237,10 @@ changes ──┬─> deterministic-gates ──> craftsmanship
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, uat, license-gate, images   (ten — vuln and
-         live-boot stay advisory and are NOT in the fan-in)
+         backend-lint, craftsmanship, craft-residue, secret-scan,
+         extension-reference, integration, frontend, uat, license-gate,
+         images   (eleven — vuln and live-boot stay advisory and are NOT
+         in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -276,6 +279,10 @@ no artifact with the lane. So starting it only once biome, vitest and tsc were g
 waiting. It would sit 9 minutes in the queue behind a unit job of 17 minutes. Running it behind `fe-quality` would
 save its runner minutes only on a change that `fe-quality` refuses. That is about one frontend run in
 7, which is cheaper than the wait.
+
+The `uat` lane is **sharded** too: three matrix runners each run a third of the Playwright tests
+(`--shard`). As one job it took longer than every other lane and set the time of the `ci` result. The `ci`
+aggregate reads one result for the three, so one red shard fails it.
 
 The integration lane on a real Postgres runs **beside** `deterministic-gates` for the same reason. It is
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
@@ -354,7 +361,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule

@@ -91,7 +91,7 @@ sits on its own at the top. Under it the screens are in three groups:
 
 - **Records**: **Contacts**, **Companies**, **Leads**, **Deals**
 - **Work**: **Projects**, **Filters and views**
-- **Intelligence**: **Analytics**
+- **Insights**: **Analytics**
 
 Settings is not in the sidebar: it is in the account menu at the top right. The
 **Deals** row is the pipeline board; there is no separate Pipeline row. The
@@ -112,7 +112,7 @@ Also called: navigation, menu, nav bar.
 Each Margince screen sits in one place in the sidebar, and you reach a few another way.
 - Contacts, companies, leads and deals: the **Records** group.
 - Projects, and saved filters and exports: the **Work** group, under **Projects** and **Filters and views**.
-- Reports and the forecast: **Analytics**, under **Intelligence**.
+- Reports and the forecast: **Analytics**, under **Insights**.
 - The Worklist, tasks and approvals: **Home**.
 - The pipeline: the **Deals** row, which is the board.
 - Settings: the account menu at the top right, not the sidebar.

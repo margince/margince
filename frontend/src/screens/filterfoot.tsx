@@ -11,14 +11,14 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import type { FilterResource } from "./filterdata";
+import type { FilterResource } from "../lib/filterdata";
+import { isComplete, type Node } from "../lib/segmentpredicate";
 import {
   ExportFilterItems,
   ExportProgress,
   type FilterExportRun,
 } from "./filterexport";
 import { proposedCount } from "./filterproposal";
-import { isComplete, type Node } from "./segmentpredicate";
 import "./filters.css";
 
 /** What the filter on the page is, which decides what keeping it means. */

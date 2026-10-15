@@ -202,10 +202,11 @@ describe("the rate sheets", () => {
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
     expect(screen.getByText(/\$6\.25$/)).toBeTruthy();
 
-    // Each sheet is a stacked settings row, and the row is what says WHICH
-    // rates these are — the table's own headers name columns, not the sheet.
+    // The table's name says which rates these are; its headers name columns.
     expect(
-      within(rateCard("Currency rates")).getByText("Rates in force"),
+      within(rateCard("Currency rates")).getByRole("table", {
+        name: "Rates in force",
+      }),
     ).toBeTruthy();
   });
 
@@ -449,8 +450,8 @@ describe("the rate sheets", () => {
     const fx = rateCard("Currency rates");
     expect(within(fx).queryByText("USD")).toBeNull();
     // Not the table with an empty body either: the withheld card draws no
-    // sheet at all, so the row that names one is absent with it.
-    expect(within(fx).queryByText("Rates in force")).toBeNull();
+    // sheet at all.
+    expect(within(fx).queryByRole("table")).toBeNull();
     // One explanation, not two: the read-only caption belongs to a sheet the
     // reader may actually read.
     expect(within(fx).queryByText(/your role cannot change rates/i)).toBeNull();

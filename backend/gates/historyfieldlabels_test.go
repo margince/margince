@@ -10,7 +10,7 @@ package gates
 // The record page renders one row per changed field, and the name it prints is
 // a key out of the audit image the writer built. Two kinds of key reach it. A
 // CONTRACT column — `amount_minor`, `owner_id` — is covered by
-// frontend/src/screens/historyfieldlabels.test.ts, which derives its set from
+// frontend/src/lib/historyfieldlabels.test.ts, which derives its set from
 // what an `Update<Type>Request` writes. A HAND-BUILT image is not: those keys
 // are Go string literals, the contract has never heard of them, and a census on
 // the other side of the wire cannot see them by construction.
@@ -53,7 +53,7 @@ import (
 )
 
 const (
-	historyLabelSource = "../frontend/src/screens/historyfieldlabels.ts"
+	historyLabelSource = "../frontend/src/lib/historyfieldlabels.ts"
 	syntheticLabelMap  = "const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>(["
 	contractLabelMap   = "const HISTORY_FIELD_LABELS = new Map<string, MessageKey>(["
 	// projectedKeyFloor guards against a vacuous pass. Roughly fifty distinct

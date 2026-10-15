@@ -8,8 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
-import { FilterBuilder } from "./filterbuilder";
-import type { VocabularyField } from "./filterdata";
+import type { VocabularyField } from "../lib/filterdata";
 import {
   encode,
   isGroup,
@@ -17,7 +16,8 @@ import {
   newGroup,
   newLeaf,
   resetIDsForTest,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
+import { FilterBuilder } from "./filterbuilder";
 
 // The builder's one job is that every choice it offers came from the server's
 // vocabulary. So the tests below mostly ask what it OFFERS, not what it draws:

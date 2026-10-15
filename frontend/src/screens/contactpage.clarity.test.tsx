@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { UnsavedGuard } from "../app/unsaved";
+import { UnsavedGuard } from "../components/unsaved";
 import { en } from "../i18n/en";
 import { jsonResponse } from "../testing/story-utils";
 import { mount, view } from "./contactpage.testkit";

@@ -66,6 +66,8 @@ type ErroredRow struct {
 	Object string   `json:"object"`
 	ID     ids.UUID `json:"id"`
 	Reason string   `json:"reason"`
+	// Code is Reason as a code a screen can say in the reader's language.
+	Code ReasonCode `json:"reason_code,omitempty"`
 }
 
 // UndoReport is the reversal outcome (IEM-WIRE-9). Every row this run
@@ -105,7 +107,8 @@ func reverseOneRow(ctx context.Context, w UndoWriters, r mapRow, touched bool, r
 		rep.ReversedCount++
 		return nil
 	case isRowRefusal(err):
-		rep.Errored = append(rep.Errored, ErroredRow{Object: r.object, ID: r.nativeID, Reason: reversalRefusalReason(err)})
+		why := reversalRefusalReason(err)
+		rep.Errored = append(rep.Errored, ErroredRow{Object: r.object, ID: r.nativeID, Reason: why.English(), Code: why.Code})
 		return nil
 	default:
 		return err
@@ -124,19 +127,19 @@ func isRowRefusal(err error) bool {
 		errors.Is(err, apperrors.ErrConflict)
 }
 
-// reversalRefusalReason turns a Reverse error into the operator-facing
-// sentence errored rows carry — never a database or driver message, the
-// same discipline the forward commit's SkippedRow reasons already keep.
-func reversalRefusalReason(err error) string {
+// reversalRefusalReason turns a Reverse error into the operator-facing cause
+// errored rows carry. It is never a database or driver message, the same rule
+// the forward commit's SkippedRow reasons keep.
+func reversalRefusalReason(err error) Reason {
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return "the caller's grant no longer covers this record"
+		return Why(ReasonUndoGrantLost)
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "the record is no longer visible to this caller"
+		return Why(ReasonUndoNotVisible)
 	case errors.Is(err, apperrors.ErrConflict):
-		return "the record refused the reversal (a business rule protects it)"
+		return Why(ReasonUndoRuleProtects)
 	default:
-		return "the record could not be reversed"
+		return Why(ReasonUndoFailed)
 	}
 }
 

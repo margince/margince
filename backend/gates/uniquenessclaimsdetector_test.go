@@ -112,7 +112,7 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 	if name == "" || name == "block" {
 		return nil
 	}
-	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
+	return compiledPattern(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
 }
 
 // claimPhrase returns the first match that is a claim rather than prose, and ""

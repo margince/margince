@@ -39,9 +39,6 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 // other than a finished undo of the run that landed it.
 var errBoundRecordArchived = errors.New("the record this row landed as is archived")
 
-// boundArchivedReason is what a row is told when its record is archived.
-const boundArchivedReason = "this row's record was archived, so it is not updated; restore the record to update it"
-
 // lookup resolves an external id to the record an earlier run landed for it.
 //
 // A bound key of an undone run is free whatever its record is. Undo never

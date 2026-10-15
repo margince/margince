@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRoster } from "../components/entityref";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
@@ -9,14 +10,13 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, usePlural, useT } from "../i18n";
+import { leadWriteKeys } from "../lib/leadkeys";
 import {
   ProblemError,
   problemMessageOf,
   throwProblem,
   unwrap,
 } from "../lib/problem";
-import { useRoster } from "./entityref";
-import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];
