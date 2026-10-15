@@ -37,7 +37,8 @@
     "openapi-fetch": "^0.17.0",
     "pdfjs-dist": "6.3.289",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

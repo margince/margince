@@ -167,9 +167,8 @@ describe("the timeline tab", () => {
   });
 
   // The cuts stand in the panel's body, over the row that narrows whichever
-  // cut is open. A pill row wraps to as many rows as the column needs, and the
-  // head is one fixed band — so in the head it was the one card on the page
-  // whose title sat at a different height from every other.
+  // cut is open. In the head, a pill row that wraps would raise that card's
+  // head above every other card's.
   it("keeps the cuts under the head, above the narrowing row", () => {
     const { container } = withProviders(
       <ContactTimelineTab contactId="p-1" view={view} />,

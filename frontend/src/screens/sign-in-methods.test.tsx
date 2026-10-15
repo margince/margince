@@ -44,12 +44,28 @@ function mount(
   providers: { key: string; label: string; enabled: boolean }[],
   groupRoleMap: Record<string, string> = {},
   allow: GrantSpec = fullSignInGrants,
+  mfa: {
+    required?: boolean;
+    ownConfirmed?: boolean;
+    ownAnswer?: Promise<Response>;
+  } = {},
 ) {
   const calls: unknown[] = [];
   const refusing = { writes: false, reads: false };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.url.endsWith("/v1/me/mfa")) {
+      if (mfa.ownAnswer) {
+        return mfa.ownAnswer;
+      }
+      const confirmed = mfa.ownConfirmed ?? true;
+      return jsonResponse({
+        enrolled: confirmed,
+        confirmed,
+        recovery_codes_left: confirmed ? 10 : 0,
+      });
     }
     if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
       return jsonResponse({ title: "Unavailable", status: 503 }, 503);
@@ -68,7 +84,7 @@ function mount(
     return jsonResponse({
       sign_in_providers: providers,
       require_sso: false,
-      require_mfa: false,
+      require_mfa: mfa.required ?? false,
       oidc_group_role_map: groupRoleMap,
     });
   });
@@ -158,6 +174,127 @@ describe("the sign-in methods card", () => {
       await screen.findByText(/no external provider configured/i),
     ).toBeTruthy();
     expect(screen.queryByRole("switch", { name: /google/i })).toBeNull();
+  });
+});
+
+// Turning the requirement on sends members without a factor to set one up, so
+// it asks first. Turning it off takes nothing from anyone, so it saves at once.
+describe("the second-factor requirement", () => {
+  const requireSwitch = () =>
+    screen.findByRole("switch", { name: /require second factor/i });
+  const confirmButton = (dialog: HTMLElement) =>
+    within(dialog).getByRole("button", { name: /require second factor/i });
+  // Settled means the confirm is live: it is held while the admin's own factor
+  // is still being asked for.
+  const settledDialog = async () => {
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(confirmButton(dialog).hasAttribute("disabled")).toBe(false),
+    );
+    return dialog;
+  };
+
+  it("asks before requiring a second factor, then saves it", async () => {
+    const { calls } = mount([]);
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+
+    const dialog = await settledDialog();
+    expect(
+      within(dialog).getByText(/asked to set it up before they can continue/i),
+    ).toBeTruthy();
+    expect(calls).toEqual([]);
+    await user.click(confirmButton(dialog));
+    await waitFor(() => expect(calls).toEqual([{ require_mfa: true }]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("sends nothing when the confirm is cancelled", async () => {
+    const { calls } = mount([]);
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls).toEqual([]);
+  });
+
+  it("tells an admin with no factor of their own that they are asked to set one up too", async () => {
+    mount([], {}, fullSignInGrants, { ownConfirmed: false });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(/you have not set up two-step sign-in/i),
+    ).toBeTruthy();
+  });
+
+  it("leaves the self warning out for an admin who holds a factor", async () => {
+    mount([], {}, fullSignInGrants, { ownConfirmed: true });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await settledDialog();
+    expect(
+      within(dialog).queryByText(/you have not set up two-step sign-in/i),
+    ).toBeNull();
+  });
+
+  it("holds the confirm while the admin's own factor is unknown", async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const ownAnswer = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const { calls } = mount([], {}, fullSignInGrants, { ownAnswer });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+
+    expect(confirmButton(dialog).hasAttribute("disabled")).toBe(true);
+    await user.click(confirmButton(dialog));
+    expect(calls).toEqual([]);
+
+    answer(
+      jsonResponse({
+        enrolled: true,
+        confirmed: true,
+        recovery_codes_left: 10,
+      }),
+    );
+    await settledDialog();
+  });
+
+  // A failed read is no proof the admin holds a factor.
+  it("warns the admin when their own factor cannot be read", async () => {
+    mount([], {}, fullSignInGrants, {
+      ownAnswer: Promise.resolve(
+        jsonResponse({ title: "Unavailable", status: 503 }, 503),
+      ),
+    });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await settledDialog();
+    expect(
+      within(dialog).getByText(/you have not set up two-step sign-in/i),
+    ).toBeTruthy();
+  });
+
+  it("turns the requirement off without asking", async () => {
+    const { calls } = mount([], {}, fullSignInGrants, { required: true });
+    const user = userEvent.setup();
+    const control = await requireSwitch();
+    expect(control.getAttribute("aria-checked")).toBe("true");
+    await user.click(control);
+    await waitFor(() => expect(calls).toEqual([{ require_mfa: false }]));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("is read-only for a caller who cannot update the installation", async () => {
+    mount(
+      [],
+      {},
+      { installation_settings: ["read"], authentication_policy: ["read"] },
+    );
+    expect((await requireSwitch()).hasAttribute("disabled")).toBe(true);
   });
 });
 

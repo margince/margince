@@ -3025,11 +3025,11 @@ export const en = {
     "Someone already decided this suggestion. Reload to see where it stands.",
   "tagSuggestion.unavailable":
     "The suggestion could not be read. Try again later.",
-  "tagAdmin.descriptionLabel": "Words that show interest",
+  "tagAdmin.descriptionLabel": "What shows interest",
   "tagAdmin.descriptionHint":
-    "Separate words or phrases with commas, for example: pricing for Product X, Product X demo.",
+    "For example, asks about pricing or a Product X demo. Without AI, each comma-separated phrase counts as a match.",
   "tagAdmin.suggestibleLabel":
-    "Suggest this tag when mail or meeting notes use these words",
+    "Suggest this tag when mail, meetings, notes or calls show this interest",
   "tagAdmin.colorNone": "No color",
   "tagAdmin.color.teal": "Teal",
   "tagAdmin.color.amber": "Amber",
@@ -8607,6 +8607,12 @@ export const en = {
   // the authority, not the session.
   // The account whose password an operator chose. Authenticated, and
   // able to do exactly one thing until it has a password of its own.
+  "forcedMfa.pageTitle": "Set up two-step sign-in",
+  "forcedMfa.title": "Set up two-step sign-in",
+  "forcedMfa.body":
+    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+  "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
+  "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
   "forcedPassword.title": "Set your own password",
   "forcedPassword.body":
@@ -8630,6 +8636,63 @@ export const en = {
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
   "password.errorGeneric": "No cause was reported. Retry.",
+  "mfa.title": "Two-step sign-in",
+  "mfa.body": "A code from an authenticator app, asked for after the password.",
+  "mfa.off": "Not set up",
+  "mfa.pending": "Not finished",
+  "mfa.on_one": "On · {count} recovery code left",
+  "mfa.on_other": "On · {count} recovery codes left",
+  "mfa.statusFailed": "Status not loaded. Reload the page.",
+  "mfa.setUp": "Set up",
+  "mfa.remove": "Remove",
+  "mfa.lowTitle": "Few recovery codes left",
+  "mfa.low": "For new codes, remove two-step sign-in and set it up again.",
+  "mfa.setupTitle": "Set up two-step sign-in",
+  "mfa.startFailedTitle": "Setup not started",
+  "mfa.alreadyOn":
+    "Two-step sign-in is already on. Remove it first to set it up again.",
+  "mfa.scan": "Scan this QR code with an authenticator app.",
+  "mfa.qrLabel": "QR code for the authenticator app",
+  "mfa.secretLabel": "Secret key",
+  "mfa.secretHint": "If the app cannot scan, enter this key in it.",
+  "mfa.copyKey": "Copy key",
+  "mfa.copied": "Copied",
+  "mfa.copyKeyFailed":
+    "Copy failed. Select the key above and copy it manually.",
+  "mfa.code": "Code from the app",
+  "mfa.signsOut": "Turning it on signs out all other devices.",
+  "mfa.turnOn": "Turn on",
+  "mfa.turningOn": "Turning on…",
+  "mfa.codeRefused": "The code was not accepted. Check it and retry.",
+  "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
+  "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
+  "mfa.onTitle": "Two-step sign-in on",
+  "mfa.onBody": "All other devices were signed out.",
+  "mfa.saveCodesTitle": "Save these recovery codes now",
+  "mfa.saveCodes":
+    "Each code signs in once without the app. The codes are not shown again.",
+  "mfa.codesLabel": "Recovery codes",
+  "mfa.copyCodes": "Copy codes",
+  "mfa.copyCodesFailed":
+    "Copy failed. Select the codes above and copy them manually.",
+  "mfa.keepCodes": "Save the codes, then choose Done.",
+  "mfa.onElsewhere":
+    "Two-step sign-in was turned on in another session. Enter a code to remove it.",
+  "mfa.done": "Done",
+  "mfa.cancel": "Cancel",
+  "mfa.removeTitle": "Remove two-step sign-in?",
+  "mfa.removeBody":
+    "Signing in then needs only the password, and the recovery codes stop working.",
+  "mfa.removeConfirm": "Remove two-step sign-in",
+  "mfa.removeCode": "Code",
+  "mfa.removeCodeHint":
+    "A code from the authenticator app, or an unused recovery code.",
+  "mfa.discardTitle": "Discard unfinished setup?",
+  "mfa.discardBody":
+    "The authenticator app was never confirmed, so no code is needed.",
+  "mfa.discard": "Discard setup",
+  "mfa.removed": "Two-step sign-in removed",
+  "mfa.discarded": "Setup discarded",
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
@@ -8701,6 +8764,13 @@ export const en = {
   "auth.resetDoneTitle": "Password updated",
   "auth.resetDoneBody":
     "The password was changed and all other sessions were signed out. Sign in with the new password.",
+  "auth.mfaTitle": "Verification code",
+  "auth.mfaSub":
+    "Enter the code from the authenticator app, or one unused recovery code.",
+  "auth.mfaCode": "Code",
+  "auth.mfaVerify": "Verify code",
+  "auth.mfaErrCode":
+    "The code was not accepted. Check it and retry, or go back to sign in and start again.",
   "auth.backToLogin": "Back to sign in",
   "auth.signOut": "Sign out",
 
@@ -10608,7 +10678,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "How people can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
+    "How members can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available. Every user can sign in this way, so the other methods can be turned off safely.",
@@ -10618,6 +10688,14 @@ export const en = {
     "Shows this provider on the sign-in screen. Turning it off stops sign-ins in progress; existing sessions continue.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
+  "signInMethods.requireMfa": "Require second factor",
+  "signInMethods.requireMfaHint":
+    "Every member needs two-step sign-in turned on to use Margince.",
+  "signInMethods.requireMfaConfirmTitle": "Require second factor?",
+  "signInMethods.requireMfaConfirmBody":
+    "Members without two-step sign-in are asked to set it up before they can continue.",
+  "signInMethods.requireMfaConfirmSelf":
+    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",

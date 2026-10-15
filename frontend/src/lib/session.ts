@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { Middleware } from "openapi-fetch";
 import { api } from "../api/client";
 import { problemMessage, unwrap } from "./problem";
 import { forgetSeat } from "./storage";
@@ -21,7 +22,10 @@ export type AuthProbeKind =
   // A distinct kind because the remedy is distinct. The login screen would
   // loop: the credentials are correct, and using them again lands in the
   // same refusal.
-  | "must-change-password";
+  | "must-change-password"
+  // The installation requires a second factor this account does not hold yet,
+  // and the server refuses every route but the enrolment ones.
+  | "must-enrol-mfa";
 
 export class AuthProbeError extends Error {
   readonly kind: AuthProbeKind;
@@ -41,6 +45,9 @@ function probeKindFor(status: number, code?: string): AuthProbeKind {
   if (status >= 500) return "connection";
   if (status === 403 && code === "password_change_required") {
     return "must-change-password";
+  }
+  if (status === 403 && code === "mfa_enrolment_required") {
+    return "must-enrol-mfa";
   }
   return "unauthorized";
 }
@@ -158,4 +165,26 @@ export function useLogout() {
 // the only claim they can make until the session is known.
 export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
+}
+
+// A 403 means the session snapshot is stale: grants changed, or the account is
+// now confined. A 401 may be a wrong code or a lapsed session, and the contract
+// gives both one answer. So /me is asked again at once, not at the next focus.
+export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
+  return {
+    onResponse({ request, response }) {
+      if (
+        (response.status === 401 || response.status === 403) &&
+        !new URL(request.url).pathname.endsWith("/me")
+      ) {
+        // Exact, and never cancelling: a prefix match re-asks the ["me", …] read
+        // that just 403'd, and a cancel discards the probe's own answer.
+        void queryClient.invalidateQueries(
+          { queryKey: ["me"], exact: true },
+          { cancelRefetch: false },
+        );
+      }
+      return response;
+    },
+  };
 }

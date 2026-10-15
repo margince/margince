@@ -2971,11 +2971,11 @@ export const de = {
     "Über diesen Vorschlag wurde schon entschieden. Lade die Seite neu, um den Stand zu sehen.",
   "tagSuggestion.unavailable":
     "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
-  "tagAdmin.descriptionLabel": "Wörter, die Interesse zeigen",
+  "tagAdmin.descriptionLabel": "Anzeichen für Interesse",
   "tagAdmin.descriptionHint":
-    "Trenne Wörter oder Wendungen mit Kommas, zum Beispiel: Preise für Produkt X, Demo von Produkt X.",
+    "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X. Ohne KI zählt jede kommagetrennte Wendung als Treffer.",
   "tagAdmin.suggestibleLabel":
-    "Dieses Tag vorschlagen, wenn E-Mails oder Terminnotizen diese Wörter enthalten",
+    "Dieses Tag vorschlagen, wenn E-Mails, Termine, Notizen oder Anrufe dieses Interesse zeigen",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",
@@ -8467,6 +8467,12 @@ export const de = {
   // wird korrigiert, nicht repariert — repariert werden Geräte.
   "auth.unavailableBody":
     "Diese Margince-Installation ist nicht für die Anmeldung bereit. Ein Admin muss die Einrichtung abschließen oder reparieren.",
+  "forcedMfa.pageTitle": "Zweistufige Anmeldung einrichten",
+  "forcedMfa.title": "Zweistufige Anmeldung einrichten",
+  "forcedMfa.body":
+    "Diese Installation verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
+  "forcedMfa.alreadyOn": "Die zweistufige Anmeldung ist schon an.",
+  "forcedMfa.continue": "Weiter",
   "forcedPassword.pageTitle": "Passwort festlegen",
   "forcedPassword.title": "Eigenes Passwort festlegen",
   "forcedPassword.body":
@@ -8489,6 +8495,68 @@ export const de = {
   "password.changeFailedTitle": "Passwort wurde nicht geändert",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Bitte versuche es erneut.",
+  "mfa.title": "Zweistufige Anmeldung",
+  "mfa.body":
+    "Ein Code aus einer Authenticator-App, nach dem Passwort abgefragt.",
+  "mfa.off": "Nicht eingerichtet",
+  "mfa.pending": "Nicht abgeschlossen",
+  "mfa.on_one": "An · {count} Wiederherstellungscode übrig",
+  "mfa.on_other": "An · {count} Wiederherstellungscodes übrig",
+  "mfa.statusFailed": "Der Status wurde nicht geladen. Lade die Seite neu.",
+  "mfa.setUp": "Einrichten",
+  "mfa.remove": "Entfernen",
+  "mfa.lowTitle": "Wenige Wiederherstellungscodes übrig",
+  "mfa.low":
+    "Für neue Codes entferne die zweistufige Anmeldung und richte sie neu ein.",
+  "mfa.setupTitle": "Zweistufige Anmeldung einrichten",
+  "mfa.startFailedTitle": "Einrichtung nicht gestartet",
+  "mfa.alreadyOn":
+    "Die zweistufige Anmeldung ist schon an. Entferne sie zuerst, um sie neu einzurichten.",
+  "mfa.scan": "Scanne diesen QR-Code mit einer Authenticator-App.",
+  "mfa.qrLabel": "QR-Code für die Authenticator-App",
+  "mfa.secretLabel": "Geheimer Schlüssel",
+  "mfa.secretHint":
+    "Wenn die App nicht scannen kann, gib dort diesen Schlüssel ein.",
+  "mfa.copyKey": "Schlüssel kopieren",
+  "mfa.copied": "Kopiert",
+  "mfa.copyKeyFailed":
+    "Kopieren fehlgeschlagen. Markiere den Schlüssel oben und kopiere ihn von Hand.",
+  "mfa.code": "Code aus der App",
+  "mfa.signsOut": "Beim Einschalten werden alle anderen Geräte abgemeldet.",
+  "mfa.turnOn": "Einschalten",
+  "mfa.turningOn": "Wird eingeschaltet…",
+  "mfa.codeRefused":
+    "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
+  "mfa.tooManyCodes":
+    "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
+  "mfa.onTitle": "Zweistufige Anmeldung an",
+  "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
+  "mfa.saveCodesTitle": "Wiederherstellungscodes jetzt sichern",
+  "mfa.saveCodes":
+    "Jeder Code gilt für eine Anmeldung ohne die App. Die Codes werden nicht noch einmal angezeigt.",
+  "mfa.codesLabel": "Wiederherstellungscodes",
+  "mfa.copyCodes": "Codes kopieren",
+  "mfa.copyCodesFailed":
+    "Kopieren fehlgeschlagen. Markiere die Codes oben und kopiere sie von Hand.",
+  "mfa.keepCodes": "Sichere die Codes und wähle dann Fertig.",
+  "mfa.onElsewhere":
+    "Die zweistufige Anmeldung wurde in einer anderen Sitzung eingeschaltet. Gib einen Code ein, um sie zu entfernen.",
+  "mfa.done": "Fertig",
+  "mfa.cancel": "Abbrechen",
+  "mfa.removeTitle": "Zweistufige Anmeldung entfernen?",
+  "mfa.removeBody":
+    "Für die Anmeldung reicht dann das Passwort, und die Wiederherstellungscodes gelten nicht mehr.",
+  "mfa.removeConfirm": "Zweistufige Anmeldung entfernen",
+  "mfa.removeCode": "Code",
+  "mfa.removeCodeHint":
+    "Ein Code aus der Authenticator-App oder ein unbenutzter Wiederherstellungscode.",
+  "mfa.discardTitle": "Unfertige Einrichtung verwerfen?",
+  "mfa.discardBody":
+    "Die Authenticator-App wurde nie bestätigt, deshalb ist kein Code nötig.",
+  "mfa.discard": "Einrichtung verwerfen",
+  "mfa.removed": "Zweistufige Anmeldung entfernt",
+  "mfa.discarded": "Einrichtung verworfen",
   "setup.pageTitle": "Margince einrichten",
   "setup.title": "Diese Installation übernehmen",
   "setup.body":
@@ -8569,6 +8637,13 @@ export const de = {
   // wird beendet.
   "auth.resetDoneBody":
     "Das Passwort wurde geändert, und alle anderen Sitzungen wurden abgemeldet. Melde dich mit dem neuen Passwort an.",
+  "auth.mfaTitle": "Bestätigungscode",
+  "auth.mfaSub":
+    "Gib den Code aus deiner Authenticator-App oder einen unbenutzten Wiederherstellungscode ein.",
+  "auth.mfaCode": "Code",
+  "auth.mfaVerify": "Code bestätigen",
+  "auth.mfaErrCode":
+    "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut, oder geh zurück zur Anmeldung und beginne neu.",
   "auth.backToLogin": "Zurück zur Anmeldung",
   "auth.signOut": "Abmelden",
 
@@ -10528,7 +10603,7 @@ export const de = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Wie sich Personen anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Ein Admin kann einen Anbieter deaktivieren, aber keinen hinzufügen.",
+    "Wie sich Mitglieder anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Admins können einen Anbieter deaktivieren, aber keinen hinzufügen.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
@@ -10538,6 +10613,14 @@ export const de = {
     "Zeigt diesen Anbieter auf der Anmeldeseite. Bestehende Sitzungen bleiben beim Deaktivieren erhalten. Laufende Anmeldungen werden abgebrochen.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
+  "signInMethods.requireMfa": "Zweiten Faktor verlangen",
+  "signInMethods.requireMfaHint":
+    "Jedes Mitglied braucht die zweistufige Anmeldung, um Margince zu nutzen.",
+  "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
+  "signInMethods.requireMfaConfirmBody":
+    "Mitglieder ohne zweistufige Anmeldung werden gebeten, sie einzurichten, bevor sie weitermachen können.",
+  "signInMethods.requireMfaConfirmSelf":
+    "Du hast die zweistufige Anmeldung noch nicht eingerichtet, deshalb wirst auch du gebeten, sie einzurichten.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Anmeldung über SSO eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",

@@ -23,6 +23,11 @@
   color-scheme: dark;
 }
 
+/* Not the default limit: it leaves a one-letter tail ("Prognosekategori-e"). */
+:root {
+  hyphenate-limit-chars: 7 3 3;
+}
+
 /* Text for assistive technology only: in the accessibility tree, off the
    screen. Clipped to 1px rather than `display: none` or `visibility: hidden` —
    both of those remove it from the tree as well, which is the opposite of what

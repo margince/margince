@@ -284,13 +284,17 @@ const EXPECTED_ERROR_TAG = "uat-expected-console-error";
 const PHONE_TAG = "uat-phone";
 // The same phone on its side, for a layout keyed on height running out.
 const PHONE_ON_ITS_SIDE_TAG = "uat-phone-on-its-side";
+// A wide desktop, for a layout that only exists above the top bar's 1100px.
+const WIDE_TAG = "uat-wide";
 const DESKTOP = { width: 1024, height: 720 };
 const PHONE = { width: 390, height: 844 };
 const PHONE_ON_ITS_SIDE = { width: 844, height: 390 };
+const WIDE = { width: 1440, height: 900 };
 
 function viewportFor(tags) {
   if (tags.includes(PHONE_TAG)) return PHONE;
   if (tags.includes(PHONE_ON_ITS_SIDE_TAG)) return PHONE_ON_ITS_SIDE;
+  if (tags.includes(WIDE_TAG)) return WIDE;
   return DESKTOP;
 }
 

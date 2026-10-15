@@ -26,6 +26,7 @@ You see only the pages your permissions open. The Reset data page appears only w
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
 - Change your password, display name, email signature, language or theme (appearance): **Account**.
+- Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you: **Meetings**, in **Bookable hours**.
 - Set up how your drafts sound: **Writing voice**.
 - Choose how each kind of notification reaches you: **Notifications**.
@@ -42,7 +43,7 @@ Things for the whole company in Margince each have one settings page.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
-- Set up single sign-on or the Google and Microsoft apps: **Sign-in and apps**.
+- Set up single sign-on or the Google and Microsoft apps, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
 - Set up webhooks or a provider of contact data: **Integrations**.
 
@@ -109,6 +110,17 @@ The company's name is the **Company name** row under **Business context**. Savin
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later, and a past rate never changes. So a new rate never changes the numbers of past months. Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
+
+## Sign-in and apps
+
+The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
+
+### How do I require two-step sign-in for every member?
+To require two-step sign-in for every member of Margince, open Settings → **Sign-in and apps** and turn on **Require second factor**. Margince asks you to confirm first.
+A member without two-step sign-in is asked to set it up the next time they sign in or open Margince, before anything else opens.
+Members who already use it go on as before, with their own phone app.
+The switch keeps its setting when someone resets data.
+Also called: require MFA, two-step sign-in for everyone, sign-in codes for all.
 
 ## Members, Teams, and Seats and license
 

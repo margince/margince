@@ -140,6 +140,7 @@ var namesItsSubject = map[string]subjectClaim{
 var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/captureclassify.go:ask":                   "one call labels a BATCH of unread messages. The batch is the unit the economics are built on, and a citation naming one of its rows would be wrong about the others",
 	"internal/compose/owedclassify.go:ask":                      "one call judges many messages at once, as the classifier above does; a citation naming one row would be wrong about the rest",
+	"internal/compose/tagsuggestpass.go:ask":                    "one call reads a batch of captured items against the tag vocabulary; a citation naming one item would be wrong about the rest",
 	"internal/compose/requestsettle.go:ask":                     "a batch of settlement candidates, one call for all of them",
 	"internal/compose/captureverdictask.go:ask":                 "it judges an ADDRESS the workspace has not made a record of yet — that is the question, and there is nothing to cite until it is answered",
 	"internal/compose/briefs/briefl2.go:askModel":               "the call ranks a queue against each other; it is about the ordering rather than about any one item in it",

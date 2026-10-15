@@ -10,6 +10,7 @@ import {
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { AuthExperience } from "./auth-core";
 import { ProviderButtons } from "./auth-providers";
+import { MfaForm } from "./auth-signin";
 
 /**
  * The unauthenticated surface, whole (ADR-0076).
@@ -411,4 +412,76 @@ export const ResetServerFault: Story = {
     await submitNewPassword(canvasElement);
     await within(canvasElement).findByText(/the link is still valid/i);
   },
+};
+
+// The password step answers 202 here, so a real submit lands on the code step.
+function SecondFactorStory({ refuse = false }: Readonly<{ refuse?: boolean }>) {
+  const routes: RouteMap = {
+    "GET /auth/capabilities": () =>
+      jsonResponse({
+        password: true,
+        password_reset: true,
+        oidc_providers: [],
+      }),
+    "POST /auth/login": () =>
+      jsonResponse({ mfa_challenge: "demo-challenge" }, 202),
+  };
+  if (refuse) {
+    routes["POST /auth/mfa"] = () =>
+      jsonResponse({ title: "unauthorized" }, 401);
+  }
+  installFetchStub(routes);
+  return (
+    <StoryProviders>
+      <AuthScreen onAuthed={() => undefined} />
+    </StoryProviders>
+  );
+}
+
+async function passPasswordStep(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.type(canvas.getByLabelText("Email"), "ada@example.com");
+  await userEvent.type(
+    canvas.getByLabelText("Password"),
+    "correct-horse-battery{enter}",
+  );
+  await canvas.findByLabelText("Code");
+}
+
+/** The code step after a correct password: one field that takes an
+ * authenticator code or a recovery code, and a way back. */
+export const SecondFactor: Story = {
+  render: () => <SecondFactorStory />,
+  play: async ({ canvasElement }) => passPasswordStep(canvasElement),
+};
+
+/** 401: a wrong code and an expired challenge are one answer, so the copy
+ * offers both remedies and the field is emptied for the retry. */
+export const SecondFactorRefused: Story = {
+  render: () => <SecondFactorStory refuse />,
+  play: async ({ canvasElement }) => {
+    await passPasswordStep(canvasElement);
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByLabelText("Code"), "000000{enter}");
+    await canvas.findByText(/the code was not accepted/i);
+  },
+};
+
+/** The code step on a phone, mounted on its own so the capture needs no
+ * password step first. */
+export const SecondFactorPhone: Story = {
+  globals: { viewport: { value: "taskOnly" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <StoryProviders>
+      <AuthExperience phase="idle">
+        <MfaForm
+          challenge="demo-challenge"
+          onAuthed={() => undefined}
+          onPhase={() => undefined}
+          onBack={() => undefined}
+        />
+      </AuthExperience>
+    </StoryProviders>
+  ),
 };

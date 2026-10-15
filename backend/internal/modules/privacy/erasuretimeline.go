@@ -170,6 +170,9 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if err := deleteReplyVerdictHistoryFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
+	if err := deleteTagInterestReadsFor(ctx, tx, contactID); err != nil {
+		return nil, err
+	}
 	// And what we concluded our own replies did about what they asked, which is
 	// the same kind of claim over the same emptied words.
 	if err := deleteRequestSettlementsFor(ctx, tx, contactID, emails); err != nil {
@@ -415,6 +418,18 @@ func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.ContactID](ctx context.Conte
 		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`,
 		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's reply verdicts: %w", err)
+	}
+	return nil
+}
+
+// deleteTagInterestReadsFor drops which tags the model read as one contact's
+// interests, through the link walk the reply verdicts above use.
+func deleteTagInterestReadsFor[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID) error {
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM tag_interest_read
+		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`,
+		contactID); err != nil {
+		return fmt.Errorf("privacy: clearing what the tag model read of the subject: %w", err)
 	}
 	return nil
 }

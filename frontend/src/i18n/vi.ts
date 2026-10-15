@@ -2910,11 +2910,11 @@ export const vi = {
   "tagSuggestion.decided":
     "Gợi ý này đã có quyết định. Tải lại để xem tình trạng hiện tại.",
   "tagSuggestion.unavailable": "Không thể tải gợi ý. Thử lại sau.",
-  "tagAdmin.descriptionLabel": "Từ ngữ cho thấy mối quan tâm",
+  "tagAdmin.descriptionLabel": "Dấu hiệu quan tâm",
   "tagAdmin.descriptionHint":
-    "Phân tách các từ hoặc cụm từ bằng dấu phẩy, ví dụ: giá Product X, demo Product X.",
+    "Ví dụ: hỏi về giá hoặc demo Product X. Khi không có AI, mỗi cụm từ cách nhau bằng dấu phẩy được tính là một kết quả khớp.",
   "tagAdmin.suggestibleLabel":
-    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp dùng các từ này",
+    "Gợi ý thẻ này khi email, cuộc họp, ghi chú hoặc cuộc gọi cho thấy mối quan tâm này",
   "tagAdmin.colorNone": "Không màu",
   "tagAdmin.color.teal": "Xanh mòng két",
   "tagAdmin.color.amber": "Hổ phách",
@@ -8271,6 +8271,12 @@ export const vi = {
   "auth.unavailableTitle": "Bản cài đặt chưa sẵn sàng",
   "auth.unavailableBody":
     "Bản cài đặt Margince này chưa sẵn sàng để đăng nhập. Quản trị viên cần hoàn tất hoặc sửa lại phần thiết lập.",
+  "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.title": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.body":
+    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+  "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
+  "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
   "forcedPassword.title": "Đặt mật khẩu của riêng bạn",
   "forcedPassword.body":
@@ -8291,6 +8297,61 @@ export const vi = {
   "password.done": "Đã đăng xuất mọi thiết bị khác.",
   "password.changeFailedTitle": "Không thể đổi mật khẩu",
   "password.errorGeneric": "Không rõ nguyên nhân. Thử lại.",
+  "mfa.title": "Đăng nhập hai bước",
+  "mfa.body": "Mã từ ứng dụng xác thực, được hỏi sau mật khẩu.",
+  "mfa.off": "Chưa thiết lập",
+  "mfa.pending": "Chưa hoàn tất",
+  "mfa.on_one": "Đang bật · còn {count} mã khôi phục",
+  "mfa.on_other": "Đang bật · còn {count} mã khôi phục",
+  "mfa.statusFailed": "Không thể tải trạng thái. Tải lại trang.",
+  "mfa.setUp": "Thiết lập",
+  "mfa.remove": "Gỡ bỏ",
+  "mfa.lowTitle": "Sắp hết mã khôi phục",
+  "mfa.low": "Để có mã mới, gỡ đăng nhập hai bước rồi thiết lập lại.",
+  "mfa.setupTitle": "Thiết lập đăng nhập hai bước",
+  "mfa.startFailedTitle": "Chưa bắt đầu thiết lập",
+  "mfa.alreadyOn":
+    "Đăng nhập hai bước đang bật. Gỡ bỏ trước rồi thiết lập lại.",
+  "mfa.scan": "Quét mã QR này bằng ứng dụng xác thực.",
+  "mfa.qrLabel": "Mã QR cho ứng dụng xác thực",
+  "mfa.secretLabel": "Khóa bí mật",
+  "mfa.secretHint": "Nếu ứng dụng không quét được, nhập khóa này vào ứng dụng.",
+  "mfa.copyKey": "Sao chép khóa",
+  "mfa.copied": "Đã sao chép",
+  "mfa.copyKeyFailed": "Không thể sao chép. Chọn khóa ở trên rồi tự sao chép.",
+  "mfa.code": "Mã từ ứng dụng",
+  "mfa.signsOut": "Khi bật, mọi thiết bị khác sẽ bị đăng xuất.",
+  "mfa.turnOn": "Bật",
+  "mfa.turningOn": "Đang bật…",
+  "mfa.codeRefused": "Mã không hợp lệ. Kiểm tra lại rồi thử lại.",
+  "mfa.tooManyCodes": "Sai mã quá nhiều lần. Chờ vài phút rồi thử lại.",
+  "mfa.confirmFailedTitle": "Chưa bật đăng nhập hai bước",
+  "mfa.onTitle": "Đã bật đăng nhập hai bước",
+  "mfa.onBody": "Mọi thiết bị khác đã bị đăng xuất.",
+  "mfa.saveCodesTitle": "Lưu các mã khôi phục này ngay",
+  "mfa.saveCodes":
+    "Mỗi mã dùng để đăng nhập một lần khi không có ứng dụng. Các mã sẽ không hiển thị lại.",
+  "mfa.codesLabel": "Mã khôi phục",
+  "mfa.copyCodes": "Sao chép mã",
+  "mfa.copyCodesFailed":
+    "Không thể sao chép. Chọn các mã ở trên rồi tự sao chép.",
+  "mfa.keepCodes": "Lưu các mã rồi chọn Xong.",
+  "mfa.onElsewhere":
+    "Đăng nhập hai bước đã bật ở phiên khác. Nhập mã để gỡ bỏ.",
+  "mfa.done": "Xong",
+  "mfa.cancel": "Hủy",
+  "mfa.removeTitle": "Gỡ đăng nhập hai bước?",
+  "mfa.removeBody":
+    "Khi đó chỉ cần mật khẩu để đăng nhập, và các mã khôi phục sẽ hết hiệu lực.",
+  "mfa.removeConfirm": "Gỡ đăng nhập hai bước",
+  "mfa.removeCode": "Mã",
+  "mfa.removeCodeHint":
+    "Mã từ ứng dụng xác thực, hoặc một mã khôi phục chưa dùng.",
+  "mfa.discardTitle": "Hủy thiết lập chưa xong?",
+  "mfa.discardBody": "Ứng dụng xác thực chưa được xác nhận nên không cần mã.",
+  "mfa.discard": "Hủy thiết lập",
+  "mfa.removed": "Đã gỡ đăng nhập hai bước",
+  "mfa.discarded": "Đã hủy thiết lập",
   "setup.pageTitle": "Thiết lập Margince",
   "setup.title": "Nhận quyền quản trị bản cài đặt này",
   "setup.body":
@@ -8363,6 +8424,13 @@ export const vi = {
   "auth.resetDoneTitle": "Đã cập nhật mật khẩu",
   "auth.resetDoneBody":
     "Đã đổi mật khẩu và đăng xuất mọi phiên khác. Đăng nhập bằng mật khẩu mới.",
+  "auth.mfaTitle": "Mã xác minh",
+  "auth.mfaSub":
+    "Nhập mã từ ứng dụng xác thực, hoặc một mã khôi phục chưa dùng.",
+  "auth.mfaCode": "Mã",
+  "auth.mfaVerify": "Xác minh mã",
+  "auth.mfaErrCode":
+    "Mã không được chấp nhận. Kiểm tra mã rồi thử lại, hoặc quay lại đăng nhập và bắt đầu lại.",
   "auth.backToLogin": "Quay lại đăng nhập",
   "auth.signOut": "Đăng xuất",
 
@@ -10286,6 +10354,14 @@ export const vi = {
     "Hiển thị nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng các lượt đăng nhập đang diễn ra; các phiên hiện có vẫn tiếp tục.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfaHint":
+    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
+  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+  "signInMethods.requireMfaConfirmBody":
+    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+  "signInMethods.requireMfaConfirmSelf":
+    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",

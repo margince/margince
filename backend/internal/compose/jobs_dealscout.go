@@ -4,9 +4,8 @@
 package compose
 
 // The River wiring of the hourly scout passes, Deal Scout's and the tag
-// scout's. Each runs once per workspace, in that workspace's transaction, as
-// the scout's own system principal. The passes themselves are RunDealScout and
-// RunTagScout.
+// scout's. Each runs per workspace as the scout's own system principal. The
+// passes themselves are RunDealScout, RunTagScout and TagSuggester.RunWorkspace.
 
 import (
 	"context"
@@ -53,12 +52,21 @@ type scoutWorker struct {
 // every suggestion reads as the scout's claim rather than a colleague's.
 func scoutWorkspace(ctx context.Context, w *scoutWorker, actor string, workspace ids.UUID) error {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), actor)
-	var pass scoutTally
-	if err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
-		var err error
-		pass, err = w.run(wsCtx, tx, w.now())
-		return err
-	}); err != nil {
+	return w.report(ctx, wsCtx, func() (scoutTally, error) {
+		var pass scoutTally
+		err := database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+			var err error
+			pass, err = w.run(wsCtx, tx, w.now())
+			return err
+		})
+		return pass, err
+	})
+}
+
+// report runs one workspace's pass under wsCtx and logs what it did.
+func (w *scoutWorker) report(ctx, wsCtx context.Context, run func() (scoutTally, error)) error {
+	pass, err := run()
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	// Logged on every pass: considered tells a quiet week from a broken read,

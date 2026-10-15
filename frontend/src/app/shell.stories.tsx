@@ -16,9 +16,10 @@ import {
   Wrench,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
+import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
@@ -576,10 +577,13 @@ function LevelExample({
   );
 }
 
-function LevelStory({ children }: Readonly<{ children: ReactNode }>) {
+function LevelStory({
+  children,
+  locale,
+}: Readonly<{ children: ReactNode; locale?: Locale }>) {
   stubSession();
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <SeedInstallation>{children}</SeedInstallation>
     </StoryProviders>
   );
@@ -597,6 +601,36 @@ export const SectionLevel: Story = {
       <LevelExample initiallyCollapsed={false} />
     </LevelStory>
   ),
+};
+
+// German: the privacy entry is wider than the rail, so its row wraps and grows
+// while the rows around it keep their height.
+export const SectionLevelGerman: Story = {
+  name: "second level — a German entry that wraps",
+  render: () => (
+    <LevelStory locale="de">
+      <LevelExample initiallyCollapsed={false} tab="account" />
+    </LevelStory>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const rows = [
+        ...canvasElement.querySelectorAll<HTMLElement>(".rail .navitem"),
+      ];
+      const long = rows.find((row) =>
+        row.textContent?.includes("Datenschutz und Aufbewahrung"),
+      );
+      const short = rows.find((row) =>
+        row.textContent?.includes("Nutzerkonto"),
+      );
+      const label = long?.querySelector(".navlabel");
+      if (!long || !short || !(label instanceof HTMLElement)) {
+        throw new Error("the settings level has no privacy or account row");
+      }
+      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+      expect(long.offsetHeight).toBeGreaterThan(short.offsetHeight);
+    });
+  },
 };
 
 // The same level at 56px: icons, the collapsed rail's tooltip on hover or
@@ -686,6 +720,40 @@ export const SectionPhone: Story = {
       <PhoneSectionExample />
     </LevelStory>
   ),
+};
+
+/** The same head in German: the badge moves under the switcher, the name wraps
+ *  with the chevron on its first line, and the trail above shows only the page. */
+export const SectionPhoneGerman: Story = {
+  name: "a section — the head's switcher, a German name that wraps",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <LevelStory locale="de">
+      <PhoneSectionExample />
+    </LevelStory>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const name = canvasElement.querySelector(".pageswitch > span");
+      const chevron = canvasElement.querySelector(".pageswitch svg");
+      if (!(name instanceof HTMLElement) || !(chevron instanceof SVGElement)) {
+        throw new Error("the head has no page switch");
+      }
+      expect(name.textContent).toBe("Datenschutz und Aufbewahrung");
+      expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+      const firstLine = parseFloat(getComputedStyle(name).lineHeight);
+      const glyph = chevron.getBoundingClientRect();
+      expect(glyph.top + glyph.height / 2).toBeCloseTo(
+        name.getBoundingClientRect().top + firstLine / 2,
+        0,
+      );
+      const stops = [...canvasElement.querySelectorAll(".topbar .crumbs li")];
+      expect(
+        stops.filter((stop) => getComputedStyle(stop).display !== "none"),
+      ).toHaveLength(1);
+    });
+  },
 };
 
 export const SectionSwitcherOpen: Story = {

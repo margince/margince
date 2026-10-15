@@ -188,7 +188,7 @@ export function StatCard({
     // and a tooltip shows the nearest title above the pointer.
     <section className={cardClass} title={value}>
       <span className="stat-card-label">
-        {/* Its own box, so a clamp on the name spares the badge and trigger. */}
+        {/* Its own box, so the name wraps and the badge and trigger keep their place. */}
         <span className="stat-card-label-text" id={labelId}>
           {label}
         </span>
