@@ -26,6 +26,9 @@ const ADMIN: GrantSpec = {
   custom_field: ["read", "create", "update", "delete"],
 };
 const READER: GrantSpec = { custom_field: ["read"] };
+// Adds but may not edit: the page's read-only callout stays away, so the cards speak.
+const ADDER: GrantSpec = { custom_field: ["read", "create"] };
+const REMOVER: GrantSpec = { custom_field: ["read", "delete"] };
 
 function source(
   key: string,
@@ -158,7 +161,7 @@ afterEach(() => {
 });
 
 describe("LeadSourcesCard", () => {
-  it("names each source over its key, counts its leads and marks a built-in for a seat that may remove", async () => {
+  it("names each source without its key, and counts its leads", async () => {
     vi.stubGlobal("fetch", backend(ADMIN));
     render(
       <Providers>
@@ -167,8 +170,7 @@ describe("LeadSourcesCard", () => {
     );
     const manual = await screen.findByTestId("lead-source-manual");
     expect(within(manual).getByText("Created manually")).toBeTruthy();
-    expect(within(manual).getByText("manual")).toBeTruthy();
-    expect(within(manual).getByText("Built-in")).toBeTruthy();
+    expect(within(manual).queryByText("manual")).toBeNull();
     expect(within(manual).getByText("3")).toBeTruthy();
     // No always-open text box: a rename goes through the row's menu.
     expect(within(manual).queryByRole("textbox")).toBeNull();
@@ -190,6 +192,9 @@ describe("LeadSourcesCard", () => {
     const cells = [...manual.querySelectorAll("td")];
     expect(cells[0]?.getAttribute("data-fold")).toBe("title");
     expect(cells.at(-1)?.getAttribute("data-fold")).toBe("end");
+    // The switch rides the title line, so its row's name is what it turns on.
+    const toggle = within(manual).getByRole("switch");
+    expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("end");
     expect(within(manual).getByText("3 leads")).toBeTruthy();
   });
 
@@ -207,6 +212,7 @@ describe("LeadSourcesCard", () => {
     const dialog = within(await screen.findByRole("dialog"));
     const field = dialog.getByLabelText(en["leadSources.labelField"]);
     expect(field).toHaveValue("Trade show");
+    expect(dialog.getByText("trade_show").tagName).toBe("CODE");
     await user.clear(field);
     await user.type(field, "Messe{Enter}");
     await waitFor(() =>
@@ -432,7 +438,7 @@ describe("LeadSourcesCard", () => {
     ).toHaveAccessibleDescription(/connector:apollo/);
   });
 
-  it("leaves every control inert for a reader and says why", async () => {
+  it("leaves every control inert for a reader, and leaves the why to the page", async () => {
     vi.stubGlobal("fetch", backend(READER));
     render(
       <Providers>
@@ -443,7 +449,7 @@ describe("LeadSourcesCard", () => {
       name: "Trade show is active",
     });
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(en["leadSources.readOnlyTitle"])).toBeTruthy();
+    expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
     expect(
       screen.queryByRole("button", { name: en["leadSources.addOpen"] }),
     ).toBeNull();
@@ -452,14 +458,42 @@ describe("LeadSourcesCard", () => {
         name: en["table.rowActions"].replace("{name}", "Trade show"),
       }),
     ).toBeNull();
-    // Built-in changes nothing a reader can do, so it is not said.
-    expect(screen.queryByText("Built-in")).toBeNull();
     // The discovered table has no verb for a reader either.
     expect(
       screen.queryByRole("columnheader", {
         name: en["leadSources.colActions"],
       }),
     ).toBeNull();
+  });
+
+  it("says why the switches are inert to a seat that may add but not edit", async () => {
+    vi.stubGlobal("fetch", backend(ADDER));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    expect(
+      await screen.findByRole("button", { name: en["leadSources.addOpen"] }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("switch", { name: "Trade show is active" }),
+    ).toBeDisabled();
+    expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
+    expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
+  });
+
+  it("tells a seat that may only remove that the list is not theirs to change", async () => {
+    vi.stubGlobal("fetch", backend(REMOVER));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    expect(
+      await screen.findByText(en["leadSources.readOnlyTitle"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
   });
 });
 
@@ -665,7 +699,7 @@ describe("LeadHandlingCard", () => {
     ).toBe(false);
   });
 
-  it("refuses the flip for a reader and says why", async () => {
+  it("refuses the flip for a reader and leaves the why to the page", async () => {
     vi.stubGlobal("fetch", backend(READER));
     render(
       <Providers>
@@ -676,10 +710,24 @@ describe("LeadHandlingCard", () => {
       "lead-first-response-switch",
     )) as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
+    expect(screen.queryByText(en["leadHandling.readOnly"])).toBeNull();
+  });
+
+  it("refuses the flip with its reason to a seat that may add but not edit", async () => {
+    vi.stubGlobal("fetch", backend(ADDER));
+    render(
+      <Providers>
+        <LeadHandlingCard />
+      </Providers>,
+    );
+    const toggle = (await screen.findByTestId(
+      "lead-first-response-switch",
+    )) as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
     // The minutes row says the same, so neither control is dimmed without a reason.
-    expect(screen.getAllByText(en["leadSources.readOnly"])).toHaveLength(2);
+    expect(screen.getAllByText(en["leadHandling.readOnly"])).toHaveLength(2);
     expect(
       screen.getByTestId("lead-first-response-target"),
-    ).toHaveAccessibleDescription(new RegExp(en["leadSources.readOnly"]));
+    ).toHaveAccessibleDescription(new RegExp(en["leadHandling.readOnly"]));
   });
 });

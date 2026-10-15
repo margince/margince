@@ -2874,11 +2874,10 @@ export const vi = {
   "co.recent.minutes": "{count} phút",
   "co.recent.re": "về một deal",
   "co.recent.reNamed": "về {name}",
-  "tagAdmin.title": "Thẻ",
   "tagAdmin.sub":
-    "Thẻ mà công ty dùng để phân loại hồ sơ. Ai cũng có thể gắn thẻ; chỉ quản trị viên và thành viên Vận hành mới có thể thêm, đổi tên hoặc ngừng dùng thẻ.",
+    "Ai cũng có thể gắn thẻ cho hồ sơ. Chỉ quản trị viên và thành viên Vận hành mới có thể thêm, đổi tên hoặc ngừng dùng thẻ.",
   "tagAdmin.listLabel": "Danh sách thẻ",
-  "tagAdmin.empty": "Chưa có thẻ nào. Thêm thẻ đầu tiên.",
+  "tagAdmin.empty": "Chưa có thẻ nào.",
   "import.contextTag": "Thẻ cho lần nhập này",
   "import.contextTagChosen":
     "Các hồ sơ do lần nhập này tạo sẽ được gắn thẻ {name}.",
@@ -3043,10 +3042,10 @@ export const vi = {
   "leadSources.title": "Nguồn lead",
   "leadSources.sub":
     "Lead đến từ đâu. Dùng trong biểu mẫu Lead mới, trong bộ lọc và khi chấm điểm.",
-  "leadSources.readOnly":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này.",
   "leadSources.readOnlyTitle":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
+  "leadSources.addOnlyTitle":
+    "Vai trò hiện tại chỉ thêm được mục mới, không thay đổi được mục đã có",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
   "leadSources.duplicate":
@@ -3058,7 +3057,6 @@ export const vi = {
   "leadSources.intent.low": "Ý định mua thấp",
   "leadSources.intentHint":
     "Cao cộng điểm, Thấp trừ điểm. Thay đổi áp dụng ở lần tính lại điểm tiếp theo của từng lead.",
-  "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
   "leadSources.inUse_one":
@@ -3111,8 +3109,9 @@ export const vi = {
   "followUpSettings.daysHint":
     "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc liên hệ lại, từ 1 đến 30.",
   "followUpSettings.outOfRange": "Nhập số ngày là số nguyên từ 1 đến 30.",
-  "leadHandling.title": "Quản lý lead",
-  "leadHandling.sub": "Cách xử lý lead mới.",
+  "leadHandling.title": "Thời gian phản hồi",
+  "leadHandling.readOnly":
+    "Vai trò hiện tại không có quyền thay đổi cài đặt này.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
   "leadHandling.firstResponseHint":
     "Mặc định tắt. Khi bật, mọi lead đang mở có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
@@ -3450,9 +3449,9 @@ export const vi = {
     "Họ viết lần cuối vào ngày {date}, cách đây {days} ngày.",
   "deal.pulse.wroteUnknown": "Họ đã gửi thư và chưa ai trả lời.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
-  "acqSources.title": "Nguồn tiếp cận",
+  "acqSources.title": "Nguồn",
   "acqSources.sub":
-    "Các kênh kinh doanh có thể gán cho deal. Nguồn lead, ghi nhận cách một hồ sơ vào Margince, là danh mục riêng.",
+    "Tách biệt với nguồn lead, vốn ghi nhận cách một hồ sơ vào Margince.",
   "acqSources.loading": "Đang tải nguồn…",
   "acqSources.addOpen": "Nguồn mới",
   "acqSources.addTitle": "Nguồn tiếp cận mới",
@@ -3553,9 +3552,7 @@ export const vi = {
   "assignments.rolePlaceholder": "Chọn vai trò",
   "assignments.saveAdd": "Giao",
   "assignments.saveChange": "Lưu thay đổi",
-  "recordRoles.title": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
-  "recordRoles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm có thể chịu trách nhiệm trên công ty, deal hoặc dự án. Vai trò không cấp quyền truy cập hồ sơ.",
+  "recordRoles.title": "Vai trò",
   "recordRoles.loading": "Đang tải vai trò…",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
@@ -5729,7 +5726,6 @@ export const vi = {
   "import.hub.uploadEmpty": "Chọn tệp hoặc thả vào đây",
   "import.hub.order": "Thứ tự nhập:",
   "import.recent.title": "Lần nhập gần đây",
-  "import.recent.empty": "Chưa có lần nhập nào.",
   "import.recent.col.date": "Ngày",
   "import.recent.col.file": "Tệp",
   "import.recent.col.rows": "Dòng",
@@ -6068,10 +6064,8 @@ export const vi = {
   "import.problem.permission": "Không có quyền",
   "import.problem.unusable_row": "Dòng không dùng được",
   "settings.dangerZone": "Vùng nguy hiểm",
-  "settings.dangerZoneSub":
-    "Chỉ dành cho bản cài đặt ngoài production. Không thể hoàn tác.",
   "settings.resetDataDesc":
-    "Đưa bản cài đặt này về trạng thái khởi động lần đầu. Dữ liệu nghiệp vụ và cấu hình sẽ bị xóa; công ty và các thành viên được giữ lại và vẫn đang đăng nhập.",
+    "Chỉ dành cho bản cài đặt ngoài production. Xóa toàn bộ hồ sơ và cấu hình; công ty và các thành viên được giữ lại và vẫn đang đăng nhập.",
   "settings.resetDataButton": "Đặt lại dữ liệu",
   "settings.resetDataLabel": "Đặt lại toàn bộ dữ liệu",
   "settings.resetDataConfirmButton": "Đặt lại toàn bộ dữ liệu",
@@ -6771,11 +6765,6 @@ export const vi = {
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
-  "settings.pipelines": "Pipeline",
-  "settings.pipelinesReadOnly":
-    "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi pipeline hoặc giai đoạn.",
-  "settings.pipelinesSub":
-    "Các giai đoạn deal đi qua, mỗi pipeline một trình tự.",
   "pipeline.new": "Pipeline mới",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
@@ -6785,7 +6774,7 @@ export const vi = {
   "pipeline.retireConfirm":
     "Ngừng dùng {name}? Pipeline này sẽ không còn trong bộ chọn và biểu mẫu deal mới. Deal trong pipeline vẫn giữ giai đoạn, lịch sử và phần đóng góp vào dự báo, và có thể khôi phục pipeline bất cứ lúc nào.",
   "pipeline.retireBlocked":
-    "Đây là pipeline mặc định, và deal mới cần có một pipeline mặc định. Đặt pipeline khác làm mặc định trước, rồi ngừng dùng pipeline này.",
+    "Deal mới bắt đầu trong pipeline mặc định. Đặt pipeline khác làm mặc định để ngừng dùng pipeline này.",
   "pipeline.retired.done": "Đã ngừng dùng {name}",
   "pipeline.restore": "Khôi phục",
   "pipeline.restored": "Đã khôi phục {name}",
@@ -6793,6 +6782,9 @@ export const vi = {
   "pipeline.makeDefault": "Đặt làm mặc định",
   "pipeline.defaultSet": "Đã đặt {name} làm mặc định",
   "pipeline.inUse": "Pipeline đang dùng",
+  "pipeline.catalog": "Tất cả pipeline",
+  "pipeline.none": "Chưa có pipeline nào",
+  "pipeline.noneNote": "Pipeline chứa các giai đoạn mà deal đi qua.",
   "pipeline.orderHint":
     "Kéo pipeline bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
   "pipeline.handle": "Di chuyển {name}, vị trí {position} trên {total}",
@@ -6805,7 +6797,6 @@ export const vi = {
     "Đã ngừng dùng. Không thể bắt đầu deal mới trong pipeline này, và không thể thay đổi giai đoạn của pipeline cho đến khi được khôi phục.",
   "pipeline.retireNote":
     "Pipeline sẽ không còn trong bộ chọn và biểu mẫu deal mới. Deal trong pipeline vẫn giữ giai đoạn.",
-  "pipeline.flow": "Cách deal chuyển giai đoạn",
   "pipeline.orderSaved": "Đã lưu thứ tự",
   "pipeline.orderRestored": "Đã khôi phục thứ tự trước",
   "pipeline.orderStale":
@@ -6846,7 +6837,6 @@ export const vi = {
   "stage.criteriaRequired_other": "{count} bắt buộc",
   "stage.criteriaOptional_one": "{count} không bắt buộc",
   "stage.criteriaOptional_other": "{count} không bắt buộc",
-  "stage.criteriaNone": "Không có",
   "stage.criteriaCount_one": "{count} tiêu chí",
   "stage.criteriaCount_other": "{count} tiêu chí",
   "stage.criteriaNoneFolded": "Không có tiêu chí",
@@ -6855,8 +6845,6 @@ export const vi = {
   "stage.occupied_one": "{count} deal đang ở giai đoạn này",
   "stage.occupied_other": "{count} deal đang ở giai đoạn này",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
-  "stage.criteria.sub":
-    "Điều kiện phải đáp ứng trước khi deal rời giai đoạn này.",
   "stage.criteria.buyerCalloutTitle": "Bằng chứng phải đến từ bên mua",
   "stage.criteria.buyerCallout":
     "Tin nhắn từ nhóm của bạn không bao giờ đáp ứng tiêu chí về hành động của bên mua.",
@@ -8702,6 +8690,7 @@ export const vi = {
     "Chưa có trường tùy chỉnh nào trên Dự án. Thêm một trường để theo dõi dữ liệu triển khai dự án mà trường lõi chưa bao quát.",
   "cf.empty.contract":
     "Chưa có trường tùy chỉnh nào trên Hợp đồng. Thêm một trường cho cách phân loại mà điều khoản chuẩn chưa bao quát.",
+  "cf.emptyReadOnly": "Chưa có trường tùy chỉnh nào trên {object}.",
   "cf.type.text": "Văn bản",
   "cf.type.number": "Số",
   "cf.type.date": "Ngày",
@@ -8749,7 +8738,6 @@ export const vi = {
   "cf.audit.empty": "Chưa có thay đổi nào về trường tùy chỉnh.",
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
-  "cf.noPermission": "Bạn chỉ có quyền đọc trường tùy chỉnh.",
   "cf.retired": "Đã ngừng dùng",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
@@ -8800,8 +8788,7 @@ export const vi = {
     "Cách thành viên đăng nhập vào bản cài đặt này, ứng dụng nào được thay mặt bản cài đặt, và nhóm IdP nào cấp vai trò.",
   "settings.page.members.sub":
     "Mọi thành viên có tài khoản, và quyền truy cập của từng thành viên.",
-  "settings.page.teams.sub":
-    "Thành viên nhóm, căn cứ để cấp quyền truy cập hồ sơ theo nhóm.",
+  "settings.page.teams.sub": "Các nhóm dùng để chia sẻ hồ sơ.",
   "settings.page.roles.sub":
     "Mỗi vai trò được làm gì, và được truy cập hồ sơ của ai.",
   "settings.page.seats.sub":
@@ -8813,7 +8800,8 @@ export const vi = {
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
   "settings.page.recordroles.sub":
     "Những gì một đồng nghiệp hoặc nhóm có thể phụ trách trên một hồ sơ. Không cấp quyền truy cập.",
-  "settings.page.leads.sub": "Các thuật ngữ nguồn lead mà công ty sử dụng.",
+  "settings.page.leads.sub":
+    "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.fields.sub":
     "Trường tùy chỉnh mà công ty thêm vào ngoài các trường chuẩn.",
   "settings.page.tags.sub":
@@ -8900,7 +8888,7 @@ export const vi = {
   "jurisdiction.selected.label": "Khu vực pháp lý đã chọn",
   "jurisdiction.selected.none": "Chưa đặt",
   "jurisdiction.selected.noneDescription":
-    "Chưa đặt khu vực pháp lý. Yêu cầu nhận thời hạn GDPR là một tháng dương lịch, và thư giữ thời hạn lưu trữ dài nhất trong các gói của bản dựng này.",
+    "Mức cơ sở GDPR được áp dụng cho đến khi đặt khu vực pháp lý.",
   "jurisdiction.unit.label": "Cung cấp bởi",
   "jurisdiction.unit.value": "{name}, phiên bản {version}",
   "jurisdiction.change.label": "Đổi khu vực pháp lý",
@@ -8942,8 +8930,6 @@ export const vi = {
   "jurisdiction.rule.gdpr": "GDPR, một tháng dương lịch",
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
-  "jurisdiction.documents.intro":
-    "Tài liệu trong gói của khu vực pháp lý này, để đọc, tải xuống và xem xét.",
   "jurisdiction.documents.empty":
     "Gói của khu vực pháp lý này không có tài liệu.",
   "jurisdiction.documents.emptyUnset":
@@ -9295,9 +9281,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "license.card.title": "Giấy phép và tài khoản",
-  "license.state.licensed": "Đã có giấy phép",
-  "license.state.uncapped": "Đã có giấy phép, không giới hạn tài khoản",
   "license.absent.title": "Bản cài đặt này chưa có giấy phép",
   "license.absent.body":
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
@@ -9305,8 +9288,9 @@ export const vi = {
   "license.refused.body":
     "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
-    "Số tài khoản đầy đủ quyền mà bản cài đặt này đang dùng. Số tài khoản được cấp bị ẩn với vai trò này.",
+    "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
   "license.seats.title": "Tài khoản",
+  "license.seats.inUse": "Tài khoản đầy đủ quyền đang dùng",
   "license.seats.uncapped": "Không giới hạn",
   "license.seats.ofGranted": "{used} trên {granted}",
   "license.seats.left": "còn {count}",
@@ -9328,7 +9312,7 @@ export const vi = {
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
   "license.counting":
-    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn số lượng và không bao giờ được tính. Thành viên mới được nhận theo con số này.",
+    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
     "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
@@ -9730,9 +9714,8 @@ export const vi = {
   "extAccess.nobodyReads":
     "Không vai trò nào có quyền đọc {object}, nên mọi thành viên sẽ thấy màn hình trống ở tiện ích này. Cấp quyền đọc cho ít nhất một vai trò bên dưới.",
   "extAccess.matrixName": "Quyền của các vai trò với {unit}",
-  "users.empty": "Chưa có người dùng nào.",
-  "users.adminOnly": "Vai trò hiện tại không có quyền quản lý người dùng.",
-  "users.inviteTitle": "Mời người dùng",
+  "users.empty": "Chưa có thành viên nào.",
+  "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm nào.",
   "users.teamNobodyToAdd": "Không có người dùng nào để thêm.",
@@ -9741,8 +9724,7 @@ export const vi = {
     "Vai trò hiện tại không có quyền xem thành viên nhóm.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
-    "Các nhóm có tên, dùng để chia sẻ hồ sơ. Với hầu hết vai trò, việc thuộc một nhóm không mang lại quyền truy cập nào. Trưởng nhóm được thêm vào một nhóm có thể đọc và sửa hồ sơ của nhóm đó mà không cần chia sẻ.",
-  "users.teamsAdminOnly": "Vai trò hiện tại không có quyền quản lý nhóm.",
+    "Là thành viên nhóm không mang lại quyền truy cập, trừ trưởng nhóm: trưởng nhóm có thể đọc và sửa hồ sơ của nhóm mà không cần chia sẻ.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
   "users.roleSaved": "Đã đổi vai trò cho {name}",
@@ -9795,7 +9777,7 @@ export const vi = {
   "users.access.maskOutside": "trên hồ sơ mà họ không có quyền sửa",
   "users.inviteSub":
     "Thêm người dùng vào bản cài đặt này và chọn vai trò ban đầu.",
-  "users.membersTitle": "Người dùng",
+  "users.membersTitle": "Thành viên",
   "users.col.member": "Tên",
   "users.col.activity": "Hoạt động",
   "users.addedOn": "Đã thêm {date}",
@@ -9823,10 +9805,10 @@ export const vi = {
   "users.agentSeat": "Trợ lý AI",
   "users.agentSeatRole": "Hoạt động qua passport, không theo vai trò",
   "users.roleLabel": "Vai trò",
-  "users.inviteOpen": "Mời người dùng",
+  "users.inviteOpen": "Mời thành viên",
   "users.invite": "Mời",
   "users.setRole": "Chọn vai trò…",
-  "users.setRoleFor": "Chọn vai trò cho {name}",
+  "users.roleOf": "vai trò của {name}",
   "users.rolesHeld":
     "Đang có vai trò {roles}. Chọn một vai trò sẽ thay thế toàn bộ.",
   "users.deactivate": "Vô hiệu hóa",
@@ -13218,9 +13200,7 @@ export const vi = {
   "lead.today.nextTask": "Việc cần làm tiếp theo",
   "lead.today.openTasks": "Việc cần làm đang mở",
   "lead.readings.answered": "Đã trả lời",
-  "stageAutomation.title": "Tự động chuyển giai đoạn",
-  "stageAutomation.intro":
-    "Kết quả của các bước chuyển giai đoạn Margince đã đề xuất. Báo cáo này không thay đổi gì; đây là bằng chứng để cho phép một bước chuyển tự động chuyển deal.",
+  "stageAutomation.record": "Thành tích",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "B\u01b0\u1edbc chuy\u1ec3n",
   "stageAutomation.reviewed": "Đã quyết định",
@@ -13239,21 +13219,19 @@ export const vi = {
   "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
   "stageAutomation.observationHint":
     "Từ đề xuất đầu tiên đã được xem xét đến đề xuất cuối cùng. Tỷ lệ tốt trong một buổi chiều chưa phải là thành tích lâu dài.",
+  "stageAutomation.glossary": "Ý nghĩa các cột",
   "stageAutomation.evidenceKinds": "Theo b\u1eb1ng ch\u1ee9ng",
+  "stageAutomation.emptyTitle": "Chưa có đề xuất chuyển giai đoạn nào",
   "stageAutomation.empty":
-    "Margince chưa đề xuất bước chuyển giai đoạn nào trên pipeline này.",
+    "Mỗi bước chuyển Margince đề xuất trên pipeline này được ghi lại ở đây, cùng với câu trả lời cho bước chuyển đó.",
   "stageAutomation.noPipelines": "Chưa có pipeline nào để báo cáo.",
   "stageAutomation.unreadable": "Không thể tải báo cáo này",
-  "stageAutomation.readOnly":
-    "Có thể xem thành tích của từng bước chuyển. Cần quyền sửa pipeline để thay đổi bước chuyển.",
   "stageAutomation.rules": "Quy tắc bước chuyển",
   "stageAutomation.rulesIntro":
-    "Bật một bước chuyển không làm deal bắt đầu tự chuyển. Margince vẫn hỏi cho đến khi thành tích ở trên đạt ngưỡng, rồi tự động áp dụng bước chuyển.",
+    "Bật một bước chuyển chưa làm deal tự chuyển ngay. Margince vẫn đề xuất cho đến khi thành tích ở trên đạt ngưỡng, rồi tự chuyển deal và báo lại sau.",
   "stageAutomation.offTitle": "Tự động chuyển giai đoạn đang tắt",
   "stageAutomation.offBody":
     "Khi tính năng này tắt, không deal nào tự chuyển, bất kể bước chuyển bên dưới được thiết lập thế nào. Bên vận hành bản cài đặt này bật tính năng trong cấu hình của bản cài đặt.",
-  "stageAutomation.modeHint":
-    "Khi bật và thành tích đạt yêu cầu, Margince chuyển deal rồi báo cho bạn sau.",
   "stageAutomation.notEarnedYet": "Chưa đạt: {why}",
   "stageAutomation.suspended": "Margince đã tạm ngưng",
   "stageAutomation.suspendedSince": "Đã tạm ngưng {date}",

@@ -127,15 +127,24 @@ describe("the jurisdiction page", () => {
     const sent = stub(UNSET);
     const user = userEvent.setup();
     render();
-    await pickOption(
-      user,
-      await screen.findByLabelText(en["jurisdiction.change.label"]),
-      "Vietnam",
-    );
     await user.click(
-      screen.getByRole("button", { name: en["jurisdiction.change.action"] }),
+      await screen.findByRole("button", {
+        name: en["jurisdiction.change.action"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("button", {
+        name: en["jurisdiction.confirm.confirm"],
+      }),
+    ).toBeDisabled();
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", {
+        name: en["jurisdiction.card.title"],
+      }),
+      "Vietnam",
+    );
     expect(within(dialog).getByText(/becomes no floor/)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/keeps Commercial correspondence/),
@@ -182,6 +191,8 @@ describe("the jurisdiction page", () => {
     stub(UNSET, false);
     render();
     await screen.findByText(en["jurisdiction.selected.none"]);
-    expect(screen.queryByText(en["jurisdiction.change.label"])).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["jurisdiction.change.action"] }),
+    ).toBeNull();
   });
 });

@@ -14,6 +14,10 @@ beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
 });
 
+function criterionRows(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(".settingrow"));
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -106,9 +110,32 @@ describe("StageExitCriteria", () => {
     ).toBeTruthy();
 
     // Which one blocks is the fact a reader is here for.
-    const rows = screen.getAllByRole("listitem");
+    const rows = criterionRows();
     expect(within(rows[0]).getByText("Required")).toBeTruthy();
     expect(within(rows[1]).getByText("Optional")).toBeTruthy();
+  });
+
+  // The key is an operator's word that evidence cites. Only the create form
+  // asks for it.
+  it("names each criterion by label and kind, never by its key", async () => {
+    vi.stubGlobal("fetch", criteriaStub({}));
+    render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
+
+    const label = await screen.findByText("Economic buyer identified");
+    const row = label.closest<HTMLElement>(".settingrow");
+    if (!row) throw new Error("the criterion drew no row");
+    expect(within(row).getByText("Role identified")).toBeTruthy();
+    expect(row.textContent).not.toContain("economic_buyer");
+  });
+
+  it("says a stage asks for nothing yet beside the verb that adds the first", async () => {
+    vi.stubGlobal("fetch", criteriaStub({ criteria: [] }));
+    render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
+
+    const none = await screen.findByText("No exit criteria yet.");
+    expect(none.parentElement).toBe(
+      screen.getByTestId("new-criterion-s1").parentElement,
+    );
   });
 
   it("ships the exact body when a criterion is added", async () => {
@@ -145,7 +172,8 @@ describe("StageExitCriteria", () => {
     vi.stubGlobal("fetch", criteriaStub({}));
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
-    const rows = await screen.findAllByRole("listitem");
+    await screen.findByText("Buyer confirmed the problem");
+    const rows = criterionRows();
     await userEvent.click(
       within(rows[0]).getByRole("button", {
         name: "Edit Buyer confirmed the problem",
@@ -192,7 +220,7 @@ describe("StageExitCriteria", () => {
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
     expect(await screen.findByText(/Criteria did not load/)).toBeTruthy();
-    expect(screen.queryByText(/asks for nothing yet/)).toBeNull();
+    expect(screen.queryByText(/No exit criteria yet/)).toBeNull();
   });
 
   // Archiving keeps recorded evidence readable, so the confirmation says that
@@ -211,7 +239,8 @@ describe("StageExitCriteria", () => {
     );
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
-    const rows = await screen.findAllByRole("listitem");
+    await screen.findByText("Buyer confirmed the problem");
+    const rows = criterionRows();
     await userEvent.click(
       within(rows[0]).getByRole("button", {
         name: "Remove Buyer confirmed the problem",

@@ -6,7 +6,7 @@ import { THEME_LABEL_KEYS } from "../app/account";
 import { Avatar, Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
@@ -763,9 +763,6 @@ function ResetDataCard() {
       // separates a destructive surface from the ordinary settings around it.
       className="settings-danger"
     >
-      <PanelBody className="form-stack">
-        <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
-      </PanelBody>
       <SettingList bleed="settings">
         {/* This button and the dialog's confirm share the screen, so each is
             named for its own act. */}

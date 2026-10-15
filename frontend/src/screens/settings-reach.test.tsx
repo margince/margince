@@ -176,11 +176,10 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
   it("opens on its own address, with its own heading and no boundary", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
     renderSettings("pipelines");
-    // The page's own name in the chrome, not the section's. The heading comes
-    // from the rail's rows, and this page has none — so a regression here reads
-    // as a page called "Settings" rather than as a missing page.
     expect(
-      await screen.findByRole("heading", { name: labelOf("pipelines") }),
+      await screen.findByRole("heading", {
+        name: translate("en", "pipeline.catalog"),
+      }),
     ).toBeTruthy();
     expect(
       screen.queryByText(translate("en", "settings.boundary.deniedTitle")),
@@ -206,7 +205,9 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
       }),
     );
     renderSettings("pipelines");
-    await screen.findByRole("heading", { name: labelOf("pipelines") });
+    await screen.findByRole("heading", {
+      name: translate("en", "pipeline.catalog"),
+    });
     expect(
       screen.queryByText(translate("en", "settings.readOnlyPage")),
     ).toBeNull();

@@ -7,13 +7,14 @@ import {
   useRoster,
   useRosterPartial,
 } from "../components/entityref";
+import { PageHeadAction } from "../components/pageheadaction";
 import { Button, EmptyState, OverflowMenu } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
+import { QueryGate, QueryStates } from "../design-system/querystates";
 import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
@@ -209,68 +210,70 @@ export function TeamsCard() {
     "email" in entry ? [entry] : [],
   );
   const verbs = { canRename, canArchive: canEditTeam };
+  const rows = (teams.data ?? []).flatMap((entry) =>
+    "name" in entry ? [entry] : [],
+  );
+  const empty = teams.isSuccess && rows.length === 0 && !teamsPartial;
+  const open = rows.find((team) => team.id === openTeamId);
   return (
-    <Panel
-      title={t("users.teamsTitle")}
-      titleAction={canCreateTeam ? <NewTeamAction /> : undefined}
-    >
-      <PanelBody>
-        <PanelIntro>
-          {t("users.teamsSub")}
-          {me.isSuccess &&
-            !(canCreateTeam || canRename) &&
-            ` ${t("users.teamsAdminOnly")}`}
-          {me.isSuccess &&
-            !canSeeMembership &&
-            ` ${t("users.teamMembersAdminOnly")}`}
-        </PanelIntro>
-        {archive.isError && (
-          <Callout tone="danger" kind="outcome" title={t("users.notArchived")}>
-            {problemMessageOf(archive.error, t)}
-          </Callout>
-        )}
-      </PanelBody>
-      <QueryGate query={teams} pendingLabel={t("users.teamsTitle")}>
-        {(list) => {
-          const rows = list.flatMap((entry) =>
-            "name" in entry ? [entry] : [],
-          );
-          if (rows.length === 0 && !teamsPartial) {
-            return <EmptyState>{t("users.noTeamsYet")}</EmptyState>;
-          }
-          const open = rows.find((team) => team.id === openTeamId);
-          return (
-            <>
-              <TeamTable
-                rows={rows}
-                colleagues={
-                  canSeeMembership && users.isSuccess ? colleagues : null
-                }
-                verbs={verbs}
-                archiving={archive.isPending}
-                onArchive={(id) => archive.mutate(id)}
-                onOpen={setOpenTeamId}
-              />
-              {open && canSeeMembership && (
-                <TeamMembersModal
-                  team={open}
-                  users={colleagues}
-                  usersPartial={usersPartial}
-                  canEdit={canEditTeam}
-                  open
-                  onClose={() => setOpenTeamId(null)}
-                />
-              )}
-            </>
-          );
-        }}
-      </QueryGate>
-      {teamsPartial && (
-        <PanelBody>
-          <RosterPartialNote partial={teamsPartial} />
-        </PanelBody>
+    <>
+      {teams.isSuccess && canCreateTeam && (
+        <PageHeadAction>
+          <NewTeamAction />
+        </PageHeadAction>
       )}
-    </Panel>
+      {/* Untitled: on a one-panel page the page heading names the teams. */}
+      <Panel>
+        <PanelBody>
+          <PanelIntro>
+            {t("users.teamsSub")}
+            {me.isSuccess &&
+              !canSeeMembership &&
+              ` ${t("users.teamMembersAdminOnly")}`}
+          </PanelIntro>
+          {archive.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("users.notArchived")}
+            >
+              {problemMessageOf(archive.error, t)}
+            </Callout>
+          )}
+          {!teams.isSuccess && (
+            <QueryStates query={teams} pendingLabel={t("users.teamsTitle")}>
+              {null}
+            </QueryStates>
+          )}
+          {empty && <EmptyState>{t("users.noTeamsYet")}</EmptyState>}
+        </PanelBody>
+        {teams.isSuccess && !empty && (
+          <TeamTable
+            rows={rows}
+            colleagues={canSeeMembership && users.isSuccess ? colleagues : null}
+            verbs={verbs}
+            archiving={archive.isPending}
+            onArchive={(id) => archive.mutate(id)}
+            onOpen={setOpenTeamId}
+          />
+        )}
+        {open && canSeeMembership && (
+          <TeamMembersModal
+            team={open}
+            users={colleagues}
+            usersPartial={usersPartial}
+            canEdit={canEditTeam}
+            open
+            onClose={() => setOpenTeamId(null)}
+          />
+        )}
+        {teamsPartial && (
+          <PanelBody>
+            <RosterPartialNote partial={teamsPartial} />
+          </PanelBody>
+        )}
+      </Panel>
+    </>
   );
 }
 

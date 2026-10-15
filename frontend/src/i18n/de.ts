@@ -2934,11 +2934,10 @@ export const de = {
   "co.recent.minutes": "{count} min",
   "co.recent.re": "zu einem Deal",
   "co.recent.reNamed": "zu {name}",
-  "tagAdmin.title": "Tags",
   "tagAdmin.sub":
-    "Tags, unter denen dieses Unternehmen Datensätze ablegt. Alle können ein Tag vergeben. Nur Admins und Operations können Tags erstellen, umbenennen oder stilllegen.",
+    "Alle können ein Tag vergeben. Nur Admins und Operations können Tags erstellen, umbenennen oder stilllegen.",
   "tagAdmin.listLabel": "Tag-Liste",
-  "tagAdmin.empty": "Noch keine Tags. Erstelle das erste Tag.",
+  "tagAdmin.empty": "Noch keine Tags.",
   "import.contextTag": "Tag für diesen Import",
   "import.contextTagChosen":
     "Datensätze, die dieser Import erstellt, werden unter {name} abgelegt.",
@@ -3107,10 +3106,10 @@ export const de = {
   "leadSources.title": "Lead-Quellen",
   "leadSources.sub":
     "Woher Leads kommen. Wird im Formular „Neuer Lead“, in Filtern und beim Scoring verwendet.",
-  "leadSources.readOnly":
-    "Nur Admins und Operations können diese Liste ändern.",
   "leadSources.readOnlyTitle":
     "Nur Admins und Operations können diese Liste ändern",
+  "leadSources.addOnlyTitle":
+    "Deine Rolle darf Einträge hinzufügen, aber nicht ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
   "leadSources.duplicate":
@@ -3122,7 +3121,6 @@ export const de = {
   "leadSources.intent.low": "Geringes Kaufinteresse",
   "leadSources.intentHint":
     "Hoch fügt dem Score Punkte hinzu, Gering zieht Punkte ab. Änderungen gelten ab der nächsten Neuberechnung jedes Leads.",
-  "leadSources.builtIn": "Vorgegeben",
   "leadSources.builtInKept":
     "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
   "leadSources.inUse_one":
@@ -3176,8 +3174,8 @@ export const de = {
   "followUpSettings.daysHint":
     "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor das sendende Teammitglied ans Nachfassen erinnert wird, 1 bis 30.",
   "followUpSettings.outOfRange": "Gib eine ganze Zahl von 1 bis 30 Tagen ein.",
-  "leadHandling.title": "Lead-Bearbeitung",
-  "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
+  "leadHandling.title": "Reaktionszeit",
+  "leadHandling.readOnly": "Deine Rolle darf diese Einstellung nicht ändern.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
   "leadHandling.firstResponseHint":
     "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
@@ -3525,9 +3523,9 @@ export const de = {
   "deal.pulse.wroteUnknown":
     "Die Gegenseite hat geschrieben, und niemand hat geantwortet.",
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
-  "acqSources.title": "Akquisitionsquellen",
+  "acqSources.title": "Quellen",
   "acqSources.sub":
-    "Vertriebskanäle, denen ein Deal zugeordnet werden kann. Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist, sind davon getrennt.",
+    "Getrennt von den Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist.",
   "acqSources.loading": "Quellen werden geladen…",
   "acqSources.addOpen": "Neue Quelle",
   "acqSources.addTitle": "Neue Akquisitionsquelle",
@@ -3628,9 +3626,7 @@ export const de = {
   "assignments.rolePlaceholder": "Rolle wählen",
   "assignments.saveAdd": "Zuweisen",
   "assignments.saveChange": "Änderung speichern",
-  "recordRoles.title": "Zuständigkeiten",
-  "recordRoles.sub":
-    "Wofür ein Teammitglied oder ein Team bei einem Unternehmen, Deal oder Projekt verantwortlich sein kann. Eine Rolle gewährt keinen Zugriff auf den Datensatz.",
+  "recordRoles.title": "Rollen",
   "recordRoles.loading": "Rollen werden geladen…",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Rolle hinzufügen",
@@ -5868,7 +5864,6 @@ export const de = {
   "import.hub.uploadEmpty": "Datei auswählen oder hier ablegen",
   "import.hub.order": "Importreihenfolge:",
   "import.recent.title": "Letzte Importe",
-  "import.recent.empty": "Noch keine Importe.",
   "import.recent.col.date": "Datum",
   "import.recent.col.file": "Datei",
   "import.recent.col.rows": "Zeilen",
@@ -6222,10 +6217,8 @@ export const de = {
   "import.problem.permission": "Keine Berechtigung",
   "import.problem.unusable_row": "Unbrauchbare Zeile",
   "settings.dangerZone": "Gefahrenbereich",
-  "settings.dangerZoneSub":
-    "Nur für nicht produktive Installationen. Das kann nicht rückgängig gemacht werden.",
   "settings.resetDataDesc":
-    "Setzt diese Installation auf den Zustand beim ersten Start zurück. Fach- und Konfigurationsdaten werden gelöscht. Das Unternehmen und seine Nutzenden bleiben erhalten und angemeldet.",
+    "Nur für nicht produktive Installationen. Alle Datensätze und Konfigurationen werden gelöscht. Das Unternehmen und seine Nutzenden bleiben erhalten und angemeldet.",
   "settings.resetDataButton": "Daten zurücksetzen",
   "settings.resetDataLabel": "Alle Daten zurücksetzen",
   "settings.resetDataConfirmButton": "Alle Daten zurücksetzen",
@@ -6940,11 +6933,6 @@ export const de = {
   "retention.scopeRawCapture": "Gespeicherte Originalnachrichten",
   "retention.scopeDealRiskDay":
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
-  "settings.pipelines": "Pipelines",
-  "settings.pipelinesReadOnly":
-    "Nur Lesezugriff. Deine Rolle darf Pipelines und Phasen nicht ändern.",
-  "settings.pipelinesSub":
-    "Phasen, die ein Deal durchläuft, eine Abfolge pro Pipeline.",
   "pipeline.new": "Neue Pipeline",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",
@@ -6954,7 +6942,7 @@ export const de = {
   "pipeline.retireConfirm":
     "{name} stilllegen? Die Pipeline verschwindet aus Auswahllisten und Formularen für neue Deals. Deals darauf behalten Phase, Verlauf und Beitrag zur Prognose, und du kannst die Pipeline jederzeit wiederherstellen.",
   "pipeline.retireBlocked":
-    "Dies ist die Standard-Pipeline, und neue Deals brauchen eine. Mache zuerst eine andere Pipeline zum Standard und lege dann diese still.",
+    "Neue Deals beginnen in der Standard-Pipeline. Mache eine andere zum Standard, um diese stillzulegen.",
   "pipeline.retired.done": "{name} stillgelegt",
   "pipeline.restore": "Wiederherstellen",
   "pipeline.restored": "{name} wiederhergestellt",
@@ -6962,6 +6950,10 @@ export const de = {
   "pipeline.makeDefault": "Zum Standard machen",
   "pipeline.defaultSet": "{name} ist jetzt Standard",
   "pipeline.inUse": "Pipelines in Verwendung",
+  "pipeline.catalog": "Alle Pipelines",
+  "pipeline.none": "Noch keine Pipelines",
+  "pipeline.noneNote":
+    "Eine Pipeline enthält die Phasen, die ein Deal durchläuft.",
   "pipeline.orderHint":
     "Ziehe eine Pipeline am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
   "pipeline.handle": "{name} verschieben, {position} von {total}",
@@ -6974,7 +6966,6 @@ export const de = {
     "Stillgelegt. In dieser Pipeline beginnen keine neuen Deals, und ihre Phasen lassen sich erst nach dem Wiederherstellen ändern.",
   "pipeline.retireNote":
     "Die Pipeline verschwindet aus Auswahllisten und Formularen für neue Deals. Deals darauf behalten ihre Phase.",
-  "pipeline.flow": "So bewegt sich ein Deal",
   "pipeline.orderSaved": "Reihenfolge gespeichert",
   "pipeline.orderRestored": "Vorherige Reihenfolge wiederhergestellt",
   "pipeline.orderStale":
@@ -7016,7 +7007,6 @@ export const de = {
   "stage.criteriaRequired_other": "{count} erforderlich",
   "stage.criteriaOptional_one": "{count} optional",
   "stage.criteriaOptional_other": "{count} optional",
-  "stage.criteriaNone": "Keine",
   "stage.criteriaCount_one": "{count} Kriterium",
   "stage.criteriaCount_other": "{count} Kriterien",
   "stage.criteriaNoneFolded": "Keine Kriterien",
@@ -7025,8 +7015,6 @@ export const de = {
   "stage.occupied_one": "{count} Deal ist in dieser Phase",
   "stage.occupied_other": "{count} Deals sind in dieser Phase",
   "stage.criteria.title": "Austrittskriterien",
-  "stage.criteria.sub":
-    "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
   "stage.criteria.buyerCalloutTitle":
     "Belege müssen von der Käuferseite kommen",
   "stage.criteria.buyerCallout":
@@ -8915,6 +8903,7 @@ export const de = {
     "Noch keine eigenen Felder für Projekte. Füge eines hinzu, um Daten zur Umsetzung zu erfassen, die die Kernfelder nicht abdecken.",
   "cf.empty.contract":
     "Noch keine eigenen Felder für Verträge. Füge eines für eine Einordnung hinzu, die die Standardkonditionen nicht abdecken.",
+  "cf.emptyReadOnly": "Noch keine eigenen Felder für {object}.",
   "cf.type.text": "Text",
   "cf.type.number": "Zahl",
   "cf.type.date": "Datum",
@@ -8963,7 +8952,6 @@ export const de = {
   "cf.audit.empty": "Noch keine Änderungen an eigenen Feldern.",
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
-  "cf.noPermission": "Du hast nur Lesezugriff auf eigene Felder.",
   "cf.retired": "Stillgelegt",
   "cf.retire.title": "„{label}“ archivieren?",
   "cf.retire.body":
@@ -9016,7 +9004,7 @@ export const de = {
   "settings.page.members.sub":
     "Alle, die einen Platz haben, und worauf sie jeweils zugreifen können.",
   "settings.page.teams.sub":
-    "Teammitgliedschaft, die den teambezogenen Zugriff auf Datensätze bestimmt.",
+    "Gruppen, mit denen Datensätze geteilt werden können.",
   "settings.page.roles.sub":
     "Was jede Rolle darf und auf welche Datensätze sie zugreifen kann.",
   "settings.page.seats.sub":
@@ -9029,7 +9017,8 @@ export const de = {
     "Vertriebskanäle, denen ein Deal zugeordnet werden kann.",
   "settings.page.recordroles.sub":
     "Wofür ein Teammitglied oder ein Team bei einem Datensatz zuständig sein kann. Gewährt keinen Zugriff.",
-  "settings.page.leads.sub": "Begriffe für Lead-Quellen in diesem Unternehmen.",
+  "settings.page.leads.sub":
+    "Woher Leads kommen, warum sie disqualifiziert werden und wie schnell sie eine erste Antwort bekommen.",
   "settings.page.fields.sub":
     "Eigene Felder, die dieses Unternehmen zu den Standardfeldern hinzufügt.",
   "settings.page.tags.sub":
@@ -9117,7 +9106,7 @@ export const de = {
   "jurisdiction.selected.label": "Ausgewählter Rechtsraum",
   "jurisdiction.selected.none": "Nicht festgelegt",
   "jurisdiction.selected.noneDescription":
-    "Kein Rechtsraum festgelegt. Anfragen erhalten die DSGVO-Frist von einem Kalendermonat, und E-Mails behalten die längste Aufbewahrungsfrist der Pakete in diesem Build.",
+    "Bis ein Rechtsraum festgelegt ist, gilt die DSGVO-Grundlage.",
   "jurisdiction.unit.label": "Geliefert von",
   "jurisdiction.unit.value": "{name}, Version {version}",
   "jurisdiction.change.label": "Rechtsraum ändern",
@@ -9159,8 +9148,6 @@ export const de = {
   "jurisdiction.rule.gdpr": "DSGVO, ein Kalendermonat",
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
-  "jurisdiction.documents.intro":
-    "Die Dokumente aus dem Paket dieses Rechtsraums, zum Lesen, Herunterladen und Prüfen.",
   "jurisdiction.documents.empty":
     "Das Paket dieses Rechtsraums enthält keine Dokumente.",
   "jurisdiction.documents.emptyUnset":
@@ -9528,9 +9515,6 @@ export const de = {
   "pipeline.reason.would_restore_erased":
     "dies auszuweisen würde Daten wiederherstellen, die eine Löschung entfernt hat",
   "pipeline.reason.no_writer_yet": "diesen Schritt gibt es noch nicht",
-  "license.card.title": "Lizenz und Plätze",
-  "license.state.licensed": "Lizenziert",
-  "license.state.uncapped": "Lizenziert, ohne Platzbegrenzung",
   "license.absent.title": "Diese Installation hat keine Lizenz",
   "license.absent.body":
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
@@ -9538,8 +9522,9 @@ export const de = {
   "license.refused.body":
     "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
   "license.seats.capacityOnly":
-    "Volle Plätze, die diese Installation nutzt. Der Lizenzumfang ist für diese Rolle nicht sichtbar.",
+    "Deine Rolle darf den Lizenzumfang nicht sehen.",
   "license.seats.title": "Plätze",
+  "license.seats.inUse": "Belegte volle Plätze",
   "license.seats.uncapped": "Keine Begrenzung",
   "license.seats.ofGranted": "{used} von {granted}",
   "license.seats.left": "{count} frei",
@@ -9561,7 +9546,7 @@ export const de = {
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
   "license.counting":
-    "Volle Plätze, die weder deaktiviert noch gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und werden nie gezählt. Neue Mitglieder werden anhand dieser Anzahl zugelassen.",
+    "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Frühere Kurse ändern sich nie.",
@@ -9974,7 +9959,6 @@ export const de = {
     "Jedes Mitglied sieht für diese Erweiterung eine leere Ansicht, da keine Rolle Lesezugriff auf {object} hat. Vergib unten mindestens einer Rolle das Leserecht.",
   "extAccess.matrixName": "Rollenzugriff auf {unit}",
   "users.empty": "Noch keine Mitglieder.",
-  "users.adminOnly": "Deine Rolle darf keine Mitglieder verwalten.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
@@ -9983,8 +9967,7 @@ export const de = {
   "users.teamNobodyToAdd": "Keine Mitglieder zum Hinzufügen.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Benannte Gruppen, mit denen Datensätze geteilt werden können. Für die meisten Rollen gewährt die Mitgliedschaft keinen Zugriff. Eine Teamleitung im Team kann dessen Datensätze auch ungeteilt lesen und bearbeiten.",
-  "users.teamsAdminOnly": "Deine Rolle darf keine Teams verwalten.",
+    "Die Mitgliedschaft gewährt keinen Zugriff, außer einer Teamleitung: Diese kann die Datensätze des Teams auch ungeteilt lesen und bearbeiten.",
   "users.deactivated": "{name} deaktiviert",
   "users.reactivated": "{name} reaktiviert",
   "users.roleSaved": "Rolle für {name} geändert",
@@ -10068,7 +10051,7 @@ export const de = {
   "users.inviteOpen": "Mitglied einladen",
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
-  "users.setRoleFor": "Rolle für {name} festlegen",
+  "users.roleOf": "Rolle von {name}",
   "users.rolesHeld":
     "Hat {roles}. Wenn du eine Rolle auswählst, ersetzt diese Rolle alle bisherigen.",
   "users.deactivate": "Deaktivieren",
@@ -13543,9 +13526,7 @@ export const de = {
   "lead.today.nextTask": "Nächste Aufgabe",
   "lead.today.openTasks": "Offene Aufgaben",
   "lead.readings.answered": "Beantwortet",
-  "stageAutomation.title": "Phasensteuerung",
-  "stageAutomation.intro":
-    "Ergebnisse der Phasenwechsel, die Margince vorgeschlagen hat. Dieser Bericht ändert nichts und ist der Beleg dafür, einen Übergang Deals automatisch verschieben zu lassen.",
+  "stageAutomation.record": "Bilanz",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "\u00dcbergang",
   "stageAutomation.reviewed": "Geprüft",
@@ -13564,21 +13545,19 @@ export const de = {
   "stageAutomation.observationDays": "Beobachtete Tage",
   "stageAutomation.observationHint":
     "Vom ersten bis zum letzten geprüften Vorschlag. Eine gute Quote an einem Nachmittag ist keine belastbare Bilanz.",
+  "stageAutomation.glossary": "Was die Spalten bedeuten",
   "stageAutomation.evidenceKinds": "Nach Beleg",
+  "stageAutomation.emptyTitle": "Noch keine vorgeschlagenen Phasenwechsel",
   "stageAutomation.empty":
-    "Margince hat auf dieser Pipeline noch keinen Phasenwechsel vorgeschlagen.",
+    "Jeder Phasenwechsel, den Margince auf dieser Pipeline vorschlägt, wird hier gezählt, zusammen mit der Antwort darauf.",
   "stageAutomation.noPipelines": "Noch keine Pipelines für einen Bericht.",
   "stageAutomation.unreadable": "Dieser Bericht wurde nicht geladen",
-  "stageAutomation.readOnly":
-    "Du siehst die Bilanz jedes Übergangs. Um einen Übergang zu ändern, brauchst du die Berechtigung, Pipelines zu bearbeiten.",
   "stageAutomation.rules": "Regeln für Übergänge",
   "stageAutomation.rulesIntro":
-    "Ein aktivierter Übergang verschiebt noch keine Deals. Margince fragt weiter nach, bis die Bilanz oben die Schwelle erreicht, und verschiebt dann automatisch.",
+    "Ein aktivierter Übergang verschiebt noch keine Deals. Margince schlägt weiter Phasenwechsel vor, bis die Bilanz oben die Schwelle erreicht. Danach verschiebt Margince die Deals selbstständig und benachrichtigt dich im Anschluss.",
   "stageAutomation.offTitle": "Die Phasensteuerung ist deaktiviert",
   "stageAutomation.offBody":
     "Solange die Phasensteuerung deaktiviert ist, wird kein Deal von selbst verschoben, unabhängig von der Einstellung der Übergänge unten. Wer diese Installation betreibt, aktiviert die Phasensteuerung in deren Konfiguration.",
-  "stageAutomation.modeHint":
-    "Wenn der Übergang aktiviert ist und die Bilanz ausreicht, verschiebt Margince den Deal und benachrichtigt dich danach.",
   "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
   "stageAutomation.suspended": "Von Margince ausgesetzt",
   "stageAutomation.suspendedSince": "Ausgesetzt am {date}",

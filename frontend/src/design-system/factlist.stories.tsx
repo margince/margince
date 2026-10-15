@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Badge, Card } from "./atoms";
 import { FactList } from "./factlist";
@@ -59,6 +60,24 @@ export const NumericWithNotes: Story = {
       },
     ],
   },
+  // A note is a caption under its figure, so it must not read as a second value.
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const value = getComputedStyle(canvas.getByText("€1,204.00"));
+    const note = getComputedStyle(
+      canvas.getByText("Partial — 12 of 28 days counted"),
+    );
+    await expect(note.color).not.toBe(value.color);
+    await expect(Number.parseFloat(note.fontSize)).toBeLessThan(
+      Number.parseFloat(value.fontSize),
+    );
+  },
+};
+
+export const NumericWithNotesPhone: Story = {
+  ...NumericWithNotes,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // Both sides take nodes, which is what the real rows need: a status pill on the

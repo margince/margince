@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The seat bar takes a fixed share of the row: sized by its figure alone it
+   would be as narrow as "9 of 10". */
+.license-meter {
+  display: block;
+  inline-size: 10rem;
+  max-inline-size: 100%;
+}

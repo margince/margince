@@ -11,6 +11,7 @@ import {
   jsonResponse,
   ROSTER,
   render,
+  roleControl,
   roleSelect,
   roleShown,
   rowFor,
@@ -30,20 +31,19 @@ describe("UsersAdminCard role picker", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Admin");
-    expect(roleShown(rowFor("Otto Off"), "otto off")).toBe("Read-only");
+    expect(roleShown(rowFor("Ada Active"))).toBe("Admin");
+    expect(roleShown(rowFor("Otto Off"))).toBe("Read-only");
   });
 
-  it("offers the placeholder to a member holding no role", async () => {
+  it("names a member holding no role as unset", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
 
-    expect(roleShown(rowFor("Nora None"), "nora none")).toBe("Set role…");
-    // It is a face and never an entry: picking "Set role…" back would set no
-    // role, so the list this row opens is the assignable roles, in the server's
-    // key order, and nothing else. The options exist only while the popup is open, hence the click.
+    expect(roleShown(rowFor("Nora None"))).toBe(en["field.unset"]);
+    // "Not set" is never an entry. The list offers the assignable roles in the
+    // server's key order.
     await user.click(roleSelect(rowFor("Nora None"), "nora none"));
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
@@ -58,9 +58,8 @@ describe("UsersAdminCard role picker", () => {
     ]);
   });
 
-  // Any choice replaces the whole set, so a member holding several roles must
-  // not read as a blank "Set role…" — that would let an admin strip privileges
-  // they were never shown.
+  // Any choice replaces the whole set. A multi-role member read as one role
+  // would let an admin strip privileges they never saw.
   it("names the roles a multi-role member holds", async () => {
     const twoRoles = {
       ...ROSTER,
@@ -118,7 +117,7 @@ describe("UsersAdminCard role picker", () => {
 
     // Both held roles are named, under their display labels, and the copy says
     // what picking one does.
-    const shown = roleShown(rowFor("Nora None"), "nora none");
+    const shown = roleShown(rowFor("Nora None"));
     expect(shown).toMatch(/holds/i);
     expect(shown).toContain("Team lead");
     expect(shown).toContain("Ops");
@@ -293,7 +292,7 @@ describe("UsersAdminCard role picker", () => {
 
     // Mid-flight: the row reads the role being applied and stays locked. "Admin"
     // here would be the stale cache showing through.
-    expect(roleShown(active, "ada active")).toBe("Team lead");
+    expect(roleShown(active)).toBe("Team lead");
     expect(roleSelect(active, "ada active").disabled).toBe(true);
 
     releaseRoster();
@@ -302,7 +301,7 @@ describe("UsersAdminCard role picker", () => {
         false,
       ),
     );
-    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Team lead");
+    expect(roleShown(rowFor("Ada Active"))).toBe("Team lead");
   });
 
   // A custom role reads under the name its maker gave it, and is offered like
@@ -343,12 +342,12 @@ describe("UsersAdminCard role picker", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ivy Invited")).toBeTruthy());
 
-    expect(roleShown(rowFor("Ivy Invited"), "ivy invited")).toBe("Field sales");
-    // Ada holds admin, which this reader may not hand out: the picker still
-    // names it, refused, and says why.
+    expect(roleShown(rowFor("Ivy Invited"))).toBe("Field sales");
+    // Ada holds admin, which this reader may not hand out: the row still names
+    // it, offers no chooser, and says why.
     const ada = rowFor("Ada Active");
-    expect(roleSelect(ada, "ada active").disabled).toBe(true);
-    expect(roleShown(ada, "ada active")).toBe("Admin");
+    expect(roleControl(ada, "ada active")).toBeNull();
+    expect(roleShown(ada)).toBe("Admin");
     expect(within(ada).getByText(en["users.role.outside"])).toBeTruthy();
 
     await user.click(roleSelect(rowFor("Nora None"), "nora none"));

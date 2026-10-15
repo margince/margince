@@ -84,20 +84,20 @@ function served(answer: () => Response, grants: GrantSpec = READER) {
   };
 }
 
-const meta: Meta<typeof ReviewTemplatesCard> = {
+const meta = {
   title: "Settings/Sales/Outcome reviews/Review questions",
   component: ReviewTemplatesCard,
   parameters: { layout: "padded" },
-};
+} satisfies Meta<typeof ReviewTemplatesCard>;
 export default meta;
-type Story = StoryObj<typeof ReviewTemplatesCard>;
+type Story = StoryObj<typeof meta>;
 
 /** A win and a loss template, and a retired one kept on the list. */
 export const Templates: Story = {
   render: served(() => jsonResponse({ data: TEMPLATES })),
 };
 
-/** An editor sees each template's own Edit questions verb in its head. */
+/** An editor sees each template's own Edit questions verb in its panel head. */
 export const Editable: Story = {
   render: served(() => jsonResponse({ data: TEMPLATES }), EDITOR),
   play: async ({ canvasElement }) => {
@@ -115,6 +115,11 @@ export const EditablePhone: Story = {
   play: async ({ canvasElement }) => {
     await within(canvasElement).findAllByRole("list");
   },
+};
+
+export const EditableDark: Story = {
+  globals: { theme: "dark" },
+  render: served(() => jsonResponse({ data: TEMPLATES }), EDITOR),
 };
 
 /** No templates served: the card says so rather than drawing an empty list. */

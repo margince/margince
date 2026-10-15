@@ -13,13 +13,7 @@ export function KeyedName({
   name,
   code,
 }: Readonly<{ name: string; code: string }>) {
-  if (name === code) {
-    return (
-      <code className="keyed-name-only">
-        <KeyText code={code} />
-      </code>
-    );
-  }
+  if (name === code) return <KeyCode code={code} />;
   return (
     <CellStack>
       <span>{name}</span>
@@ -27,6 +21,15 @@ export function KeyedName({
         <KeyText code={code} />
       </code>
     </CellStack>
+  );
+}
+
+/** A key on its own, in the code face of the line around it. */
+export function KeyCode({ code }: Readonly<{ code: string }>) {
+  return (
+    <code className="keyed-name-only">
+      <KeyText code={code} />
+    </code>
   );
 }
 

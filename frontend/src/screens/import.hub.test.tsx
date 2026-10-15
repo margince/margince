@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportCard } from "./import";
@@ -171,8 +171,9 @@ describe("the data import hub", () => {
         jsonResponse({ ...formatFixture, order: ["contact", "company"] }),
     });
     render(<ImportCard />);
-    const line = (await screen.findByText("Import order:")).parentElement;
-    expect(line).toHaveTextContent("Import order:Contacts→Companies");
+    // The arrows are drawn for the eye only; a screen reader hears the names.
+    const line = await screen.findByText("Import order: Contacts Companies");
+    expect(line).toHaveTextContent("Import order: Contacts → Companies");
   });
 
   it("asks before an undo, then starts it", async () => {
@@ -236,10 +237,19 @@ describe("the data import hub", () => {
     }
   });
 
-  it("says so when there is no import yet", async () => {
-    stubRoutes();
+  it("shows no history panel before the first import", async () => {
+    const sent = stubRoutes();
     render(<ImportCard />);
-    expect(await screen.findByText("No imports yet.")).toBeVisible();
+    expect(await screen.findByText("Upload your data")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        sent.filter((one) => one.path === "GET /imports").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    await act(async () => {});
+    expect(
+      screen.queryByRole("heading", { name: "Recent imports" }),
+    ).toBeNull();
   });
 
   it("opens the run page with the dropped file", async () => {

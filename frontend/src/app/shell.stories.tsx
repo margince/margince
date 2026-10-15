@@ -18,7 +18,11 @@ import {
 import { type ReactNode, useRef, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { Card } from "../design-system/atoms";
+import {
+  PageHeadAction,
+  PageHeadActionProvider,
+} from "../components/pageheadaction";
+import { Button, Card } from "../design-system/atoms";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
@@ -248,6 +252,42 @@ export const SettingsHeadOnItsColumn: Story = {
       </StoryProviders>
     );
   },
+};
+
+// A one-list settings page puts its create verb beside the page's name. The
+// head keeps the name 16rem wide; below that the verb wraps under it.
+function SettingsHeadWithVerb() {
+  stubSession({ user_admin: ["read", "create"] });
+  return (
+    <StoryProviders>
+      <SeedInstallation>
+        <PageHeadActionProvider>
+          <ShellExample at="#/settings/members">
+            <PageHeadAction>
+              <Button>{en["users.inviteOpen"]}</Button>
+            </PageHeadAction>
+            <div className="wrap">
+              <div className="settings-stack">
+                <Card as="div">Content</Card>
+              </div>
+            </div>
+          </ShellExample>
+        </PageHeadActionProvider>
+      </SeedInstallation>
+    </StoryProviders>
+  );
+}
+
+export const SettingsHeadWithAction: Story = {
+  name: "a settings entry — the page's verb in the head",
+  render: () => <SettingsHeadWithVerb />,
+};
+
+export const SettingsHeadWithActionPhone: Story = {
+  name: "a settings entry — the page's verb under the head on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <SettingsHeadWithVerb />,
 };
 
 /** A company's wide logo owns the expanded head, with Margince credited on the

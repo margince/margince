@@ -485,14 +485,12 @@ export const SETTINGS_PAGES = [
   },
   {
     id: "reviewtemplates",
-    // `custom_field` read, which is what the templates endpoint itself
-    // requires. The card has no write of any kind — the API serves these
-    // templates and accepts no edits — so reading them IS the action, and the
-    // two questions have one answer.
+    // `custom_field` read, which is what the templates endpoint requires.
+    // Editing a template's questions is `custom_field` update on the server.
     group: "sales",
     scope: "workspace",
     requires: reads("custom_field"),
-    changes: readingIsTheAct,
+    changes: acts(writes("custom_field", ["update"])),
   },
   {
     id: "recordroles",

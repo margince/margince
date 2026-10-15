@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
+import { PageHeadActionSlot } from "../components/pageheadaction";
 import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
@@ -724,9 +725,8 @@ export function PageTitle({
             own `aria-label` — "Privacy & retention — change section" — and put an
             instruction in the document's heading list. The control keeps that
             name; the heading states the page. */}
-        {/* The heading and the scope share one ROW: `.pagetitle-text` stacks its
-            children, so a badge placed as a sibling would sit under the heading
-            at full width and read as a second line of the title. */}
+        {/* One row for heading and scope: as a sibling the badge would read as
+            a second line of the title. */}
         <div className="pagetitle-head">
           <Heading
             size="xlarge"
@@ -735,11 +735,9 @@ export function PageTitle({
           >
             {switcher || title}
           </Heading>
-          {/* Beside the heading rather than inside it: the scope is about the
-              page, not part of its name, and a heading carrying it would read
-              "Capture rules Company" in every document outline and screen
-              reader. Neutral: company-wide is the ordinary case, not a
-              warning. */}
+          {/* Beside the heading, not in it: a heading carrying the scope would
+              read "Capture rules Company" in every outline and screen reader.
+              Neutral: company-wide is the ordinary case, not a warning. */}
           {scopeKey && (
             <Badge>
               {/* The mixed page says something different from the others: not
@@ -757,6 +755,7 @@ export function PageTitle({
         </div>
         {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
       </div>
+      <PageHeadActionSlot />
     </div>
   );
 }

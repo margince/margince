@@ -294,6 +294,30 @@ describe("AuditEntryLine", () => {
     expect(screen.queryByText(new RegExp(ME))).toBeNull();
   });
 
+  it("names the record by what the change wrote when the server names none", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({ after: { label: "Fleet size", type: "number" } })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Fleet size")).toBeTruthy();
+  });
+
+  it("prefers the record's live name to the one the change wrote", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({
+          entity_label: "Fleet count",
+          before: { label: "Fleet size" },
+        })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Fleet count")).toBeTruthy();
+    expect(screen.queryByText("Fleet size")).toBeNull();
+  });
+
   it("dates an entry on the company's clock, not the reader's", () => {
     // 18:00Z on 21 August is 20:00 the same day in Berlin and 01:00 the NEXT
     // day in Ho Chi Minh City. An audit line is a fact in the shared book, so

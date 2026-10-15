@@ -10,10 +10,10 @@ import {
 } from "../testing/story-utils";
 import { PipelinesCard } from "./settings.pipelines";
 
-// The admin and read-only postures of this card live in settings.stories.tsx;
-// this file holds the retired pipeline and its refused restore.
+// The several-pipeline catalog lives in settings.stories.tsx; this file holds
+// one pipeline standing alone, and the retired pipeline with its refused restore.
 const meta: Meta = {
-  title: "Settings/Sales/Pipelines/Retired pipeline",
+  title: "Settings/Sales/Pipelines/Pipeline page",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -76,4 +76,124 @@ export const RestoreRefused: Story = {
       "A pipeline named Legacy renewals is already in use.",
     );
   },
+};
+
+const salesPipeline = {
+  id: "pl-sales",
+  name: "Sales",
+  is_default: true,
+  position: 1,
+  version: 2,
+  stages: [
+    ["s1", "Qualified", "open", 10],
+    ["s2", "Discovery", "open", 25],
+    ["s3", "Proposal", "open", 50],
+    ["s4", "Won", "won", 100],
+    ["s5", "Lost", "lost", 0],
+  ].map(([id, name, semantic, odds], index) => ({
+    id,
+    pipeline_id: "pl-sales",
+    name,
+    position: index + 1,
+    semantic,
+    win_probability: odds,
+    version: 1,
+    ...(semantic === "open"
+      ? { exit_criteria: { required: index, optional: 0 } }
+      : {}),
+  })),
+};
+
+type Grants = Parameters<typeof stubWithSession>[1];
+
+function alone(allow: Grants) {
+  return () => {
+    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+    stubWithSession(
+      {
+        "GET /pipelines": () =>
+          jsonResponse({
+            data: [salesPipeline],
+            page: { next_cursor: null, has_more: false },
+          }),
+        "GET /stages/s2/exit-criteria": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "c1",
+                stage_id: "s2",
+                key: "budget_confirmed",
+                label: "Buyer confirmed the budget",
+                kind: "buyer_confirmed",
+                required: true,
+                position: 1,
+                version: 1,
+              },
+            ],
+          }),
+        "GET /stages/s1/exit-criteria": () => jsonResponse({ data: [] }),
+      },
+      allow,
+    );
+    return (
+      <StoryProviders>
+        <PipelinesCard />
+      </StoryProviders>
+    );
+  };
+}
+
+const ADMIN: Grants = { pipeline: ["read", "create", "update", "delete"] };
+
+/** One pipeline: no catalog to choose from, so its own head offers the next one. */
+export const OnePipeline: Story = {
+  render: alone(ADMIN),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const head = await canvas.findByRole("region", { name: "Sales" });
+    await expect(
+      within(head).getByRole("button", { name: /New pipeline/ }),
+    ).toBeInTheDocument();
+  },
+};
+
+/** A first stage with no criteria: one line and the verb that adds the first. */
+export const NoCriteriaYet: Story = {
+  render: alone(ADMIN),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Exit criteria for Qualified",
+      }),
+    );
+    await expect(
+      await canvas.findByText("No exit criteria yet."),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: "Add criterion" }),
+    ).toBeInTheDocument();
+  },
+};
+
+/** The same page for a reader who may only look. */
+export const OnePipelineReadOnly: Story = {
+  render: alone({ pipeline: ["read"] }),
+};
+
+export const OnePipelinePhone: Story = {
+  render: alone(ADMIN),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    const root = canvasElement.ownerDocument.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+  },
+};
+
+export const OnePipelineDark: Story = {
+  globals: { theme: "dark" },
+  render: alone(ADMIN),
 };

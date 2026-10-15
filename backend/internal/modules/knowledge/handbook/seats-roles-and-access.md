@@ -12,20 +12,20 @@ A "no" from any one of them is a no. **Settings → Overview** shows your own an
 ## Managing colleagues, roles and teams
 
 ### How do I invite a colleague to Margince?
-To invite a colleague to Margince, open **Settings → Members** and choose **Invite user**.
+To invite a colleague to Margince, open **Settings → Members** and choose **Invite member** at the top right, beside the page title.
 1. Open the account menu at the top right and choose **Settings**, then **Members**.
-2. Choose **Invite user**.
+2. Choose **Invite member**.
 3. Fill **Email** (required) and **Full name** (required).
 4. Pick a **Role** and tick any **Teams** they should join.
 5. Check the **User access** preview, then choose **Invite**.
-You need the permission to manage users. Without it the page says "Your role cannot manage users." An invite is refused when no seat is left.
+You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### How do I change someone's role or make someone an admin?
-To change a colleague's role in Margince, open **Settings → Members** and pick the new role in the role menu on their row.
+To change a colleague's role in Margince, open **Settings → Members** and choose the role on their row.
 1. Open **Settings → Members**.
-2. Find the colleague in the **Users** list.
-3. Open the role menu on their row (it reads **Set role…** when they hold no role). Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
+2. Find the colleague in the **Members** list.
+3. Choose the role on their row. It reads as plain text, and **Not set** when they hold no role. Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
 4. The note "Role changed for {name}" confirms it.
 Choosing a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
@@ -60,12 +60,12 @@ The box shows when the link ends. To change your own password, use **Settings �
 Also called: forgot password, password reset, locked out.
 
 ### How do I create a team?
-To create a team in Margince, open **Settings → Teams** and choose **New team**.
+To create a team in Margince, open **Settings → Teams** and choose **New team** at the top right, beside the page title.
 1. Open **Settings → Teams**.
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. Without the permission the page says "Your role cannot manage teams."
+To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. A role that may only read the page sees **Read-only settings** and no **New team**.
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?
@@ -228,7 +228,7 @@ A team in Margince is a named group of colleagues. To create or rename one you n
 1. **You can share with it.** You can share a record with a whole team in one step.
 2. It gives the meaning of team row scope: what "their team" means for a **Team lead**. That is the one role Margince comes with that reads it.
 
-The Teams page says it: "For most roles, membership grants no access. A team lead added to a team can read and edit that team’s records without a share."
+The Teams page says it: "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share."
 
 When a team is archived, being in it gives nothing any more. You can restore an archived team.
 

@@ -13,8 +13,7 @@ import {
 import { StageExitCriteria } from "./settings.exitcriteria";
 
 // What a stage asks for before a deal may leave it, as the pipelines card draws
-// it inside one stage's row. Two states are worth a picture: the standing
-// notice about who evidence has to come from, and the read that failed.
+// it inside one stage's row.
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -88,4 +87,56 @@ export const Unreadable: Story = {
       <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
     </Served>
   ),
+};
+
+/** Two criteria, one that blocks the move and one that only counts toward it. */
+export const RequiredAndOptional: Story = {
+  render: () => (
+    <Served
+      answer={() =>
+        jsonResponse({
+          data: [
+            criterion({}),
+            criterion({
+              id: "33333333-3333-4333-8333-333333333333",
+              key: "champion_named",
+              label: "A champion is named",
+              kind: "role_identified",
+              required: false,
+              position: 2,
+            }),
+          ],
+        })
+      }
+    >
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
+    </Served>
+  ),
+};
+
+/** None yet: one line, and the verb that adds the first. */
+export const Empty: Story = {
+  render: () => (
+    <Served answer={() => jsonResponse({ data: [] })}>
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
+    </Served>
+  ),
+};
+
+/** A reader sees each criterion and its standing, and no verb. */
+export const ReadOnly: Story = {
+  render: () => (
+    <Served answer={() => jsonResponse({ data: [criterion({})] })}>
+      <StageExitCriteria
+        stageId={STAGE_ID}
+        stageName="Discovery"
+        canEdit={false}
+      />
+    </Served>
+  ),
+};
+
+export const RequiredAndOptionalDark: Story = {
+  globals: { theme: "dark" },
+  render: RequiredAndOptional.render,
 };

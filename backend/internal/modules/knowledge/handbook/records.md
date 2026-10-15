@@ -342,7 +342,7 @@ To add a custom field in Margince, open Settings → **Fields**, pick the **Obje
 1. Choose the **Object**: Deal, Company, Contact, Lead, Project or Contract.
 2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency.
 3. Confirm with **Add field**.
-The new field then shows in that record's create and edit forms. Without the right to change fields you see "You have read-only access to custom fields." More on fields is in [Settings](settings.md).
+The new field then shows in that record's create and edit forms. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
 Also called: custom property, extra column, new attribute.
 
 **Activities cannot hold a custom field.**

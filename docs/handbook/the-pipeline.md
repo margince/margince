@@ -59,7 +59,7 @@ A deal that went cold is still open unless someone closed it. Margince marks an 
 Any real activity clears the mark; opening the record does not. If the deal was closed as lost, reopen it instead. Also called: revive, re-engage, stale deal.
 
 ### How do I change the pipeline stages?
-To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group). Then choose the pipeline in the list.
+To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group). With more than one pipeline, choose it under **All pipelines**.
 1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100).
 2. A new open stage goes after the other open stages.
 3. To change a stage, open the **…** menu on its row and choose **Edit stage**.
@@ -68,13 +68,13 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 6. To delete a stage, open the **…** menu on its row and choose **Remove** → **Remove stage**. Move its deals off it first. While it holds deals you can see, **Remove** cannot be chosen and says how many.
 7. To see what a deal must show to leave a stage, press the arrow at the end of its row. It opens the stage's **Exit criteria** under the row. **Add criterion** adds one, here or in the **…** menu. A condition of the kind **Legal approved** holds a deal at the stage until legal approves it; see [Legal review](legal-review.md).
 
-A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only. Your role cannot change pipelines or stages."
+A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
 An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
-Give it a **Name** and choose **Default** or **Not default**. It starts with a Won and a Lost stage, so add its open stages with **New stage**. The list at the top shows every pipeline with the shape of its stages. Drag one by its handle to change the order pipelines are offered in. Choose **Make default** on a pipeline to make new deals go there.
+Give it a **Name** and choose **Default** or **Not default**. It starts with a Won and a Lost stage, so add its open stages with **New stage**. Once there are two, **All pipelines** at the top lists each one with its count of open stages. Drag one by its handle to change the order pipelines are offered in. Choose **Make default** on a pipeline to make new deals go there.
 
 New deals need a default pipeline. To stop using a pipeline, choose **Retire**. It leaves the pickers and the forms for new deals, its deals keep their stage and history, and **Restore** brings it back. You cannot retire the default pipeline until another one is the default. Margince does not delete pipelines. Also called: second sales process, separate pipeline.
 
@@ -318,8 +318,7 @@ group).
 
 The report itself is read-only. Under it sit the rules that decide what each
 stage move may do, and changing one of those needs permission to edit
-pipelines. The page says so: "You can see each transition’s record. Changing a
-transition requires permission to edit pipelines."
+pipelines. Without it, the page shows "Read-only settings" at the top.
 
 Under **Transition rules**, turning a stage move on does not start moving deals.
 Margince keeps asking until the record is good enough. Then it moves deals by
@@ -339,13 +338,14 @@ are shown as a share of what was reviewed.
 It also reports **Days observed**, from the first reviewed idea to the last. It
 says why that counts: "A good rate from one afternoon is not a track record."
 
-The table shows the reviewed count and the four shares. A stage move's details
-show **Still open**, **Expired** and **Days observed**. They also show how often
-each kind of evidence, such as a signed document, was accepted as proposed.
+The **Track record** table shows **Reviewed**, **Accepted** and **Undone or corrected**.
+A stage move's details show **Edited**, **Rejected**, **Still open**, **Expired** and **Days observed**.
+They also show how often each kind of evidence, such as a signed document, was accepted as proposed.
+**What the columns mean**, under the table, explains each heading.
 
 ### How do I set up stage automation?
 To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.
-1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted**, **Rejected** and **Undone or corrected**, then **Days observed** in its details.
+1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted** and **Undone or corrected** in **Track record**, then **Rejected** and **Days observed** in its details.
 2. Under **Transition rules**, turn on the stage move you trust.
 
 Nothing moves at once. Margince keeps suggesting moves for you to check until the record is good enough, then moves deals and tells you after. Changing a rule needs permission to edit pipelines. Also called: automatic stage moves, pipeline automation.

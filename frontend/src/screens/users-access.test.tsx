@@ -869,7 +869,7 @@ describe("TeamsCard membership", () => {
 
     expect(
       await screen.findByText(
-        `${en["users.teamsSub"]} ${en["users.teamsAdminOnly"]} ${en["users.teamMembersAdminOnly"]}`,
+        `${en["users.teamsSub"]} ${en["users.teamMembersAdminOnly"]}`,
       ),
     ).toBeTruthy();
     expect(screen.getByText("Nord")).toBeTruthy();

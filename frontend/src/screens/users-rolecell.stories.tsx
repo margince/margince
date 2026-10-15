@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { StoryProviders } from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
-import { RoleCell } from "./users-rolecell";
+import { MemberRole, type RoleRefusal } from "./users-rolecell";
 
-// The member row's role picker on its own: a seeded role under its translated
-// label, a custom role under the name its maker gave it, and a member holding
-// several roles, whose placeholder names what a choice would replace.
+// The member row's role alone. Plain words at rest, a chooser only on press,
+// and a refusal whose reason stays off the row.
 
 const FIELD_SALES = {
   key: "custom_field_sales",
@@ -30,36 +30,51 @@ function member(roles: string[]): components["schemas"]["User"] {
   };
 }
 
-function cell(roles: string[], pending = false, refused = false) {
+function cell(roles: string[], refusal: RoleRefusal | null = null) {
   return () => (
     <StoryProviders>
-      <RoleCell
-        member={member(roles)}
-        roles={refused ? ROLES.filter((role) => role.key !== "admin") : ROLES}
-        pending={pending}
-        refused={refused}
-        onPick={() => undefined}
-      />
+      <MemberRole member={member(roles)} roles={ROLES} refusal={refusal} />
     </StoryProviders>
   );
 }
 
-const meta: Meta<typeof RoleCell> = {
+const meta = {
   title: "Settings/People/Members/Role picker",
-  component: RoleCell,
-};
+  component: MemberRole,
+  args: { member: member(["rep"]), roles: ROLES, refusal: null },
+} satisfies Meta<typeof MemberRole>;
 export default meta;
-type Story = StoryObj<typeof RoleCell>;
+type Story = StoryObj<typeof meta>;
 
-export const SeededRole: Story = { render: cell(["rep"]) };
+export const SeededRole: Story = {
+  render: cell(["rep"]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(await body.findByRole("listbox")).toBeVisible();
+  },
+};
 
 export const CustomRole: Story = { render: cell([FIELD_SALES.key]) };
 
+// Any choice replaces the whole set, so the resting face names every held role.
 export const SeveralRoles: Story = {
   render: cell(["manager", FIELD_SALES.key]),
 };
 
-export const Applying: Story = { render: cell(["rep"], true) };
+export const NoRole: Story = { render: cell([]) };
 
-// A role this reader may not hand out still names itself on the refused face.
-export const Refused: Story = { render: cell(["admin"], false, true) };
+// The last admin: plain words, the reason on hover and for a screen reader.
+export const RefusedWithReason: Story = {
+  render: cell(["admin"], {
+    reason: "This is the only admin. Make another member an admin first.",
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Admin");
+    await expect(canvas.queryByRole("button")).toBeNull();
+  },
+};

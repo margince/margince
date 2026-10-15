@@ -7,6 +7,7 @@ import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { createQueryClient } from "./app/queryclient";
 import { BulkUndoProvider } from "./components/bulkchange";
+import { PageHeadActionProvider } from "./components/pageheadaction";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
@@ -94,7 +95,11 @@ createRoot(root).render(
                     that ran it: that list's bulk bar is gone once the change
                     clears its selection. */}
                 <BulkUndoProvider>
-                  <App />
+                  {/* The shell's page head and the screen under it both read
+                      it: the screen declares its verb, the head draws it. */}
+                  <PageHeadActionProvider>
+                    <App />
+                  </PageHeadActionProvider>
                 </BulkUndoProvider>
               </FilePreviewProvider>
               <ToastRegion />

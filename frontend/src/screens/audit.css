@@ -22,6 +22,10 @@
 }
 
 /* WHO acted — the half a reader's eye should land on. */
+.audit-target {
+  color: var(--textPrimary);
+}
+
 .audit-actor-name:empty {
   display: none;
 }

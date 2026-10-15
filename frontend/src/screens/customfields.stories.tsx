@@ -297,9 +297,8 @@ export const CardRowsPhone: Story = {
   },
 };
 
-// A seat that may read the catalogue and change nothing: the add row is absent
-// (an action-only affordance makes no claim about the data by not being there)
-// and the posture line says so once for the whole section.
+// A seat that may read the catalogue and change nothing. The add verb and the
+// intro about adding are absent; the settings page says it is read-only.
 export const CardReadOnly: Story = {
   render: () => {
     installFetchStub({
@@ -311,6 +310,44 @@ export const CardReadOnly: Story = {
         <CustomFieldsAdmin />
       </StoryProviders>
     );
+  },
+};
+
+// The same seat on an object with no fields: the empty line states the fact
+// and asks for nothing this reader cannot do.
+export const CardReadOnlyEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...CARD_ROUTES,
+      "GET /me": meRoute({ custom_field: ["read"] }),
+      "GET /custom-fields": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+};
+
+// Six objects fit a phone only as a dropdown, so the picker opens as a list.
+export const CardObjectPickerPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installFetchStub(CARD_ROUTES);
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("combobox", { name: "Object" }),
+    );
+    await body.findByRole("option", { name: "Contract" });
   },
 };
 

@@ -1,19 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { StatCard } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
-import { StatStrip } from "../design-system/statstrip";
+import { Meter } from "../design-system/readings";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { useLicenseEntitlement } from "../lib/license-posture";
 import { throwProblem } from "../lib/problem";
 import { useMe } from "../lib/session";
+import "./license.css";
 import { LicenseHolderCard } from "./licenseholder";
 
 // The entitlement surface: what the license grants, and how many seats are using
@@ -134,12 +134,6 @@ export function LicenseCard() {
   );
 }
 
-// The standing of a valid license. A refused or absent one is said by its
-// callout alone, whose title would otherwise repeat this line.
-function stateKey(capped: boolean): MessageKey {
-  return capped ? "license.state.licensed" : "license.state.uncapped";
-}
-
 // What is still free, or what the count is past — the caption the seat reading
 // owes, and the one an uncapped installation owes instead.
 //
@@ -173,20 +167,17 @@ function seatsDetail(
  * they may not see it. A card that filled the gap with "unlicensed" would tell
  * a manager something false about the company they work for.
  */
-function SeatUsageReading({ seatsUsed }: Readonly<{ seatsUsed: number }>) {
+export function SeatUsageReading({
+  seatsUsed,
+}: Readonly<{ seatsUsed: number }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <Panel title={t("license.card.title")}>
+    <Panel title={t("license.seats.title")}>
       <PanelBody>
         <PanelIntro>{t("license.seats.capacityOnly")}</PanelIntro>
       </PanelBody>
-      <SeatsBody>
-        <StatCard
-          label={t("license.seats.title")}
-          value={formatNumber(seatsUsed, locale)}
-        />
-      </SeatsBody>
+      <SeatsReading figure={formatNumber(seatsUsed, locale)} />
     </Panel>
   );
 }
@@ -198,109 +189,131 @@ export function LicenseReading({
   const { locale } = useLocale();
   const granted = entitlement.seats_granted;
   const capped = granted !== undefined && granted !== null;
-  // ONE spelling of "the grant, or the word for not having one". The callout,
-  // the slot and the meter's name all say it, and three readings of one absence
-  // is how a card ends up claiming two different things about one license.
+  // The callout and the seat row both name the grant. One spelling keeps them
+  // from disagreeing.
   const grantedText = capped
     ? formatNumber(granted, locale)
     : t("license.seats.uncapped");
 
+  const notices =
+    entitlement.state !== "valid" || entitlement.over_limit === true;
   return (
-    // A `Panel`, like every other card on every other settings page. This card
-    // was the last `Card` on the surface, and a `Card` draws its title INSIDE
-    // the padded body with no band and no rule — so on a page of panels it read
-    // as a different kind of object rather than as one more card.
-    <Panel title={t("license.card.title")}>
-      <PanelBody>
-        {entitlement.state === "valid" && (
-          <PanelIntro>{t(stateKey(capped))}</PanelIntro>
-        )}
-        {/* This card is where the installation's licence gap is REPAIRED, so
-            it states the gap in every posture; the shell banner (refused) and
-            the agent panel's pill (absent or refused) name it and link here. The
-            orb never does: an unlicensed demo or dev stack would wear permanent
-            amber, and amber would stop meaning "a fault that can wait".
+    <Panel title={t("license.seats.title")}>
+      {notices && (
+        <PanelBody>
+          {/* This card is where the installation's licence gap is REPAIRED, so
+              it states the gap in every posture; the shell banner (refused) and
+              the agent panel's pill (absent or refused) name it and link here. The
+              orb never does: an unlicensed demo or dev stack would wear permanent
+              amber, and amber would stop meaning "a fault that can wait".
 
-            Not `live="alert"`: `over_limit` above owns the only interruption on
-            this screen, and neither of these is news that arrived while the
-            reader was here. The TONES differ because the two facts do — a
-            licence that was refused is a live fault with a repair behind it, and
-            one that was never configured is a standing condition. */}
-        {entitlement.state === "rejected" && (
-          <Callout
-            kind="standing"
-            tone="warning"
-            title={t("license.refused.title")}
-          >
-            {t("license.refused.body")}
-          </Callout>
-        )}
-        {entitlement.state === "absent" && (
-          <Callout kind="standing" title={t("license.absent.title")}>
-            {t("license.absent.body")}
-          </Callout>
-        )}
-        {entitlement.over_limit && (
-          // `live` overrides what `standing` derives, which is silence: the
-          // breach is true as the page renders and still has to interrupt,
-          // here and nowhere else on this screen — the installation is past
-          // what it is entitled to, and that is a thing the admin has to act on
-          // rather than notice eventually.
-          <Callout
-            kind="standing"
-            tone="danger"
-            live="alert"
-            title={t("license.over.title")}
-          >
-            {/* Gated on the server's verdict ALONE. `over_limit` is false
-                whenever nothing caps seats, so the contract already answers
-                this; re-deriving it here from `seats_granted` would be the
-                client reaching its own answer about the installation's
-                standing, and on a payload where the two disagreed it would
-                withdraw the one alert an admin has to act on. */}
-            {t("license.over.body", {
-              used: formatNumber(entitlement.seats_used, locale),
-              granted: grantedText,
-            })}
-          </Callout>
-        )}
-      </PanelBody>
-      <SeatsBody>
-        <StatCard
-          label={t("license.seats.title")}
-          // Used against granted in one value, because that is one fact.
-          value={
-            capped
-              ? t("license.seats.ofGranted", {
-                  used: formatNumber(entitlement.seats_used, locale),
-                  granted: grantedText,
-                })
-              : formatNumber(entitlement.seats_used, locale)
-          }
-          detail={seatsDetail(entitlement.seats_used, granted, locale, t)}
-          // Only where the reading has a denominator: a bar drawn against an
-          // invented limit invents the limit.
-          meter={
-            capped
-              ? { filled: entitlement.seats_used, total: granted }
-              : undefined
-          }
-          // The slot itself is the bad news past the grant, so `alert` rather
-          // than `tone`, which would only colour the figure.
-          alert={entitlement.over_limit}
-        />
-      </SeatsBody>
+              Not `live="alert"`: `over_limit` above owns the only interruption on
+              this screen, and neither of these is news that arrived while the
+              reader was here. The TONES differ because the two facts do — a
+              licence that was refused is a live fault with a repair behind it, and
+              one that was never configured is a standing condition. */}
+          {entitlement.state === "rejected" && (
+            <Callout
+              kind="standing"
+              tone="warning"
+              title={t("license.refused.title")}
+            >
+              {t("license.refused.body")}
+            </Callout>
+          )}
+          {entitlement.state === "absent" && (
+            <Callout kind="standing" title={t("license.absent.title")}>
+              {t("license.absent.body")}
+            </Callout>
+          )}
+          {entitlement.over_limit && (
+            // `live` overrides the silence `standing` derives. A breach is true on
+            // render and still interrupts, because the admin has to act on it.
+            <Callout
+              kind="standing"
+              tone="danger"
+              live="alert"
+              title={t("license.over.title")}
+            >
+              {/* Gated on the server's verdict ALONE. `over_limit` is false
+                  whenever nothing caps seats, so the contract already answers
+                  this; re-deriving it here from `seats_granted` would be the
+                  client reaching its own answer about the installation's
+                  standing, and on a payload where the two disagreed it would
+                  withdraw the one alert an admin has to act on. */}
+              {t("license.over.body", {
+                used: formatNumber(entitlement.seats_used, locale),
+                granted: grantedText,
+              })}
+            </Callout>
+          )}
+        </PanelBody>
+      )}
+      <SeatsReading
+        // Used against granted in one value, because that is one fact.
+        figure={
+          capped
+            ? t("license.seats.ofGranted", {
+                used: formatNumber(entitlement.seats_used, locale),
+                granted: grantedText,
+              })
+            : formatNumber(entitlement.seats_used, locale)
+        }
+        // An absent or refused license says "uncapped" in its notice above.
+        detail={
+          entitlement.state === "valid"
+            ? seatsDetail(entitlement.seats_used, granted, locale, t)
+            : undefined
+        }
+        // Only where the reading has a denominator: a bar drawn against an
+        // invented limit invents the limit.
+        meter={
+          capped ? { value: entitlement.seats_used, max: granted } : undefined
+        }
+        over={entitlement.over_limit === true}
+      />
     </Panel>
   );
 }
 
-// The seat reading and what it counts, the one shape both postures draw.
-function SeatsBody({ children }: Readonly<{ children: ReactNode }>) {
+// The seat reading and what it counts, the one row both postures draw. No
+// control: the count changes only with the members and the deployment.
+function SeatsReading({
+  figure,
+  detail,
+  meter,
+  over = false,
+}: Readonly<{
+  figure: string;
+  detail?: string;
+  meter?: Readonly<{ value: number; max: number }>;
+  over?: boolean;
+}>) {
   const t = useT();
   return (
-    <PanelBody>
-      <PanelIntro>{t("license.counting")}</PanelIntro>
-      <StatStrip>{children}</StatStrip>
-    </PanelBody>
+    <SettingList bleed="settings">
+      <SettingRow
+        label={t("license.seats.inUse")}
+        description={t("license.counting")}
+        value={
+          <CellStack>
+            <span className="t-num">{figure}</span>
+            {meter && (
+              <span className="license-meter">
+                <Meter
+                  dense
+                  value={meter.value}
+                  max={meter.max}
+                  label={t("license.seats.inUse")}
+                  tone={over ? "danger" : undefined}
+                />
+              </span>
+            )}
+            {detail && <span className="t-caption">{detail}</span>}
+          </CellStack>
+        }
+        control={null}
+      />
+    </SettingList>
   );
 }

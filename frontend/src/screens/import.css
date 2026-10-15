@@ -88,21 +88,6 @@
   gap: var(--space-1);
 }
 
-/* The hub's two ways in sit side by side, and stack once the pane is narrow. */
-.import-hub__ways {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.import-hub__way {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
 .import-hub__verbs {
   display: flex;
   flex-wrap: wrap;
@@ -111,17 +96,8 @@
 }
 
 .import-hub__order {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-}
-
-.import-hub__step {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  display: block;
+  margin-top: var(--space-1);
 }
 
 .import-template__chips {

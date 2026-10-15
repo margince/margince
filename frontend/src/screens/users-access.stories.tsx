@@ -48,15 +48,16 @@ const ADMIN: GrantSpec = {
   user_admin: ["read", "update"],
 };
 
-function story(teams: Record<string, unknown>[], allow: GrantSpec = ADMIN) {
+type TeamsRead = () => Response | Promise<Response>;
+
+const listed = (teams: Record<string, unknown>[]) => () =>
+  jsonResponse({ data: teams, page: { next_cursor: null, has_more: false } });
+
+function story(teams: TeamsRead, allow: GrantSpec = ADMIN) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /teams": () =>
-        jsonResponse({
-          data: teams,
-          page: { next_cursor: null, has_more: false },
-        }),
+      "GET /teams": teams,
       "GET /users": () =>
         jsonResponse({
           data: USERS,
@@ -71,27 +72,47 @@ function story(teams: Record<string, unknown>[], allow: GrantSpec = ADMIN) {
   };
 }
 
-const meta: Meta<typeof TeamsCard> = {
+const meta = {
   title: "Settings/People/Teams/Teams",
   component: TeamsCard,
-};
+} satisfies Meta<typeof TeamsCard>;
 export default meta;
-type Story = StoryObj<typeof TeamsCard>;
+type Story = StoryObj<typeof meta>;
 
-export const Teams: Story = { render: story(TEAMS) };
+export const Teams: Story = { render: story(listed(TEAMS)) };
 
-export const NoTeams: Story = { render: story([]) };
+// The intro and the empty line share one body; the create verb stays below.
+export const NoTeams: Story = { render: story(listed([])) };
+
+export const Loading: Story = {
+  render: story(() => new Promise<Response>(() => undefined)),
+};
+
+// A failed read offers a retry and no create verb.
+export const Failed: Story = {
+  render: story(() =>
+    jsonResponse(
+      { title: "Internal Server Error", status: 500, detail: "Read failed." },
+      500,
+    ),
+  ),
+};
+
+// Membership readable, nothing changeable: no create verb, no row menu.
+export const ReadOnly: Story = {
+  render: story(listed(TEAMS), { team_admin: ["read"], user_admin: ["read"] }),
+};
 
 // Below 36rem a row folds: the name and its menu on line one, the faces and
 // count on line two.
 export const TeamsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story(TEAMS),
+  render: story(listed(TEAMS)),
 };
 
 export const NewTeamDialog: Story = {
-  render: story(TEAMS),
+  render: story(listed(TEAMS)),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -104,11 +125,11 @@ export const NewTeamDialog: Story = {
 // A seat without `user_admin:read` sees the teams and their counts, and no
 // faces and no door to the members.
 export const MembershipWithheld: Story = {
-  render: story(TEAMS, { team_admin: ["read"] }),
+  render: story(listed(TEAMS), { team_admin: ["read"] }),
 };
 
 export const MembersDialog: Story = {
-  render: story(TEAMS),
+  render: story(listed(TEAMS)),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -119,7 +140,7 @@ export const MembersDialog: Story = {
 };
 
 export const RowMenu: Story = {
-  render: story(TEAMS),
+  render: story(listed(TEAMS)),
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {

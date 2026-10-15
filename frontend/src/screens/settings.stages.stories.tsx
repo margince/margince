@@ -9,7 +9,7 @@ import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { unwrap } from "../lib/problem";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
-import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
+import { StageLadderEditor } from "./settings.stages";
 import "./settings.pipelines.css";
 import {
   installFetchStub,
@@ -25,7 +25,6 @@ type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
 
 const PIPELINE_ID = "33333333-3333-4333-8333-333333333333";
-const HINT_ID = "stage-order-hint";
 
 function stage(
   n: number,
@@ -156,16 +155,7 @@ function LiveLadder({
   }
   return (
     <Panel title={pipeline.name}>
-      <StageLadderIntro
-        pipeline={pipeline}
-        canEdit={canEdit}
-        hintId={HINT_ID}
-      />
-      <StageLadderEditor
-        pipeline={pipeline}
-        canEdit={canEdit}
-        hintId={HINT_ID}
-      />
+      <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
     </Panel>
   );
 }
@@ -263,6 +253,25 @@ export const CriteriaOpen: Story = {
     await expect(
       await canvas.findByText("Buyer confirmed the budget"),
     ).toBeInTheDocument();
+  },
+};
+
+/** A reader's criteria: the rows and their standing, with no verb to change them. */
+export const CriteriaReadOnly: Story = {
+  render: served(sales, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Exit criteria for Discovery" }),
+    );
+    await expect(
+      await canvas.findByText("Buyer confirmed the budget"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("button", { name: "Add criterion" }),
+    ).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /^Remove / })).toBeNull();
   },
 };
 

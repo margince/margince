@@ -46,6 +46,15 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
     entry: row({ action: "create" }),
   },
   {
+    caption:
+      "A record the server does not name, named by what the change wrote",
+    entry: row({
+      action: "create",
+      entity_type: "custom_field",
+      after: { label: "Fleet size", column_name: "cf_fleet_size" },
+    }),
+  },
+  {
     caption: "Another colleague — NAMED, where this used to read “A teammate”",
     entry: row({ actor_id: "human:u-lars", actor_name: "Lars Vogt" }),
   },

@@ -162,15 +162,15 @@ function story(
 const roster = (data: Partial<User>[]) => () =>
   jsonResponse({ data, page: {} });
 
-const meta: Meta<typeof UsersAdminCard> = {
+const meta = {
   title: "Settings/People/Members/Members",
   component: UsersAdminCard,
-};
+} satisfies Meta<typeof UsersAdminCard>;
 export default meta;
-type Story = StoryObj<typeof UsersAdminCard>;
+type Story = StoryObj<typeof meta>;
 
 // Every status a seat can be in, the agent seat, and Lars as the one admin.
-// His picker is the same control, refused with the reason beside it.
+// His role reads as words; the reason is on hover and for a screen reader.
 export const Roster: Story = { render: story(roster(ROSTER), ADMIN, true) };
 
 // Under 36rem the table folds: member with its status and the menu on line
@@ -222,7 +222,7 @@ export const Delegated: Story = {
 };
 
 // The roster read without `user_admin:read`: no roles, teams, activity or
-// verbs, and the card says once that managing users is not this reader's.
+// verbs. The settings page, not the card, says the page is read-only.
 export const NotAnAdmin: Story = {
   render: story(
     roster(
@@ -240,6 +240,27 @@ export const NotAnAdmin: Story = {
   ),
 };
 
+// Invite and deactivate without the role change: roles read as words under one
+// card sentence.
+export const RolesWithheld: Story = {
+  render: story(roster(ROSTER), {
+    roles: ["custom"],
+    allow: { user_admin: ["read", "create", "delete"] },
+  }),
+};
+
+// A press on a role turns it into the chooser in place.
+export const RoleChooser: Story = {
+  render: story(roster([LARS, DANA, IVY]), ADMIN),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("listbox");
+  },
+};
+
 export const InviteDialog: Story = {
   render: story(roster([LARS, DANA]), {
     roles: ["admin"],
@@ -248,7 +269,7 @@ export const InviteDialog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Invite user" }),
+      await canvas.findByRole("button", { name: "Invite member" }),
     );
     await within(document.body).findByRole("dialog");
   },

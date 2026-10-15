@@ -15,9 +15,11 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
+import { KeyCode } from "../design-system/keyedname";
 import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryStates } from "../design-system/querystates";
+import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
@@ -306,24 +308,8 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
   };
 }
 
-// The custom-fields admin surface (AC-custom-fields-1..8): pick an object, read
-// its fields with the audit rail, and — for an admin/ops role — add one via the
-// governed create (optimistic "writing…" row → commit) or rename/archive an
-// existing one. Every mutation is server-authorized; the UI mirror only keeps
-// affordances that a call could actually honour. Copy is i18n throughout.
-//
-// This is CONTENT inside a settings page, not a route of its own. The page owns
-// the .wrap reading column (a second one nested inside it would double the page
-// padding) and the h1 in the shell's page head, so this returns ONE Panel whose
-// own h2 sits under that h1 — the document never carries two page titles.
-//
-// One panel, not four surfaces. It used to be a bare heading, a chip bar and
-// three sibling Cards, which is four things on a tab that already carries three
-// more subjects — and the heading pair said "Custom fields" twice in 40px, once
-// as the section name and again as the card title. The object is now named by
-// the segmented control alone, and the two surfaces most visits do not want —
-// the builder and the change trail — are Disclosures. What is left open is the
-// answer to the question contacts actually arrive with: which fields exist.
+// Content inside a settings page, which owns the reading column and the h1. One
+// Panel whose h2 sits under that h1 keeps the page to one title.
 export function CustomFieldsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
@@ -450,6 +436,7 @@ export function CustomFieldsAdmin() {
   };
 
   const objectName = t(`cf.obj.${object}`);
+  const listed = list.isSuccess && list.data.data.length > 0;
 
   return (
     <Panel
@@ -474,27 +461,44 @@ export function CustomFieldsAdmin() {
         )
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("cf.subtitle")}</PanelIntro>
-        <SettingList>
-          {/* Which object the table below belongs to. Stacked: six objects
-              beside the label overflow a tablet-width pane. */}
-          <SettingRow
-            label={t("cf.object")}
-            layout="stack"
-            control={
-              <SegmentedControl
-                label={t("cf.object")}
-                options={CF_OBJECTS}
-                value={object}
-                onChange={setObject}
-                labels={objectLabels(t)}
-              />
-            }
-          />
-        </SettingList>
-      </PanelBody>
-      {list.isSuccess && list.data.data.length > 0 ? (
+      {canCreate && (
+        <PanelBody>
+          <PanelIntro>{t("cf.subtitle")}</PanelIntro>
+        </PanelBody>
+      )}
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("cf.object")}
+          control={(control) => (
+            <Select
+              {...control}
+              options={CF_OBJECTS.map((one) => ({
+                value: one,
+                label: objectLabels(t)[one],
+              }))}
+              value={object}
+              onChange={(next) =>
+                setObject(CF_OBJECTS.find((one) => one === next) ?? object)
+              }
+            />
+          )}
+        />
+      </SettingList>
+      {!listed && (
+        <PanelBody>
+          <QueryStates
+            query={list}
+            pendingLabel={t("cf.listLabel", { object: objectName })}
+          >
+            <EmptyState>
+              {canCreate
+                ? t(`cf.empty.${object}`)
+                : t("cf.emptyReadOnly", { object: objectName })}
+            </EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
+      {listed && (
         <FieldTable
           object={object}
           fields={list.data.data}
@@ -503,15 +507,6 @@ export function CustomFieldsAdmin() {
           onRename={startRename}
           onArchive={setRetiring}
         />
-      ) : (
-        <PanelBody>
-          <QueryStates
-            query={list}
-            pendingLabel={t("cf.listLabel", { object: objectName })}
-          >
-            <EmptyState>{t(`cf.empty.${object}`)}</EmptyState>
-          </QueryStates>
-        </PanelBody>
       )}
       <PanelBody>
         {/* Withheld, not absent: the trail keeps its place for every reader,
@@ -535,15 +530,6 @@ export function CustomFieldsAdmin() {
               one may read it back. */}
           <p className="cf-hint t-caption">{t("cf.audit.footer")}</p>
         </Disclosure>
-        {/* The posture speaks for BOTH grants, so it is bound to both. The
-            server splits them — create.go admits `custom_field:create`, the
-            lifecycle handlers admit `update` — and a principal holding update
-            without create was reading "you have read-only access" above rows
-            whose Edit and Archive buttons worked. A sentence about a boundary
-            has to be true of the boundary it names. */}
-        {!canCreate && !canEdit && (
-          <p className="cf-posture t-sub">{t("cf.noPermission")}</p>
-        )}
       </PanelBody>
 
       <Modal
@@ -580,6 +566,11 @@ export function CustomFieldsAdmin() {
         title={t("cf.edit")}
         label={t("cf.renamePrompt")}
         initial={renaming?.label ?? ""}
+        hint={
+          renaming && (
+            <KeyCode code={`${renaming.object}.${renaming.column_name}`} />
+          )
+        }
         confirmLabel={t("trust.save")}
         pending={rename.isPending}
         problem={rename.isError ? problemMessageOf(rename.error, t) : null}

@@ -677,7 +677,7 @@ export function Field({
    * accessible name.
    */
   labelEnd?: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
   /**
    * Announce the hint when it CHANGES, not only when focus reaches the field.
    *

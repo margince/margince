@@ -978,9 +978,13 @@
  * (--pageMeasure), so the name starts and ends exactly where the content under
  * it does at every width. An uncapped page needs nothing more than the gutter,
  * because there the content is the full column too. */
+/* A page's verb (PageHeadAction) stands beside the name while the name keeps
+   16rem, and wraps under it on a phone rather than squeezing it. */
 .pagetitle {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
+  gap: var(--space-3) var(--space-4);
   flex: none;
   width: 100%;
   /* No top padding: the scroller carries the air under the strip for every
@@ -991,7 +995,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  flex: 1;
+  flex: 1 1 16rem;
   min-width: 0;
 }
 /* The heading and its scope badge on one line, the badge baseline-aligned with

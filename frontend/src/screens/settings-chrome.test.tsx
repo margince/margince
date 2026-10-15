@@ -115,7 +115,9 @@ describe("SettingsScreen page layout", () => {
   it("renders the pipeline designer inline on its own page, never a door to it", async () => {
     render(<SettingsScreen route={settingsHref("pipelines")} />);
     expect(
-      await screen.findByRole("heading", { name: "Pipelines" }),
+      await screen.findByRole("heading", {
+        name: translate("en", "pipeline.catalog"),
+      }),
     ).toBeTruthy();
     // A former standalone screen is inline content: the door-card that stood in
     // for it is gone rather than relabelled.

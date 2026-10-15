@@ -11,8 +11,8 @@ import {
 import { ImportCard } from "./import";
 import { formatFixture, recentRunsFixture } from "./import.fixtures";
 
-// Bringing a customer's data in. The settings page is the hub: the template,
-// the drop zone, the import order and the recent runs. The wizard that performs
+// Bringing a customer's data in. The settings page is the hub: the drop zone,
+// the template with its import order, and the recent runs. The wizard that performs
 // an import is the page behind it, at #/settings/import/run.
 //
 // What is catalogued here is the hub with and without runs, the withheld
@@ -57,15 +57,23 @@ type Story = StoryObj<typeof ImportCard>;
 // one already undone.
 export const Hub: Story = { render: story(OPERATOR) };
 
-// The same hub in dark: the order badges, the status badges and the drop zone
-// all read off derived tokens.
+// The same hub in dark: the status badges and the drop zone read off derived
+// tokens.
 export const HubDark: Story = {
   globals: { theme: "dark" },
   render: story(OPERATOR),
 };
 
-// No import has run yet.
+// No import has run yet: the hub stands alone, with no history panel.
 export const HubEmpty: Story = { render: story(OPERATOR, undefined, []) };
+
+// At a phone width the import order wraps with each arrow beside the name
+// before it, and the history table folds.
+export const HubPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(OPERATOR),
+};
 
 // Maintenance opens on the admin role OR an embedding-reindex read, so a seat
 // holding only the latter reaches this page. It is told the import exists and is

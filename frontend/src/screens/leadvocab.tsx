@@ -2,17 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { NumberSettingRow } from "../design-system/numbersetting";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { useCanWrite } from "../lib/capability";
 import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
+import { useVocabGrants } from "./leadvocab.rows";
 
 // Every role reads these cards and only the custom_field write verbs change
-// them, so a control disables with the reason rather than hide.
+// them, so a control disables rather than hide.
 export { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
 export { LeadSourcesCard } from "./leadvocab.sources";
 
@@ -33,14 +33,13 @@ const TARGET_BOUNDS = {
 // audits the pair down one column.
 export function LeadHandlingCard() {
   const t = useT();
-  const canEdit = useCanWrite("custom_field", "update");
+  const grants = useVocabGrants({ removes: true });
+  const { canEdit } = grants;
+  const refusal = grants.refusal && t("leadHandling.readOnly");
   const query = useLeadSettings();
   const update = useUpdateLeadSettings();
   return (
     <Panel title={t("leadHandling.title")}>
-      <PanelBody>
-        <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
-      </PanelBody>
       <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
         {(settings) => (
           <SettingList bleed="settings">
@@ -58,7 +57,8 @@ export function LeadHandlingCard() {
                   labelHidden
                   checked={settings.first_response_enabled}
                   pending={update.isPending}
-                  reason={canEdit ? undefined : t("leadSources.readOnly")}
+                  disabled={!canEdit}
+                  reason={refusal}
                   testId="lead-first-response-switch"
                   onChange={(next) =>
                     update.mutate({ first_response_enabled: next })
@@ -76,7 +76,7 @@ export function LeadHandlingCard() {
               disabled={
                 !canEdit || !settings.first_response_enabled || update.isPending
               }
-              reason={canEdit ? undefined : t("leadSources.readOnly")}
+              reason={refusal}
               onCommit={(minutes) =>
                 update.mutate({ first_response_target_minutes: minutes })
               }
@@ -84,7 +84,7 @@ export function LeadHandlingCard() {
           </SettingList>
         )}
       </QueryGate>
-      {/* This card's rows are switches every seat may flip, so no posture. */}
+      {/* Each row carries its own refusal, so the card names no posture. */}
       <PanelNotices
         refused={
           update.isError

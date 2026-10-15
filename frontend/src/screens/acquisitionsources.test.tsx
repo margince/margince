@@ -94,12 +94,12 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("names each source over its key and counts its deals, with no text box", async () => {
+it("names each source without its key and counts its deals, with no text box", async () => {
   vi.stubGlobal("fetch", backend(ADMIN));
   render(<AcquisitionSourcesCard />);
   const row = await screen.findByTestId("acq-source-existing_customer");
   expect(within(row).getByText("Existing customer")).toBeInTheDocument();
-  expect(within(row).getByText("existing_customer")).toBeInTheDocument();
+  expect(within(row).queryByText("existing_customer")).toBeNull();
   expect(within(row).getByText("12")).toBeInTheDocument();
   expect(within(row).getByText("12 deals")).toBeInTheDocument();
   expect(within(row).queryByRole("textbox")).toBeNull();
@@ -109,6 +109,8 @@ it("names each source over its key and counts its deals, with no text box", asyn
   const cells = [...row.querySelectorAll("td")];
   expect(cells[0]?.getAttribute("data-fold")).toBe("title");
   expect(cells.at(-1)?.getAttribute("data-fold")).toBe("end");
+  const toggle = within(row).getByRole("switch");
+  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("end");
 });
 
 it("says a withheld deal count in words and never as a zero", async () => {
@@ -135,6 +137,7 @@ it("renames through the row menu's dialog, starting from the current label", asy
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["acqSources.addLabel"]);
   expect(field).toHaveValue("Partner");
+  expect(dialog.getByText("partner").tagName).toBe("CODE");
   await user.clear(field);
   await user.type(field, "Channel partner{Enter}");
   await waitFor(() =>
@@ -205,7 +208,7 @@ it("retires a source through its switch, one PATCH", async () => {
   expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
 });
 
-it("leaves every control inert for a reader and says why", async () => {
+it("leaves every control inert for a reader, and leaves the why to the page", async () => {
   vi.stubGlobal("fetch", backend(READER));
   render(<AcquisitionSourcesCard />);
   expect(
@@ -213,7 +216,7 @@ it("leaves every control inert for a reader and says why", async () => {
       name: "Partner can be chosen on a deal",
     }),
   ).toBeDisabled();
-  expect(screen.getByText(en["leadSources.readOnlyTitle"])).toBeTruthy();
+  expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
   expect(
     screen.queryByRole("button", { name: en["acqSources.addOpen"] }),
   ).toBeNull();
@@ -223,4 +226,16 @@ it("leaves every control inert for a reader and says why", async () => {
   expect(
     screen.queryByRole("columnheader", { name: en["leadSources.colActions"] }),
   ).toBeNull();
+});
+
+it("says why the switches are inert to a seat that may add but not edit", async () => {
+  vi.stubGlobal("fetch", backend({ custom_field: ["read", "create"] }));
+  render(<AcquisitionSourcesCard />);
+  expect(
+    await screen.findByRole("button", { name: en["acqSources.addOpen"] }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("switch", { name: "Partner can be chosen on a deal" }),
+  ).toBeDisabled();
+  expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
 });

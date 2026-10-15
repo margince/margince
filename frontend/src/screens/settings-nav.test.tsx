@@ -138,16 +138,11 @@ const EVERY_PAGE = [
   ...SETTINGS_PAGES.map((page) => labelOf(page.id)),
 ];
 
-// The five reads the old Data model entry unioned, now spread across five pages
-// of their own. Each still has to open its page ALONE: a page wired to one
-// object with four decorative terms passes any fixture that grants all five.
-// `custom_field` opens the field editor, lead and acquisition vocabularies,
-// outcome-review templates and responsibility roles. Revoking that read closes
-// all five; the template page needs no write because its content is read-only.
+// Each read must open its pages alone. A page wired to one object with four
+// decorative terms passes any fixture that grants all five.
 //
-// A record rather than a tuple, so the object and the pages keep their own
-// types: a tuple with a variadic tail widens both halves to their union, and
-// `readOn` would then accept a page id.
+// Not a tuple: a variadic tail widens both halves to their union, and `readOn`
+// would then accept a page id.
 const SALES_READS: readonly {
   readonly object: RbacObject;
   readonly opens: readonly SettingsPageId[];

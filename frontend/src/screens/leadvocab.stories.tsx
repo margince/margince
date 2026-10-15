@@ -85,6 +85,7 @@ const REASONS = {
 
 const ADMIN = { custom_field: ["read", "create", "update", "delete"] } as const;
 const READER = { custom_field: ["read"] } as const;
+const ADDER = { custom_field: ["read", "create"] } as const;
 
 const DUPLICATE = {
   type: "about:blank",
@@ -123,22 +124,49 @@ function story(
   };
 }
 
-const meta: Meta<typeof LeadSourcesCard> = {
+const meta = {
   title: "Settings/Sales/Lead handling/Lead vocabularies",
   component: LeadSourcesCard,
-};
+} satisfies Meta<typeof LeadSourcesCard>;
 export default meta;
-type Story = StoryObj<typeof LeadSourcesCard>;
+type Story = StoryObj<typeof meta>;
 
 export const Admin: Story = { render: story(ADMIN, false) };
 export const AdminWithTargetOn: Story = { render: story(ADMIN, true) };
+// The settings page's own callout says why, so no card repeats it.
 export const Reader: Story = {
   render: story(READER, false),
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByTestId("lead-first-response-target");
     await expect(
-      await within(canvasElement).findByTestId("lead-first-response-target"),
-    ).toHaveAccessibleDescription(/Only an administrator or operations user/);
+      canvas.queryByText("Your role cannot change this setting."),
+    ).toBeNull();
+    await expect(
+      canvas.queryByText("Your role can add entries but not change them"),
+    ).toBeNull();
   },
+};
+
+// A seat that may add but not edit opens the page with no callout, so the
+// cards name why their switches are inert.
+export const Adder: Story = {
+  render: story(ADDER, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByTestId("lead-first-response-target"),
+    ).toHaveAccessibleDescription(/Your role cannot change this setting\./);
+    await expect(
+      canvas.getAllByText("Your role can add entries but not change them"),
+    ).toHaveLength(2);
+  },
+};
+
+export const ReaderPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(READER, true),
 };
 
 export const AdminDark: Story = {

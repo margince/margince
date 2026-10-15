@@ -1,9 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import { useId } from "react";
 import { api } from "../api/client";
-import { ErrorLine } from "../design-system/errorline";
+import { InlineChoice } from "../design-system/inlinechoice";
 import type { QueryLike } from "../design-system/querystates";
-import { Select, type SelectOption } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { holdsAdminRole } from "../lib/capability";
@@ -48,8 +46,8 @@ export function withRoles(
   };
 }
 
-/** Why a member's role control is refused: a sentence elsewhere on the page, or its own. */
-export type RoleRefusal = Readonly<{ id: string }> | Readonly<{ text: string }>;
+/** A refused role control, with its own reason unless the card already says one. */
+export type RoleRefusal = Readonly<{ reason?: string }>;
 
 export function roleRefusal(
   member: User,
@@ -57,36 +55,35 @@ export function roleRefusal(
     roster: readonly User[];
     roles: readonly AssignableRole[];
     canChangeRole: boolean;
-    cardReasonId: string;
     meId: string | undefined;
     t: ReturnType<typeof useT>;
   }>,
 ): RoleRefusal | null {
   const { roster, roles, t } = context;
   if (!context.canChangeRole) {
-    return { id: context.cardReasonId };
+    return {};
   }
   const offered = offers(member, "change_role");
   // A delegate's own role is often one they may not hand out, and "outside your
   // access" would misname why their own row is refused.
   if (!offered && member.id === context.meId) {
     return soleActiveAdmin(member, roster)
-      ? { text: t("users.role.lastAdmin") }
-      : { text: t("users.role.own") };
+      ? { reason: t("users.role.lastAdmin") }
+      : { reason: t("users.role.own") };
   }
   const held = member.roles ?? [];
   const heldAssignable =
     held.length !== 1 || roles.some((role) => role.key === held[0]);
   if (!heldAssignable) {
-    return { text: t("users.role.outside") };
+    return { reason: t("users.role.outside") };
   }
   if (offered) {
     return null;
   }
   if (soleActiveAdmin(member, roster)) {
-    return { text: t("users.role.lastAdmin") };
+    return { reason: t("users.role.lastAdmin") };
   }
-  return { text: t("users.role.outside") };
+  return { reason: t("users.role.outside") };
 }
 
 function soleActiveAdmin(member: User, roster: readonly User[]): boolean {
@@ -111,8 +108,6 @@ export function MemberRole({
   const toast = useToast();
   const refresh = useMemberRefresh();
   const busy = useMemberBusy(member.id);
-  const reasonId = useId();
-  const errorId = useId();
   const setRole = useMutation({
     mutationKey: memberMutationKey(member.id, "role"),
     mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
@@ -131,93 +126,36 @@ export function MemberRole({
   if (member.is_agent) {
     return <span className="t-caption">{t("users.agentSeatRole")}</span>;
   }
-  const described = [
-    refusal && ("id" in refusal ? refusal.id : reasonId),
-    setRole.isError ? errorId : undefined,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const label = roleLabel(t);
+  const held = member.roles ?? [];
+  const reason = refusal?.reason;
   return (
     <span className="users-role">
-      <RoleCell
-        member={member}
-        roles={roles}
-        pending={busy}
-        refused={refusal !== null}
-        describedBy={described || undefined}
-        // A failed change falls back to the held role, so re-picking the same
-        // target still fires onChange.
-        inFlight={setRole.isPending ? setRole.variables.role : undefined}
-        onPick={(role) => setRole.mutate({ id: member.id, role })}
+      <InlineChoice
+        label={t("users.roleOf", { name: member.display_name })}
+        hideLabel
+        // Several held roles read as one value: any choice replaces the whole
+        // set, so the face names all of them rather than hiding them.
+        value={held.join(" ")}
+        options={roleOptions(t, roles)}
+        // Another verb in flight on this member locks the role. This row's own
+        // save does not, or the chooser would close on its pick.
+        canEdit={refusal === null && (!busy || setRole.isPending)}
+        readOnlyReason={reason}
+        render={() =>
+          held.length > 1
+            ? t("users.rolesHeld", {
+                roles: held
+                  .map((key) => label(key, nameOf(roles, key)))
+                  .join(", "),
+              })
+            : label(held[0] ?? "", nameOf(roles, held[0] ?? ""))
+        }
+        onSave={(role) => setRole.mutateAsync({ id: member.id, role })}
       />
-      {refusal && "text" in refusal && (
-        <span id={reasonId} className="t-caption">
-          {refusal.text}
-        </span>
-      )}
-      <ErrorLine id={errorId} error={setRole.error} />
+      {reason && <span className="sr-only">{reason}</span>}
     </span>
   );
-}
-
-// Fixed width, so every row's picker starts and ends at one x.
-export function RoleCell({
-  member,
-  roles,
-  pending,
-  refused = false,
-  describedBy,
-  inFlight,
-  onPick,
-}: Readonly<{
-  member: User;
-  roles: readonly AssignableRole[];
-  pending: boolean;
-  refused?: boolean;
-  describedBy?: string;
-  inFlight?: Role;
-  onPick: (role: Role) => void;
-}>) {
-  const t = useT();
-  const label = roleLabel(t);
-  const heldRoles = member.roles ?? [];
-  const currentRole = heldRoles.length === 1 ? (heldRoles[0] ?? "") : "";
-  // Any choice replaces the whole set, so several held roles are named rather
-  // than hidden behind a neutral "Set role…".
-  // plural-rule:allow the two arms name what is held and what to do, which is a
-  // state the reader is in rather than two forms of one sentence
-  const placeholder =
-    heldRoles.length > 1
-      ? t("users.rolesHeld", {
-          roles: heldRoles
-            .map((key) => label(key, nameOf(roles, key)))
-            .join(", "),
-        })
-      : t("users.setRole");
-  return (
-    <Select
-      className="users-role-select"
-      aria-label={t("users.setRoleFor", { name: member.display_name })}
-      aria-describedby={describedBy}
-      value={inFlight ?? currentRole}
-      placeholder={placeholder}
-      disabled={pending || refused}
-      onChange={onPick}
-      options={withHeld(roleOptions(t, roles), currentRole, label)}
-    />
-  );
-}
-
-// A held role this reader may not hand out still names itself on the face.
-function withHeld(
-  options: SelectOption[],
-  held: string,
-  label: (key: string) => string,
-): SelectOption[] {
-  if (held === "" || options.some((option) => option.value === held)) {
-    return options;
-  }
-  return [...options, { value: held, label: label(held), disabled: true }];
 }
 
 function nameOf(

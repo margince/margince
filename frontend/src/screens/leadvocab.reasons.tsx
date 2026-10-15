@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { rowsOf } from "../api/rows";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
@@ -22,7 +22,6 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
@@ -32,6 +31,7 @@ import {
 import {
   leadsColumn,
   useRemovalFocus,
+  useVocabGrants,
   vocabMenuColumn,
 } from "./leadvocab.rows";
 
@@ -115,19 +115,13 @@ function reasonColumns({
       key: "name",
       header: t("leadReasons.colReason"),
       grow: true,
-      render: (reason) => (
-        <span className="lead-vocab-name">
-          <span>{reason.label}</span>
-          {canRemove && reason.system === true && (
-            <Badge>{t("leadSources.builtIn")}</Badge>
-          )}
-        </span>
-      ),
+      render: (reason) => reason.label,
     },
     leadsColumn({ t, plural, locale }, (reason) => reason.lead_count ?? 0),
     {
       key: "active",
       header: t("leadSources.colActive"),
+      fold: "end",
       render: (reason) => (
         <Switch
           label={t("leadSources.activeFor", { label: reason.label })}
@@ -160,9 +154,9 @@ export function LeadDisqualifyReasonsCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const canCreate = useCanWrite("custom_field", "create");
-  const canEdit = useCanWrite("custom_field", "update");
-  const canRemove = useCanWrite("custom_field", "delete");
+  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants({
+    removes: true,
+  });
   const query = useLeadDisqualifyReasons();
   const { create, update, rename, remove } = useReasonMutations();
   // Kept after close, so the dialog leaving the page still reads as what it was.
@@ -232,7 +226,7 @@ export function LeadDisqualifyReasonsCard() {
         </PanelBody>
       )}
       <PanelNotices
-        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        readOnly={refusal && t(refusal)}
         refused={
           update.isError
             ? { title: t("leadSources.notSaved"), error: update.error }

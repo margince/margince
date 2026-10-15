@@ -290,6 +290,16 @@ export function ActorTag({
   );
 }
 
+// The live name when the server resolves one, else the name the change wrote.
+function entryName(entry: AuditLogEntry): string | undefined {
+  const live = entry.entity_label?.trim();
+  if (live) return live;
+  const recorded = entry.after?.label ?? entry.before?.label;
+  return typeof recorded === "string" && recorded.trim() !== ""
+    ? recorded
+    : undefined;
+}
+
 // AuditEntryLine is the one-line rendering of an audit entry: who, what, on
 // which kind of thing, and when. The entity's uuid is deliberately dropped —
 // it is opaque to a reader and carries no meaning without a name lookup.
@@ -300,11 +310,13 @@ export function AuditEntryLine({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const name = entryName(entry);
   return (
     <div className="audit-line t-sub">
       <ActorTag entry={entry} meUserId={meUserId} />
       <Badge tone="accent">{actionLabel(entry.action, t)}</Badge>
       <span>{entityLabel(entry.entity_type, t)}</span>
+      {name && <span className="audit-target">{name}</span>}
       {/* An audit entry is a fact in the company's book, like the change
           history beside it, so it reads on the company's clock. On the
           viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin

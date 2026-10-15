@@ -2988,11 +2988,10 @@ export const en = {
   "co.recent.minutes": "{count} min",
   "co.recent.re": "on a deal",
   "co.recent.reNamed": "on {name}",
-  "tagAdmin.title": "Tags",
   "tagAdmin.sub":
-    "Tags this company files records under. Anyone can apply a tag; only administrators and operations users can add, rename or retire tags.",
+    "Anyone can apply a tag to a record. Only administrators and operations users can add, rename or retire tags.",
   "tagAdmin.listLabel": "Tag list",
-  "tagAdmin.empty": "No tags yet. Add the first tag.",
+  "tagAdmin.empty": "No tags yet.",
   "import.contextTag": "Tag for this import",
   "import.contextTagChosen":
     "Records this import creates will be filed under {name}.",
@@ -3158,10 +3157,9 @@ export const en = {
   "leadSources.title": "Lead sources",
   "leadSources.sub":
     "Where leads come from. Used in the New lead form, in filters and in scoring.",
-  "leadSources.readOnly":
-    "Only an administrator or operations user can change this list.",
   "leadSources.readOnlyTitle":
     "Only an administrator or operations user can change this list",
+  "leadSources.addOnlyTitle": "Your role can add entries but not change them",
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
   "leadSources.duplicate":
@@ -3173,7 +3171,6 @@ export const en = {
   "leadSources.intent.low": "Low intent",
   "leadSources.intentHint":
     "High adds points to the score and Low subtracts them. Changes apply at each lead’s next rescore.",
-  "leadSources.builtIn": "Built-in",
   "leadSources.builtInKept":
     "Built-in sources can be renamed or deactivated, not removed.",
   "leadSources.inUse_one":
@@ -3227,8 +3224,8 @@ export const en = {
   "followUpSettings.daysHint":
     "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
   "followUpSettings.outOfRange": "Enter a whole number of days from 1 to 30.",
-  "leadHandling.title": "Lead handling",
-  "leadHandling.sub": "How new leads are handled.",
+  "leadHandling.title": "Response time",
+  "leadHandling.readOnly": "Your role cannot change this setting.",
   "leadHandling.firstResponse": "First-response target",
   "leadHandling.firstResponseHint":
     "Off by default. When on, every open lead gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
@@ -3569,9 +3566,9 @@ export const en = {
   "deal.pulse.wroteOn": "They last wrote on {date}. Days since: {days}.",
   "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
-  "acqSources.title": "Acquisition sources",
+  "acqSources.title": "Sources",
   "acqSources.sub":
-    "Business channels a deal can be attributed to. Lead sources, which record how a record entered Margince, are separate.",
+    "Separate from lead sources, which record how a record entered Margince.",
   "acqSources.loading": "Loading sources…",
   "acqSources.addOpen": "New source",
   "acqSources.addTitle": "New acquisition source",
@@ -3672,9 +3669,7 @@ export const en = {
   "assignments.rolePlaceholder": "Pick a role",
   "assignments.saveAdd": "Assign",
   "assignments.saveChange": "Save change",
-  "recordRoles.title": "Responsibility roles",
-  "recordRoles.sub":
-    "What a colleague or team can be accountable for on a company, deal or project. A role grants no access to the record.",
+  "recordRoles.title": "Roles",
   "recordRoles.loading": "Loading roles…",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add responsibility role",
@@ -6002,7 +5997,6 @@ export const en = {
   "import.hub.uploadEmpty": "Choose a file or drop it here",
   "import.hub.order": "Import order:",
   "import.recent.title": "Recent imports",
-  "import.recent.empty": "No imports yet.",
   "import.recent.col.date": "Date",
   "import.recent.col.file": "File",
   "import.recent.col.rows": "Rows",
@@ -6341,10 +6335,8 @@ export const en = {
   "import.problem.permission": "No permission",
   "import.problem.unusable_row": "Unusable row",
   "settings.dangerZone": "Danger zone",
-  "settings.dangerZoneSub":
-    "Non-production installations only. Cannot be undone.",
   "settings.resetDataDesc":
-    "Resets this installation to its first-boot state. Domain and configuration data is deleted; the company and its users are kept and stay signed in.",
+    "Non-production installations only. Deletes all records and configuration; the company and its users are kept and stay signed in.",
   "settings.resetDataButton": "Reset data",
   "settings.resetDataLabel": "Reset all data",
   "settings.resetDataConfirmButton": "Reset all data",
@@ -7046,11 +7038,6 @@ export const en = {
 
   "retention.scopeRawCapture": "Stored message originals",
   "retention.scopeDealRiskDay": "Daily record of material deals at risk",
-  "settings.pipelines": "Pipelines",
-  "settings.pipelinesReadOnly":
-    "Read-only. Your role cannot change pipelines or stages.",
-  "settings.pipelinesSub":
-    "Stages a deal moves through, one sequence per pipeline.",
   "pipeline.new": "New pipeline",
   "pipeline.name": "Name",
   "pipeline.default": "Default",
@@ -7060,7 +7047,7 @@ export const en = {
   "pipeline.retireConfirm":
     "Retire {name}? It leaves pickers and new-deal forms. Deals on it keep their stage, history and forecast contribution, and you can restore it at any time.",
   "pipeline.retireBlocked":
-    "This is the default pipeline, and new deals need one. Make another pipeline the default first, then retire this one.",
+    "New deals start in the default pipeline. Make another one the default to retire this one.",
   "pipeline.retired.done": "{name} retired",
   "pipeline.restore": "Restore",
   "pipeline.restored": "{name} restored",
@@ -7068,6 +7055,9 @@ export const en = {
   "pipeline.makeDefault": "Make default",
   "pipeline.defaultSet": "{name} set as default",
   "pipeline.inUse": "Pipelines in use",
+  "pipeline.catalog": "All pipelines",
+  "pipeline.none": "No pipelines yet",
+  "pipeline.noneNote": "A pipeline holds the stages a deal moves through.",
   "pipeline.orderHint":
     "Drag a pipeline by its handle, or focus the handle and press the up or down arrow.",
   "pipeline.handle": "Move {name}, {position} of {total}",
@@ -7080,7 +7070,6 @@ export const en = {
     "Retired. New deals cannot start in this pipeline, and its stages cannot change until it is restored.",
   "pipeline.retireNote":
     "It leaves pickers and new-deal forms. Deals on it keep their stage.",
-  "pipeline.flow": "How a deal moves",
   "pipeline.orderSaved": "Order saved",
   "pipeline.orderRestored": "Previous order restored",
   "pipeline.orderStale":
@@ -7121,7 +7110,6 @@ export const en = {
   "stage.criteriaRequired_other": "{count} required",
   "stage.criteriaOptional_one": "{count} optional",
   "stage.criteriaOptional_other": "{count} optional",
-  "stage.criteriaNone": "None",
   "stage.criteriaCount_one": "{count} criterion",
   "stage.criteriaCount_other": "{count} criteria",
   "stage.criteriaNoneFolded": "No criteria",
@@ -7130,7 +7118,6 @@ export const en = {
   "stage.occupied_one": "{count} deal is in this stage",
   "stage.occupied_other": "{count} deals are in this stage",
   "stage.criteria.title": "Exit criteria",
-  "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",
   "stage.criteria.buyerCallout":
     "A message from your team never satisfies a criterion about a buyer action.",
@@ -9040,6 +9027,7 @@ export const en = {
     "No custom fields on Project yet. Add one to track delivery data the core fields do not cover.",
   "cf.empty.contract":
     "No custom fields on Contract yet. Add one for a classification the standard terms do not cover.",
+  "cf.emptyReadOnly": "No custom fields on {object} yet.",
   "cf.type.text": "Text",
   "cf.type.number": "Number",
   "cf.type.date": "Date",
@@ -9087,7 +9075,6 @@ export const en = {
   "cf.audit.empty": "No custom field changes yet.",
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
-  "cf.noPermission": "You have read-only access to custom fields.",
   "cf.retired": "Retired",
   "cf.retire.title": "Archive “{label}”?",
   "cf.retire.body":
@@ -9144,8 +9131,7 @@ export const en = {
     "How people sign in to this installation, which apps may act for it, and which IdP groups grant roles.",
   "settings.page.members.sub":
     "Everyone with a seat, and what each can access.",
-  "settings.page.teams.sub":
-    "Team membership, which decides team-scoped record access.",
+  "settings.page.teams.sub": "Groups that records can be shared with.",
   "settings.page.roles.sub":
     "What each role may do, and whose records it reaches.",
   "settings.page.seats.sub":
@@ -9158,7 +9144,8 @@ export const en = {
     "Business channels a deal can be attributed to.",
   "settings.page.recordroles.sub":
     "What a colleague or team can be responsible for on a record. Grants no access.",
-  "settings.page.leads.sub": "Lead source terms used by this company.",
+  "settings.page.leads.sub":
+    "Where leads come from, why they are disqualified, and how fast they get a first reply.",
   "settings.page.fields.sub":
     "Custom fields this company adds to the standard fields.",
   "settings.page.tags.sub":
@@ -9242,7 +9229,7 @@ export const en = {
   "jurisdiction.selected.label": "Selected jurisdiction",
   "jurisdiction.selected.none": "Not set",
   "jurisdiction.selected.noneDescription":
-    "No jurisdiction is set. Requests get the GDPR deadline of one calendar month, and mail keeps the longest retention floor of the packs in this build.",
+    "The GDPR baseline applies until a jurisdiction is set.",
   "jurisdiction.unit.label": "Shipped by",
   "jurisdiction.unit.value": "{name}, version {version}",
   "jurisdiction.change.label": "Change jurisdiction",
@@ -9285,8 +9272,6 @@ export const en = {
   "jurisdiction.rule.gdpr": "GDPR, one calendar month",
   "jurisdiction.rule.pack": "Rule set {rule}",
   "jurisdiction.documents.title": "Documents",
-  "jurisdiction.documents.intro":
-    "The documents this jurisdiction’s pack ships, to read, download and review.",
   "jurisdiction.documents.empty":
     "This jurisdiction’s pack ships no documents.",
   "jurisdiction.documents.emptyUnset":
@@ -9635,18 +9620,15 @@ export const en = {
   "pipeline.reason.would_restore_erased":
     "reporting this would restore data an erasure removed",
   "pipeline.reason.no_writer_yet": "this step does not exist yet",
-  "license.card.title": "License and seats",
-  "license.state.licensed": "Licensed",
-  "license.state.uncapped": "Licensed, no seat limit",
   "license.absent.title": "This installation has no license",
   "license.absent.body":
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
     "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
-  "license.seats.capacityOnly":
-    "Full seats this installation is using. The entitlement is not visible to this role.",
+  "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
+  "license.seats.inUse": "Full seats in use",
   "license.seats.uncapped": "No limit",
   "license.seats.ofGranted": "{used} of {granted}",
   "license.seats.left": "{count} left",
@@ -9668,7 +9650,7 @@ export const en = {
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
   "license.counting":
-    "Full seats that are neither deactivated nor suspended, agents included. Read-only seats are unlimited and never counted. New members are admitted against this count.",
+    "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later; past rates never change.",
@@ -10069,9 +10051,8 @@ export const en = {
   "extAccess.nobodyReads":
     "No role has read access to {object}, so every member sees an empty screen for this extension. Grant read to at least one role below.",
   "extAccess.matrixName": "Role access to {unit}",
-  "users.empty": "No users yet.",
-  "users.adminOnly": "Your role cannot manage users.",
-  "users.inviteTitle": "Invite user",
+  "users.empty": "No members yet.",
+  "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Team members",
@@ -10079,8 +10060,7 @@ export const en = {
   "users.teamNobodyToAdd": "No users to add.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
-    "Named groups that records can be shared with. For most roles, membership grants no access. A team lead added to a team can read and edit that team’s records without a share.",
-  "users.teamsAdminOnly": "Your role cannot manage teams.",
+    "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share.",
   "users.deactivated": "{name} deactivated",
   "users.reactivated": "{name} reactivated",
   "users.roleSaved": "Role changed for {name}",
@@ -10134,7 +10114,7 @@ export const en = {
   "users.access.maskOutside": "on records they may not edit",
   "users.inviteSub":
     "Add a user to this installation and choose their starting role.",
-  "users.membersTitle": "Users",
+  "users.membersTitle": "Members",
   "users.col.member": "Name",
   "users.col.activity": "Activity",
   "users.addedOn": "Added {date}",
@@ -10143,7 +10123,7 @@ export const en = {
     "This is the only admin. Make another member an admin first.",
   "users.role.own": "Another admin changes your role.",
   "users.role.outside": "This role is outside your access.",
-  "users.role.withheld": "Your role cannot change user roles.",
+  "users.role.withheld": "Your role cannot change member roles.",
   "users.teamMemberCount_one": "{count} member",
   "users.teamMemberCount_other": "{count} members",
   "users.emailLabel": "Email",
@@ -10161,10 +10141,10 @@ export const en = {
   "users.agentSeat": "Agent",
   "users.agentSeatRole": "Acts through a passport, not a role",
   "users.roleLabel": "Role",
-  "users.inviteOpen": "Invite user",
+  "users.inviteOpen": "Invite member",
   "users.invite": "Invite",
   "users.setRole": "Set role…",
-  "users.setRoleFor": "Set role for {name}",
+  "users.roleOf": "{name}’s role",
   "users.rolesHeld": "Holds {roles}. Choosing a role replaces all of them.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
@@ -13625,9 +13605,7 @@ export const en = {
   "lead.today.nextTask": "Next task",
   "lead.today.openTasks": "Open tasks",
   "lead.readings.answered": "Answered",
-  "stageAutomation.title": "Stage automation",
-  "stageAutomation.intro":
-    "Outcomes of the stage moves Margince proposed. This report changes nothing; it is the evidence for letting a transition move deals automatically.",
+  "stageAutomation.record": "Track record",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "Transition",
   "stageAutomation.reviewed": "Reviewed",
@@ -13646,21 +13624,19 @@ export const en = {
   "stageAutomation.observationDays": "Days observed",
   "stageAutomation.observationHint":
     "From the first reviewed proposal to the last. A good rate from one afternoon is not a track record.",
+  "stageAutomation.glossary": "What the columns mean",
   "stageAutomation.evidenceKinds": "By evidence",
+  "stageAutomation.emptyTitle": "No proposed moves yet",
   "stageAutomation.empty":
-    "Margince has not proposed a stage move on this pipeline yet.",
+    "Each move Margince proposes on this pipeline is counted here, with how someone answered it.",
   "stageAutomation.noPipelines": "No pipelines to report on yet.",
   "stageAutomation.unreadable": "This report did not load",
-  "stageAutomation.readOnly":
-    "You can see each transition’s record. Changing a transition requires permission to edit pipelines.",
   "stageAutomation.rules": "Transition rules",
   "stageAutomation.rulesIntro":
-    "Turning a transition on does not start moving deals. Margince keeps asking until the record above meets the threshold, then applies moves automatically.",
+    "Turning a transition on does not move deals yet. Margince keeps proposing until the track record above meets the threshold, then moves deals itself and tells you afterward.",
   "stageAutomation.offTitle": "Stage automation is switched off",
   "stageAutomation.offBody":
     "No deal moves by itself while this is off, whatever a transition below is set to. Whoever runs this installation turns it on in the installation’s configuration.",
-  "stageAutomation.modeHint":
-    "When on and the record qualifies, Margince moves the deal and notifies you afterward.",
   "stageAutomation.notEarnedYet": "Not qualified yet: {why}",
   "stageAutomation.suspended": "Suspended by Margince",
   "stageAutomation.suspendedSince": "Suspended {date}",
