@@ -13,6 +13,7 @@ import { navigate } from "../lib/router";
 import { UndoConfirm, UndoErrors } from "./import.notices";
 import { hasProgress, ImportProgressPanel } from "./import.progress";
 import { PartCounts, partsOf, problemsHref } from "./import.testrun";
+import { reasonText } from "./importreason";
 import type {
   ImportFormat,
   ImportReport,
@@ -306,6 +307,9 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
                 {undo.kept.map((row) => (
                   <li key={`${row.object}-${row.id}`}>
                     {t(`import.object.${row.object}`)}: {row.id}
+                    {row.reason || row.reason_code
+                      ? ` — ${reasonText(t, row.reason ?? "", row.reason_code, row.params)}`
+                      : null}
                   </li>
                 ))}
               </ul>

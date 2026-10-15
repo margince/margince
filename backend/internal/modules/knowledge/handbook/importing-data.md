@@ -201,8 +201,8 @@ Also called: re-import, upload again, update from a spreadsheet, import twice, d
 Undo reverses one import, in reverse order: activities, then deals, then prospects, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
 - Undo archives only the records that import created. A prospect is disqualified instead.
 - Records the import only updated keep their new values. Undo never puts back the old values.
-- A record someone edited after the import stays, and is listed under "Kept because they were edited after the import:".
-- A company that a live deal or contact still names stays, and is listed as one that could not be reversed. A company the import only matched by its ID is never archived.
+- A record someone edited after the import stays, and is listed under "Left in place by the undo:" with the reason "Someone changed this record after the import".
+- A company that a live deal or contact still names stays too. It is listed under the same heading, with the number of deals and contacts that name it. A company the import only matched by its ID is never archived.
 - New tags stay, because they may be in use.
 - A finished undo frees the `ref` values of that import. The same file can be imported again, and it creates the records again.
 - A record that undo kept is still found by its `ref`, so a later import updates it.

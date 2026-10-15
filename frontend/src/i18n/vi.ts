@@ -5717,7 +5717,7 @@ export const vi = {
   "import.undone": "Đã hoàn tác lần nhập",
   "import.undoReversed_one": "Đã hoàn tác 1 dòng.",
   "import.undoReversed_other": "Đã hoàn tác {rows} dòng.",
-  "import.undoKeptLead": "Giữ nguyên vì đã được sửa sau khi nhập:",
+  "import.undoKeptLead": "Được giữ nguyên khi hoàn tác:",
   "import.undoErroredLead": "Không thể hoàn tác, giữ nguyên:",
   "import.hub.title": "Lần nhập mới",
   "import.hub.templateTitle": "Mẫu",
@@ -6116,6 +6116,10 @@ export const vi = {
     "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết.",
   "import.reason.link_row_skipped_dropped":
     "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.undo_edited":
+    "Có người đã sửa hồ sơ này sau khi nhập nên hồ sơ được giữ nguyên.",
+  "import.reason.undo_still_referenced":
+    "Vẫn còn deal hoặc liên hệ đang dùng công ty này (deal: {deals}, liên hệ: {contacts}) nên công ty được giữ nguyên.",
   "import.reason.deal_not_found_dropped":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.activity_link_ambiguous":

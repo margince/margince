@@ -5855,7 +5855,7 @@ export const de = {
   "import.undone": "Import rückgängig gemacht",
   "import.undoReversed_one": "1 Zeile rückgängig gemacht.",
   "import.undoReversed_other": "{rows} Zeilen rückgängig gemacht.",
-  "import.undoKeptLead": "Beibehalten, da nach dem Import bearbeitet:",
+  "import.undoKeptLead": "Beim Rückgängigmachen belassen:",
   "import.undoErroredLead":
     "Nicht rückgängig gemacht und unverändert belassen:",
   "import.hub.title": "Neuer Import",
@@ -6271,6 +6271,10 @@ export const de = {
     "Die Zeile „{ref}“ wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen.",
   "import.reason.link_row_skipped_dropped":
     "Die Zeile „{ref}“ wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.undo_edited":
+    "Jemand hat diesen Datensatz nach dem Import geändert, daher blieb er bestehen.",
+  "import.reason.undo_still_referenced":
+    "Aktive Deals oder Kontakte nennen dieses Unternehmen noch (Deals: {deals}, Kontakte: {contacts}), daher blieb es bestehen.",
   "import.reason.deal_not_found_dropped":
     "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.activity_link_ambiguous":

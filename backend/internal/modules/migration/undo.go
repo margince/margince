@@ -57,6 +57,21 @@ type UndoWriters interface {
 type KeptRow struct {
 	Object string   `json:"object"`
 	ID     ids.UUID `json:"id"`
+	// Reason is Code's sentence; Code and Params let a screen say it in the
+	// reader's language. A report written before kept rows carried one has none.
+	Reason string     `json:"reason,omitempty"`
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
+}
+
+// KeptError is a refusal of one row's reversal that leaves the row in place,
+// with the reason the report shows beside it. It is not a failure of the row.
+type KeptError struct{ Why Reason }
+
+func (e *KeptError) Error() string { return e.Why.English() }
+
+func keptRow(r mapRow, why Reason) KeptRow {
+	return KeptRow{Object: r.object, ID: r.nativeID, Reason: why.English(), Code: why.Code, Params: why.Params}
 }
 
 // ErroredRow is one import-created row the reversal could not archive — a
@@ -98,11 +113,15 @@ type mapRow struct {
 // caller must treat as fatal to the current pass rather than recording.
 func reverseOneRow(ctx context.Context, w UndoWriters, r mapRow, touched bool, rep *UndoReport) error {
 	if touched {
-		rep.Kept = append(rep.Kept, KeptRow{Object: r.object, ID: r.nativeID})
+		rep.Kept = append(rep.Kept, keptRow(r, Why(ReasonUndoEdited)))
 		return nil
 	}
 	err := w.Reverse(ctx, r.object, r.nativeID, r.createdAt)
+	var kept *KeptError
 	switch {
+	case errors.As(err, &kept):
+		rep.Kept = append(rep.Kept, keptRow(r, kept.Why))
+		return nil
 	case err == nil:
 		rep.ReversedCount++
 		return nil

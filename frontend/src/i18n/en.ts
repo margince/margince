@@ -5991,7 +5991,7 @@ export const en = {
   "import.undone": "Import undone",
   "import.undoReversed_one": "1 row reversed.",
   "import.undoReversed_other": "{rows} rows reversed.",
-  "import.undoKeptLead": "Kept because they were edited after the import:",
+  "import.undoKeptLead": "Left in place by the undo:",
   "import.undoErroredLead": "Could not be reversed and left unchanged:",
   "import.hub.title": "New import",
   "import.hub.templateTitle": "Template",
@@ -6389,6 +6389,10 @@ export const en = {
     "The row “{ref}” was skipped in this import, so there is nothing to link to.",
   "import.reason.link_row_skipped_dropped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+  "import.reason.undo_edited":
+    "Someone changed this record after the import, so it was left in place.",
+  "import.reason.undo_still_referenced":
+    "Live deals or contacts still name this company (deals: {deals}, contacts: {contacts}), so it was left in place.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.activity_link_ambiguous":

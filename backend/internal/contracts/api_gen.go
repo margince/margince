@@ -10588,10 +10588,12 @@ const (
 	ImportReasonCodeTaskNotImportable            ImportReasonCode = "task_not_importable"
 	ImportReasonCodeTimestampNeedsZone           ImportReasonCode = "timestamp_needs_zone"
 	ImportReasonCodeTooManyLinks                 ImportReasonCode = "too_many_links"
+	ImportReasonCodeUndoEdited                   ImportReasonCode = "undo_edited"
 	ImportReasonCodeUndoFailed                   ImportReasonCode = "undo_failed"
 	ImportReasonCodeUndoGrantLost                ImportReasonCode = "undo_grant_lost"
 	ImportReasonCodeUndoNotVisible               ImportReasonCode = "undo_not_visible"
 	ImportReasonCodeUndoRuleProtects             ImportReasonCode = "undo_rule_protects"
+	ImportReasonCodeUndoStillReferenced          ImportReasonCode = "undo_still_referenced"
 	ImportReasonCodeValueRefused                 ImportReasonCode = "value_refused"
 	ImportReasonCodeValueUnreadable              ImportReasonCode = "value_unreadable"
 )
@@ -10799,6 +10801,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeTooManyLinks:
 		return true
+	case ImportReasonCodeUndoEdited:
+		return true
 	case ImportReasonCodeUndoFailed:
 		return true
 	case ImportReasonCodeUndoGrantLost:
@@ -10806,6 +10810,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeUndoNotVisible:
 		return true
 	case ImportReasonCodeUndoRuleProtects:
+		return true
+	case ImportReasonCodeUndoStillReferenced:
 		return true
 	case ImportReasonCodeValueRefused:
 		return true
@@ -37992,7 +37998,7 @@ type ImportUndoReport struct {
 		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"errored"`
 
-	// Kept Import-created rows a human edited since import, therefore left in place (A93).
+	// Kept Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.
 	Kept []struct {
 		Id openapi_types.UUID `json:"id"`
 
@@ -38030,6 +38036,15 @@ type ImportUndoReport struct {
 		// match — so a file of duplicates produces a review queue, not a silent
 		// merge.
 		Object ImportObject `json:"object"`
+
+		// Params The values the sentence of `reason_code` names, by name. Absent when the code names none.
+		Params *map[string]string `json:"params,omitempty"`
+
+		// Reason Why the row was left in place, in terms the operator can act on. Absent in a report written before kept rows carried one.
+		Reason *string `json:"reason,omitempty"`
+
+		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"kept"`
 
 	// ReversedCount Import-created rows that were untouched since and have been reversed (archived).

@@ -5,7 +5,9 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -68,7 +70,21 @@ func (w *csvWriters) Reverse(
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}
 	if err != nil {
-		return fmt.Errorf("import undo: reversing %s %s: %w", object, nativeID, err)
+		return fmt.Errorf("import undo: reversing %s %s: %w", object, nativeID, keptCause(err))
 	}
 	return nil
+}
+
+// keptCause answers the refusals that leave a row in place on purpose as
+// kept rows with their reason, and any other error as it is.
+func keptCause(err error) error {
+	if wrapsA[*contacts.HumanTouchedError](err) || wrapsA[*deals.HumanTouchedError](err) ||
+		wrapsA[*activities.HumanTouchedError](err) {
+		return &migration.KeptError{Why: migration.Why(migration.ReasonUndoEdited)}
+	}
+	if still, ok := errors.AsType[*contacts.StillReferencedError](err); ok {
+		return &migration.KeptError{Why: migration.Why(migration.ReasonUndoStillReferenced,
+			"deals", strconv.Itoa(still.Deals), "contacts", strconv.Itoa(still.Contacts))}
+	}
+	return err
 }

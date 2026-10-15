@@ -106,7 +106,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",
@@ -417,4 +417,4 @@ var reasonCatalog = withActivityReasons(withDealReasons(map[ReasonCode]reasonEnt
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-}))
+})))

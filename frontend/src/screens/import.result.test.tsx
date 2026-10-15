@@ -131,7 +131,21 @@ describe("the import and its result", () => {
                     run_id: "r1",
                     status,
                     reversed_count: 2,
-                    kept: [{ object: "lead", id: "l-1" }],
+                    kept: [
+                      {
+                        object: "lead",
+                        id: "l-1",
+                        reason:
+                          "Someone changed this record after the import, so it was left in place.",
+                        reason_code: "undo_edited",
+                      },
+                      {
+                        object: "company",
+                        id: "c-1",
+                        reason_code: "undo_still_referenced",
+                        params: { deals: "2", contacts: "1" },
+                      },
+                    ],
                     errored: [],
                   }
                 : undefined,
@@ -159,7 +173,16 @@ describe("the import and its result", () => {
       status = "undone";
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText("Import undone")).toBeVisible();
-      expect(screen.getByText("Prospects: l-1")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Prospects: l-1 — Someone changed this record after the import, so it was left in place.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          "Companies: c-1 — Live deals or contacts still name this company (deals: 2, contacts: 1), so it was left in place.",
+        ),
+      ).toBeVisible();
     } finally {
       vi.useRealTimers();
     }

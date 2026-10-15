@@ -350,17 +350,24 @@ type undoErroredRow = struct {
 	ReasonCode *crmcontracts.ImportReasonCode `json:"reason_code,omitempty"`
 }
 
+// undoKeptRow is the generated ImportUndoReport.Kept item, declared here for
+// the slice and the literals that fill it.
+type undoKeptRow = struct {
+	Id         openapi_types.UUID             `json:"id"` //nolint:staticcheck // matches the generated item shape
+	Object     crmcontracts.ImportObject      `json:"object"`
+	Params     *map[string]string             `json:"params,omitempty"`
+	Reason     *string                        `json:"reason,omitempty"`
+	ReasonCode *crmcontracts.ImportReasonCode `json:"reason_code,omitempty"`
+}
+
 // toContractUndoReport renders the reversal outcome (IEM-WIRE-9).
 func toContractUndoReport(id migration.RunID, status string, rep migration.UndoReport) *crmcontracts.ImportUndoReport {
-	kept := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-		Object crmcontracts.ImportObject `json:"object"`
-	}, 0, len(rep.Kept))
+	kept := make([]undoKeptRow, 0, len(rep.Kept))
 	for _, k := range rep.Kept {
-		kept = append(kept, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-			Object crmcontracts.ImportObject `json:"object"`
-		}{Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object)})
+		kept = append(kept, undoKeptRow{
+			Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object),
+			Reason: textOrAbsent(k.Reason), ReasonCode: reasonCodeOrAbsent(k.Code), Params: paramsOrAbsent(k.Params),
+		})
 	}
 	errored := make([]undoErroredRow, 0, len(rep.Errored))
 	for _, e := range rep.Errored {
