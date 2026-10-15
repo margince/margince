@@ -64,12 +64,19 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		targets = append(targets, r.routeTarget(spec.Name, rt.routeTargets()[choice]))
 	}
 	first := targets[0]
-	spec.RequiredScope, spec.Tier = first.RequiredScope, first.Tier
-	for _, target := range targets {
-		if target.RequiredScope != first.RequiredScope || target.Tier != first.Tier {
+	spec.RequiredScope, spec.Tier, spec.TierResolver = first.RequiredScope, first.Tier, nil
+	spec.Actions = make([]mcp.ToolAction, 0, len(targets))
+	for i, target := range targets {
+		if target.RequiredScope != first.RequiredScope {
 			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(fmt.Sprintf("crmagents: router %s fronts %s and %s, which differ in scope or tier — one tool spends one of each",
+			panic(fmt.Sprintf("crmagents: router %s fronts %s and %s, which differ in scope — one tool spends one scope",
 				spec.Name, first.Name, target.Name))
+		}
+		// Each action is admitted at its own verb's tier once routed. The
+		// router is listed as decided per call when its actions differ.
+		spec.Actions = append(spec.Actions, mcp.ToolAction{Action: choices[i], Verb: target.Name, Tier: target.Tier})
+		if target.Tier != first.Tier {
+			spec.Tier = mcp.TierDynamic
 		}
 		spec.MaxArgsBytes = max(spec.MaxArgsBytes, argsLimit(target))
 		spec.Egress = spec.Egress || target.Egress
@@ -94,9 +101,9 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 }
 
 // routeTarget is one registered target's own spec, refused unless a router may
-// front it. A dynamic tier is refused because its resolver belongs to the
-// target. A router has no call to resolve it on until it has routed. The
-// last three are refused because the listing reads them off the router.
+// front it. A dynamic target keeps its resolver: a call is routed before it is
+// admitted. The last three are refused because the listing reads them off the
+// router.
 func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RLock()
 	t, ok := r.tools[name]
@@ -115,8 +122,6 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 		why = "is itself a router"
 	case !spec.Unlisted:
 		why = "is still offered, so fronting it would list one capability twice"
-	case spec.Tier == mcp.TierDynamic:
-		why = "has a dynamic tier"
 	case spec.HumanOnly, spec.SelfDescribing, spec.ConfirmsInConversation:
 		why = "is offered or confirmed in a way a router does not carry"
 	}

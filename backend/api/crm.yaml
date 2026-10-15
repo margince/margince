@@ -52515,8 +52515,25 @@ components:
             result — followed by this server's own governance clause, which is absent for a
             tool that runs immediately and needs only the read scope.
         required_scope: { type: string, description: Passport scope required to call it. }
-        tier:  { type: string, enum: [auto_execute, confirmation_required, dynamic] }
+        tier: { $ref: '#/components/schemas/AgentToolTier' }
         egress: { type: boolean, description: True if the tool reaches outside the workspace. }
+        actions:
+          type: array
+          description: >
+            A router's choices. Each runs one verb and is admitted at that verb's tier, so a router
+            whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
+          items: { $ref: '#/components/schemas/AgentToolAction' }
+    AgentToolAction:
+      type: object
+      required: [action, verb, tier]
+      properties:
+        action: { type: string, description: The value the router's action argument takes. }
+        verb: { type: string, description: The tool the action runs as; approvals and tasks name it. }
+        tier: { $ref: '#/components/schemas/AgentToolTier' }
+    AgentToolTier:
+      type: string
+      description: Runs at once, waits for a human, or decides per call from its arguments.
+      enum: [auto_execute, confirmation_required, dynamic]
     AgentToolListResponse:
       type: object
       required: [data]

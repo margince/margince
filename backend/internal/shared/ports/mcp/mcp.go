@@ -145,6 +145,16 @@ type ToolSpec struct {
 	// MaxArgsBytes bounds this tool's encoded arguments; zero is the 1 MiB every
 	// JSON body takes, so a transport ceiling raised for one tool widens no other.
 	MaxArgsBytes int64
+	// Actions are a router's choices, each with the verb it runs and that
+	// verb's tier. A call is admitted at its action's tier, never the router's.
+	Actions []ToolAction
+}
+
+// ToolAction is one choice a router offers.
+type ToolAction struct {
+	Action string
+	Verb   string
+	Tier   RiskTier
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

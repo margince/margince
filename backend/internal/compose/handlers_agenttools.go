@@ -55,9 +55,23 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			RequiredScope: new(string(spec.RequiredScope)),
 			Tier:          tierWire(spec.Tier),
 			Egress:        spec.Egress,
+			Actions:       actionsWire(spec.Actions),
 		})
 	}
 	return out
+}
+
+// actionsWire lists a router's actions with each verb's tier, or nothing for a
+// tool that is not a router.
+func actionsWire(actions []mcp.ToolAction) *[]crmcontracts.AgentToolAction {
+	if len(actions) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.AgentToolAction, 0, len(actions))
+	for _, a := range actions {
+		out = append(out, crmcontracts.AgentToolAction{Action: a.Action, Verb: a.Verb, Tier: tierWire(a.Tier)})
+	}
+	return &out
 }
 
 // tierWire maps the closed AutoExecute/ConfirmationRequired/Dynamic RiskTier set (the only

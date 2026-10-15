@@ -38382,11 +38382,24 @@ export interface components {
             description: string;
             /** @description Passport scope required to call it. */
             required_scope?: string;
-            /** @enum {string} */
-            tier: "auto_execute" | "confirmation_required" | "dynamic";
+            tier: components["schemas"]["AgentToolTier"];
             /** @description True if the tool reaches outside the workspace. */
             egress: boolean;
+            /** @description A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router. */
+            actions?: components["schemas"]["AgentToolAction"][];
         };
+        AgentToolAction: {
+            /** @description The value the router's action argument takes. */
+            action: string;
+            /** @description The tool the action runs as; approvals and tasks name it. */
+            verb: string;
+            tier: components["schemas"]["AgentToolTier"];
+        };
+        /**
+         * @description Runs at once, waits for a human, or decides per call from its arguments.
+         * @enum {string}
+         */
+        AgentToolTier: "auto_execute" | "confirmation_required" | "dynamic";
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };

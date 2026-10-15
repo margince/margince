@@ -46,7 +46,8 @@ func (r *Registry) Register(t mcp.Tool) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a tool with no name")
 	}
-	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil {
+	// A router decides per call by its action, so it has no resolver of its own.
+	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil && len(spec.Actions) == 0 {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: %s is TierDynamic without a TierResolver", spec.Name))
 	}

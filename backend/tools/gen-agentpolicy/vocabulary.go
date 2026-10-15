@@ -30,14 +30,17 @@ import (
 // names to their declared enum, or — for an array property — its items' enum.
 type schemaNode struct {
 	Properties map[string]schemaProperty `yaml:"properties"`
-	// Type is read for a query parameter whose schema is a component.
-	Type any `yaml:"type"`
+	// Type is read for a query parameter whose schema is a component; Enum for a
+	// property that names an enum component by $ref.
+	Type any      `yaml:"type"`
+	Enum []string `yaml:"enum"`
 }
 
 // schemaProperty is one property's declaration: a scalar's own enum, or an
 // array's items' enum. Which one carries the vocabulary depends on the
 // property, so the reader picks (see closedEnum).
 type schemaProperty struct {
+	Ref   string   `yaml:"$ref"`
 	Enum  []string `yaml:"enum"`
 	Items struct {
 		Enum []string `yaml:"enum"`
@@ -128,7 +131,11 @@ func closedEnum(schemas map[string]schemaNode, schema, field string, enum func(s
 			"components.schemas.%s is missing: %s.%s is held equal to it, and without it the check passes "+
 				"by default instead of holding the two vocabularies together", schema, vocabularySchema, field)
 	}
-	values := enum(declared.Properties[field])
+	prop := declared.Properties[field]
+	if prop.Ref != "" {
+		prop.Enum = schemas[strings.TrimPrefix(prop.Ref, "#/components/schemas/")].Enum
+	}
+	values := enum(prop)
 	if len(values) == 0 {
 		return nil, fmt.Errorf(
 			"components.schemas.%s.%s declares no enum — the vocabulary must be closed to be checkable against %s",

@@ -23593,6 +23593,9 @@ type AgentRecordRef struct {
 
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
+	// Actions A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
+	Actions *[]AgentToolAction `json:"actions,omitempty"`
+
 	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
@@ -23603,20 +23606,34 @@ type AgentTool struct {
 	Name string `json:"name"`
 
 	// RequiredScope Passport scope required to call it.
-	RequiredScope *string       `json:"required_scope,omitempty"`
-	Tier          AgentToolTier `json:"tier"`
+	RequiredScope *string `json:"required_scope,omitempty"`
+
+	// Tier Runs at once, waits for a human, or decides per call from its arguments.
+	Tier AgentToolTier `json:"tier"`
 
 	// Title The written display name a client shows in place of the name.
 	Title string `json:"title"`
 }
 
-// AgentToolTier defines model for AgentTool.Tier.
-type AgentToolTier string
+// AgentToolAction defines model for AgentToolAction.
+type AgentToolAction struct {
+	// Action The value the router's action argument takes.
+	Action string `json:"action"`
+
+	// Tier Runs at once, waits for a human, or decides per call from its arguments.
+	Tier AgentToolTier `json:"tier"`
+
+	// Verb The tool the action runs as; approvals and tasks name it.
+	Verb string `json:"verb"`
+}
 
 // AgentToolListResponse defines model for AgentToolListResponse.
 type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
 }
+
+// AgentToolTier Runs at once, waits for a human, or decides per call from its arguments.
+type AgentToolTier string
 
 // AgentUsage One window's use of the three agent allowances, and when they reset.
 type AgentUsage struct {
