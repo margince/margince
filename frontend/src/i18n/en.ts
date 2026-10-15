@@ -6393,6 +6393,10 @@ export const en = {
     "Someone changed this record after the import, so it was left in place.",
   "import.reason.undo_still_referenced":
     "Live deals or contacts still name this company (deals: {deals}, contacts: {contacts}), so it was left in place.",
+  "import.reason.lead_status_unknown":
+    "“{value}” is not a lead status. The statuses are: {allowed}.",
+  "import.reason.lead_status_not_importable":
+    "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.activity_link_ambiguous":

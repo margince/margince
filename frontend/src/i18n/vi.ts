@@ -6120,6 +6120,10 @@ export const vi = {
     "Hồ sơ này đã được sửa sau khi nhập nên được giữ nguyên.",
   "import.reason.undo_still_referenced":
     "Vẫn còn deal hoặc liên hệ đang dùng công ty này (deal: {deals}, liên hệ: {contacts}) nên công ty được giữ nguyên.",
+  "import.reason.lead_status_unknown":
+    "“{value}” không phải trạng thái lead. Các trạng thái: {allowed}.",
+  "import.reason.lead_status_not_importable":
+    "Tệp không thể đặt trạng thái “{value}”. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.activity_link_ambiguous":

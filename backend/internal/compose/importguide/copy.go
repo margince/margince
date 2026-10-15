@@ -152,6 +152,11 @@ var Columns = withActivityColumns(map[string]Column{
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
 	}, Example: same("Acme")},
+	"lead.status": {Description: langcopy.Phrase{
+		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
+		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
+		Vi: "Lead đang ở giai đoạn nào: new, contacted hoặc engaged. Để trống nghĩa là new. Lead được xác nhận đủ điều kiện hoặc loại ngay trong Margince, nên tệp không thể đặt hai trạng thái này.",
+	}, Example: same("contacted")},
 	"contact.company_name": {Description: langcopy.Phrase{
 		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",

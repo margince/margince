@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.4 KB |
+| Tool catalog | 175.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45788 |
+| Approx. wire tokens | 45819 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,9 +32,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
+| Output schemas | 61.2 KB | 34% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.3 KB | 27% | Yes, every step |
-| Input schemas | 52.6 KB | 30% | Yes, every step |
+| Input schemas | 52.6 KB | 29% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
 | **Description + input schema** | **100.9 KB** | **57%** | **the recurring cost** |
 
@@ -6519,6 +6519,18 @@ make. (Runs immediately; requires passport scope "write".)
                         "type": "string"
                       },
                       "object": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "reason_code": {
                         "type": "string"
                       }
                     },

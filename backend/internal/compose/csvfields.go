@@ -55,13 +55,17 @@ const fieldTitle = "title"
 // rows as leads rather than as contacts.
 const leadStatusNew = "new"
 
+// leadTargetStatus is the lead's status column. A file may place a lead only
+// on the open ladder; the terminal statuses go through promote and disqualify.
+const leadTargetStatus = "status"
+
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
 // honouring the file on the second upload.
 //
 // The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -233,6 +237,11 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
 			continue
 		}
+		// An empty box changes nothing, so it is never an update. A lead's
+		// status would otherwise read as moved to nothing on every re-import.
+		if field == leadTargetStatus && incoming == "" {
+			continue
+		}
 		want := canonicalFor(field, incoming)
 		value, checked := typed[field]
 		if field == csvTargetOwner && !checked {
@@ -354,6 +363,9 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 		Author:       authorFrom(fields),
 		OwnerID:      ownerFrom(fields, typed),
 	}
+	if status, ok := typed[leadTargetStatus].(string); ok {
+		in.Status = status
+	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
 	in.Phone = checkedString(fields, typed, fieldPhone)
@@ -366,7 +378,14 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
+	var status *string
+	if text, ok := typed[leadTargetStatus].(string); ok {
+		if _, given := changed[leadTargetStatus]; given {
+			status = &text
+		}
+	}
 	return contacts.UpdateLeadInput{
+		Status:       status,
 		FullName:     importString(changed, fieldFullName),
 		Email:        importString(changed, fieldEmail),
 		Phone:        checkedString(changed, typed, fieldPhone),

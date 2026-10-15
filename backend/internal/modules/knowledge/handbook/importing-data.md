@@ -96,6 +96,12 @@ Also called: ID from another system, key column, record ID from my old system.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.
 
+### How do I set a prospect's status?
+A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new prospect as `new`, and an existing one as it is.
+
+A file cannot set a prospect to qualified or disqualified. Use **Qualify** or **Disqualify** on the prospect. A row with another word is skipped, and the problem lists the allowed values.
+Also called: import lead status, set the stage of a lead.
+
 ### How do I import deals?
 A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `name` and a `stage`.
 
@@ -150,7 +156,7 @@ Also called: import a contact's history, add past calls to a contact.
 ### What if a link is broken?
 A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.
 
-An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email. A link that finds no record is a **Broken link**. With **Import anyway** the activity keeps its other links, and one with none left is still skipped. A link to a row that this import skipped, such as a deal with no exchange rate, is treated the same way and says the row was skipped.
+An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email. A link that finds no record is a **Broken link**. With **Import anyway** the activity keeps its other links, and one with none left is still skipped. A link to a row that this import skipped, such as a deal with no exchange rate, is a broken link too. The problem says the row was skipped.
 
 Also called: missing company, link not found.
 
@@ -201,7 +207,7 @@ Also called: re-import, upload again, update from a spreadsheet, import twice, d
 Undo reverses one import, in reverse order: activities, then deals, then prospects, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
 - Undo archives only the records that import created. A prospect is disqualified instead.
 - Records the import only updated keep their new values. Undo never puts back the old values.
-- A record someone edited after the import stays, and is listed under "Left in place by the undo:" with the reason "Someone changed this record after the import".
+- A record someone edited after the import stays. It is listed under "Left in place by the undo:", with the reason beside it.
 - A company that a live deal or contact still names stays too. It is listed under the same heading, with the number of deals and contacts that name it. A company the import only matched by its ID is never archived.
 - New tags stay, because they may be in use.
 - A finished undo frees the `ref` values of that import. The same file can be imported again, and it creates the records again.

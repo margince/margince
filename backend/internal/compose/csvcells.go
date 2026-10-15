@@ -264,6 +264,9 @@ func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration
 	if problem == nil && w.object == migration.ObjectDeal {
 		typed, problem = w.dealStages.checkCells(fields, typed)
 	}
+	if problem == nil && w.object == migration.ObjectLead {
+		typed, problem = checkLeadStatus(fields, typed)
+	}
 	if problem == nil && w.object == migration.ObjectActivity {
 		typed, problem = checkActivityCells(fields, typed, w.nowUTC())
 	}

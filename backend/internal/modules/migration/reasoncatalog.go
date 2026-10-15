@@ -69,6 +69,8 @@ const (
 	ReasonLinkRowNotImported         ReasonCode = "link_row_not_imported"
 	ReasonLinkContactNotImported     ReasonCode = "link_contact_not_imported"
 	ReasonLinkEdgeUnsupported        ReasonCode = "link_edge_unsupported"
+	ReasonLeadStatusUnknown          ReasonCode = "lead_status_unknown"
+	ReasonLeadStatusNotImportable    ReasonCode = "lead_status_not_importable"
 	ReasonUndoGrantLost              ReasonCode = "undo_grant_lost"
 	ReasonUndoNotVisible             ReasonCode = "undo_not_visible"
 	ReasonUndoRuleProtects           ReasonCode = "undo_rule_protects"
@@ -396,6 +398,16 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "A CSV import has no {from} → {to} link, so it was not applied.",
 		textlang.German:     "Ein CSV-Import kennt keine Verknüpfung {from}→{to}; sie wurde nicht angewendet.",
 		textlang.Vietnamese: "Nhập từ tệp CSV không có liên kết {from}→{to}; liên kết này không được áp dụng.",
+	}},
+	ReasonLeadStatusUnknown: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is not a lead status. The statuses are: {allowed}.",
+		textlang.German:     "{value:q} ist kein Lead-Status. Es gibt: {allowed}.",
+		textlang.Vietnamese: "{value:q} không phải trạng thái lead. Các trạng thái: {allowed}.",
+	}},
+	ReasonLeadStatusNotImportable: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
+		textlang.English:    "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
+		textlang.German:     "Eine Datei kann den Status {value:q} nicht setzen. Nutze Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
+		textlang.Vietnamese: "Tệp không thể đặt trạng thái {value:q}. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
 	}},
 	ReasonUndoGrantLost: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Your permissions no longer cover this record.",

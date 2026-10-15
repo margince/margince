@@ -10540,6 +10540,8 @@ const (
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
+	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
+	ImportReasonCodeLeadStatusUnknown            ImportReasonCode = "lead_status_unknown"
 	ImportReasonCodeLinkAmbiguous                ImportReasonCode = "link_ambiguous"
 	ImportReasonCodeLinkAmbiguousDropped         ImportReasonCode = "link_ambiguous_dropped"
 	ImportReasonCodeLinkContactNotImported       ImportReasonCode = "link_contact_not_imported"
@@ -10704,6 +10706,10 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLeadNotFound:
 		return true
 	case ImportReasonCodeLeadNotFoundDropped:
+		return true
+	case ImportReasonCodeLeadStatusNotImportable:
+		return true
+	case ImportReasonCodeLeadStatusUnknown:
 		return true
 	case ImportReasonCodeLinkAmbiguous:
 		return true

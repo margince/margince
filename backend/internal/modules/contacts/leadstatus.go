@@ -31,6 +31,16 @@ const (
 // boundary — TestLadderClimbsFromActivityAndNeverDescends holds the ladder.
 var openLeadStatuses = []LeadStatus{LeadStatusNew, LeadStatusContacted, LeadStatusEngaged}
 
+// OpenLeadStatuses answers the statuses a lead may be written with, in ladder
+// order: the ones a file or an edit may place by hand.
+func OpenLeadStatuses() []string {
+	out := make([]string, len(openLeadStatuses))
+	for i, s := range openLeadStatuses {
+		out[i] = string(s)
+	}
+	return out
+}
+
 // ParseLeadStatus is the seam guard: a set membership check at parse
 // time, because LeadStatus("typo") still compiles.
 func ParseLeadStatus(raw string) (LeadStatus, error) {

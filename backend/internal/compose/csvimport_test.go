@@ -36,6 +36,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	defer createOnlyTargets.AssertAllMatched(t)
 	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
 		migration.ObjectLead: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			// The status cell is typed by the row's check before it is written.
+			typed["status"] = "engaged"
 			in := leadCreateFrom(fields, typed, "import:csv", "ext-1", "src")
 			up := leadUpdateFrom(fields, typed)
 			created := map[string]bool{
@@ -48,8 +50,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"author":       in.Author.AuthorName != nil,
 				"owner_email":  in.OwnerID != nil,
 				"cf_tier":      in.CustomFields["cf_tier"] != nil,
+				"status":       in.Status == "engaged",
 			}
 			patched := map[string]bool{
+				"status":       up.Status != nil,
 				"full_name":    up.FullName != nil,
 				"email":        up.Email != nil,
 				"phone":        up.Phone != nil,

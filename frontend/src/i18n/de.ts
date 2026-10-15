@@ -6275,6 +6275,10 @@ export const de = {
     "Jemand hat diesen Datensatz nach dem Import geändert, daher blieb er bestehen.",
   "import.reason.undo_still_referenced":
     "Aktive Deals oder Kontakte nennen dieses Unternehmen noch (Deals: {deals}, Kontakte: {contacts}), daher blieb es bestehen.",
+  "import.reason.lead_status_unknown":
+    "„{value}“ ist kein Lead-Status. Es gibt: {allowed}.",
+  "import.reason.lead_status_not_importable":
+    "Eine Datei kann den Status „{value}“ nicht setzen. Nutze Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.activity_link_ambiguous":
