@@ -6,15 +6,15 @@ import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import type { DrawerSpan } from "../design-system/modal";
+import { WorklistScreen } from "../features/worklist/worklist";
+import { drawerScope } from "../features/worklist/worklist.address";
+import { worklistFilterFrom } from "../features/worklist/worklist.header";
+import { WorklistReturnScope } from "../features/worklist/worklist.return";
 import { useT } from "../i18n";
 import { navigateReplacing, useHash } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useUrlParams } from "../lib/urlstate";
-import { WorklistScreen } from "./worklist";
-import { drawerScope } from "./worklist.address";
-import { worklistFilterFrom } from "./worklist.header";
-import { WorklistReturnScope } from "./worklist.return";
 import "./brief.css";
 
 /** Older shared links open the same queue, including its owner and narrowing. */

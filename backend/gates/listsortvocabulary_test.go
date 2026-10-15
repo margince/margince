@@ -34,6 +34,7 @@ package gates
 
 import (
 	"go/ast"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -145,12 +146,22 @@ func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 
 // assertEveryColumnModuleRead fails a column module no surface's scan reached.
 // Moving a screen's columns into their own file otherwise takes every header
-// out of this census while it goes on reporting a pass.
+// out of this census while it goes on reporting a pass. It walks all of
+// frontend/src, so a module that moves to a feature folder stays counted.
 func assertEveryColumnModuleRead(t *testing.T, read map[string]bool) {
 	t.Helper()
-	modules, err := filepath.Glob(screenDir + "*.columns.tsx")
+	var modules []string
+	err := filepath.WalkDir(frontendSrc, func(path string, _ fs.DirEntry, err error) error {
+		if err == nil && strings.HasSuffix(path, ".columns.tsx") {
+			modules = append(modules, path)
+		}
+		return err
+	})
 	if err != nil {
 		t.Fatalf("listing column modules: %v", err)
+	}
+	if len(modules) == 0 {
+		t.Fatalf("found no *.columns.tsx under %s, so no column module was checked", frontendSrc)
 	}
 	for _, path := range modules {
 		if !read[filepath.Base(path)] {

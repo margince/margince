@@ -83,6 +83,7 @@ import { Select } from "../design-system/select";
 import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { WorklistReturnLink } from "../features/worklist/worklist.return";
 import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
@@ -185,7 +186,6 @@ import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { TagsPanel } from "./tagspanel";
-import { WorklistReturnLink } from "./worklist.return";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.

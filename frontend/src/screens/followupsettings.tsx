@@ -6,11 +6,11 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { worklistKey } from "./worklist.queries";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];
 

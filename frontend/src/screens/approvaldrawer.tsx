@@ -2,12 +2,15 @@ import { useId } from "react";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { ApprovalBundleReview } from "../features/worklist/worklist.bundle";
+import {
+  useApproval,
+  worklistKey,
+} from "../features/worklist/worklist.queries";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { hashWithParams, useUrlParams } from "../lib/urlstate";
 import { ApprovalRow } from "./approvalrow";
-import { ApprovalBundleReview } from "./worklist.bundle";
-import { useApproval, worklistKey } from "./worklist.queries";
 
 /** The address parameter that opens one decision over Home. */
 export const APPROVAL_PARAM = "approval";

@@ -2,11 +2,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { readingsDay } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
-import type { Worklist } from "./worklist.queries";
 
 // Urgent counts rows from every lane, so a lane that did not answer makes it a
 // floor. A side read that failed is named beside the lanes but puts no row on

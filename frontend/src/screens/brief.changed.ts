@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { worklistLaneHref } from "./worklist.header";
-import type { Worklist } from "./worklist.queries";
+import { worklistLaneHref } from "../features/worklist/worklist.header";
+import type { Worklist } from "../features/worklist/worklist.queries";
 
 // What has happened since the night looked.
 //

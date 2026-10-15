@@ -13,6 +13,14 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import {
+  type SettableState,
+  useAskForHelp,
+  useSetCommitmentState,
+  useStartWeeklyPlan,
+  useWeeklyPlan,
+  type WeeklyPlanCommitment,
+} from "../features/worklist/weeklyplan.queries";
 import { middayInstant } from "../format/calendarday";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -22,14 +30,6 @@ import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
-import {
-  type SettableState,
-  useAskForHelp,
-  useSetCommitmentState,
-  useStartWeeklyPlan,
-  useWeeklyPlan,
-  type WeeklyPlanCommitment,
-} from "./weeklyplan.queries";
 
 import "./brief.plan.css";
 

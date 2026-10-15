@@ -12,6 +12,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { RecordShell } from "../app/testing/recordshell.testkit";
+import {
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "../lib/activitykeys";
 import { meFixture } from "../testing/mefixture";
@@ -20,7 +24,6 @@ import { NextSteps, type SuggestionAction } from "./company360";
 import { TodayOnThisAccount } from "./companytoday";
 import { sinceLastVisitFooter } from "./companywork";
 import { SentenceList } from "./record360";
-import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
 // The company view's honesty rules, which are the whole point of the
 // composite read:

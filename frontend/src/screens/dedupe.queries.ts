@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { unwrap } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
 
 /**
  * Deciding one pair: merge into a surviving record, or say they are not the

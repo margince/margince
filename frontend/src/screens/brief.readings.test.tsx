@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { WORKLIST_FILTER_PARAM } from "../features/worklist/worklist";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
@@ -21,8 +23,6 @@ import {
   wholeMeetings,
 } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
-import { WORKLIST_FILTER_PARAM } from "./worklist";
-import type { Worklist } from "./worklist.queries";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
 // own strip does not: the row is FIVE slots on every morning, quiet or busy, so

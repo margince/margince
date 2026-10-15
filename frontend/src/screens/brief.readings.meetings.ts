@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { formatNumber } from "../format/format";
 import type { Locale, Translator, usePlural } from "../i18n";
 import { navigate } from "../lib/router";
@@ -13,7 +14,6 @@ import {
   sourceComplete,
 } from "./brief.facts";
 import { settingsHref } from "./settingsrouting";
-import type { Worklist } from "./worklist.queries";
 
 // The meetings slot of the readings strip: its figure, its line, and what
 // stands in for the figure when the calendar behind it could not count.
