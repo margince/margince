@@ -8,8 +8,8 @@ import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { CountLine } from "../design-system/listsurface";
-import { Pager } from "../design-system/pager";
 import { fitsOnePage, PAGE_SIZES } from "../design-system/listtable.paging";
+import { Pager } from "../design-system/pager";
 import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
@@ -176,7 +176,9 @@ function TestRunBody({
   const closedLost = sumOf(report, "closed_lost");
   const closed = closedWon + closedLost;
   const landing = report.disposition.created + report.disposition.updated;
-  const nothingToWrite = landing === 0 && linkless === 0;
+  const nothingToWrite =
+    report.rows_read > 0 && landing === 0 && linkless === 0;
+  const skippedRows = report.disposition.skipped > 0;
   return (
     <div className="import">
       <PartCounts
@@ -235,6 +237,7 @@ function TestRunBody({
           title={t("import.test.nothing.title")}
         >
           {t("import.test.nothing.body")}
+          {skippedRows ? ` ${t("import.test.nothing.skipped")}` : null}
         </Callout>
       ) : null}
       <ActionRow

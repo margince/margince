@@ -5855,7 +5855,7 @@ export const vi = {
   "import.progress.links": "Liên kết",
   "import.progress.overall": "Tất cả tệp",
   "import.progress.total": "{done} trên {total} dòng",
-  "import.progress.reversed": "Đã hoàn tác {done} trên {total} dòng",
+  "import.progress.reversed": "Đã xử lý {done} trên {total} dòng",
   "import.progress.rate": "{rate} dòng/giây",
   "import.progress.elapsed": "đã qua {span}",
   "import.progress.etaObject": "còn khoảng {minutes} phút cho {type}",
@@ -5909,6 +5909,8 @@ export const vi = {
   "import.test.nothing.title": "Không có gì để nhập",
   "import.test.nothing.body":
     "Mọi hàng đã có trong CRM hoặc được liệt kê ở trên như một vấn đề. Chưa ghi gì cả.",
+  "import.test.nothing.skipped":
+    "Hãy tải problems.csv trước khi bấm Xong: tệp liệt kê các hàng bị bỏ qua và lý do.",
   "import.test.nothing.done": "Xong",
   "import.test.reupload": "Sửa và tải lại",
   "import.test.issuesUnit": "vấn đề",

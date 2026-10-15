@@ -6129,7 +6129,7 @@ export const en = {
   "import.progress.links": "Links",
   "import.progress.overall": "All files",
   "import.progress.total": "{done} of {total} rows",
-  "import.progress.reversed": "{done} of {total} rows reversed",
+  "import.progress.reversed": "{done} of {total} rows processed",
   "import.progress.rate": "{rate} rows/s",
   "import.progress.elapsed": "{span} elapsed",
   "import.progress.etaObject": "about {minutes} min left in {type}",
@@ -6182,6 +6182,8 @@ export const en = {
   "import.test.nothing.title": "Nothing to import",
   "import.test.nothing.body":
     "Every row is already in the CRM, or is listed above as a problem. Nothing was written.",
+  "import.test.nothing.skipped":
+    "Download problems.csv before you press Done: it lists the skipped rows and why.",
   "import.test.nothing.done": "Done",
   "import.test.reupload": "Fix and re-upload",
   "import.test.issuesUnit": "issues",

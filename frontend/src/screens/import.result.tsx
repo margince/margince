@@ -15,6 +15,7 @@ import { UndoConfirm, UndoErrors } from "./import.notices";
 import {
   hasProgress,
   ImportProgressPanel,
+  panelStalled,
   workerSilent,
 } from "./import.progress";
 import { PartCounts, ProblemsDownload, partsOf } from "./import.testrun";
@@ -289,14 +290,17 @@ function UndoProgress({
 }: Readonly<{ run: ImportRun; pending: boolean; onContinue: () => void }>) {
   const t = useT();
   const stopped = workerSilent(run);
+  const panelSaysStopped = hasProgress(run) && panelStalled(run);
   return (
     <div className="import import--fill">
       {hasProgress(run) ? (
         <ImportProgressPanel run={run} waiting={t("import.undoing")} />
       ) : null}
-      <p className="import__hint t-sub">
-        {t(stopped ? "import.result.undoStopped" : "import.result.undoing")}
-      </p>
+      {panelSaysStopped ? null : (
+        <p className="import__hint t-sub">
+          {t(stopped ? "import.result.undoStopped" : "import.result.undoing")}
+        </p>
+      )}
       {stopped ? (
         <div className="import__actions">
           <Button

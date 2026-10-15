@@ -250,7 +250,7 @@ describe("the import and its result", () => {
     });
     const view = renderAtImport("r1");
     expect(
-      await screen.findByText(/30 of 70 rows reversed · 40 rows\/s/),
+      await screen.findByText(/30 of 70 rows processed · 40 rows\/s/),
     ).toBeVisible();
     expect(screen.getAllByText("Undoing Contacts").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Continue undo" })).toBeNull();
@@ -260,6 +260,39 @@ describe("the import and its result", () => {
     expect(
       await screen.findByRole("button", { name: "Continue undo" }),
     ).toBeVisible();
+  });
+
+  it("says a stopped undo once, in the progress panel's notice", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          phase: "undoing",
+          phase_object: "contact",
+          heartbeat_age_seconds: 45,
+          idle_seconds: 45,
+          progress: {
+            objects: [{ object: "contact", rows_done: 30, rows_total: 50 }],
+            counts: {
+              created: 0,
+              updated: 0,
+              unchanged: 0,
+              skipped: 0,
+              problems: 0,
+            },
+          },
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+    });
+    renderAtImport("r1");
+    expect(
+      (await screen.findAllByText("Waiting for the server")).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/The undo has stopped/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Continue undo" })).toBeVisible();
   });
 
   it("treats a press on a run another attempt holds as progress, not as a failure", async () => {

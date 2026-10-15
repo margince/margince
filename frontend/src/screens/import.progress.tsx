@@ -66,6 +66,15 @@ export function workerSilent(run: ImportRun): boolean {
   return (run.heartbeat_age_seconds ?? 0) >= STALL_SECONDS;
 }
 
+/**
+ * True when the progress panel shows its own notice for a run that stopped
+ * moving, so a screen around it must not say the same again.
+ */
+export function panelStalled(run: ImportRun): boolean {
+  const queued = run.started_at === undefined && run.phase === undefined;
+  return !queued && (run.idle_seconds ?? 0) >= STALL_SECONDS;
+}
+
 /** True when the run has said nothing but its status: an older API or worker. */
 export function hasProgress(run: ImportRun): boolean {
   return run.phase !== undefined || run.progress !== undefined;
@@ -212,7 +221,7 @@ export function ImportProgressPanel({
   const minutes = useSettledEta(run);
   const queued = run.started_at === undefined && run.phase === undefined;
   const idle = run.idle_seconds ?? 0;
-  const stalled = !queued && idle >= STALL_SECONDS;
+  const stalled = panelStalled(run);
   const phase = run.phase
     ? t(`import.phase.${run.phase}`, { type: typeName(t, run.phase_object) })
     : waiting;

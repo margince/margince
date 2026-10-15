@@ -152,6 +152,43 @@ describe("the test run", () => {
     );
   });
 
+  it("does not say every row is in the CRM when the file held no rows", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 0,
+          disposition: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByRole("button", { name: "Import 0 rows" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Nothing to import")).toBeNull();
+  });
+
+  it("points at problems.csv before Done when rows were skipped", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 2, skipped: 1 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText(/Download problems\.csv before/),
+    ).toBeVisible();
+  });
+
   it("polls a validating run until its report arrives", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

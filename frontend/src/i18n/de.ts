@@ -6001,7 +6001,7 @@ export const de = {
   "import.progress.links": "Verknüpfungen",
   "import.progress.overall": "Alle Dateien",
   "import.progress.total": "{done} von {total} Zeilen",
-  "import.progress.reversed": "{done} von {total} Zeilen rückgängig gemacht",
+  "import.progress.reversed": "{done} von {total} Zeilen verarbeitet",
   "import.progress.rate": "{rate} Zeilen/s",
   "import.progress.elapsed": "{span} vergangen",
   "import.progress.etaObject": "noch etwa {minutes} Min. für {type}",
@@ -6058,6 +6058,8 @@ export const de = {
   "import.test.nothing.title": "Nichts zu importieren",
   "import.test.nothing.body":
     "Jede Zeile ist schon im CRM oder oben als Problem aufgeführt. Es wurde nichts geschrieben.",
+  "import.test.nothing.skipped":
+    "Lade problems.csv herunter, bevor du auf Fertig klickst: Die Datei nennt die übersprungenen Zeilen und warum.",
   "import.test.nothing.done": "Fertig",
   "import.test.reupload": "Korrigieren und neu hochladen",
   "import.test.issuesUnit": "Probleme",
