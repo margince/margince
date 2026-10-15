@@ -68,7 +68,6 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 		return deployconfig.Config{}, err
 	}
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
-	cfg.listsEnabled = deployCfg.Lists.Enabled
 	cfg.csvImportCap = deployCfg.EffectiveUploads().CSVImport
 	return deployCfg, nil
 }

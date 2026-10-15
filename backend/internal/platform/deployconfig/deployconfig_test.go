@@ -136,27 +136,6 @@ func TestAllowTestMailboxGateDefaultsOff(t *testing.T) {
 
 // Lists ship on: an installation whose files never mention them has them, and
 // an operator who writes `enabled: false` in either file switches them off.
-func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
-	absent, err := Load(filepath.Join(t.TempDir(), "absent.yaml"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parsed, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !absent.Lists.Enabled || !parsed.Lists.Enabled {
-		t.Fatalf("lists.enabled unset: Load=%v Parse=%v, want both on", absent.Lists.Enabled, parsed.Lists.Enabled)
-	}
-	off, err := Load(writeTemp(t, "version: 1\nlists:\n  enabled: false\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if off.Lists.Enabled {
-		t.Fatal("lists.enabled: false must switch lists off")
-	}
-}
-
 // The retention posture defaults to the historical behaviour byte for byte: an
 // omitted block, an empty value and the explicit `standard` all leave storage
 // limitation enforcing. An installation under a keep-everything obligation is

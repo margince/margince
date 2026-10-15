@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 	Web            Web             `yaml:"web"`
@@ -71,12 +70,6 @@ type Operations struct {
 	// also holds a real gmail/graph grant still sends through that one —
 	// SendableMailProvider picks the first alphabetically capable provider.
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
-}
-
-// Lists switches Live Lists and Shortlists. They are on unless an operator
-// writes `enabled: false`, which hides every list surface and deletes no list.
-type Lists struct {
-	Enabled bool `yaml:"enabled"`
 }
 
 // Workspace names the installation's singleton workspace — the tenant every
@@ -262,7 +255,7 @@ func decodeRoots(raw []byte, cfg *Config) error {
 // compiledDefaults is the layer under every file: what an installation runs
 // with for each key its files leave unwritten.
 func compiledDefaults() Config {
-	return Config{Version: 1, Lists: Lists{Enabled: true}}
+	return Config{Version: 1}
 }
 
 func (c Config) validate() error {

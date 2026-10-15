@@ -120,3 +120,13 @@ func TestRetiredReportingConfigurationStillLoads(t *testing.T) {
 		t.Fatalf("a file carrying analytics.performance_enabled must still load: %v", err)
 	}
 }
+
+func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
+	t.Parallel()
+	if !config.Val(configtest.MustLoad(t, "version: 1\n", ps.FileSettings()...), ps.ListsEnabled) {
+		t.Fatal("lists.enabled unset switched lists off, want on")
+	}
+	if config.Val(configtest.MustLoad(t, "version: 1\nlists:\n  enabled: false\n", ps.FileSettings()...), ps.ListsEnabled) {
+		t.Fatal("lists.enabled: false must switch lists off")
+	}
+}
