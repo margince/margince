@@ -184,7 +184,7 @@
 }
 
 .import__select {
-  flex: 1 1 9rem;
+  flex: 1 1 5rem;
   min-inline-size: 0;
 }
 
@@ -198,6 +198,17 @@
 
 /* The footer is a row of the card's own width, so its call to action stands on
    the card's end edge, not at the end of its own content. */
+/* A rung's name stays on one line, and the track between rungs is shorter, so
+   the last rung never drops under its own connector on a narrow card. */
+.import-wizard .stage-ladder-step > .btn,
+.import-wizard .stage-ladder-here {
+  white-space: nowrap;
+}
+
+.import-wizard .stage-ladder-sep {
+  inline-size: var(--space-3);
+}
+
 .import__footer {
   align-self: stretch;
 }

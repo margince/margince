@@ -78,9 +78,9 @@ var Columns = withActivityColumns(map[string]Column{
 		Vi: "Người đã viết hồ sơ trong hệ thống nguồn, giữ nguyên như ở đó. Nếu là email của một thành viên Margince, hồ sơ sẽ ghi tên thành viên đó. Chỉ được ghi khi dòng tạo hồ sơ mới.",
 	}, Example: same("mai@yourcompany.com · Mai Nguyen")},
 	"owner_email": {Description: langcopy.Phrase{
-		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so.",
-		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin.",
-		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này.",
+		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so. A lead stays unassigned.",
+		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin. Ein Lead bleibt nicht zugewiesen.",
+		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này. Lead vẫn chưa giao.",
 	}, Example: same("mai@yourcompany.com")},
 	"tags": {Description: langcopy.Phrase{
 		En: "Tags, separated by semicolons. Tags that do not exist yet are created, and the import preview lists them.",

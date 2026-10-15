@@ -38,6 +38,12 @@ const STEPS: readonly WizardStep[] = [
   "result",
 ];
 
+function stagedHint(wizard: ImportWizardState) {
+  return wizard.step === "result"
+    ? "import.step.hintDone"
+    : "import.step.hintStaged";
+}
+
 /** The run flow's page: it owns the flow's state and draws the flow. */
 export function ImportWizardPage() {
   const wizard = useImportWizard();
@@ -96,9 +102,7 @@ export function ImportWizard({
         label={t("import.step.label")}
         hint={
           <span id={hintId}>
-            {wizard.editable
-              ? t("import.step.hint")
-              : t("import.step.hintStaged")}
+            {wizard.editable ? t("import.step.hint") : t(stagedHint(wizard))}
           </span>
         }
         steps={STEPS.map((step, index) => {

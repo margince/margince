@@ -85,6 +85,11 @@ export function partsOf(
   );
 }
 
+/** The issue list, tolerant of a report that sends none. */
+function issuesOf(report: ImportReport): readonly ImportRowIssue[] {
+  return report.issues ?? [];
+}
+
 function countOf(
   issues: readonly ImportRowIssue[],
   ...kinds: ImportProblemKind[]
@@ -169,15 +174,17 @@ function TestRunBody({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const invalid = countOf(report.issues, "invalid_value");
-  const linkless = countOf(report.issues, "broken_link", "dropped_link");
+  const invalid = countOf(issuesOf(report), "invalid_value");
+  const linkless = countOf(issuesOf(report), "broken_link", "dropped_link");
   const restaging = wizard.test.isPending;
   const closedWon = sumOf(report, "closed_won");
   const closedLost = sumOf(report, "closed_lost");
   const closed = closedWon + closedLost;
   const landing = report.disposition.created + report.disposition.updated;
+  // Rows with a broken link can still land, but only once the box is ticked.
   const nothingToWrite =
-    report.rows_read > 0 && landing === 0 && linkless === 0;
+    report.rows_read > 0 && landing === 0 && (linkless === 0 || !wizard.anyway);
+  const nothingLands = landing === 0 && !wizard.anyway;
   const skippedRows = report.disposition.skipped > 0;
   return (
     <div className="import">
@@ -219,7 +226,7 @@ function TestRunBody({
           {t("import.test.invalidBody")}
         </Callout>
       ) : null}
-      <ProblemTable issues={report.issues} />
+      <ProblemTable issues={issuesOf(report)} />
       {linkless > 0 ? (
         <Checkbox
           checked={wizard.anyway}
@@ -258,7 +265,7 @@ function TestRunBody({
             ) : (
               <Button
                 variant="primary"
-                disabled={restaging}
+                disabled={restaging || nothingLands}
                 pending={wizard.approve.isPending}
                 busyLabel={t("import.importing")}
                 onClick={() => {
@@ -276,7 +283,9 @@ function TestRunBody({
           </>
         }
       >
-        {report.issues.length > 0 ? <ProblemsDownload runId={runId} /> : null}
+        {issuesOf(report).length > 0 ? (
+          <ProblemsDownload runId={runId} />
+        ) : null}
       </ActionRow>
       {wizard.approve.error ? (
         <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>

@@ -167,8 +167,54 @@ describe("the test run", () => {
     await renderAtTestRun(user);
     expect(
       await screen.findByRole("button", { name: "Import 0 rows" }),
-    ).toBeVisible();
+    ).toBeDisabled();
     expect(screen.queryByText("Nothing to import")).toBeNull();
+  });
+
+  it("reads a report that sends no issue list as a clean one", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 3, skipped: 0 },
+          issues: null,
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+  });
+
+  it("offers no Import 0 rows while only broken-link rows remain, and imports them once the box is ticked", async () => {
+    const user = userEvent.setup();
+    let tests = 0;
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 1,
+          disposition: { created: 0, updated: 0, unchanged: 0, skipped: 1 },
+          issues: [bundleReportFixture.issues[0]],
+        }),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({
+          ...run,
+          on_broken_link: tests > 1 ? "drop_link" : "skip_row",
+        }),
+      [`POST /imports/${run.id}/validate`]: () => {
+        tests += 1;
+        return jsonResponse({ ...run, status: "validating" }, 202);
+      },
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Import 0 rows" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
+    expect(
+      await screen.findByRole("button", { name: /^Import anyway/ }),
+    ).toBeEnabled();
   });
 
   it("points at problems.csv before Done when rows were skipped", async () => {

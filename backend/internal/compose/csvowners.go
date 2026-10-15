@@ -153,7 +153,8 @@ func ownerFrom(fields map[string]string, typed map[string]any) *ids.UserID {
 func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.ImportRowIssue {
 	first := map[string]int{}
 	counts := map[string]int{}
-	var out []crmcontracts.ImportRowIssue
+	// Non-nil: an empty list is `[]` on the wire, never null.
+	out := make([]crmcontracts.ImportRowIssue, 0, len(issues))
 	for _, issue := range issues {
 		if issue.Kind == nil || string(*issue.Kind) != migration.ProblemUnknownOwner {
 			out = append(out, issue)

@@ -6119,6 +6119,8 @@ export const en = {
   "import.map.testStopped": "Test run stopped",
   "import.step.hintStaged":
     "A test run is staged, so the files and the map are fixed. Fix and re-upload starts again.",
+  "import.step.hintDone":
+    "This import is finished, so its files and map are fixed.",
   "import.progress.waiting": "Waiting",
   "import.progress.running": "In progress",
   "import.progress.done": "Done",
@@ -6298,7 +6300,7 @@ export const en = {
   "import.reason.owner_refused":
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
-    "No user has this email, so you become the owner. Rows naming it: {rows}.",
+    "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
   "import.reason.phone_needs_country":
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":

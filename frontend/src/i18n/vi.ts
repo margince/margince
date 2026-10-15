@@ -5845,6 +5845,7 @@ export const vi = {
   "import.map.testStopped": "Chạy thử đã dừng",
   "import.step.hintStaged":
     "Đã tạo lần chạy thử nên tệp và ánh xạ đã cố định. Sửa và tải lại sẽ bắt đầu lại.",
+  "import.step.hintDone": "Lần nhập đã hoàn tất nên tệp và ánh xạ đã cố định.",
   "import.progress.waiting": "Đang chờ",
   "import.progress.running": "Đang chạy",
   "import.progress.done": "Xong",
@@ -6025,7 +6026,7 @@ export const vi = {
   "import.reason.owner_refused":
     "Bạn không thể đặt thành viên này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
   "import.reason.owner_unknown":
-    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu. Số hàng nêu email này: {rows}.",
+    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
   "import.reason.phone_needs_country":
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":

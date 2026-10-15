@@ -53,7 +53,7 @@ These skip the row:
 - a record type you may not create, or a change to a record you may not edit.
 
 These stop nothing. The row lands, and the problem is listed:
-- an owner email that no user has (**Unknown owner**): you become the owner;
+- an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
 - a tag that does not exist yet (**New tag**): the import creates it;
 - a company name that is already in Margince: the import creates a second company and files the pair for review (**Duplicate**).
 Also called: rows skipped, import errors, why was my row not imported.
@@ -91,7 +91,7 @@ A row without a `ref` is matched by a company's display name, or by a contact's 
 Also called: ID from another system, key column, record ID from my old system.
 
 ### How do owners, tags and custom fields import?
-- **Owner:** put the email of a Margince user in `owner_email`. If no user has it, you become the owner. The test run lists each such address once, with the number of rows that name it.
+- **Owner:** put the email of a Margince user in `owner_email`. If no user has it, you become the owner; a lead stays unassigned. The test run lists each such address once, with the number of rows that name it.
 - **Tags:** separate tags with `;` in `tags`. A new tag is created, and the test run lists it. A tag column only adds tags, and never removes one. **Tag for this import** files every record the import creates under one more tag. Records it only updates keep their own tags.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.

@@ -4,6 +4,8 @@
 package compose
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -46,5 +48,25 @@ func TestRowsNamingOneUnknownOwnerAreOneWarningWithTheirCount(t *testing.T) {
 	}
 	if *got[0].Line != 2 {
 		t.Errorf("the warning sits on line %d, want the first row that names the address", *got[0].Line)
+	}
+}
+
+// A clean file has no issues, and the wire says so with an empty list: a
+// null would break every reader that counts them.
+func TestACleanReportSendsAnEmptyIssueList(t *testing.T) {
+	report := migration.Report{Objects: []migration.ObjectReport{{Object: migration.ObjectCompany, MirrorCount: 2, Unchanged: 2}}}
+	got := toContractImportReport(migration.Run{
+		Status: migration.StatusAwaitingApproval, Report: &report,
+		Mapping: &migration.RunMapping{Object: migration.ObjectCompany},
+	})
+	wire, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(wire), `"issues":[]`) {
+		t.Fatalf("report wire = %s, want issues as an empty list", wire)
+	}
+	if collapseUnknownOwners(nil) == nil {
+		t.Fatal("collapsing no issues answered nil")
 	}
 }

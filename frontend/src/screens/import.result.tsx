@@ -251,7 +251,9 @@ function ResultBody({
           </>
         }
       >
-        {report.issues.length > 0 ? <ProblemsDownload runId={run.id} /> : null}
+        {(report.issues ?? []).length > 0 ? (
+          <ProblemsDownload runId={run.id} />
+        ) : null}
         {run.status === "complete" ? (
           <Button variant="danger" onClick={() => setAsking(true)}>
             {t("import.result.undo")}

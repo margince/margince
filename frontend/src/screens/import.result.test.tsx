@@ -188,6 +188,27 @@ describe("the import and its result", () => {
     }
   });
 
+  it("reads a finished import whose report sends no issue list, and says it is finished", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "complete" }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({
+          ...dryRun,
+          run_id: "r1",
+          status: "complete",
+          issues: null,
+        }),
+    });
+    renderAtImport("r1");
+    expect(await screen.findByText("Import complete")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "problems.csv" })).toBeNull();
+    expect(screen.queryByText(/A test run is staged/)).toBeNull();
+    expect(
+      screen.getByText(/This import is finished, so its files and map/),
+    ).toBeInTheDocument();
+  });
+
   it("counts what each file wrote and the rows it left out", async () => {
     stubRoutes({
       "GET /imports/r1": () =>
