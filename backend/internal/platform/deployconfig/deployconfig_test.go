@@ -12,7 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 const fullConfig = `
@@ -86,7 +85,7 @@ func TestParseValidatesFailClosed(t *testing.T) {
 }
 
 func TestLoadMissingFileBootsExistingInstallation(t *testing.T) {
-	cfg, err := Load(filepath.Join(t.TempDir(), "does-not-exist.yaml"), runtimeenv.Production)
+	cfg, err := LoadBootstrap(filepath.Join(t.TempDir(), "does-not-exist.yaml"))
 	if err != nil {
 		t.Fatalf("missing file must not be an error (it cannot bootstrap, only bind): %v", err)
 	}
@@ -100,7 +99,7 @@ func TestLoadMissingFileBootsExistingInstallation(t *testing.T) {
 // new deployment (and every `make dev`, which copies it) a config that fails at
 // boot. It also guards the now-active rates block against a typo.
 func TestShippedExampleConfigParses(t *testing.T) {
-	if _, err := Load("../../../../config/margince.example.yaml", runtimeenv.Production); err != nil {
+	if _, err := LoadBootstrap("../../../../config/margince.example.yaml"); err != nil {
 		t.Fatalf("config/margince.example.yaml no longer parses: %v", err)
 	}
 }

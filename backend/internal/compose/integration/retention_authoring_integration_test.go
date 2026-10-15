@@ -325,7 +325,7 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: "Regulated Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{

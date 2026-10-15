@@ -87,7 +87,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	defer pool.Close()
 
-	deployCfg, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
+	bootstrap, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// where the client it shares is opened.
 	shareThroughRedis(ctx, rdb)
 
-	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
+	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, bootstrap, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// The model path comes back already bound to volumeMeter (MCP-SESS-COST);
 	// boot.go carries why that binding belongs with the path, not here.
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context
-	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, deployCfg, pool, logger, volumeMeter)
+	modelOpts, modelPath, err := modelAndHandoffOptions(ctx, cfg, bootstrap, pool, logger, volumeMeter)
 	if err != nil {
 		return err
 	}

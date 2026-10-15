@@ -290,7 +290,7 @@ func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 	var logged strings.Builder
 	log := slog.New(slog.NewTextHandler(&logged, nil))
 	// No BootstrapAdmin: this is the claim path.
-	cfg := deployconfig.Config{Version: 1}
+	cfg := deployconfig.Bootstrap{Version: 1}
 	if err := compose.EnsureInstallation(ctx, e.Pool, log, cfg); err != nil {
 		t.Fatalf("an unprovisioned boot with no bootstrap_admin failed: %v — it must mint a token and serve, not refuse to start", err)
 	}
@@ -374,7 +374,7 @@ func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T
 
 	var logged strings.Builder
 	log := slog.New(slog.NewJSONHandler(&logged, nil))
-	if err := compose.EnsureInstallation(ctx, e.Pool, log, deployconfig.Config{Version: 1}); err != nil {
+	if err := compose.EnsureInstallation(ctx, e.Pool, log, deployconfig.Bootstrap{Version: 1}); err != nil {
 		t.Fatalf("a boot whose token file could not be written must still serve, so the operator can claim: %v", err)
 	}
 

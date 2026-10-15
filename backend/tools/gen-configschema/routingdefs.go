@@ -18,8 +18,7 @@ import (
 // under `seeds.ai_routing` — and, once an installation is running, in the
 // database — so its shape belongs where the thing it describes is written.
 //
-// Held as literals rather than assembled through the builder the rest of this
-// generator uses: these descriptions are hand-tuned and the key order is
+// Held as literals: these descriptions are hand-tuned and the key order is
 // deliberate, and round-tripping them would churn the file on every
 // regeneration for no reader's benefit. What is NOT literal is the tier enum,
 // which comes from the task contract through ai.AllTiers, and the provider

@@ -104,16 +104,16 @@ func asJSONValue(t *testing.T, path string) any {
 	return value
 }
 
-// Every key the LOADER accepts is a key the schema accepts.
+// Every key the loaders read is a key the schema accepts, and every section
+// key the schema accepts is one a program reads.
 //
-// The schema says additionalProperties:false, mirroring the loader's
-// KnownFields(true) — which makes an omission an active lie rather than a
-// silence: a section missing here is reported to the operator as an unknown key
-// while the server reads it happily. Derived from the struct rather than a list
-// somebody remembers to extend: this walk IS what keeps the generated file and
-// the struct together, so it derives its list from the struct rather than
-// restating one.
-func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
+// The schema says additionalProperties:false, so an omission is an active lie:
+// an editor flags a key the server reads. The bootstrap roots are walked from
+// deployconfig.Bootstrap, and the settings from the program registries, rather
+// than from a list somebody remembers to extend. A flat setting key (redis,
+// dsn) is a boot flag's name, which the schema does not describe yet; every
+// dotted key is a margince.yaml section the schema must carry.
+func TestTheSchemaAndTheLoadersAgreeOnEveryKey(t *testing.T) {
 	t.Parallel()
 	raw, err := os.ReadFile(configSchemaPath)
 	if err != nil {
@@ -123,10 +123,67 @@ func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}
-	missing := missingFields(reflect.TypeFor[deployconfig.Config](), doc, "")
-	for _, m := range missing {
+	for _, m := range missingFields(reflect.TypeFor[deployconfig.Bootstrap](), doc, "") {
 		t.Errorf("margince.yaml accepts %s and the schema does not — an editor would flag a key the server reads", m)
 	}
+	settingKeys := map[string]bool{}
+	for _, reg := range compose.ProgramRegistries() {
+		for _, s := range reg.All() {
+			settingKeys[s.Key()] = true
+			if strings.Contains(s.Key(), ".") && !schemaHasPath(doc, s.Key()) {
+				t.Errorf("margince.yaml accepts %s and the schema does not — an editor would flag a key the server reads", s.Key())
+			}
+		}
+	}
+	if len(settingKeys) == 0 {
+		t.Fatal("no setting in any program registry; this gate would check nothing")
+	}
+	props, _ := doc["properties"].(map[string]any)
+	for root, node := range props {
+		if deployconfig.Roots()[root] {
+			continue
+		}
+		for _, key := range schemaLeaves(node, root, settingKeys) {
+			t.Errorf("the schema accepts %s, which no program reads — an editor would pass a key the server refuses", key)
+		}
+	}
+}
+
+// schemaHasPath follows a dotted key down the schema's properties. A $ref is
+// followed no further: the routing subtree has its own gate.
+func schemaHasPath(node map[string]any, key string) bool {
+	for part := range strings.SplitSeq(key, ".") {
+		if _, isRef := node["$ref"]; isRef {
+			return true
+		}
+		props, _ := node["properties"].(map[string]any)
+		child, ok := props[part].(map[string]any)
+		if !ok {
+			return false
+		}
+		node = child
+	}
+	return true
+}
+
+// schemaLeaves names the keys under path that no setting declares. A setting
+// key ends the walk, since a struct setting's own fields belong to it.
+//
+//craft:ignore naked-any a decoded JSON Schema node, whose shape varies by keyword
+func schemaLeaves(node any, path string, settingKeys map[string]bool) []string {
+	if settingKeys[path] {
+		return nil
+	}
+	m, _ := node.(map[string]any)
+	props, ok := m["properties"].(map[string]any)
+	if !ok {
+		return []string{path}
+	}
+	var out []string
+	for name, child := range props {
+		out = append(out, schemaLeaves(child, path+"."+name, settingKeys)...)
+	}
+	return out
 }
 
 // missingFields walks the struct beside the schema and names what the schema
@@ -183,13 +240,14 @@ bootstrap_admin: null
 uploads:
   attachment_mb: null
 `
-	// Through deployconfig.Parse, which is what the server actually calls:
-	// decoding ALONE is a weaker claim, because Parse also validates, and a
-	// schema matched against the decoder would accept a file the loader goes on
-	// to reject. If this ever stops being accepted the test fails here, on the
-	// premise, rather than quietly asserting a rule nobody holds any more.
+	// Through both loaders the server runs: decoding alone is a weaker claim,
+	// because each also validates. If this stops being accepted the test fails
+	// here, on the premise, rather than asserting a rule nobody holds.
 	if _, err := deployconfig.Parse([]byte(withNulls)); err != nil {
-		t.Fatalf("the loader refuses an explicit null — this test's premise is gone: %v", err)
+		t.Fatalf("the bootstrap loader refuses an explicit null — this test's premise is gone: %v", err)
+	}
+	if _, err := configtest.Load(t, withNulls, nil, nil, compose.UploadAttachmentMB); err != nil {
+		t.Fatalf("the settings loader refuses an explicit null — this test's premise is gone: %v", err)
 	}
 
 	var doc any

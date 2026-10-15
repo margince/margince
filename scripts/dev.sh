@@ -847,7 +847,7 @@ log_colour=0
 # effective_flag KEY — what the api will see for a boolean key, printed as
 # "true", "false", or "" when neither file names it (the compiled default).
 #
-# The overlay is consulted first because MARGINCE_ENV=dev makes it the winning
+# The dev file is consulted first because it is the --config-file, the winning
 # layer, and a key it names decides even when it names `false`. Both files are
 # grepped rather than parsed: this is a status line, and a shell YAML parser
 # would be a second implementation of the loader that could disagree with it.
@@ -1143,7 +1143,7 @@ up)
   # The model binding is a stored setting, planted at bootstrap from
   # `seeds.ai_routing`; there is no routing file to seed any more. Which file
   # declares it decides which providers this stack binds, and the layering picks
-  # the winner: the posture overlay is applied AFTER the base, so if
+  # the winner: the --config-file is read AFTER the base, so if
   # config/margince.dev.yaml declares the key it wins over the engineer's own
   # config/margince.yaml.
   #
@@ -1311,10 +1311,10 @@ up)
   # Report which deployment config the api + worker are using, and its AI
   # posture — mirrors the ai-routing line above so both configs are visible.
   #
-  # Both keys are read the way the api reads them: the dev overlay first,
-  # because it wins, and the base only for a key the overlay is silent about. A
+  # Both keys are read the way the api reads them: the dev file first,
+  # because it wins, and the base only for a key the dev file is silent about. A
   # status line that reported the base alone would contradict the running
-  # process the moment anyone used the overlay for what it is for.
+  # process the moment anyone used the dev file for what it is for.
   if [[ "$(effective_flag capture_payloads)" == "true" ]]; then
     capture_note="ai.capture_payloads ON"
   else

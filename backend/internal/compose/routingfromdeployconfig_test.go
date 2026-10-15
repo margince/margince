@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 func writeConfig(t *testing.T, body string) string {
@@ -45,7 +44,7 @@ seeds:
 // a record's identity, so taking it from anywhere else would file the record
 // under an environment class nobody declared.
 func TestRoutingFromDeployConfigReadsTheDeclaredBinding(t *testing.T) {
-	routing, err := RoutingFromDeployConfig(writeConfig(t, boundConfig), runtimeenv.Development)
+	routing, err := RoutingFromDeployConfig(writeConfig(t, boundConfig))
 	if err != nil {
 		t.Fatalf("reading a config that declares a binding: %v", err)
 	}
@@ -61,13 +60,13 @@ func TestRoutingFromDeployConfigReadsTheDeclaredBinding(t *testing.T) {
 	}
 }
 
-// A path that is not there is reported AS a missing file. deployconfig.Load
-// tolerates an absent layer, which is right for an optional overlay and wrong
-// here — a typo would otherwise be reported as "declares no seeds.ai_routing"
+// A path that is not there is reported AS a missing file.
+// deployconfig.LoadBootstrap tolerates an absent file, which is right for a boot
+// and wrong here — a typo would otherwise be reported as "declares no seeds.ai_routing"
 // and send an operator to edit a file that does not exist.
 func TestRoutingFromDeployConfigNamesAMissingFile(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "not-here.yaml")
-	_, err := RoutingFromDeployConfig(missing, runtimeenv.Development)
+	_, err := RoutingFromDeployConfig(missing)
 	if err == nil {
 		t.Fatal("an absent config was accepted; the run would have failed later and blamed the file's contents")
 	}
@@ -83,7 +82,7 @@ func TestRoutingFromDeployConfigNamesAMissingFile(t *testing.T) {
 // bootstrap where binding nothing is the ordinary case: a certification run has
 // no default to fall back on, and there is no model to measure.
 func TestRoutingFromDeployConfigRefusesAConfigThatBindsNothing(t *testing.T) {
-	_, err := RoutingFromDeployConfig(writeConfig(t, "# a deployment that binds no model, which is the ordinary case at bootstrap\n"), runtimeenv.Development)
+	_, err := RoutingFromDeployConfig(writeConfig(t, "# a deployment that binds no model, which is the ordinary case at bootstrap\n"))
 	if err == nil {
 		t.Fatal("a config declaring no binding was accepted; the run would have spent its setup before failing on the first call")
 	}
@@ -107,7 +106,7 @@ func TestRoutingFromDeployConfigRefusesAConfigThatBindsNothing(t *testing.T) {
 // passed on THIS error instead, which is a test passing for a reason it did not
 // name.
 func TestRoutingFromDeployConfigReportsARefusedBinding(t *testing.T) {
-	_, err := RoutingFromDeployConfig(writeConfig(t, "seeds:\n  ai_routing:\n    profile: eu_hosted\n    tiers:\n      local_small: { provider: openai_compatible, model: x, base_url: https://broker.example/api }\n"), runtimeenv.Development)
+	_, err := RoutingFromDeployConfig(writeConfig(t, "seeds:\n  ai_routing:\n    profile: eu_hosted\n    tiers:\n      local_small: { provider: openai_compatible, model: x, base_url: https://broker.example/api }\n"))
 	if err == nil {
 		t.Fatal("a routing block with no embeddings lane was accepted; the router requires one and would have failed at assembly")
 	}

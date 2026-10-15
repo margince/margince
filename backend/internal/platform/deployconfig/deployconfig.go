@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package deployconfig loads the installation's deployment configuration
-// file (`margince.yaml`, A107/ADR-0061). It carries bootstrap and
-// authentication, and a small set of operator-posture runtime switches
-// (e.g. ai.capture_payloads) that are deployment choices rather than
-// secrets or per-request settings. Decoding is strict (an unknown key is a
-// boot error, never a silent ignore) and secrets arrive only as `*_file`
-// references (OPS-CFG-3): the file itself never carries a credential.
+// Package deployconfig reads what an installation is created with: the
+// workspace, the first administrator and the seeds of margince.yaml. Every
+// other key of the file is a setting config.Load reads. A seed is consumed
+// once, when the workspace is created, and the database is authoritative
+// afterwards. Decoding is strict (an unknown key inside these roots is a boot
+// error) and the admin password arrives only as a reference.
 package deployconfig
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -24,11 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// Config is the root of margince.yaml. Every section beyond `version` is
-// optional: a missing file (or one holding only `version: 1`) boots an
-// already-bootstrapped installation; bootstrap of an empty database
-// additionally requires `company` and `bootstrap_admin`.
-type Config struct {
+// Bootstrap is the four roots of margince.yaml this package reads. Every one
+// beyond `version` is optional: a missing file boots an already-bootstrapped
+// installation, and bootstrapping an empty database needs `workspace` and
+// `bootstrap_admin`.
+type Bootstrap struct {
 	Version        int             `yaml:"version"`
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
@@ -167,61 +162,7 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Parse strictly decodes and validates a single configuration document.
-// Unknown fields, invalid values, and incompatible combinations are errors — a
-// typo must never silently disable authentication.
-//
-// One document: what a running process reads is the base file plus its
-// posture's overlay, which is Load in layers.go.
-func Parse(raw []byte) (Config, error) {
-	cfg := compiledDefaults()
-	if err := decodeRoots(raw, &cfg); err != nil && !errors.Is(err, io.EOF) {
-		return Config{}, fmt.Errorf("deployconfig: %w", err)
-	}
-	if err := cfg.validate(); err != nil {
-		return Config{}, err
-	}
-	return cfg, nil
-}
-
-// decodeRoots strictly decodes the roots this package owns and leaves every
-// other root to config.Load, which owns the settings.
-func decodeRoots(raw []byte, cfg *Config) error {
-	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		return err
-	}
-	if len(doc.Content) == 0 {
-		return io.EOF
-	}
-	// An anchor may sit in a root this drops, so aliases resolve first.
-	resolveSeedAliases(&doc)
-	if root := doc.Content[0]; root.Kind == yaml.MappingNode {
-		owned := Sections()
-		kept := root.Content[:0]
-		for i := 0; i+1 < len(root.Content); i += 2 {
-			if owned[root.Content[i].Value] {
-				kept = append(kept, root.Content[i], root.Content[i+1])
-			}
-		}
-		root.Content = kept
-	}
-	var buf bytes.Buffer
-	if err := yaml.NewEncoder(&buf).Encode(&doc); err != nil {
-		return err
-	}
-	dec := yaml.NewDecoder(&buf)
-	dec.KnownFields(true)
-	return dec.Decode(cfg)
-}
-
-// compiledDefaults is the layer under every file: what an installation runs
-// with for each key its files leave unwritten.
-func compiledDefaults() Config {
-	return Config{Version: 1}
-}
-
-func (c Config) validate() error {
+func (c Bootstrap) validate() error {
 	if c.Version != 1 {
 		return fmt.Errorf("deployconfig: unsupported version %d (this build supports version 1)", c.Version)
 	}
@@ -246,10 +187,7 @@ func (c Config) validate() error {
 			return err
 		}
 	}
-	if err := c.Seeds.validate(); err != nil {
-		return err
-	}
-	return nil
+	return c.Seeds.validate()
 }
 
 func (b BootstrapAdmin) validate() error {

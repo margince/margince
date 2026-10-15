@@ -48,7 +48,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // routingSeedActor names the boot in the audit trail when a stored binding is
@@ -354,15 +353,15 @@ func singletonWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, erro
 // run the CRUD — and a certification run has none: there is no model to measure,
 // and returning an empty config would spend the run's setup before failing on
 // the first call.
-func RoutingFromDeployConfig(path string, env runtimeenv.Environment) (ai.RoutingConfig, error) {
-	// Stat first. deployconfig.Load TOLERATES an absent layer — that is right for
-	// an optional overlay and wrong here, where the path is the whole instruction:
-	// a typo would otherwise be reported as "declares no seeds.ai_routing", which
-	// sends an operator to edit a file that does not exist.
+func RoutingFromDeployConfig(path string) (ai.RoutingConfig, error) {
+	// Stat first. LoadBootstrap tolerates an absent file, which is right for a
+	// boot and wrong here, where the path is the whole instruction: a typo would
+	// otherwise be reported as "declares no seeds.ai_routing", which sends an
+	// operator to edit a file that does not exist.
 	if _, err := os.Stat(path); err != nil {
 		return ai.RoutingConfig{}, fmt.Errorf("compose: reading the deployment config %s: %w", path, err)
 	}
-	cfg, err := deployconfig.Load(path, env)
+	cfg, err := deployconfig.LoadBootstrap(path)
 	if err != nil {
 		return ai.RoutingConfig{}, fmt.Errorf("compose: reading the deployment config %s: %w", path, err)
 	}

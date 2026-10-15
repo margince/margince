@@ -45,7 +45,7 @@ import (
 // 1 → bind; >1 → refuse with the operator-facing invariant error.
 // Restarts are idempotent — bootstrap values never reconcile into an
 // existing workspace.
-func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Config) error {
+func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Bootstrap) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
 		if cfg.Workspace.Name == "" {

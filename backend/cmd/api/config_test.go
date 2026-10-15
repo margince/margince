@@ -305,3 +305,25 @@ func TestTheAPIAcceptsAYAMLKeyOnlyTheWorkerReads(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// An old per-posture overlay beside the base file is no longer read. Booting
+// past it would drop whatever it armed without a word, so the boot stops and
+// says how to keep it.
+func TestAnOverlayBesideTheBaseFileStopsTheBoot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	base := filepath.Join(dir, "margince.yaml")
+	mustWrite(t, base, "version: 1\n")
+	mustWrite(t, filepath.Join(dir, "margince.dev.yaml"), "version: 1\n")
+	_, _, err := loadAPIConfig([]string{"--config", base, "--dsn", "x"}, []string{"MARGINCE_ENV=dev"})
+	if err == nil || !strings.Contains(err.Error(), "overlay files are no longer read; pass it with --config-file") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func mustWrite(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+}

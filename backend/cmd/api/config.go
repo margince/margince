@@ -21,11 +21,10 @@ import (
 
 // apiConfig is the parsed boot configuration of the api process.
 type apiConfig struct {
-	dsn        string
-	configPath string
-	schemaDSN  string
-	addr       string
-	redisAddr  string
+	dsn       string
+	schemaDSN string
+	addr      string
+	redisAddr string
 	// redisPassword is the bus credential, empty where the instance requires
 	// none. The bus carries job payloads and therefore CRM data, so an
 	// instance reachable by anything but this deployment has to require one —
@@ -59,8 +58,7 @@ type apiConfig struct {
 	geocodeBaseURL        string
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
-	// It selects the configuration overlay and which license authorities are
-	// honoured; it decides nothing destructive — see shared/runtimeenv.
+	// It selects which license authorities are honoured; it decides nothing destructive — see shared/runtimeenv.
 	posture        runtimeenv.Environment
 	trustedProxies httpserver.TrustedProxies
 	// settings are the loaded settings, for the reads compose makes itself.
@@ -86,7 +84,7 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 		Environ:        environ,
 		KnownKey:       compose.AllSettingKeys,
 		KnownEnv:       compose.AllSettingEnvs,
-		BootstrapRoots: deployconfig.Sections(),
+		BootstrapRoots: deployconfig.Roots(),
 		Faults:         func(c *config.Config) []error { return apiFaults(c, posture) },
 	})
 	if errors.Is(err, flag.ErrHelp) {
@@ -106,7 +104,7 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 // cmd/api reads.
 func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiConfig, error) {
 	cfg := apiConfig{
-		dsn: config.Val(loaded, dbsettings.DSN), configPath: loaded.Files().Base, schemaDSN: config.Val(loaded, ps.SchemaDSN),
+		dsn: config.Val(loaded, dbsettings.DSN), schemaDSN: config.Val(loaded, ps.SchemaDSN),
 		addr: config.Val(loaded, ps.Addr), redisAddr: config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
 		inlineRelay: config.Val(loaded, ps.InlineRelay), routingPath: config.Val(loaded, ps.AIRouting), fakeBrain: config.Val(loaded, ps.AIFake),
 		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),

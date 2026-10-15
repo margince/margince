@@ -112,12 +112,18 @@ func SettingsCatalogForTest() []SettingSpec {
 	return out
 }
 
-// DeploymentConfigKeysForTest returns every dotted yaml path in the
-// deployment-config schema, so the surface-disjointness gate compares against
-// the STRUCT rather than the illustrative example file — which omits whole
-// sections and would let the check pass vacuously.
+// DeploymentConfigKeysForTest returns every dotted yaml path margince.yaml
+// takes: the bootstrap struct's, and every boot setting's key. Derived rather
+// than read off the example file, which omits whole sections and would let the
+// surface-disjointness gate pass vacuously.
 func DeploymentConfigKeysForTest() map[string]bool {
-	return yamlPaths(reflect.TypeFor[deployconfig.Config](), "")
+	keys := yamlPaths(reflect.TypeFor[deployconfig.Bootstrap](), "")
+	for _, s := range allSettings() {
+		if !s.Stored() {
+			keys[s.Key()] = true
+		}
+	}
+	return keys
 }
 
 // yamlPaths walks a config struct and returns every dotted yaml path in it,

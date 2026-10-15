@@ -1034,7 +1034,6 @@ outrank
 outside
 over
 overlap
-overlay
 overridable
 overridden
 override
@@ -1372,7 +1371,6 @@ see
 seeded
 seeds
 segment
-sek
 selects
 self
 send

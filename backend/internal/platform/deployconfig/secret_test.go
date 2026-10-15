@@ -184,7 +184,7 @@ func TestEverySecretFieldRefusesALiteral(t *testing.T) {
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: hunter2-literal\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			var cfg Config
+			var cfg Bootstrap
 			err := yaml.Unmarshal([]byte(doc), &cfg)
 			if err == nil {
 				t.Fatalf("%s accepted a literal secret", name)
@@ -203,7 +203,7 @@ func TestEverySecretFieldAcceptsAReference(t *testing.T) {
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: ${env:X}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			var cfg Config
+			var cfg Bootstrap
 			if err := yaml.Unmarshal([]byte(doc), &cfg); err != nil {
 				t.Fatalf("%s refused a reference: %v", name, err)
 			}

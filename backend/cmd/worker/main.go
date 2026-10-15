@@ -68,7 +68,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	cfg, deployCfg, logger := boot.cfg, boot.deploy, boot.log
+	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
 	if err != nil {
@@ -110,7 +110,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the pool and after the release assertion, for the same reasons the license
 	// does. A nil vault IS an unconfigured deployment; keyvault.ForRole carries
 	// why nothing downstream is handed a flag beside it.
-	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg, deployCfg)
+	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
-	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, deployCfg), pool, logger)
+	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, bootstrap), pool, logger)
 	if err != nil {
 		return err
 	}
@@ -240,11 +240,11 @@ func registerComposedExtensions() ([]extension.Extension, error) {
 }
 
 // workerBoot is everything decided before this process touches a network: the
-// parsed flags, the deployment file, the composed extension set, and the
+// parsed flags, the file's seeds, the composed extension set, and the
 // logger the phases after it report through.
 type workerBoot struct {
 	cfg        workerConfig
-	deploy     deployconfig.Config
+	deploy     deployconfig.Bootstrap
 	extensions []extension.Extension
 	log        *slog.Logger
 }
@@ -268,7 +268,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
-	deployCfg, err := loadDeployment(&cfg)
+	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
 		return workerBoot{}, err
 	}
@@ -282,7 +282,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
 	cfg.captureConfig.AllowTestMailbox = config.Val(cfg.settings, ps.AllowTestMailbox)
-	return workerBoot{cfg: cfg, deploy: deployCfg, extensions: extensions, log: log}, nil
+	return workerBoot{cfg: cfg, deploy: bootstrap, extensions: extensions, log: log}, nil
 }
 
 // newWorkerLogger builds this role's correlation-aware logger from the
@@ -387,7 +387,7 @@ func workerVault(ctx context.Context, pool *pgxpool.Pool) func() (keyvault.Vault
 // hands back the vault it resolved.
 func admitBoot(
 	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
-	resolveVault func() (keyvault.Vault, error), cfg workerConfig, deployCfg deployconfig.Config,
+	resolveVault func() (keyvault.Vault, error), cfg workerConfig,
 ) (keyvault.Vault, error) {
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
 		return nil, err

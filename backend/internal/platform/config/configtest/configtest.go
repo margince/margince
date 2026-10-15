@@ -27,7 +27,7 @@ func Load(t testing.TB, body string, environ []string, faults func(*config.Confi
 		t.Fatalf("configtest: %v", err)
 	}
 	return config.Load(reg, config.Sources{
-		Args: []string{"--config", path}, Environ: environ, Faults: faults, BootstrapRoots: deployconfig.Sections(),
+		Args: []string{"--config", path}, Environ: environ, Faults: faults, BootstrapRoots: deployconfig.Roots(),
 	})
 }
 

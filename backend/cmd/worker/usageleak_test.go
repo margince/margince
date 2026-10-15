@@ -124,8 +124,8 @@ func TestWorkerStillReadsTheEnvironment(t *testing.T) {
 	if cfg.dsn != "postgres://u@127.0.0.1:1/from-env" {
 		t.Errorf("--dsn did not come from the environment: %q", cfg.dsn)
 	}
-	if cfg.configPath != "/from/env.yaml" {
-		t.Errorf("--config did not come from the environment: %q", cfg.configPath)
+	if cfg.settings.Files().Base != "/from/env.yaml" {
+		t.Errorf("--config did not come from the environment: %q", cfg.settings.Files().Base)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestWorkerFlagBeatsTheEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading: %v", err)
 	}
-	if cfg.configPath != "/from/flag.yaml" || cfg.redisAddr != "flag:6379" {
-		t.Errorf("the environment overrode an explicit flag: config %q, redis %q", cfg.configPath, cfg.redisAddr)
+	if cfg.settings.Files().Base != "/from/flag.yaml" || cfg.redisAddr != "flag:6379" {
+		t.Errorf("the environment overrode an explicit flag: config %q, redis %q", cfg.settings.Files().Base, cfg.redisAddr)
 	}
 }

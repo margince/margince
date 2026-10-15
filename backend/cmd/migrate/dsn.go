@@ -39,7 +39,7 @@ func (d *dsnSettings) resolve(environ []string) (string, error) {
 		Environ:        environ,
 		KnownKey:       compose.AllSettingKeys,
 		KnownEnv:       compose.AllSettingEnvs,
-		BootstrapRoots: deployconfig.Sections(),
+		BootstrapRoots: deployconfig.Roots(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("migrate: %w", err)

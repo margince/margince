@@ -118,8 +118,8 @@ func TestAPIStillReadsTheEnvironment(t *testing.T) {
 	if cfg.dsn != "postgres://u@127.0.0.1:1/from-env" {
 		t.Errorf("--dsn did not come from the environment: %q", cfg.dsn)
 	}
-	if cfg.configPath != "/from/env.yaml" {
-		t.Errorf("--config did not come from the environment: %q", cfg.configPath)
+	if cfg.settings.Files().Base != "/from/env.yaml" {
+		t.Errorf("--config did not come from the environment: %q", cfg.settings.Files().Base)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestAPIFlagBeatsTheEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading: %v", err)
 	}
-	if cfg.configPath != "/from/flag.yaml" || cfg.addr != ":9" {
-		t.Errorf("the environment overrode an explicit flag: config %q, addr %q", cfg.configPath, cfg.addr)
+	if cfg.settings.Files().Base != "/from/flag.yaml" || cfg.addr != ":9" {
+		t.Errorf("the environment overrode an explicit flag: config %q, addr %q", cfg.settings.Files().Base, cfg.addr)
 	}
 }

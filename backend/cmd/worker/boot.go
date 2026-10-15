@@ -54,31 +54,23 @@ func runDebugSubcommand(ctx context.Context, args []string, stdout io.Writer) (b
 	return false, nil
 }
 
-// loadDeployment reads the same deployment file the api boots from — the
-// capture pipeline tuning (capture.freemail_extra), the operator's
-// ai.capture_payloads posture the Surface-B runner honors, and whether the
-// installation armed operations.allow_data_reset, which decides whether this
-// role subscribes to reset announcements at all — and folds the rate sources it
-// declares into cfg. A missing file means defaults; a malformed one
-// is a boot error (a typo must not silently drop the blocklist or flip the
-// payload posture).
-func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
-	deployCfg, err := deployconfig.Load(cfg.configPath, cfg.posture)
-	if err != nil {
-		return deployconfig.Config{}, err
-	}
-	return deployCfg, nil
+// loadBootstrap reads the seeds from the same files the settings came from:
+// the model binding a fresh installation is bound with. A missing file means
+// none; a malformed one is a boot error.
+func loadBootstrap(cfg workerConfig) (deployconfig.Bootstrap, error) {
+	files := cfg.settings.Files()
+	return deployconfig.LoadBootstrapFiles(files.Base, files.ConfigFile)
 }
 
 // workerModelPathSpec gathers the model-path knobs from where each is
 // declared: the routing choice from the process flags, the capture posture from
 // the deployment config — the same split cmd/api's modelPathSpecFrom reads, so
 // the two roles cannot disagree on whether content capture is on.
-func workerModelPathSpec(cfg workerConfig, deployCfg deployconfig.Config) modelPathSpec {
+func workerModelPathSpec(cfg workerConfig, bootstrap deployconfig.Bootstrap) modelPathSpec {
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fake:            cfg.fakeBrain,
-		seeds:           deployCfg.Seeds,
+		seeds:           bootstrap.Seeds,
 		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
 	}
 }

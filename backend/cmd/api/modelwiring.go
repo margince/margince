@@ -63,11 +63,11 @@ type modelPathSpec struct {
 // modelPathSpecFrom gathers the model-path knobs from where each is declared:
 // the routing choice from the process flags, the capture posture from the
 // deployment config.
-func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSpec {
+func modelPathSpecFrom(cfg apiConfig, bootstrap deployconfig.Bootstrap) modelPathSpec {
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
-		seeds:           deployCfg.Seeds,
+		seeds:           bootstrap.Seeds,
 		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
 	}
 }

@@ -27,15 +27,15 @@ The api and the worker follow the same rules, and each reads only the values it 
 | Kind of value | Sources, first match wins | When no source has a value |
 |---|---|---|
 | Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
-| Key in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | The default. |
+| Key in `margince.yaml` | flag → environment variable → `--env-file` → `--config-file` → `margince.yaml` → default | The default. |
 | Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
-| Seed in `margince.yaml` | `margince.<posture>.yaml` → `margince.yaml` → default | Used when the company is created, and again by a data reset. |
+| Seed in `margince.yaml` | `--config-file` → `margince.yaml` → default, root by root | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
 | SMTP password | `email.smtp.password` reference → the copy sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
 | License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → the copy sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
-**Posture.** `MARGINCE_ENV` picks the overlay; how the two files merge is in
-[The file layer is two files](#the-file-layer-is-two-files-a-base-and-the-postures-overlay).
+**Files.** How the base file and `--config-file` work together is in
+[The file layer](#the-file-layer-a-base-and-an-optional---config-file).
 
 **Seeds.** These are `workspace`, `bootstrap_admin` and `seeds.*` (pipeline, consent purposes,
 retention, starter automations, booking page, legal review, `ai_routing`). The api writes them in one transaction
@@ -962,8 +962,8 @@ Once that line shows up, the declaration may be deleted, and the installation ke
 sealed copy. A process cannot edit its own deployment, so you delete it yourself.
 
 **Delete the declaration and its source.** Say you drop the variable, or remove the file, while the
-`license:` block or the `password:` line is still in `margince.yaml`. Then the boot fails in
-`deployconfig`, before Margince looks at the vault. A `${file:…}` that no longer exists cannot be
+`license:` block or the `password:` line is still in `margince.yaml`. Then the boot fails while
+it loads its settings, before Margince looks at the vault. A `${file:…}` that no longer exists cannot be
 read. A `${env:…}` that is unset is a named source that gave nothing, which is an error.
 
 Remove the whole `license:` block, or the `password:` line from `email.smtp`. Then the variable or
@@ -989,10 +989,11 @@ nothing sealed does nothing and logs nothing. If the delete fails, the boot logs
 without a password anyway, and tries again on the next boot.
 
 `${none}` is not a password. Each secret field refuses a literal value, so it cannot be one.
-`email.smtp.password` is the only field that takes it. `license.token` and
-`bootstrap_admin.password` refuse it at boot, and so does `email.smtp.password` next to
-`password_file`. A variable or file that holds the text `${none}` is refused as well, so that a
-removal is always written in `margince.yaml` itself.
+`email.smtp.password` is the only field that takes it, in `margince.yaml` or as the value of
+`MARGINCE_EMAIL_SMTP_PASSWORD`. `license.token` and `bootstrap_admin.password` refuse it at boot,
+and so does `email.smtp.password` next to `password_file`. A `${env:…}` or `${file:…}` reference
+whose target holds the text `${none}` is refused as well. A removal is always written where the
+setting is declared.
 
 Copies sealed before a change of password are not deleted by `${none}`. Margince keeps them on
 purpose (see below), and nothing points to them.
@@ -1319,34 +1320,30 @@ the first run; both are gitignored. `--config` reaches both the api and the work
 such as `ai.capture_payloads` applies to every role. To reset, delete `config/margince.yaml` and
 run `make dev` again.
 
-#### The file layer is two files: a base and the posture's overlay
+#### The file layer: a base and an optional `--config-file`
 
-`MARGINCE_ENV` picks an overlay that Margince reads over the base. Its name puts the posture before
-the file ending: `--config config/margince.yaml` under `MARGINCE_ENV=dev` also reads
-[`config/margince.dev.yaml`](../../config/margince.dev.yaml). The two files need not exist. The name
-comes out the same way for every posture, production included.
+`--config` names the base file, `config/margince.yaml` by default. `--config-file` names a second
+YAML file read over it, such as [`config/margince.dev.yaml`](../../config/margince.dev.yaml), which
+`make dev` passes to the api and the worker. A file named for a posture beside the base
+(`margince.dev.yaml` beside `margince.yaml`) stops the boot unless `--config-file` names it. So a
+posture file that armed something is never dropped without a word.
 
-The full order:
+The full order, where a later source wins:
 
 ```
-compiled defaults → margince.yaml → margince.<posture>.yaml → env vars → flags
+compiled defaults → margince.yaml → --config-file → --env-file → env vars → flags
 ```
 
-Later wins. Within the file layer, the YAML itself shows how a key merges:
+The last source that has a setting key replaces it whole. A list in `--config-file` is the whole
+list, and a key it leaves out keeps the base's value. The
+bootstrap roots (`version`, `workspace`, `bootstrap_admin`, `seeds`) are replaced root by root: a
+`seeds:` block in `--config-file` replaces the base's `seeds:` whole.
 
-| The base key is | The overlay | Why |
-|---|---|---|
-| a scalar (`connector_enabled: false`) | replaces it | one value, one answer |
-| a mapping (`rates:`) | merges key by key | an overlay sets one key and does not need to name the others again |
-| a list (`fx_currencies: [USD, GBP]`) | replaces it whole | an overlay list is the whole list: `[SEK]` means SEK |
+An unknown key in either file is a boot error that names the file that holds it. The bootstrap
+checks run once, over the result, so `--config-file` may supply a whole `bootstrap_admin` the base
+only started.
 
-An overlay can add a mapping key and change one, but cannot remove one. A posture that must not
-have a key takes it out of the base, and puts it in the postures that need it.
-
-An unknown key in either file is a boot error that names the file that holds it. The checks run once over the merged result, so an overlay may complete a section the base only
-starts.
-
-`MARGINCE_ENV` only **picks config**, and no trust decision rests on it. Nothing that deletes data
+`MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that
 arms it lives in the tracked `config/margince.dev.yaml`, and every other posture gets the compiled
 default.

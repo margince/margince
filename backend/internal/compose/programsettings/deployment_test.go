@@ -89,7 +89,7 @@ func TestAConfigFileReplacesAListAndKeepsTheBasesOtherKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := config.Load(reg, config.Sources{Args: []string{"--config", base, "--config-file", over}, BootstrapRoots: deployconfig.Sections()})
+	cfg, err := config.Load(reg, config.Sources{Args: []string{"--config", base, "--config-file", over}, BootstrapRoots: deployconfig.Roots()})
 	if err != nil {
 		t.Fatal(err)
 	}

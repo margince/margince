@@ -24,7 +24,6 @@ import (
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
 	dsn           string
-	configPath    string
 	publicBaseURL string
 	listsEnabled  bool
 	captureConfig compose.CaptureConfig
@@ -66,9 +65,8 @@ type workerConfig struct {
 	observeAddr    string
 	observePprof   bool
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
-	// (OPS-CFG-2). It selects the configuration overlay and which license
-	// authorities are honoured; it decides nothing destructive — see
-	// shared/runtimeenv.
+	// (OPS-CFG-2). It selects which license authorities are honoured; it
+	// decides nothing destructive — see shared/runtimeenv.
 	posture runtimeenv.Environment
 	// settings are the loaded settings, for the reads compose makes itself.
 	settings *config.Config
@@ -87,7 +85,7 @@ func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, err
 		Environ:        environ,
 		KnownKey:       compose.AllSettingKeys,
 		KnownEnv:       compose.AllSettingEnvs,
-		BootstrapRoots: deployconfig.Sections(),
+		BootstrapRoots: deployconfig.Roots(),
 		Faults:         func(c *config.Config) []error { return workerFaults(c, posture) },
 	})
 	if errors.Is(err, flag.ErrHelp) {
@@ -103,7 +101,7 @@ func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, err
 // cmd/worker reads.
 func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerConfig {
 	return workerConfig{
-		dsn: config.Val(loaded, dbsettings.DSN), configPath: loaded.Files().Base,
+		dsn:           config.Val(loaded, dbsettings.DSN),
 		publicBaseURL: config.Val(loaded, ps.PublicBaseURL),
 		redisAddr:     config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
 		routingPath: config.Val(loaded, ps.AIRouting), fakeBrain: config.Val(loaded, ps.AIFake),
