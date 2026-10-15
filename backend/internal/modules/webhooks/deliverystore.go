@@ -186,15 +186,18 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var belongs bool
+		var hasBody bool
 		err := tx.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE id = $1 AND subscription_id = $2)",
-			deliveryID, subID).Scan(&belongs)
+			"SELECT payload <> '' FROM webhook_delivery WHERE id = $1 AND subscription_id = $2",
+			deliveryID, subID).Scan(&hasBody)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return err
 		}
-		if !belongs {
-			return apperrors.ErrNotFound
+		if !hasBody {
+			return &BadInputError{Field: "delivery", Reason: "this delivery has no body to resend because its template could not be rendered; fix the template and the next event will use it"}
 		}
 		_, err = storekit.AuditEvent(ctx, tx, "update", rbacObject, subID,
 			map[string]any{"replayed_delivery": deliveryID.String()})
@@ -212,6 +215,8 @@ type attemptTarget struct {
 	eventType     string
 	eventID       ids.UUID
 	payload       []byte
+	contentType   string
+	headers       []storedHeader
 	priorAttempts int
 	// entityType, entityID and ownerID are what a RE-attempt needs and a first
 	// attempt does not: the enqueue path has already asked whether this owner
@@ -226,8 +231,10 @@ type attemptTarget struct {
 // subCandidate is one active subscription matching an event's type, with
 // the owning principal the fan-out is bounded to (B-E10.15/BYO-EVT-4).
 type subCandidate struct {
-	id      ids.UUID
-	ownerID ids.UUID
+	id              ids.UUID
+	ownerID         ids.UUID
+	bodyTemplate    *string
+	bodyContentType *string
 }
 
 // matchingSubscriptions returns the active subscriptions in the envelope's
@@ -238,7 +245,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 	var out []subCandidate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, owner_id FROM webhook_subscription
+			SELECT id, owner_id, body_template, body_content_type FROM webhook_subscription
 			WHERE state = 'active' AND archived_at IS NULL
 			  AND event_types @> ARRAY[$1]::text[]`, eventType)
 		if err != nil {
@@ -247,7 +254,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 		defer rows.Close()
 		for rows.Next() {
 			var c subCandidate
-			if err := rows.Scan(&c.id, &c.ownerID); err != nil {
+			if err := rows.Scan(&c.id, &c.ownerID, &c.bodyTemplate, &c.bodyContentType); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -255,50 +262,6 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 		return rows.Err()
 	})
 	return out, err
-}
-
-// enqueueForSubscriptions creates a pending delivery for each named
-// subscription, idempotently: the (workspace, subscription, event) unique
-// key means a redelivered bus event conflicts and yields no new row — so
-// it never double-POSTs. It returns only the freshly-created rows to
-// attempt now. subIDs is the visibility-filtered set (BYO-EVT-4). Runs in
-// the envelope's workspace.
-func (s *Store) enqueueForSubscriptions(ctx context.Context, subIDs []ids.UUID, eventType string, eventID ids.UUID, body []byte, entityType string, entityID ids.UUID) ([]attemptTarget, error) {
-	if len(subIDs) == 0 {
-		return nil, nil
-	}
-	var targets []attemptTarget
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			WITH matched AS (
-				SELECT id, target_url, signing_secret_ref
-				FROM webhook_subscription
-				WHERE id = ANY($4::uuid[]) AND state = 'active' AND archived_at IS NULL
-			), created AS (
-				INSERT INTO webhook_delivery
-				  (subscription_id, event_id, event_type, payload, status, entity_type, entity_id)
-				SELECT m.id, $2, $1, $3::text, 'pending', $5, $6
-				FROM matched m
-				ON CONFLICT (subscription_id, event_id) DO NOTHING
-				RETURNING id, subscription_id
-			)
-			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref
-			FROM created c JOIN matched m ON m.id = c.subscription_id`,
-			eventType, eventID, body, subIDs, entityType, entityID)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			t := attemptTarget{eventType: eventType, eventID: eventID, payload: body}
-			if err := rows.Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret); err != nil {
-				return err
-			}
-			targets = append(targets, t)
-		}
-		return rows.Err()
-	})
-	return targets, err
 }
 
 // dueRetries finds retrying deliveries in the ctx's workspace whose backoff
@@ -337,20 +300,21 @@ func (s *Store) dueRetries(ctx context.Context, now time.Time, limit int) ([]ids
 func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTarget, error) {
 	var t attemptTarget
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var entityType *string
+		var entityType, contentType *string
 		var entityID *ids.UUID
 		if err := tx.QueryRow(ctx, `
 			SELECT d.id, d.subscription_id, s.target_url, s.signing_secret_ref,
-			       d.event_type, d.event_id, d.payload, d.attempts,
-			       d.entity_type, d.entity_id, s.owner_id
+			       d.event_type, d.event_id, d.payload, d.content_type, s.custom_headers,
+			       d.attempts, d.entity_type, d.entity_id, s.owner_id
 			FROM webhook_delivery d
 			JOIN webhook_subscription s ON s.id = d.subscription_id
 			WHERE d.id = $1`, deliveryID).
 			Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret,
-				&t.eventType, &t.eventID, &t.payload, &t.priorAttempts,
-				&entityType, &entityID, &t.ownerID); err != nil {
+				&t.eventType, &t.eventID, &t.payload, &contentType, &t.headers,
+				&t.priorAttempts, &entityType, &entityID, &t.ownerID); err != nil {
 			return err
 		}
+		t.contentType = deref(contentType)
 		// A NULL subject scans to a nil pointer and stays the zero value, which
 		// refuseUnverifiable reads as "cannot be checked". Widening it to an
 		// empty string here rather than at the call site keeps the one meaning

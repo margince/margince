@@ -59,7 +59,7 @@ components:
 `
 
 func TestGenerateSourceEmitsTypesAndEventMethods(t *testing.T) {
-	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions")
+	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions", "")
 	if err != nil {
 		t.Fatalf("generateSource: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestGenerateSourceEmitsTypesAndEventMethods(t *testing.T) {
 // A schema without the event extensions gets no methods appended — only the
 // struct. Guards against blanket method emission.
 func TestGenerateSourceOmitsMethodsForPlainSchema(t *testing.T) {
-	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions")
+	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions", "")
 	if err != nil {
 		t.Fatalf("generateSource: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestGenerateSourceOmitsMethodsForPlainSchema(t *testing.T) {
 // PublicEventY (which declares no x-version at all) — the single
 // generated source of truth the coverage and version gates read.
 func TestGenerateSourceEmitsPublicEventVersions(t *testing.T) {
-	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions")
+	src, err := generateSource([]byte(fixtureSpec), "testpkg", "PublicEventVersions", "")
 	if err != nil {
 		t.Fatalf("generateSource: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestGenerateSourceEmitsPublicEventVersions(t *testing.T) {
 // EntityType() methods this generator projects below it, so the map shape
 // would fail to compile the moment those methods were appended.
 func TestGenerateSourceStructifiesEmptyEventPayload(t *testing.T) {
-	src, err := generateSource([]byte(nilPayloadFixtureSpec), "testpkg", "PublicEventVersions")
+	src, err := generateSource([]byte(nilPayloadFixtureSpec), "testpkg", "PublicEventVersions", "")
 	if err != nil {
 		t.Fatalf("generateSource: %v", err)
 	}
@@ -158,7 +158,7 @@ components:
       properties:
         name: { type: string }
 `
-	if _, err := generateSource([]byte(spec), "testpkg", "PublicEventVersions"); err == nil {
+	if _, err := generateSource([]byte(spec), "testpkg", "PublicEventVersions", ""); err == nil {
 		t.Fatal("a fractional x-version (1.5) must be rejected, not truncated to 1")
 	}
 }
@@ -168,7 +168,7 @@ components:
 // compile. A family that no gate reads a version map for names none, and then
 // none is emitted — the methods it does need are still there.
 func TestAFamilyThatNamesNoVersionsMapEmitsNone(t *testing.T) {
-	src, err := generateSource([]byte(fixtureSpec), "testpkg", "")
+	src, err := generateSource([]byte(fixtureSpec), "testpkg", "", "")
 	if err != nil {
 		t.Fatalf("generateSource: %v", err)
 	}
@@ -177,5 +177,37 @@ func TestAFamilyThatNamesNoVersionsMapEmitsNone(t *testing.T) {
 	}
 	if !strings.Contains(src, `func (PublicEventX) EventType() string { return "x.happened" }`) {
 		t.Errorf("the event methods are still owed\n---\n%s", src)
+	}
+}
+
+const sampleFixtureSpec = `openapi: 3.1.0
+info:
+  title: gen-payloads sample fixture
+  version: "1"
+components:
+  schemas:
+    PublicEventS:
+      type: object
+      x-event-type: s.happened
+      x-entity-type: widget
+      required: [deal_id]
+      properties:
+        deal_id: { type: string, format: uuid }
+        to_status: { type: string, enum: [won, lost] }
+        stage_name: { type: string }
+        amount_minor: { type: integer, format: int64 }
+        tags: { type: array, items: { type: string } }
+        note: { type: [string, 'null'] }
+`
+
+func TestEveryEventSchemaGetsASampleBuiltFromItsProperties(t *testing.T) {
+	src, err := generateSource([]byte(sampleFixtureSpec), "testpkg", "", "Samples")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `"s.happened": "{\"amount_minor\":1,\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",` +
+		`\"note\":\"Sample note\",\"stage_name\":\"Sample stage name\",\"tags\":[\"Sample tags\"],\"to_status\":\"won\"}"`
+	if !strings.Contains(src, "var Samples = map[string]string{") || !strings.Contains(src, want) {
+		t.Fatalf("generated source lacks the expected sample:\n%s", src)
 	}
 }

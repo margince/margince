@@ -7712,6 +7712,7 @@ public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_versio
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
+public.webhook_delivery.content_type text gen=- def=-
 public.webhook_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.webhook_delivery.dead_lettered_at timestamp with time zone gen=- def=-
 public.webhook_delivery.delivered_at timestamp with time zone gen=- def=-
@@ -7736,7 +7737,10 @@ public.webhook_delivery_dedupe_key CREATE UNIQUE INDEX webhook_delivery_dedupe_k
 public.webhook_delivery_pkey CREATE UNIQUE INDEX webhook_delivery_pkey ON public.webhook_delivery USING btree (id)
 public.webhook_subscription acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_subscription.archived_at timestamp with time zone gen=- def=-
+public.webhook_subscription.body_content_type text gen=- def=-
+public.webhook_subscription.body_template text gen=- def=-
 public.webhook_subscription.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.webhook_subscription.custom_headers jsonb NOT NULL gen=- def='[]'::jsonb
 public.webhook_subscription.event_types text[] NOT NULL gen=- def=-
 public.webhook_subscription.id uuid NOT NULL gen=- def=uuidv7()
 public.webhook_subscription.owner_id uuid NOT NULL gen=- def=-

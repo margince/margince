@@ -12995,6 +12995,32 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /webhook-subscriptions/body-preview:
+    post:
+      tags: [Webhooks]
+      operationId: previewWebhookBody
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Render a body template against a sample event, without sending anything.
+      description: |
+        Renders `body_template` with the same engine a delivery uses, against a sample event of
+        `event_type` built from the public event contract. Nothing is sent and nothing is stored.
+        A template the engine refuses answers 422 on `body_template`, naming the line and column.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookBodyPreviewRequest' }
+      responses:
+        '200':
+          description: The rendered body.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookBodyPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /webhook-subscriptions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -13018,9 +13044,9 @@ paths:
       operationId: updateWebhookSubscription
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: Pause/resume a subscription or re-target its event set.
+      summary: Pause/resume a subscription, re-target its event set, or change its headers or body template.
       description: |
-        A partial update (pause/resume or re-target the event set). Re-targeting can widen
+        A partial update (pause/resume, the event set, custom headers, body template). Re-targeting can widen
         outbound egress, so an agent principal is refused.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -29806,10 +29832,60 @@ components:
           items: { type: string }
           description: The subscribed event types, each from the published event catalog.
         state: { type: string, enum: [active, paused] }
+        custom_headers:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookCustomHeader' }
+          description: >-
+            The headers sent with every delivery, by name. A value is sealed when saved and never
+            returned, not even in part.
+        body_template:
+          type: [string, 'null']
+          description: The body template every delivery is rendered from; null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
         version: { type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update. }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    WebhookCustomHeader:
+      type: object
+      description: A custom header as a read shows it. The value stays sealed; `configured` says one is stored.
+      required: [name, configured]
+      properties:
+        name: { type: string }
+        configured: { type: boolean }
+
+    WebhookCustomHeaderInput:
+      type: object
+      description: >-
+        A custom header to store. `value` is required for a new name. On update, a row that
+        omits `value` keeps the value already stored under that name.
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 64 }
+        value: { type: string, maxLength: 4096 }
+
+    WebhookBodyContentType:
+      type: [string, 'null']
+      enum: [application/json, text/plain, application/x-www-form-urlencoded, null]
+      description: The Content-Type of a templated body; null means application/json.
+
+    WebhookBodyPreviewRequest:
+      type: object
+      required: [event_type, body_template]
+      properties:
+        event_type: { type: string, description: The event type whose sample the template is rendered against. }
+        body_template: { type: string, maxLength: 16384 }
+        body_content_type: { $ref: '#/components/schemas/WebhookBodyContentType' }
+
+    WebhookBodyPreview:
+      type: object
+      required: [body, content_type, byte_length]
+      properties:
+        body: { type: string, description: The exact bytes a delivery of the sample event would send. }
+        content_type: { type: string }
+        byte_length: { type: integer }
 
     WebhookSubscriptionCreated:
       type: object
@@ -29839,10 +29915,25 @@ components:
           uniqueItems: true
           items: { type: string }
           description: At least one event type from the published catalog; a true set — duplicates are rejected.
+        custom_headers:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/WebhookCustomHeaderInput' }
+          description: Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+        body_template:
+          type: [string, 'null']
+          maxLength: 16384
+          description: >-
+            A `{{ path }}` template over the public event envelope. Inside a JSON string use
+            `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
 
     UpdateWebhookSubscriptionRequest:
       type: object
-      description: A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set.
+      description: >-
+        A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole
+        set; `body_template: null` returns to the standard envelope.
       minProperties: 1
       properties:
         state: { type: string, enum: [active, paused] }
@@ -29851,6 +29942,19 @@ components:
           minItems: 1
           uniqueItems: true
           items: { type: string }
+        custom_headers:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/WebhookCustomHeaderInput' }
+          description: Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+        body_template:
+          type: [string, 'null']
+          maxLength: 16384
+          description: >-
+            A `{{ path }}` template over the public event envelope. Inside a JSON string use
+            `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
 
     WebhookSubscriptionListResponse:
       type: object

@@ -75,7 +75,11 @@ type BadInputError struct {
 
 func (e *BadInputError) Error() string { return e.Field + ": " + e.Reason }
 
-const subscriptionColumns = `id, owner_id, target_url, event_types, state, version, created_at, updated_at, archived_at`
+// subscriptionColumns reads header names only: a sealed value never leaves
+// the delivery path, not even as ciphertext.
+const subscriptionColumns = `id, owner_id, target_url, event_types, state,
+	ARRAY(SELECT h->>'name' FROM jsonb_array_elements(custom_headers) h),
+	body_template, body_content_type, version, created_at, updated_at, archived_at`
 
 // Subscription is the metadata view of a subscription — the signing
 // secret is deliberately absent: it exists on the wire exactly once.
@@ -85,16 +89,20 @@ type Subscription struct {
 	TargetURL  string
 	EventTypes []string
 	State      string
-	Version    int64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ArchivedAt *time.Time
+	// HeaderNames lists the custom headers; their values stay sealed.
+	HeaderNames     []string
+	BodyTemplate    *string
+	BodyContentType *string
+	Version         int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	ArchivedAt      *time.Time
 }
 
 func scanSubscription(r pgx.Row) (Subscription, error) {
 	var s Subscription
 	err := r.Scan(&s.ID, &s.OwnerID, &s.TargetURL, &s.EventTypes,
-		&s.State, &s.Version, &s.CreatedAt, &s.UpdatedAt, &s.ArchivedAt)
+		&s.State, &s.HeaderNames, &s.BodyTemplate, &s.BodyContentType, &s.Version, &s.CreatedAt, &s.UpdatedAt, &s.ArchivedAt)
 	return s, err
 }
 
@@ -147,8 +155,11 @@ func validateEventTypes(types []string) error {
 // CreateSubscriptionInput is the create payload; the owner and secret are
 // server-derived, never client-supplied.
 type CreateSubscriptionInput struct {
-	TargetURL  string
-	EventTypes []string
+	TargetURL       string
+	EventTypes      []string
+	CustomHeaders   []CustomHeaderInput
+	BodyTemplate    *string
+	BodyContentType *string
 }
 
 // CreateSubscription registers a subscription and returns it together
@@ -165,6 +176,14 @@ func (s *Store) CreateSubscription(ctx context.Context, in CreateSubscriptionInp
 		return Subscription{}, "", err
 	}
 	if err := validateEventTypes(in.EventTypes); err != nil {
+		return Subscription{}, "", err
+	}
+	if err := checkBodyFormat(in.BodyTemplate, in.BodyContentType); err != nil {
+		return Subscription{}, "", err
+	}
+	id := ids.NewV7()
+	headers, err := s.cipher.sealHeaders(id, in.CustomHeaders, nil)
+	if err != nil {
 		return Subscription{}, "", err
 	}
 	ownerID, err := owner(ctx)
@@ -184,16 +203,19 @@ func (s *Store) CreateSubscription(ctx context.Context, in CreateSubscriptionInp
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
 			INSERT INTO webhook_subscription
-			  (owner_id, target_url, event_types, signing_secret_ref, state)
-			VALUES ($1, $2, $3, $4, 'active')
+			  (id, owner_id, target_url, event_types, signing_secret_ref, state,
+			   custom_headers, body_template, body_content_type)
+			VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8)
 			RETURNING `+subscriptionColumns,
-			ownerID, in.TargetURL, in.EventTypes, sealed)
+			id, ownerID, in.TargetURL, in.EventTypes, sealed, headers, in.BodyTemplate, in.BodyContentType)
 		var err error
 		if out, err = scanSubscription(row); err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", rbacObject, out.ID, nil, map[string]any{
 			"target_url": out.TargetURL, fieldEventTypes: out.EventTypes,
+			fieldCustomHeaders: out.HeaderNames, fieldBodyTemplate: out.BodyTemplate,
+			fieldBodyContentType: out.BodyContentType,
 		})
 		return err
 	})
@@ -257,17 +279,20 @@ func (s *Store) GetSubscription(ctx context.Context, id ids.UUID) (Subscription,
 // UpdateSubscriptionInput carries the mutable fields. State toggles the
 // pause/resume lifecycle; event_types re-targets the fan-out.
 type UpdateSubscriptionInput struct {
-	State      *string
-	EventTypes *[]string
-	IfVersion  *int64
+	State         *string
+	EventTypes    *[]string
+	CustomHeaders *[]CustomHeaderInput
+	// Body is nil when the request names neither body field.
+	Body      *BodyFormatChange
+	IfVersion *int64
 }
 
 // validateUpdate rejects a malformed patch: a body that sets nothing (the
 // contract's minProperties:1, honored at runtime), an unknown state, or an
 // invalid event-type set.
 func validateUpdate(in UpdateSubscriptionInput) error {
-	if in.State == nil && in.EventTypes == nil {
-		return &BadInputError{Field: "body", Reason: "at least one of state or event_types is required"}
+	if in.State == nil && in.EventTypes == nil && in.CustomHeaders == nil && in.Body == nil {
+		return &BadInputError{Field: "body", Reason: "name at least one of state, event_types, custom_headers, body_template or body_content_type"}
 	}
 	if in.State != nil && *in.State != "active" && *in.State != "paused" {
 		return &BadInputError{Field: "state", Reason: "must be active or paused"}
@@ -287,13 +312,22 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 	if err := validateUpdate(in); err != nil {
 		return Subscription{}, err
 	}
+	if in.CustomHeaders != nil && s.cipher == nil {
+		return Subscription{}, ErrNotConfigured
+	}
 	var out Subscription
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanSubscription(tx.QueryRow(ctx,
-			"SELECT "+subscriptionColumns+" FROM webhook_subscription WHERE id = $1 AND archived_at IS NULL", id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
+		// Locked before the reads: kept header values and the If-Match check
+		// both decide from the row as it stands when this write lands.
+		lock, err := storekit.LockRow(ctx, tx, "webhook_subscription", id, storekit.LiveOnly)
+		if err != nil {
+			return err
 		}
+		if err := storekit.EnsureIfMatch(ctx, tx, "webhook_subscription", id, in.IfVersion); err != nil {
+			return err
+		}
+		current, err := scanSubscription(tx.QueryRow(ctx,
+			"SELECT "+subscriptionColumns+" FROM webhook_subscription WHERE id = $1", id))
 		if err != nil {
 			return err
 		}
@@ -304,17 +338,27 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 		if in.EventTypes != nil {
 			p.Set(fieldEventTypes, current.EventTypes, *in.EventTypes)
 		}
-		if p.Empty() {
-			if err := storekit.EnsureIfMatch(ctx, tx, "webhook_subscription", id, in.IfVersion); err != nil {
-				return err
-			}
+		if err := setBodyFormat(p, current, in.Body); err != nil {
+			return err
+		}
+		if p.Empty() && in.CustomHeaders == nil {
 			out = current
 			return nil
 		}
-		if err := p.ApplyGuarded(ctx, tx, "webhook_subscription", id, in.IfVersion); err != nil {
-			return err
+		if !p.Empty() {
+			if err := p.ApplyLocked(ctx, tx, lock); err != nil {
+				return err
+			}
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, p.Before(), p.After()); err != nil {
+		before, after := p.Before(), p.After()
+		if in.CustomHeaders != nil {
+			names, err := s.replaceHeaders(ctx, tx, id, *in.CustomHeaders)
+			if err != nil {
+				return err
+			}
+			before[fieldCustomHeaders], after[fieldCustomHeaders] = current.HeaderNames, names
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return err
 		}
 		out, err = scanSubscription(tx.QueryRow(ctx,
