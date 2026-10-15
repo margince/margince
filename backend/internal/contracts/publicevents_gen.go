@@ -1703,7 +1703,7 @@ type PublicEventEntityRef struct {
 	// Id Stable identifier of the entity.
 	Id openapi_types.UUID `json:"id"`
 
-	// Name The record's name when the event was delivered, for a record that is not a person (a deal, company or project). Absent for a contact or lead; open the link to see who it is.
+	// Name The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is.
 	Name *string `json:"name,omitempty"`
 
 	// Type Entity kind (e.g. deal, contact, company).
@@ -1873,7 +1873,7 @@ type PublicEventLeadCreated struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventLeadDemoted Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
+// PublicEventLeadDemoted Payload for lead.demoted, the audited reverse of lead.promoted. The lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
 type PublicEventLeadDemoted struct {
 	// FromContactId The contact the promotion had created or merged into.
 	FromContactId openapi_types.UUID `json:"from_contact_id"`
@@ -1924,7 +1924,7 @@ type PublicEventLeadPromoted struct {
 	Trigger string `json:"trigger"`
 }
 
-// PublicEventLeadSlaBreached Payload for lead.sla_breached (formulas §18.2) — the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
+// PublicEventLeadSlaBreached Payload for lead.sla_breached: the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
 type PublicEventLeadSlaBreached struct {
 	// Deadline The first-response deadline that passed.
 	Deadline time.Time `json:"deadline"`

@@ -6,6 +6,7 @@ package webhooks
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -18,30 +19,36 @@ import (
 // a mirror of frontend/src/lib/entity.ts ENTITY that
 // gates/webhookrecordroutes_test.go holds to it.
 var recordRoutes = map[string]string{
-	"contact": "contacts",
-	"company": "companies",
-	"deal":    "deals",
-	"lead":    "leads",
-	"project": "projects",
+	recordContact: "contacts",
+	recordCompany: "companies",
+	recordDeal:    "deals",
+	recordLead:    "leads",
+	recordProject: "projects",
 }
 
+// The record types a delivery can link to, as an event's entity names them.
+const (
+	recordContact = "contact"
+	recordCompany = "company"
+	recordDeal    = "deal"
+	recordLead    = "lead"
+	recordProject = "project"
+)
+
 // namedRecords are the record types whose name a delivery carries, with the
-// column that holds it. People (contacts, leads) are left out: their name
-// would stay in stored deliveries past an erasure, and the link is enough.
+// table and column that hold it; each table bears its record type's name.
+// Contacts and leads are left out: their name would stay in stored
+// deliveries past an erasure, and the link is enough.
 var namedRecords = map[string]struct{ table, column string }{
-	"deal":    {"deal", "name"},
-	"company": {"company", "display_name"},
-	"project": {"project", "name"},
+	recordDeal:    {recordDeal, "name"},
+	recordCompany: {recordCompany, "display_name"},
+	recordProject: {recordProject, "name"},
 }
 
 // RecordRoutes returns a copy of the record routes, for the gate that holds
 // them to the frontend's.
 func RecordRoutes() map[string]string {
-	out := make(map[string]string, len(recordRoutes))
-	for entityType, route := range recordRoutes {
-		out[entityType] = route
-	}
-	return out
+	return maps.Clone(recordRoutes)
 }
 
 // recordURL links a record to its page, or nil when the type has no page or
@@ -56,25 +63,21 @@ func recordURL(baseURL, entityType string, id ids.UUID) *string {
 }
 
 // recordName reads a named record's name, archived or not, so an archive
-// event still says what was archived. nil when the type carries no name or
-// the record is gone.
-func (s *Store) recordName(ctx context.Context, entityType string, id ids.UUID) (*string, error) {
+// event still says what was archived. found is false when the type carries
+// no name or the record is gone.
+func (s *Store) recordName(ctx context.Context, entityType string, id ids.UUID) (name string, found bool, err error) {
 	named, ok := namedRecords[entityType]
 	if !ok {
-		return nil, nil
+		return "", false, nil
 	}
-	var name string
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, "SELECT "+pgx.Identifier{named.column}.Sanitize()+
 			" FROM "+pgx.Identifier{named.table}.Sanitize()+" WHERE id = $1", id).Scan(&name)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return "", false, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &name, nil
+	return name, err == nil, err
 }
 
 // humanize adds the record's name and link to a public envelope, once per
@@ -83,10 +86,12 @@ func (s *Store) recordName(ctx context.Context, entityType string, id ids.UUID) 
 func (d *Deliverer) humanize(ctx context.Context, wire *crmcontracts.PublicEventEnvelope) {
 	id := ids.UUID(wire.Entity.Id)
 	wire.Entity.Url = recordURL(d.publicBaseURL, wire.Entity.Type, id)
-	name, err := d.store.recordName(ctx, wire.Entity.Type, id)
+	name, found, err := d.store.recordName(ctx, wire.Entity.Type, id)
 	if err != nil {
 		d.log.Warn("webhooks: reading the record name for a delivery", "entity", wire.Entity.Type, "id", id, "err", err)
 		return
 	}
-	wire.Entity.Name = name
+	if found {
+		wire.Entity.Name = &name
+	}
 }

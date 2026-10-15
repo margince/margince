@@ -188,9 +188,8 @@ components:
         name:
           type: string
           description: >-
-            The record's name when the event was delivered, for a record that is not a
-            person (a deal, company or project). Absent for a contact or lead; open the
-            link to see who it is.
+            The record's name when the event was delivered, for a deal, company or
+            project. Absent for a contact or lead; open the link to see who it is.
         url:
           type: string
           format: uri
@@ -1853,8 +1852,8 @@ components:
       x-entity-type: lead
       x-version: 1
       description: >-
-        Payload for lead.demoted — the audited reverse of lead.promoted
-        (formulas §26): the lead is back in the segregated pool and the
+        Payload for lead.demoted, the audited reverse of lead.promoted.
+        The lead is back in the segregated pool and the
         contact-side lineage is nulled. Its own verb, because a lead.updated
         cannot say a contact node lost its lineage.
       required:
@@ -1902,7 +1901,7 @@ components:
       x-entity-type: lead
       x-version: 1
       description: >-
-        Payload for lead.sla_breached (formulas §18.2) — the first scan on
+        Payload for lead.sla_breached: the first scan on
         which a lead's first-response deadline passed unanswered. Emitted at
         most once per breach occurrence; the escalation hangs off it.
       required:

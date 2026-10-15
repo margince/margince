@@ -26,7 +26,7 @@ export interface components {
              * @description Stable identifier of the entity.
              */
             id: string;
-            /** @description The record's name when the event was delivered, for a record that is not a person (a deal, company or project). Absent for a contact or lead; open the link to see who it is. */
+            /** @description The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is. */
             name?: string;
             /**
              * Format: uri
@@ -824,7 +824,7 @@ export interface components {
             /** @description The activities whose link this promotion moved from the lead onto the contact. These are what carryLeadActivities re-pointed: the lead's own timeline, and nothing the survivor already had. The event names them because the contact id cannot. A promotion that merges lands the lead's follow-up task on a contact that may already carry unrelated reminders of its own. So the open system tasks on this contact differ from the tasks this promotion carried. A consumer completing the first set would tick off work the promotion never touched. The field is absent on an event written before it existed. A consumer replaying such an event has no worse an answer than it had then. For a freshly created contact the two sets are the same, so that case worked without the field. */
             carried_activity_ids?: string[];
         };
-        /** @description Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage. */
+        /** @description Payload for lead.demoted, the audited reverse of lead.promoted. The lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage. */
         PublicEventLeadDemoted: {
             /**
              * Format: uuid
@@ -847,7 +847,7 @@ export interface components {
              */
             merged_into_id: string;
         };
-        /** @description Payload for lead.sla_breached (formulas §18.2) — the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it. */
+        /** @description Payload for lead.sla_breached: the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it. */
         PublicEventLeadSlaBreached: {
             /**
              * Format: uuid

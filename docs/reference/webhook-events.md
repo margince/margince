@@ -29,7 +29,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `entity.id` | string (uuid) | yes | Stable identifier of the entity. |
-| `entity.name` | string | no | The record's name when the event was delivered, for a record that is not a person (a deal, company or project). Absent for a contact or lead; open the link to see who it is. |
+| `entity.name` | string | no | The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is. |
 | `entity.type` | string | yes | Entity kind (e.g. deal, contact, company). |
 | `entity.url` | string (uri) | no | A link to the record in the app, when the record has a page and the installation has a public base URL. |
 
@@ -1027,7 +1027,7 @@ Payload for lead.created, a lead was created. Two emit sites: a direct create (c
 
 Record: `lead` · version 1
 
-Payload for lead.demoted, the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
+Payload for lead.demoted, the audited reverse of lead.promoted. The lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1071,7 +1071,7 @@ Payload for lead.promoted: the lead's promotion into the context graph after rea
 
 Record: `lead` · version 1
 
-Payload for lead.sla_breached (formulas §18.2), the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
+Payload for lead.sla_breached: the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

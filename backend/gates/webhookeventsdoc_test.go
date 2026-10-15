@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H3
+
 //go:build !integration
 
 package gates
@@ -70,6 +72,7 @@ func loadEventSchemas(t *testing.T) map[string]eventSchema {
 // The webhook event reference is rendered from the published contract, so it
 // lists every event a subscription may choose and every field it carries.
 func TestWebhookEventReferenceMatchesTheContract(t *testing.T) {
+	t.Parallel()
 	schemas := loadEventSchemas(t)
 	want := renderWebhookEvents(schemas)
 	if *updateWebhookEvents {
@@ -91,6 +94,7 @@ func TestWebhookEventReferenceMatchesTheContract(t *testing.T) {
 // The floor under the parity check: the render is measured against the
 // catalog, so a parser that dropped schemas cannot pass by rendering short.
 func TestWebhookEventReferenceListsEverySubscribableEvent(t *testing.T) {
+	t.Parallel()
 	page := renderWebhookEvents(loadEventSchemas(t))
 	for eventType := range crmcontracts.PublicEventVersions {
 		if !strings.Contains(page, "\n### `"+eventType+"`\n") {

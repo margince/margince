@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H3
+
 package gates
 
 import (
@@ -17,6 +19,7 @@ import (
 // The frontend's ENTITY table owns those routes, so this reads it. It fails
 // both ways: a link to a screen the app lacks, and a page the links leave out.
 func TestWebhookRecordLinksFollowTheAppRoutes(t *testing.T) {
+	t.Parallel()
 	src, err := os.ReadFile(filepath.Join("..", "frontend", "src", "lib", "entity.ts"))
 	if err != nil {
 		t.Fatal(err)

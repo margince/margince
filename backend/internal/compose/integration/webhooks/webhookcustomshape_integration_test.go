@@ -334,7 +334,7 @@ func TestADeliveryNamesItsRecordAndLinksToItsPage(t *testing.T) {
 	}
 }
 
-func TestAPersonIsLinkedButNotNamed(t *testing.T) {
+func TestAContactIsLinkedButNotNamed(t *testing.T) {
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)
@@ -355,6 +355,6 @@ func TestAPersonIsLinkedButNotNamed(t *testing.T) {
 	}
 	want := fmt.Sprintf(`{"name": "", "link": "https://crm.example.test/#/contacts/%s"}`, contactID)
 	if string(hits[0].body) != want {
-		t.Errorf("body = %s, want %s: a person's name stays out of stored deliveries", hits[0].body, want)
+		t.Errorf("body = %s, want %s: a contact's name stays out of stored deliveries", hits[0].body, want)
 	}
 }
