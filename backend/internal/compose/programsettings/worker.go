@@ -27,7 +27,7 @@ var (
 		Doc: "Gmail Pub/Sub topic (projects/<p>/topics/<t>) that enables the push-watch job; unset leaves capture on the poll.",
 	})
 	GraphNotificationURL = config.Define(config.Spec[string]{
-		Key: "graph_notification_url", Env: "MARGINCE_GRAPH_NOTIFICATION_URL", Flag: "graph-notification-url", Type: config.String, Roles: workerOnly,
+		Key: "graph_notification_url", Env: "MARGINCE_GRAPH_NOTIFICATION_URL", Flag: "graph-notification-url", Type: config.String, Secret: true, Roles: workerOnly,
 		Doc: "Public URL, token included, that Microsoft posts Graph change notifications to; unset leaves Outlook capture on the poll.",
 	})
 	JobDrainWindow = config.Define(config.Spec[time.Duration]{

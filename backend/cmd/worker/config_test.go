@@ -164,6 +164,8 @@ func TestTheWorkerMarksItsCredentials(t *testing.T) {
 		"MARGINCE_DSN", "MARGINCE_GMAIL_CLIENT_SECRET", "MARGINCE_GRAPH_CLIENT_SECRET",
 		"MARGINCE_WEBHOOK_KEY", "MARGINCE_KEYVAULT_ROOT_KEY", "MARGINCE_LICENSE",
 		"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+		// The Graph notification URL carries the push token in its query.
+		"MARGINCE_GRAPH_NOTIFICATION_URL",
 	} {
 		if !secret[name] {
 			t.Errorf("%s authenticates something and is not marked Secret", name)

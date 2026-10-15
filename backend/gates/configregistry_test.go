@@ -36,10 +36,13 @@ const settingsDefineFiles = 28
 
 // declaredSetting is one package-level var a config.Define or DefineStored
 // call initialises.
-type declaredSetting struct{ pos, name, key string }
+type declaredSetting struct{ pos, callPos, name, key string }
 
 type configCensus struct {
-	settings      []declaredSetting
+	settings []declaredSetting
+	// strayCalls are Define or DefineStored calls that initialise no
+	// package-level var: a loop or a function, whose keys a census cannot read.
+	strayCalls    []string
 	defineFiles   []string
 	cliflagsUsers []string
 	files         int
@@ -57,12 +60,26 @@ func TestEverySettingIsInSomeProgram(t *testing.T) {
 			registered[s.Key()] = true
 		}
 	}
+	declared := map[string]bool{}
 	for _, s := range census.settings {
 		switch {
 		case s.key == "":
 			t.Errorf("%s: %s declares its Key with an expression; write it as a string literal so this census can read it", s.pos, s.name)
+		case declared[s.key]:
+			t.Errorf("%s: %s declares key %s a second time", s.pos, s.name, s.key)
 		case !registered[s.key]:
 			t.Errorf("%s: %s (%s) is declared but no program registers it", s.pos, s.name, s.key)
+		}
+		declared[s.key] = true
+	}
+	for _, pos := range census.strayCalls {
+		t.Errorf("%s: config.Define or DefineStored outside a package-level var; declare each setting as one, with a literal Key, so this census can count it", pos)
+	}
+	// Both ways: a registered key no census declaration names came from a
+	// declaration this census cannot see.
+	for key := range registered {
+		if !declared[key] {
+			t.Errorf("%s is registered but declared where this census cannot read it", key)
 		}
 	}
 	for _, pos := range census.cliflagsUsers {
@@ -102,7 +119,9 @@ func takeConfigCensus(t *testing.T) configCensus {
 		if _, ok := names[cliflagsImport]; ok {
 			census.cliflagsUsers = append(census.cliflagsUsers, path)
 		}
-		census.settings = append(census.settings, packageSettings(file, names[configImport], fset.Position)...)
+		settings, stray := configDeclarations(file, names[configImport], fset.Position)
+		census.settings = append(census.settings, settings...)
+		census.strayCalls = append(census.strayCalls, stray...)
 		if settingsName, ok := names[settingsImport]; ok && !strings.HasPrefix(path, "internal/platform/config/") && callsDefine(file, settingsName) {
 			census.defineFiles = append(census.defineFiles, path)
 		}
@@ -129,6 +148,30 @@ func importNames(t *testing.T, file *ast.File) map[string]string {
 	return out
 }
 
+// configDeclarations returns the file's package-level settings and the
+// position of every other Define or DefineStored call.
+func configDeclarations(file *ast.File, pkg string, position func(p token.Pos) token.Position) ([]declaredSetting, []string) {
+	settings := packageSettings(file, pkg, position)
+	if pkg == "" {
+		return settings, nil
+	}
+	initialisers := map[string]bool{}
+	for _, s := range settings {
+		initialisers[s.callPos] = true
+	}
+	var stray []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if ok && callsFunc(call.Fun, pkg, "Define", "DefineStored") {
+			if pos := position(call.Pos()).String(); !initialisers[pos] {
+				stray = append(stray, pos)
+			}
+		}
+		return true
+	})
+	return settings, stray
+}
+
 // packageSettings are the file's package-level vars whose value is a call to
 // pkg.Define or pkg.DefineStored, with the Key their Spec literal spells.
 func packageSettings(file *ast.File, pkg string, position func(p token.Pos) token.Position) []declaredSetting {
@@ -152,7 +195,8 @@ func packageSettings(file *ast.File, pkg string, position func(p token.Pos) toke
 					continue
 				}
 				out = append(out, declaredSetting{
-					pos: position(value.Names[i].Pos()).String(), name: value.Names[i].Name, key: specKey(call.Args[0]),
+					pos: position(value.Names[i].Pos()).String(), callPos: position(call.Pos()).String(),
+					name: value.Names[i].Name, key: specKey(call.Args[0]),
 				})
 			}
 		}

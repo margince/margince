@@ -7,8 +7,8 @@
 // not fail either one on a key only the other reads.
 //
 // A key is the flag with `_` for `-`, the name an operator already types.
-// Secret marks a credential only: a DSN, password, client secret, token or
-// key. A URL, id, address or list stays visible, so a fault can quote it.
+// Secret marks a credential: a DSN, password, client secret, token or key, and
+// a URL that carries one. Any other URL, id, address or list stays visible.
 package programsettings
 
 import (
