@@ -23,7 +23,7 @@ type PriceSources struct {
 	// Listed is what each usable vendor's key lists; absent when the listing failed.
 	Listed map[string][]model.Info
 	// Switched is, by provider, the models it named as answering calls bound to
-	// another model, so a model an alias moved to gets a price of its own.
+	// another model. A model an alias moved to gets a price of its own.
 	Switched map[string][]string
 }
 

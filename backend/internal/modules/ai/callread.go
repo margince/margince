@@ -156,7 +156,7 @@ func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 }
 
 // CallListFilter narrows the call list to the calls that ended on one task,
-// provider, model, model that answered, upstream host or tier; an empty field
+// provider, model, answering model, upstream host or tier. An empty field
 // filters nothing.
 type CallListFilter struct {
 	Task, Provider, Model, ServedModel, ServedProvider, Tier string

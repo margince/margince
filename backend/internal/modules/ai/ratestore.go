@@ -81,7 +81,7 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // as-of-date rate and sums per (calendar day, task, tier) — THE one
 // money computation that runs at read time (price-on-read: the
 // router/meter/adapters never compute a cost). One SQL statement: a
-// LATERAL join picks each row's as-of-date rate through pricedRate (RateFor's
+// LATERAL join picks each row's as-of-date rate (RateFor's same
 // resolution, inlined so the whole window prices in one query instead of
 // one round-trip per call), the four-bucket arithmetic mirrors PriceCall
 // exactly (same floor, same zero-cache-price fallback to the input rate, same

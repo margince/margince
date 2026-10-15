@@ -208,8 +208,8 @@ func TestEstimateRepricesDepartedSliceAtItsTiersCurrentModel(t *testing.T) {
 	}
 }
 
-// A still-bound slice the provider answered with another model prices at the
-// model that answered when the sheet prices it, and at its binding when not.
+// A still-bound slice the provider answered with another model prices at that
+// model when the sheet prices it. Otherwise it prices at its binding.
 func TestEstimatePricesAStillBoundSliceAtTheModelThatAnswered(t *testing.T) {
 	cheaper := &ai.ModelRate{InputPerMTokMicroUSD: 500_000, OutputPerMTokMicroUSD: 1_000_000}
 	for _, tc := range []struct {
@@ -359,7 +359,7 @@ func TestEstimatePricedDenomFlooredAtOne(t *testing.T) {
 	// A huge GENUINELY-unpriced slice at the same task drives sumCalls up so that
 	// denom(=Σcalls)×pricedCalls/sumCalls truncates toward 0 before the floor. It
 	// is served on cheap_cloud, whose CURRENT binding (gemini/flash) has NO rate,
-	// so pricingModels reprices it at an unrated model — it must not fall back to
+	// so pricingModels reprices it at an unrated model. It must not fall back to
 	// the priced local head, which would make it priced and defeat the guard.
 	unpriced := ai.ServedTaskTotal{
 		Task: ai.TaskEnrich, Tier: ai.TierCheapCloud, Provider: "gemini", ModelID: "old-flash",

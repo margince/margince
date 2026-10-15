@@ -10,9 +10,7 @@ package costestimate
 // inputs compose per task and degrade INDEPENDENTLY:
 //
 //   - per-UNIT cost, from this workspace's served ai_call slices, each priced at
-//     the model that WILL run it (the answered model while its binding is still
-//     bound, else that binding, else the slice's own tier's current binding,
-//     else the ladder head, else unpriced);
+//     the model that WILL run it (see pricingModels);
 //   - expected UNITS for X, from this connection's representative backfill yields
 //     (else a named work-shape floor).
 //
@@ -316,11 +314,11 @@ func observedUnitsDenom(task ai.Task, slices []ai.ServedTaskTotal, labeledCount 
 	return sumCompletedCalls(slices)
 }
 
-// pricingModels are the models to price a served slice at, best first — the
-// model that will actually RUN this task now, keyed on the slice's own recorded
-// tier. A still-bound binding offers the model that answered it, then itself,
-// as the ai module's pricedRate does; a departed one reprices at its tier's
-// current binding, else the ladder head. None means an empty ladder: unpriced.
+// pricingModels are the models to price a served slice at, best first. They
+// are the model that will RUN this task now, keyed on the slice's own tier. A still-bound
+// binding offers the model that answered it, then itself, as pricedRate does.
+// A departed one reprices at its tier's current binding, else the ladder head.
+// None means an empty ladder: unpriced.
 func pricingModels(ladder LadderResolver, task ai.Task, s ai.ServedTaskTotal) []ai.ModelRef {
 	bound := ladder.BoundLadder(task)
 	binding := ai.ModelRef{Provider: s.Provider, Model: s.ModelID}

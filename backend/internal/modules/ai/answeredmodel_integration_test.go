@@ -5,8 +5,7 @@
 
 package ai
 
-// A call the provider answered with another model than the bound one is priced
-// at the model that answered, by every reader that prices a call; a served
+// Every reader that prices a call prices it at the model that answered. A served
 // model the sheet does not price falls back to the binding's rate.
 
 import (

@@ -12,9 +12,9 @@ import (
 )
 
 // ServedTaskTotal is one (task, tier, provider, model, answered model) slice of
-// served ai_call history — the token buckets summed and the call count,
-// conditioned on the model that ACTUALLY ran. The cost estimator prices each slice at the
-// model that will run it and scales it by expected units.
+// served ai_call history: the token buckets summed and the call count. The cost
+// estimator prices each slice at the model that will run it and scales it by
+// expected units.
 //
 // "Served" means the provider actually ran the model and spent tokens: NOT
 // cache_hit AND tokens_in > 0 AND the terminal was not a provider failure. A
@@ -52,10 +52,9 @@ type ServedTaskTotal struct {
 }
 
 // ServedTaskTotals returns the served ai_call slices for tasks since the given
-// instant, grouped by (task, tier, provider, model, answered model). The
-// query's own workspace predicate keeps it to the bound workspace's calls —
-// this feeds a per-message cost, so another tenant's traffic in the numerator
-// would price this one's work wrong. An empty task set returns no rows.
+// instant, one per ServedTaskTotal key. It reads only the bound workspace's
+// calls, because another tenant's traffic would price this one's work wrong.
+// An empty task set returns no rows.
 func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, since time.Time) ([]ServedTaskTotal, error) {
 	// Decision rows are left out: a decision is priced on its own lane, and
 	// these totals price what a re-run of the task's LLM ladder would cost.
