@@ -5,8 +5,8 @@ import { useCallback } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
-import { storeCompany } from "../installationcompany";
+import { throwProblem } from "../../lib/problem";
+import { companySaveMessage, storeCompany } from "../installationcompany";
 import type { CompanyDraft, CompanyForm } from "../onboarding";
 import type { ConfirmRefusal } from "./artifact";
 import type { ClarifyAnswer } from "./company-proposal";
@@ -153,7 +153,7 @@ export function useCompanyConfirm({
   // that save in fact went through.
   const bannerMessage =
     confirm.isError && recovery.notice === null && !recovery.awaitingCompanyLoad
-      ? problemMessageOf(confirm.error, t)
+      ? companySaveMessage(confirm.error, t)
       : null;
   const refusal: ConfirmRefusal | null =
     recovery.refusal === null

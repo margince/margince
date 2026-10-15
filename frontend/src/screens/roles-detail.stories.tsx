@@ -2,13 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
 import type { Role } from "./roles.queries";
-import { RoleDetail } from "./roles-detail";
+import { RoleDetail, useRoleWrites } from "./roles-detail";
+
+// The body a role's drawer hosts, drawn without the drawer around it.
 
 const ALL = { read: true, create: true, update: true, delete: true };
 const READ = { read: true, create: false, update: false, delete: false };
@@ -19,48 +22,90 @@ const FIELD_SALES: Role = {
   is_system: false,
   version: 7,
   row_scope: "team",
-  objects: { contact: READ, deal: ALL },
+  objects: { contact: READ, deal: ALL, audit_log: READ, ext_gone_note: READ },
 };
 
-function story(role: Role, canUpdate: boolean) {
-  return () => {
-    installFetchStub({
-      "GET /users/access-preview": () =>
-        jsonResponse({
-          role: role.key,
-          row_scope: role.row_scope,
-          objects: role.objects,
-          field_masks: [],
-          teams: [],
-        }),
-    });
-    return (
-      <StoryProviders>
-        <RoleDetail
-          role={role}
-          directory={[role]}
-          units={[]}
-          canUpdate={canUpdate}
-          canMove={canUpdate}
-          canRestore={canUpdate}
-          canWiden={canUpdate}
-        />
-      </StoryProviders>
-    );
-  };
+function Body({
+  role,
+  canUpdate,
+}: Readonly<{ role: Role; canUpdate: boolean }>) {
+  const writes = useRoleWrites();
+  return (
+    <RoleDetail
+      role={role}
+      directory={[role]}
+      units={[]}
+      canUpdate={canUpdate}
+      canWiden={canUpdate}
+      writes={writes}
+    />
+  );
 }
 
-const meta: Meta<typeof RoleDetail> = {
+function stubPreview(role: Role) {
+  installFetchStub({
+    "GET /users/access-preview": () =>
+      jsonResponse({
+        role: role.key,
+        row_scope: role.row_scope,
+        objects: role.objects,
+        field_masks: [],
+        teams: [],
+      }),
+  });
+}
+
+const meta = {
   title: "Settings/People/Roles and permissions/Role detail",
-  component: RoleDetail,
-};
+  component: Body,
+  parameters: { layout: "padded" },
+  args: { role: FIELD_SALES, canUpdate: true },
+  render: (args) => {
+    stubPreview(args.role);
+    return (
+      <StoryProviders>
+        <Body {...args} />
+      </StoryProviders>
+    );
+  },
+} satisfies Meta<typeof Body>;
 export default meta;
-type Story = StoryObj<typeof RoleDetail>;
+type Story = StoryObj<typeof meta>;
 
-export const Editable: Story = { render: story(FIELD_SALES, true) };
+export const Editable: Story = {};
 
+// The archive is said once, at the top; the grid row adds no second sentence.
 export const Archived: Story = {
-  render: story({ ...FIELD_SALES, archived_at: "2026-09-01T09:00:00Z" }, true),
+  args: { role: { ...FIELD_SALES, archived_at: "2026-09-01T09:00:00Z" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/^This role is archived\./);
+    await expect(canvas.queryByText(/can read roles but not/)).toBeNull();
+  },
 };
 
-export const ReadOnly: Story = { render: story(FIELD_SALES, false) };
+// The reason stands once above the grid, as well as on every switch.
+export const ReadOnly: Story = {
+  args: { canUpdate: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table");
+    const said = canvas
+      .getAllByText("Your role can read roles but not change them.")
+      .filter((line) => !line.closest(".grant-cell"));
+    await expect(said).toHaveLength(1);
+  },
+};
+
+/** Each row with its raw key under the name, for an operator who asked. */
+export const WithKeys: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("switch", { name: "Show API names" }),
+    );
+    await expect(
+      canvas.getByRole("rowheader", { name: /Audit log/ }).textContent,
+    ).toContain("audit_log");
+  },
+};

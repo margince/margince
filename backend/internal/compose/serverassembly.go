@@ -76,7 +76,8 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
 			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
+		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithInstallationRenamer(installationRenamer(pool))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it
@@ -333,7 +334,10 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// The installation's own company (the 0083 anchor). Its own store
 	// instance, like every other contacts-backed shadow here: the company
 	// form's write shape is contacts's, the transport is compose's.
-	s.companyHandlers = companyHandlers{store: contacts.NewStore(InstallationDB(pool)), rollout: companyContextRolloutOnboarding}
+	s.companyHandlers = companyHandlers{
+		store:   contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)),
+		rollout: companyContextRolloutOnboarding,
+	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
 	s.onboardingStateHandlers = onboardingStateHandlers{
 		state: identity.NewOnboardingStore(InstallationDB(pool)), company: contacts.NewStore(InstallationDB(pool)),

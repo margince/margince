@@ -14,6 +14,7 @@ import {
   QueryStates,
 } from "../design-system/querystates";
 import { INTL_LOCALE } from "../format/format";
+import { objectLabel } from "../format/rbacobjects";
 import { useLocale, useT } from "../i18n";
 import { useCan, useCanMutate } from "../lib/capability";
 import {
@@ -348,17 +349,6 @@ function UnitCard({
   );
 }
 
-// Not translated: the contract carries no label for an extension's object, so
-// its key, less the unit's own prefix, is the only name there is.
-export function objectLabel(unit: string, object: string): string {
-  const prefix = `ext_${unit}_`;
-  const bare = object.startsWith(prefix)
-    ? object.slice(prefix.length)
-    : object.replace(/^ext_/, "");
-  const words = (bare || unit).replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 // Built-in and custom roles are told apart only where both kinds stand in the
 // grid. The mark goes on the fewer of the two, so it says what differs.
 function roleBadges(
@@ -503,7 +493,7 @@ function ObjectMatrix({
       <PanelGroupHead title={label} level="h3" id={headId} />
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
-        rows={rows}
+        sections={[{ key: object, rows }]}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
         name={{ labelledBy: headId }}

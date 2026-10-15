@@ -15,6 +15,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCanWriteRecord } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { invalidateCompany } from "../lib/recordwritekeys";
 import { useRecordZone } from "../lib/recordzone";
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
@@ -93,6 +94,7 @@ const SIDECAR_FIELDS = [
 // single-line input is a field a reader cannot read back while typing it.
 export function SidecarFieldRow({
   companyId,
+  anchor,
   fields,
   fieldsLoaded,
   field,
@@ -106,6 +108,8 @@ export function SidecarFieldRow({
   guardDetails,
 }: Readonly<{
   companyId: string;
+  // The record's `is_anchor`: its fields are also the settings company profile.
+  anchor: boolean;
   fields: readonly ProfileField[];
   // Whether `fields` is an ANSWER or merely the empty list a pending or failed
   // read stands in with. The two are not the same claim: an answered read
@@ -158,8 +162,7 @@ export function SidecarFieldRow({
     // that just landed, and the 360 summarises it.
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
-      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
-      queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
+      invalidateCompany(queryClient, { id: companyId, is_anchor: anchor }),
     ]);
   };
   // A value a machine read keeps its dotted underline and its receipt. The mark
@@ -228,6 +231,7 @@ export function CompanyProfileDetails({
           key={sidecar.field}
           guardDetails
           companyId={company.id}
+          anchor={company.is_anchor === true}
           fields={query.data ?? []}
           fieldsLoaded={query.isSuccess}
           canEdit={canUpdate && !readOnlyReason}

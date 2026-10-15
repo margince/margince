@@ -166,15 +166,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
 
     // ---- company ----
     case "company":
-      // The installation's own facts, then the money, then the company profile
-      // the AI reads, then the follow-up window. The currency pair stays
+      // The company first (brand, business context and the website that context
+      // is read from), then the installation's own facts. The currency pair stays
       // ADJACENT: the base currency is declared in InstallationSettingsCard and
       // every rate below converts to it.
       return (
         <>
+          <CompanyContextCard />
           <InstallationSettingsCard />
           <FxRatesCard />
-          <CompanyContextCard />
           <FollowUpSettingsCard />
           <SignatureTemplateCard />
         </>

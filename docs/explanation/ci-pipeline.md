@@ -280,6 +280,10 @@ waiting. It would sit 9 minutes in the queue behind a unit job of 17 minutes. Ru
 save its runner minutes only on a change that `fe-quality` refuses. That is about one frontend run in
 7, which is cheaper than the wait.
 
+The `uat` lane is **sharded** too: three matrix runners each run a third of the Playwright tests
+(`--shard`). As one job it took longer than every other lane and set the time of the `ci` result. The `ci`
+aggregate reads one result for the three, so one red shard fails it.
+
 The integration lane on a real Postgres runs **beside** `deterministic-gates` for the same reason. It is
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The only schemes a company website or a read-back source may name. Anything
@@ -103,8 +104,8 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if strings.TrimSpace(req.DisplayName) == "" {
-		httperr.Write(w, r, httperr.Validation("display_name", "empty", "a company needs a name"))
+	if code, why := values.CompanyNameFault(req.DisplayName); code != "" {
+		httperr.Write(w, r, httperr.Validation("display_name", code, why))
 		return
 	}
 	// New onboarding requires the three semantic answers. During the pre-live
