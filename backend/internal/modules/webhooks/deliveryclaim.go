@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// claimLease bounds a claim: longer than one attempt, so a live attempt keeps
-// its row, and short enough that a crashed worker's row is retried soon.
+// claimLease bounds a claim. It outlasts one attempt, so a live attempt keeps
+// its row. It is short, so a crashed worker's row is retried soon.
 const claimLease = 2 * deliveryTimeout
 
 // errDeliveryInFlight is a replay of a delivery that a sweep or another replay
