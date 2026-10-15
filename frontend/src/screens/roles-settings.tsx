@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronRight } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   Button,
   EmptyState,
@@ -63,10 +63,11 @@ export function RolesSettings() {
   const openRole = (key: string | undefined) => replaceDial(ROLE_PARAM, key);
   const readsMembers = useCan("user_admin", "read");
   const roles = useRoles(readsRoles, showArchived);
+  const linked = useLinkedRole(roles, openKey, readsRoles && !showArchived);
   const roster = useRosterWalk("user", readsRoles && readsMembers);
   const units = useExtensions(readsRoles && readsUnits);
   const found: Role | null =
-    roles.data?.find((role) => role.key === openKey) ?? null;
+    roles.data?.find((role) => role.key === openKey) ?? linked;
   // Kept while the drawer leaves. Kept too when a role archived in it drops out
   // of a list that hides archived roles, so Restore stays one press away.
   const shown = useLastSubject(found);
@@ -125,6 +126,32 @@ export function RolesSettings() {
       )}
     </>
   );
+}
+
+// A link may name an archived role while the list hides archived ones, so
+// that role is read with them. A key no read lists leaves the address.
+function useLinkedRole(
+  roles: ReturnType<typeof useRoles>,
+  openKey: string | null,
+  mayLookWider: boolean,
+): Role | null {
+  const listed = roles.data?.some((role) => role.key === openKey) ?? true;
+  const wider = useRoles(mayLookWider && openKey !== null && !listed, true);
+  const searched = mayLookWider ? wider : roles;
+  const linked = wider.data?.find((role) => role.key === openKey) ?? null;
+  const unknown =
+    openKey !== null &&
+    !listed &&
+    linked === null &&
+    !roles.isFetching &&
+    searched.isSuccess &&
+    !searched.isFetching;
+  useEffect(() => {
+    if (unknown) {
+      replaceDial(ROLE_PARAM, undefined);
+    }
+  }, [unknown]);
+  return linked;
 }
 
 type RosterWalk = NonNullable<ReturnType<typeof useRosterWalk>["data"]>;

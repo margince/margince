@@ -101,15 +101,24 @@ const ROLE_ADMIN: GrantSpec = {
   user_admin: ["read"],
 };
 
+// The stub cannot see the query, so a directory given as a function answers
+// each read by its count.
 function story(
   allow: GrantSpec,
   roles: string[],
-  directory: readonly unknown[] = ROLES,
+  directory:
+    | readonly unknown[]
+    | ((read: number) => readonly unknown[]) = ROLES,
 ) {
   return () => {
+    let reads = 0;
     installFetchStub({
       "GET /me": meRoute(allow, { roles }),
-      "GET /roles": () => jsonResponse({ roles: directory }),
+      "GET /roles": () =>
+        jsonResponse({
+          roles:
+            typeof directory === "function" ? directory(reads++) : directory,
+        }),
       "GET /users": () =>
         jsonResponse({ data: ROSTER, page: { has_more: false } }),
       "GET /users/access-preview": () =>
@@ -188,6 +197,25 @@ export const OpenFromLink: Story = {
   play: async ({ canvasElement }) => {
     await within(canvasElement.ownerDocument.body).findByRole("dialog", {
       name: "Field sales",
+    });
+  },
+};
+
+// A link to an archived role opens it while the list still hides archived ones.
+export const OpenArchivedFromLink: Story = {
+  beforeEach: () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_seasonal",
+    );
+  },
+  render: story(ROLE_ADMIN, ["admin"], (read) =>
+    read === 0 ? ROLES : MORE_ROLES,
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: "Seasonal temps",
     });
   },
 };

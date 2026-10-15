@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -101,7 +101,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Filled: Story = { render: story(CAPABILITIES, EDITOR) };
 
-export const ReadOnly: Story = { render: story(CAPABILITIES, READER) };
+// The read-only sentence stands on the profile card only, not on the brand card.
+export const ReadOnly: Story = {
+  render: story(CAPABILITIES, READER),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const facts = await canvas.findByRole("region", {
+      name: "Business context",
+    });
+    await within(facts).findByText(/^Read-only\./);
+    await expect(canvas.getAllByText(/^Read-only\./)).toHaveLength(1);
+  },
+};
 
 // The one cause that justifies the surface being absent rather than withheld.
 export const NotEnabledHere: Story = {
@@ -140,4 +151,52 @@ export const Sparse: Story = {
     icp: "Operators running 50–400 vans on mixed-age fleets.",
     fields: [],
   }),
+};
+
+// A name past the installation's cap is refused in the reader's own words.
+export const NameTooLong: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute(EDITOR),
+      "GET /company/context/capabilities": () => jsonResponse(CAPABILITIES),
+      "GET /company": () => jsonResponse(PROFILE),
+      "PUT /company": () =>
+        jsonResponse(
+          {
+            title: "Unprocessable Entity",
+            status: 422,
+            code: "validation_error",
+            details: {
+              errors: [
+                {
+                  field: "display_name",
+                  code: "too_long",
+                  message: "a company name is at most 200 characters",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <CompanyContextCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit business context",
+      }),
+    );
+    const dialog = within(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog"),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Save company context" }),
+    );
+    await dialog.findByText("Shorten the company name.");
+  },
 };

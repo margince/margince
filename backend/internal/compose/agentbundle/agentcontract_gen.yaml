@@ -628,6 +628,15 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |-
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -642,15 +651,10 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Company'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a company (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Companies]
       operationId: archiveCompany
@@ -8721,7 +8725,7 @@ components:
         name:
           type: string
           description: |-
-            The company's display name. A human saving the anchor company's `display_name`
+            The company's display name. An administrator saving the anchor company's `display_name`
             (`PUT /company`, a profile-field correction or a company edit) sets it in the same
             transaction; before the first save it is the name the installation was configured with.
         timezone:

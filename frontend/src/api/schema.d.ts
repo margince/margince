@@ -1764,7 +1764,13 @@ export interface paths {
         delete: operations["archiveCompany"];
         options?: never;
         head?: never;
-        /** Update a company (partial). */
+        /**
+         * Update a company (partial).
+         * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         */
         patch: operations["updateCompany"];
         trace?: never;
     };
@@ -19870,6 +19876,11 @@ export interface paths {
          *
          *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
+         *
+         *     A `display_name` correction is refused with `422 required` when blank. Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -20358,7 +20369,7 @@ export interface components {
          */
         InstallationSettings: {
             /**
-             * @description The company's display name. A human saving the anchor company's `display_name`
+             * @description The company's display name. An administrator saving the anchor company's `display_name`
              *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
              *     transaction; before the first save it is the name the installation was configured with.
              */
@@ -38457,6 +38468,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
+            /** @description The installation's name too, so it carries the installation name's bound: `422 too_long` past 200 characters. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -46281,7 +46293,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
         PayloadTooLarge: {
             headers: {
                 [name: string]: unknown;
@@ -49322,6 +49334,7 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];

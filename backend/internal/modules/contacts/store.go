@@ -80,7 +80,7 @@ type Store struct {
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
 	// renameInstallation keeps the installation's name on the anchor's display
-	// name (anchorname.go); nil refuses a human's anchor rename.
+	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
 }
 

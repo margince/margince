@@ -9901,6 +9901,7 @@ export const en = {
   "roles.restore": "Restore role",
   "roles.archivedNote":
     "This role is archived. It grants nothing, and nobody can be given it until it is restored.",
+  "roles.archivedReadOnly": "Restore this role to change it.",
   "roles.archivedToast": "{name} archived",
   "roles.restoredToast": "{name} restored",
   "roles.notSaved": "Change not saved",
@@ -10124,6 +10125,7 @@ export const en = {
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
   "settings.companySaveFailed": "Company context not saved",
+  "settings.companyNameTooLong": "Shorten the company name.",
   "settings.companyRefreshFailed": "Website read did not finish",
   "settings.companyApplyFailed": "Changes not applied",
   "settings.companyRefreshWarnings": "Warnings from this read",

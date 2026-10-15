@@ -152,7 +152,7 @@ import { TimelineActions } from "./timelineactions";
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
 import { useAddressedTab } from "./recordtab";
-import { invalidateRecord } from "./recordwritekeys";
+import { invalidateCompany } from "./recordwritekeys";
 import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
@@ -1370,8 +1370,7 @@ function CompanyPage({
                 id={company.id}
                 restore={{
                   version: company.version,
-                  onRestored: () =>
-                    invalidateRecord(queryClient, "company", company.id),
+                  onRestored: () => invalidateCompany(queryClient, company),
                 }}
               />
             )}

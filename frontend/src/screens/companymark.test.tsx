@@ -218,21 +218,20 @@ it.each([
   expect(request.method).toBe("DELETE");
 });
 
-function refuseUploads() {
+const UNSUPPORTED = {
+  type: "about:blank",
+  title: "Unsupported media type",
+  status: 415,
+  code: "unsupported_media_type",
+  detail: "the upload is not an image this server can read",
+};
+
+function refuseUploads(
+  problem: Readonly<Record<string, unknown> & { status: number }> = UNSUPPORTED,
+) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      Response.json(
-        {
-          type: "about:blank",
-          title: "Unsupported media type",
-          status: 415,
-          code: "unsupported_media_type",
-          detail: "the upload is not an image this server can read",
-        },
-        { status: 415 },
-      ),
-    ),
+    vi.fn(async () => Response.json(problem, { status: problem.status })),
   );
 }
 
@@ -265,6 +264,30 @@ it("names the refused slot and describes only that slot's control", async () => 
       .getByLabelText("Wide logo")
       .getAttribute("aria-describedby"),
   ).not.toContain(alert.parentElement?.id ?? "none");
+});
+
+// The body httperr.BodyTooLargeRefusal writes: a code the server never sends
+// would pass on a dead entry.
+it("says what to do when the file is over the upload limit", async () => {
+  const user = userEvent.setup();
+  refuseUploads({
+    type: "about:blank",
+    title: "Request Entity Too Large",
+    status: 413,
+    code: "body_too_large",
+    detail: "the upload exceeds the 5 MB limit",
+  });
+  mark(WITHOUT_MARK);
+
+  await user.upload(
+    slot("Wide logo").getByLabelText("Wide logo"),
+    NOT_AN_IMAGE(),
+  );
+
+  const alert = await screen.findByRole("alert");
+  expect(within(alert).getByText("Wide logo not uploaded")).toBeTruthy();
+  expect(within(alert).getByText("Use a smaller file.")).toBeTruthy();
+  expect(within(alert).queryByText(/exceeds/)).toBeNull();
 });
 
 // A notice inside a slot widens it and wraps the other tile onto its own row.

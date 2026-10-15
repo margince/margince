@@ -465,8 +465,9 @@ describe("CompanyContextCard write posture", () => {
       // The read is granted, so the data is there to read — as the row's own
       // answer now rather than as the contents of an input.
       expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
-      // Stated once, at the surface, rather than annotated onto each absent
-      // control.
+      // Stated once, on the profile card, rather than annotated onto each absent
+      // control or repeated on the brand card above it.
+      expect(screen.getAllByText(READ_ONLY)).toHaveLength(1);
       const facts = screen.getByRole("region", { name: "Business context" });
       expect(within(facts).getByText(READ_ONLY)).toBeTruthy();
       expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
@@ -814,5 +815,75 @@ describe("CompanyContextCard after a failed refetch", () => {
       expect(screen.queryByRole("heading", { name: "Brand" })).toBeNull();
     },
     SETTLE_MS * 2,
+  );
+});
+
+// The anchor's name is the installation's too, so the server caps its length.
+describe("CompanyContextCard save refusals", () => {
+  it(
+    "says in the reader's words that the company name is too long",
+    async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const request =
+            input instanceof Request ? input : new Request(String(input), init);
+          const path = new URL(request.url).pathname;
+          if (request.method === "PUT" && path === "/v1/company") {
+            return Response.json(
+              {
+                title: "Unprocessable Entity",
+                status: 422,
+                code: "validation_error",
+                detail: "the request failed validation",
+                details: {
+                  errors: [
+                    {
+                      field: "display_name",
+                      code: "too_long",
+                      message:
+                        "a company name is at most 200 characters; this one is 201",
+                    },
+                  ],
+                },
+              },
+              { status: 422 },
+            );
+          }
+          return Response.json(routeBody(path));
+        }),
+      );
+      render(
+        <Providers>
+          <CompanyContextCard />
+        </Providers>,
+      );
+      fireEvent.click(
+        await screen.findByRole(
+          "button",
+          { name: "Edit business context" },
+          { timeout: SETTLE_MS },
+        ),
+      );
+      const dialog = await screen.findByRole("dialog", undefined, {
+        timeout: SETTLE_MS,
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Save company context" }),
+      );
+
+      expect(
+        await within(dialog).findByText(
+          "Shorten the company name.",
+          undefined,
+          {
+            timeout: SETTLE_MS,
+          },
+        ),
+      ).toBeTruthy();
+      expect(within(dialog).queryByText(/at most 200/)).toBeNull();
+      expect(within(dialog).queryByText(/failed validation/)).toBeNull();
+    },
+    DIALOG_MS,
   );
 });

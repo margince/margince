@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -106,6 +107,10 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	}
 	if strings.TrimSpace(req.Profile.DisplayName) == "" {
 		httperr.Write(w, r, httperr.Validation("profile.display_name", "empty", "a company needs a name"))
+		return
+	}
+	if code, why := values.CompanyNameFault(req.Profile.DisplayName); code != "" {
+		httperr.Write(w, r, httperr.Validation("profile.display_name", code, why))
 		return
 	}
 	for _, required := range []struct {

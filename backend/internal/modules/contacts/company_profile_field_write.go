@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -183,10 +184,26 @@ func (s *Store) writeProfileField(
 	// human just corrected.
 	if column, canonical := canonicalCompanyColumn(field); canonical && in.Value != nil {
 		w.canonical = func(ctx context.Context, tx pgx.Tx) error {
+			if column != fieldDisplayName {
+				return writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value)
+			}
+			if _, err := httperr.RequireNonBlank(fieldDisplayName, *in.Value); err != nil {
+				return err
+			}
+			// Read under the name lock every renamer takes, so the installation
+			// follows only a name that moved and a resent one refuses no one.
+			if err := lockCompanyNameWrites(ctx, tx); err != nil {
+				return err
+			}
+			var current string
+			if err := tx.QueryRow(ctx, `SELECT display_name FROM company WHERE id = $1`,
+				companyID).Scan(&current); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("contacts: reading company %s before its name correction: %w", companyID, err)
+			}
 			if err := writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value); err != nil {
 				return err
 			}
-			if column != fieldDisplayName {
+			if current == *in.Value {
 				return nil
 			}
 			return s.followAnchorNameTx(ctx, tx, companyID)

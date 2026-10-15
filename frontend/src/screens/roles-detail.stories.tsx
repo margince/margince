@@ -74,11 +74,28 @@ type Story = StoryObj<typeof meta>;
 
 export const Editable: Story = {};
 
+// The archive is said once, at the top; the grid row adds no second sentence.
 export const Archived: Story = {
   args: { role: { ...FIELD_SALES, archived_at: "2026-09-01T09:00:00Z" } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/^This role is archived\./);
+    await expect(canvas.queryByText(/can read roles but not/)).toBeNull();
+  },
 };
 
-export const ReadOnly: Story = { args: { canUpdate: false } };
+// The reason stands once above the grid, as well as on every switch.
+export const ReadOnly: Story = {
+  args: { canUpdate: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table");
+    const said = canvas
+      .getAllByText("Your role can read roles but not change them.")
+      .filter((line) => !line.closest(".grant-cell"));
+    await expect(said).toHaveLength(1);
+  },
+};
 
 /** Each row with its raw key under the name, for an operator who asked. */
 export const WithKeys: Story = {

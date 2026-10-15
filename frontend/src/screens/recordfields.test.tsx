@@ -283,3 +283,45 @@ it("keeps a rendered group's edit verb in place, disabled, while another field s
     expect(screen.getByRole("button", { name: "Change Tags" })).toBeEnabled(),
   );
 });
+
+// The anchor's name is also /me's brand and the settings company profile.
+it.each([
+  { anchor: true, refreshed: true },
+  { anchor: false, refreshed: false },
+])(
+  "refreshes /me and the company profile after an edit only when is_anchor is $anchor",
+  async ({ anchor, refreshed }) => {
+    const user = userEvent.setup();
+    const client = new QueryClient();
+    for (const queryKey of [["me"], ["company"], ["company", "c1"]]) {
+      client.setQueryData(queryKey, {});
+    }
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <RecordFields
+            title="Details"
+            kind="company"
+            fields={[{ key: "display_name", labelText: "Name" }]}
+            record={{
+              id: "c1",
+              version: 1,
+              display_name: "Acme",
+              is_anchor: anchor,
+            }}
+            canEdit
+            save={async () => undefined}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Change Name" }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), "!{Enter}");
+
+    await waitFor(() =>
+      expect(client.getQueryState(["company", "c1"])?.isInvalidated).toBe(true),
+    );
+    expect(client.getQueryState(["me"])?.isInvalidated).toBe(refreshed);
+    expect(client.getQueryState(["company"])?.isInvalidated).toBe(refreshed);
+  },
+);

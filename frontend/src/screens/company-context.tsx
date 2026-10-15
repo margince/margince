@@ -43,7 +43,11 @@ import { coldFieldLabel } from "./coldfieldlabels";
 import { ReadWarnings } from "./company-context.notices";
 import { CompanyFactsCard, PROFILE_GROUPS } from "./companycontextfacts";
 import { CompanyMark } from "./companymark";
-import { storeCompany, useCompany } from "./installationcompany";
+import {
+  companySaveMessage,
+  storeCompany,
+  useCompany,
+} from "./installationcompany";
 import "./company-context.css";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -477,11 +481,7 @@ export function CompanyContextCard() {
     <div className="company-context-shell">
       {/* The company's face first: what a reader recognises at a glance. */}
       {company.data && !company.isError && form && (
-        <CompanyMark
-          profile={company.data}
-          canEdit={canEdit}
-          readOnly={readOnly}
-        />
+        <CompanyMark profile={company.data} canEdit={canEdit} />
       )}
       <CompanyFactsCard
         company={company}
@@ -506,7 +506,7 @@ export function CompanyContextCard() {
           form={form}
           focus={editing}
           pending={save.isPending}
-          error={save.isError ? problemMessageOf(save.error, t) : null}
+          error={save.isError ? companySaveMessage(save.error, t) : null}
           onChange={setForm}
           onClose={() => setEditing(null)}
           onSubmit={() => save.mutate(trimCompanyInput(form))}

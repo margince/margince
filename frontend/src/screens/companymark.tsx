@@ -52,11 +52,9 @@ const ACCEPTED_IMAGES =
 export function CompanyMark({
   profile,
   canEdit,
-  readOnly = false,
 }: Readonly<{
   profile: CompanyProfile;
   canEdit: boolean;
-  readOnly?: boolean;
 }>) {
   const t = useT();
   const client = useQueryClient();
@@ -74,7 +72,6 @@ export function CompanyMark({
   return (
     <Panel title={t("settings.brandTitle")}>
       <PanelBody>
-        {readOnly && <p>{t("settings.companyReadOnly")}</p>}
         <div className="brand-slots">
           <MarkSlot
             profile={profile}
@@ -192,7 +189,7 @@ type MarkRefusalState = NonNullable<MarkWrites["refusal"]>;
 // with nothing to do. These two codes get a sentence that says what to do.
 const REFUSAL_COPY = new Map<string, MessageKey>([
   ["unsupported_media_type", "settings.companyMarkUnsupported"],
-  ["payload_too_large", "settings.companyMarkTooLarge"],
+  ["body_too_large", "settings.companyMarkTooLarge"],
 ]);
 
 // Below the tiles, not inside a slot: a notice in a slot widens it and pushes

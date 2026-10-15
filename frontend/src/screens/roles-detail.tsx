@@ -233,6 +233,15 @@ function GrantSection({
 }>) {
   const t = useT();
   const [showKeys, setShowKeys] = useState(false);
+  const archived = Boolean(role.archived_at);
+  const refusal = t(archived ? "roles.archivedReadOnly" : "roles.readOnly");
+  // An archived role already says why at the top of the drawer.
+  let note: string | undefined;
+  if (editable) {
+    note = t(canWiden ? "roles.grantsSub" : "roles.grantsNarrowOnly");
+  } else if (!archived) {
+    note = refusal;
+  }
   const row = ({ object, name: label, known }: GrantObject): GrantMatrixRow => {
     const grant = grantOf(role, object);
     return {
@@ -263,11 +272,7 @@ function GrantSection({
     <SettingRow
       layout="stack"
       label={t("roles.grants")}
-      description={
-        editable
-          ? t(canWiden ? "roles.grantsSub" : "roles.grantsNarrowOnly")
-          : undefined
-      }
+      description={note}
       control={(control) => (
         <div className="settingrow-measure roles-grants">
           <Switch
@@ -283,7 +288,7 @@ function GrantSection({
               rows: group.objects.map(row),
             }))}
             canManage={editable}
-            readOnlyReason={t("roles.readOnly")}
+            readOnlyReason={refusal}
             turnOnReason={canWiden ? undefined : t("roles.turnOnAdminOnly")}
             busy={busy}
             name={{ labelledBy: control["aria-labelledby"] }}

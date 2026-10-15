@@ -286,7 +286,7 @@ describe("RolesSettings", () => {
     expect(document.activeElement).toBe(row);
   });
 
-  it("opens the role a link names, and nothing for a key it does not list", async () => {
+  it("opens the role a link names, and drops a key no role has from the address", async () => {
     globalThis.history.replaceState(
       null,
       "",
@@ -302,11 +302,36 @@ describe("RolesSettings", () => {
     globalThis.history.replaceState(
       null,
       "",
-      "#/settings/roles?role=custom_old",
+      "#/settings/roles?role=custom_gone",
     );
     render(<RolesSettings />);
     await screen.findByText("Field sales");
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/settings/roles"),
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens an archived role a link names, with archived roles still hidden", async () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_old",
+    );
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+
+    const drawer = within(
+      await screen.findByRole("dialog", { name: "Old role" }),
+    );
+    expect(drawer.getByText(en["roles.archivedNote"])).toBeTruthy();
+    expect(screen.queryByTestId(`role-${OLD.key}`)).toBeNull();
+    expect(
+      screen
+        .getByRole("switch", { name: /show archived/i })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(globalThis.location.hash).toBe("#/settings/roles?role=custom_old");
   });
 
   it("makes a new role as a copy of the one picked, and opens it", async () => {

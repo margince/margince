@@ -16,8 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,36 +55,16 @@ const authenticationPolicyObject = "authentication_policy"
 const SettingsObject = installationSettingsObject
 
 // Name is the company's display name. Seeded from margince.yaml at
-// bootstrap; a human saving the anchor company's display name writes it from
+// bootstrap; an administrator saving the anchor company's display name writes it from
 // then on (compose/installationname.go).
-//
-// The CEILING lives here because this entry is the only thing that governs the
-// value: without it the unauthenticated setup claim stores a name as large as
-// the body limit allows, and every screen that renders a company carries
-// it thereafter.
-//
-// 200 rather than the 63 an earlier bound happened to impose. That number was a
-// DNS label limit, inherited from a slug the name was once reduced to, and it
-// refused legitimate registered company names — the German ones this product
-// sells to routinely run past 63 characters with their legal form spelled out.
-// 200 is chosen for what a name is, not for what a subdomain was.
-const maxInstallationNameLen = 200
-
 var Name = settings.Define[string](
 	"installation.name",
 	installationSettingsObject,
 	"update",
 	"",
 	func(v string) error {
-		trimmed := strings.TrimSpace(v)
-		if trimmed == "" {
-			return errors.New("the company needs a name")
-		}
-		// Counted in RUNES, like every other length bound in this module: a name
-		// of 200 CJK characters is not three times too long.
-		if n := utf8.RuneCountInString(trimmed); n > maxInstallationNameLen {
-			return fmt.Errorf("a company name is at most %d characters; this one is %d",
-				maxInstallationNameLen, n)
+		if code, why := values.CompanyNameFault(v); code != "" {
+			return errors.New(why)
 		}
 		return nil
 	},

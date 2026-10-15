@@ -28,6 +28,15 @@ describe("recordWriteKeys", () => {
     ]);
   });
 
+  it("adds the settings company profile and /me for the anchor company only", () => {
+    expect(recordWriteKeys("company", "c-1", { anchor: true })).toEqual([
+      ...recordWriteKeys("company", "c-1"),
+      ["company"],
+      ["me"],
+    ]);
+    expect(recordWriteKeys("company", "c-1")).not.toContainEqual(["me"]);
+  });
+
   it("carries the lead's board and list, which its detail key does not reach", () => {
     expect(recordWriteKeys("lead", "l-1")).toContainEqual(["leads"]);
   });

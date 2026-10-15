@@ -314,7 +314,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
 		}
-		if err := s.followAnchorNameTx(ctx, tx, companyID); err != nil {
+		if err := s.followAnchorSaveTx(ctx, tx, target); err != nil {
 			return err
 		}
 
@@ -382,6 +382,8 @@ type anchorTarget struct {
 	id      ids.CompanyID
 	created bool
 	before  map[string]any
+	// named is true when this save wrote the anchor's display name.
+	named bool
 }
 
 // resolveOrCreateAnchor returns the workspace's own company, minting it on the
@@ -404,7 +406,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 			return anchorTarget{}, err
 		}
 		companyID, err = createAnchorCompany(ctx, tx, displayName, by)
-		return anchorTarget{id: companyID, created: true}, err
+		return anchorTarget{id: companyID, created: true, named: true}, err
 	}
 	if err != nil {
 		return anchorTarget{}, err
@@ -437,7 +439,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 			return anchorTarget{}, err
 		}
 	}
-	return anchorTarget{id: companyID, before: before}, nil
+	return anchorTarget{id: companyID, before: before, named: tag.RowsAffected() > 0}, nil
 }
 
 // createAnchorCompany mints the company row, marked as the installation's

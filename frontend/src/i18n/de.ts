@@ -9803,6 +9803,7 @@ export const de = {
   "roles.restore": "Rolle wiederherstellen",
   "roles.archivedNote":
     "Diese Rolle ist archiviert. Die Rolle gewährt nichts und kann bis zur Wiederherstellung niemandem zugewiesen werden.",
+  "roles.archivedReadOnly": "Stelle diese Rolle wieder her, um sie zu ändern.",
   "roles.archivedToast": "{name} archiviert",
   "roles.restoredToast": "{name} wiederhergestellt",
   "roles.notSaved": "Änderung nicht gespeichert",
@@ -10030,6 +10031,7 @@ export const de = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
+  "settings.companyNameTooLong": "Kürze den Unternehmensnamen.",
   "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
   "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",

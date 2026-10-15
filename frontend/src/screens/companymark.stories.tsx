@@ -76,9 +76,9 @@ export const BothMarksPhone: Story = {
 };
 
 // Read-only: the marks are facts about the company, so they are still shown.
-// The verbs and the drop target go, and the panel says why once.
+// The verbs and the drop target go; the profile card below says why.
 export const NotYoursToChange: Story = {
-  args: { profile: BOTH, canEdit: false, readOnly: true },
+  args: { profile: BOTH, canEdit: false },
 };
 
 function refuseUploads(...paths: string[]) {

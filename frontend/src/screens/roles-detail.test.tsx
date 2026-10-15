@@ -48,31 +48,45 @@ const FIELD: Role = {
   },
 };
 
-function Body({ units }: Readonly<{ units: readonly ExtensionUnit[] }>) {
+type Seat = Readonly<{ role?: Role; canUpdate?: boolean }>;
+
+function Body({
+  units,
+  role = FIELD,
+  canUpdate = true,
+}: Readonly<{ units: readonly ExtensionUnit[] }> & Seat) {
   const writes = useRoleWrites();
   return (
     <RoleDetail
-      role={FIELD}
-      directory={[FIELD]}
+      role={role}
+      directory={[role]}
       units={units}
-      canUpdate
+      canUpdate={canUpdate}
       canWiden
       writes={writes}
     />
   );
 }
 
-function render(units: readonly ExtensionUnit[] = [NOTES]) {
+function render(units: readonly ExtensionUnit[] = [NOTES], seat: Seat = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <Body units={units} />
+        <Body units={units} {...seat} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// What a screen reader hears after a control's name.
+function description(control: HTMLElement): string {
+  return (control.getAttribute("aria-describedby") ?? "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent ?? "")
+    .join(" ");
 }
 
 // The names of the rows under each run, in the order the grid draws them.
@@ -172,5 +186,28 @@ describe("RoleDetail permission grid", () => {
         body: { ...READ, create: true },
       }),
     );
+  });
+
+  it("says once above the grid why a reader who may only read changes nothing, and on every switch", () => {
+    render([NOTES], { canUpdate: false });
+    const said = screen
+      .getAllByText(en["roles.readOnly"])
+      .filter((line) => !line.closest(".grant-cell"));
+    expect(said).toHaveLength(1);
+    const switches = screen.getAllByRole("switch", { name: /^Allow / });
+    expect(switches.length).toBeGreaterThan(0);
+    for (const control of switches) {
+      expect(description(control)).toContain(en["roles.readOnly"]);
+    }
+  });
+
+  it("gives an archived role's switches the archive as their reason, not the reader's role", () => {
+    render([NOTES], {
+      role: { ...FIELD, archived_at: "2026-09-01T09:00:00Z" },
+    });
+    expect(screen.queryByText(en["roles.readOnly"])).toBeNull();
+    for (const control of screen.getAllByRole("switch", { name: /^Allow / })) {
+      expect(description(control)).toContain(en["roles.archivedReadOnly"]);
+    }
   });
 });

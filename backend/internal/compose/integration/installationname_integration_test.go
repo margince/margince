@@ -11,6 +11,7 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -129,7 +130,7 @@ func TestAHumanRenamingTheAnchorRecordRenamesTheInstallation(t *testing.T) {
 	}
 }
 
-func TestAnAgentRenamingTheAnchorLeavesTheInstallationName(t *testing.T) {
+func TestAnAgentCannotRenameTheAnchorEvenWithApproval(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	agent := apptest.PassportBearer(t, e, "renaming agent", "read", "write")
@@ -144,18 +145,111 @@ func TestAnAgentRenamingTheAnchorLeavesTheInstallationName(t *testing.T) {
 		t.Fatalf("human approve = %d, want 200", status)
 	}
 	agent["X-Approval-Token"] = approval
-	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor, rename, agent, nil); status != http.StatusOK {
-		t.Fatalf("the approved agent PATCH = %d, want 200", status)
+	var refused companyProblem
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor, rename, agent, &refused); status != http.StatusUnprocessableEntity {
+		t.Fatalf("the approved agent PATCH = %d, want 422", status)
 	}
-	var record struct {
-		DisplayName string `json:"display_name"`
-	}
-	if status := e.Call(t, http.MethodGet, "/v1/companies/"+anchor, nil, nil, &record); status != http.StatusOK ||
-		record.DisplayName != "Agent Picked Ltd" {
-		t.Fatalf("the anchor reads %d %q after the approved rename, want 200 %q", status, record.DisplayName, "Agent Picked Ltd")
+	wantNameFault(t, refused, "anchor_protected")
+	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
+		t.Errorf("the refused rename left the anchor named %q, want %q", got, "Profile Name AG")
 	}
 	if got := settingsName(t, e); got != "Profile Name AG" {
 		t.Errorf("an agent's rename moved the installation to %q, want %q", got, "Profile Name AG")
+	}
+}
+
+// The anchor's name carries the installation name's bound on every path that
+// renames it; a customer company's name does not.
+func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
+	e := oneNameApp(t)
+	anchor := saveAnchor(t, e, "Profile Name AG")
+	tooLong := strings.Repeat("a", 201)
+
+	body := wellFormedCompany()
+	body["display_name"] = tooLong
+	var problem companyProblem
+	if status := e.Call(t, http.MethodPut, "/v1/company", body, nil, &problem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("PUT /v1/company with a 201-character name = %d, want 422", status)
+	}
+	wantNameFault(t, problem, "too_long")
+
+	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
+		var patched companyProblem
+		if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
+			AnyMap{"display_name": name}, nil, &patched); status != http.StatusUnprocessableEntity {
+			t.Fatalf("PATCH the anchor's display_name to %d runes = %d, want 422", len(name), status)
+		}
+		wantNameFault(t, patched, code)
+		var corrected companyProblem
+		if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor+"/profile-fields/display_name",
+			AnyMap{"value": name}, nil, &corrected); status != http.StatusUnprocessableEntity {
+			t.Fatalf("correct the anchor's display_name to %d runes = %d, want 422", len(name), status)
+		}
+		wantNameFault(t, corrected, code)
+	}
+	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
+		t.Errorf("a refused rename left the anchor named %q", got)
+	}
+	if got := settingsName(t, e); got != "Profile Name AG" {
+		t.Errorf("a refused rename moved the installation to %q", got)
+	}
+
+	customer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Brandt Logistik GmbH", "source": "manual"})
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+customer,
+		AnyMap{"display_name": tooLong}, nil, nil); status != http.StatusOK {
+		t.Errorf("a customer's 201-character name = %d, want 200: only the anchor carries the bound", status)
+	}
+}
+
+// Renaming the anchor renames the installation. So a seat that may edit the
+// record but not the installation is refused, and resending the name is no rename.
+func TestOnlyAnAdministratorRenamesTheAnchor(t *testing.T) {
+	e := oneNameApp(t)
+	anchor := saveAnchor(t, e, "Profile Name AG")
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
+		AnyMap{"owner_id": sessionUserID(t, e)}, nil, nil); status != http.StatusOK {
+		t.Fatalf("hand the anchor to the seat about to be a rep = %d, want 200", status)
+	}
+	demoteToRep(t, e)
+
+	var refused companyProblem
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
+		AnyMap{"display_name": "Rep Picked GmbH"}, nil, &refused); status != http.StatusForbidden {
+		t.Fatalf("a rep renaming the anchor = %d, want 403", status)
+	}
+	if refused.Code != "permission_denied" || !strings.Contains(refused.Detail, "only an administrator renames the company") {
+		t.Errorf("refusal = %s %q, want permission_denied saying only an administrator renames the company",
+			refused.Code, refused.Detail)
+	}
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor+"/profile-fields/display_name",
+		AnyMap{"value": "Rep Picked GmbH"}, nil, nil); status != http.StatusForbidden {
+		t.Errorf("a rep correcting the anchor's name = %d, want 403", status)
+	}
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor+"/profile-fields/display_name",
+		AnyMap{"value": "Profile Name AG"}, nil, nil); status != http.StatusOK {
+		t.Errorf("a rep resending the anchor's own name = %d, want 200", status)
+	}
+	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
+		t.Errorf("the refused rename left the anchor named %q", got)
+	}
+}
+
+func anchorName(t *testing.T, e *apptest.AppEnv, anchor string) string {
+	t.Helper()
+	var record struct {
+		DisplayName string `json:"display_name"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/companies/"+anchor, nil, nil, &record); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies/{anchor} = %d, want 200", status)
+	}
+	return record.DisplayName
+}
+
+func wantNameFault(t *testing.T, problem companyProblem, code string) {
+	t.Helper()
+	if len(problem.Details.Errors) != 1 || problem.Details.Errors[0].Field != "display_name" ||
+		problem.Details.Errors[0].Code != code {
+		t.Errorf("refusal = %+v, want one %s error on display_name", problem.Details.Errors, code)
 	}
 }
 
@@ -178,4 +272,24 @@ func TestTheDeprecatedSettingsNameCannotDriftFromTheProfile(t *testing.T) {
 	if got := settingsName(t, e); got != "Profile Name AG" {
 		t.Errorf("the refused rename left the installation as %q, want %q", got, "Profile Name AG")
 	}
+
+	before := settingsTimezone(t, e)
+	if status := e.Call(t, http.MethodPatch, "/v1/installation/settings",
+		AnyMap{"name": "Typed Elsewhere Inc", "timezone": "Asia/Tokyo"}, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a refused rename beside a valid zone = %d, want 422", status)
+	}
+	if got := settingsTimezone(t, e); got != before {
+		t.Errorf("the refused patch moved the zone to %q; one refused field writes nothing", got)
+	}
+}
+
+func settingsTimezone(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	var settings struct {
+		Timezone string `json:"timezone"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/installation/settings", nil, nil, &settings); status != http.StatusOK {
+		t.Fatalf("GET /v1/installation/settings = %d, want 200", status)
+	}
+	return settings.Timezone
 }

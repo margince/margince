@@ -151,7 +151,7 @@ func (s *Store) confirmCompanySiteReadTx(
 	if err := recordSiteReadConfirmation(ctx, tx, read, confirmation); err != nil {
 		return Company{}, nil, err
 	}
-	if err := s.followAnchorNameTx(ctx, tx, confirmation.target.id); err != nil {
+	if err := s.followAnchorSaveTx(ctx, tx, confirmation.target); err != nil {
 		return Company{}, nil, err
 	}
 	// The marks land AFTER the confirmation's own event, never before it. Their

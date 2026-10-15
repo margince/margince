@@ -9564,6 +9564,7 @@ export const vi = {
   "roles.restore": "Khôi phục vai trò",
   "roles.archivedNote":
     "Vai trò này đang trong kho lưu trữ: không cấp quyền nào và không thể gán cho ai cho đến khi được khôi phục.",
+  "roles.archivedReadOnly": "Hãy khôi phục vai trò này để thay đổi.",
   "roles.archivedToast": "Đã chuyển {name} vào kho lưu trữ",
   "roles.restoredToast": "Đã khôi phục {name}",
   "roles.notSaved": "Không thể lưu thay đổi",
@@ -9789,6 +9790,7 @@ export const vi = {
   "settings.companySave": "Lưu bối cảnh công ty",
   "settings.companySaved": "Đã lưu",
   "settings.companySaveFailed": "Không thể lưu bối cảnh công ty",
+  "settings.companyNameTooLong": "Hãy rút ngắn tên công ty.",
   "settings.companyRefreshFailed": "Quá trình đọc trang web bị gián đoạn",
   "settings.companyApplyFailed": "Không thể áp dụng thay đổi",
   "settings.companyRefreshWarnings": "Cảnh báo từ lần đọc này",

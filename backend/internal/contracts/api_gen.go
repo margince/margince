@@ -30730,10 +30730,12 @@ type CompanyProfileInput struct {
 	CommonObjections *string `json:"common_objections,omitempty"`
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
-	DisplayName      string  `json:"display_name"`
-	History          *string `json:"history,omitempty"`
-	Icp              *string `json:"icp,omitempty"`
-	Industry         *string `json:"industry,omitempty"`
+
+	// DisplayName The installation's name too, so it carries the installation name's bound: `422 too_long` past 200 characters.
+	DisplayName string  `json:"display_name"`
+	History     *string `json:"history,omitempty"`
+	Icp         *string `json:"icp,omitempty"`
+	Industry    *string `json:"industry,omitempty"`
 
 	// LegalForm The legal form as the imprint prints it (GmbH, AG, Ltd).
 	LegalForm *string `json:"legal_form,omitempty"`
@@ -37944,7 +37946,7 @@ type InstallationSettings struct {
 	// little room rather than compare a file against it exactly.
 	MaxUploadBytes int64 `json:"max_upload_bytes"`
 
-	// Name The company's display name. A human saving the anchor company's `display_name`
+	// Name The company's display name. An administrator saving the anchor company's `display_name`
 	// (`PUT /company`, a profile-field correction or a company edit) sets it in the same
 	// transaction; before the first save it is the name the installation was configured with.
 	Name string `json:"name"`
