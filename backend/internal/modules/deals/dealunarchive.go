@@ -47,5 +47,9 @@ func (s *Store) RestoreDealTx(
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, dealUnarchive, id.UUID, ifVersion, with)
+	shape := dealUnarchive
+	restored := crmcontracts.PublicEventDealRestored{}
+	restored.Imported, restored.ImportRunId = storekit.ImportMark(ctx)
+	shape.Restored = restored
+	return storekit.Unarchive(ctx, tx, shape, id.UUID, ifVersion, with)
 }

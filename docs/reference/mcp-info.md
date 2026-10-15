@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.3 KB |
+| Tool catalog | 175.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45758 |
+| Approx. wire tokens | 45780 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 61.0 KB | 34% | **No**: a result's shape, never listed to a model |
+| Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
 | Input schemas | 52.6 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **100.8 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **100.9 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 988 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 993 |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -6111,8 +6111,8 @@ when an item happened, in UTC — prefer it over a date the prose recalls.
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
 checks every row against the workspace and reports what importing it would do. Writes nothing.
-`object` is company, contact or lead. Use `contact` for a file the business already knows — a
-migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
+`object` is company, contact, lead or deal. Use `contact` for a file the business already knows —
+a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
 nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
 here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
 email is already held, which is always refused, because an email is a real key. A company's Website
@@ -6163,7 +6163,8 @@ immediately; requires passport scope "write".)
             "enum": [
               "company",
               "lead",
-              "contact"
+              "contact",
+              "deal"
             ],
             "type": "string"
           }
@@ -6175,7 +6176,7 @@ immediately; requires passport scope "write".)
         ],
         "type": "object"
       },
-      "maxItems": 3,
+      "maxItems": 4,
       "minItems": 1,
       "type": "array"
     },
@@ -6195,7 +6196,8 @@ immediately; requires passport scope "write".)
       "enum": [
         "company",
         "lead",
-        "contact"
+        "contact",
+        "deal"
       ],
       "type": "string"
     },
@@ -6414,6 +6416,12 @@ immediately; requires passport scope "write".)
             "parts": {
               "items": {
                 "properties": {
+                  "closed_lost": {
+                    "type": "integer"
+                  },
+                  "closed_won": {
+                    "type": "integer"
+                  },
                   "disposition": {
                     "properties": {
                       "created": {

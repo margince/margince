@@ -5831,6 +5831,7 @@ export const de = {
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
+  "import.object.deal": "Deals",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -6035,6 +6036,12 @@ export const de = {
     "1 Zeile hat ungültige Werte und wird übersprungen",
   "import.test.invalid_other":
     "{count} Zeilen haben ungültige Werte und werden übersprungen",
+  "import.test.closedDeals_one":
+    "1 Deal wird als abgeschlossene Historie importiert",
+  "import.test.closedDeals_other":
+    "{count} Deals werden als abgeschlossene Historie importiert",
+  "import.test.closedDealsBody":
+    "{won} gewonnen und {lost} verloren. Die Deals behalten das Abschlussdatum aus der Datei, und für sie läuft keine Automatisierung und keine Provision.",
   "import.test.invalidBody":
     "Korrigiere die Zeilen in der Datei und lade die Datei erneut hoch, um die Zeilen zu übernehmen.",
   "import.test.anyway_one":
@@ -6176,6 +6183,39 @@ export const de = {
   "import.reason.tag_new":
     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "Du darfst keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
+  "import.reason.stage_unnamed": "Nenne die Phase des Deals.",
+  "import.reason.pipeline_unnamed":
+    "Nenne die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
+  "import.reason.pipeline_unknown":
+    "„{value}“ ist keine Pipeline. Es gibt: {names}.",
+  "import.reason.stage_unknown":
+    "„{value}“ ist keine Phase der Pipeline „{pipeline}“. Mögliche Phasen: {names}.",
+  "import.reason.currency_not_a_code":
+    "„{value}“ ist kein Währungscode. Schreibe die drei Buchstaben, etwa EUR.",
+  "import.reason.close_date_future":
+    "„{value}“ liegt in der Zukunft, und das Abschlussdatum eines abgeschlossenen Deals darf das nicht sein.",
+  "import.reason.close_date_past":
+    "„{value}“ liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
+  "import.reason.lost_reason_missing":
+    "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
+  "import.reason.deal_pipeline_fixed":
+    "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "import.reason.deal_already_closed":
+    "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
+  "import.reason.fx_rate_missing":
+    "Für {currency} liegt kein Wechselkurs für den Abschlusstag dieses Deals vor, daher wird die Zeile übersprungen. Hinterlege den Kurs und importiere erneut.",
+  "import.reason.deal_legal_gate":
+    "Eine Phase vor der Phase dieses Deals erfordert eine rechtliche Prüfung, daher kann der Deal nicht über diese Phase hinaus importiert werden.",
+  "import.reason.pipeline_no_open_stage":
+    "Die Pipeline hat keine offene Phase, in der ein abgeschlossener Deal beginnen kann.",
+  "import.reason.cannot_link_stakeholders":
+    "Du kannst keine Stakeholder zu Deals hinzufügen, daher wird der Kontakt dieser Zeile nicht verknüpft.",
+  "import.reason.contact_not_found":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",

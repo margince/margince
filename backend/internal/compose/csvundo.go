@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,11 +47,17 @@ func (w *csvWriters) Reverse(
 	case migration.ObjectLead:
 		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched)
 	case migration.ObjectCompany:
-		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched)
+		// A live deal or contact that still names the company keeps it.
+		// Archiving would leave that record pointing at a hidden company.
+		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched, contacts.KeepWhileReferenced())
 	case migration.ObjectContact:
 		// The archive cascades to the contact's addresses, numbers and
 		// relationships, so the child rows this run created go with it.
 		_, err = w.contacts.ArchiveContact(ctx, ids.From[ids.ContactKind](nativeID), nil, untouched)
+	case migration.ObjectDeal:
+		// The archive takes the deal's stakeholder edges with it, so the edges
+		// this run seated go too.
+		_, err = w.deals.ArchiveDeal(ctx, ids.From[ids.DealKind](nativeID), nil, deals.NotTouchedByHumanSince(importedAt))
 	default:
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}

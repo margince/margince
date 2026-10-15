@@ -5963,6 +5963,7 @@ export const en = {
   "import.object.lead": "Prospects",
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
+  "import.object.deal": "Deals",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
@@ -6159,6 +6160,11 @@ export const en = {
   "import.test.invalid_one": "1 row has invalid values and will be skipped",
   "import.test.invalid_other":
     "{count} rows have invalid values and will be skipped",
+  "import.test.closedDeals_one": "1 deal is imported as closed history",
+  "import.test.closedDeals_other":
+    "{count} deals are imported as closed history",
+  "import.test.closedDealsBody":
+    "{won} won and {lost} lost. They keep the close date in the file, and no automation or commission runs for them.",
   "import.test.invalidBody":
     "Fix them in the file and upload it again to bring them in.",
   "import.test.anyway_one":
@@ -6295,6 +6301,39 @@ export const en = {
   "import.reason.tag_new":
     "No tag has this name yet, so the import creates it.",
   "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "You cannot read pipelines, so a deal row naming its stage is skipped.",
+  "import.reason.stage_unnamed": "Name the deal’s stage.",
+  "import.reason.pipeline_unnamed":
+    "Name the pipeline: this CRM has no default pipeline.",
+  "import.reason.pipeline_unknown":
+    "“{value}” is not a pipeline. The pipelines are: {names}.",
+  "import.reason.stage_unknown":
+    "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
+  "import.reason.currency_not_a_code":
+    "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.close_date_future":
+    "“{value}” is in the future, and a closed deal’s close date cannot be.",
+  "import.reason.close_date_past":
+    "“{value}” is in the past, and an open deal’s close date cannot be.",
+  "import.reason.lost_reason_missing":
+    "A lost deal needs the reason it was lost.",
+  "import.reason.deal_pipeline_fixed":
+    "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_already_closed":
+    "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
+  "import.reason.fx_rate_missing":
+    "No exchange rate for {currency} is on file for the day this deal closed, so the row is skipped. Add the rate, then import again.",
+  "import.reason.deal_legal_gate":
+    "A stage before this deal’s stage needs a legal review, so the deal cannot be imported as past that stage.",
+  "import.reason.pipeline_no_open_stage":
+    "The pipeline has no open stage to start a closed deal on.",
+  "import.reason.cannot_link_stakeholders":
+    "You cannot add stakeholders to deals, so this row’s contact is not linked.",
+  "import.reason.contact_not_found":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.contact_not_found_dropped":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",

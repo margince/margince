@@ -5692,6 +5692,7 @@ export const vi = {
   "import.object.lead": "Lead",
   "import.object.company": "Công ty",
   "import.object.contact": "Liên hệ",
+  "import.object.deal": "Deal",
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
@@ -5888,6 +5889,10 @@ export const vi = {
   "import.test.invalid_one": "1 dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
   "import.test.invalid_other":
     "{count} dòng có giá trị không hợp lệ và sẽ bị bỏ qua",
+  "import.test.closedDeals_one": "1 deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDeals_other": "{count} deal được nhập làm lịch sử đã chốt",
+  "import.test.closedDealsBody":
+    "{won} thắng và {lost} thua. Các deal giữ ngày chốt trong tệp, và không có tự động hóa hay hoa hồng nào chạy cho chúng.",
   "import.test.invalidBody":
     "Sửa trong tệp rồi tải lên lại để nhập các dòng này.",
   "import.test.anyway_one":
@@ -6024,6 +6029,38 @@ export const vi = {
   "import.reason.tag_new":
     "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
   "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "Bạn không có quyền xem quy trình bán hàng nên hàng deal nêu giai đoạn bị bỏ qua.",
+  "import.reason.stage_unnamed": "Hãy nêu giai đoạn của deal.",
+  "import.reason.pipeline_unnamed":
+    "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
+  "import.reason.pipeline_unknown":
+    "“{value}” không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
+  "import.reason.stage_unknown":
+    "“{value}” không phải giai đoạn của quy trình “{pipeline}”. Các giai đoạn: {names}.",
+  "import.reason.currency_not_a_code":
+    "“{value}” không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
+  "import.reason.close_date_future":
+    "“{value}” ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
+  "import.reason.close_date_past":
+    "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
+  "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
+  "import.reason.deal_pipeline_fixed":
+    "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "import.reason.deal_already_closed":
+    "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
+  "import.reason.fx_rate_missing":
+    "Chưa có tỷ giá {currency} cho ngày deal này đóng nên hàng bị bỏ qua. Hãy thêm tỷ giá rồi nhập lại.",
+  "import.reason.deal_legal_gate":
+    "Một giai đoạn trước giai đoạn của deal này cần được rà soát pháp lý nên không thể nhập deal vượt qua giai đoạn đó.",
+  "import.reason.pipeline_no_open_stage":
+    "Quy trình không có giai đoạn đang mở để bắt đầu một deal đã đóng.",
+  "import.reason.cannot_link_stakeholders":
+    "Bạn không thể thêm bên liên quan vào deal nên liên hệ của hàng này không được liên kết.",
+  "import.reason.contact_not_found":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",

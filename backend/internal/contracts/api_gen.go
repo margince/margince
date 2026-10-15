@@ -10373,6 +10373,7 @@ func (e ImportIgnoredEntryReason) Valid() bool {
 const (
 	ImportObjectCompany ImportObject = "company"
 	ImportObjectContact ImportObject = "contact"
+	ImportObjectDeal    ImportObject = "deal"
 	ImportObjectLead    ImportObject = "lead"
 )
 
@@ -10382,6 +10383,8 @@ func (e ImportObject) Valid() bool {
 	case ImportObjectCompany:
 		return true
 	case ImportObjectContact:
+		return true
+	case ImportObjectDeal:
 		return true
 	case ImportObjectLead:
 		return true
@@ -10469,16 +10472,26 @@ const (
 	ImportReasonCodeCannotCreateTags           ImportReasonCode = "cannot_create_tags"
 	ImportReasonCodeCannotEdit                 ImportReasonCode = "cannot_edit"
 	ImportReasonCodeCannotEditAndTag           ImportReasonCode = "cannot_edit_and_tag"
+	ImportReasonCodeCannotLinkStakeholders     ImportReasonCode = "cannot_link_stakeholders"
+	ImportReasonCodeCannotReadPipelines        ImportReasonCode = "cannot_read_pipelines"
 	ImportReasonCodeCannotReadTags             ImportReasonCode = "cannot_read_tags"
 	ImportReasonCodeCannotWriteType            ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCloseDateFuture            ImportReasonCode = "close_date_future"
+	ImportReasonCodeCloseDatePast              ImportReasonCode = "close_date_past"
 	ImportReasonCodeCompanyDuplicateFound      ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped    ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyNameEmpty           ImportReasonCode = "company_name_empty"
 	ImportReasonCodeContactDuplicateFound      ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped    ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld           ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactNotFound            ImportReasonCode = "contact_not_found"
+	ImportReasonCodeContactNotFoundDropped     ImportReasonCode = "contact_not_found_dropped"
 	ImportReasonCodeContactUnnamed             ImportReasonCode = "contact_unnamed"
+	ImportReasonCodeCurrencyNotACode           ImportReasonCode = "currency_not_a_code"
 	ImportReasonCodeCurrencyUnset              ImportReasonCode = "currency_unset"
+	ImportReasonCodeDealAlreadyClosed          ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealLegalGate              ImportReasonCode = "deal_legal_gate"
+	ImportReasonCodeDealPipelineFixed          ImportReasonCode = "deal_pipeline_fixed"
 	ImportReasonCodeDescriptionTooLong         ImportReasonCode = "description_too_long"
 	ImportReasonCodeDomainHeld                 ImportReasonCode = "domain_held"
 	ImportReasonCodeDuplicateEmail             ImportReasonCode = "duplicate_email"
@@ -10488,6 +10501,7 @@ const (
 	ImportReasonCodeEmployerNotFoundDropped    ImportReasonCode = "employer_not_found_dropped"
 	ImportReasonCodeEmptyPayload               ImportReasonCode = "empty_payload"
 	ImportReasonCodeFieldInactive              ImportReasonCode = "field_inactive"
+	ImportReasonCodeFxRateMissing              ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId            ImportReasonCode = "id_not_a_company_id"
 	ImportReasonCodeIdNotVisible               ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany             ImportReasonCode = "id_on_non_company"
@@ -10499,6 +10513,7 @@ const (
 	ImportReasonCodeLinkNotFoundDropped        ImportReasonCode = "link_not_found_dropped"
 	ImportReasonCodeLinkRowNotImported         ImportReasonCode = "link_row_not_imported"
 	ImportReasonCodeLinkedinHeld               ImportReasonCode = "linkedin_held"
+	ImportReasonCodeLostReasonMissing          ImportReasonCode = "lost_reason_missing"
 	ImportReasonCodeNaturalKeyTaken            ImportReasonCode = "natural_key_taken"
 	ImportReasonCodeNotADate                   ImportReasonCode = "not_a_date"
 	ImportReasonCodeNotADomain                 ImportReasonCode = "not_a_domain"
@@ -10512,11 +10527,16 @@ const (
 	ImportReasonCodeOwnerRefused               ImportReasonCode = "owner_refused"
 	ImportReasonCodeOwnerUnknown               ImportReasonCode = "owner_unknown"
 	ImportReasonCodePhoneNeedsCountry          ImportReasonCode = "phone_needs_country"
+	ImportReasonCodePipelineNoOpenStage        ImportReasonCode = "pipeline_no_open_stage"
+	ImportReasonCodePipelineUnknown            ImportReasonCode = "pipeline_unknown"
+	ImportReasonCodePipelineUnnamed            ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived             ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany   ImportReasonCode = "ref_taken_by_another_company"
 	ImportReasonCodeRowKeyEmpty                ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated             ImportReasonCode = "row_key_repeated"
 	ImportReasonCodeSizeBandInvalid            ImportReasonCode = "size_band_invalid"
+	ImportReasonCodeStageUnknown               ImportReasonCode = "stage_unknown"
+	ImportReasonCodeStageUnnamed               ImportReasonCode = "stage_unnamed"
 	ImportReasonCodeTagCreated                 ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid             ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                     ImportReasonCode = "tag_new"
@@ -10541,9 +10561,17 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeCannotEditAndTag:
 		return true
+	case ImportReasonCodeCannotLinkStakeholders:
+		return true
+	case ImportReasonCodeCannotReadPipelines:
+		return true
 	case ImportReasonCodeCannotReadTags:
 		return true
 	case ImportReasonCodeCannotWriteType:
+		return true
+	case ImportReasonCodeCloseDateFuture:
+		return true
+	case ImportReasonCodeCloseDatePast:
 		return true
 	case ImportReasonCodeCompanyDuplicateFound:
 		return true
@@ -10557,9 +10585,21 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeContactEmailHeld:
 		return true
+	case ImportReasonCodeContactNotFound:
+		return true
+	case ImportReasonCodeContactNotFoundDropped:
+		return true
 	case ImportReasonCodeContactUnnamed:
 		return true
+	case ImportReasonCodeCurrencyNotACode:
+		return true
 	case ImportReasonCodeCurrencyUnset:
+		return true
+	case ImportReasonCodeDealAlreadyClosed:
+		return true
+	case ImportReasonCodeDealLegalGate:
+		return true
+	case ImportReasonCodeDealPipelineFixed:
 		return true
 	case ImportReasonCodeDescriptionTooLong:
 		return true
@@ -10578,6 +10618,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeEmptyPayload:
 		return true
 	case ImportReasonCodeFieldInactive:
+		return true
+	case ImportReasonCodeFxRateMissing:
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
@@ -10600,6 +10642,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkRowNotImported:
 		return true
 	case ImportReasonCodeLinkedinHeld:
+		return true
+	case ImportReasonCodeLostReasonMissing:
 		return true
 	case ImportReasonCodeNaturalKeyTaken:
 		return true
@@ -10627,6 +10671,12 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodePhoneNeedsCountry:
 		return true
+	case ImportReasonCodePipelineNoOpenStage:
+		return true
+	case ImportReasonCodePipelineUnknown:
+		return true
+	case ImportReasonCodePipelineUnnamed:
+		return true
 	case ImportReasonCodeRecordArchived:
 		return true
 	case ImportReasonCodeRefTakenByAnotherCompany:
@@ -10636,6 +10686,10 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeRowKeyRepeated:
 		return true
 	case ImportReasonCodeSizeBandInvalid:
+		return true
+	case ImportReasonCodeStageUnknown:
+		return true
+	case ImportReasonCodeStageUnnamed:
 		return true
 	case ImportReasonCodeTagCreated:
 		return true
@@ -33441,6 +33495,10 @@ type CreateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37004,6 +37062,10 @@ type ImportFormatFile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37043,6 +37105,10 @@ type ImportIgnoredEntryReason string
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
+//
+// `deal` creates deals, after the companies and contacts of the same
+// upload. A deal row needs a `ref`, and names its pipeline and stage by
+// name.
 //
 // `lead` and `contact` are two answers to one question about a file of
 // humans, and the caller picks the one that matches where the file came
@@ -37118,6 +37184,10 @@ type ImportPartProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37151,6 +37221,12 @@ type ImportPartProfile struct {
 
 // ImportPartReport One file's slice of a run's report.
 type ImportPartReport struct {
+	// ClosedLost Deals of a deals file that land already lost, as closed history. Absent when none does.
+	ClosedLost *int `json:"closed_lost,omitempty"`
+
+	// ClosedWon Deals of a deals file that land already won, as closed history. Absent when none does.
+	ClosedWon *int `json:"closed_won,omitempty"`
+
 	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
 	Disposition ImportRunDisposition `json:"disposition"`
 
@@ -37160,6 +37236,10 @@ type ImportPartReport struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -37197,6 +37277,10 @@ type ImportPartRequest struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -37308,6 +37392,10 @@ type ImportRun struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -37460,6 +37548,10 @@ type ImportRunPart struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37593,6 +37685,10 @@ type ImportSourceProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37672,6 +37768,10 @@ type ImportUndoReport struct {
 		//
 		// `company` creates companies.
 		//
+		// `deal` creates deals, after the companies and contacts of the same
+		// upload. A deal row needs a `ref`, and names its pipeline and stage by
+		// name.
+		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
 		// from.
@@ -37709,6 +37809,10 @@ type ImportUndoReport struct {
 		// Object What the file's rows are, and therefore what the run creates.
 		//
 		// `company` creates companies.
+		//
+		// `deal` creates deals, after the companies and contacts of the same
+		// upload. A deal row needs a `ref`, and names its pipeline and stage by
+		// name.
 		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
@@ -48152,6 +48256,10 @@ type UpdateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -54934,12 +55042,16 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -71169,6 +71281,9 @@ type ServerInterface interface {
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
+	// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+	// (GET /openapi.json)
+	GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request)
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
@@ -75513,6 +75628,12 @@ func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request
 // Create or replace the acting user's resumable onboarding state.
 // (PUT /onboarding/state)
 func (_ Unimplemented) PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+// (GET /openapi.json)
+func (_ Unimplemented) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102218,6 +102339,28 @@ func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetAgentOpenAPIDocument operation middleware
+func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAgentOpenAPIDocument(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPartners operation middleware
 func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.Request) {
 
@@ -114561,6 +114704,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/onboarding/state", wrapper.PutOnboardingState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/openapi.json", wrapper.GetAgentOpenAPIDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)
