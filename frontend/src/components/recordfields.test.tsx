@@ -5,14 +5,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import {
-  PageAsideProvider,
-  PageAsideToggle,
-  usePageAside,
-} from "../app/pageaside";
-import { UnsavedGuard, useUnsavedGuard } from "../app/unsaved";
 import { LocaleProvider } from "../i18n";
+import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
 import { type RecordFieldSave, RecordFields } from "./recordfields";
+import { UnsavedGuard, useUnsavedGuard } from "./unsaved";
 
 afterEach(cleanup);
 function wrapper({ children }: { children: ReactNode }) {

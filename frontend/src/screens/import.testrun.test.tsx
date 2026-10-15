@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UnsavedGuard } from "../app/unsaved";
+import { UnsavedGuard } from "../components/unsaved";
 import { ImportCard } from "./import";
 import {
   dryRun,

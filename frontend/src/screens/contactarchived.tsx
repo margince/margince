@@ -9,12 +9,12 @@ import { IdentityLine } from "../design-system/identityline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordView } from "../design-system/recordview";
 import { useT } from "../i18n";
+import { invalidateRecord } from "../lib/recordwritekeys";
 import { useRecordZone } from "../lib/recordzone";
 import { ContactActions } from "./contactactions";
 import { ContactFacts } from "./contactfacts";
 import { RecordHistoryTab } from "./history";
 import { RecordAccess } from "./recordaccess";
-import { invalidateRecord } from "./recordwritekeys";
 import { WorklistReturnLink } from "./worklist.return";
 import "./contact360.css";
 

@@ -5,6 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import {
+  EntityRef,
+  RosterPartialNote,
+  rosterOwnerName,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
 import { Badge, Button, Field, Textarea } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
@@ -21,13 +28,6 @@ import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMemberName } from "../lib/membernames";
 import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
-import {
-  EntityRef,
-  RosterPartialNote,
-  rosterOwnerName,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
 import {
   DSR_KIND_LABEL,
   DSR_STATUS_LABEL,

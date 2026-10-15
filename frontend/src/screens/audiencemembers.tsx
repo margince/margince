@@ -13,10 +13,10 @@
 // names are being picked here or resolved for a chip somewhere else.
 
 import type { components } from "../api/schema";
+import { type RosterKind, useRoster } from "../components/entityref";
 import { Checkbox } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { type RosterKind, useRoster } from "./entityref";
 import "./audiencemembers.css";
 
 type AudienceMember = components["schemas"]["AudienceMember"];

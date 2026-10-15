@@ -30,6 +30,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { recordWriteKeys } from "../lib/recordwritekeys";
 import { useMe } from "../lib/session";
 import { BuyableRefused } from "./integrations-provider.notices";
 import { LookupPostureRow } from "./integrations-provider-posture";
@@ -39,7 +40,6 @@ import {
   connectionTone,
   useProviderConnections,
 } from "./provider-status";
-import { recordWriteKeys } from "./recordwritekeys";
 
 // The licensed-data-provider card (ADR-0101, PI-WIRE-1..5): connect a key,
 // decide whether new contacts are enriched automatically, and read what the

@@ -1,8 +1,8 @@
 import { Link2 } from "lucide-react";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
-import { EntityRef } from "./entityref";
 
 // What an edge row shows instead of a field diff.
 //

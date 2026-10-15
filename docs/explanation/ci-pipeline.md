@@ -216,7 +216,9 @@ What follows from this:
 ## Job graph
 
 ```
-changes ──┬─> deterministic-gates ──> craftsmanship
+changes ──┬─> deterministic-gates
+          ├─> backend-lint
+          ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
           │                     integration-unit-coverage ┴─> fan-in│
@@ -235,9 +237,10 @@ changes ──┬─> deterministic-gates ──> craftsmanship
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, uat, license-gate, images   (ten — vuln and
-         live-boot stay advisory and are NOT in the fan-in)
+         backend-lint, craftsmanship, craft-residue, secret-scan,
+         extension-reference, integration, frontend, uat, license-gate,
+         images   (eleven — vuln and live-boot stay advisory and are NOT
+         in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -354,7 +357,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule

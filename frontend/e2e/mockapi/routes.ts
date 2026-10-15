@@ -216,6 +216,11 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.startsWith("/approvals/"),
     handle: work.decideApproval,
   },
+  {
+    method: "GET",
+    path: "/activities/a-quarterly",
+    handle: reply(insight.quarterlyReview),
+  },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {
     method: "POST",

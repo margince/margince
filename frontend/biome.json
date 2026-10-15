@@ -116,9 +116,11 @@
                       "**/screens",
                       "**/screens/**",
                       "**/App",
+                      "**/components",
+                      "**/components/**",
                       "!@composition/**"
                     ],
-                    "message": "A base layer (lib, api, i18n, format) is imported by the screens and the shell, so it never imports them back. Move the shared code down into lib/ instead."
+                    "message": "A base layer (lib, api, i18n, format) is imported by the components, the screens and the shell, so it never imports them back. Move the shared code down into lib/ instead."
                   }
                 ]
               }
@@ -143,9 +145,38 @@
                       "**/screens",
                       "**/screens/**",
                       "**/App",
+                      "**/components",
+                      "**/components/**",
                       "!@composition/**"
                     ],
-                    "message": "The design system draws what the screens and the shell compose, so it never imports them. A piece that needs a screen's data or a feature belongs in screens/; a shared helper belongs in lib/."
+                    "message": "The design system draws what the components, the screens and the shell compose, so it never imports them. A piece that needs a screen's data or a feature belongs in components/ or screens/; a shared helper belongs in lib/."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/components/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**/app",
+                      "**/app/**",
+                      "**/screens",
+                      "**/screens/**",
+                      "**/App",
+                      "!@composition/**"
+                    ],
+                    "message": "A component is shared by many screens, so it never imports a screen or the shell. Move what it needs down into components/ or lib/, or keep the piece in screens/."
                   }
                 ]
               }

@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { EditAction } from "../components/edit";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
@@ -23,9 +24,8 @@ import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
-import { EditAction } from "./edit";
 import "../design-system/querystates.css";
-import { EntityRef } from "./entityref";
+import { EntityRef } from "../components/entityref";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./relationshiprows.css";
 import {

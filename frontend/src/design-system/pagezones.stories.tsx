@@ -153,11 +153,11 @@ export const AsideClosed: Story = {
   },
 };
 
-// The pane arriving and leaving, which is the reason `asideOpen` exists: the
-// content is handed over at every width and the flag alone decides whether the
-// column stands. A screen wires this switch into `PageAsideToggle` and the
-// memory behind it (app/pageaside.tsx); here it is a bare button, because what
-// this story is for is the COLUMN.
+// The pane arriving and leaving, which is why `asideOpen` exists. The content
+// is handed over at every width, and the flag alone decides if the column
+// stands. A screen wires this switch into `PageAsideToggle` and its
+// memory in components/pageaside.tsx. Here it is a bare button, because this
+// story is about the column.
 function TogglePane() {
   const [open, setOpen] = useState(true);
   return (

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { CreateField } from "../components/create";
 import type { MessageKey } from "../i18n/en";
-import type { CreateField } from "./create";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and

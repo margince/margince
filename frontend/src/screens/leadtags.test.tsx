@@ -10,11 +10,11 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { LEAD_LIST_KEY } from "../lib/leadkeys";
+import { useApplyTag } from "../lib/tags.queries";
 import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "../testing/story-utils";
-import { LEAD_LIST_KEY } from "./leadkeys";
 import { LeadsScreen } from "./leads";
-import { useApplyTag } from "./tags.queries";
 
 const TAG_A = "01a114b9-2725-7389-967d-a0ef76e58930";
 const TAG_B = "01a114b9-2725-7389-967d-a0ef76e58931";

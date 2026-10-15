@@ -2,13 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
-import { useMemberColumns } from "./listmembercolumns";
-import { MembersPanel } from "./listmembers";
+import type { List } from "../lib/lists.queries";
 import {
   chosenListing,
   LIVE_ID,
@@ -19,8 +13,14 @@ import {
   members,
   SHORTLIST_ID,
   shortlist,
-} from "./lists.fixtures";
-import type { List } from "./lists.queries";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { useMemberColumns } from "./listmembercolumns";
+import { MembersPanel } from "./listmembers";
 
 // A list's members as one Panel: Select all in its head, and the table as its
 // own content, ticked rows feeding the bulk bar. A Shortlist's columns say who

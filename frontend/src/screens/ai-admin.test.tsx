@@ -13,7 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { UnsavedGuard, useHasUnsavedChanges } from "../app/unsaved";
+import { UnsavedGuard, useHasUnsavedChanges } from "../components/unsaved";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";

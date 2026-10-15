@@ -93,11 +93,6 @@ AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
-**Creating or changing a custom field.** This changes the fields everyone can use.
-
-**Creating or changing a webhook subscription.** This decides where your events
-are sent.
-
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.
 
@@ -128,7 +123,7 @@ installation whether that floor is set. Ask; do not guess.
 The **Autonomy tiers** card in **Settings → Agents** states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
-"Enrichment, custom fields, webhooks, tag merges: wait in Approvals."
+"Enrichment and tag merges: wait in Approvals."
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -161,8 +156,9 @@ in these cases:
   action and the other approve it, and nobody would have looked.
 - An agent may approve its own proposal only in a narrow case. The change must
   be one that would have applied by itself if a human had not edited the record
-  first, and could be put back. That leaves out closing a deal, relinking, merging tags, changing a custom
-  field, sending, and anything your installation always holds for a human.
+  first, and could be put back. That leaves out closing a deal, relinking,
+  merging tags, sending, and anything your installation always holds for a
+  human.
   Any of the colleague's passports may approve such a proposal. That includes
   the one that proposed it, and a connected agent.
 - Anything else an agent proposed is approved by the colleague in the app, or
@@ -195,9 +191,13 @@ question box works over a named set of documents rather than over everything.
 a deal" approval is judged against. An agent that could edit the ladder could
 change the meaning of the approval it was asking for.
 
-For consent, document sets and pipeline settings, Margince does not let an
-agent's passport sign in at all. Approvals work in another way: the passport is
-let in, and the check happens on the card itself.
+**Custom fields, webhooks, saved views and sharing.** These are settings for
+members, and an agent can neither read nor change them. It can still read which
+custom fields exist, so it can search on them.
+
+For these and for consent, document sets and pipeline settings, a passport
+cannot sign in at all. Approvals work in another way: the passport is let in,
+and the check happens on the card itself.
 
 **New actions that change data.** Agents cannot use a new action that changes
 data until it is given a label. A missing label means the agent cannot do it,

@@ -5,7 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { usePageAside } from "../app/pageaside";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "../components/customfields.form";
+import { EditAction } from "../components/edit";
+import { usePageAside } from "../components/pageaside";
 import { OverflowMenu } from "../design-system/atoms";
 import { QueryGate } from "../design-system/querystates";
 import {
@@ -28,11 +33,6 @@ import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "./customfields.form";
-import { EditAction } from "./edit";
 import { OpenEmailDrawer } from "./openemaildrawer";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";

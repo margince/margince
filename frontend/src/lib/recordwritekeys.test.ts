@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { ENTITY_KINDS } from "../lib/entity";
+import { ENTITY_KINDS } from "./entity";
 import { recordWriteKeys } from "./recordwritekeys";
 
 describe("recordWriteKeys", () => {

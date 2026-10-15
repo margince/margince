@@ -29,7 +29,10 @@ import { describe, expect, it } from "vitest";
 const here = dirname(fileURLToPath(import.meta.url));
 
 function declaredListKeys(): string[] {
-  const source = readFileSync(resolve(here, "recordlistkeys.ts"), "utf8");
+  const source = readFileSync(
+    resolve(here, "../lib/recordlistkeys.ts"),
+    "utf8",
+  );
   const table =
     /const RECORD_LIST_KEY: Record<ListedRecordType, string> = \{([^}]*)\}/s.exec(
       source,

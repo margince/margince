@@ -4,7 +4,7 @@
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useTagVocabulary } from "./tags.queries";
+import { useTagVocabulary } from "../lib/tags.queries";
 
 /**
  * What the approver is committing to, named rather than implied.

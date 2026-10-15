@@ -1,15 +1,15 @@
 // RecordCustomFields: the editable Details of company, contact, deal and lead.
 // CustomFieldsPanel: read-only, for projects and contracts; omits unset fields.
 
-import { OffsiteLink } from "../design-system/offsitelink";
-import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
 import {
   customFieldHref,
   useCustomFieldDisplay,
   useObjectCustomFields,
-} from "./customfields.form";
-import type { CfObject } from "./customfields.logic";
+} from "../components/customfields.form";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useT } from "../i18n";
+import type { CfObject } from "../lib/customfields.logic";
 
 export function CustomFieldsPanel({
   object,

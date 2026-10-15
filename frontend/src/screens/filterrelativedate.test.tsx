@@ -8,17 +8,16 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-
+import { ShortlistVerb } from "../components/bulkshortlist";
 import { en } from "../i18n/en";
+import type { LeafValue } from "../lib/segmentpredicate";
+import { listsMe, shortlist } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { ShortlistVerb } from "./bulkshortlist";
 import { ValueControl } from "./filtervalue";
-import { listsMe, shortlist } from "./lists.fixtures";
-import type { LeafValue } from "./segmentpredicate";
 
 afterEach(cleanup);
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { EntityRef } from "../components/entityref";
 import { Card } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
-import { EntityRef } from "./entityref";
 
 // The interval between two lessons is declared beside the week's own, in the
 // sheet the panel that holds this one imports.

@@ -17,9 +17,9 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useMe } from "../lib/session";
 import "./users-admin.css";
+import { useRoster } from "../components/roster";
 import { useCan, useCanWrite } from "../lib/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
-import { useRoster } from "./roster";
 import { InviteUserForm } from "./users-invite-form";
 import {
   memberAnchorId,

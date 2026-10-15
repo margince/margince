@@ -4,15 +4,15 @@
 // One Live List, one Shortlist and the answers their pages read, shared by the
 // list stories and tests so both draw the same lists.
 
-import { meFixture } from "../testing/mefixture";
-import { jsonResponse } from "../testing/story-utils";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
 import type {
   List,
   ListExplanation,
   ListHistoryEntry,
   ListMember,
-} from "./lists.queries";
+} from "../lib/lists.queries";
+import { meFixture } from "./mefixture";
+import { jsonResponse } from "./story-utils";
 
 export const LIVE_ID = "01a0f000-0000-7000-8000-000000000001";
 export const SHORTLIST_ID = "01a0f000-0000-7000-8000-000000000002";

@@ -5,6 +5,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Hash } from "lucide-react";
 import { api } from "../api/client";
 import { usePageName } from "../app/pagemeta";
+import { CreateAction } from "../components/create";
+import { EntityRef } from "../components/entityref";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
+import { useOwnerChips } from "../components/ownerdials";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
@@ -12,16 +22,6 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { CreateAction } from "./create";
-import { EntityRef } from "./entityref";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
-import { useOwnerChips } from "./ownerdials";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,

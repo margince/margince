@@ -10,14 +10,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CreateField } from "../components/create";
+import { useObjectCustomFields } from "../components/customfields.form";
+import { EditAction, EditRecordModal } from "../components/edit";
 import { Button } from "../design-system/atoms";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
-import type { CreateField } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
-import { EditAction, EditRecordModal } from "./edit";
 
 // The shared edit-record form (the mirror of create): a record prefills the
 // form, submit carries only the typed values (the screen attaches ifMatch),

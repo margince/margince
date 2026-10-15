@@ -1,9 +1,9 @@
 export { searchCompanyTargets as searchCompanyReferences } from "./companyform";
 export { searchProjects as searchProjectReferences } from "./companyprojects";
 
+import { rosterOwnerName, useRoster } from "../components/entityref";
 import { useT } from "../i18n";
 import { useMemberName } from "../lib/membernames";
-import { rosterOwnerName, useRoster } from "./entityref";
 
 export function useRecordOwners(ownerId: string | null | undefined) {
   const t = useT();

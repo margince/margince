@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { AiPending } from "../design-system/aipending";
 import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -34,7 +35,6 @@ import {
   momentFallbackVerb,
   momentVerb,
 } from "./companytodayverbs";
-import { EntityRef } from "./entityref";
 import {
   CallCard,
   FoundMove,

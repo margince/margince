@@ -11,6 +11,7 @@ import { MultiSelect, Select } from "../design-system/select";
 import { forReader } from "../format/collate";
 import { ordinalNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { VocabularyField } from "../lib/filterdata";
 import {
   draftProblem,
   type FilterDraft,
@@ -36,7 +37,6 @@ import {
   valueControlOp,
   valueShape,
 } from "./analytics.questions.vocab";
-import type { VocabularyField } from "./filterdata";
 import { ValueControl } from "./filtervalue";
 import "./analytics.questions.css";
 

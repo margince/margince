@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PageAsideProvider, usePageAside } from "../app/pageaside";
+import { PageAsideProvider, usePageAside } from "../components/pageaside";
 import { StoryProviders } from "../testing/story-utils";
 import { ProjectTabs } from "./projecttabs";
 

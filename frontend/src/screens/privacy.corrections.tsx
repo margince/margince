@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -28,7 +29,6 @@ import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { correctableFieldLabel } from "./confirmfields";
-import { EntityRef } from "./entityref";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
 type Resolution = "accepted" | "rejected";

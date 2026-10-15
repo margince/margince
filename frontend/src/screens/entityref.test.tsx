@@ -10,10 +10,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { DealBulkBar } from "./dealbulk";
-import { EntityRef } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];

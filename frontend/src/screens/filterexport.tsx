@@ -22,9 +22,9 @@ import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { downloadBytes, filenameFromDisposition } from "../lib/download";
+import type { FilterResource } from "../lib/filterdata";
 import { throwProblem } from "../lib/problem";
-import type { FilterResource } from "./filterdata";
-import { encode, isComplete, type Node } from "./segmentpredicate";
+import { encode, isComplete, type Node } from "../lib/segmentpredicate";
 
 /** The formats the contract offers. Closed — the server enumerates these two. */
 const FORMATS = ["csv", "json"] as const;

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { Badge, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -14,7 +15,6 @@ import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
-import { EntityRef } from "./entityref";
 import "./partnercommissions.css";
 
 // What a partner has earned, on the partner's own company page.

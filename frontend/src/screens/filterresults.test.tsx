@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import type { FilterPreview, VocabularyField } from "./filterdata";
+import type { FilterPreview, VocabularyField } from "../lib/filterdata";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
 // The preview answers every non-generated column of the table, so what this

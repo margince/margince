@@ -4,7 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";

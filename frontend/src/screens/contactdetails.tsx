@@ -1,4 +1,5 @@
 import type { components } from "../api/schema";
+import { RecordFields, rawRecord } from "../components/recordfields";
 import { ContactLink } from "../design-system/contactlink";
 import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
@@ -10,7 +11,6 @@ import { BoughtAttributes } from "./contactboughtattributes";
 import { contactEditFields, mapContactUpdate } from "./contactformfields";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
-import { RecordFields, rawRecord } from "./recordfields";
 import { useRecordOwners } from "./recordreferences";
 import { TagsPanel } from "./tagspanel";
 
