@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
-import { PageHeadActionSlot } from "../components/pageheadaction";
+import { PageHeadSlot } from "../components/pageheadaction";
 import { Avatar, Badge, Modal } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
@@ -510,9 +510,11 @@ function SettingsTopBar({
   );
 }
 
-function SettingsPageTitle({ route }: Readonly<{ route: Route }>) {
-  const section = useSettingsSection(route);
-  return <PageTitle route={route} section={section} />;
+function SettingsPageTitle(
+  props: Readonly<{ route: Route; actionSlot: SlotRef }>,
+) {
+  const section = useSettingsSection(props.route);
+  return <PageTitle {...props} section={section} />;
 }
 
 // One group of the switcher's list, with the section's own heading above it — the
@@ -634,6 +636,8 @@ function SectionSwitcher({
   );
 }
 
+type SlotRef = (slot: HTMLElement | null) => void;
+
 /**
  * The page's own name, standing in the content column above what it names.
  *
@@ -648,9 +652,12 @@ function SectionSwitcher({
 export function PageTitle({
   route,
   section,
+  actionSlot,
 }: Readonly<{
   route: Route;
   section?: NavSection;
+  /** Takes the box the page's own verb (PageHeadAction) is drawn into. */
+  actionSlot?: SlotRef;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -663,11 +670,6 @@ export function PageTitle({
   // trail in the top bar and the sidebar's level, and printing it here
   // named the section twice and the surface never — a settings page read
   // "Settings" above a heading reading "Settings" with the audit log under both.
-  //
-  // At every width, now. The heading used to name the SECTION at phone width,
-  // because the sidebar shows destinations there and nothing else on screen said
-  // which section the page belonged to. The trail says it at every width, so the
-  // swap left the phone naming the section twice and the entry twice.
   const entryTitle = inSection
     ? entryLabel(inSection.entry, locale, t)
     : undefined;
@@ -755,7 +757,7 @@ export function PageTitle({
         </div>
         {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
       </div>
-      <PageHeadActionSlot />
+      <div className="pagehead-action" ref={actionSlot} />
     </div>
   );
 }
@@ -805,22 +807,14 @@ export function Shell({
   // a section route is a different component, mounted on the way in and gone
   // again on the way out.
   const walk = useNavWalk(route, !railless && !leveled);
+  const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  // A route change opens a different page, and a page opens at its top. Nothing
-  // in the browser does this for us here: the document itself never scrolls
-  // (`.app` is exactly one viewport tall), the content COLUMN does, and that
-  // column is the same element on every route — so it carries the offset the
-  // last page was left at straight into the next one. Reading a scrolled AI
-  // settings page and then opening another entry landed the reader partway down
-  // whatever the new page happened to have at that offset, and fewer, longer
-  // settings pages made it worse.
+  // A page opens at its top. The document never scrolls; the content column
+  // does, and it is one element on every route, so it would carry the old offset.
   //
   // Keyed by the ADDRESS, not by `route`: useRoute parses a fresh object every
   // render, so a dependency on the object would re-run this on every keystroke a
   // screen handles and fight a reader who has scrolled deliberately.
-  // Assigning scrollTop rather than calling scrollTo: it is the same instant jump,
-  // it is what the list surface's own reset already uses, and it is a property
-  // every environment the tests run in actually has.
   const address = routeHash(route);
   // A new page opens at its top; a page the reader is returning to opens where
   // they left it. Both live in lib/scrollmemory.ts. The second needs an identity
@@ -957,11 +951,13 @@ export function Shell({
             own controls. */}
           <div className="scroll" ref={scroller} tabIndex={-1}>
             {leveled ? (
-              <SettingsPageTitle route={route} />
+              <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
             ) : (
-              <PageTitle route={route} />
+              <PageTitle route={route} actionSlot={setHeadSlot} />
             )}
-            {children}
+            <PageHeadSlot.Provider value={headSlot}>
+              {children}
+            </PageHeadSlot.Provider>
           </div>
         </main>
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than

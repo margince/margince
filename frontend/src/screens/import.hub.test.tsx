@@ -171,9 +171,53 @@ describe("the data import hub", () => {
         jsonResponse({ ...formatFixture, order: ["contact", "company"] }),
     });
     render(<ImportCard />);
-    // The arrows are drawn for the eye only; a screen reader hears the names.
     const line = await screen.findByText("Import order: Contacts Companies");
     expect(line).toHaveTextContent("Import order: Contacts → Companies");
+    // The arrows are drawn for the eye only; a screen reader hears the names.
+    const arrows = [...line.children].filter((one) =>
+      one.textContent?.includes("→"),
+    );
+    expect(arrows).toHaveLength(1);
+    for (const arrow of arrows) {
+      expect(arrow).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("keeps the history panel while a read is pending, and says a failed one", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({ data: [{ ...run, file_name: "crm.csv" }] }),
+    });
+    const routed = vi.mocked(fetch).getMockImplementation();
+    let answerDrafts: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://test.local",
+        );
+        if (url.searchParams.get("view") === "drafts") {
+          return new Promise<Response>((resolve) => {
+            answerDrafts = resolve;
+          });
+        }
+        return routed?.(input, init) ?? Promise.reject(new Error("unrouted"));
+      }),
+    );
+    render(<ImportCard />);
+    const panel = await screen.findByRole("region", { name: "Recent imports" });
+    expect(within(panel).queryByRole("table")).toBeNull();
+    act(() =>
+      answerDrafts(
+        jsonResponse(
+          { title: "Server error", status: 500, type: "about:blank" },
+          500,
+        ),
+      ),
+    );
+    expect(await within(panel).findByRole("alert")).toBeVisible();
+    expect(within(panel).queryByRole("table")).toBeNull();
   });
 
   it("asks before an undo, then starts it", async () => {

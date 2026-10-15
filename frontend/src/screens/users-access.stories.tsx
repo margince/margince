@@ -81,7 +81,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Teams: Story = { render: story(listed(TEAMS)) };
 
-// The intro and the empty line share one body; the create verb stays below.
+// The intro and the empty line share one body; the create verb stays above.
 export const NoTeams: Story = { render: story(listed([])) };
 
 export const Loading: Story = {

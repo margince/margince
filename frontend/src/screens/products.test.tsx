@@ -329,8 +329,9 @@ describe("ProductsAdmin", () => {
       "value",
       "Consulting Day",
     );
-    // Closing the dialog hands focus back to the menu, still open.
+    // Closing the dialog hands focus back to the row's menu, which opens again.
     await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("{Enter}");
     await userEvent.click(
       await screen.findByRole("button", { name: "Archive product" }),
     );

@@ -245,7 +245,7 @@ it("leaves every control inert for a reader, and leaves the why to the page", as
       name: "Technical contact can be newly assigned",
     }),
   ).toBeDisabled();
-  expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
   expect(screen.queryByRole("button", { name: "Add role" })).toBeNull();
   expect(
     screen.queryByRole("button", {
@@ -269,4 +269,24 @@ it("tells a seat that may add but not edit which half is theirs", async () => {
     }),
   ).toBeDisabled();
   expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
+});
+
+// Nothing to retire here by deletion, so the page's read-only notice covers a
+// delete-only seat and the card adds no reason of its own.
+it("leaves a delete-only seat to the page's notice", async () => {
+  vi.stubGlobal("fetch", rolesBackend({ custom_field: ["read", "delete"] }));
+  render(<RecordRolesCard />);
+  expect(
+    await screen.findByRole("switch", {
+      name: "Technical contact can be newly assigned",
+    }),
+  ).toBeDisabled();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
+  expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add role" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: en["table.rowActions"].replace("{name}", "Technical contact"),
+    }),
+  ).toBeNull();
 });

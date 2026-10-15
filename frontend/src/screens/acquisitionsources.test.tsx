@@ -216,7 +216,7 @@ it("leaves every control inert for a reader, and leaves the why to the page", as
       name: "Partner can be chosen on a deal",
     }),
   ).toBeDisabled();
-  expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
   expect(
     screen.queryByRole("button", { name: en["acqSources.addOpen"] }),
   ).toBeNull();
@@ -238,4 +238,26 @@ it("says why the switches are inert to a seat that may add but not edit", async 
     screen.getByRole("switch", { name: "Partner can be chosen on a deal" }),
   ).toBeDisabled();
   expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
+});
+
+// Nothing to retire here by deletion, so the page's read-only notice covers a
+// delete-only seat and the card adds no reason of its own.
+it("leaves a delete-only seat to the page's notice", async () => {
+  vi.stubGlobal("fetch", backend({ custom_field: ["read", "delete"] }));
+  render(<AcquisitionSourcesCard />);
+  expect(
+    await screen.findByRole("switch", {
+      name: "Partner can be chosen on a deal",
+    }),
+  ).toBeDisabled();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
+  expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["acqSources.addOpen"] }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: actionsFor("Partner"),
+    }),
+  ).toBeNull();
 });

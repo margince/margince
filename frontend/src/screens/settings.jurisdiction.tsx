@@ -169,22 +169,17 @@ function ChangeJurisdiction({
   );
   return (
     <>
-      <Button aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Button
+        aria-haspopup="dialog"
+        aria-label={t("jurisdiction.change.label")}
+        onClick={() => setOpen(true)}
+      >
         {t("jurisdiction.change.action")}
       </Button>
       <ConfirmModal
         open={open}
         onClose={close}
-        title={
-          choice === ""
-            ? t("jurisdiction.change.label")
-            : t("jurisdiction.confirm.title", {
-                name:
-                  target === ""
-                    ? t("jurisdiction.option.none")
-                    : jurisdictionName(target, locale),
-              })
-        }
+        title={t("jurisdiction.change.label")}
         confirmLabel={t("jurisdiction.confirm.confirm")}
         confirmDisabled={choice === ""}
         onConfirm={() => change.mutate(target)}
@@ -201,7 +196,10 @@ function ChangeJurisdiction({
               options={options}
               value={choice}
               placeholder={t("jurisdiction.change.placeholder")}
-              onChange={setChoice}
+              onChange={(next) => {
+                setChoice(next);
+                change.reset();
+              }}
             />
           )}
         </Field>

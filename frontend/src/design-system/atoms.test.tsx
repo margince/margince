@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -22,7 +22,6 @@ import {
 } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Heading } from "./heading";
-import { holdExits } from "./presence-testing";
 import { Select } from "./select";
 
 // The dropdown these cases pair with a Field is the Select from select.tsx — a
@@ -185,12 +184,9 @@ function DialogAction() {
   );
 }
 
-// The one item that must NOT close the menu under itself: one whose whole job
-// is to put a dialog up. A dialog restores focus, on close, to the control that
-// opened it — so hiding that control first strands the reader on <body>. The
-// menu asks `coveredByDialog` as its Escape handler does, one commit after the
-// press, which is the first moment the answer exists.
-it("stays open when the item it just ran opened a dialog", async () => {
+// A dialog put up from the menu owns the screen, so the menu does not stand
+// behind it. Focus waits on the trigger, so closing the dialog lands there.
+it("closes when an item opens a dialog, and the dialog hands focus back to the trigger", async () => {
   const user = userEvent.setup();
   render(
     <OverflowMenu label="More actions">
@@ -202,36 +198,16 @@ it("stays open when the item it just ran opened a dialog", async () => {
 
   await user.click(screen.getByRole("button", { name: "Merge with…" }));
 
-  expect(trigger.getAttribute("aria-expanded")).toBe("true");
-});
-
-// A dialog on its way out is no longer up: a reader who dismissed it and picked
-// a verb before its exit ended has chosen that verb, and the menu is finished.
-it("closes when an item is chosen while the dialog it opened is leaving", async () => {
-  const exits = holdExits();
-  try {
-    const user = userEvent.setup();
-    render(
-      <OverflowMenu label="More actions">
-        <DialogAction />
-        <button type="button">Archive</button>
-      </OverflowMenu>,
-    );
-    const trigger = screen.getByRole("button", { name: "More actions" });
-    await user.click(trigger);
-    await user.click(screen.getByRole("button", { name: "Merge with…" }));
-    await user.keyboard("{Escape}");
-    expect(document.querySelector(".overlay")?.hasAttribute("inert")).toBe(
-      true,
-    );
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-
-    await user.click(screen.getByRole("button", { name: "Archive" }));
-
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-  } finally {
-    exits.mockRestore();
-  }
+  expect(
+    await screen.findByRole("dialog", { name: "Merge with…" }),
+  ).toBeTruthy();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(
+    document.querySelector(".overflow-menu-items")?.hasAttribute("hidden"),
+  ).toBe(true);
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
 });
 
 // A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits

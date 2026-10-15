@@ -118,9 +118,7 @@ export function AcquisitionSourcesCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { canCreate, canEdit, refusal } = useVocabGrants({
-    removes: false,
-  });
+  const { canCreate, canEdit, refusal } = useVocabGrants("acquisition");
   const query = useAcquisitionSources();
   const create = useCreateAcquisitionSource();
   const update = useUpdateAcquisitionSource();

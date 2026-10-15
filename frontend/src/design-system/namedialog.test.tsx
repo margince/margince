@@ -80,6 +80,7 @@ it("describes the name field by its hint, the key in the code face", async () =>
   const described = document.getElementById(
     field.getAttribute("aria-describedby") ?? "",
   );
+  expect(described).toHaveTextContent("Key: deal.cf_fleet_size");
   expect(described?.querySelector("code")).toHaveTextContent(
     "deal.cf_fleet_size",
   );

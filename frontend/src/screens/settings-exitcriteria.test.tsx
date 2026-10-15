@@ -166,9 +166,9 @@ describe("StageExitCriteria", () => {
     });
   });
 
-  // The editor never offers the key. Evidence matches a criterion by key
-  // across an edit, so renaming one would orphan every claim recorded under it.
-  it("never offers the key on an edit", async () => {
+  // Evidence matches a criterion by key across an edit, so the editor names the
+  // key under the label and offers no field to change it.
+  it("shows the key on an edit and never offers to change it", async () => {
     vi.stubGlobal("fetch", criteriaStub({}));
     render(<StageExitCriteria stageId="s1" stageName="Qualify" canEdit />);
 
@@ -179,7 +179,13 @@ describe("StageExitCriteria", () => {
         name: "Edit Buyer confirmed the problem",
       }),
     );
-    expect(await screen.findByLabelText(/Label/)).toBeTruthy();
+    const label = await screen.findByLabelText(/Label/);
+    const hints = (label.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map((id) => document.getElementById(id));
+    const keyHint = hints.find((hint) => hint?.querySelector("code"));
+    expect(keyHint?.textContent).toBe("Key: buyer_confirmed");
+    expect(keyHint?.querySelector("code")?.textContent).toBe("buyer_confirmed");
     expect(screen.queryByLabelText(/^Key/)).toBeNull();
   });
 

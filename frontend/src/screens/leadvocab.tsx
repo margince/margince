@@ -33,7 +33,7 @@ const TARGET_BOUNDS = {
 // audits the pair down one column.
 export function LeadHandlingCard() {
   const t = useT();
-  const grants = useVocabGrants({ removes: true });
+  const grants = useVocabGrants("leads");
   const { canEdit } = grants;
   const refusal = grants.refusal && t("leadHandling.readOnly");
   const query = useLeadSettings();

@@ -308,23 +308,20 @@ describe("LeadSourcesCard", () => {
       ).toHaveFocus(),
     );
     await openMenu(user, "Fair");
+    const fairTrigger = screen.getByRole("button", {
+      name: en["table.rowActions"].replace("{name}", "Fair"),
+    });
     const fairMenu = document.getElementById(
-      screen
-        .getByRole("button", {
-          name: en["table.rowActions"].replace("{name}", "Fair"),
-        })
-        .getAttribute("aria-controls") ?? "",
+      fairTrigger.getAttribute("aria-controls") ?? "",
     );
     if (!fairMenu) throw new Error("the menu for Fair drew no items");
-    const fairRemove = within(fairMenu).getByRole("button", { name: "Remove" });
-    await user.click(fairRemove);
+    await user.click(within(fairMenu).getByRole("button", { name: "Remove" }));
     await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: en["create.cancel"],
       }),
     );
-    // The menu stays open under a dialog, so focus goes back to the item.
-    await waitFor(() => expect(fairRemove).toHaveFocus());
+    await waitFor(() => expect(fairTrigger).toHaveFocus());
   });
 
   it("hands focus to the card's title when the seat may remove but not add", async () => {
@@ -449,7 +446,8 @@ describe("LeadSourcesCard", () => {
       name: "Trade show is active",
     });
     expect(toggle).toBeDisabled();
-    expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
+    expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
+    expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
     expect(
       screen.queryByRole("button", { name: en["leadSources.addOpen"] }),
     ).toBeNull();
@@ -480,10 +478,10 @@ describe("LeadSourcesCard", () => {
       screen.getByRole("switch", { name: "Trade show is active" }),
     ).toBeDisabled();
     expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
-    expect(screen.queryByText(en["leadSources.readOnlyTitle"])).toBeNull();
+    expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
   });
 
-  it("tells a seat that may only remove that the list is not theirs to change", async () => {
+  it("tells a seat that may only remove which half is theirs", async () => {
     vi.stubGlobal("fetch", backend(REMOVER));
     render(
       <Providers>
@@ -491,7 +489,12 @@ describe("LeadSourcesCard", () => {
       </Providers>,
     );
     expect(
-      await screen.findByText(en["leadSources.readOnlyTitle"]),
+      await screen.findByText(en["leadSources.removeOnlyTitle"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: en["table.rowActions"].replace("{name}", "Trade show"),
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
   });

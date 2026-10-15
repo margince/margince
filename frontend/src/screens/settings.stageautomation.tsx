@@ -161,8 +161,10 @@ export function StageAutomationCard() {
 const GLOSSARY: readonly (readonly [string, MessageKey, MessageKey])[] = [
   ["reviewed", "stageAutomation.reviewed", "stageAutomation.reviewedHint"],
   ["clean", "stageAutomation.cleanAcceptance", "stageAutomation.acceptedHint"],
-  ["edits", "stageAutomation.edits", "stageAutomation.editedHint"],
   ["unsafe", "stageAutomation.unsafe", "stageAutomation.unsafeHint"],
+  ["edits", "stageAutomation.edits", "stageAutomation.editedHint"],
+  ["rejected", "stageAutomation.rejections", "stageAutomation.rejectedHint"],
+  ["open", "stageAutomation.open", "stageAutomation.openHint"],
   ["expired", "stageAutomation.expired", "stageAutomation.expiredHint"],
   [
     "observed",

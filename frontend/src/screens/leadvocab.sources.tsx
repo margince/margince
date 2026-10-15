@@ -314,9 +314,7 @@ export function LeadSourcesCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants({
-    removes: true,
-  });
+  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants("leads");
   const query = useLeadSources();
   const { create, adopt, update, rename, remove } = useSourceMutations();
   const [adding, setAdding] = useState(false);

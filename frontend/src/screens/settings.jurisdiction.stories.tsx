@@ -144,7 +144,9 @@ export const ChangeDialog: Story = {
   render: story(UNSET),
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("button", { name: "Change" }));
+    await userEvent.click(
+      await body.findByRole("button", { name: "Change jurisdiction" }),
+    );
     await userEvent.click(
       await body.findByRole("combobox", { name: "Jurisdiction" }),
     );

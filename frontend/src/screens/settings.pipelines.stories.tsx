@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   jsonResponse,
   StoryProviders,
@@ -11,7 +11,7 @@ import {
 import { PipelinesCard } from "./settings.pipelines";
 
 // The several-pipeline catalog lives in settings.stories.tsx; this file holds
-// one pipeline standing alone, and the retired pipeline with its refused restore.
+// one pipeline standing alone, its second arriving, and a refused restore.
 const meta: Meta = {
   title: "Settings/Sales/Pipelines/Pipeline page",
   parameters: { layout: "padded" },
@@ -196,4 +196,51 @@ export const OnePipelinePhone: Story = {
 export const OnePipelineDark: Story = {
   globals: { theme: "dark" },
   render: alone(ADMIN),
+};
+
+// The pipeline created here is in the next read, so the catalog appears.
+function growing() {
+  let catalog: readonly object[] = [salesPipeline];
+  globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+  stubWithSession(
+    {
+      "GET /pipelines": () =>
+        jsonResponse({
+          data: catalog,
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /pipelines": (body) => {
+        const created = { id: "pl-new", version: 1, ...(body as object) };
+        catalog = [...catalog, created];
+        return jsonResponse(created, 201);
+      },
+    },
+    ADMIN,
+  );
+  return (
+    <StoryProviders>
+      <PipelinesCard />
+    </StoryProviders>
+  );
+}
+
+/** The second pipeline: the catalog appears, and focus lands on the new name. */
+export const SecondPipeline: Story = {
+  render: growing,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const head = await canvas.findByRole("region", { name: "Sales" });
+    await userEvent.click(
+      await within(head).findByRole("button", { name: /New pipeline/ }),
+    );
+    await userEvent.type(await body.findByLabelText(/Name/), "Partnerships");
+    await userEvent.click(body.getByRole("button", { name: "Create" }));
+    const name = await canvas.findByRole("heading", { name: "Partnerships" });
+    await waitFor(() =>
+      expect(canvasElement.ownerDocument.activeElement).toBe(
+        name.firstElementChild,
+      ),
+    );
+  },
 };

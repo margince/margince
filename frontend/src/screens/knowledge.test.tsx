@@ -391,19 +391,17 @@ describe("KnowledgeCard", () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
     render(<KnowledgeCard />);
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Actions for How-to" }),
-    );
-    const archive = screen.getByRole("button", { name: /archive set/i });
-    await user.click(archive);
+    const menu = await screen.findByRole("button", {
+      name: "Actions for How-to",
+    });
+    await user.click(menu);
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Cancel",
       }),
     );
-    await waitFor(() =>
-      expect(globalThis.document.activeElement).toBe(archive),
-    );
+    await waitFor(() => expect(globalThis.document.activeElement).toBe(menu));
   });
 
   it("keeps two files that share a name, because the server dedupes on content", async () => {

@@ -341,7 +341,7 @@ says why that counts: "A good rate from one afternoon is not a track record."
 The **Track record** table shows **Reviewed**, **Accepted** and **Undone or corrected**.
 A stage move's details show **Edited**, **Rejected**, **Still open**, **Expired** and **Days observed**.
 They also show how often each kind of evidence, such as a signed document, was accepted as proposed.
-**What the columns mean**, under the table, explains each heading.
+**What the figures mean**, under the table, explains every figure in the table and in the details.
 
 ### How do I set up stage automation?
 To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.

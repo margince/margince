@@ -100,9 +100,8 @@ export const TEAMS = [
   { id: "t-nordics", name: "Nordics" },
 ];
 
-// The row's role control: the open chooser while one is open, else the resting
-// value that opens it. Narrowed by instance, so a control that stopped being a
-// button fails by name instead of reading `.disabled` off something else.
+// The open chooser, else the resting value that opens it. Narrowed by instance,
+// so a control that stopped being a button fails by name.
 export function roleSelect(row: HTMLElement, name: string) {
   const control = roleControl(row, name);
   if (!(control instanceof HTMLButtonElement)) {

@@ -487,6 +487,33 @@ describe("TeamsCard", () => {
     expect(patch?.body).toEqual({ name: "Nordost" });
   });
 
+  // A refetch that fails keeps the teams it had, so the verb stays with them.
+  it("keeps New team while a re-read of the teams fails", async () => {
+    const user = userEvent.setup();
+    let teamReads = 0;
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+      refuse: (call) =>
+        call.method === "GET" &&
+        call.path.endsWith("/teams") &&
+        teamReads++ > 0,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await archiveVia(user);
+
+    await waitFor(() => expect(teamReads).toBeGreaterThan(1));
+    await screen.findByRole("button", { name: /try again|retry/i });
+    expect(
+      screen.getByRole("button", { name: en["users.newTeamOpen"] }),
+    ).toBeTruthy();
+  });
+
   it("creates a team through the dialog its title verb opens, trimming the name", async () => {
     const user = userEvent.setup();
     const { fetchMock, calls } = backend({ teams: [] });

@@ -814,9 +814,8 @@ export function visibleSettingsPages(
  * navigates every day is the work they can do; the settings home carries both,
  * under headings that say which is which.
  *
- * Splitting here rather than at each caller is what keeps the rail, the home
- * and the read-only banner agreeing. Three readers deriving "can this contact
- * act?" separately is three chances to disagree in front of one user.
+ * Splitting here keeps the rail, the home, the read-only banner and the cards
+ * that defer to it agreeing on whether this contact can act.
  */
 export type SettingsReach = {
   /** Pages with at least one control this reader may use. */
@@ -841,3 +840,6 @@ export function settingsReach(
   }
   return { acts, looksUp };
 }
+
+export const readsOnly = (reach: SettingsReach, page: SettingsPageId) =>
+  reach.looksUp.some((each) => each.id === page);

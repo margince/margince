@@ -233,7 +233,9 @@ describe("stage automation report", () => {
         name: "Details for Negotiation → Contract",
       }),
     );
-    const open = await screen.findByText("Still open");
+    const detail = unanswered?.nextElementSibling;
+    if (!(detail instanceof HTMLElement)) throw new Error("no detail row");
+    const open = await within(detail).findByText("Still open");
     expect(open.closest(".factlist-row")?.textContent).toContain("4");
   });
 
@@ -248,17 +250,22 @@ describe("stage automation report", () => {
     expect(terms).toEqual([
       "Reviewed",
       "Accepted",
-      "Edited",
       "Undone or corrected",
+      "Edited",
+      "Rejected",
+      "Still open",
       "Expired",
       "Days observed",
     ]);
+    // Every figure heading the table shows is one the glossary explains.
+    const headings = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent ?? "")
+      .filter((heading) => !["Transition", "Details", ""].includes(heading));
+    expect(headings.length).toBeGreaterThan(0);
+    for (const heading of headings) expect(terms).toContain(heading);
   });
 
-  // The three states a reader must be able to tell apart. "Nothing proposed" is
-  // a fact somebody acts on by waiting; a refused or failed load is not, and
-  // drawing the same words for both sends them to wait for numbers that will
-  // never come.
   // The safety number is the one held to a CEILING, and the threshold below it
   // is one percent. Rounded to whole numbers, a transition sitting at 0.4%
   // undone prints "0%" and reads as flawless — a rounding that flatters,
@@ -289,6 +296,8 @@ describe("stage automation report", () => {
     expect(row?.textContent).not.toMatch(/(^|[^.\d])0%/);
   });
 
+  // "Nothing proposed" tells a reader to wait. A failed load must not, or they
+  // wait for numbers that never come.
   it("does not call a failed load an empty record", async () => {
     vi.stubGlobal(
       "fetch",
@@ -327,8 +336,8 @@ describe("stage automation report", () => {
 
     expect(await screen.findByText(/No proposed moves yet/)).toBeTruthy();
     // The panel holds its name and the empty line, and no intro of its own.
-    expect(
-      screen.getByRole("region", { name: "Track record" }).textContent,
-    ).toBe(`Track recordNo proposed moves yet${en["stageAutomation.empty"]}`);
+    const record = screen.getByRole("region", { name: "Track record" });
+    expect(record.querySelector(".panel-intro")).toBeNull();
+    expect(within(record).getByText(en["stageAutomation.empty"])).toBeTruthy();
   });
 });

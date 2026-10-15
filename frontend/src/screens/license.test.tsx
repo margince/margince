@@ -122,9 +122,8 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    // ONE reading, and the words carry it: the bar is hidden from a screen
-    // reader precisely because the value and its detail already say the share
-    // in full, so a reader who hears the card hears both figures.
+    // One reading: the words say the share in full, and the meter carries the
+    // same two figures for a screen reader.
     const reading = await waitFor(() => screen.getByText(ofGranted("9", "10")));
     expect(screen.getByText(left("1"))).toBeTruthy();
     const row = reading.closest(".settingrow");

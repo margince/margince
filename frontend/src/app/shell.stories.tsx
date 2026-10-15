@@ -18,10 +18,7 @@ import {
 import { type ReactNode, useRef, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import {
-  PageHeadAction,
-  PageHeadActionProvider,
-} from "../components/pageheadaction";
+import { PageHeadAction } from "../components/pageheadaction";
 import { Button, Card } from "../design-system/atoms";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
@@ -261,18 +258,16 @@ function SettingsHeadWithVerb() {
   return (
     <StoryProviders>
       <SeedInstallation>
-        <PageHeadActionProvider>
-          <ShellExample at="#/settings/members">
-            <PageHeadAction>
-              <Button>{en["users.inviteOpen"]}</Button>
-            </PageHeadAction>
-            <div className="wrap">
-              <div className="settings-stack">
-                <Card as="div">Content</Card>
-              </div>
+        <ShellExample at="#/settings/members">
+          <PageHeadAction>
+            <Button>{en["users.inviteOpen"]}</Button>
+          </PageHeadAction>
+          <div className="wrap">
+            <div className="settings-stack">
+              <Card as="div">Content</Card>
             </div>
-          </ShellExample>
-        </PageHeadActionProvider>
+          </div>
+        </ShellExample>
       </SeedInstallation>
     </StoryProviders>
   );

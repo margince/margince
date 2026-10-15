@@ -11,11 +11,12 @@
 // address, so a reload or a shared link lands on the same one.
 
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { CreateAction, type CreateField } from "../components/create";
 import { EditAction } from "../components/edit";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryStates } from "../design-system/querystates";
@@ -262,10 +263,12 @@ function PipelineCatalog({
   query,
   openId,
   onOpen,
+  onCreated,
 }: Readonly<{
   query: UseQueryResult<Pipeline[]>;
   openId: string | undefined;
   onOpen: (id: string) => void;
+  onCreated: (id: string) => void;
 }>) {
   const t = useT();
   const pipelines = query.data ?? [];
@@ -274,7 +277,7 @@ function PipelineCatalog({
   return (
     <Panel
       title={t("pipeline.catalog")}
-      titleAction={<NewPipeline pipelines={pipelines} onOpen={onOpen} />}
+      titleAction={<NewPipeline pipelines={pipelines} onOpen={onCreated} />}
     >
       {(!query.isSuccess || inUse.length > 0 || retired.length === 0) && (
         <PanelBody>
@@ -305,8 +308,12 @@ function PipelineCatalog({
 function PipelineDetail({
   pipeline,
   create,
-}: Readonly<{ pipeline: Pipeline; create: ReactNode }>) {
+  arrived,
+}: Readonly<{ pipeline: Pipeline; create: ReactNode; arrived: boolean }>) {
   const t = useT();
+  // The second pipeline brings the catalog and takes "New pipeline" off this
+  // head, so focus would fall to the page.
+  const title = useArrivalFocus<HTMLSpanElement>(arrived);
   // Renaming, reordering stages and making default are pipeline:update;
   // retiring is pipeline:delete; putting one back is update, because
   // restoring is not a deletion.
@@ -316,7 +323,11 @@ function PipelineDetail({
   const retireBlockedId = useId();
   return (
     <Panel
-      title={pipeline.name}
+      title={
+        <span ref={title} tabIndex={-1}>
+          {pipeline.name}
+        </span>
+      }
       titleAction={
         <span className="pipeline-standing">
           {retired && <Badge>{t("pipeline.retired")}</Badge>}
@@ -403,10 +414,15 @@ export function PipelinesCard() {
       return data.data;
     },
   });
+  const [created, setCreated] = useState<string>();
   const open = (id: string) => {
     const next = new Map(params);
     next.set(PIPELINE_PARAM, id);
     setParams(next);
+  };
+  const openCreated = (id: string) => {
+    open(id);
+    setCreated(id);
   };
   const pipelines = query.data ?? [];
   const opened = openPipeline(pipelines, params.get(PIPELINE_PARAM));
@@ -416,12 +432,20 @@ export function PipelinesCard() {
   return (
     <div className="settings-pipelines">
       {!alone && (
-        <PipelineCatalog query={query} openId={opened?.id} onOpen={open} />
+        <PipelineCatalog
+          query={query}
+          openId={opened?.id}
+          onOpen={open}
+          onCreated={openCreated}
+        />
       )}
       {opened && (
         <PipelineDetail
           pipeline={opened}
-          create={alone && <NewPipeline pipelines={pipelines} onOpen={open} />}
+          arrived={opened.id === created}
+          create={
+            alone && <NewPipeline pipelines={pipelines} onOpen={openCreated} />
+          }
         />
       )}
       {/* Whether a stage may wait for legal is a pipeline question. */}

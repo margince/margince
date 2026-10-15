@@ -217,7 +217,7 @@ export function TeamsCard() {
   const open = rows.find((team) => team.id === openTeamId);
   return (
     <>
-      {teams.isSuccess && canCreateTeam && (
+      {teams.data !== undefined && canCreateTeam && (
         <PageHeadAction>
           <NewTeamAction />
         </PageHeadAction>

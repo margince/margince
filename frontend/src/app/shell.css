@@ -977,9 +977,10 @@
  * cap is applied to this element and to `.wrap` by one declaration above
  * (--pageMeasure), so the name starts and ends exactly where the content under
  * it does at every width. An uncapped page needs nothing more than the gutter,
- * because there the content is the full column too. */
-/* A page's verb (PageHeadAction) stands beside the name while the name keeps
-   16rem, and wraps under it on a phone rather than squeezing it. */
+ * because there the content is the full column too.
+ *
+ * A page's verb (PageHeadAction) stands beside the name while the name keeps
+ * 16rem, and wraps under it on a phone rather than squeezing it. */
 .pagetitle {
   display: flex;
   flex-wrap: wrap;

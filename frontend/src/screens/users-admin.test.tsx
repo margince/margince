@@ -51,19 +51,15 @@ describe("UsersAdminCard", () => {
     // is honoured only for a caller who passes that read.
     expect(screen.queryByText("Otto Off")).toBeNull();
 
-    // Inviting is the admin's. The settings page states the read-only posture
-    // once, above every card.
+    // Inviting is the admin's. The read-only notice is the page's, not this
+    // card's (settings-reach.test.tsx, "says once that it is theirs to read").
     expect(screen.queryByRole("button", { name: /invite member/i })).toBeNull();
     expect(screen.queryByText(en["users.role.withheld"])).toBeNull();
     expect(screen.queryByLabelText(/^Email/)).toBeNull();
   });
 
-  // The escalation Codex found: `user_admin:update` WITHOUT the read. The
-  // roster omits every member's roles for this caller, `RoleCell` would read the
-  // missing field as [], and `ChangeUserRole` REPLACES the whole role set — so
-  // picking a role would silently drop every other role the target holds, none
-  // of which this reader can see. The picker is withheld until the read is
-  // there too.
+  // `user_admin:update` without the read: the roster omits roles, and a role
+  // change replaces the whole set, so a pick would drop roles nobody saw.
   it("offers no role picker to a write holder who cannot read the roster", async () => {
     vi.stubGlobal(
       "fetch",
@@ -100,9 +96,9 @@ describe("UsersAdminCard", () => {
     expect(screen.getByRole("button", { name: /invite member/i })).toBeTruthy();
   });
 
-  // The page heading names the roster, so the card carries no title. The invite
-  // verb belongs to the page head.
-  it("carries the invite verb to the page head and no title, count or intro", async () => {
+  // The page heading names the roster, so the card carries no title. With no
+  // shell around it, the invite verb draws outside the panel (PageHeadAction).
+  it("puts the invite verb outside the panel, with no title, count or intro", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
@@ -432,9 +428,7 @@ describe("UsersAdminCard", () => {
       }),
     );
 
-    // The menu the verb was pressed in stays open — a dialog restores focus to
-    // whatever opened it, so hiding that item first would send focus, on close,
-    // to a node that is gone. What it now offers is the opposite verb.
+    // The closed menu keeps its items mounted, and now offers the opposite verb.
     await waitFor(() => expect(verbs.getByText("Reactivate")).toBeTruthy());
     expect(within(row).getByText("Deactivated")).toBeTruthy();
     expect(document.activeElement).toBe(

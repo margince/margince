@@ -60,7 +60,8 @@ describe("UsersAdminCard role picker", () => {
 
   // Any choice replaces the whole set. A multi-role member read as one role
   // would let an admin strip privileges they never saw.
-  it("names the roles a multi-role member holds", async () => {
+  it("names the roles a multi-role member holds, and warns in the chooser", async () => {
+    const user = userEvent.setup();
     const twoRoles = {
       ...ROSTER,
       data: ROSTER.data.map((u) =>
@@ -115,13 +116,18 @@ describe("UsersAdminCard role picker", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
 
-    // Both held roles are named, under their display labels, and the copy says
-    // what picking one does.
-    const shown = roleShown(rowFor("Nora None"));
-    expect(shown).toMatch(/holds/i);
-    expect(shown).toContain("Team lead");
-    expect(shown).toContain("Ops");
-    expect(shown).toMatch(/replaces all of them/i);
+    const nora = rowFor("Nora None");
+    expect(roleShown(nora)).toMatch(/^Team lead, Ops/);
+    expect(within(nora).getByText(en["users.rolesReplace"])).toBeTruthy();
+    expect(within(nora).getByRole("status").textContent).toBe("");
+
+    await user.click(roleSelect(nora, "Nora None"));
+    const set = await screen.findByRole("option", { name: /^Team lead, Ops/ });
+    expect(set.getAttribute("aria-selected")).toBe("true");
+    expect(roleControl(nora, "Nora None")?.textContent).toMatch(/Team lead/);
+    expect(within(nora).getByRole("status").textContent).toBe(
+      en["users.rolesReplace"],
+    );
   });
 
   it("sets a member's role through the role seam", async () => {

@@ -273,7 +273,7 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
   );
 }
 
-// Creating a team is the card's verb, not a row's: it sits in the title band.
+// Creating a team is the page's verb, not a row's: it sits in the page head.
 export function NewTeamAction() {
   const t = useT();
   const qc = useQueryClient();

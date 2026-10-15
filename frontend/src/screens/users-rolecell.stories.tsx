@@ -9,7 +9,7 @@ import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { MemberRole, type RoleRefusal } from "./users-rolecell";
 
 // The member row's role alone. Plain words at rest, a chooser only on press,
-// and a refusal whose reason stays off the row.
+// and a refusal that says its reason under the role.
 
 const FIELD_SALES = {
   key: "custom_field_sales",
@@ -54,20 +54,48 @@ export const SeededRole: Story = {
       await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
     );
     const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole("listbox")).toBeVisible();
+    const held = await body.findByRole("option", { name: "User" });
+    await expect(held).toHaveAttribute("aria-selected", "true");
   },
 };
 
 export const CustomRole: Story = { render: cell([FIELD_SALES.key]) };
 
-// Any choice replaces the whole set, so the resting face names every held role.
+// At rest the names, and a line saying a pick replaces them. Open, the held set
+// comes first.
 export const SeveralRoles: Story = {
   render: cell(["manager", FIELD_SALES.key]),
 };
 
+export const SeveralRolesChooser: Story = {
+  render: cell(["manager", FIELD_SALES.key]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    const held = await body.findByRole("option", {
+      name: "Team lead, Field sales DACH",
+    });
+    await expect(held).toHaveAttribute("aria-selected", "true");
+    await expect(
+      await canvas.findByText(/replaces all current roles/, {
+        selector: ".t-caption",
+      }),
+    ).toBeVisible();
+  },
+};
+
+export const SeveralRolesPhone: Story = {
+  ...SeveralRolesChooser,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 export const NoRole: Story = { render: cell([]) };
 
-// The last admin: plain words, the reason on hover and for a screen reader.
+// The last admin: plain words, and the reason under them on every screen.
 export const RefusedWithReason: Story = {
   render: cell(["admin"], {
     reason: "This is the only admin. Make another member an admin first.",
@@ -76,5 +104,12 @@ export const RefusedWithReason: Story = {
     const canvas = within(canvasElement);
     await canvas.findByText("Admin");
     await expect(canvas.queryByRole("button")).toBeNull();
+    await expect(canvas.getByText(/only admin/)).toBeVisible();
   },
+};
+
+export const RefusedWithReasonPhone: Story = {
+  ...RefusedWithReason,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

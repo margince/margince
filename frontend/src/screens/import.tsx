@@ -203,9 +203,16 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
     setUndoing(null);
     undo.reset();
   };
+  // One state for both reads, so drafts never land above a table already drawn.
+  const reads = {
+    isPending: recent.isPending || drafts.isPending,
+    isError: recent.isError || drafts.isError,
+    error: recent.error ?? drafts.error,
+    refetch: () => Promise.all([recent.refetch(), drafts.refetch()]),
+  };
   // Before the first run this panel could only say there is none, which the
   // hub above already shows by offering the first one.
-  if (!recent.isError && runs.length === 0) {
+  if (recent.isSuccess && drafts.isSuccess && runs.length === 0) {
     return null;
   }
   return (
@@ -218,7 +225,13 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
           />
         </PanelBody>
       ) : null}
-      <QueryStates query={recent} pendingLabel={t("common.loading")}>
+      {reads.isPending || reads.isError ? (
+        <PanelBody>
+          <QueryStates query={reads} pendingLabel={t("common.loading")}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      ) : (
         <DataTable<ImportRun>
           bleed
           fold
@@ -316,7 +329,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
             },
           ]}
         />
-      </QueryStates>
+      )}
       <UndoConfirm
         open={undoing !== null}
         order={format?.order ?? []}

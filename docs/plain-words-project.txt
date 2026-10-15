@@ -256,7 +256,6 @@ certification
 certify
 chain
 champion
-chance
 change
 chart
 charts
@@ -1404,7 +1403,6 @@ seven
 seventh
 several
 shacl
-shaded
 shadow
 shadows
 shape

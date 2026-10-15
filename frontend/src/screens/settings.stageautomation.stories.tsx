@@ -229,15 +229,18 @@ export const PopulatedPhone: Story = {
   },
 };
 
-/** The headings spelled out, one press under the table. */
+/** Every figure in the table and in the details spelled out, one press under the table. */
 export const ColumnsExplained: Story = {
   render: Populated.render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
-    await userEvent.click(canvas.getByText("What the columns mean"));
+    await userEvent.click(canvas.getByText("What the figures mean"));
     await expect(
       await canvas.findByText(/Every rate is a share of this number/),
+    ).toBeVisible();
+    await expect(
+      canvas.getByText("Proposals someone turned down."),
     ).toBeVisible();
   },
 };
@@ -269,10 +272,10 @@ export const SeveralPipelines: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const record = await canvas.findByRole("region", { name: "Track record" });
-    await expect(
-      within(record).getByRole("combobox", { name: "Pipeline" }),
-    ).toBeInTheDocument();
+    // The loading panel carries the same name, so wait for the picker first.
+    const picker = await canvas.findByRole("combobox", { name: "Pipeline" });
+    const record = canvas.getByRole("region", { name: "Track record" });
+    await expect(record).toContainElement(picker);
   },
 };
 

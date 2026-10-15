@@ -112,9 +112,10 @@ export function actionLabel(action: string, t: Translator): string {
   return key ? t(key) : humanizeToken(action);
 }
 
-const KIND_LABELS = new Map<string, MessageKey>(
-  Object.entries(SEARCH_HIT_KIND_KEY),
-);
+const KIND_LABELS = new Map<string, MessageKey>([
+  ...Object.entries(SEARCH_HIT_KIND_KEY),
+  ["custom_field", "audit.kind.customField"],
+]);
 
 // A record kind reads in the reader's language; a governance object keeps its
 // own name.
@@ -290,14 +291,19 @@ export function ActorTag({
   );
 }
 
+// Kinds whose change `label` is the record's own name. On other kinds a field
+// called `label` may hold any value, so the line shows none.
+const NAMED_BY_CHANGE: ReadonlySet<string> = new Set(["custom_field"]);
+
 // The live name when the server resolves one, else the name the change wrote.
 function entryName(entry: AuditLogEntry): string | undefined {
   const live = entry.entity_label?.trim();
   if (live) return live;
-  const recorded = entry.after?.label ?? entry.before?.label;
-  return typeof recorded === "string" && recorded.trim() !== ""
-    ? recorded
-    : undefined;
+  if (!NAMED_BY_CHANGE.has(entry.entity_type)) return undefined;
+  return [entry.after?.label, entry.before?.label].find(
+    (label): label is string =>
+      typeof label === "string" && label.trim() !== "",
+  );
 }
 
 // AuditEntryLine is the one-line rendering of an audit entry: who, what, on

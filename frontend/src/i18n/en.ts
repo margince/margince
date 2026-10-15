@@ -3157,8 +3157,9 @@ export const en = {
   "leadSources.title": "Lead sources",
   "leadSources.sub":
     "Where leads come from. Used in the New lead form, in filters and in scoring.",
-  "leadSources.readOnlyTitle":
-    "Only an administrator or operations user can change this list",
+  "keyCode.label": "Key: {key}",
+  "leadSources.removeOnlyTitle":
+    "Your role can remove entries but not add or change them",
   "leadSources.addOnlyTitle": "Your role can add entries but not change them",
   "leadSources.notSaved": "Change was not saved",
   "leadSources.notAdded": "Source was not added",
@@ -3566,7 +3567,7 @@ export const en = {
   "deal.pulse.wroteOn": "They last wrote on {date}. Days since: {days}.",
   "deal.pulse.wroteUnknown": "They wrote and no one has replied.",
   "deal.timeline.empty": "No activity on this deal yet.",
-  "acqSources.title": "Sources",
+  "acqSources.title": "Source list",
   "acqSources.sub":
     "Separate from lead sources, which record how a record entered Margince.",
   "acqSources.loading": "Loading sources…",
@@ -3669,7 +3670,7 @@ export const en = {
   "assignments.rolePlaceholder": "Pick a role",
   "assignments.saveAdd": "Assign",
   "assignments.saveChange": "Save change",
-  "recordRoles.title": "Roles",
+  "recordRoles.title": "Role list",
   "recordRoles.loading": "Loading roles…",
   "recordRoles.addOpen": "Add role",
   "recordRoles.addTitle": "Add responsibility role",
@@ -9072,6 +9073,7 @@ export const en = {
   "cf.renamePrompt": "New label",
   "cf.renamed": "Renamed to “{label}”",
   "cf.audit.title": "Recent field changes",
+  "audit.kind.customField": "Custom field",
   "cf.audit.empty": "No custom field changes yet.",
   "cf.audit.footer":
     "Every addition, edit and archive is recorded permanently in the audit log.",
@@ -9238,7 +9240,6 @@ export const en = {
   "jurisdiction.change.placeholder": "Choose a jurisdiction",
   "jurisdiction.option.none": "No jurisdiction pack (GDPR baseline)",
   "jurisdiction.change.action": "Change",
-  "jurisdiction.confirm.title": "Change the jurisdiction to {name}?",
   "jurisdiction.confirm.confirm": "Change jurisdiction",
   "jurisdiction.confirm.floor": "Retention floor: {from} becomes {to}.",
   "jurisdiction.confirm.floorCarried":
@@ -10057,7 +10058,7 @@ export const en = {
   "users.noTeamsYet": "No teams yet.",
   "users.teamMembersLabel": "Team members",
   "users.teamMembersAdminOnly": "Your role cannot see team members.",
-  "users.teamNobodyToAdd": "No users to add.",
+  "users.teamNobodyToAdd": "No members to add.",
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share.",
@@ -10113,7 +10114,7 @@ export const en = {
   "users.access.maskAlways": "always",
   "users.access.maskOutside": "on records they may not edit",
   "users.inviteSub":
-    "Add a user to this installation and choose their starting role.",
+    "Add a member to this installation and choose their starting role.",
   "users.membersTitle": "Members",
   "users.col.member": "Name",
   "users.col.activity": "Activity",
@@ -10145,7 +10146,7 @@ export const en = {
   "users.invite": "Invite",
   "users.setRole": "Set role…",
   "users.roleOf": "{name}’s role",
-  "users.rolesHeld": "Holds {roles}. Choosing a role replaces all of them.",
+  "users.rolesReplace": "A role you choose replaces all current roles.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
@@ -13624,7 +13625,7 @@ export const en = {
   "stageAutomation.observationDays": "Days observed",
   "stageAutomation.observationHint":
     "From the first reviewed proposal to the last. A good rate from one afternoon is not a track record.",
-  "stageAutomation.glossary": "What the columns mean",
+  "stageAutomation.glossary": "What the figures mean",
   "stageAutomation.evidenceKinds": "By evidence",
   "stageAutomation.emptyTitle": "No proposed moves yet",
   "stageAutomation.empty":
@@ -13656,6 +13657,9 @@ export const en = {
     "{accepted} of {reviewed} accepted as proposed",
   "stageAutomation.acceptedHint": "Accepted as proposed, with nothing changed.",
   "stageAutomation.editedHint": "Accepted after someone changed the proposal.",
+  "stageAutomation.rejectedHint": "Proposals someone turned down.",
+  "stageAutomation.openHint":
+    "Proposals no one has answered yet. They count in no rate.",
   "employment.importLoading": "Loading purchased employment history…",
   "employment.apply": "Link imported companies",
   "employment.status.current": "Current",

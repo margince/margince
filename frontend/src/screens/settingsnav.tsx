@@ -36,7 +36,9 @@ import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
+  readsOnly,
   type SettingsPage,
+  type SettingsPageId,
   type SettingsReach,
   settingsReach,
   visibleSettingsPages,
@@ -408,4 +410,9 @@ export function useSettingsReach(): SettingsReach {
     composedUnitScopes:
       unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
   });
+}
+
+// A card on a page the reader only consults leaves the why to the page's notice.
+export function usePageReadOnly(page: SettingsPageId): boolean {
+  return readsOnly(useSettingsReach(), page);
 }

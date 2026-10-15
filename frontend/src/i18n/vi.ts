@@ -3042,8 +3042,9 @@ export const vi = {
   "leadSources.title": "Nguồn lead",
   "leadSources.sub":
     "Lead đến từ đâu. Dùng trong biểu mẫu Lead mới, trong bộ lọc và khi chấm điểm.",
-  "leadSources.readOnlyTitle":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
+  "keyCode.label": "Khóa: {key}",
+  "leadSources.removeOnlyTitle":
+    "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
   "leadSources.addOnlyTitle":
     "Vai trò hiện tại chỉ thêm được mục mới, không thay đổi được mục đã có",
   "leadSources.notSaved": "Không thể lưu thay đổi",
@@ -3449,7 +3450,7 @@ export const vi = {
     "Họ viết lần cuối vào ngày {date}, cách đây {days} ngày.",
   "deal.pulse.wroteUnknown": "Họ đã gửi thư và chưa ai trả lời.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
-  "acqSources.title": "Nguồn",
+  "acqSources.title": "Danh sách nguồn",
   "acqSources.sub":
     "Tách biệt với nguồn lead, vốn ghi nhận cách một hồ sơ vào Margince.",
   "acqSources.loading": "Đang tải nguồn…",
@@ -3552,7 +3553,7 @@ export const vi = {
   "assignments.rolePlaceholder": "Chọn vai trò",
   "assignments.saveAdd": "Giao",
   "assignments.saveChange": "Lưu thay đổi",
-  "recordRoles.title": "Vai trò",
+  "recordRoles.title": "Danh sách vai trò",
   "recordRoles.loading": "Đang tải vai trò…",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
@@ -8735,6 +8736,7 @@ export const vi = {
   "cf.renamePrompt": "Nhãn mới",
   "cf.renamed": "Đã đổi tên thành “{label}”",
   "cf.audit.title": "Thay đổi trường gần đây",
+  "audit.kind.customField": "Trường tùy chỉnh",
   "cf.audit.empty": "Chưa có thay đổi nào về trường tùy chỉnh.",
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
@@ -8897,7 +8899,6 @@ export const vi = {
   "jurisdiction.change.placeholder": "Chọn khu vực pháp lý",
   "jurisdiction.option.none": "Không có gói khu vực pháp lý (mức cơ sở GDPR)",
   "jurisdiction.change.action": "Đổi",
-  "jurisdiction.confirm.title": "Đổi khu vực pháp lý sang {name}?",
   "jurisdiction.confirm.confirm": "Đổi khu vực pháp lý",
   "jurisdiction.confirm.floor": "Thời hạn lưu trữ: {from} trở thành {to}.",
   "jurisdiction.confirm.floorCarried":
@@ -9718,7 +9719,7 @@ export const vi = {
   "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm nào.",
-  "users.teamNobodyToAdd": "Không có người dùng nào để thêm.",
+  "users.teamNobodyToAdd": "Không có thành viên nào để thêm.",
   "users.teamMembersLabel": "Thành viên nhóm",
   "users.teamMembersAdminOnly":
     "Vai trò hiện tại không có quyền xem thành viên nhóm.",
@@ -9776,7 +9777,7 @@ export const vi = {
   "users.access.maskAlways": "trong mọi trường hợp",
   "users.access.maskOutside": "trên hồ sơ mà họ không có quyền sửa",
   "users.inviteSub":
-    "Thêm người dùng vào bản cài đặt này và chọn vai trò ban đầu.",
+    "Thêm thành viên vào bản cài đặt này và chọn vai trò ban đầu.",
   "users.membersTitle": "Thành viên",
   "users.col.member": "Tên",
   "users.col.activity": "Hoạt động",
@@ -9809,8 +9810,8 @@ export const vi = {
   "users.invite": "Mời",
   "users.setRole": "Chọn vai trò…",
   "users.roleOf": "vai trò của {name}",
-  "users.rolesHeld":
-    "Đang có vai trò {roles}. Chọn một vai trò sẽ thay thế toàn bộ.",
+  "users.rolesReplace":
+    "Vai trò được chọn sẽ thay thế toàn bộ vai trò hiện có.",
   "users.deactivate": "Vô hiệu hóa",
   "users.reactivate": "Kích hoạt lại",
   "users.status.active": "Đang hoạt động",
@@ -13219,7 +13220,7 @@ export const vi = {
   "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
   "stageAutomation.observationHint":
     "Từ đề xuất đầu tiên đã được xem xét đến đề xuất cuối cùng. Tỷ lệ tốt trong một buổi chiều chưa phải là thành tích lâu dài.",
-  "stageAutomation.glossary": "Ý nghĩa các cột",
+  "stageAutomation.glossary": "Ý nghĩa các số liệu",
   "stageAutomation.evidenceKinds": "Theo b\u1eb1ng ch\u1ee9ng",
   "stageAutomation.emptyTitle": "Chưa có đề xuất chuyển giai đoạn nào",
   "stageAutomation.empty":
@@ -13252,6 +13253,9 @@ export const vi = {
     "Chấp nhận nguyên đề xuất {accepted} trên {reviewed}",
   "stageAutomation.acceptedHint": "Chấp nhận nguyên đề xuất, không sửa gì.",
   "stageAutomation.editedHint": "Chấp nhận sau khi đề xuất đã được sửa.",
+  "stageAutomation.rejectedHint": "Đề xuất đã bị từ chối.",
+  "stageAutomation.openHint":
+    "Đề xuất chưa ai trả lời. Không tính vào tỷ lệ nào.",
   "employment.importLoading": "Đang tải lịch sử công tác đã mua…",
   "employment.apply": "Liên kết công ty đã nhập",
   "employment.status.current": "Hiện tại",

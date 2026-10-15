@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -20,7 +21,7 @@ import { formatFixture, recentRunsFixture } from "./import.fixtures";
 function story(
   allow: Parameters<typeof meRoute>[0],
   subpage?: string,
-  runs: readonly unknown[] = recentRunsFixture,
+  runs: readonly unknown[] | "refused" = recentRunsFixture,
 ) {
   return () => {
     // The run page reads its run from the address, and the capture harness
@@ -30,7 +31,12 @@ function story(
       "GET /me": meRoute(allow),
       "GET /imports/format": () => jsonResponse(formatFixture),
       "GET /imports": () =>
-        jsonResponse({ data: runs, page: { has_more: false } }),
+        runs === "refused"
+          ? jsonResponse(
+              { title: "Server error", status: 500, type: "about:blank" },
+              500,
+            )
+          : jsonResponse({ data: runs, page: { has_more: false } }),
       "GET /users/names": () =>
         jsonResponse({ data: [{ id: "u-ada", display_name: "Ada Lovelace" }] }),
     });
@@ -73,6 +79,17 @@ export const HubPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(OPERATOR),
+};
+
+// The history did not load: the panel stays and says so inside its body.
+export const HistoryUnreadable: Story = {
+  render: story(OPERATOR, undefined, "refused"),
+  play: async ({ canvasElement }) => {
+    const panel = await within(canvasElement).findByRole("region", {
+      name: "Recent imports",
+    });
+    await expect(await within(panel).findByRole("alert")).toBeVisible();
+  },
 };
 
 // Maintenance opens on the admin role OR an embedding-reindex read, so a seat

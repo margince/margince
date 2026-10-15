@@ -21,6 +21,7 @@ import { PageHeadAction } from "../components/pageheadaction";
 import { useRoster } from "../components/roster";
 import { useCan, useCanWrite } from "../lib/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
+import { usePageReadOnly } from "./settingsnav";
 import { InviteUserForm } from "./users-invite-form";
 import {
   memberAnchorId,
@@ -39,7 +40,6 @@ export function UsersAdminCard() {
   const administersRoster = useCan("user_admin", "read");
   const mayInvite = useCanWrite("user_admin", "create");
   const mayChangeRole = useCanWrite("user_admin", "update");
-  const maySetStatus = useCanWrite("user_admin", "delete");
   return (
     <MembersCard
       me={me.data?.user.id}
@@ -50,7 +50,7 @@ export function UsersAdminCard() {
       management={administersRoster}
       canInvite={administersRoster && mayInvite}
       canChangeRole={administersRoster && mayChangeRole}
-      canSetStatus={administersRoster && maySetStatus}
+      readOnlyPage={usePageReadOnly("members")}
     />
   );
 }
@@ -63,7 +63,7 @@ function MembersCard({
   management,
   canInvite,
   canChangeRole,
-  canSetStatus,
+  readOnlyPage,
 }: Readonly<{
   me: string | undefined;
   probeSettled: boolean;
@@ -72,7 +72,7 @@ function MembersCard({
   management: boolean;
   canInvite: boolean;
   canChangeRole: boolean;
-  canSetStatus: boolean;
+  readOnlyPage: boolean;
 }>) {
   const t = useT();
   const members = useMembers();
@@ -83,9 +83,8 @@ function MembersCard({
   );
   // A reader who may change nothing gets the page's read-only notice. The card
   // speaks only for the partial posture that notice cannot see.
-  const administers = canInvite || canChangeRole || canSetStatus;
   const posture =
-    probeSettled && administers && management && !canChangeRole
+    probeSettled && !readOnlyPage && management && !canChangeRole
       ? t("users.role.withheld")
       : null;
   const loaded = read.data !== undefined && !probing;
@@ -106,7 +105,7 @@ function MembersCard({
           </PanelBody>
         )}
         {/* Until /me answers the role picker's read is not known to be needed, and
-          drawing the roster early would drop back to pending once it is. */}
+            drawing the roster early would drop back to pending once it is. */}
         {read.data === undefined || probing ? (
           <PanelBody>
             <QueryStates

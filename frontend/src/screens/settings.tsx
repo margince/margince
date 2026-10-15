@@ -94,7 +94,7 @@ import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
-import type { SettingsPageId } from "./settingscatalog";
+import { readsOnly, type SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
   ADMIN_SEGMENT,
@@ -407,7 +407,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // Whether this page is one the reader consults rather than one they work in.
   // Read off the same partition the rail is built from, so a page that left the
   // rail for being read-only is the page that explains itself here.
-  const readOnlyPage = reach.looksUp.some((page) => page.id === active?.id);
+  const readOnlyPage = active !== undefined && readsOnly(reach, active.id);
   // A legacy admin address is answered AND rewritten: the reader gets the page
   // they asked for, and the URL bar then says where that page lives, so the
   // link they copy from it is the current one. Replaced rather than pushed, or

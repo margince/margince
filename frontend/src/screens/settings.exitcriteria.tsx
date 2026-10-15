@@ -15,6 +15,7 @@ import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { IconAction } from "../design-system/iconaction";
+import { KeyCode } from "../design-system/keyedname";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
@@ -171,7 +172,7 @@ function CriterionRow({
                 required: String(criterion.required),
                 hint: criterion.hint ?? "",
               }}
-              fields={criterionEditFields(t, criterion.kind)}
+              fields={criterionEditFields(t, criterion)}
               update={async (values, _rows, opened) => {
                 const saved = unwrap(
                   await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
@@ -376,16 +377,20 @@ function criterionCreateFields(
   ];
 }
 
-// The edit form omits `key`: evidence matches a criterion by key across an
-// edit, so renaming one would orphan every claim already recorded under it.
-// The contract has no key field on the PATCH body either.
+// The edit form shows `key` and never edits it: evidence matches a criterion by
+// key, so renaming one would orphan every claim already recorded under it.
 function criterionEditFields(
   t: ReturnType<typeof useT>,
-  current: CriterionKind,
+  current: Pick<Criterion, "key" | "kind">,
 ): CreateField[] {
-  const legal = current === "legal_reviewed";
+  const legal = current.kind === "legal_reviewed";
   return [
-    { key: "label", label: "stage.criteria.label", required: true },
+    {
+      key: "label",
+      label: "stage.criteria.label",
+      required: true,
+      hint: <KeyCode code={current.key} />,
+    },
     ...criterionShapeFields(t, (kind) => (kind === "legal_reviewed") === legal),
   ];
 }

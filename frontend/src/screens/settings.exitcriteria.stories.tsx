@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -139,4 +140,31 @@ export const ReadOnly: Story = {
 export const RequiredAndOptionalDark: Story = {
   globals: { theme: "dark" },
   render: RequiredAndOptional.render,
+};
+
+/** The edit form names the key it keeps, in the code face, and offers no field for it. */
+export const EditShowsKey: Story = {
+  render: RequiredAndOptional.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Edit Buyer confirmed the budget",
+      }),
+    );
+    const dialog = within(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog"),
+    );
+    const key = await dialog.findByText("buyer_confirmed_budget");
+    await expect(key.tagName).toBe("CODE");
+    await expect(key.parentElement).toHaveTextContent(
+      "Key: buyer_confirmed_budget",
+    );
+  },
+};
+
+export const EditShowsKeyPhone: Story = {
+  ...EditShowsKey,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

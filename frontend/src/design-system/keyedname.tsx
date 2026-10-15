@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Fragment } from "react";
+import { useT } from "../i18n";
 import { CellStack } from "./cellstack";
 import "./keyedname.css";
 
@@ -13,7 +14,7 @@ export function KeyedName({
   name,
   code,
 }: Readonly<{ name: string; code: string }>) {
-  if (name === code) return <KeyCode code={code} />;
+  if (name === code) return <BareKey code={code} />;
   return (
     <CellStack>
       <span>{name}</span>
@@ -24,8 +25,23 @@ export function KeyedName({
   );
 }
 
-/** A key on its own, in the code face of the line around it. */
+/**
+ * A key on its own under a field, named as a key so a listener hears more
+ * than a string of words and underscores.
+ */
 export function KeyCode({ code }: Readonly<{ code: string }>) {
+  const t = useT();
+  const [before, after = ""] = t("keyCode.label").split("{key}");
+  return (
+    <span>
+      {before}
+      <BareKey code={code} />
+      {after}
+    </span>
+  );
+}
+
+function BareKey({ code }: Readonly<{ code: string }>) {
   return (
     <code className="keyed-name-only">
       <KeyText code={code} />

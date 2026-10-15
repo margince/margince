@@ -1237,11 +1237,9 @@ function isSetting(item: Element): boolean {
 // and the frequent actions rather than a row of buttons of equal weight where
 // the destructive ones sit next to the routine ones.
 //
-// The children are the caller's own action components (each opening its own
-// confirm flow), so the menu owns only the disclosure: it closes on Escape, on
-// a click outside, and on an item being chosen — with the two exceptions
-// `isSetting` and `coveredByDialog` below name, an item that SETS rather than
-// does, and one that put a dialog up which now owns the screen and the focus.
+// The children are the caller's own action components, so the menu owns only
+// the disclosure. It closes on Escape, on a click outside, and on a chosen item
+// that does something rather than sets something (`isSetting`).
 //
 // The children are not rendered until the menu is first opened. They are
 // components with their own reads — the company's edit form alone fetches the
@@ -1278,36 +1276,12 @@ export function OverflowMenu({
 }>) {
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
-  // How many times an item has been chosen. A counter rather than a flag
-  // because it is a fact that RECURS: the second press of the second item has
-  // to reach the effect below as its own event, and a boolean already true
-  // would be no change at all.
-  const [chosen, setChosen] = useState(0);
   const wrap = useRef<HTMLDivElement | null>(null);
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
   const at = useAnchoredToTrigger(open, trigger, panel);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
-
-  // Choosing an item closes the menu, one commit after the press.
-  //
-  // The delay is the whole design. Some items DO something and are finished —
-  // and a menu still standing over the page after that reads as a control that
-  // did not take the press. Others only open a dialog, which restores focus on
-  // close to the control that opened it, so hiding that control first would
-  // strand the reader on <body>. Which of the two happened is not knowable
-  // while the item's own handler is running: the dialog is not in the document
-  // until React has committed the state that handler set. So the press records
-  // that it happened, and this effect — after that commit — asks the same
-  // `coveredByDialog` the Escape handler asks and answers accordingly.
-  useEffect(() => {
-    if (chosen === 0 || coveredByDialog(trigger.current)) {
-      return;
-    }
-    setOpen(false);
-    trigger.current?.focus();
-  }, [chosen]);
 
   // The panel is portalled to the end of its layer, so without moving focus in,
   // Tab reaches the next row's trigger before this menu's items.
@@ -1419,9 +1393,12 @@ export function OverflowMenu({
             // refuses these verbs — and a click landing on a paragraph has
             // chosen nothing. A refused item never arrives at all: `reason` and
             // `reasonId` disable the button natively.
+            // Focus moves to the trigger inside the press, before any dialog
+            // the item opened mounts, so that dialog hands focus back to it.
             const item = event.target.closest("button, a");
             if (item && !isSetting(item)) {
-              setChosen((count) => count + 1);
+              setOpen(false);
+              trigger.current?.focus();
             }
           }}
         >

@@ -5,9 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "../design-system/atoms";
 import { PageHeadAction } from "./pageheadaction";
 
-// The verb on its own, where no shell head stands around it: it draws in
-// place. "Shell/Navigation shell" shows it in a settings page's head, wide and
-// on a phone.
+// With no shell around it the verb draws in place. "Shell/Navigation shell"
+// shows it in a settings page's head, wide and on a phone.
 
 const meta = {
   title: "Shell/Page head action",

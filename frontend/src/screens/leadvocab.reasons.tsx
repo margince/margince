@@ -154,9 +154,7 @@ export function LeadDisqualifyReasonsCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants({
-    removes: true,
-  });
+  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants("leads");
   const query = useLeadDisqualifyReasons();
   const { create, update, rename, remove } = useReasonMutations();
   // Kept after close, so the dialog leaving the page still reads as what it was.

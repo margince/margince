@@ -3106,8 +3106,9 @@ export const de = {
   "leadSources.title": "Lead-Quellen",
   "leadSources.sub":
     "Woher Leads kommen. Wird im Formular „Neuer Lead“, in Filtern und beim Scoring verwendet.",
-  "leadSources.readOnlyTitle":
-    "Nur Admins und Operations können diese Liste ändern",
+  "keyCode.label": "Schlüssel: {key}",
+  "leadSources.removeOnlyTitle":
+    "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
   "leadSources.addOnlyTitle":
     "Deine Rolle darf Einträge hinzufügen, aber nicht ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
@@ -3523,7 +3524,7 @@ export const de = {
   "deal.pulse.wroteUnknown":
     "Die Gegenseite hat geschrieben, und niemand hat geantwortet.",
   "deal.timeline.empty": "Noch keine Aktivität zu diesem Deal.",
-  "acqSources.title": "Quellen",
+  "acqSources.title": "Quellenliste",
   "acqSources.sub":
     "Getrennt von den Lead-Quellen, die festhalten, wie ein Datensatz in Margince gelangt ist.",
   "acqSources.loading": "Quellen werden geladen…",
@@ -3626,7 +3627,7 @@ export const de = {
   "assignments.rolePlaceholder": "Rolle wählen",
   "assignments.saveAdd": "Zuweisen",
   "assignments.saveChange": "Änderung speichern",
-  "recordRoles.title": "Rollen",
+  "recordRoles.title": "Rollenliste",
   "recordRoles.loading": "Rollen werden geladen…",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
   "recordRoles.addTitle": "Rolle hinzufügen",
@@ -8949,6 +8950,7 @@ export const de = {
   "cf.renamePrompt": "Neue Bezeichnung",
   "cf.renamed": "Umbenannt in „{label}“",
   "cf.audit.title": "Letzte Feldänderungen",
+  "audit.kind.customField": "Eigenes Feld",
   "cf.audit.empty": "Noch keine Änderungen an eigenen Feldern.",
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
@@ -9115,7 +9117,6 @@ export const de = {
   "jurisdiction.change.placeholder": "Rechtsraum auswählen",
   "jurisdiction.option.none": "Kein Rechtsraum-Paket (DSGVO-Grundlage)",
   "jurisdiction.change.action": "Ändern",
-  "jurisdiction.confirm.title": "Rechtsraum auf {name} ändern?",
   "jurisdiction.confirm.confirm": "Rechtsraum ändern",
   "jurisdiction.confirm.floor": "Aufbewahrungsfrist: Aus {from} wird {to}.",
   "jurisdiction.confirm.floorCarried":
@@ -10052,8 +10053,8 @@ export const de = {
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
   "users.roleOf": "Rolle von {name}",
-  "users.rolesHeld":
-    "Hat {roles}. Wenn du eine Rolle auswählst, ersetzt diese Rolle alle bisherigen.",
+  "users.rolesReplace":
+    "Eine Rolle, die du auswählst, ersetzt alle bisherigen.",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
@@ -13545,7 +13546,7 @@ export const de = {
   "stageAutomation.observationDays": "Beobachtete Tage",
   "stageAutomation.observationHint":
     "Vom ersten bis zum letzten geprüften Vorschlag. Eine gute Quote an einem Nachmittag ist keine belastbare Bilanz.",
-  "stageAutomation.glossary": "Was die Spalten bedeuten",
+  "stageAutomation.glossary": "Was die Zahlen bedeuten",
   "stageAutomation.evidenceKinds": "Nach Beleg",
   "stageAutomation.emptyTitle": "Noch keine vorgeschlagenen Phasenwechsel",
   "stageAutomation.empty":
@@ -13579,6 +13580,9 @@ export const de = {
     "Wie vorgeschlagen angenommen, ohne Änderung.",
   "stageAutomation.editedHint":
     "Angenommen, nachdem jemand den Vorschlag geändert hat.",
+  "stageAutomation.rejectedHint": "Vorschläge, die jemand abgelehnt hat.",
+  "stageAutomation.openHint":
+    "Vorschläge, auf die noch niemand geantwortet hat. Keine Quote zählt sie mit.",
   "employment.importLoading": "Gekaufter beruflicher Werdegang wird geladen…",
   "employment.apply": "Importierte Unternehmen verknüpfen",
   "employment.status.current": "Aktuell",

@@ -366,8 +366,6 @@ describe("PipelinesCard: the catalog", () => {
     expect(await screen.findByText("Order saved")).toBeTruthy();
   });
 
-  // One pipeline in use has nothing to be ordered against: no grip, and no
-  // hint for a grip that is not there.
   it("stands a lone pipeline without a catalog, its own head offering the next", async () => {
     server({ soloInUse: true, onlyPipeline: true });
     renderPage();
@@ -376,6 +374,8 @@ describe("PipelinesCard: the catalog", () => {
     expect(screen.queryByRole("region", { name: "All pipelines" })).toBeNull();
   });
 
+  // One pipeline in use has nothing to be ordered against: no grip, and no
+  // hint for a grip that is not there.
   it("draws no grip and no order hint while one pipeline is in use", async () => {
     server({ soloInUse: true });
     renderPage();

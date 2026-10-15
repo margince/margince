@@ -325,8 +325,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "settings.voice.worksNot",
     "settings.voice.worksTranscripts",
     "users.access.title",
-    "users.inviteSub",
-    "users.teamNobodyToAdd",
     "worklist.because.champion_unknown",
     "worklist.because.no_champion",
     "worklist.disposition.done.not_mine",

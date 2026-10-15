@@ -105,6 +105,21 @@ describe("the members table", () => {
     }
     expect(roleShown(rowFor("Ada Active"))).toBe("Admin");
   });
+
+  // Deactivate is a verb on this page, so the page carries no read-only notice
+  // and the card says which half is withheld.
+  it("tells a seat that may only deactivate that roles are not theirs to change", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        roles: ["custom"],
+        allow: { user_admin: ["read", "delete"] },
+      }),
+    );
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
+    expect(screen.getByText(en["users.role.withheld"])).toBeTruthy();
+  });
 });
 
 describe("roleRefusal", () => {

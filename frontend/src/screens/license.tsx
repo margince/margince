@@ -207,7 +207,7 @@ export function LicenseReading({
               orb never does: an unlicensed demo or dev stack would wear permanent
               amber, and amber would stop meaning "a fault that can wait".
 
-              Not `live="alert"`: `over_limit` above owns the only interruption on
+              Not `live="alert"`: `over_limit` below owns the only interruption on
               this screen, and neither of these is news that arrived while the
               reader was here. The TONES differ because the two facts do — a
               licence that was refused is a live fault with a repair behind it, and

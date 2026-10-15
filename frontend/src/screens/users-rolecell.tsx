@@ -1,5 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
+import { CellStack } from "../design-system/cellstack";
 import { InlineChoice } from "../design-system/inlinechoice";
 import type { QueryLike } from "../design-system/querystates";
 import { useToast } from "../design-system/toast";
@@ -108,6 +110,7 @@ export function MemberRole({
   const toast = useToast();
   const refresh = useMemberRefresh();
   const busy = useMemberBusy(member.id);
+  const [choosing, setChoosing] = useState(false);
   const setRole = useMutation({
     mutationKey: memberMutationKey(member.id, "role"),
     mutationFn: async ({ id, role }: Readonly<{ id: string; role: Role }>) => {
@@ -126,35 +129,47 @@ export function MemberRole({
   if (member.is_agent) {
     return <span className="t-caption">{t("users.agentSeatRole")}</span>;
   }
-  const label = roleLabel(t);
   const held = member.roles ?? [];
+  const names = held
+    .map((key) => roleLabel(t)(key, nameOf(roles, key)))
+    .join(", ");
+  const value = held.join(" ");
+  const several = held.length > 1;
+  // The held set is an option of its own, so the open chooser never shows a
+  // blank face, and picking it again is no change.
+  const options = several
+    ? [{ value, label: names }, ...roleOptions(t, roles)]
+    : roleOptions(t, roles);
   const reason = refusal?.reason;
+  const replaces = several && refusal === null;
   return (
-    <span className="users-role">
-      <InlineChoice
-        label={t("users.roleOf", { name: member.display_name })}
-        hideLabel
-        // Several held roles read as one value: any choice replaces the whole
-        // set, so the face names all of them rather than hiding them.
-        value={held.join(" ")}
-        options={roleOptions(t, roles)}
-        // Another verb in flight on this member locks the role. This row's own
-        // save does not, or the chooser would close on its pick.
-        canEdit={refusal === null && (!busy || setRole.isPending)}
-        readOnlyReason={reason}
-        render={() =>
-          held.length > 1
-            ? t("users.rolesHeld", {
-                roles: held
-                  .map((key) => label(key, nameOf(roles, key)))
-                  .join(", "),
-              })
-            : label(held[0] ?? "", nameOf(roles, held[0] ?? ""))
-        }
-        onSave={(role) => setRole.mutateAsync({ id: member.id, role })}
-      />
-      {reason && <span className="sr-only">{reason}</span>}
-    </span>
+    <CellStack>
+      <span className="users-role">
+        <InlineChoice
+          label={t("users.roleOf", { name: member.display_name })}
+          hideLabel
+          value={value}
+          options={options}
+          // Another verb in flight on this member locks the role. This row's own
+          // save does not, or the chooser would close on its pick.
+          canEdit={refusal === null && (!busy || setRole.isPending)}
+          render={() => names}
+          onSave={(role) => setRole.mutateAsync({ id: member.id, role })}
+          onEditingChange={setChoosing}
+        />
+      </span>
+      {/* Shown at rest: the open list covers whatever stands under the
+          chooser. The status says it again as the chooser opens. */}
+      {replaces && (
+        <>
+          <span className="t-caption">{t("users.rolesReplace")}</span>
+          <span className="sr-only" role="status">
+            {choosing ? t("users.rolesReplace") : ""}
+          </span>
+        </>
+      )}
+      {reason && <span className="t-caption">{reason}</span>}
+    </CellStack>
   );
 }
 
