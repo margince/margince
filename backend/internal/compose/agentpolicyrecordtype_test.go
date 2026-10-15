@@ -14,9 +14,17 @@ import (
 // MCP too. A tool with no record_type property is exempt: there the route's
 // record_type is only a label.
 func TestEveryPolicyRecordTypeIsOneItsToolCanSend(t *testing.T) {
+	named := map[string]bool{}
+	for _, policy := range agentPolicies {
+		if policy.RecordType != "" {
+			named[policy.Tool] = true
+		}
+	}
 	accepts := map[string][]string{}
 	for _, spec := range servedSurface(t).Specs() {
-		accepts[spec.Name] = recordTypeEnum(t, spec.Name, spec.InputSchema)
+		if named[spec.Name] {
+			accepts[spec.Name] = recordTypeEnum(t, spec.Name, spec.InputSchema)
+		}
 	}
 	for route, policy := range agentPolicies {
 		enum, registered := accepts[policy.Tool]

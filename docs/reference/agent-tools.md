@@ -63,6 +63,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | `read_relationships` | 🟢 | `read` | no | 🔀 Read who we know, and how well <details><summary>actions</summary>`company_coverage` `intro_path_to` `who_knows`</details> |
 | `read_reporting` | 🟢 | `read` | no | Read sales reporting |
 | `read_tags` | 🟢 | `read` | no | 🔀 Read tags <details><summary>actions</summary>`get_record_tags` `get_tag` `list_tags`</details> |
+| `read_view` | 🟢 | `read` | no | Read a view: a record's derived views, reference lists and reporting objects, each as its REST route answers |
 | `resolve_entities` | 🟢 | `read` | no | Resolve contacts and companies |
 | `review_commitments` | 🟢 | `read` | no | Review open promises |
 | `run_analytics_query` | 🟢 | `read` | no | Ask a question of the data |

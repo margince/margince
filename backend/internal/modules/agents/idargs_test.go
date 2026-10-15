@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"reflect"
 	"sort"
 	"strings"
@@ -355,6 +356,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
 	RegisterOfferLinesTool(r, seamProbeOfferLines{})
+	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {
+		return nil, errSeamReached
+	})
 	RegisterBriefTool(r, func(context.Context) (ReadBriefResult, error) {
 		return ReadBriefResult{}, errSeamReached
 	})
@@ -649,4 +653,11 @@ func (seamProbeOfferLines) UpdateOfferLine(context.Context, ids.UUID, ids.UUID, 
 
 func (seamProbeOfferLines) RemoveOfferLine(context.Context, ids.UUID, ids.UUID) (crmcontracts.Offer, error) {
 	return crmcontracts.Offer{}, errSeamReached
+}
+
+// probeViews are two views in the shapes the contract declares: a record's own
+// view, addressed by id, and a reference list with a filter.
+var probeViews = []ReadView{
+	{Name: "company_360", Op: "getCompany360", Pattern: "/v1/companies/{id}/360", PathParams: []string{"id"}},
+	{Name: "stages", Op: "listStages", Pattern: "/v1/stages", Query: []string{"pipeline_id"}},
 }

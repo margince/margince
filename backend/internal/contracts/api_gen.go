@@ -96109,6 +96109,8 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	// Parameter object where we will unmarshal all parameters from the context
@@ -96195,6 +96197,8 @@ func (siw *ServerInterfaceWrapper) GetDedupeCandidate(w http.ResponseWriter, r *
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 

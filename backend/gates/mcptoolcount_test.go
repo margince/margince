@@ -93,9 +93,10 @@ const clientToolCeiling = 100
 // which brings it to 56. The ceiling only comes down; raising it needs an
 // explicit maintainer decision.
 //
-// change_offer raises it to 57, by that decision. A passport changes an offer's
-// line items on MCP as on REST; the resource routers bring the count back down.
-const publishedToolCeiling = 57
+// change_offer and read_view raise it to 58, by that decision. A passport
+// changes an offer's lines and reads every REST view on MCP as on REST; the
+// resource routers bring the count back down.
+const publishedToolCeiling = 58
 
 type mcpInfoFile struct {
 	Totals struct {

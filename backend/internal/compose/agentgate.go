@@ -61,7 +61,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) {
+			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) || admittedByTheTool(r) {
 				next.ServeHTTP(w, r)
 				return
 			}

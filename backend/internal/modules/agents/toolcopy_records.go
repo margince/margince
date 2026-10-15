@@ -32,6 +32,15 @@ var listRecordsCopy = toolCopy{
 		"A result's `owner` says who holds it. " + sayWhoseItIs,
 }
 
+var readViewCopy = toolCopy{
+	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
+		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
+		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
+		"Each view answers exactly what the matching REST route answers.",
+	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
+		"it does not take and names the ones it does.",
+}
+
 var changeOfferCopy = toolCopy{
 	Purpose: "Add a line item to an offer, change one, or remove one. Prices are in minor units; " +
 		"read a product for its unit_price_minor rather than inventing one.",

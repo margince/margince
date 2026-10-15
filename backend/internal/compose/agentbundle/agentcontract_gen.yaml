@@ -5650,6 +5650,42 @@ paths:
                     page: {next_cursor: null, has_more: false}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /dedupe/candidates:
+    get:
+      tags: [Contacts]
+      operationId: listDedupeCandidates
+      security: [{bearerAuth: []}]
+      summary: The dedupe review queue, confidence-sorted.
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [open, merged, not_a_duplicate], default: open}}
+        - {name: entity_type, in: query, schema: {type: string, enum: [contact, company, lead]}}
+        - {name: cursor, in: query, schema: {type: string}, description: Opaque keyset cursor.}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+      responses:
+        '200':
+          description: One page of candidates.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DedupeCandidateListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+      description: The dedupe review queue, confidence-sorted.
+  /dedupe/candidates/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [Contacts]
+      operationId: getDedupeCandidate
+      security: [{bearerAuth: []}]
+      summary: One candidate with its full detection-time evidence.
+      responses:
+        '200':
+          description: The candidate.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DedupeCandidate'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+      description: One candidate with its full detection-time evidence.
   /dedupe/candidates/{id}/disposition:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -8358,6 +8394,12 @@ components:
         disposed_by: {type: [string, 'null'], format: uuid}
         disposed_at: {type: [string, 'null'], format: date-time}
         created_at: {type: string, format: date-time}
+    DedupeCandidateListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/DedupeCandidate'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
     DedupeDispositionRequest:
       type: object
       required: [disposition]

@@ -17,6 +17,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /contacts/{id}/graph` | getContactGraph | Who around this contact could open a door, and through whom. | Read records | at once |
 | `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | Read records | at once |
 | `GET /email-signature-template` | getEmailSignatureTemplate | The workspace's signature template. | Read records | at once |
+| `GET /dedupe/candidates` | listDedupeCandidates | The dedupe review queue, confidence-sorted. | Read records | at once |
+| `GET /dedupe/candidates/{id}` | getDedupeCandidate | One candidate with its full detection-time evidence. | Read records | at once |
 | `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
 | `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | Read records | at once |

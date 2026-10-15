@@ -981,6 +981,7 @@ paths:
     get:
       tags: [Identity]
       operationId: getAgentOpenAPIDocument
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
       description: |
         The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
@@ -1040,6 +1041,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: previewContactEmploymentImport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read retained provider roles and their company-link outcomes without buying another lookup.
       responses:
         '200':
@@ -1493,6 +1495,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContact360
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
       description: |
         The contact half of the one-composite-read doctrine (PO-EXT-3), assembled inside ONE
@@ -2146,6 +2149,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactGraph
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who around this contact could open a door, and through whom.
       description: |
         The local graph answers one question a rep actually asks: *who here can introduce me,
@@ -2511,6 +2515,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactStrength
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Relationship strength for a contact (deterministic recency × frequency × reciprocity).
       responses:
         '200':
@@ -3054,6 +3059,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyHierarchyRollup
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
       description: |
         `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
@@ -3156,6 +3162,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompany360
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
       description: |
         One composite read assembled inside ONE workspace transaction, so the sections
@@ -3223,6 +3230,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyGraph
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies.
       description: |
         The company view's connections card: who and what this account is attached to,
@@ -3375,6 +3383,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyCoverage
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How well this account is covered — who answers, who is missing from the buying team, and the warmest way in.
       description: |
         The decision layer of the company Contacts tab. `GET /companies/{id}/contacts`
@@ -3409,6 +3418,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyContacts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account.
       description: |
         The company Contacts tab's list. `GET /companies/{id}/360` carries a contacts
@@ -4468,6 +4478,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyStrength
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Relationship strength for a company (max over current employees).
       responses:
         '200':
@@ -4485,6 +4496,7 @@ paths:
     get:
       tags: [Companies, Finance]
       operationId: getCompanyFinanceSummary
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Does this customer actually pay us, and on time?
       description: |
         The finance card's whole read (FIN-WIRE-1, ADR-0083): what we have
@@ -4562,6 +4574,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyFacts
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The company's confirmed facts (company_fact), grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it.
       responses:
         '200':
@@ -4620,6 +4633,7 @@ paths:
     get:
       tags: [Companies]
       operationId: listCompanyProfileFields
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
       responses:
         '200':
@@ -5514,6 +5528,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listDealStakeholders
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List a deal's stakeholders (deal↔contact relationships).
       responses:
         '200':
@@ -5721,6 +5736,7 @@ paths:
     get:
       tags: [Bulk]
       operationId: getBulkChange
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read what one bulk change did, and whether it was undone.
       description: |
         The record of one executed bulk change or undo: its record type and verb, how many records
@@ -6025,6 +6041,7 @@ paths:
     get:
       tags: [Projects]
       operationId: listProjectHealthAssessments
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How this project has been going, newest judgement first.
       description: |
         The whole history, corrections included, so a delivery review can read what was said
@@ -6109,6 +6126,7 @@ paths:
     get:
       tags: [Projects]
       operationId: listProjectStakeholders
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List a project's stakeholders (project↔contact relationships).
       description: |
         `relationship` rows of kind `project_stakeholder` — the deal-stakeholder surface's twin,
@@ -6265,6 +6283,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getPipeline
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a pipeline (with its ordered stages).
       responses:
         '200':
@@ -6447,6 +6466,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listStages
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List stages (optionally filtered by pipeline).
       parameters:
         - name: pipeline_id
@@ -6496,6 +6516,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getStage
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a stage by id.
       responses:
         '200':
@@ -6682,6 +6703,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listStageEvidence
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What has been observed about this deal against its stage's criteria.
       description: |
         The evidence ledger for one deal, newest observation first.
@@ -6707,6 +6729,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: getStageAutomationReport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What each stage transition has earned.
       description: |
         Every from→to transition in one pipeline, with what happened to the moves
@@ -6761,6 +6784,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listTransitionPolicies
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What each transition in this pipeline is allowed to do.
       description: |
         One rule per from→to transition an admin has decided about. A transition
@@ -6872,6 +6896,7 @@ paths:
     get:
       tags: [Pipelines]
       operationId: listStageExitCriteria
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What a deal must satisfy before it leaves this stage.
       description: |
         The stage's exit criteria in `position` order. Live rows only unless
@@ -7416,6 +7441,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingBrief
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       x-waits-on-model: always
       summary: The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
       description: |
@@ -7844,6 +7870,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getReplyRecipient
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who a reply to this message would be addressed to.
       description: |
         Asked without drafting, so a composer can show the recipient when it opens
@@ -8687,6 +8714,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getSchedulingProfile
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read the caller's reusable booking page and scheduling policy.
       responses:
         default:
@@ -8755,6 +8783,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getMeetingInvitation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read invitation delivery and calendar state.
       responses:
         default:
@@ -9583,6 +9612,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomationCatalog
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The closed starter library of automation types the workspace can instantiate.
       description: |
         Lists the available automation *types* (the closed starter library, E15/ADR-0035) — the left
@@ -9603,6 +9633,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomations
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's configured automation instances.
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -9647,6 +9678,7 @@ paths:
     get:
       tags: [Automations]
       operationId: getAutomation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read one automation instance.
       responses:
         '200':
@@ -9997,6 +10029,7 @@ paths:
     get:
       tags: [Activities]
       operationId: getFollowUpSettings
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How long a sent message may go unanswered before the worklist reminds its sender.
       description: |
         The workspace's follow-up window: a message a seat sent to a customer that is still
@@ -10036,6 +10069,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getEmailSignatureTemplate
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The workspace's signature template.
       description: |
         The layout every member's mail signs with when it is set, filled in with each member's
@@ -10074,6 +10108,7 @@ paths:
     get:
       tags: [Leads]
       operationId: getLeadSettings
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: How this installation handles leads.
       description: |
         The first-response target (formulas §18) is opt-in: off by default. While it is off
@@ -10598,6 +10633,7 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadSources
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List lead sources, active and inactive, in display order.
       description: |
         `data` is the administered list. `discovered` names source values that
@@ -10685,6 +10721,7 @@ paths:
     get:
       tags: [Deals]
       operationId: listAcquisitionSources
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List deal acquisition sources, active and retired, in display order.
       description: |
         The administered business channels a deal can be attributed to. This list is
@@ -10759,6 +10796,7 @@ paths:
     get:
       tags: [Assignments]
       operationId: listRecordRoles
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List responsibility roles, active and retired, in display order.
       description: |
         The administered vocabulary of responsibilities a colleague or team can hold on a
@@ -10840,6 +10878,7 @@ paths:
     get:
       tags: [Assignments]
       operationId: listRecordAssignments
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Who is responsible for this record, by role.
       description: |
         Answers with the live assignments on one company, deal or project, ordered by role
@@ -10929,6 +10968,7 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadDisqualifyReasons
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List disqualification reasons, active and inactive, in display order.
       responses:
         '200':
@@ -11011,6 +11051,7 @@ paths:
     get:
       tags: [Relationships]
       operationId: listRelationships
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List relationships (employment, deal_stakeholder, or partner edges).
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -11456,6 +11497,7 @@ paths:
     get:
       tags: [Lists]
       operationId: getRecordLists
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The lists one record is on that this caller may find.
       description: |
         Every Shortlist the record was chosen for, and every Live List whose filter selects it
@@ -11532,6 +11574,7 @@ paths:
     get:
       tags: [Views]
       operationId: getFilterVocabulary
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read what a new filter clause may name on one record type (LVS-EXT-8).
       description: |
         The per-resource filter vocabulary: every field a dynamic list, saved view
@@ -11715,6 +11758,7 @@ paths:
       tags:
       - Reports
       operationId: exportReportingEvaluation
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Evaluate reporting
       responses:
         '409': { $ref: '#/components/responses/Conflict' }
@@ -11830,6 +11874,7 @@ paths:
     get:
       tags: [Reports]
       operationId: exportReportingEdition
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Export this edition's permitted frozen metrics and chart readings.
       parameters:
       - $ref: '#/components/parameters/Id'
@@ -12199,6 +12244,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingTargets
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting targets
       responses:
         '200':
@@ -12261,6 +12307,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingTarget
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting target
       responses:
         '200':
@@ -12312,6 +12359,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingFramework
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting framework
       responses:
         '200':
@@ -12364,6 +12412,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingSchedules
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting schedules
       responses:
         '200':
@@ -12603,6 +12652,7 @@ paths:
       tags:
       - Reports
       operationId: listReportingExecutions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List reporting executions
       responses:
         '200':
@@ -12628,6 +12678,7 @@ paths:
       tags:
       - Reports
       operationId: getReportingExecution
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get reporting execution
       responses:
         '200':
@@ -13678,6 +13729,7 @@ paths:
     get:
       tags: [Reports]
       operationId: explainReport
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: '"Explain This Number" — resolve a derivation handle to its definition + source rows.'
       description: |
         Resolves the drill-through handle minted as `derivation_url` on every `runReport`
@@ -18494,7 +18546,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: listDedupeCandidates
-      security: [ { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The dedupe review queue, confidence-sorted.
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [open, merged, not_a_duplicate], default: open } }
@@ -18515,7 +18568,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getDedupeCandidate
-      security: [ { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: One candidate with its full detection-time evidence.
       responses:
         '200':
@@ -20086,6 +20140,7 @@ paths:
     get:
       tags: [CustomFields]
       operationId: listCustomFieldLiveLists
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The Live Lists whose filter names this custom field.
       description: |
         What retiring the field would leave behind, asked before the retire is confirmed. A list
@@ -20263,6 +20318,7 @@ paths:
     get:
       tags: [Compliance]
       operationId: listConsentPurposes
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
       description: |
         UNPAGED, deliberately. A workspace's consent purposes are configuration — a handful of
@@ -21626,6 +21682,7 @@ paths:
     get:
       tags: [Identity]
       operationId: nameSeats
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Name the colleagues behind a set of ids. Read-only.
       description: |
         The display names behind ids the caller already holds — a record's owner, an activity's
@@ -22259,6 +22316,7 @@ paths:
     get:
       tags: [Identity]
       operationId: listTeams
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
@@ -23879,6 +23937,7 @@ paths:
     get:
       tags: [Activities]
       operationId: listActivityReviewTemplates
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The question sets an outcome review can ask.
       responses:
         '200':
@@ -24284,6 +24343,7 @@ paths:
     get:
       tags: [Signals]
       operationId: listSignals
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: List signals (cursor-paginated), newest first.
       # The warm room is a human review surface (features/07 §9: the warm room
       # proposes, the rep sends) and signal is deliberately NOT a datasource-seam
@@ -24379,6 +24439,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignal
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Get a signal by id.
       # Read-only, REST-reachable under the signal RBAC object + row scope; not an
       # agent tool — signal is not a datasource-seam entity (see listSignals).
@@ -24468,6 +24529,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignalWarmth
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The warm/cold classification with the full "why warm" evidence (B-E08.3).
       description: |
         A signal resolved to a company where we hold ≥1 live contact edge
@@ -24495,6 +24557,7 @@ paths:
     get:
       tags: [Signals]
       operationId: getSignalIntroPath
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: The proposed warm-intro path for a warm signal (B-E08.4) — an actionable move, not a notification.
       description: |
         Names the route-in contact (the strongest live relationship at the resolved
@@ -25117,6 +25180,7 @@ paths:
     get:
       tags: [Reports]
       operationId: listForecastCalls
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What this period's forecast has been called, newest first.
       description: |
         The calls made for one period and scope, newest first — not just the one standing now.
@@ -26722,6 +26786,7 @@ paths:
       tags: [Deals]
       operationId: getDealCommitments
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: What the customer committed to that this deal waits on.
       description: |
         The open commitments the contacts employed at the deal's company made to us, read
@@ -28237,6 +28302,7 @@ paths:
       tags: [Import]
       operationId: getImportRun
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       # An assistant reads a run's state through read_import_report, which
       # answers the run before its report exists.
       summary: Read one import run's lifecycle state.

@@ -13,11 +13,11 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 57 |
+| Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 178.2 KB |
+| Tool catalog | 182.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 46522 |
+| Approx. wire tokens | 47540 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 62.0 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.6 KB | 27% | Yes, every step |
-| Input schemas | 54.0 KB | 30% | Yes, every step |
-| _Names, annotations, punctuation_ | 13.7 KB | 7% | Partly |
-| **Description + input schema** | **102.6 KB** | **57%** | **the recurring cost** |
+| Output schemas | 62.8 KB | 34% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 49.0 KB | 26% | Yes, every step |
+| Input schemas | 56.6 KB | 31% | Yes, every step |
+| _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
+| **Description + input schema** | **105.6 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -55,7 +55,7 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (57)
+### Tools (58)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
@@ -102,6 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 566 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
+| [`read_view`](#read_view) | Read a view | yes |  | 772 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
@@ -9014,6 +9015,316 @@ offers it without applying it.
   },
   "required": [
     "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### read_view
+
+**Read a view**
+
+```text
+Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
+deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
+record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly
+what the matching REST route answers. Name the view, then the id it reads and any of its filters. A
+view refuses an argument it does not take and names the ones it does.
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "agg": {
+      "type": "string"
+    },
+    "as_of": {
+      "type": "string"
+    },
+    "blocks": {
+      "type": "string"
+    },
+    "by": {
+      "type": "string"
+    },
+    "close_window": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "cursor": {
+      "type": "string"
+    },
+    "deal_id": {
+      "type": "string"
+    },
+    "end_at": {
+      "type": "string"
+    },
+    "entity_id": {
+      "type": "string"
+    },
+    "entity_type": {
+      "type": "string"
+    },
+    "evaluated_at": {
+      "type": "string"
+    },
+    "evaluation_key": {
+      "type": "string"
+    },
+    "framework_revision": {
+      "type": "string"
+    },
+    "handle_version": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "include_archived": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "limit": {
+      "type": "string"
+    },
+    "metrics": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "period_start": {
+      "type": "string"
+    },
+    "pipeline_id": {
+      "description": "comes from read_directory (list: pipelines)",
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "q": {
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "record_type": {
+      "type": "string"
+    },
+    "report": {
+      "type": "string"
+    },
+    "resolution_state": {
+      "type": "string"
+    },
+    "resource": {
+      "type": "string"
+    },
+    "retired": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "scope_kind": {
+      "type": "string"
+    },
+    "sort": {
+      "type": "string"
+    },
+    "start_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "target_basis": {
+      "type": "string"
+    },
+    "view": {
+      "enum": [
+        "acquisition_sources",
+        "activity_review_templates",
+        "agent_open_api_document",
+        "automation",
+        "automation_catalog",
+        "automations",
+        "bulk_change",
+        "company_360",
+        "company_contacts",
+        "company_coverage",
+        "company_facts",
+        "company_finance_summary",
+        "company_graph",
+        "company_hierarchy_rollup",
+        "company_profile_fields",
+        "company_strength",
+        "consent_purposes",
+        "contact_360",
+        "contact_graph",
+        "contact_strength",
+        "custom_field_live_lists",
+        "deal_commitments",
+        "deal_stakeholders",
+        "dedupe_candidate",
+        "dedupe_candidates",
+        "email_signature_template",
+        "explain_report",
+        "export_reporting_edition",
+        "export_reporting_evaluation",
+        "filter_vocabulary",
+        "follow_up_settings",
+        "forecast_calls",
+        "import_run",
+        "lead_disqualify_reasons",
+        "lead_settings",
+        "lead_sources",
+        "meeting_brief",
+        "meeting_invitation",
+        "name_seats",
+        "pipeline",
+        "preview_contact_employment_import",
+        "project_health_assessments",
+        "project_stakeholders",
+        "record_assignments",
+        "record_lists",
+        "record_roles",
+        "relationships",
+        "reply_recipient",
+        "reporting_execution",
+        "reporting_executions",
+        "reporting_framework",
+        "reporting_schedules",
+        "reporting_target",
+        "reporting_targets",
+        "scheduling_profile",
+        "signal",
+        "signal_intro_path",
+        "signal_warmth",
+        "signals",
+        "stage",
+        "stage_automation_report",
+        "stage_evidence",
+        "stage_exit_criteria",
+        "stages",
+        "teams",
+        "transition_policies"
+      ],
+      "type": "string"
+    },
+    "window_days": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }
