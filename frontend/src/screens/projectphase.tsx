@@ -9,7 +9,7 @@ import { Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { StageLadder } from "../design-system/stageladder";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   PHASE_LABEL,
   PROJECT_PHASES,

@@ -3,9 +3,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { PageAsideProvider, usePageAside } from "../../app/pageaside";
-import { RecordFields } from "../recordfields";
-import { StoryProviders } from "../story-utils";
+import { PageAsideProvider, usePageAside } from "../../components/pageaside";
+import { RecordFields } from "../../components/recordfields";
+import { StoryProviders } from "../../testing/story-utils";
 import { DealBrief } from "./dealbrief";
 
 afterEach(cleanup);

@@ -15,29 +15,14 @@ import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
-import {
-  composedScreens,
-  EXTENSION_SCREEN,
-  findExtension,
-} from "./app/extensions";
 import { opensReservedPage } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./app/recordzone";
-import { SPA_RELEASE } from "./app/release";
-import {
-  navigate,
-  navigateReplacing,
-  parseHash,
-  routeHash,
-  routeIdentity,
-  type Screen,
-} from "./app/router";
 import { Shell, useRoute } from "./app/shell";
-import { UnsavedGuard } from "./app/unsaved";
+import { UnsavedGuard } from "./components/unsaved";
 import {
   Card,
   EmptyState,
@@ -47,12 +32,27 @@ import {
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
+  composedScreens,
+  EXTENSION_SCREEN,
+  findExtension,
+} from "./lib/extensions";
+import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
+import { SPA_RELEASE } from "./lib/release";
+import {
+  navigate,
+  navigateReplacing,
+  parseHash,
+  routeHash,
+  routeIdentity,
+  type Screen,
+} from "./lib/router";
+import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
-import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";
@@ -60,16 +60,12 @@ import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
-import { WriteToHost } from "./screens/writeto";
+import { WriteToHost } from "./screens/writetohost";
 
-// Route → screen. The table below is TOTAL over `Screen` (app/router.tsx), so
-// every address the product answers has a view and an address it does not answer
+// Route → screen. The table below is total over `Screen` (lib/router.tsx), so
+// every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
 
-// The routed screens arrive as their own chunks, so a visitor who has only
-// reached the login form downloads the form rather than every screen in the
-// product: a screen's code arrives when somebody navigates to it.
-//
 // What stays STATIC is what a first paint genuinely needs — the shell, the auth
 // surfaces, the router — plus screens/onboarding, whose company probe the shell
 // itself calls. A module that is imported statically anywhere lands in the entry
@@ -226,6 +222,13 @@ const AnalyticsScreen = lazy(
     import("./screens/analytics").then((m) => ({ default: m.AnalyticsScreen })),
   ),
 );
+const LegalReviewsRoute = lazy(
+  routed(() =>
+    import("./screens/legalreviews").then((m) => ({
+      default: m.LegalReviewsRoute,
+    })),
+  ),
+);
 const ScheduledSendsScreen = lazy(
   routed(() =>
     import("./screens/scheduledsends").then((m) => ({
@@ -237,9 +240,9 @@ const TagResultScreen = lazy(() =>
   import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
 );
 
-const SearchScreen = lazy(
+const SearchRoute = lazy(
   routed(() =>
-    import("./screens/search").then((m) => ({ default: m.SearchScreen })),
+    import("./screens/search").then((m) => ({ default: m.SearchRoute })),
   ),
 );
 const SettingsScreen = lazy(
@@ -437,9 +440,9 @@ function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
 type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
 
 // One entry per address, and `Record<Screen, …>` is what makes that set
-// COMPLETE: a screen added to the union in app/router.tsx with no view here
-// fails the build instead of quietly rendering the page a hash nobody typed
-// gets. A fallback arm cannot tell an unwired screen from an unknown address.
+// complete. A screen added to the union in lib/router.tsx with no view here
+// fails the build. It does not render the page an unknown hash gets. A
+// fallback arm cannot tell an unwired screen from an unknown address.
 const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
   {
     home: () => <BriefScreen />,
@@ -471,15 +474,11 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     ),
     // The object or library section, and a saved view below it, ride the URL.
     filters: ({ id, id2 }) => <FiltersScreen id={id} view={id2} />,
-    // No segments: the queue is one page, and a single scheduled message has
-    // nothing to show that its row does not already carry.
-    //
-    // The literal rather than the screen's own SCHEDULED_SCREEN, which is the
-    // one place that constant is NOT used: importing it here would pull the
-    // module into the startup graph and the lazy() above would load a chunk the
-    // browser already has. The key is still typed against `Screen`, so a rename
-    // fails here too.
+    // No segments: the queue is one page, and a row carries all a message has.
+    // The literal, not SCHEDULED_SCREEN: importing that would pull the module
+    // into the startup graph. The key is still typed against `Screen`.
     scheduled: () => <ScheduledSendsScreen />,
+    "legal-reviews": ({ id }) => <LegalReviewsRoute id={id} />,
     offers: ({ id }) =>
       id ? (
         <OfferScreen id={id} />
@@ -487,7 +486,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
         <ScreenNotice messageKey="screen.pending" />
       ),
     search: ({ id, id2 }) => (
-      <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
+      <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
     lists: ({ id }) => <FiltersScreen list={id ?? ""} />,
@@ -510,10 +509,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // it is a different credential from the reusable preference link.
     confirm: ({ id }) => <ConfirmDetailsScreen token={id} />,
     // #/room?c=<credential> — the Deal Room's buyer, anonymous. The credential
-    // is already out of the address by the time this table is reached: the
-    // router takes it as it reads the hash (app/router.tsx), because a gate
-    // above this dispatch can render instead of the route and this screen would
-    // then never mount to scrub it.
+    // is already out of the address by the time this table is reached. The
+    // router takes it as it reads the hash (lib/router.tsx). A gate above this
+    // dispatch can render instead of the route, and then this screen would
+    // never mount to scrub it.
     room: () => <BuyerRoomScreen />,
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>) — never a rail destination.
@@ -583,7 +582,7 @@ function ScreenView({
   // it into the retry card instead of a blank frame.
   return (
     <Suspense fallback={<ScreenPending />}>
-      {/* Keyed by what the address is ABOUT (app/router.tsx's routeIdentity),
+      {/* Keyed by what the address is ABOUT (lib/router.tsx's routeIdentity),
           which makes moving to another THING a REMOUNT rather than a
           re-render. Two reasons, and the second is the load-bearing one. A
           screen carries state about the record it was opened for — an expanded
@@ -653,10 +652,9 @@ const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 export function App() {
-  // Ahead of every gate below, and that ordering is load-bearing rather than
-  // tidy: reading the address is also what takes a one-time credential out of
-  // it (app/router.tsx), and a credential must leave the bar whatever this
-  // function decides to render instead of the route.
+  // Ahead of every gate below, since reading the address also takes a one-time
+  // credential out of it (lib/router.tsx). A credential must leave the bar
+  // whatever this function renders instead.
   const route = useRoute();
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing

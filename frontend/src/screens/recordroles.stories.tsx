@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { RecordRolesCard } from "./recordroles";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordRolesCard } from "./recordroles";
 
 // Settings › the responsibilities somebody can hold on a record.
 // The retired role stays listed with its switch off, because assignments still

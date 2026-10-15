@@ -2,19 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
-import { CompanyContextCard } from "./company-context";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyContextCard } from "./company-context";
 
-// What the AI is told about the company it is selling for. Two independent
-// conditions govern this card and they mean different things: a rollout FLAG
-// says whether the surface exists on this installation at all, and the
-// company grant says whether this reader may change it.
+// Two conditions, not one: a rollout flag says whether the surface exists, the
+// company grant whether this reader may change it.
 const PROFILE = {
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
@@ -30,12 +28,8 @@ const PROFILE = {
   buying_intents: "Depot expansion, emissions deadlines.",
   common_objections: "Downtime risk, and whether the quote holds.",
   sales_motion: "Field, with a depot visit before the quote.",
-  // The provenance sidecar, in the shape the server actually sends: one row per
-  // confirmed statement. The story used to pass three bare field NAMES here,
-  // which counted as three confirmed statements in the footer and produced no
-  // provenance at all — so the one state this card draws differently from a
-  // plain value, a site-read value under an evidence mark, was invisible in
-  // every story of it.
+  // The provenance sidecar, in the shape the server sends: one row per
+  // confirmed statement, so a site-read value shows under its evidence mark.
   fields: [
     {
       field: "display_name",
@@ -98,49 +92,47 @@ function story(
 const EDITOR = { company: ["read", "update"] } as const;
 const READER = { company: ["read"] } as const;
 
-const meta: Meta<typeof CompanyContextCard> = {
+const meta = {
   title: "Settings/Company/Company profile/Company profile",
   component: CompanyContextCard,
-};
+} satisfies Meta<typeof CompanyContextCard>;
 export default meta;
-type Story = StoryObj<typeof CompanyContextCard>;
+type Story = StoryObj<typeof meta>;
 
 export const Filled: Story = { render: story(CAPABILITIES, EDITOR) };
 
-// A permission, not a rollout: the profile stays readable and says once that it
-// is not this reader's to change.
-export const ReadOnly: Story = { render: story(CAPABILITIES, READER) };
+// The read-only sentence stands on the profile card only, not on the brand card.
+export const ReadOnly: Story = {
+  render: story(CAPABILITIES, READER),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const facts = await canvas.findByRole("region", {
+      name: "Business context",
+    });
+    await within(facts).findByText(/^Read-only\./);
+    await expect(canvas.getAllByText(/^Read-only\./)).toHaveLength(1);
+  },
+};
 
-// The installation cannot read a company profile at all — a capability this
-// deployment does not have, which is the one cause that justifies the surface
-// being absent rather than withheld.
+// The one cause that justifies the surface being absent rather than withheld.
 export const NotEnabledHere: Story = {
   render: story({ ...CAPABILITIES, read_enabled: false }, EDITOR),
 };
 
-// The filled profile in dark, and this is the surface where that is not a
-// formality: the lead card is accent-toned, so its header band and its footer
-// rule are both tints that composite over the panel face. The accent wash, the
-// count in the footer and the dotted evidence marks in the value column are the
-// set to look at, not the text.
+// Look at the logo tiles, group counts and dotted evidence marks.
 export const FilledDark: Story = {
   globals: { theme: "dark" },
   render: story(CAPABILITIES, EDITOR),
 };
 
-// The profile at 390px, which is where the row language earns or loses its
-// keep: below 640px a row stops holding its answer to the right and stacks the
-// naming above it, and the website value is a full URL with no space to break
-// at.
+// The website value is a full URL with no space to break at.
 export const FilledPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(CAPABILITIES, EDITOR),
 };
 
-// The editor the row verbs open: seventeen fields in their three sections, one
-// Save, and focus on the fact whose verb was pressed. The rows behind it are
-// answers; this is the only place on the page that is a form.
+// Focus lands on the fact whose row was pressed.
 export const EditingEssentials: Story = {
   render: story(CAPABILITIES, EDITOR),
   play: async ({ canvasElement }) => {
@@ -151,11 +143,6 @@ export const EditingEssentials: Story = {
   },
 };
 
-// A profile nobody has filled in past the three the save demands. Every
-// elaboration reads "Not set" behind its disclosure, and the footer counts no
-// confirmed statements — the state a fresh installation opens on, and the one
-// where an empty right column would have been indistinguishable from a row that
-// failed to render.
 export const Sparse: Story = {
   render: story(CAPABILITIES, EDITOR, {
     display_name: "Brandt Automotive GmbH",
@@ -166,10 +153,50 @@ export const Sparse: Story = {
   }),
 };
 
-// One confirmed statement: the footer's count in the singular.
-export const OneConfirmed: Story = {
-  render: story(CAPABILITIES, EDITOR, {
-    ...PROFILE,
-    fields: PROFILE.fields.slice(0, 1),
-  }),
+// A name past the installation's cap is refused in the reader's own words.
+export const NameTooLong: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute(EDITOR),
+      "GET /company/context/capabilities": () => jsonResponse(CAPABILITIES),
+      "GET /company": () => jsonResponse(PROFILE),
+      "PUT /company": () =>
+        jsonResponse(
+          {
+            title: "Unprocessable Entity",
+            status: 422,
+            code: "validation_error",
+            details: {
+              errors: [
+                {
+                  field: "display_name",
+                  code: "too_long",
+                  message: "a company name is at most 200 characters",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <CompanyContextCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit business context",
+      }),
+    );
+    const dialog = within(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog"),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Save company context" }),
+    );
+    await dialog.findByText("Shorten the company name.");
+  },
 };

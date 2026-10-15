@@ -155,7 +155,7 @@ describe("the address follows the reader", () => {
   });
 
   // Replace, not push: an officer who opened four cases still has one Back out
-  // of the queue, which is the choice app/urlstate.ts makes for every dial.
+  // of the queue. lib/urlstate.ts makes the same choice for every dial.
   it("leaves one history entry behind however many cases are opened", () => {
     const { result } = renderHook(() =>
       useLinkedCase(["case-1", "case-2"], false),

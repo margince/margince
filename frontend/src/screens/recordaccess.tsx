@@ -18,8 +18,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
-import { navigate, navigateReplacing } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
@@ -28,9 +26,12 @@ import { useToast } from "../design-system/toast";
 import { VisibilityBadge } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap, useViewerId } from "./common";
-import { useMemberName } from "./membernames";
-import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
+import { useRecordWriteRefusal } from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { invalidateRecord, recordWriteKeys } from "../lib/recordwritekeys";
+import { navigate, navigateReplacing } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled

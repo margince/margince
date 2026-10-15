@@ -197,8 +197,7 @@ export const MissingChampion: Story = {
         },
       ],
       lanes: [
-        FULL.lanes[0],
-        FULL.lanes[1],
+        ...FULL.lanes.slice(0, 2),
         {
           id: "champion",
           column: "right",

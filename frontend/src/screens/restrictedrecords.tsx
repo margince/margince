@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -16,19 +15,16 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate, QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { humanizeToken } from "./audit";
-import {
-  problemMessageOf,
-  QueryGate,
-  QueryStates,
-  unwrap,
-  useMe,
-} from "./common";
 import "./retention.css";
 
 // Settings → Privacy → Restricted records (A165/ADR-0114 §4): what a
@@ -57,7 +53,7 @@ const RECORD_ID_RE =
 // ("commercial_correspondence · §257 HGB / §147 AO"); the statute after the
 // separator is shown as written, because it is the citation and not a label.
 function splitReason(reason: string): { cls: string; basis: string } {
-  const [cls, ...rest] = reason.split(" · ");
+  const [cls = "", ...rest] = reason.split(" · ");
   return { cls, basis: rest.join(" · ") };
 }
 
@@ -209,8 +205,10 @@ export function RestrictedRecordsCard() {
     );
   }
 
-  const kindOf = (row: RestrictedRecord) =>
-    KIND_LABEL[row.kind] ? t(KIND_LABEL[row.kind]) : humanizeToken(row.kind);
+  const kindOf = (row: RestrictedRecord) => {
+    const label = KIND_LABEL[row.kind];
+    return label ? t(label) : humanizeToken(row.kind);
+  };
   const columns: DataTableColumn<RestrictedRecord>[] = [
     {
       key: "record",

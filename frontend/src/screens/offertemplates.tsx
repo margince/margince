@@ -1,23 +1,24 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
-import { Badge, OverflowMenu } from "../design-system/atoms";
-import type { ListColumn } from "../design-system/listtable";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { type Translator, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { ArchiveAction } from "./archive";
-import { unwrap, useMe } from "./common";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
 import {
   type ListPage,
   type ListQuery,
   ListTable,
   listFetchLimit,
   useListQuery,
-} from "./listquery";
+} from "../components/listquery";
+import { Badge, OverflowMenu } from "../design-system/atoms";
+import type { ListColumn } from "../design-system/listtable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
+import { ArchiveAction } from "./archive";
 import "./listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -123,7 +124,7 @@ export function OfferTemplatesAdmin() {
     return unwrap(
       await api.POST("/offer-templates", {
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           locale: values.locale || "de-DE",
           is_default: values.is_default === "true",
           layout: {

@@ -7,7 +7,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 
 // "My mail with this party is nobody else's."
 //

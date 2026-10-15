@@ -6,7 +6,13 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -243,17 +249,23 @@ it("lets a hand-drawn table bleed through the same box", () => {
 
 // The first and the last cell of every row, header included, carry the pane's
 // padding, so the first column's text stands at a PanelBody's x.
-it("pads a bleeding table's outer cells to the pane", () => {
+it("pads a bleeding table's outer cells to the pane, in a bleeding disclosure too", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const css = readFileSync(join(here, "atoms.css"), "utf8");
   for (const [edge, side] of [
     ["first-child", "start"],
     ["last-child", "end"],
   ]) {
-    expect(css).toContain(
-      `.panel > .table-scroll-bleed > .table > * > tr > :${edge} {\n  padding-inline-${side}: var(--padPanel);`,
+    const rule = new RegExp(
+      `\\.panel > \\.table-scroll-bleed > \\.table > \\* > tr > :${edge}([^{]*)\\{\\s*padding-inline-${side}: var\\(--padPanel\\);`,
     );
+    const selectors = css.match(rule)?.[1] ?? "";
+    expect(selectors).toMatch(/> \.disclosure-body\s+> \.table-scroll/);
   }
+  const spans = css.match(
+    /\.panel\s+> :is\(\.panel-body, \.settinglist-bleed\)\s+> \.disclosure\s+> \.disclosure-body\s+> \.table-scroll \{\s*margin-inline: ([^;]+);/,
+  );
+  expect(spans?.[1]).toBe("calc(-1 * var(--padPanel))");
 });
 
 type DemoMember = { name: string; email: string; role: string; team: string };
@@ -317,6 +329,37 @@ it("takes the title from the column that names it, and hides on request", () => 
     MEMBER_COLUMNS[3],
   ]);
   expect(foldPlaces(container)).toEqual(["hide", "title", "rest", "end"]);
+});
+
+const NOTE_COLUMN: DataTableColumn<DemoMember> = {
+  key: "note",
+  header: "Note",
+  fold: "only",
+  render: (row: DemoMember) => `Reached through ${row.email}`,
+};
+
+// A fact the title cell carries itself while there is room; only a folded row
+// needs it on a line of its own.
+it("draws a fold-only column in no table that cannot fold", () => {
+  const { container } = renderMembers(false, [...MEMBER_COLUMNS, NOTE_COLUMN]);
+  expect(screen.queryByText("Note")).toBeNull();
+  expect(screen.queryByText(/Reached through/)).toBeNull();
+  expect(container.querySelectorAll("tbody td")).toHaveLength(4);
+});
+
+it("marks a fold-only column's heading and cells alike in a folding table", () => {
+  const { container } = renderMembers(true, [...MEMBER_COLUMNS, NOTE_COLUMN]);
+  expect(foldPlaces(container)).toEqual([
+    "title",
+    "rest",
+    "rest",
+    "end",
+    "only",
+  ]);
+  expect(screen.getByText("Note").className).toBe("datatable-fold-only");
+  expect(screen.getByText(/Reached through/).className).toBe(
+    "datatable-fold-only",
+  );
 });
 
 it("titles a fold by its first unplaced column when none names one", () => {
@@ -395,6 +438,20 @@ it("separates a folded caption's cells by space, never by a glyph", () => {
   expect(fold).toContain("column-gap: var(--space-3);");
 });
 
+// Unfolded the column is absent, so it spends no width; folded it is a line.
+it("draws a fold-only column only inside the fold", () => {
+  const css = datatableCss();
+  const at = css.indexOf("@container table-fold");
+  const unfolded =
+    /\.table-scroll-fold \.datatable-fold-only \{\s*display: none;\s*\}/;
+  expect(css.slice(0, at)).toMatch(unfolded);
+  const fold = css.slice(at);
+  expect(fold).toMatch(/th\.datatable-fold-only \{\s*display: table-cell;/);
+  expect(fold).toMatch(
+    /td\.datatable-fold-only \{\s*display: block;\s*flex-basis: 100%;/,
+  );
+});
+
 it("folds on the table's own width rather than the viewport's", () => {
   const css = datatableCss();
   expect(css).toContain("container: table-fold / inline-size;");
@@ -449,11 +506,11 @@ const CALL_COLUMNS: DataTableColumn<Call>[] = [
   { key: "task", header: "Task", render: (call) => call.task },
 ];
 
-const TRACE: DataTableDetail<Call> = {
+const TRACE = {
   header: "Detail",
   toggleLabel: (call) => `Show ${call.task}`,
   render: (call) => <p>{call.trace}</p>,
-};
+} satisfies DataTableDetail<Call>;
 
 function CallLog({
   fold,
@@ -514,6 +571,143 @@ it("leaves which rows are open to a caller that holds them", async () => {
   await user.click(screen.getByText("Triage"));
   expect(toggled).toEqual(["a"]);
   expect(screen.queryByText("Two attempts")).toBeNull();
+});
+
+it("opens one row at a time when the detail is single", async () => {
+  const user = userEvent.setup();
+  render(<CallLog detail={{ ...TRACE, single: true }} />);
+  await user.click(screen.getByText("Triage"));
+  await user.click(screen.getByText("Enrich"));
+  expect(
+    screen
+      .getByRole("button", { name: "Show Triage" })
+      .getAttribute("aria-expanded"),
+  ).toBe("false");
+  expect(screen.queryByText("Two attempts")).toBeNull();
+  expect(screen.getByText("One attempt")).toBeTruthy();
+  await user.click(screen.getByText("Enrich"));
+  expect(screen.queryByText("One attempt")).toBeNull();
+});
+
+// happy-dom runs no CSS, so the test stubs `getAnimations` with a height
+// transition and ends it itself.
+it("keeps a closing detail on screen until its fold has ended", async () => {
+  const user = userEvent.setup();
+  render(<CallLog />);
+  await user.click(screen.getByText("Triage"));
+  const fold = screen
+    .getByText("Two attempts")
+    .closest(".datatable-detail-fold");
+  let end = () => {};
+  const finished = new Promise<void>((resolve) => {
+    end = resolve;
+  });
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished,
+    transitionProperty: "height",
+  };
+  Object.defineProperty(fold, "getAnimations", { value: () => [motion] });
+  await user.click(screen.getByRole("button", { name: "Show Triage" }));
+  expect(screen.getByText("Two attempts")).toBeTruthy();
+  expect(fold?.closest("tr")?.hidden).toBe(false);
+  expect(
+    fold?.querySelector(".datatable-detail-body")?.hasAttribute("inert"),
+  ).toBe(true);
+  await act(async () => end());
+  expect(screen.queryByText("Two attempts")).toBeNull();
+  expect(fold?.closest("tr")?.hidden).toBe(true);
+});
+
+function HeldCalls({ open }: Readonly<{ open: string[] }>) {
+  return (
+    <CallLog
+      detail={{
+        ...TRACE,
+        render: (call) => <button type="button">Retry {call.task}</button>,
+        expanded: new Set(open),
+        onToggle: () => {},
+      }}
+    />
+  );
+}
+
+it("hands focus to the row's toggle when code closes the detail that holds it", () => {
+  const { rerender } = render(<HeldCalls open={["a"]} />);
+  screen.getByRole("button", { name: "Retry Triage" }).focus();
+  rerender(<HeldCalls open={[]} />);
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Show Triage" }),
+  );
+});
+
+// A late read lands as a new height, and may bring a page scrollbar's new width
+// in the same observer tick.
+it("moves an open detail to its new height, with or without a new width", () => {
+  const size = { width: 300, height: 40 };
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    DOMRect.fromRect(size),
+  );
+  const ticks: (() => void)[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(tick: () => void) {
+        ticks.push(tick);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished: new Promise(() => {}),
+    transitionProperty: "height",
+  };
+  Object.defineProperty(HTMLDivElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [motion],
+  });
+  try {
+    render(<HeldCalls open={["a"]} />);
+    const fold = screen
+      .getByRole("button", { name: "Retry Triage" })
+      .closest<HTMLElement>(".datatable-detail-fold");
+    const tick = () => {
+      for (const each of ticks) each();
+    };
+    size.width = 280;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(false);
+    size.width = 260;
+    size.height = 80;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(true);
+    expect(fold?.style.height).toBe("80px");
+  } finally {
+    Reflect.deleteProperty(HTMLDivElement.prototype, "getAnimations");
+    vi.unstubAllGlobals();
+  }
+});
+
+it("takes single only in a table that holds its own open rows", () => {
+  const held: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+  };
+  // @ts-expect-error a caller that holds the rows decides which stay open
+  const both: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+    single: true,
+  };
+  expect([held.single, both.single]).toEqual([undefined, true]);
 });
 
 it("gives a row with nothing to open no toggle and no pointer", async () => {

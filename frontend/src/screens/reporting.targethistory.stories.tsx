@@ -1,9 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { TargetHistory } from "./reporting.targethistory";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 export default {
   title: "Records/Reports/Analytics/Target history",
 } satisfies Meta;
@@ -16,7 +20,10 @@ export const Retired: StoryObj = {
     );
   },
   render: () => {
-    const target = reportingTargets[0];
+    const [target] = reportingTargets;
+    if (!target) {
+      throw new Error("the reporting scenarios hold no target to draw");
+    }
     installFetchStub({
       ...reportingStoryRoutes(),
       [`GET /analytics/targets/${target.id}`]: () =>

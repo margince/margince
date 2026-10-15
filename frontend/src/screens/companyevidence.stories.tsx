@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // EvidenceModal renders one receipt at a time, keyed by the citation the
 // caller passed in (`cited.entityType` + `cited.entityId`). Each story below

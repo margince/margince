@@ -7,6 +7,9 @@
 // send, and the whole point is that adding a reason means adding a line here.
 // Kept beside the copy that renders them, it read as incidental to the
 // rendering rather than as the list it is.
+//
+// backend/gates/worklistreasonkinds_test.go holds KNOWN_REASONS equal to the
+// contract's WorklistReason.kind enum, and each kind to an English sentence.
 
 import type { WorklistReason } from "./worklist.queries";
 
@@ -50,10 +53,33 @@ export const KNOWN_REASONS = {
   asks_nothing: true,
   addressed_elsewhere: true,
   outcome_unrecorded: true,
+  you_wrote_last: true,
+  no_reply_days: true,
+  met_days_ago: true,
+  nothing_sent_since: true,
+  no_attendee_on_file: true,
+  read_only: true,
 } as const;
 
 export type KnownReason = keyof typeof KNOWN_REASONS;
 
 export function known(kind: WorklistReason["kind"]): kind is KnownReason {
   return kind in KNOWN_REASONS;
+}
+
+// The valued reasons whose figure is a DAY COUNT rather than a currency
+// amount. A count needs the reader's own plural rule ("1 day", not "1 days"),
+// which a money figure never does.
+const DAYS_VALUED_REASONS = {
+  waiting_days: true,
+  quiet_days: true,
+  earlier_requests: true,
+  no_reply_days: true,
+  met_days_ago: true,
+} as const;
+
+export function daysValued(
+  kind: WorklistReason["kind"],
+): kind is keyof typeof DAYS_VALUED_REASONS {
+  return kind in DAYS_VALUED_REASONS;
 }

@@ -11,8 +11,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { ENTITY_KINDS, type EntityKind } from "../app/entity";
 import { LocaleProvider, useT } from "../i18n";
+import { ENTITY_KINDS, type EntityKind } from "../lib/entity";
 import { ContactTimelineTab } from "./contacttabs";
 import {
   chronologyNotice,

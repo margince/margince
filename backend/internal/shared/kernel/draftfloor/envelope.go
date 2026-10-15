@@ -134,6 +134,16 @@ func (e Envelope) Greeting(firstName, lastName string) string {
 	return fill(formalGermanGreeting, NameLine(firstName+" "+lastName))
 }
 
+// GreetingTo is the opening line of a message to the recipient and to others
+// further readers. With any others it greets the group, since naming one
+// reader would leave the rest out.
+func (e Envelope) GreetingTo(firstName, lastName string, others int) string {
+	if others > 0 {
+		return GroupGreeting(e.Lang())
+	}
+	return e.Greeting(firstName, lastName)
+}
+
 // formalGermanGreeting is the Sie opening the shared drafting rules prescribe.
 const formalGermanGreeting = "Guten Tag %s,"
 

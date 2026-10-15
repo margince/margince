@@ -8,11 +8,11 @@
 // in every column, which is the failure the tests beside this file exist for.
 
 import type { components } from "../api/schema";
-import { routeHash } from "../app/router";
+import type { OwnerNaming } from "../components/entityref";
 import type { BoardDeal, BoardDealMail } from "../design-system/composed";
 import { idleSince } from "../format/idlebase";
+import { routeHash } from "../lib/router";
 import type { CompanyNaming } from "./dealcompanymarks";
-import type { OwnerNaming } from "./entityref";
 
 type Deal = components["schemas"]["Deal"];
 

@@ -23,10 +23,10 @@
 // they are genuinely different rows that happen to name the same message.
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { EmailEntry } from "../../design-system/emailentry";
 import { formatDateTime } from "../../format/format";
 import { useLocale } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { Citations, type Cited, type OpenReceipt } from "./citations";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.

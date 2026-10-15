@@ -7,9 +7,13 @@ import { expect, userEvent, within } from "storybook/test";
 import { Badge } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { taskRow, waitingEmailRow } from "./brief.fixtures";
 import { Triage } from "./brief.focus";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 
 // THE FOCUS PANEL'S INSIDE: the card in hand on the stack of what is still
@@ -69,6 +73,10 @@ function Chosen({
   start,
 }: Readonly<{ rows: WorklistItem[]; start: number }>) {
   const [at, setAt] = useState(start);
+  const lead = rows[at];
+  if (lead === undefined) {
+    return null;
+  }
   return (
     <div id="brief-today">
       {/* The panel's own band, because the card is judged against it: INDIGO,
@@ -83,7 +91,7 @@ function Chosen({
         <Triage
           rows={rows}
           at={at}
-          lead={rows[at]}
+          lead={lead}
           onChoose={(item) => setAt(rows.indexOf(item))}
           onOpenEmail={() => undefined}
           onContext={() => undefined}

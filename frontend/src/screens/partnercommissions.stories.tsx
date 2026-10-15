@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { PartnerCommissions } from "./partnercommissions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { PartnerCommissions } from "./partnercommissions";
 
 // What a partner has earned. The strip on top is the one figure the panel is
 // opened for — what is still OWED, one card per currency because two currencies

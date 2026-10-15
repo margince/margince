@@ -5,19 +5,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDuration, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import { bandTone } from "./aiusage";
-import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import "./embedreindex.css";
+import { useNow } from "../format/now";
 import { available } from "./settingscapability";
 import { holds } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
@@ -48,6 +51,21 @@ export function useEmbedReindexAvailable(): boolean {
   return holds(available("embedding_reindex"), useMe().data);
 }
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
+
+export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
+  return useQuery({
+    queryKey: embedReindexStatusQueryKey,
+    enabled,
+    staleTime,
+    queryFn: async (): Promise<ReindexStatus> => {
+      const data = unwrap(await api.GET("/embeddings/reindex/status"));
+      if (!data) {
+        throw new Error("malformed reindex status response");
+      }
+      return data;
+    },
+  });
+}
 
 // impactLabel names the HYPOTHETICAL post-reindex band the estimator
 // disclosed (utilization_impact) — distinct copy from aiusage's bandLabel,
@@ -96,6 +114,8 @@ function StatusHeader({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
+  // Ticks while a run is going, so a stalled run's age grows on screen.
+  const now = useNow(isRunning ? 1000 : 0);
   const tone = isRunning
     ? "accent"
     : data.reindex_needed
@@ -132,7 +152,7 @@ function StatusHeader({
         <span className="t-caption">
           {t("embedreindex.lastProgress", {
             duration: formatDuration(
-              Math.max(0, Date.now() - new Date(data.updated_at).getTime()),
+              Math.max(0, now - new Date(data.updated_at).getTime()),
               locale,
             ),
           })}
@@ -236,17 +256,7 @@ export function EmbedReindexCard() {
     setPreviewedIdentity(null);
   };
 
-  const status = useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled: canRead && bound,
-    queryFn: async (): Promise<ReindexStatus> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
+  const status = useEmbedReindexStatus(canRead && bound);
 
   // Fetched only once the dialog is open (ADR-0020 preview-before-spend):
   // the estimate is what the operator is about to consent to, not a figure

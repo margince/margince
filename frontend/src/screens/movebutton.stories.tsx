@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { MoveButton } from "./movebutton";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MoveButton } from "./movebutton";
 
 const meta: Meta<typeof MoveButton> = {
   title: "Patterns/Move button",

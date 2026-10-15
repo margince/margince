@@ -8,9 +8,9 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import { ColumnGuideButton } from "./import.guide";
-import type { ImportWizardState, WizardFile } from "./importflow";
+import { ImportRefusal } from "./import.notices";
+import type { WizardFile } from "./importflow";
 import type {
   ImportColumn,
   ImportFormat,
@@ -18,6 +18,7 @@ import type {
   ImportObject,
 } from "./importtypes";
 import { DONT_IMPORT } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
 // The mapping surface (IEM-AC-OPEN-2): one row per column of the uploaded file,
 // carrying what a human needs to decide where it goes — the name as the file
@@ -196,7 +197,11 @@ export function MapStep({
   const mapping = wizard.mapping[name] ?? {};
   const targets =
     format.files.find((file) => file.object === current.object)?.columns ?? [];
-  const stage = wizard.stage;
+  const test = wizard.test;
+  const refused = test.error ?? wizard.saveFailure;
+  // A test run that stopped left the run a draft, with the reason on it.
+  const stopped =
+    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
   return (
     <div className="import">
       <RecordTabs
@@ -233,7 +238,7 @@ export function MapStep({
         targets={targets}
         file={name}
         mapping={mapping}
-        locked={stage.isPending}
+        locked={test.isPending}
         onChange={(column, target) =>
           wizard.setColumnTarget(name, column, target)
         }
@@ -244,22 +249,22 @@ export function MapStep({
         </Button>
         <Button
           variant="primary"
-          pending={stage.isPending}
+          pending={test.isPending}
           busyLabel={t("import.map.running")}
-          onClick={() => {
-            if (wizard.profile) stage.mutate(wizard.stageInput(wizard.profile));
-          }}
+          onClick={wizard.runTest}
         >
           {t("import.map.run")}
         </Button>
       </div>
-      {stage.error ? (
+      {refused ? (
+        <ImportRefusal title={t("import.map.stageFailed")} error={refused} />
+      ) : stopped ? (
         <Callout
           tone="danger"
-          kind="outcome"
-          title={t("import.map.stageFailed")}
+          kind="standing"
+          title={t("import.map.testStopped")}
         >
-          {problemMessageOf(stage.error, t)}
+          {stopped}
         </Callout>
       ) : null}
     </div>

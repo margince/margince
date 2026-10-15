@@ -262,7 +262,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The story hand-renders a member row and passes the formatter's required zone directly — a story has no installation read to take it from, and a zone read off the runner would draw a different date column on every machine the catalog builds on.",
   },
   {
-    file: "app/pageaside.stories.tsx",
+    file: "components/pageaside.stories.tsx",
     why: "The story hand-renders a RecordView around the details pane and passes the view's required zone; nothing in it renders a date, so the zone is the shape being satisfied, not a rendering under review.",
   },
   {
@@ -294,7 +294,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The whole-app smoke story serves an installation-settings response, and the contract makes `timezone` required — a settled answer without one is a server this bundle does not match, which the app reports as an error and the render gate then fails on. The zone is the SERVER's answer being stubbed, not a zone this story picks.",
   },
   {
-    file: "app/recordzone.test.tsx",
+    file: "lib/recordzone.test.tsx",
     why: "Proves what the record zone does with what the server sends it, which needs a configured zone to hand it and an unrenderable one to refuse — neither is a zone this code picks, both are the input under test.",
   },
   {
@@ -306,7 +306,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "createdColumn now takes the zone it renders dates in; this suite asserts what the column SORTS on, so it hands over a named zone to satisfy the signature and the zone itself carries none of the claim.",
   },
   {
-    file: "app/mefixture.ts",
+    file: "testing/mefixture.ts",
     why: "The offline `me` fixture stands in for a real installation's stored settings, and its company timezone is one of those settings — a value on the wire, not a zone this code picks.",
   },
   {
@@ -542,15 +542,15 @@ describe("a zone is named in one module", () => {
     // through the back door, and no zone LITERAL appears in such a file for the
     // sweep above to catch.
     //
-    // Three permitted files, all of them ABOUT the fallback rather than users
-    // of it: `app/recordzone.tsx` decides when it applies, its own suite proves
-    // that decision, and `format/timezone.test.ts` asserts the one property the
-    // fallback must never lose — that the formatters accept it, since it is
-    // what renders when the installation's own zone cannot. A test forbidden
+    // Three permitted files, all of them about the fallback rather than users
+    // of it. `lib/recordzone.tsx` decides when it applies, and its own suite
+    // proves that decision. `format/timezone.test.ts` asserts the one property
+    // the fallback must keep: the formatters accept it, since it renders when
+    // the installation's own zone cannot. A test forbidden
     // from naming the value it asserts on could only check it against itself.
     const allowed = new Set([
-      "app/recordzone.tsx",
-      "app/recordzone.test.tsx",
+      "lib/recordzone.tsx",
+      "lib/recordzone.test.tsx",
       "format/timezone.test.ts",
     ]);
     const importers = sourceFiles(srcRoot)

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { viewerZone } from "../format/timezone";
+import { jsonResponse, type RouteMap } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import { bookingProfile } from "./book.testkit";
 import { BookingGuestScreen } from "./booking-guest";
 import { GuestDetailsForm } from "./booking-guest-parts";
-import { jsonResponse, type RouteMap } from "./story-utils";
 
 import "./book.css";
 
@@ -71,6 +71,7 @@ export const PickedTime: Story = {
     const [first] = await page.findAllByRole("button", {
       name: /^\d{1,2}:\d{2}/,
     });
+    if (!first) throw new Error("the month offers no time");
     await userEvent.click(first);
   },
 };

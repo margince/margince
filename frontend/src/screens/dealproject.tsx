@@ -6,18 +6,18 @@ import { Briefcase } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { ENTITY } from "../app/entity";
-import { navigate, routeHash } from "../app/router";
+import type { CreateField } from "../components/create";
+import { useEntityName } from "../components/entityref";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FieldGuard } from "../design-system/rbac";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { dealRecordKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem, unwrap } from "./common";
-import type { CreateField } from "./create";
-import { useEntityName } from "./entityref";
+import { dealRecordKeys } from "../lib/activitykeys";
+import { ENTITY } from "../lib/entity";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
 import type { Project } from "./projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the
@@ -298,15 +298,16 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   // A withheld project arrives as null with `masked_fields` naming it, and
   // is not the same as none; an archived deal takes no writes at all.
   const masked = (deal.masked_fields ?? []).includes("project_id");
+  const [project] = candidates;
   if (
     deal.status !== "won" ||
     masked ||
     deal.archived_at ||
-    candidates.length !== 1
+    candidates.length !== 1 ||
+    project === undefined
   ) {
     return null;
   }
-  const project = candidates[0];
   // The retry case: the deal already names this project but the advance
   // failed, so the project is still short of delivery.
   const attached = deal.project_id === project.id;

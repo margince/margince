@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { CompanyFactsPanel } from "./companyfactspanel";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyFactsPanel } from "./companyfactspanel";
 
 type CompanyFact = components["schemas"]["CompanyFact"];
 
@@ -123,6 +123,7 @@ function frame(
       )}
       <CompanyFactsPanel
         companyId={COMPANY}
+        anchor={false}
         canEdit={canEdit}
         reasonId={reasonId}
       />

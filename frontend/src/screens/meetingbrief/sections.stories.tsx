@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { installFetchStub, StoryProviders } from "../story-utils";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { briefModel, briefReady } from "./fixtures";
 import { Background, BodyPanels, GlanceLine, GoalPanel } from "./sections";
 import "./meetingbrief.css";

@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { FactRow } from "./companyfactrow";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 // The row wears the contact page's meta-row shape, which lives with the
 // composed primitives rather than with this screen — so a row drawn on its own
 // has to load it the way the facts panel above it does.
@@ -87,6 +91,7 @@ function Rows({
               <FactRow
                 key={one.id}
                 companyId={COMPANY}
+                anchor={false}
                 fact={one}
                 label={one.field === "founded_year" ? "Founded" : undefined}
                 canEdit={canEdit}

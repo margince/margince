@@ -21,6 +21,7 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { writtenAsMarkdown } from "./activitytimeline";
 import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
@@ -607,15 +608,12 @@ export type TimelineEntry = {
   detail?: ReactNode;
 };
 
-// One icon for every kind, and ONE for every messaging transport: since
-// ADR-0107/A158 the timeline no longer knows a Telegram row from a WhatsApp one
-// by its kind, so a per-transport icon here would be a map this file cannot
-// keep — an extension unit's transport has no entry and never will. The row
-// names its transport in the label instead.
-// The kind in a word, beside the row rather than as an icon alone: a glyph is
-// a thing to recognise and a word is a thing to read, and a chronology mixing
-// mail, meetings and field edits is scanned by the second.
-const TIMELINE_KIND_LABEL = {
+// One icon per kind and one for all messaging transports. An extension unit's
+// transport has no entry here, so the row names it in the label.
+// The kind in a word beside the row, not an icon alone. A glyph is a thing to
+// recognise and a word is a thing to read. A timeline that mixes mail,
+// meetings and field edits is scanned by reading.
+export const TIMELINE_KIND_LABEL = {
   email: "timeline.kind.email",
   meeting: "timeline.kind.meeting",
   note: "timeline.kind.note",
@@ -688,8 +686,6 @@ function linkify(text: string): ReactNode[] {
   return out;
 }
 
-const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
-
 /**
  * TimelineText is the message itself, three lines by default and the whole of
  * it on request. A timeline of full emails would be a mailbox.
@@ -715,8 +711,7 @@ function TimelineText({
   const [clipped, setClipped] = useState(false);
   const [el, setEl] = useState<HTMLElement | null>(null);
   // Markdown is block content, which a <span> may not hold.
-  const Block =
-    WRITTEN_KINDS.has(entry.kind) && !entry.transcript ? "div" : "span";
+  const Block = writtenAsMarkdown(entry) ? "div" : "span";
   // The tail is what the reader is spared; `trimmed` is what the row shows and
   // what the clamp measures, so the split has to happen before that effect.
   const parts = useMemo(
@@ -903,12 +898,14 @@ export function GroupedTimelineList({
     <ul className="timeline">
       {groups.map((group) =>
         group.kind === "single" ? (
-          <TimelineRow
-            key={group.id}
-            entry={group.entries[0]}
-            zone={zone}
-            flag={<MoveFlag entry={group.entries[0]} />}
-          />
+          group.entries[0] && (
+            <TimelineRow
+              key={group.id}
+              entry={group.entries[0]}
+              zone={zone}
+              flag={<MoveFlag entry={group.entries[0]} />}
+            />
+          )
         ) : group.kind === "thread" ? (
           <ThreadRow
             key={group.id}
@@ -1203,7 +1200,10 @@ function ThreadRow({
   const { locale } = useLocale();
   const t = useT();
   const [allOpen, setAllOpen] = useState(false);
-  const newest = group.entries[0];
+  const [newest] = group.entries;
+  if (newest === undefined) {
+    return null;
+  }
   const Icon = TIMELINE_ICON[newest.kind];
   const threadKey = newest.threadKey;
   const participants = threadParticipants(group.entries, t, locale);
@@ -1324,7 +1324,10 @@ function BulkGroupRow({
   const { locale } = useLocale();
   const t = useT();
   const [open, setOpen] = useState(false);
-  const newest = group.entries[0];
+  const [newest] = group.entries;
+  if (newest === undefined) {
+    return null;
+  }
   const Icon = TIMELINE_ICON[newest.kind];
   return (
     <li className={directionClass(newest.direction)}>

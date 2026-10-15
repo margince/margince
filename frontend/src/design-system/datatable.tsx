@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronDown } from "lucide-react";
 import {
   Fragment,
   type MouseEvent,
   type ReactNode,
   useId,
+  useRef,
   useState,
 } from "react";
 import { TableScroll } from "./atoms";
+import { ExpanderChevron } from "./disclosure";
+import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
 import { IconAction } from "./iconaction";
 import { type SortableRows, useSortableRows } from "./sortablelist";
 import "./atoms.css";
@@ -60,7 +62,7 @@ export function DataTable<Row>({
   const sortable = useSortableRows(rows, rowKey, reorder);
   const columns = [
     ...(reorder ? [gripColumn(reorder.header, sortable.grip)] : []),
-    ...ownColumns,
+    ...ownColumns.filter((column) => fold || column.fold !== "only"),
     ...(disclosure ? [disclosure.column] : []),
   ];
   const title = foldTitle(columns);
@@ -135,20 +137,13 @@ export function DataTable<Row>({
                   ))}
                 </tr>
                 {disclosure?.rendersRow(row) && (
-                  // Mounted while closed so the toggle's aria-controls always resolves.
-                  <tr
-                    className="datatable-detail"
-                    role={role("row")}
-                    hidden={!disclosure.isOpen(row)}
-                  >
-                    <td
-                      colSpan={columns.length}
-                      id={disclosure.id(row)}
-                      role={role("cell")}
-                    >
-                      {disclosure.isOpen(row) && disclosure.render(row)}
-                    </td>
-                  </tr>
+                  <DetailRow
+                    open={disclosure.isOpen(row)}
+                    id={disclosure.id(row)}
+                    span={columns.length}
+                    role={role}
+                    render={() => disclosure.render(row)}
+                  />
                 )}
               </Fragment>
             );
@@ -174,10 +169,15 @@ export type DataTableDetail<Row> = Readonly<
     /** The id of what the chevron opens inside the row. */
     | { controls: (row: Row) => string; render?: never }
   ) &
+    /** `single`: opening a row closes the open one, in a table that holds its own rows. */
     (
-      | { expanded?: never; onToggle?: never }
+      | { expanded?: never; onToggle?: never; single?: boolean }
       /** The open rows' keys, held by the caller. */
-      | { expanded: ReadonlySet<string>; onToggle: (key: string) => void }
+      | {
+          expanded: ReadonlySet<string>;
+          onToggle: (key: string) => void;
+          single?: never;
+        }
     )
 >;
 
@@ -197,9 +197,12 @@ function useDisclosure<Row>(
     detail.onToggle ??
     ((key: string) =>
       setOwn((current) => {
-        const next = new Set(current);
-        if (!next.delete(key)) next.add(key);
-        return next;
+        if (current.has(key)) {
+          const next = new Set(current);
+          next.delete(key);
+          return next;
+        }
+        return new Set(detail.single ? [key] : [...current, key]);
       }));
   const has = (row: Row) => detail.has?.(row) ?? true;
   const isOpen = (row: Row) => has(row) && expanded.has(rowKey(row));
@@ -216,7 +219,7 @@ function useDisclosure<Row>(
       has(row) && (
         <IconAction
           label={detail.toggleLabel(row)}
-          icon={<ChevronDown aria-hidden className="expander-chevron" />}
+          icon={<ExpanderChevron />}
           disclosure={{ expanded: isOpen(row), controls: id(row) }}
           onClick={() => toggleRow(row)}
         />
@@ -226,6 +229,42 @@ function useDisclosure<Row>(
   const rendersRow = (row: Row) => detail.render !== undefined && has(row);
   return { column, has, isOpen, id, toggleRow, render, rendersRow };
 }
+
+// Mounted while closed so the toggle's aria-controls always resolves; its
+// content only while open, and through the close.
+function DetailRow({
+  open,
+  id,
+  span,
+  role,
+  render,
+}: Readonly<{
+  open: boolean;
+  id: string;
+  span: number;
+  role: (name: string) => string | undefined;
+  render: () => ReactNode;
+}>) {
+  const box = useRef<HTMLDivElement>(null);
+  useFocusHandBack(id, open);
+  const shown = useFold(box, open, detailEnds);
+  return (
+    <tr className="datatable-detail" role={role("row")} hidden={!shown}>
+      <td colSpan={span} id={id} role={role("cell")}>
+        <div ref={box} className="datatable-detail-fold">
+          <div className="datatable-detail-body" inert={shown && !open}>
+            {shown && render()}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+const detailEnds: FoldEnds = (box) => ({
+  shut: 0,
+  open: box.firstElementChild?.getBoundingClientRect().height ?? 0,
+});
 
 /** `SortableRows` for a table: a leading grip on each row `can` allows, an empty cell on the rest. */
 export type DataTableReorder<Row> = SortableRows<Row> &
@@ -279,7 +318,8 @@ export type DataTableColumn<Row> = Readonly<{
   // Where the cell goes when a `fold` table folds. "hide" leaves sight but is
   // still read, so it must not hold a control. "lead" and "trail" keep their
   // width empty or not, so every title and every last control sits on one edge.
-  fold?: "title" | "end" | "hide" | "lead" | "trail";
+  // "only" is hide's mirror: absent until the table folds, then a line of its own.
+  fold?: "title" | "end" | "hide" | "lead" | "trail" | "only";
   /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
   folded?: (row: Row) => ReactNode | undefined;
 }>;
@@ -339,6 +379,7 @@ function columnClass<Row>(column: DataTableColumn<Row>): string | undefined {
     column.align === "end" ? "datatable-end" : "",
     column.grow ? "datatable-grow" : "",
     column.key === GRIP_COLUMN ? "datatable-grip" : "",
+    column.fold === "only" ? "datatable-fold-only" : "",
   ].filter(Boolean);
   return classes.length > 0 ? classes.join(" ") : undefined;
 }

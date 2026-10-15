@@ -4,8 +4,9 @@
 import { LogOut } from "lucide-react";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { problemMessageOf, useLogout } from "../screens/common";
-import { comparableRelease, SPA_RELEASE } from "./release";
+import { problemMessageOf } from "../lib/problem";
+import { CORE_RELEASE, comparableRelease, SPA_RELEASE } from "../lib/release";
+import { useLogout } from "../lib/session";
 
 // The foot of the account menu: the way out, and the release the reader is on.
 // Apart from account.tsx so the menu's roving walk and its rows read on their own.
@@ -65,21 +66,33 @@ export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
 }
 
 /**
- * The release this bundle was built from, so a reader reporting a problem can
+ * The releases this bundle was built from, so a reader reporting a problem can
  * say which build it is in. A statement, not a row: `role="none"` keeps it out
- * of the menu's items and out of the roving tabstop. An unstamped build prints
- * nothing rather than a version that is not one.
+ * of the menu's items and out of the roving tabstop. A stamped core release
+ * marks an instance build, which names both repositories even when they agree.
+ * An unstamped value prints nothing rather than a version that is not one.
  */
 export function AccountRelease() {
   const t = useT();
-  if (!comparableRelease(SPA_RELEASE)) {
+  const lines: string[] = [];
+  if (comparableRelease(CORE_RELEASE)) {
+    if (comparableRelease(SPA_RELEASE)) {
+      lines.push(t("shell.instanceVersion", { version: SPA_RELEASE }));
+    }
+    lines.push(t("shell.coreVersion", { version: CORE_RELEASE }));
+  } else if (comparableRelease(SPA_RELEASE)) {
+    lines.push(t("shell.version", { version: SPA_RELEASE }));
+  }
+  if (lines.length === 0) {
     return null;
   }
   return (
     <>
       <hr />
       <div className="acctversion t-caption" role="none">
-        {t("shell.version", { version: SPA_RELEASE })}
+        {lines.map((line) => (
+          <div key={line}>{line}</div>
+        ))}
       </div>
     </>
   );

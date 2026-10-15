@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { DealsSection } from "./companyraildeals";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealsSection } from "./companyraildeals";
 
 // The rail's open-pipeline section on its own: the ranked top deals, each with
 // its amount in tabular figures so the column of money lines up down the rail,

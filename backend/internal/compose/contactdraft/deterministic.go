@@ -87,10 +87,7 @@ func deterministicBody(in Input) string {
 // greeting names the recipient, or greets the group when the message goes to
 // further contacts as well.
 func greeting(in Input) string {
-	if len(in.AlsoTo) > 0 {
-		return draftfloor.GroupGreeting(in.Envelope.Lang())
-	}
-	return in.Envelope.Greeting(in.Recipient.FirstName, in.Recipient.LastName)
+	return in.Envelope.GreetingTo(in.Recipient.FirstName, in.Recipient.LastName, len(in.AlsoTo))
 }
 
 // The one sentence of substance, from the highest-ranked input that has

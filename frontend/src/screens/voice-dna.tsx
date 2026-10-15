@@ -3,11 +3,11 @@ import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   type SettingControlProps,
   SettingList,
@@ -16,7 +16,8 @@ import {
 import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import { useVoiceProfile } from "./voice-profile";
 import { bandLabel, useVoiceSources, VoiceSamples } from "./voice-samples";

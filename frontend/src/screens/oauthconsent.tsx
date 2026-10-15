@@ -2,15 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, Card, Checkbox, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, unwrap, useMe } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import "./oauthconsent.css";
 
 // The human hands an agent their own authority here — the one screen where
@@ -190,7 +192,7 @@ export function OAuthConsent() {
   const t = useT();
   // Read once per mount: the fragment is the SPA's own address bar for this
   // screen, not a value that changes while it's open.
-  const params = useMemo(fragmentParams, []);
+  const [params] = useState(fragmentParams);
   const clientId = params.get("client_id") ?? "";
   const scope = params.get("scope") ?? "";
   const consent = params.get("consent") ?? "";

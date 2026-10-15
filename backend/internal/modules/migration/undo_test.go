@@ -43,16 +43,18 @@ func TestReversalRefusalReasonNamesEachSentinelAndFallsBackHonestly(t *testing.T
 	for _, tc := range []struct {
 		name string
 		err  error
+		code ReasonCode
 		want string
 	}{
-		{"permission denied", apperrors.ErrPermissionDenied, "the caller's grant no longer covers this record"},
-		{"not found", apperrors.ErrNotFound, "the record is no longer visible to this caller"},
-		{"conflict", apperrors.ErrConflict, "the record refused the reversal (a business rule protects it)"},
-		{"unclassified", errors.New("boom"), "the record could not be reversed"},
+		{"permission denied", apperrors.ErrPermissionDenied, ReasonUndoGrantLost, "Your permissions no longer cover this record."},
+		{"not found", apperrors.ErrNotFound, ReasonUndoNotVisible, "This record is no longer visible to you."},
+		{"conflict", apperrors.ErrConflict, ReasonUndoRuleProtects, "The record refused the undo because a business rule protects it."},
+		{"unclassified", errors.New("boom"), ReasonUndoFailed, "The record could not be undone."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := reversalRefusalReason(tc.err); got != tc.want {
-				t.Errorf("reversalRefusalReason(%v) = %q, want %q", tc.err, got, tc.want)
+			got := reversalRefusalReason(tc.err)
+			if got.Code != tc.code || got.English() != tc.want {
+				t.Errorf("reversalRefusalReason(%v) = %s %q, want %s %q", tc.err, got.Code, got.English(), tc.code, tc.want)
 			}
 		})
 	}
@@ -119,9 +121,9 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 }
 
 func TestAnUndoReversesTheTypesALaterImportLandedFirst(t *testing.T) {
-	want := []string{ObjectLead, ObjectContact, ObjectCompany}
+	want := []string{ObjectDeal, ObjectLead, ObjectContact, ObjectCompany}
 	if got := reverseImportOrder(); !slices.Equal(got, want) {
-		t.Fatalf("undo order = %v, want %v: a company archived first leaves its contacts naming an archived record", got, want)
+		t.Fatalf("undo order = %v, want %v: a contact archived first leaves its deals naming an archived record", got, want)
 	}
 	if ImportOrder[0] != ObjectCompany {
 		t.Fatalf("reversing changed ImportOrder itself: %v", ImportOrder)

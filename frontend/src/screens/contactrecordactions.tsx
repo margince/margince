@@ -6,13 +6,13 @@ import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { navigate } from "../app/router";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { invalidateRecord } from "../lib/recordwritekeys";
+import { navigate } from "../lib/router";
 import { ArchiveAction } from "./archive";
-import { unwrap } from "./common";
 import { MergeAction } from "./merge";
-import { invalidateRecord } from "./recordwritekeys";
 
 // The contact header's merge and archive commands.
 

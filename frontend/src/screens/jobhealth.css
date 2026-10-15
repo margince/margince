@@ -1,7 +1,0 @@
-/* SPDX-License-Identifier: BUSL-1.1
- * SPDX-FileCopyrightText: 2026 Gradion */
-
-/* A job kind is one token an operator greps for, so it never breaks mid-word. */
-.jobhealth-kind {
-  white-space: nowrap;
-}

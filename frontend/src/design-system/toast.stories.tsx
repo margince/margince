@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import {
@@ -193,6 +194,37 @@ function QueuedBehind() {
     </Button>
   );
 }
+
+/**
+ * A refusal is never kept waiting behind a verb. Hide a file, then refuse the
+ * next one. The refusal takes the region at once, and the Undo waits second
+ * with its full eight seconds still ahead.
+ */
+export const ARefusalOutranksAVerb: Story = {
+  render: () => (
+    <Bench
+      label="Hide a file"
+      message="Hidden from this deal"
+      options={{ action: { kind: "undo", label: "Undo", onAct: () => {} } }}
+      extra={
+        <Bench
+          label="Hide another"
+          message="That file could not be hidden."
+          options={{ tone: "danger", sticky: true }}
+        />
+      }
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Hide a file" }),
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Hide another" }));
+    await screen.findByText("That file could not be hidden.");
+    await expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  },
+};
 
 /**
  * The long-content case, at the width a record name can reach. The sentence

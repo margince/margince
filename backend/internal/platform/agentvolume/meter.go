@@ -36,17 +36,19 @@ const keyPrefix = "msr:"
 // identity. A meter without one does not bound cost at all, which is a real
 // composition — a role that serves no agent principals has no share to compute.
 type CostCeiling interface {
-	TokensPerPassport(ctx context.Context) int
+	TokensPerPassport(ctx context.Context, window time.Duration) int
 }
 
 // Meter counts what one Passport has spent inside a window. The zero value is
 // not usable; construct with New, NewWithClock or Unmetered.
 type Meter struct {
-	rdb    *redis.Client
-	limits Limits
-	window time.Duration
-	now    func() time.Time
-	cost   CostCeiling
+	rdb *redis.Client
+	// fallback binds until a policy source answers, and whenever none is set.
+	fallback Policy
+	source   PolicySource
+	cache    *policyCache
+	now      func() time.Time
+	cost     CostCeiling
 	// unbounded marks the meter Unmetered built: it admits everything and
 	// records nothing, because this composition declared no bound rather than
 	// failed to reach one.
@@ -72,7 +74,8 @@ func NewWithClock(rdb *redis.Client, limits Limits, window time.Duration, now fu
 	if window <= 0 {
 		window = DefaultWindow
 	}
-	return &Meter{rdb: rdb, limits: limits.withDefaults(), window: window, now: now, reachable: reachableAtBoot(rdb != nil)}
+	fallback := Policy{Limits: limits.withDefaults(), Window: WindowPlan{Length: window}}
+	return &Meter{rdb: rdb, fallback: fallback, now: now, reachable: reachableAtBoot(rdb != nil)}
 }
 
 // Unmetered is a meter that counts nothing and bounds nothing — for a
@@ -88,7 +91,8 @@ func NewWithClock(rdb *redis.Client, limits Limits, window time.Duration, now fu
 // Nothing in a production api path may use it. cmd/api wires the Redis-backed
 // meter, and a deployment that misconfigures Redis gets the loud refusal.
 func Unmetered() *Meter {
-	return &Meter{limits: Limits{}.withDefaults(), window: DefaultWindow, now: time.Now, unbounded: true, reachable: reachableAtBoot(false)}
+	fallback := Policy{Limits: Limits{}.withDefaults(), Window: WindowPlan{Length: DefaultWindow}}
+	return &Meter{fallback: fallback, now: time.Now, unbounded: true, reachable: reachableAtBoot(false)}
 }
 
 // WithCostCeiling installs the share one Passport may spend of the workspace AI
@@ -112,20 +116,10 @@ func (m *Meter) RebindFrom(src *Meter) {
 	// rebound meter judging cost against the composition it used to be in,
 	// which is silent: the counter refuses nothing, so a wrong ceiling shows up
 	// only as a warning that fires at the wrong volume.
-	m.rdb, m.limits, m.window = src.rdb, src.limits, src.window
+	m.rdb, m.fallback, m.source, m.cache = src.rdb, src.fallback, src.source, src.cache
 	m.now, m.unbounded, m.cost = src.now, src.unbounded, src.cost
 	m.reachable = src.reachable
 }
-
-// Limit is the configured threshold for one counter, for a refusal envelope to
-// report without a second reading of the window.
-func (m *Meter) Limit(c Counter) int { return m.limits.of(c) }
-
-// Window is the span one counter covers. A caller computing anything PER window
-// — the cost ceiling's share of a monthly budget is the one today — must
-// pro-rate against this rather than against the default, or it compares a share
-// of one span with a count over another.
-func (m *Meter) Window() time.Duration { return m.window }
 
 // Reading is what the meter knows about one Passport's window for one counter.
 type Reading struct {
@@ -151,6 +145,9 @@ type Reading struct {
 	// window the human was SHOWN — carrying the bucket is what stops an
 	// approval answered an hour later from widening a window nobody looked at.
 	Bucket int64
+	// Window is the length the bucket was counted under. A release names it
+	// with the bucket, because a bucket number means nothing under another length.
+	Window time.Duration
 }
 
 // countKey is one agent's counter for one window bucket. The bucket comes from
@@ -200,19 +197,18 @@ func governed(ctx context.Context) bool {
 // bounds govern whose counter cannot be built, and admitting it would be a free
 // pass handed out by a wiring fault.
 //
-// The key is the Passport, falling back to the principal's own id. Every agent
-// principal this product mints carries a Passport
-// (identity.AgentIdentity.Principal), so the fallback is not a live path — but
-// keying on something ALWAYS present is what stops a future agent principal
+// The key is SubjectOf the passport and its connection, falling back to the
+// principal's own id. Every agent principal this product mints carries a
+// Passport (identity.AgentIdentity.Principal), so the fallback is not a live
+// path. Keying on something always present stops a future agent principal
 // without one from being silently exempt.
 func callerKey(ctx context.Context) (ws ids.UUID, agent string, named bool) {
 	actor, present := principal.Actor(ctx)
 	if !present {
 		return ws, "", false
 	}
-	if actor.PassportID != (ids.UUID{}) {
-		agent = actor.PassportID.String()
-	} else {
+	agent = SubjectOf(actor.PassportID, actor.ConnectionID)
+	if agent == "" {
 		agent = actor.ID
 	}
 	ws, bound := principal.WorkspaceID(ctx)
@@ -228,15 +224,25 @@ func (m *Meter) usable(ctx context.Context) (ws ids.UUID, agent string, ok bool)
 	return ws, agent, named
 }
 
-// Bucket is the fixed window a moment falls in. Exported because a release has
-// to name the window it was granted for, and the granting path runs as the
-// HUMAN — outside this meter's per-call context entirely.
-//
-// It divides in NANOSECONDS rather than whole seconds: a sub-second window
-// truncates to zero seconds and the division panics, and a window is a
-// caller-supplied duration with nothing stopping it being 500ms.
-func (m *Meter) Bucket() int64 {
-	return m.now().UTC().UnixNano() / int64(m.window)
+// SubjectOf names whose counters a passport's calls are charged to. A passport
+// minted under a connection is counted as the connection. A renewal retires the
+// passport and mints another under the same grant, and the allowance must
+// outlast the renewal. A passport a user minted is counted as itself.
+func SubjectOf(passport, connection ids.UUID) string {
+	switch {
+	case connection != (ids.UUID{}):
+		return connection.String()
+	case passport != (ids.UUID{}):
+		return passport.String()
+	default:
+		return ""
+	}
+}
+
+// Bucket is the fixed window this moment falls in under the length in force,
+// for a caller that names a window outside a metered call.
+func (m *Meter) Bucket(ctx context.Context) int64 {
+	return m.window(ctx).bucket
 }
 
 // Consume records n against ctx's Passport on one counter.
@@ -256,8 +262,9 @@ func (m *Meter) Consume(ctx context.Context, c Counter, n int) error {
 	if !ok {
 		return nil
 	}
-	key := m.countKey(ws, agent, c, m.Bucket())
-	if err := addScript.Run(ctx, m.rdb, []string{key}, n, m.ttlSeconds()).Err(); err != nil {
+	w := m.window(ctx)
+	key := m.countKey(ws, agent, c, w.bucket)
+	if err := addScript.Run(ctx, m.rdb, []string{key}, n, w.ttlSeconds()).Err(); err != nil {
 		return fmt.Errorf("agentvolume: recording %d against %s: %w", n, c, err)
 	}
 	return nil
@@ -275,13 +282,15 @@ func (m *Meter) Consume(ctx context.Context, c Counter, n int) error {
 //     the fail-closed branch: the meter does not know whether the threshold has
 //     been passed, and a control that cannot answer must not answer "no".
 func (m *Meter) Read(ctx context.Context, c Counter) Reading {
-	bucket := m.Bucket()
+	w := m.window(ctx)
 	if m.unbounded || !governed(ctx) {
-		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Bucket: bucket}
+		return w.reading(c)
 	}
 	if c == Cost {
-		return m.readCost(ctx, bucket)
+		return m.readCost(ctx, w)
 	}
+	refused := w.reading(c)
+	refused.Exceeded = true
 	ws, agent, named := callerKey(ctx)
 	if !named || m.rdb == nil {
 		// Governed, and unidentifiable or uncountable. Both are the fail-closed
@@ -294,17 +303,16 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 		// the alert on it says what matters. Agent reads are refusing, and
 		// draining the pod does not fix it. docs/how-to/deploy-margince.md
 		// says so under "Alert on the agent bound, do not drain on it".
-		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}
+		return refused
 	}
-	observed, released, err := m.observe(ctx, ws, agent, c, bucket)
+	observed, released, err := m.observe(ctx, ws, agent, c, w.bucket)
 	if err != nil {
-		return Reading{Counter: c, Limit: m.limits.of(c), Allowance: m.limits.of(c), Exceeded: true, Bucket: bucket}
+		return refused
 	}
-	limit := m.effectiveLimit(c, released)
-	return Reading{
-		Counter: c, Observed: observed, Limit: limit, Allowance: m.limits.of(c),
-		Exceeded: observed >= limit, Bucket: bucket,
-	}
+	out := w.reading(c)
+	out.Observed, out.Limit = observed, w.effectiveLimit(c, released)
+	out.Exceeded = observed >= out.Limit
+	return out
 }
 
 // readCost answers the soft counter.
@@ -314,20 +322,22 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 // so a fail-closed reading would raise that warning on every call while Redis is
 // unreachable, which is the fastest way to teach a reader to ignore it. An
 // unreadable soft counter says nothing instead.
-func (m *Meter) readCost(ctx context.Context, bucket int64) Reading {
+func (m *Meter) readCost(ctx context.Context, w window) Reading {
+	out := Reading{Counter: Cost, Bucket: w.bucket, Window: w.length}
 	if m.cost == nil {
-		return Reading{Counter: Cost, Bucket: bucket}
+		return out
 	}
-	limit := m.cost.TokensPerPassport(ctx)
+	out.Limit = m.cost.TokensPerPassport(ctx, w.length)
 	ws, agent, named := callerKey(ctx)
-	if limit <= 0 || !named || m.rdb == nil {
-		return Reading{Counter: Cost, Limit: limit, Bucket: bucket}
+	if out.Limit <= 0 || !named || m.rdb == nil {
+		return out
 	}
-	observed, _, err := m.observe(ctx, ws, agent, Cost, bucket)
+	observed, _, err := m.observe(ctx, ws, agent, Cost, w.bucket)
 	if err != nil {
-		return Reading{Counter: Cost, Limit: limit, Bucket: bucket}
+		return out
 	}
-	return Reading{Counter: Cost, Observed: observed, Limit: limit, Exceeded: observed >= limit, Bucket: bucket}
+	out.Observed, out.Exceeded = observed, observed >= out.Limit
+	return out
 }
 
 // observe reads the window's charge and its granted allowances in ONE round
@@ -398,29 +408,6 @@ func asCount(v any) (int, error) {
 		return 0, fmt.Errorf("agentvolume: counter value %d is negative; this meter never writes one", n)
 	}
 	return n, nil
-}
-
-// effectiveLimit is the configured threshold plus what a human has released.
-//
-// One release grants ONE more allowance of the same size, because that is the
-// question the approval screen asked: the agent has read its window's worth,
-// may it read another. A release that granted an unbounded continuation would
-// make the second confirmation the last one anybody is ever asked for.
-func (m *Meter) effectiveLimit(c Counter, released int) int {
-	base := m.limits.of(c)
-	if released <= 0 {
-		return base
-	}
-	return base * (released + 1)
-}
-
-// ttlSeconds covers the window plus an hour of clock-skew slack, so a counter
-// never outlives its window (over-counting a later one) nor expires inside it
-// (under-counting this one). Redis expiry has one-second granularity, so a
-// sub-second window still gets a whole second at minimum — the slack already
-// guarantees that, and it is named here so the floor is not a surprise.
-func (m *Meter) ttlSeconds() int {
-	return max(1, int((m.window + time.Hour).Seconds()))
 }
 
 // CostShare is the SOFT counter's reading, and the only counter this meter will

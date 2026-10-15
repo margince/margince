@@ -411,14 +411,13 @@ func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UU
 // keeps a future-dated activity (a scheduled call, a clock-skewed import)
 // out of a count that claims to describe the PAST 30 days.
 //
-// "Reaches" is activities.CompanyLinkedActivityExistsAny — the same three-arm
-// walk (own link, its deal's company, the contact's employer) the timeline
-// list and the company view's sections use. A count that answered a
+// "Reaches" is activities.CompanyLinkedActivityExistsAny, the four-arm walk the
+// timeline list and the company view's sections use. A count that answered a
 // narrower question than the timeline it is displayed above was a number
 // the reader could disprove by scrolling.
 //
-// EXISTS rather than a join, so an activity reachable through several
-// links of the same tree is one row and COUNT(*) needs no DISTINCT.
+// A membership test rather than a join, so an activity reached through several
+// links of the tree is one row. COUNT(*) then needs no DISTINCT.
 func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx, `

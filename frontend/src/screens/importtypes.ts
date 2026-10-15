@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 // The import surface's wire shapes, named once so the card and its mapping
 // table cannot drift apart about what a profile or a report is.
 export type ImportObject = components["schemas"]["ImportObject"];
+export type ImportReasonCode = components["schemas"]["ImportReasonCode"];
 export type ImportProfile = components["schemas"]["ImportSourceProfile"];
 export type ImportColumn = components["schemas"]["ImportColumn"];
 export type ImportRun = components["schemas"]["ImportRun"];
@@ -34,6 +35,7 @@ const IMPORT_OBJECTS = {
   company: true,
   contact: true,
   lead: true,
+  deal: true,
 } as const satisfies Record<ImportObject, true>;
 
 export function isImportObject(value: unknown): value is ImportObject {

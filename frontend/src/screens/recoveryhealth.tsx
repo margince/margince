@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { type Fact, FactList } from "../design-system/factlist";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -12,7 +11,8 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/recovery-health: when the restore procedure was last rehearsed,
@@ -168,6 +168,8 @@ function isRecoveryHealth(health: Health | undefined): health is Health {
   );
 }
 
+// A drill's facts stand in their own row. No drill at all is one line in the
+// intro, said outright: it is when the targets are least proven.
 function RecoveryBody({
   health,
   zone,
@@ -178,38 +180,30 @@ function RecoveryBody({
 
   return (
     <SettingList bleed="settings">
-      <SettingRow
-        label={t("recoveryHealth.lastDrill")}
-        description={t("recoveryHealth.lastDrillHint")}
-        layout="stack"
-        control={
-          drill ? (
+      {drill && (
+        <SettingRow
+          label={t("recoveryHealth.lastDrill")}
+          description={t("recoveryHealth.lastDrillHint")}
+          layout="stack"
+          control={
             <div className="settingrow-measure">
               <FactList facts={drillFacts(health, drill, t, locale, zone)} />
             </div>
-          ) : (
-            // Never having rehearsed is the case the published targets are
-            // least true of, so it is said outright rather than left blank.
-            <EmptyState>{t("recoveryHealth.never")}</EmptyState>
-          )
-        }
-      />
+          }
+        />
+      )}
       <SettingRow
         label={t("recoveryHealth.lastBackup")}
         description={t("recoveryHealth.lastBackupHint")}
-        layout="stack"
         control={<span>{t("recoveryHealth.backupNotObserved")}</span>}
       />
     </SettingList>
   );
 }
 
-export function RecoveryHealthCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  // `job_health:read`, what the endpoint asks for (compose/recoveryhealth.go),
-  // the grant every System health card shares.
+// `job_health:read`, what the endpoint asks for (compose/recoveryhealth.go),
+// the grant every System health card shares.
+export function useRecoveryHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({
     queryKey: ["recovery-health"],
@@ -222,6 +216,13 @@ export function RecoveryHealthCard() {
       return data;
     },
   });
+  return { canSee, query };
+}
+
+export function RecoveryHealthCard() {
+  const t = useT();
+  const zone = viewerZone();
+  const { canSee, query } = useRecoveryHealth();
 
   return (
     <HealthCard
@@ -230,10 +231,10 @@ export function RecoveryHealthCard() {
       withheld={t("recoveryHealth.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={(report) =>
-        t("recoveryHealth.generatedAt", {
-          time: formatDateTime(report.generated_at, locale, zone),
-        })
+      lead={(health) =>
+        health.last_drill === null && (
+          <EmptyState>{t("recoveryHealth.never")}</EmptyState>
+        )
       }
     >
       {(health) => <RecoveryBody health={health} zone={zone} />}

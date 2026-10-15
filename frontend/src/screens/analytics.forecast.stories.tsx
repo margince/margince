@@ -5,17 +5,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
-import type { AnalyticsSelection } from "./analytics.context";
-import { ForecastView, SharedForecastView } from "./analytics.forecast";
-import { forecastEvaluation } from "./reporting.scenarios";
-import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import type { AnalyticsSelection } from "./analytics.context";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
+import { forecastEvaluation } from "./reporting.scenarios";
+import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 // The forecast section, whole: the period control, the screen's own answer, the
 // three readings and the receipt they were drawn from.

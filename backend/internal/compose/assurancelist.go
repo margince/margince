@@ -39,6 +39,26 @@ import (
 // full list in Go means the rows crossed a boundary they should not have, and
 // the count of what was dropped is itself a statement about how much there is.
 func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception, error) {
+	return assuranceExceptionsOwnedBy(ctx, tx, nil, 0)
+}
+
+// TeamAssuranceExceptions reads the open findings on deals the members own
+// now. Ownership is the deal's live owner, never the finding's own owner_id,
+// which is set when the finding is first raised and not kept in step.
+func TeamAssuranceExceptions(
+	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+) ([]assurance.Exception, error) {
+	if len(members) == 0 {
+		return nil, nil
+	}
+	return assuranceExceptionsOwnedBy(ctx, tx, members, limit)
+}
+
+// assuranceExceptionsOwnedBy is both readers' body. Nil owners reads every
+// finding the caller may see; a zero limit reads them all.
+func assuranceExceptionsOwnedBy(
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, limit int,
+) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a
 	// deal and carries its name, so the row scope below answers which deals
 	// and never whether this caller may read deals at all — under row_scope=all
@@ -62,13 +82,20 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 	if scopeClause == "" {
 		scopeClause = sqlUnnarrowed
 	}
+	if owners != nil {
+		scopeClause = fmt.Sprintf("(%s) AND d.owner_id = ANY($%d)", scopeClause, arg(owners))
+	}
+	bound := ""
+	if limit > 0 {
+		bound = fmt.Sprintf(" LIMIT $%d", arg(limit))
+	}
 
 	// An INNER join to deal, so a finding whose subject is not a deal — or is a
 	// deal that has since been archived away — does not arrive without a
 	// visibility decision having been made about it. A LEFT join would let
 	// exactly the rows nobody can gate through.
 	sql := fmt.Sprintf(`
-		SELECT `+exceptionColumns+`, d.name
+		SELECT `+exceptionColumns+`, d.name, d.owner_id
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		WHERE e.status = 'open'
@@ -81,7 +108,7 @@ func AssuranceExceptions(ctx context.Context, tx pgx.Tx) ([]assurance.Exception,
 		  -- are for.
 		  CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
 		  e.affected_minor DESC NULLS LAST,
-		  e.last_seen_at DESC`, scopeClause)
+		  e.last_seen_at DESC, e.id`+bound, scopeClause)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -102,14 +129,13 @@ const exceptionColumns = `e.id, e.type, e.subject_kind, e.subject_id, e.severity
 	       e.claim, e.observed, e.first_seen_at, e.last_seen_at`
 
 // scanLabelledException reads one row of exceptionColumns plus the subject's
-// own name, which only this reader selects.
+// name and live owner, which only this reader selects.
 //
-// The name is appended rather than added to exceptionColumns because that list
-// is shared with bundleableFindings and bound POSITIONALLY: a column inserted
-// there would be read into a neighbouring field by the other scanner, silently.
+// The two are appended rather than added to exceptionColumns. That list is
+// shared with bundleableFindings and bound POSITIONALLY. A column inserted there
+// would be read into a neighbouring field by the other scanner, silently.
 func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
-	out, err := scanExceptionInto(row, true)
-	return out, err
+	return scanExceptionInto(row, true)
 }
 
 // scanException reads one row of exceptionColumns.
@@ -135,8 +161,9 @@ func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Excepti
 		&out.AffectedMinor, &currency, &owner, &out.Status,
 		&out.Claim, &out.Observed, &firstSeen, &lastSeen,
 	}
+	var dealOwner *ids.UUID
 	if labelled {
-		targets = append(targets, &out.SubjectLabel)
+		targets = append(targets, &out.SubjectLabel, &dealOwner)
 	}
 	err := row.Scan(targets...)
 	out.ID = id
@@ -147,5 +174,8 @@ func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Excepti
 		out.Currency = *currency
 	}
 	out.OwnerID = owner
+	if labelled {
+		out.OwnerID = dealOwner
+	}
 	return out, err
 }

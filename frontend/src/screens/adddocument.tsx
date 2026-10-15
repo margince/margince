@@ -9,8 +9,6 @@ import {
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { formatUploadLimit, useMaxUploadBytes } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
@@ -26,18 +24,20 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "../lib/attachmentupload";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
+import {
   DEAL_MATCH_LIMIT,
   DEAL_PAGE_FRESH_MS,
   DEAL_PAGE_SIZE,
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
-import {
-  ACCEPTED_ATTACHMENT_ATTR,
-  type AttachmentParent,
-  uploadAttachment,
-} from "./attachmentupload";
-import { problemMessageOf, unwrap } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.

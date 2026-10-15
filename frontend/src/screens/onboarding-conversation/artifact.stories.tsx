@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../../testing/story-utils";
 import { EMPTY_DRAFT } from "../onboarding";
-import { StoryProviders } from "../story-utils";
 import { CompanyActArtifact } from "./artifact";
 import "../onboarding.css";
 import "./conversation.css";

@@ -4,8 +4,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import {
   AddDocument,
   DOCUMENT_GROUPS,

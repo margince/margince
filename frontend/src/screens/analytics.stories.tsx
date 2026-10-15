@@ -4,19 +4,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../design-system/statstrip";
-import { AnalyticsScreen, ForecastTile } from "./analytics";
-import { forecastEvaluation } from "./reporting.scenarios";
-import {
-  reportingStoryEvaluation,
-  reportingStoryRoutes,
-} from "./reporting.story-fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { forecastEvaluation } from "./reporting.scenarios";
+import {
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 
 // The Reports screen for the fe-uat render gate. All three report segments draw
 // into ONE surface — a titled card whose head carries "Explain this number"
@@ -58,12 +58,17 @@ const pipelines = {
   page: { next_cursor: null, has_more: false },
 };
 
-function run(report: string, rows: Record<string, unknown>[]) {
+function run(
+  report: string,
+  rows: Record<string, unknown>[],
+  totalRows = rows.length,
+) {
   return jsonResponse({
     report,
     plan: {},
     columns: [],
     rows,
+    total_rows: totalRows,
     // The frame every result carries, so the story shows the caption a reader
     // actually meets under each report.
     as_of: "2026-03-04T09:00:00Z",
@@ -287,6 +292,38 @@ export const Forecast: Story = {
 export const OpenDealsPerCompany: Story = {
   render: screenStory,
   play: clickButton("Pipeline"),
+};
+
+// The company report past the server's cap: the rows it sent, the count left
+// out beneath them, and no count links.
+export const OpenDealsPerCompanyCapped: Story = {
+  render: () => {
+    installFetchStub({
+      ...routes,
+      "POST /reports/open-deals-per-company": () =>
+        run("open-deals-per-company", companyRows, 1250),
+    });
+    return (
+      <StoryProviders>
+        <AnalyticsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async (context) => {
+    await clickButton("Pipeline")(context);
+    await within(context.canvasElement).findByText("1,248 more not shown");
+  },
+};
+
+export const OpenDealsPerCompanyCappedDark: Story = {
+  ...OpenDealsPerCompanyCapped,
+  globals: { theme: "dark" },
+};
+
+export const OpenDealsPerCompanyCappedPhone: Story = {
+  ...OpenDealsPerCompanyCapped,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // The performance section: closed outcomes beside stage velocity, every

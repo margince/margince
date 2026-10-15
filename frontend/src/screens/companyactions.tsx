@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import { CreateAction, type CreateField } from "../components/create";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
-import { CreateAction, type CreateField } from "./create";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { currencyBeside } from "./dealcurrency";
 import { useProjectCreateForm } from "./projects.create";
 
@@ -109,9 +109,9 @@ export function NewDealAction({
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           pipeline_id: pipeline.id,
-          stage_id: values.stage_id,
+          stage_id: values.stage_id ?? "",
           // The form takes major units; the wire is minor units.
           amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
           currency: currencyBeside(currency, amount),

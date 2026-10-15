@@ -68,7 +68,16 @@ type searchBranch struct {
 	// identifier is the table of handles a reader pastes instead of a name: a
 	// contact's address, a company's domain. The name index holds neither.
 	identifier storekit.Identifier
+	// rankSample, when set, is how many visible matches the branch scores at
+	// most; the scan stops there, and the best hits come from that sample.
+	rankSample int
 }
+
+// activityRankSample bounds the mail the activity branch ranks. A common word
+// matches a tenth of all mail, and every match was read, permission-checked
+// and scored before the per-type limit. Sampling is acceptable because, on the
+// corpus this was measured on, the top mail hit was kept for every prefix.
+const activityRankSample = 2000
 
 // ownMatch is the predicate that finds a record by its own text: the name index,
 // or an exact identifier the record carries. identifierPos binds the query the
@@ -243,7 +252,7 @@ var searchBranches = []searchBranch{
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
 	{entity: "tag", table: entityTag, title: columnName, snippet: noSnippet, workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
-	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true},
+	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true, rankSample: activityRankSample},
 }
 
 // SearchedTables names every physical table the search union full-text matches,

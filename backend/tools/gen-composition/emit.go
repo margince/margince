@@ -119,7 +119,7 @@ export type ExtensionVerbDescriptor = {
    * The RBAC object the operation gates on, or "" when it gates on none.
    *
    * A plain string, not a union: this file is generated, and the generator
-   * cannot enumerate what a unit will declare. app/extensions.ts narrows it
+   * cannot enumerate what a unit will declare. lib/extensions.ts narrows it
    * into the capability vocabulary, which is where the ext_ grammar is
    * checked once.
    */
@@ -129,6 +129,11 @@ export type ExtensionVerbDescriptor = {
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
+  /**
+   * The unit's copy key for its own name, or "" when its copy carries none
+   * in every locale. A screen shows what it resolves to, else the unit name.
+   */
+  readonly title: ` + "`ext${string}.title`" + ` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
@@ -221,7 +226,7 @@ func composedFiles(root string) (composition, error) {
 		goWorkFile:                   work,
 		"backend/go.mod":             composedGoMod(goVersion),
 		"backend/extensions_gen.go":  wiring,
-		"frontend/extensions.gen.ts": frontendGen(manifests, verbs),
+		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
 		"frontend/extscreens.gen.ts": extScreensGen(units),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
 	}

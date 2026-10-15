@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContractForm, SignedFileField } from "./contractform";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Recording an agreement, and reaching the paper already filed against it.
 //

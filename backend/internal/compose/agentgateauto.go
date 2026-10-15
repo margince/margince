@@ -69,13 +69,6 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	// refused. A volume budget counts what an agent did, so a rejected mutation that
 	// spent a write would let a caller exhaust its own allowance on requests
 	// that changed nothing, which is a bound nobody wrote.
-	// The meter sits OUTSIDE the recorder, so the handler's WriteJSON finds
-	// it by a plain assertion while the recorder still sees every status.
-	// A mutation that answers with the row it changed handed over a record,
-	// and the MCP door charges that record at chargeAnswer whatever the tool
-	// kind — a read-back free on one door and charged on the other is the
-	// same asymmetry this gate exists to close.
-	//
 	// The CALL itself has been charged exactly once by the time this runs — at
 	// the door for a plain admission, at the redemption above for a call that
 	// asserted one — so nothing charges it here.
@@ -84,13 +77,12 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	// effect is charged at that count rather than as one act.
 	r = r.WithContext(agentvolume.WithEffectTally(r.Context()))
 	performed := &effectRecorder{ResponseWriter: w}
-	metered := &servedMeter{ResponseWriter: performed, r: r, reg: outcome.registry, mayRefuse: theEffectAlreadyLanded}
 	if !redeemed && reachesTheHumanOwnedSplit(outcome.pol) {
-		splitHumanOwnedUpdate(metered, r, next,
+		splitHumanOwnedUpdate(performed, r, next,
 			splitUpdateDeps{staging: outcome.staging, commands: outcome.commands, ownership: outcome.ownership},
 			outcome.pol, outcome.body)
 	} else {
-		next.ServeHTTP(metered, r)
+		next.ServeHTTP(performed, r)
 	}
 	if performed.done() {
 		outcome.registry.ChargeEffect(r.Context(), outcome.spec)

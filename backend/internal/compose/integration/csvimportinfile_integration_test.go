@@ -5,9 +5,10 @@
 
 package integration
 
-// The dry run must say what approval will do when the file's own rows collide.
-// The commit lands them one at a time, so a later look-alike meets each earlier
-// row in the estate.
+// The dry run must say what approval will do, row for row. That covers rows
+// of one file that collide, a row moving a key another record holds, and a
+// cell that cannot land. The commit lands rows one at a time, so a later row meets each
+// earlier one in the estate.
 
 import (
 	"maps"
@@ -28,20 +29,14 @@ func previewThenCommit(t *testing.T, e *apptest.AppEnv, object, file string, run
 	body := map[string]any{"connector": "csv", "object": object, "source_ref": profile.SourceRef}
 	maps.Copy(body, run)
 	var staged importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", body, nil, &staged); status != http.StatusAccepted {
+	if status := testCall(t, e, "/v1/imports", body, &staged); status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	var preview, final importReportDTO
-	if status := e.Call(t, http.MethodGet, "/v1/imports/"+staged.ID+"/report", nil, nil, &preview); status != http.StatusOK {
-		t.Fatalf("preview report → %d, want 200", status)
-	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+staged.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	preview := readImportReport(t, e, staged.ID)
+	if status := importCall(t, e, staged.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/imports/"+staged.ID+"/report", nil, nil, &final); status != http.StatusOK {
-		t.Fatalf("final report → %d, want 200", status)
-	}
-	return preview, final
+	return preview, readImportReport(t, e, staged.ID)
 }
 
 // assertPreviewIsTheCommit holds the preview to the finished run and both to
@@ -211,8 +206,7 @@ func TestAnUnnamedCompanyRowHoldsNoDomain(t *testing.T) {
 
 	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
 	for name, report := range map[string]importReportDTO{"preview": preview, "commit": final} {
-		if len(report.Issues) != 1 || report.Issues[0].Line != 2 ||
-			report.Issues[0].Reason != "the mapped display_name is empty, so the row names no company" {
+		if len(report.Issues) != 1 || report.Issues[0].Line != 2 || report.Issues[0].ReasonCode != "company_name_empty" {
 			t.Errorf("%s issues = %+v, want only line 2 refused for naming no company", name, report.Issues)
 		}
 	}
@@ -237,8 +231,7 @@ func TestASkipRunRefusesAHeldAddressForTheAddress(t *testing.T) {
 
 	assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 0, 1, 0))
 	for _, report := range []importReportDTO{preview, final} {
-		if len(report.Issues) != 1 || report.Issues[0].Reason != "this email address is already held in the CRM, "+
-			"so the row cannot create a second contact under it" {
+		if len(report.Issues) != 1 || report.Issues[0].ReasonCode != "contact_email_held" {
 			t.Errorf("issues = %+v, want the held-address refusal", report.Issues)
 		}
 	}
@@ -321,11 +314,11 @@ func TestAnUpdateMeetsTheAddressAnEarlierRowTakes(t *testing.T) {
 // record made by hand holds it. The store refuses the move.
 func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 	cases := []struct {
-		object, path, header, first, moved string
-		incumbent                          map[string]any
-		mapping                            map[string]string
+		object, path, header, key, first, moved string
+		incumbent                               map[string]any
+		mapping                                 map[string]string
 	}{{
-		object: "contact", path: "/v1/contacts", header: "Full Name,Email",
+		object: "contact", path: "/v1/contacts", header: "Full Name,Email", key: "Full Name",
 		first: "Grace Hopper,grace@hopper.example", moved: "Grace Hopper,ada@lovelace.example",
 		incumbent: map[string]any{
 			"source": "manual", "full_name": "Ada Lovelace",
@@ -333,18 +326,18 @@ func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 		},
 		mapping: map[string]string{"Full Name": "full_name", "Email": "email"},
 	}, {
-		object: "lead", path: "/v1/leads", header: "Full Name,Email",
+		object: "lead", path: "/v1/leads", header: "Full Name,Email", key: "Full Name",
 		first: "Grace Hopper,grace@hopper.example", moved: "Grace Hopper,ada@lovelace.example",
 		incumbent: map[string]any{"source": "manual", "full_name": "Ada Lovelace", "email": "ada@lovelace.example"},
 		mapping:   map[string]string{"Full Name": "full_name", "Email": "email"},
 	}, {
-		object: "company", path: "/v1/companies", header: "Full Name,Website",
+		object: "company", path: "/v1/companies", header: "Company,Website", key: "Company",
 		first: "Nordwind Logistik,nordwind.example", moved: "Nordwind Logistik,zephyr.example",
 		incumbent: map[string]any{
 			"source": "manual", "display_name": "Zephyr Freight",
 			"domains": []map[string]any{{"domain": "zephyr.example", "is_primary": true}},
 		},
-		mapping: map[string]string{"Full Name": "display_name", "Website": "domain"},
+		mapping: map[string]string{"Company": "display_name", "Website": "domain"},
 	}}
 	for _, tc := range cases {
 		t.Run(tc.object, func(t *testing.T) {
@@ -352,7 +345,7 @@ func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 			if status := e.Call(t, http.MethodPost, tc.path, tc.incumbent, nil, nil); status != http.StatusCreated {
 				t.Fatalf("creating the incumbent → %d, want 201", status)
 			}
-			run := map[string]any{"mapping": tc.mapping, "source_key": "Full Name"}
+			run := map[string]any{"mapping": tc.mapping, "source_key": tc.key}
 			previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.first+"\n", run)
 
 			preview, final := previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.moved+"\n", run)
@@ -360,4 +353,96 @@ func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 			assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 0, 1, 0))
 		})
 	}
+}
+
+// The lead store checks a LinkedIn URL on create and not on update. A
+// re-import may then move one onto its lead while another lead holds it.
+func TestALeadUpdateMovesALinkedInURLAnotherLeadHolds(t *testing.T) {
+	const url = "https://www.linkedin.com/in/ada"
+	run := map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email", "LinkedIn": "linkedin_url"},
+		"source_key": "Full Name",
+	}
+	updated := dispositionOf(0, 0, 0, 0)
+	updated.Updated = 1
+	t.Run("held in the CRM", func(t *testing.T) {
+		e := setupImportApp(t)
+		if status := e.Call(t, http.MethodPost, "/v1/leads", map[string]any{
+			"source": "manual", "full_name": "Ada Lovelace", "linkedin_url": url,
+		}, nil, nil); status != http.StatusCreated {
+			t.Fatalf("creating the incumbent lead → %d, want 201", status)
+		}
+		previewThenCommit(t, e, "lead", "Full Name,Email,LinkedIn\nGrace Hopper,grace@hopper.example,\n", run)
+
+		preview, final := previewThenCommit(t, e, "lead", "Full Name,Email,LinkedIn\nGrace Hopper,grace@hopper.example,"+url+"\n", run)
+
+		assertPreviewIsTheCommit(t, preview, final, updated)
+	})
+	t.Run("held by an earlier row", func(t *testing.T) {
+		e := setupImportApp(t)
+		previewThenCommit(t, e, "lead", "Full Name,Email,LinkedIn\nGrace Hopper,grace@hopper.example,\n", run)
+		file := "Full Name,Email,LinkedIn\nAda Lovelace,ada@lovelace.example," + url + "\nGrace Hopper,grace@hopper.example," + url + "\n"
+
+		preview, final := previewThenCommit(t, e, "lead", file, run)
+
+		want := dispositionOf(1, 0, 0, 0)
+		want.Updated = 1
+		assertPreviewIsTheCommit(t, preview, final, want)
+	})
+}
+
+// A lead's LinkedIn URL is compared as stored, case and all, so two URLs that
+// differ only in case are two keys. A company's folds case.
+func TestALeadLinkedInURLKeepsItsCase(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Full Name,LinkedIn\nAda Lovelace,https://www.linkedin.com/in/Ada\nAda Byron,https://www.linkedin.com/in/ada\n"
+
+	preview, final := previewThenCommit(t, e, "lead", file, map[string]any{
+		"mapping": map[string]string{"Full Name": "full_name", "LinkedIn": "linkedin_url"}, "source_key": "Full Name",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(2, 0, 0, 0))
+}
+
+// Two keys refuse one row: the CRM holds one, an earlier row the other. The
+// row is refused for the key the store checks first.
+func TestARowRefusedTwiceNamesTheKeyTheCommitNames(t *testing.T) {
+	e := setupImportApp(t)
+	const url = "https://www.linkedin.com/company/zephyr"
+	if status := e.Call(t, http.MethodPost, "/v1/companies", map[string]any{
+		"source": "manual", "display_name": "Zephyr Freight", "linkedin_url": url,
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent company → %d, want 201", status)
+	}
+	const file = "Company,Website,LinkedIn\nAlpha Works,alpha.example,\nBeta Werke,alpha.example," + url + "\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name", "Website": "domain", "LinkedIn": "linkedin_url"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+	for name, report := range map[string]importReportDTO{"preview": preview, "commit": final} {
+		if len(report.Issues) != 1 || report.Issues[0].ReasonCode != "domain_held" {
+			t.Errorf("%s issues = %+v, want line 3 refused for the domain", name, report.Issues)
+		}
+	}
+}
+
+// One row reaches a company by its id and a later row by its ref. They are one
+// holder, so the second row's domain is its own.
+func TestACompanyNamedByIdAndByRefHoldsItsOwnDomain(t *testing.T) {
+	e := setupImportApp(t)
+	run := map[string]any{
+		"mapping":    map[string]string{"Ref": "description", "Id": "id", "Company": "display_name", "Website": "domain", "City": "address.city"},
+		"source_key": "Ref",
+	}
+	previewThenCommit(t, e, "company", "Ref,Id,Company,Website,City\na,,Nordwind Logistik,,\n", run)
+	id, _, _ := companyByName(t, e, "Nordwind Logistik")
+	file := "Ref,Id,Company,Website,City\nb," + id + ",Nordwind Logistik,nordwind.example,\na,,Nordwind Logistik,nordwind.example,Bremen\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, run)
+
+	want := dispositionOf(0, 0, 0, 0)
+	want.Updated = 2
+	assertPreviewIsTheCommit(t, preview, final, want)
 }

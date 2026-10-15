@@ -258,3 +258,54 @@ func TestTheStopSurvivesAnAcknowledgementThatCannotBeStaged(t *testing.T) {
 		t.Error("the stop was rolled back by its own acknowledgement")
 	}
 }
+
+// TestAPressForOnePurposeIsAcknowledged. Every marketing send carries an
+// unsubscribe link that names its own purpose, so this is the press most
+// recipients make.
+func TestAPressForOnePurposeIsAcknowledged(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	if _, err := e.store.Record(e.ctx, RecordInput{
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted",
+		PolicyText: &grantWording,
+	}); err != nil {
+		t.Fatalf("granting before the press: %v", err)
+	}
+
+	withdrawn, err := e.store.PublicWithdrawAll(e.ctx, e.contact, []string{"newsletter"})
+	if err != nil {
+		t.Fatalf("the press failed: %v", err)
+	}
+	if len(withdrawn) != 1 {
+		t.Fatalf("the press withdrew %v, want the newsletter", withdrawn)
+	}
+	if stager.calls != 1 {
+		t.Errorf("the press for one purpose staged %d acknowledgements, want 1", stager.calls)
+	}
+}
+
+// TestWithdrawingCorrespondenceIsNotAnAdvertisingRefusal. The decree owes an
+// acknowledgement for refused advertising, and replies to the contact's own
+// enquiries are not advertising.
+func TestWithdrawingCorrespondenceIsNotAnAdvertisingRefusal(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (key, label, class)
+		VALUES ('replies', 'Replies', 'business_correspondence')`); err != nil {
+		t.Fatalf("seeding the correspondence purpose: %v", err)
+	}
+
+	withdrawn, err := e.store.PublicWithdrawAll(e.ctx, e.contact, []string{"replies"})
+	if err != nil {
+		t.Fatalf("the press failed: %v", err)
+	}
+	if len(withdrawn) != 1 {
+		t.Fatalf("the press withdrew %v, want the correspondence purpose", withdrawn)
+	}
+	if stager.calls != 0 {
+		t.Errorf("withdrawing correspondence staged %d acknowledgements, want none", stager.calls)
+	}
+}

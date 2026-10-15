@@ -211,6 +211,12 @@
         "read": true,
         "update": true
       },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "license": {
         "create": false,
         "delete": false,
@@ -611,6 +617,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "license": {
         "create": false,
@@ -1013,6 +1025,12 @@
         "read": true,
         "update": true
       },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "license": {
         "create": false,
         "delete": false,
@@ -1413,6 +1431,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "license": {
         "create": false,
@@ -1815,6 +1839,12 @@
         "read": true,
         "update": false
       },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "license": {
         "create": false,
         "delete": false,
@@ -2215,6 +2245,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_review": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "license": {
         "create": false,

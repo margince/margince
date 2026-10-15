@@ -9,7 +9,12 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
+import {
+  EntityRef,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
 import { Badge, Button } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
 import { ErrorLine } from "../design-system/errorline";
@@ -19,13 +24,8 @@ import { Select } from "../design-system/select";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { useMe } from "./common";
-import {
-  EntityRef,
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
+import { useCanWrite } from "../lib/capability";
+import { useMe } from "../lib/session";
 import { leadStatusLabel } from "./leadpresentation";
 import { scoreReasonLabel } from "./leadreadings";
 import type { LeadWriter } from "./leads";

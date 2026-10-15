@@ -9,10 +9,11 @@ import { Button, SegmentedControl } from "../design-system/atoms";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Eyebrow } from "../design-system/eyebrow";
 import { PanelPlate } from "../design-system/panel";
+import { WriteRefused } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { throwProblem, WriteRefused } from "./common";
-import { downloadBytes, filenameFromDisposition } from "./download";
+import { downloadBytes, filenameFromDisposition } from "../lib/download";
+import { throwProblem } from "../lib/problem";
 
 const SKILL_FILENAME = "margince-skill.zip";
 

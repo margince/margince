@@ -157,6 +157,7 @@ components:
         - onboarding.state_changed
         - approval.requested
         - approval.decided
+        - approval.failure_acknowledged
         - coldstart.read_back_proposed
         - coldstart.accepted
         - coldstart.rejected
@@ -251,6 +252,16 @@ components:
         name:
           type: string
           description: The deal's name at creation.
+        imported:
+          type: boolean
+          description: >-
+            True when a data import wrote the event. An outside system can tell a deal
+            brought in from another system from one a rep worked in Margince. Absent
+            otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventCommissionAccrued:
@@ -908,6 +919,13 @@ components:
           type: string
           format: uuid
           description: The previous owner (absent when the deal had none).
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealStageChanged:
@@ -978,6 +996,16 @@ components:
             The native→base rate frozen at close, carried because REOPENING a deal clears
             it: a consumer reading the deal back after a reopen could not recover the rate
             the win was priced at.
+        imported:
+          type: boolean
+          description: >-
+            True when a data import wrote the event. An outside system can tell a deal
+            brought in from another system from one a rep worked in Margince. Absent
+            otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealArchived:
@@ -985,7 +1013,17 @@ components:
       x-event-type: deal.archived
       x-entity-type: deal
       x-version: 1
-      description: Payload for deal.archived — a deal was archived. Carries no data.
+      description: >-
+        Payload for deal.archived: a deal was archived. Carries only the import
+        mark, when an import's undo wrote the event.
+      properties:
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealUpdated:
@@ -1011,6 +1049,13 @@ components:
             recompute/routing/relationship sites carry a `{delta: {...}}`
             sub-object (occasionally with a sibling `source`). Read a
             key's value as either form.
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealRestored:
@@ -1019,9 +1064,17 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.restored — an archived deal was brought back, with
-        the relationships, list memberships and tags its archive took down
-        where they can still come back. Carries no data.
+        Payload for deal.restored: an archived deal was brought back. Its
+        archive took down relationships, list memberships and tags, and those
+        that can still come back return. Carries only the import mark.
+      properties:
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventOfferCreated:
@@ -2517,9 +2570,11 @@ components:
       x-entity-type: activity
       x-version: 1
       description: >-
-        Payload for activity.marked_handled. One reader marked a waiting message
-        done: they dealt with it another way, by phone, in a meeting, or with no
-        reply owed (activities/disposition.go). It is that reader's own state,
+        Payload for activity.marked_handled. One reader marked an activity on
+        their Worklist done. It is a waiting message, a message of their own
+        still unanswered, or a meeting still owed a follow-up. They dealt with it
+        another way, by phone, in a meeting, or with nothing owed
+        (activities/disposition.go). It is that reader's own state,
         like a snooze, and the reader is not on the wire. No reply was sent.
         The undo is activity.disposition_recorded with `picked_up`.
       required:
@@ -4161,6 +4216,29 @@ components:
             (the runner's resume consumer decodes it as json.RawMessage
             off the wire; a fixed struct here would drop fields a future
             staging kind adds).
+      additionalProperties: false
+
+    PublicEventApprovalFailureAcknowledged:
+      type: object
+      x-event-type: approval.failure_acknowledged
+      x-entity-type: approval
+      x-version: 1
+      description: >-
+        Payload for approval.failure_acknowledged: the human who approved a
+        decision has seen that its work did not run, and the failure leaves
+        their Worklist (approvals/failureack.go). A later failure of the same
+        approval carries a newer failed_at and shows again.
+      required:
+        - kind
+        - failed_at
+      properties:
+        kind:
+          type: string
+          description: The approval's kind.
+        failed_at:
+          type: string
+          format: date-time
+          description: When the failure that was acknowledged was recorded.
       additionalProperties: false
 
     PublicEventColdstartReadBackProposed:

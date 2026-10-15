@@ -6,7 +6,6 @@ import { Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -23,16 +22,18 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { captureValueMessage } from "./capturevalue";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.

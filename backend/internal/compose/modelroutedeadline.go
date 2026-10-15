@@ -52,6 +52,23 @@ var modelRouteSuffixes = []string{
 	"/filters/propose",
 }
 
+// The routes whose last segment is a word other routes also end in. A suffix
+// cannot name them without catching endpoints that call no model. A `*` stands
+// for one path segment, which is where the id sits, so the segments before it
+// are part of the match.
+//
+// `/deals/{id}/status` is the case this exists for. `/status` alone also ends
+// `/contracts/{id}/status`, `/embeddings/reindex/status` and the chassis's own
+// liveness path. A probe holding a five-minute write deadline is the
+// connection-holding this file keeps its deadline short to prevent.
+//
+// The same gate holds this list to the contract in both directions. A marked
+// route matching nothing here fails, and an entry reaching an unmarked route
+// fails too. The second direction is the one a bare `/status` trips.
+var modelRoutePatterns = []string{
+	"/deals/*/status",
+}
+
 // boundByResponseDeadline decides how long THIS request has, and applies that
 // one figure to both halves of it: the response's write deadline, and the
 // context the handler behind it runs under.
@@ -125,5 +142,35 @@ func callsAModel(path string) bool {
 			return true
 		}
 	}
+	return matchesModelRoutePattern(path)
+}
+
+// matchesModelRoutePattern answers the patterns, whose trailing segments must
+// all match: a `*` takes any one segment and every other segment is literal.
+//
+// It compares the pattern against the END of the path, because a request
+// arrives with the version prefix the pattern does not name
+// (`/v1/deals/abc/status` against `/deals/*/status`).
+func matchesModelRoutePattern(path string) bool {
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	for _, pattern := range modelRoutePatterns {
+		want := strings.Split(strings.Trim(pattern, "/"), "/")
+		if len(segments) < len(want) {
+			continue
+		}
+		if segmentsMatch(segments[len(segments)-len(want):], want) {
+			return true
+		}
+	}
 	return false
+}
+
+// segmentsMatch compares two equal-length segment runs, `*` matching any one.
+func segmentsMatch(got, want []string) bool {
+	for i, segment := range want {
+		if segment != "*" && segment != got[i] {
+			return false
+		}
+	}
+	return true
 }

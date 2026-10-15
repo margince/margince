@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { OfferTotalsPanel } from "./offerrecurring";
-import { StoryProviders } from "./story-utils";
 
 // An offer's money totals: net, tax and gross, and — only where the offer has a
 // recurring part — its annual and committed values. Every figure sits in

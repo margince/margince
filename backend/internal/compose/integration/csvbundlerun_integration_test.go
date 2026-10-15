@@ -16,9 +16,9 @@ import (
 func stageBundle(t *testing.T, e *apptest.AppEnv, sourceRef, sourceName string, parts []AnyMap) importRunDTO {
 	t.Helper()
 	var run importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": sourceRef, "source_name": sourceName, "parts": parts,
-	}, nil, &run); status != http.StatusAccepted {
+	}, &run); status != http.StatusAccepted {
 		t.Fatalf("stage → %d", status)
 	}
 	return run
@@ -34,7 +34,7 @@ func bundleParts() []AnyMap {
 // approveAndRead commits a staged run and reads it back once it is terminal.
 func approveAndRead(t *testing.T, e *apptest.AppEnv, runID string) {
 	t.Helper()
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+runID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, runID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	var run importRunDTO
@@ -121,7 +121,7 @@ func TestUndoReversesContactsBeforeCompanies(t *testing.T) {
 	run := stageBundle(t, e, uploadZip(t, e, "u.zip", zipBytes(t, files)).SourceRef, "u", bundleParts())
 	approveAndRead(t, e, run.ID)
 	var undone importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undone); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d", status)
 	}
 	order := archiveOrder(t, e, run.ID, "contact", "company")

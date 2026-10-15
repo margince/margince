@@ -4,12 +4,12 @@
 import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ListPopover } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import { ComposeModal } from "./compose";
 import { LogActivityAction } from "./logactivity";
 import { searchCompanyContacts } from "./meetingattendees";

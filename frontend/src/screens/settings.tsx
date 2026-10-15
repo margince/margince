@@ -3,21 +3,26 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { operations } from "../api/schema";
 import { THEME_LABEL_KEYS } from "../app/account";
-import { useCanWrite } from "../app/capability";
-import { navigateReplacing, type Route } from "../app/router";
-import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
-import { Avatar, Button, Disclosure, TextInput } from "../design-system/atoms";
+import { Avatar, Button, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigateReplacing, type Route } from "../lib/router";
+import { useLogout, useMe } from "../lib/session";
+import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
+import { AgentAllowancesCard } from "./agentallowances";
+import { AgentUsageByUserCard } from "./agentusage";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -37,13 +42,6 @@ import {
   MailSyncCard,
   WebsiteReadingCard,
 } from "./capture-settings";
-import {
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-  useLogout,
-  useMe,
-} from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
@@ -74,7 +72,7 @@ import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ProductsAdmin } from "./products";
-import { FxRatesCard, ModelCostsCard } from "./rates";
+import { FxRatesCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
@@ -102,7 +100,6 @@ import { VoiceDnaCard } from "./voice-dna";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
-import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
@@ -169,15 +166,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
 
     // ---- company ----
     case "company":
-      // The installation's own facts, then the money, then the company profile
-      // the AI reads, then the follow-up window. The currency pair stays
+      // The company first (brand, business context and the website that context
+      // is read from), then the installation's own facts. The currency pair stays
       // ADJACENT: the base currency is declared in InstallationSettingsCard and
       // every rate below converts to it.
       return (
         <>
+          <CompanyContextCard />
           <InstallationSettingsCard />
           <FxRatesCard />
-          <CompanyContextCard />
           <FollowUpSettingsCard />
           <SignatureTemplateCard />
         </>
@@ -275,19 +272,11 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
-    // The five-tab strip that used to hold these is gone. Its tabs shared ONE
-    // address, which is why the routing card had to report its draft up to a
-    // page that owned a confirm dialog: the app's unsaved guard watches
-    // addresses and could not see a move between them. Each is an address now,
-    // so the card claims the guard itself and the dialog is deleted.
+    // Each AI page is its own address. The unsaved guard watches addresses, so
+    // it sees a move between them, and each card claims it itself.
     case "models":
       return (
         <>
-          {/* Which vendors are answering, above the bindings that name them.
-              It was a header reading on the old combined page and belongs with
-              the lanes it qualifies: a binding to a vendor holding no key is
-              the thing an operator came here to fix. */}
-          <ProvidersStat />
           <AiProviderKeysCard />
           {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
           <ModelPricesCard />
@@ -300,11 +289,11 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "usage":
       return (
         <>
-          {/* The allowance with the month's spend in it, then where it went, then
-              the prices the estimate is drawn from. */}
+          {/* The allowance, each agent's limits and use, then the spend. */}
           <AiBudgetCard />
+          <AgentAllowancesCard />
+          <AgentUsageByUserCard />
           <AiUsageCard />
-          <ModelPriceDetails />
         </>
       );
     case "model-calls":
@@ -470,7 +459,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // carried, so a rewrite never invents an address: a legacy link to a page the
   // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
-    if (legacy) {
+    if (legacy && active) {
       navigateReplacing(settingsHref(active.id));
     }
   }, [legacy, active]);
@@ -501,6 +490,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
       </div>
     );
   }
+  if (active === undefined) return null;
 
   return (
     <div className="wrap">
@@ -561,15 +551,10 @@ function AgentsTab() {
 // you — how you sign in, how you sign off, and which language the product
 // speaks to you in.
 //
-// It used to be four panels with four header bands: Profile, Change password,
-// Email signature, Preferences. Each held exactly one decision, so a reader
-// auditing their own account read four titles to find three settings, and the
-// answers sat at four different x. The identity block is the card's SUBJECT,
-// drawn the way the product draws an identity everywhere else — the record
-// page's own header block (composed.css `.record-head`): a mark, the name, the
-// standing badges on the name's line, and the meta that qualifies it
-// underneath. Everything below it is a decision ABOUT that subject, in the
-// page's one row language.
+// The identity block is the card's subject, drawn like the record page's
+// header block (composed.css `.record-head`). It has a mark, the name, badges
+// on the name's line, and the meta under it. Everything below
+// it is a decision about that subject, in the page's one row language.
 function AccountCard() {
   const t = useT();
   const query = useMe();
@@ -644,11 +629,11 @@ function AccountCard() {
 /**
  * The appearance choice, in Settings as well as in the account menu.
  *
- * ONE state, two faces: both read `useThemeChoice` and write `setThemeChoice`
- * from app/theme.ts, so changing it in either place moves the other. The menu
- * keeps its shortcut — appearance is the setting a reader changes most often and
- * from wherever they are standing — and this is where somebody who came to
- * Settings looking for it finds it.
+ * One state, two faces. Both read `useThemeChoice` and write `setThemeChoice`
+ * from lib/theme.ts, so changing it in either place moves the other. The menu
+ * keeps its shortcut, because appearance is the setting a reader changes most
+ * often and from anywhere. This is where somebody who came to Settings looking
+ * for it finds it.
  */
 function AppearanceSettingRow() {
   const t = useT();
@@ -888,14 +873,5 @@ function ResetDataCard() {
         />
       </ConfirmModal>
     </Panel>
-  );
-}
-
-function ModelPriceDetails() {
-  const t = useT();
-  return (
-    <Disclosure summary={t("aiRouting.priceSheet")}>
-      <ModelCostsCard />
-    </Disclosure>
   );
 }

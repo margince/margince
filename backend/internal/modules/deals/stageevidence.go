@@ -42,9 +42,13 @@ const ExtractedByDeterministic = "deterministic"
 // approval is retired — public-events.yaml marks it historical and nothing
 // emits it. A source type no writer can produce is a vocabulary entry that
 // only ever misleads a reader about what the ledger can hold.
+//
+// SourceLegalReview is written by the legal review decision alone, inside its
+// own transaction; validEvidence keeps it off every other writer.
 const (
-	SourceActivity = "activity"
-	SourceContract = "contract"
+	SourceActivity    = "activity"
+	SourceContract    = "contract"
+	SourceLegalReview = "legal_review"
 )
 
 // The commitment vocabulary, mirroring deal_stage_evidence.commitment.

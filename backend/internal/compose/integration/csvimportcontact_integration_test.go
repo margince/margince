@@ -60,7 +60,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := importedContactCount(t, e); got != contactsBefore+3 {
@@ -111,7 +111,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -139,7 +139,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 	}
 
 	var reapproved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, &reapproved); s != http.StatusAccepted {
+	if s := importCall(t, e, rerun.ID, "approve", nil, &reapproved); s != http.StatusAccepted {
 		t.Fatalf("approve re-run → %d, want 202", s)
 	}
 	var after importReportDTO
@@ -215,7 +215,7 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -313,7 +313,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 	var after importReportDTO
@@ -388,7 +388,7 @@ func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
 		t.Fatalf("links = %+v, want the shared name reported unresolved rather than linked to "+
 			"whichever company the read happened to see first", report.Links)
 	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "more than one") {
+	if !strings.Contains(strings.ToLower(report.Links.Unresolved[0].Reason), "more than one") {
 		t.Errorf("reason = %q, want it to say the name is shared — a contact told 'not found' "+
 			"would go and create a third Faraday", report.Links.Unresolved[0].Reason)
 	}
@@ -439,7 +439,7 @@ func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -453,7 +453,7 @@ func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, rerun.ID, "approve", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("approve the correction → %d, want 202", s)
 	}
 	if got := contactTitle(t, e, "ada@lovelace.example"); got != "New title" {
@@ -468,7 +468,7 @@ func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
 		t.Fatalf("the correcting run reports %+v, want 1 update and no creation", ran.Disposition)
 	}
 
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/undo", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, rerun.ID, "undo", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", s)
 	}
 	// The undo endpoint answers with the run; the reversal's own report is
@@ -531,10 +531,10 @@ func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "undo", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", s)
 	}
 
@@ -546,7 +546,7 @@ func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("staging the file again → %d, want 202", rerunStatus)
 	}
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, nil); s != http.StatusAccepted {
+	if s := importCall(t, e, rerun.ID, "approve", nil, nil); s != http.StatusAccepted {
 		t.Fatalf("approve the second run → %d, want 202", s)
 	}
 	if got := importedContactCount(t, e); got != 1 {

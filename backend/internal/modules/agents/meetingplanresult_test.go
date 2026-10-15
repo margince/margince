@@ -14,11 +14,10 @@ import (
 
 // Citations carries the whole plan, and this is what says so.
 //
-// The read bound charges what a tool call reached. A field added to the plan
-// whose citations Citations does not walk is a set of records an agent read for
-// free — invisible, because nothing else in the tree counts them. So rather
-// than trusting the method to keep up, this walks the STRUCT: every field that
-// can hold evidence must be one Citations reports.
+// The evidence list names what a tool call reached. A field added to the plan
+// whose citations Citations does not walk is a set of records read without
+// evidence, and nothing else would notice. So this walks the struct instead of
+// trusting the method: every field that can hold evidence must be reported.
 func TestCitationsReachesEveryFieldThatCanCarryEvidence(t *testing.T) {
 	// One citation per evidence-bearing field, each with its own record id, so
 	// a field the method skips is a specific id that never arrives.

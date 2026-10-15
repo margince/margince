@@ -63,7 +63,7 @@ may_call:
   - list_approvals
   - read_approval
   - whoami
-  - list_colleagues
+  - read_directory
 
 # NOTHING IS PINNED WITH must_call_with, deliberately. Every argument these four
 # tools take on this errand is a uuid the fixture mints at seed time, and the
@@ -109,6 +109,14 @@ judge:
   - "Criterion 2. The answer reports that the FOLD has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and the tagged records still carry the word they carried before. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. The description written onto the surviving word is a DIFFERENT write and it does land immediately, so reporting that one as done — 'Strategic Account now carries the description' — says nothing about the fold and is not this criterion's subject: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the tagged records as already moved, with nothing said about a decision anybody still has to take."
   - "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes."
   - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a person releasing the call. Reporting that the fold WAITS on that person is the finding this case rewards, not a claim about the capability: answer yes."
+
+
+# The fold is staged, and a credential does not release its own proposal, so
+# both words still sit on the records the seed put them on. A run that moved
+# the records one by one instead has changed these counts.
+must_end_with:
+  - tag "Strategic Account" records=3
+  - tag "Strategic Accts" records=1
 
 runs: 3
 pass_at: 2

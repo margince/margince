@@ -13,14 +13,12 @@ import (
 	"io"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -35,6 +33,10 @@ type NewDocument struct {
 	ContentType string
 	Content     io.ReadSeeker
 }
+
+// ErrDocumentShipped is a delete aimed at a page that ships with Margince. The
+// next boot's reconciliation would file it again, so the delete could only hide it.
+var ErrDocumentShipped = errors.New("this page ships with Margince, so it cannot be deleted; it comes back with every update")
 
 // QueueIngest is how the composition layer enqueues the ingest job inside the
 // transaction that writes the document row. The module declares the seam and
@@ -139,7 +141,7 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 			return err
 		}
 		var rerr error
-		out, rerr = readDocument(ctx, tx, id)
+		out, rerr = readDocument(ctx, tx, id, s.embedIdentity())
 		return rerr
 	})
 	if err != nil {
@@ -214,7 +216,10 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		corpus, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		if err == nil && corpus.corpus.Shipped {
+			return errUploadShippedCorpus
+		}
 		return err
 	}); err != nil {
 		return "", "", 0, err
@@ -293,6 +298,7 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 		return nil, err
 	}
 	out := []crmcontracts.KnowledgeDocument{}
+	identity := s.embedIdentity()
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The corpus read first, so an unknown or archived corpus is absent
 		// rather than an empty list — "no documents" and "no such corpus" are
@@ -301,15 +307,15 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 			return err
 		}
 		rows, err := tx.Query(ctx,
-			`SELECT `+documentColumns+` FROM knowledge_document
-			 WHERE corpus_id = $1 AND archived_at IS NULL
-			 ORDER BY created_at DESC, id DESC`, corpusID)
+			`SELECT `+documentColumns+` FROM knowledge_document d
+			 WHERE d.corpus_id = $1 AND d.archived_at IS NULL
+			 ORDER BY d.created_at DESC, d.id DESC`, corpusID)
 		if err != nil {
 			return fmt.Errorf("list corpus documents: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
-			doc, err := scanDocument(rows)
+			doc, err := scanDocument(rows, identity)
 			if err != nil {
 				return err
 			}
@@ -318,34 +324,6 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 		return rows.Err()
 	})
 	return out, err
-}
-
-const documentColumns = `id, corpus_id, filename, content_type, byte_size,
-	ingest_status, ingest_detail, chunk_count, created_at`
-
-func readDocument(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.KnowledgeDocument, error) {
-	doc, err := scanDocument(tx.QueryRow(ctx,
-		`SELECT `+documentColumns+` FROM knowledge_document WHERE id = $1 AND archived_at IS NULL`, id))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.KnowledgeDocument{}, apperrors.ErrNotFound
-	}
-	return doc, err
-}
-
-func scanDocument(row pgx.Row) (crmcontracts.KnowledgeDocument, error) {
-	var doc crmcontracts.KnowledgeDocument
-	var id, corpusID ids.UUID
-	var status string
-	var chunkCount int
-	if err := row.Scan(&id, &corpusID, &doc.Filename, &doc.ContentType, &doc.ByteSize,
-		&status, &doc.IngestDetail, &chunkCount, &doc.CreatedAt); err != nil {
-		return crmcontracts.KnowledgeDocument{}, err
-	}
-	doc.Id = openapi_types.UUID(id)
-	doc.CorpusId = openapi_types.UUID(corpusID)
-	doc.IngestStatus = crmcontracts.KnowledgeDocumentIngestStatus(status)
-	doc.ChunkCount = &chunkCount
-	return doc, nil
 }
 
 // DeleteDocument removes a document, its passages, their vectors and its
@@ -379,17 +357,23 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 	if err := auth.Require(ctx, "knowledge_document", principal.ActionDelete); err != nil {
 		return err
 	}
-	if s.blob == nil {
-		return ErrBlobstoreUnconfigured
-	}
 	var storageKey string
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		var doc deletedDocument
+		var shipped bool
 		if err := tx.QueryRow(ctx,
-			`SELECT storage_key, filename, checksum, content_type, chunk_count
+			`SELECT storage_key, filename, checksum, content_type, chunk_count, managed_source IS NOT NULL
 			   FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
-			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount); err != nil {
+			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount, &shipped); err != nil {
 			return notFoundOr(err, "read the document to delete")
+		}
+		// Before the blobstore check: a handbook page is refused on every
+		// installation, including the ones with no object storage.
+		if shipped {
+			return ErrDocumentShipped
+		}
+		if s.blob == nil {
+			return ErrBlobstoreUnconfigured
 		}
 		storageKey = doc.storageKey
 		// The chunks go explicitly rather than by the FK's ON DELETE CASCADE.

@@ -98,20 +98,20 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 		t.Errorf("read without a grant returned %v, want ErrPermissionDenied", err)
 	}
 	// A read grant is not a write grant.
-	newName := "Renamed GmbH"
-	if _, err := store.UpdateInstallation(rep, identity.InstallationPatch{Name: &newName}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	newZone := "Europe/Berlin"
+	if _, err := store.UpdateInstallation(rep, identity.InstallationPatch{Timezone: &newZone}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("write with only a read grant returned %v, want ErrPermissionDenied", err)
 	}
 
 	before := installationAuditCount(t, e)
 
 	// A real change commits the row and its audit entry together.
-	updated, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName})
+	updated, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &newZone})
 	if err != nil {
-		t.Fatalf("renaming the installation: %v", err)
+		t.Fatalf("moving the installation's zone: %v", err)
 	}
-	if updated.Name != newName {
-		t.Errorf("name = %q after the write, want %q", updated.Name, newName)
+	if updated.Timezone != newZone {
+		t.Errorf("timezone = %q after the write, want %q", updated.Timezone, newZone)
 	}
 	if n := installationAuditCount(t, e); n != before+1 {
 		t.Errorf("audit rows = %d, want %d — a settings change is audited", n, before+1)
@@ -119,8 +119,8 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 
 	// Re-asserting the same value is a no-op: no second audit row. An
 	// idempotent PATCH must not litter the ledger.
-	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &newName}); err != nil {
-		t.Fatalf("re-asserting the same name: %v", err)
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &newZone}); err != nil {
+		t.Fatalf("re-asserting the same zone: %v", err)
 	}
 	if n := installationAuditCount(t, e); n != before+1 {
 		t.Errorf("audit rows = %d after an unchanged write, want %d", n, before+1)
@@ -131,8 +131,8 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reread.Name != newName {
-		t.Errorf("re-read name = %q, want %q", reread.Name, newName)
+	if reread.Timezone != newZone {
+		t.Errorf("re-read timezone = %q, want %q", reread.Timezone, newZone)
 	}
 }
 
@@ -237,13 +237,13 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 	// is the whole contract of this endpoint, and an encoding that treated an
 	// absent field as a zero would set the month to 0 here rather than fail
 	// loudly — 0 is not a month, but nothing on the read path would say so.
-	renamed := "Renamed, fiscal untouched"
-	after, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &renamed})
+	zone := "Europe/Berlin"
+	after, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &zone})
 	if err != nil {
-		t.Fatalf("renaming the company: %v", err)
+		t.Fatalf("moving the zone: %v", err)
 	}
 	if after.FiscalYearStartMonth != april {
-		t.Errorf("a patch naming only the name moved the fiscal start to %d, want %d",
+		t.Errorf("a patch naming only the zone moved the fiscal start to %d, want %d",
 			after.FiscalYearStartMonth, april)
 	}
 }
@@ -418,8 +418,8 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 
 	// Everything else on the surface still changes — the freeze is scoped to
 	// the one value whose history is at stake.
-	name := "Still Renamable GmbH"
-	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Name: &name}); err != nil {
+	zone := "Europe/Berlin"
+	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{Timezone: &zone}); err != nil {
 		t.Errorf("the freeze on one setting blocked another: %v", err)
 	}
 }

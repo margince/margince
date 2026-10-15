@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
@@ -71,6 +72,23 @@ function rungCaption(call: CallSummary, t: Translator): string {
   return [rung, providerName(call.provider, t)].filter(Boolean).join(" · ");
 }
 
+function TokenFigure({
+  call,
+  children,
+}: Readonly<{ call: CallSummary; children: ReactNode }>) {
+  const t = useT();
+  return (
+    <span className="aicalls-figure">
+      <CellStack>
+        <span>{children}</span>
+        {call.cache_hit && (
+          <span className="t-caption">{t("aicalls.badge.cacheHit")}</span>
+        )}
+      </CellStack>
+    </span>
+  );
+}
+
 function callColumns(
   t: Translator,
   locale: Locale,
@@ -121,17 +139,18 @@ function callColumns(
       header: t("aicalls.col.tokens"),
       align: "end",
       render: (call) => (
-        <span className="aicalls-figure">
-          <CellStack>
-            <span>
-              {formatNumber(call.tokens_in, locale)} /{" "}
-              {formatNumber(call.tokens_out, locale)}
-            </span>
-            {call.cache_hit && (
-              <span className="t-caption">{t("aicalls.badge.cacheHit")}</span>
-            )}
-          </CellStack>
-        </span>
+        <TokenFigure call={call}>
+          {formatNumber(call.tokens_in, locale)} /{" "}
+          {formatNumber(call.tokens_out, locale)}
+        </TokenFigure>
+      ),
+      folded: (call) => (
+        <TokenFigure call={call}>
+          {t("aicalls.folded.tokens", {
+            in: formatNumber(call.tokens_in, locale),
+            out: formatNumber(call.tokens_out, locale),
+          })}
+        </TokenFigure>
       ),
     },
     {
@@ -141,6 +160,13 @@ function callColumns(
       render: (call) => (
         <span className="aicalls-figure">
           {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+        </span>
+      ),
+      folded: (call) => (
+        <span className="aicalls-figure">
+          {t("aicalls.folded.latency", {
+            value: formatNumber(call.latency_ms, locale),
+          })}
         </span>
       ),
     },

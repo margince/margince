@@ -22,11 +22,16 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-type previewImport struct{ imports Imports }
+// previewImport stages a run's test and waits for its report.
+type previewImport struct {
+	imports Imports
+	wait    importWait
+}
 
 func (t previewImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -36,7 +41,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","properties":{
-			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
+			"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
@@ -44,7 +49,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			  "description":"Several files as one run, in place of object, csv and mapping.",
 			  "items":{"type":"object","required":["name","object","csv"],"properties":{
 				"name":{"type":"string"},
-				"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
+				"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 				"csv":{"type":"string","description":"The file's contents, header row first."},
 				"mapping":{"type":"object","additionalProperties":{"type":"string"},"description":"As mapping, for this file."}},
 				"additionalProperties":false}},
@@ -114,28 +119,17 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// NOT discarded. Staging persists its run before it validates, and a
-		// run that failed validation is resumable from its SourceRef — so
-		// deleting the file here would turn a run somebody can fix into one
-		// nobody can. The orphan on this path is the pre-existing cost of a
-		// tool call that stores before it can know, and it is a different
-		// change from this one.
-		return nil, err
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
-	return json.Marshal(ImportPreviewResult{
-		Run:      importRunResult(run),
+	return t.answered(ctx, run, ImportPreviewResult{
 		Mapping:  mapping,
 		Columns:  columnNames(profile),
 		Unmapped: unmappedColumns(profile, mapping),
 	})
 }
 
-// discarding removes the stored source behind a call that is about to fail, and
-// returns the failure unchanged.
-//
-// Only for a refusal BEFORE anything is staged. Past that point a run exists
-// that references the source and can be resumed from it, and deleting the file
-// would turn a run somebody can fix into one nobody can.
+// discarding cancels the draft of a call about to fail before its test, which
+// releases the stored source. It returns the failure unchanged.
 //
 // The refusal is what the caller needs to read, so a failure to clean up cannot
 // replace it: an orphan blob is a cost, and the wrong error is a wrong answer.
@@ -153,6 +147,45 @@ func discarding(ctx context.Context, imports Imports, ref string, cause error) e
 	//craft:ignore swallowed-errors the refusal below is the answer; a store that would not delete is a cost to carry, not a reason to report something else
 	_ = imports.DiscardSource(cleanup, ref)
 	return cause
+}
+
+// busyRunCopy is what a busy refusal tells the caller to do with the run it
+// names, by the refusal's code.
+var busyRunCopy = map[string]string{
+	httperr.SourceBusyCode: "import run %s of this source_name is still writing. read_import that run " +
+		"until its state is complete or failed, then preview again",
+	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
+		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
+		"then preview again",
+}
+
+// stagingRefused answers a refused StageRun. A refusal for this agent's other
+// test discards the draft. The caller is told to preview again, so a looping
+// caller would leave one upload per call. Any other refused draft is kept.
+// createImportRun on its source_ref tests it again, and the sweep cancels one
+// nobody returns to.
+func stagingRefused(ctx context.Context, imports Imports, ref string, err error) error {
+	if busy, ok := errors.AsType[*httperr.DetailedError](err); ok && busy.Code == httperr.AgentBusyCode {
+		err = discarding(ctx, imports, ref, err)
+	}
+	return namingTheBusyRun(err)
+}
+
+// namingTheBusyRun points a busy refusal at the run it names, when the caller
+// may read that run.
+func namingTheBusyRun(err error) error {
+	busy, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok {
+		return err
+	}
+	detail, known := busyRunCopy[busy.Code]
+	runID, named := busy.Details["run_id"].(string)
+	if !known || !named {
+		return err
+	}
+	return &httperr.DetailedError{
+		Status: busy.Status, Code: busy.Code, Details: busy.Details, Detail: fmt.Sprintf(detail, runID),
+	}
 }
 
 // discardTimeout bounds the cleanup. It outlives the request on purpose, and a

@@ -42,8 +42,10 @@ type PrivacyInformation struct {
 	// the acquisition alike. Nil only where there is no evidence row at all.
 	AcquiredAt *time.Time
 	// Purposes are what the installation uses this contact's data for, by
-	// published name.
-	Purposes []string
+	// published name. PurposeKeys holds each one's key at the same index, so a
+	// page can name the purposes the product seeds in its reader's language.
+	Purposes    []string
+	PurposeKeys []string
 	// Rights are the codes a page renders in its own language.
 	Rights []string
 }
@@ -77,7 +79,7 @@ func subjectRights() []string {
 func (s *Store) assembleDisclosure(
 	ctx context.Context, contactID ids.ContactID,
 ) (PrivacyInformation, error) {
-	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}}
+	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{}}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			SELECT kind, coalesce(occurred_at, captured_at)
@@ -104,7 +106,8 @@ func (s *Store) assembleDisclosure(
 // source, dated when the lead was captured.
 func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (PrivacyInformation, error) {
 	out := PrivacyInformation{
-		Rights: subjectRights(), Purposes: []string{}, AcquiredAs: acquiredFromAPublicSource,
+		Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{},
+		AcquiredAs: acquiredFromAPublicSource,
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var capturedAt time.Time
@@ -129,7 +132,7 @@ const acquiredFromAPublicSource = "public_or_business_source"
 // contact's and a lead's disclosure state alike.
 func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
 	rows, err := tx.Query(ctx, `
-		SELECT label FROM consent_purpose
+		SELECT key, label FROM consent_purpose
 		 WHERE archived_at IS NULL
 		 ORDER BY label`)
 	if err != nil {
@@ -137,11 +140,12 @@ func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformati
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var label string
-		if err := rows.Scan(&label); err != nil {
+		var key, label string
+		if err := rows.Scan(&key, &label); err != nil {
 			return err
 		}
 		out.Purposes = append(out.Purposes, label)
+		out.PurposeKeys = append(out.PurposeKeys, key)
 	}
 	return rows.Err()
 }

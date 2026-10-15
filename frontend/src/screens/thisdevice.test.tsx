@@ -5,8 +5,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { InstallOutcome } from "../app/pwa";
 import { en } from "../i18n/en";
+import type { InstallOutcome } from "../lib/pwa";
 import { InstallPanel } from "./thisdevice";
 
 const INSTALL = { name: en["settings.installAppAction"] };
@@ -90,7 +90,7 @@ afterEach(() => {
 /** A fresh page, because the install store lives as long as the page does. */
 async function page() {
   vi.resetModules();
-  const pwa = await import("../app/pwa");
+  const pwa = await import("../lib/pwa");
   const { ThisDevicePanel } = await import("./thisdevice");
   listening.push(pwa.listenForInstall());
   return ThisDevicePanel;

@@ -11,12 +11,12 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
 import {
@@ -1300,12 +1300,12 @@ describe("DealsScreen", () => {
       "Other",
     );
 
-    const confirm = screen.getByRole("button", { name: "Confirm" });
-    expect(confirm.hasAttribute("disabled")).toBe(true);
+    const confirm = () => screen.getByRole("button", { name: "Confirm" });
+    expect(confirm().hasAttribute("disabled")).toBe(true);
 
     await user.type(screen.getByLabelText("Details"), "a barter deal");
-    expect(confirm.hasAttribute("disabled")).toBe(false);
-    await user.click(confirm);
+    expect(confirm().hasAttribute("disabled")).toBe(false);
+    await user.click(confirm());
 
     await waitFor(() => expect(advances).toHaveLength(2));
     expect(advances[1]).toEqual({

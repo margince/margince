@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 

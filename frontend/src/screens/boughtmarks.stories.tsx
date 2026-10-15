@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { ContactLink } from "../design-system/contactlink";
+import { StoryProviders } from "../testing/story-utils";
 import { BoughtMark, BoughtText } from "./boughtmarks";
-import { StoryProviders } from "./story-utils";
 
 // The two shapes a bought value takes: plain text underlined in place, and a
 // value that is already a control, with the mark beside it rather than inside.

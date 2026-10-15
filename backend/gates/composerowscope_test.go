@@ -243,6 +243,10 @@ var rowScopeSpellings = map[string]bool{
 	// The whole-record admissions open with the object grant and then call
 	// EnsureVisible and EnsureWritableLive, so they bound the row the same way.
 	"EnsureReadable": true, "EnsureChangeable": true,
+	// VisibleSubset renders VisiblePredicate over the ids it is handed, so a
+	// projection whose references pass through it is bounded row by row.
+	// It counts at function granularity, as EnsureVisible and VisibleTo do.
+	"VisibleSubset": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a
@@ -784,11 +788,8 @@ func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 }
 
 // namedColumn matches one column by name, optionally qualified by an alias.
-// Compiled per call rather than cached: the map is small, this runs once per
-// statement, and a cache keyed by column is a second place for the pattern to
-// be wrong.
 func namedColumn(column string) *regexp.Regexp {
-	return regexp.MustCompile(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
+	return compiledPattern(`\b(?:[A-Za-z_][\w]*\.)?` + column + `\b`)
 }
 
 // countedBytes marks the bytes inside a count(), which hands back a NUMBER.
@@ -874,7 +875,7 @@ func projectedBytes(sql string) []bool {
 // both halves of #632 were — a query that DISCOVERS references, keyed on
 // something other than the referenced record itself.
 func boundToCallerArgument(sql, column string) bool {
-	return regexp.MustCompile(
+	return compiledPattern(
 		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
 }
 

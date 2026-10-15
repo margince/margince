@@ -13,7 +13,7 @@ import {
   type ReviewTemplate,
   useCreateOutcomeReview,
 } from "../outcomereview.queries";
-import "../common.css";
+import "../../design-system/querystates.css";
 
 /**
  * Writing a review of how the deal went.

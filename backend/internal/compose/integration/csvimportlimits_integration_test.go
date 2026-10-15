@@ -69,15 +69,15 @@ func TestAnOverlongCellInAnyTargetIsReportedByTheTestRunAndNotTheCommit(t *testi
 				mapping[target] = target
 			}
 			var run importRunDTO
-			if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+			if status := testCall(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "object": object, "source_ref": profile.SourceRef,
 				"mapping": mapping, "source_key": "ref",
-			}, nil, &run); status != http.StatusAccepted {
+			}, &run); status != http.StatusAccepted {
 				t.Fatalf("test run → %d", status)
 			}
 			predicted := readImportReport(t, e, run.ID).Disposition
 
-			e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil)
+			importCall(t, e, run.ID, "approve", nil, nil)
 			if after := readRun(t, e, run.ID); after.Status != "complete" {
 				t.Fatalf("the commit ended %q (%s); every cell it refuses must be a problem of the test run", after.Status, after.Error)
 			}

@@ -5,8 +5,8 @@
 # `./...` stops at the module boundary. The repo has eleven Go modules; that
 # pattern covers exactly one. The other ten — backend/tools, composition, the
 # units under extensions/, desktop/launcher, and the deliberately-broken
-# fixtures/extensions/ — were linted by nothing. Not by CI, not by `make check`,
-# not by the pre-push hook, which only sees the craft gate. That is how an
+# fixtures/extensions/ — were linted by nothing. Not by CI and not by `make check`,
+# which saw only the craft gate there. That is how an
 # unformatted file reached main with every gate green (extjobs.go), and the
 # formatting was the visible half: the same blind spot was also hiding two
 # swallowed errors, two misspellings and nine staticcheck findings.

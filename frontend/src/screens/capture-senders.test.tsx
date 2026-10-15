@@ -7,17 +7,23 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { translate, translatePlural } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
+import { openRowMenu } from "../testing/tablerow.testkit";
 import { CaptureSendersCard } from "./capture-senders";
 import { jsonResponse, render } from "./settings.testkit";
-import { openRowMenu } from "./tablerow.testkit";
 
 type Sent = { method: string; path: string; body: unknown };
 
+// Every path the card read, for the cases that prove a read never happened.
+const read: string[] = [];
+
 function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
   const sent: Sent[] = [];
+  read.length = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -34,6 +40,7 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
         });
         return new Response(null, { status: 204 });
       }
+      read.push(path);
       if (path === "/capture/senders") return jsonResponse({ data: senders });
       if (path === "/capture/contacts-awaiting-decision")
         return jsonResponse({ data: waiting });
@@ -44,19 +51,29 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
   return sent;
 }
 
+const CONTACT_ID = "0190b7a2-0000-7000-8000-000000000012";
+const LAST_SEEN = "2026-09-10T14:40:00Z";
+
 const NEWSLETTER = {
   address: "news@letters.example",
   kind: "newsletter",
   overruled: false,
   record_exists: false,
+  message_count: 0,
 };
 
 const WAITING = {
-  contact_id: "0190b7a2-0000-7000-8000-000000000012",
+  contact_id: CONTACT_ID,
   display_name: "Marta Ortiz",
   emails: ["m.ortiz@steireif.de"],
   captured_at: "2026-09-10T14:40:00Z",
 };
+
+function rowOf(cell: HTMLElement): HTMLTableRowElement {
+  const row = cell.closest("tr");
+  if (row === null) throw new Error("the cell sits in no table row");
+  return row;
+}
 
 afterEach(() => {
   cleanup();
@@ -198,4 +215,46 @@ it("lets the owner withdraw their own answer, and says it is theirs", async () =
   await waitFor(() =>
     expect(sent).toEqual([expect.objectContaining({ method: "DELETE" })]),
   );
+});
+
+// The contact a sender became is one press away, named by the list itself.
+// No row reads its contact, and the count says how much mail there is.
+it("links a sender to its contact beside its mail count and newest message", async () => {
+  stubRoutes(
+    [],
+    [
+      {
+        ...NEWSLETTER,
+        address: "m.ortiz@steireif.de",
+        kind: "contact",
+        record_exists: true,
+        contact_id: CONTACT_ID,
+        contact_name: "Marta Ortiz",
+        message_count: 1204,
+        last_seen_at: LAST_SEEN,
+      },
+    ],
+  );
+
+  render(<CaptureSendersCard />);
+
+  const link = await screen.findByRole("link", { name: "Marta Ortiz" });
+  expect(link.getAttribute("href")).toContain(CONTACT_ID);
+  const row = within(rowOf(link));
+  expect(row.getByText("1,204")).toBeVisible();
+  expect(
+    row.getByText(formatDateTime(LAST_SEEN, "en", viewerZone())),
+  ).toBeVisible();
+  expect(read.filter((path) => path.startsWith("/contacts/"))).toEqual([]);
+});
+
+it("names no contact and no date for a sender with neither", async () => {
+  stubRoutes([], [NEWSLETTER]);
+
+  render(<CaptureSendersCard />);
+
+  const row = within(rowOf(await screen.findByText(NEWSLETTER.address)));
+  expect(row.queryByRole("link")).toBeNull();
+  expect(row.getAllByText("—")).toHaveLength(2);
+  expect(row.getByText("0")).toBeVisible();
 });

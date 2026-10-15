@@ -182,7 +182,8 @@ func TestRegisterDerivesTheRouterSpec(t *testing.T) {
 	big.MaxArgsBytes = 4 << 20
 	big.InputSchema = json.RawMessage(`{"type":"object","required":["x"],"properties":{"x":{"type":"integer"}}}`)
 	small := targetSpec("fake_b", principal.ScopeWrite, mcp.TierAutoExecute)
-	small.InputSchema = json.RawMessage(`{"type":"object","required":["x"],"properties":{"x":{"type":"integer"},"y":{"type":"string"}}}`)
+	small.InputSchema = json.RawMessage(`{"type":"object","required":["x"],"properties":{"x":{"type":"integer"},"y":{"type":"object"}}}`)
+	small.UnkeyedArguments = map[string]string{"$.y": "the caller's own keys"}
 	r.Register(&argsTool{spec: big})
 	r.Register(&argsTool{spec: small})
 	r.Register(fakeRouter{
@@ -226,6 +227,9 @@ func TestRegisterDerivesTheRouterSpec(t *testing.T) {
 	}
 	if strings.Join(schema.Required, ",") != "action,x" {
 		t.Errorf("required = %v, want the route field and what every target requires", schema.Required)
+	}
+	if spec.UnkeyedArguments["$.y"] != "the caller's own keys" {
+		t.Errorf("unkeyed = %v, want the target's declaration carried to the argument it advertises", spec.UnkeyedArguments)
 	}
 }
 

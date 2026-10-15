@@ -6,7 +6,6 @@ import type { LucideIcon } from "lucide-react";
 import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 
 import { api } from "../api/client";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -14,7 +13,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import "./tagresult.css";
 
 /**

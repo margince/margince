@@ -11,12 +11,13 @@ import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
 
 // The forecast links a reader has issued and that still open, listed so any of
 // them can be closed after the dialog that showed it is gone. The server

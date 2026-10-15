@@ -6,8 +6,6 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Card,
@@ -15,6 +13,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import {
   EvidenceChip,
@@ -23,7 +22,11 @@ import {
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { LoadMoreButton, QueryStates, unwrap, useViewerId } from "./common";
+import type { EntityKind } from "../lib/entity";
+import { historyFieldLabel } from "../lib/historyfieldlabels";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
 import {
   type ActorFacet,
   distinctFields,
@@ -32,7 +35,6 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
-import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 import { ResolvedPassportChip } from "./passportchip";
 import "./history.css";

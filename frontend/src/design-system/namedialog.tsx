@@ -3,7 +3,7 @@
 
 import { type FormEvent, useState } from "react";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf } from "../screens/common";
+import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { useSinglePress } from "./presslatch";

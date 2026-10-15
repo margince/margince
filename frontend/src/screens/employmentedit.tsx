@@ -14,7 +14,7 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { stillHeld } from "./employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
-import "./common.css";
+import "../design-system/querystates.css";
 
 type Employment = components["schemas"]["Contact360Employment"];
 type Patch = components["schemas"]["UpdateRelationshipRequest"];

@@ -488,6 +488,7 @@ const (
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
+	ApprovalFailureAcknowledged           SubscribableEventType = "approval.failure_acknowledged"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
 	AttachmentArchived                    SubscribableEventType = "attachment.archived"
 	AttachmentCreated                     SubscribableEventType = "attachment.created"
@@ -631,6 +632,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityUpdated:
 		return true
 	case ApprovalDecided:
+		return true
+	case ApprovalFailureAcknowledged:
 		return true
 	case ApprovalRequested:
 		return true
@@ -995,7 +998,7 @@ type PublicEventActivityDispositionRecorded struct {
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
 
-// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked a waiting message done: they dealt with it another way, by phone, in a meeting, or with no reply owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
+// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 }
@@ -1047,6 +1050,15 @@ type PublicEventApprovalDecided struct {
 
 // PublicEventApprovalDecidedVerdict The decision outcome. `expired` is the window closing on a staging nobody answered (APPR-PARAM-1's "unactioned means rejected"): it is a real verdict written by the expiry sweep, not a rendering, and it is the one verdict with no deciding human — consumers that treat a refusal as a refusal must handle it alongside `rejected`.
 type PublicEventApprovalDecidedVerdict string
+
+// PublicEventApprovalFailureAcknowledged Payload for approval.failure_acknowledged: the human who approved a decision has seen that its work did not run, and the failure leaves their Worklist (approvals/failureack.go). A later failure of the same approval carries a newer failed_at and shows again.
+type PublicEventApprovalFailureAcknowledged struct {
+	// FailedAt When the failure that was acknowledged was recorded.
+	FailedAt time.Time `json:"failed_at"`
+
+	// Kind The approval's kind.
+	Kind string `json:"kind"`
+}
 
 // PublicEventApprovalRequested Payload for approval.requested — an agent's 🟡 call was staged pending a human decision (ADR-0036, approvals/staging.go's StageInTx). The staged approval row's own id is the event's entity ref; this payload names what was staged, its polymorphic target, and when the staging lapses into expired if undecided.
 type PublicEventApprovalRequested struct {
@@ -1417,11 +1429,23 @@ type PublicEventConversationClaimChanged struct {
 	Status string `json:"status"`
 }
 
-// PublicEventDealArchived Payload for deal.archived — a deal was archived. Carries no data.
-type PublicEventDealArchived struct{}
+// PublicEventDealArchived Payload for deal.archived: a deal was archived. Carries only the import mark, when an import's undo wrote the event.
+type PublicEventDealArchived struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealCreated Payload for deal.created — a deal was opened.
 type PublicEventDealCreated struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// Name The deal's name at creation.
 	Name string `json:"name"`
 }
@@ -1431,12 +1455,24 @@ type PublicEventDealOwnerChanged struct {
 	// FromOwnerId The previous owner (absent when the deal had none).
 	FromOwnerId *openapi_types.UUID `json:"from_owner_id,omitempty"`
 
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// ToOwnerId The new owner.
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
-type PublicEventDealRestored struct{}
+// PublicEventDealRestored Payload for deal.restored: an archived deal was brought back. Its archive took down relationships, list memberships and tags, and those that can still come back return. Carries only the import mark.
+type PublicEventDealRestored struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
 // Its releases survive, so what a buyer was shown stays answerable.
@@ -1600,6 +1636,12 @@ type PublicEventDealStageChanged struct {
 	// FxRateToBase The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
 
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// PartnerAttribution What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only.
 	PartnerAttribution *string `json:"partner_attribution,omitempty"`
 
@@ -1623,6 +1665,12 @@ type PublicEventDealStageChanged struct {
 type PublicEventDealUpdated struct {
 	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
 	ChangedFields map[string]interface{} `json:"changed_fields"`
+
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
 }
 
 // PublicEventEmailSignatureChanged Payload for email_signature.changed — a member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later, so the change is audited and published rather than written quietly. The signature TEXT is NOT in the payload: it is the member's own words about themselves, often carrying a direct line or an address, and a subscriber needs to know the sign-off moved rather than what it says.
@@ -2632,6 +2680,12 @@ func (PublicEventApprovalDecided) EventType() string { return "approval.decided"
 
 func (PublicEventApprovalDecided) EntityType() string { return "approval" }
 
+func (PublicEventApprovalFailureAcknowledged) EventType() string {
+	return "approval.failure_acknowledged"
+}
+
+func (PublicEventApprovalFailureAcknowledged) EntityType() string { return "approval" }
+
 func (PublicEventApprovalRequested) EventType() string { return "approval.requested" }
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
@@ -3162,6 +3216,7 @@ var PublicEventVersions = map[string]int{
 	"activity.marked_handled":                   1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
+	"approval.failure_acknowledged":             1,
 	"approval.requested":                        1,
 	"attachment.archived":                       1,
 	"attachment.created":                        1,

@@ -2,12 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { UTC_ZONE } from "../format/timezone";
 import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
+import {
   type DeadlineDraft,
   DsrDeadlineFields,
   EMPTY_DEADLINE,
   useRequestDeadline,
 } from "./privacy.deadline";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // The deadline fields of a manual subject request: the arrival day, the
 // deadline the server computes with its rule, and an optional earlier date.

@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { listsMe } from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { FiltersScreen } from "./filters";
-import { listsMe } from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The dispatcher: what an address shows before the session answers, and what
 // it opens once it has. The pages it opens have their own stories (Library,

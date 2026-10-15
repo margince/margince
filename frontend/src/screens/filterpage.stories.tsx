@@ -4,15 +4,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { newGroup, newLeaf } from "../lib/segmentpredicate";
+import { listsMe } from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import { FocusedHead } from "./filterhead";
 import { usePlainWords } from "./filterpropose";
 import { FiltersScreen } from "./filters";
-import { listsMe } from "./lists.fixtures";
-import { newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // `#/filters/contacts`: a new filter, from the calm start to a filter worth
 // keeping. The page grows only as the reader builds, so most states are
@@ -230,7 +234,9 @@ export const EmptyGroup: Story = {
     const removes = within(canvasElement).getAllByRole("button", {
       name: "Remove City condition",
     });
-    await user.click(removes[removes.length - 1]);
+    const last = removes.at(-1);
+    if (!last) throw new Error("the filter shows no City condition to remove");
+    await user.click(last);
   },
 };
 

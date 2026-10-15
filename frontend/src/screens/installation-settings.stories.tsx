@@ -4,14 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { DateFormatsProvider } from "../app/dateformats";
-import { InstallationSettingsCard } from "./installation-settings";
-import { defaultOperations } from "./operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { defaultAgentAllowances } from "./agentallowances.fixtures";
+import { InstallationSettingsCard } from "./installation-settings";
+import { defaultOperations } from "./operationsettings.fixtures";
 
 // Settings → Admin settings → General → Installation. Two surfaces in one card:
 // three ROWS that read what the installation is set to, and the one dialog that
@@ -28,6 +29,7 @@ const SETTINGS = {
   dead_work_banner_hours: 24,
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
+  agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
   timezone: "Europe/Berlin",
   base_currency: "EUR",
@@ -77,12 +79,12 @@ type Story = StoryObj<typeof InstallationSettingsCard>;
 // auditing the installation travels one column instead of parsing a form.
 export const Editable: Story = { render: story(SETTINGS, MANAGER) };
 
-// The form the rows lead to, opened from the name row, so focus is in the name
-// field. Three fields, one heading for the currency rule, one Save.
+// The form the rows lead to, opened from the timezone row, so focus is in the
+// timezone field. One heading for the currency rule, one Save.
 export const ProfileDialog: Story = {
   render: story(SETTINGS, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit company name/i);
+    await openFrom(canvasElement, /edit reporting timezone/i);
   },
 };
 

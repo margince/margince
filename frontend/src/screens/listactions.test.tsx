@@ -9,7 +9,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { ListScreen } from "./listpage";
 import {
   LIVE_ID,
   listsMe,
@@ -19,9 +18,14 @@ import {
   shortlist,
   TEAM_ID,
   teamsPage,
-} from "./lists.fixtures";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ListScreen } from "./listpage";
 import { ListSettingsAction } from "./listsettings";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
   cleanup();

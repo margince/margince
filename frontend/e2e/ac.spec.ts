@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { meFixture } from "../src/app/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { openedAt, pageOverflow, textsOf } from "./waits";
@@ -77,6 +77,9 @@ async function settleAnimations(page: Page) {
       running: document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
+        // A scroll-driven animation follows the scroll position, not the
+        // clock, so axe reads the frame a reader at that position sees.
+        .filter((animation) => animation.timeline instanceof DocumentTimeline)
         .map((animation) => {
           const effect = animation.effect;
           return effect instanceof KeyframeEffect &&
@@ -242,14 +245,14 @@ function accountTrigger(page: Page) {
 // Home owns the work queue; the queue opens in a drawer rather than occupying
 // a second sidebar destination.
 const primaryDestinations = [
-  "Startseite",
+  "Home",
   "Kontakte",
   "Unternehmen",
   "Leads",
   "Deals",
   "Projekte",
   "Filter und Ansichten",
-  "Analysen",
+  "Analytics",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every
@@ -318,10 +321,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Deals",
   );
-  await page.locator('nav.rail a[aria-label="Analysen"]').click();
+  await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Analysen",
+    "Analytics",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -986,11 +989,13 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   // paperwork already explains stays one click, because a field every rep must
   // fill is a field every rep fills with the same lie.
   await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText("Wie wurde er gewonnen?")).toBeVisible();
+  await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
   await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
 
-  await page.getByRole("combobox", { name: "Wie wurde er gewonnen?" }).click();
+  await page
+    .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
+    .click();
   await page.getByRole("option", { name: "Per Bestellung" }).click();
   await page.getByRole("button", { name: "Bestätigen" }).click();
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
@@ -1057,11 +1062,13 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   await expect(
     form.getByRole("spinbutton", { name: "due_in_days" }),
   ).toHaveValue("3");
-  await form.getByRole("button", { name: "Anlegen" }).click();
+  await form.getByRole("button", { name: "Erstellen" }).click();
   // The outcome lands on the CARD: by the time it is true the dialog that
   // produced it is gone.
   await expect(
-    page.getByText("Pausiert angelegt. Nichts läuft, bis sie aktiviert ist."),
+    page.getByText(
+      "Pausiert erstellt. Nichts läuft, bis die Automatisierung aktiviert ist.",
+    ),
   ).toBeVisible();
   const row = page.getByTestId("automation-au-2");
   // The row states its status on the control that changes it, rather than on a
@@ -1112,9 +1119,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
   // The settings sidebar's own group heading also reads "Du", so the actor
-  // label is read inside the trail's panel — the count-0 below proves the
-  // filter dropped the ROW rather than that the sidebar went missing.
-  const trail = page.getByRole("region", { name: "Audit-Log" });
+  // label is read inside the trail's table. The count-0 below then proves the
+  // filter dropped the ROW, not the sidebar.
+  const trail = page.getByRole("table", {
+    name: de["settings.auditTrailLabel"],
+  });
   await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
@@ -1126,14 +1135,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   await expect(
     page.getByText("connector:gmail", { exact: true }),
   ).toBeVisible();
-  // The dials are the card's SECONDARY half — a reader arrives to read what
-  // happened and narrows it second — so they sit in a disclosure closed on
-  // arrival and the filter has to be opened before it can be typed in.
-  await page
-    .locator("details")
-    .filter({ has: page.getByText("Filter", { exact: true }) })
-    .locator("summary")
-    .click();
+  // The dials stand open on a bar above the trail, each applying on its own.
   // The actor filter still speaks the API's `type:id` vocabulary, which is the
   // spelling the column itself carries.
   await page
@@ -1157,6 +1159,13 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
+  // A revoked passport can do nothing more, so it waits behind a toggle.
+  await expect(page.getByText("Alter Runner")).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: de["settings.passportsShowRevoked_one"].replace("{count}", "1"),
+    })
+    .click();
   const revoked = page.locator('[data-passport="pp-2"]');
   await expect(revoked.getByText("widerrufen")).toBeVisible();
   // Struck on the NAME rather than across the whole row: the row also carries
@@ -1235,9 +1244,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
       name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
     })
     .click();
-  await expect(
-    page.getByText(de["common.duplicate.slotTaken"]),
-  ).toBeVisible();
+  await expect(page.getByText(de["common.duplicate.slotTaken"])).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
@@ -1263,7 +1270,7 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   await expect(page.locator(".stepper")).toHaveCount(0);
   await expect(page.getByLabel("Website-Adresse")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Website lesen" }),
+    page.getByRole("button", { name: "Website analysieren" }),
   ).toBeVisible();
   // The thread belongs to the working view, not the gate.
   await expect(
@@ -1280,7 +1287,7 @@ test("AC-create-1: a contact is created from the list and lands on its 360", asy
   // Email is now a repeatable row group (P-15): add a row, then fill it.
   await page.getByRole("button", { name: "E-Mail hinzufügen" }).click();
   await page.getByLabel("E-Mail *").fill("peter@neu.example");
-  await page.getByRole("button", { name: "Anlegen" }).click();
+  await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/contacts\/p-new$/);
 });
 
@@ -1312,12 +1319,9 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  // By ROLE, not by label: the rail's "Auswertung" group carries a real
-  // accessible name, and a label lookup for "Wert" matches inside it. The
-  // amount is a number input, so the role is what the query meant all along
-  // and a group can never answer to it.
+  // By role: getByLabel("Wert") matches any label containing the word.
   await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
-  await page.getByRole("button", { name: "Anlegen" }).click();
+  await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
@@ -3295,6 +3299,76 @@ test.describe("the contact's access panel, open", () => {
       await page.keyboard.press("Escape");
       await expect(panel).toBeHidden();
       await expect(chip).toBeFocused();
+    });
+  }
+});
+
+// An archived contact opens on its row: the server refuses its 360, brief and
+// guard. The seeded contact is live, so no sweep above reaches this page.
+test.describe("an archived contact opens read-only", () => {
+  const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
+  for (const colorScheme of schemes) {
+    test(`row, reason and history, with no AA violations (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.route(/\/v1\/contacts\/p-anna$/, (route) =>
+        route.fulfill({
+          json: {
+            ...anna,
+            writable: false,
+            version: 2,
+            archived_at: "2026-06-20T09:00:00Z",
+          },
+        }),
+      );
+      await page.route(
+        /\/v1\/contacts\/p-anna\/(360|brief|consent\/guard)$/,
+        (route) =>
+          route.fulfill({
+            status: 404,
+            json: { status: 404, code: "not_found", title: "Not Found" },
+          }),
+      );
+      await page.route(/\/v1\/records\/contact\/p-anna\/history/, (route) =>
+        route.fulfill({
+          json: {
+            data: [
+              {
+                id: "h-archive",
+                actor_type: "human",
+                actor_id: meFixture().user.id,
+                actor_name: "Demo Admin",
+                action: "archive",
+                occurred_at: "2026-06-20T09:00:00Z",
+                summary: "Demo Admin archived the record",
+                undoable: { undoable: true },
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          },
+        }),
+      );
+      await page.goto("/#/contacts/p-anna");
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: "Anna Weber",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(de["contact.rail.archivedReadOnly"]),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: de["history.undo.action"] }),
+      ).toBeVisible();
+      await expect(page.getByText(de["contact.page.notOpened"])).toHaveCount(0);
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `contacts/p-anna archived (${colorScheme})`,
+      );
     });
   }
 });

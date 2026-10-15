@@ -1,5 +1,4 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   EvidenceMark,
   type EvidenceMarkSource,
@@ -7,6 +6,7 @@ import {
 import { providerBrandName } from "../design-system/provider-mark";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 
 // What a data provider was PAID to put on a contact, marked where it stands on
 // the record. The server decides which values still hold what the purchase

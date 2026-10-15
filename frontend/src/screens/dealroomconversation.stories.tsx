@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { refusalFor } from "./dealroom";
-import { DealRoomConversation } from "./dealroomconversation";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { refusalFor } from "./dealroom";
+import { DealRoomConversation } from "./dealroomconversation";
 
 // The seller's side of the document board: the documents in the room with
 // their remove verb, the threads under each, and the form that adds another.

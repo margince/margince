@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { connectorsPollInterval } from "../app/capture-progress";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -10,7 +9,13 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCode, problemMessageOf, throwProblem, unwrap } from "./common";
+import { connectorsPollInterval } from "../lib/capture-progress";
+import {
+  problemCode,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
 import { AddConnectionDialog, ALL_PROVIDERS } from "./connectors.add";
 import { OAuthOutcomeNote } from "./connectors.notices";
 import { ConnectorRow, OAUTH_PROVIDERS } from "./connectors.row";

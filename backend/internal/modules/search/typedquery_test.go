@@ -241,39 +241,41 @@ func TestATrailingSpaceStillMarksTheWordFinished(t *testing.T) {
 	}
 }
 
-// The fragment keeps the activity branch's stemming.
+// Mail matches the fragment as a whole word, in every parse its index speaks;
+// records keep the prefix.
 //
-// A prefix compares `simple` lexemes while the activity index stores stems, so
-// "study" as `study:*` reaches neither the stored `studi` nor the simple
-// `studies`. Every search is a fragment as it is typed, so without this the
-// branch's whole reason for existing — reaching "Verträge" from "Vertrag" —
-// stopped applying to exactly the case a reader hits first.
-func TestTheActivityFragmentKeepsItsStemming(t *testing.T) {
+// A short prefix matches most mail, so offering it as one spent the whole query
+// budget before a hit was ranked. The stemmed parses still apply, so "Vertrag"
+// reaches "Verträge" whether or not the reader has typed the trailing space.
+func TestMailMatchesTheFragmentWholeAndRecordsByPrefix(t *testing.T) {
 	t.Parallel()
-	ctx := teamReaderFor("activity")
-	var bound []any
-	arg := func(v any) int { bound = append(bound, v); return len(bound) }
-	headPos, tailPos := arg(""), arg("study")
-
-	branches, err := admittedBranchSQL(ctx, []string{"activity"}, headPos, tailPos, true, bindIdentifier("study", arg), arg)
-	if err != nil {
-		t.Fatalf("building the branch SQL: %v", err)
+	branchSQL := func(entity string) (sql string, tailPos int) {
+		ctx := teamReaderFor(entity)
+		var bound []any
+		arg := func(v any) int { bound = append(bound, v); return len(bound) }
+		headPos, tailPos := arg(""), arg("study")
+		branches, err := admittedBranchSQL(ctx, []string{entity}, headPos, tailPos, true, bindIdentifier("study", arg), arg)
+		if err != nil {
+			t.Fatalf("building the %s branch SQL: %v", entity, err)
+		}
+		return strings.Join(branches, " "), tailPos
 	}
-	sql := strings.Join(branches, " ")
 
-	if !strings.Contains(sql, "':*'") {
-		t.Fatal("the fragment is no longer offered as a prefix")
+	mail, tailPos := branchSQL("activity")
+	if strings.Contains(mail, "':*'") {
+		t.Fatalf("mail is offered the fragment as a prefix:\n%s", mail)
 	}
 	// The FRAGMENT'S parameter has to appear inside a stemmed arm. Counting
 	// occurrences of the stemmed parse is not enough: the finished-words half of
-	// an activity branch already carries them, so a fragment that dropped its
-	// own still left the count satisfied.
+	// an activity branch already carries them.
 	for _, config := range []string{"german", "english"} {
-		stemmedFragment := fmt.Sprintf(
-			"websearch_to_tsquery('%s', f_unaccent($%d))", config, tailPos)
-		if !strings.Contains(sql, stemmedFragment) {
+		stemmedFragment := fmt.Sprintf("websearch_to_tsquery('%s', f_unaccent($%d))", config, tailPos)
+		if !strings.Contains(mail, stemmedFragment) {
 			t.Fatalf("the fragment does not carry the %s parse, so a single-word search loses stemming", config)
 		}
+	}
+	if contacts, _ := branchSQL("contact"); !strings.Contains(contacts, "':*'") {
+		t.Fatalf("a record no longer matches the fragment as a prefix:\n%s", contacts)
 	}
 }
 
@@ -308,5 +310,30 @@ func TestTheScoreLiftsTheFragmentAsAWholeWord(t *testing.T) {
 	bonus, _, _ := strings.Cut(scoreExpression(entityActivity, "t", 1, 2, true), "::int")
 	if strings.Contains(bonus, "english") || strings.Contains(bonus, "german") {
 		t.Fatalf("the activity bonus is stemmed, so \"studies\" earns it for \"study\": %s", bonus)
+	}
+}
+
+// The activity branch ranks a bounded sample of its visible matches, and the
+// bound is the named constant; a record branch ranks every match.
+func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
+	t.Parallel()
+	for entity, wantSample := range map[string]bool{"activity": true, "contact": false} {
+		var bound []any
+		arg := func(v any) int { bound = append(bound, v); return len(bound) }
+		headPos := arg("contract")
+		branches, err := admittedBranchSQL(teamReaderFor(entity), []string{entity}, headPos, 0, false, bindIdentifier("contract", arg), arg)
+		if err != nil {
+			t.Fatalf("building the %s branch SQL: %v", entity, err)
+		}
+		sql := strings.Join(branches, " ")
+		sampled := false
+		for pos, v := range bound {
+			if n, ok := v.(int); ok && n == activityRankSample && strings.Contains(sql, fmt.Sprintf("LIMIT $%d)", pos+1)) {
+				sampled = true
+			}
+		}
+		if sampled != wantSample {
+			t.Errorf("%s branch ranks a sample of %d: %v, want %v:\n%s", entity, activityRankSample, sampled, wantSample, sql)
+		}
 	}
 }

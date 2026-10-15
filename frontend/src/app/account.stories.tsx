@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { AccountMenu } from "./account";
-import { meFixture } from "./mefixture";
 // The strip's own sheet, loaded because THIS file builds a `.topbar` by hand and
 // imports nothing that would pull it in. `.storybook/preview.tsx` loads the
 // chrome sheets a story reaches by class rather than by module — but its list was

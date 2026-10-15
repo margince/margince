@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { importLabel } from "../design-system/provenance";
+import { importProvenance } from "../design-system/provenanceof";
 import type { useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
-import { LEAD_LIST_KEY } from "./leadkeys";
+import { LEAD_LIST_KEY } from "../lib/leadkeys";
+import { throwProblem, unwrap } from "../lib/problem";
 
 // The lead vocabularies and lead handling, read from the server: which
 // sources a lead may come from (and what each is worth to the score), the
@@ -108,10 +110,10 @@ function administeredOf(
   );
 }
 
-// sourceLabelFor names a stored source value for a reader: the server's own
-// label when the row carries one, else the administered list's, else the
-// shipped label, else a connector value's family ("Apollo") — never the
-// raw `connector:apollo:a-1` token.
+// sourceLabelFor names a stored source value for a reader. The server's own
+// label wins, then the administered list's, the shipped label, and a connector
+// value's family ("Apollo"). It never shows the raw `connector:apollo:a-1`
+// token or an import's stamp.
 export function sourceLabelFor(
   lead: Readonly<{ source?: string | null; source_label?: string | null }>,
   sources: readonly LeadSource[] | undefined,
@@ -127,6 +129,9 @@ export function sourceKeyLabel(
   t: ReturnType<typeof useT>,
 ): string {
   if (!source) return t("lead.shortfall.noSource");
+  // An imported lead's source is the importer's stamp, never a vocabulary key.
+  const imported = importProvenance(source);
+  if (imported) return importLabel(imported, t);
   const known = administeredOf(sources);
   const administered = known.find((s) => s.key === source);
   if (administered) return administered.label;

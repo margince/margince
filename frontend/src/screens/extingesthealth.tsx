@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -21,7 +20,9 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { useCan } from "../lib/capability";
+import { extensionTitle } from "../lib/extensions";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
@@ -63,9 +64,10 @@ function unitColumns(
     {
       key: "unit",
       header: t("extIngest.col.connector"),
-      // The unit's own name, verbatim: what the operator greps the connector's
-      // log with and what names the directory the mapping lives in.
-      render: (unit) => <KeyedName name={unit.unit} code={unit.unit} />,
+      // The key under the title is what the connector's log and directory carry.
+      render: (unit) => (
+        <KeyedName name={extensionTitle(unit.unit, locale)} code={unit.unit} />
+      ),
     },
     {
       key: "refused",
@@ -137,43 +139,28 @@ function ExtensionIngestBody({
   }
 
   return (
-    <>
-      <PanelBody>
-        <PanelIntro>{t("extIngest.noDetail")}</PanelIntro>
-      </PanelBody>
-      <DataTable
-        bleed
-        fold
-        label={t("settings.extIngest")}
-        columns={unitColumns(t, plural, locale, zone)}
-        rows={[...health.units]}
-        rowKey={(unit) => unit.unit}
-      />
-    </>
+    <DataTable
+      bleed
+      fold
+      label={t("settings.extIngest")}
+      columns={unitColumns(t, plural, locale, zone)}
+      rows={[...health.units]}
+      rowKey={(unit) => unit.unit}
+    />
   );
 }
 
-export function ExtensionIngestHealthCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  // The reader's own resolved zone, for the same reason the job card resolves
-  // one: "most recent at 03:14" is only useful against the clock on their wall.
-  const zone = viewerZone();
-  // `job_health:read`, which is what the endpoint asks for
-  // (compose/extingesthealth.go). The same operational question as the card
-  // above, for the same reader, so the same grant decides both.
+// `job_health:read`, what the endpoint asks for (compose/extingesthealth.go):
+// the job card's question for the same reader, so the same grant decides both.
+export function useExtensionIngestHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({
     queryKey: ["extension-ingest-health"],
     enabled: canSee,
     queryFn: async () => {
       const data = unwrap(await api.GET("/admin/extension-ingest-health"));
-      // Rejected rather than defaulted. `?? []` would draw the clean state,
-      // which claims every record this installation's connectors sent was
-      // representable — a statement about the installation that this response
-      // never made, and exactly the reassurance an operator opens the card to
-      // trust. A malformed payload is a condition to report, so it becomes the
-      // card's error state.
+      // Rejected, not defaulted: `?? []` would draw the clean state, a claim about
+      // the installation this response never made.
       if (
         !data ||
         typeof data.generated_at !== "string" ||
@@ -185,6 +172,15 @@ export function ExtensionIngestHealthCard() {
       return data;
     },
   });
+  return { canSee, query };
+}
+
+export function ExtensionIngestHealthCard() {
+  const t = useT();
+  // The reader's own zone: "most recent at 03:14" is only useful against the
+  // clock on their wall.
+  const zone = viewerZone();
+  const { canSee, query } = useExtensionIngestHealth();
 
   return (
     <HealthCard
@@ -193,10 +189,10 @@ export function ExtensionIngestHealthCard() {
       withheld={t("extIngest.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={(report) =>
-        t("extIngest.generatedAt", {
-          time: formatDateTime(report.generated_at, locale, zone),
-        })
+      lead={(health) =>
+        health.units.length > 0 && (
+          <PanelIntro>{t("extIngest.noDetail")}</PanelIntro>
+        )
       }
     >
       {(health) => <ExtensionIngestBody health={health} zone={zone} />}

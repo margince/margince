@@ -1,18 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCan, useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button, Disclosure, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, unwrap } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -138,11 +139,15 @@ export function ReportingReportDetail({
       label: editionLabel(item, locale),
     })),
   ];
-  const showHistory =
-    historyOpen ||
-    editions.isError ||
-    schedules.isError ||
-    capturePending === true;
+  // A failed read or a capture under way opens the history once; the reader
+  // may still close it.
+  const forcedHistory =
+    editions.isError || schedules.isError || capturePending === true;
+  const [forcedBefore, setForcedBefore] = useState(false);
+  if (forcedHistory !== forcedBefore) {
+    setForcedBefore(forcedHistory);
+    if (forcedHistory) setHistoryOpen(true);
+  }
   const reportActions = (report: ReportingReport) =>
     (canEditReport || canCreate || canArchiveReport) && (
       <OverflowMenu label={t("reporting.actions")}>
@@ -283,7 +288,7 @@ export function ReportingReportDetail({
           )}
           <Disclosure
             summary={t("reporting.history")}
-            open={showHistory}
+            open={historyOpen}
             onToggle={setHistoryOpen}
           >
             {canReadSchedules && (

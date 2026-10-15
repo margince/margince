@@ -17,10 +17,9 @@ import (
 // label to be improved.
 type Counter string
 
-// The five counters of api-rate-limits-and-abuse §2.2.
+// The counters a Passport is held to. A read hands the agent nothing it can
+// change, so it spends a call and has no counter of its own.
 const (
-	// Reads counts RECORDS handed to the agent (MCP-SESS-READS).
-	Reads Counter = "reads"
 	// Writes counts mutating calls (MCP-SESS-WRITES).
 	Writes Counter = "writes"
 	// Egress counts calls that leave the workspace (MCP-SESS-EGRESS).
@@ -32,19 +31,17 @@ const (
 )
 
 // Releasable reports whether a human can hand this counter another allowance
-// mid-window — the §2.4 ladder's difference between a step the connecting human
-// may take and a stop only the window can end.
+// mid-window. That is a step the connecting human may take, against a stop only
+// the window can end.
 //
-// Reads is BYO-STEP-1's step-up and Writes is BYO-STEP-2's batch-confirm: both
-// exist to turn bulk activity into a gated, VISIBLE event rather than to end it.
-// Egress is BYO-STEP-3 and is fail-closed on the spec's own reasoning — it is
-// the exfiltration endpoint, and "resuming needs a new approved session". Calls
-// is BYO-STEP-4's suspension, the ceiling under which every other volume budget sits;
-// releasing it would release all four at once.
+// Writes is a batch-confirm. It turns bulk activity into a gated, visible event
+// and does not end it. Egress is the exfiltration endpoint, so resuming needs a
+// new approved session. Calls is the suspension under which every other counter
+// sits, so releasing it would release all of them at once.
 //
-// Cost is not releasable because it never refuses: there is nothing to release.
+// Cost is not releasable because it never refuses.
 func (c Counter) Releasable() bool {
-	return c == Reads || c == Writes
+	return c == Writes
 }
 
 // Governed reports whether crossing this counter refuses anything at all. Cost
@@ -74,20 +71,16 @@ func CounterFor(spec mcp.ToolSpec) Counter {
 	case spec.Egress:
 		return Egress
 	case spec.ReadOnly():
-		return Reads
+		return Calls
 	default:
 		return Writes
 	}
 }
 
-// The default thresholds (api-rate-limits-and-abuse §2.2, SaaS column). They are
-// defaults and mode-tunable — the operator's lever — and §4.2 makes lowering one
-// below its floor an ADR matter, since these are security controls rather than
-// performance knobs.
+// The default thresholds, from the SaaS column of the rate-limit spec. An admin
+// changes them in the installation settings, within each setting's floor and
+// ceiling. These bind until a policy source answers.
 const (
-	// DefaultReads is MCP-SESS-READS: the records a Passport may be handed
-	// inside one window before its next read needs a human's release.
-	DefaultReads = 2000
 	// DefaultWrites is MCP-SESS-WRITES: the mutating calls before the rest of
 	// the window's writes batch-confirm.
 	DefaultWrites = 200
@@ -112,10 +105,9 @@ const (
 // the same words.
 const DefaultWindow = 24 * time.Hour
 
-// Limits is one deployment's thresholds. A zero field takes the default above,
+// Limits is one installation's thresholds. A zero field takes the default above,
 // so a caller configuring one counter does not silently unbound the other three.
 type Limits struct {
-	Reads  int
 	Writes int
 	Egress int
 	Calls  int
@@ -126,9 +118,6 @@ type Limits struct {
 // reading — a ceiling below zero, which every counter exceeds on its first
 // charge — would suspend an installation's whole agent surface on a typo.
 func (l Limits) withDefaults() Limits {
-	if l.Reads <= 0 {
-		l.Reads = DefaultReads
-	}
 	if l.Writes <= 0 {
 		l.Writes = DefaultWrites
 	}
@@ -146,8 +135,6 @@ func (l Limits) withDefaults() Limits {
 // CostCeiling rather than configured per deployment here.
 func (l Limits) of(c Counter) int {
 	switch c {
-	case Reads:
-		return l.Reads
 	case Writes:
 		return l.Writes
 	case Egress:

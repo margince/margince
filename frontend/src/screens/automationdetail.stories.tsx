@@ -2,13 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
+  AutomationInspectors,
   AutomationPreview,
   AutomationRuns,
   OutcomeBadge,
 } from "./automationdetail";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The two human-only automation panels rendered against static fixtures — the
 // same fetch-stub convention the unit tests use, so every visual state below
@@ -106,21 +112,15 @@ const renderMixedRuns = () => {
 
 export const RunsMixed: Story = { render: renderMixedRuns };
 
-// The same five outcomes in dark, and the reason LINE is why this is worth a
-// picture rather than the badge legend above. A badge carries its tone on a
-// filled chip; `reasonColor` puts `--danger` and `--warning` on bare text over the
-// inset card, which is the shape that fails a contrast floor first when the
-// tokens re-resolve — a bright warning that reads on white is the same warning on
-// near-black. The card is `inset`, so its ground is recessed too.
+// The same five outcomes in dark. `reasonColor` puts `--danger` and `--warning`
+// on bare text, the shape that fails a contrast floor first in dark.
 export const RunsMixedDark: Story = {
   globals: { theme: "dark" },
   render: renderMixedRuns,
 };
 
-// The run list at 390px. Two things crowd here: the outcome filter is six
-// buttons in one row (all + five outcomes), which is meant to wrap rather than
-// clip, and each row pairs a badge with evidence prose and a `deal:BÄR Pharma`
-// target ref that has no space to break at.
+// The run list at 390px: each row pairs a badge with evidence prose and a
+// `deal:BÄR Pharma` target ref that has no space to break at.
 export const RunsMixedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -136,6 +136,32 @@ export const RunsEmpty: Story = {
     return (
       <StoryProviders>
         <AutomationRuns automationId="au-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// Both inspectors open on one rule: each takes a heading to tell them apart.
+export const RunsAndPreview: Story = {
+  render: () => {
+    installFetchStub({
+      [RUNS_PATH]: () =>
+        jsonResponse({ data: mixedRuns, page: { next_cursor: null } }),
+      [PREVIEW_PATH]: () =>
+        jsonResponse({
+          matches_now: 12,
+          would_have_fired: 34,
+          window_days: 30,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <AutomationInspectors
+          automationId="au-1"
+          runsOpen
+          previewOpen
+          canConfigure
+        />
       </StoryProviders>
     );
   },
@@ -165,6 +191,12 @@ export const RunsLoading: Story = {
         <AutomationRuns automationId="au-1" />
       </StoryProviders>
     );
+  },
+  // The outcome filter stands above the skeleton, so it does not pop in.
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("combobox", { name: "Outcome" }),
+    ).toBeInTheDocument();
   },
 };
 

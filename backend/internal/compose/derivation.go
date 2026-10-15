@@ -53,7 +53,7 @@ const asOfKey = "as_of"
 // reservedDerivationKeys are the query-string names a handle owns. Report
 // vocabularies may not squat on them, or a minted URL would be ambiguous.
 // Derived from here rather than restated, so adding a key updates the gate.
-var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, reservedDerivationColumn, reportingScopeKind, "scope_id", reportingHandleVersion}
+var reservedDerivationKeys = []string{groupByKey, "agg", nullPredicateKey, asOfKey, baseCurrencyKey, reservedDerivationColumn, reportingScopeKind, "scope_id", reportingHandleVersion}
 
 // groupByKey names the dimensions a handle groups by. Named because a refusal
 // quotes it back, and a refusal naming an argument the caller did not send is
@@ -77,6 +77,10 @@ type derivationQuery struct {
 	// converts the same way. Zero when the handle predates this key, which
 	// resolves at the current instant exactly as it always did.
 	AsOf time.Time
+	// BaseCurrency is what the headline converted to, carried for the same
+	// reason. Empty when the handle predates this key, which then resolves at
+	// the installation's current base as it did before.
+	BaseCurrency string
 }
 
 // boundExpr is one validated predicate: the vocabulary field, its fixed
@@ -113,7 +117,8 @@ type derivationPlan struct {
 	groupBy []string
 	// asOf is the instant the headline was computed at, from the handle. Zero
 	// for a handle minted before this key existed.
-	asOf time.Time
+	asOf         time.Time
+	baseCurrency string
 }
 
 // Derive resolves one handle against a prebuilt report's vocabulary.
@@ -247,6 +252,7 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	}
 	plan.definition = definition
 	plan.asOf = q.AsOf
+	plan.baseCurrency = q.BaseCurrency
 
 	// Drill-through columns: the row identity plus every dimension and
 	// measure the vocabulary declares — a derived measure (e.g. the

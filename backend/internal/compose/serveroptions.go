@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
@@ -176,12 +177,11 @@ func WithBlobstore(store blobstore.Store) Option {
 	}
 }
 
-// WithImportCommitRunner sets what runs an import's commit and undo once the
-// request has answered. A test passes RunImportInline to see the finished run
-// in the response, or a runner that holds the task to see what came first.
-func WithImportCommitRunner(run func(task func())) Option {
+// WithImportJobs queues an import's commit and undo for the worker role,
+// through the insert-only runner, in the transaction that moves the run.
+func WithImportJobs(inserter *jobs.Runner) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		s.detach = run
+		s.queue = &importEnqueuer{runner: inserter}
 	}
 }
 
@@ -302,7 +302,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 // what the workspace's numbers mean.
 func WithAgentVolume(meter *agentvolume.Meter) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool, meter.Window())))
+		s.volumeMeter.RebindFrom(meter.WithCostCeiling(newPassportShareCeiling(pool)))
 	}
 }
 

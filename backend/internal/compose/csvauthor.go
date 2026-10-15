@@ -30,9 +30,10 @@ const csvTargetAuthor = "author"
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
-// where it came from, fixed when it landed; a later file does not rewrite that.
+// where it came from, and a lost reason why the deal closed; a later file
+// rewrites neither.
 func isCreateOnlyTarget(field string) bool {
-	return field == csvTargetAuthor
+	return field == csvTargetAuthor || field == dealTargetLostReason
 }
 
 // refuseAuthorFromNonImporter keeps the author column behind the same door as
@@ -65,12 +66,12 @@ func authorFrom(fields map[string]string) storekit.SourceAuthorInput {
 
 // authorUnwritableReason refuses an author cell the create would refuse, so the
 // dry run promises what the commit does.
-func authorUnwritableReason(fields map[string]string) string {
+func authorUnwritableReason(fields map[string]string) migration.Reason {
 	name := importString(fields, csvTargetAuthor)
 	if name == nil || utf8.RuneCountInString(*name) <= provenance.SourceAuthorNameMax {
-		return ""
+		return migration.Reason{}
 	}
-	return fmt.Sprintf("author is longer than %d characters", provenance.SourceAuthorNameMax)
+	return migration.WhyCount(migration.ReasonAuthorTooLong, "max", provenance.SourceAuthorNameMax)
 }
 
 // authorSeats caches one answer per author cell for the run, so a file naming

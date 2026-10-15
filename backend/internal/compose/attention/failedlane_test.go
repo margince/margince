@@ -120,3 +120,38 @@ func TestTheFailedLaneKeepsAbsentWithheldAndEmptyApart(t *testing.T) {
 		t.Errorf("a clear lane should be an empty list, got %v", clearDay.DidNotRun)
 	}
 }
+
+// Every failure can be acknowledged, or it stays on the list for good. Retry
+// is offered only where approving again would run the work, because the
+// approve endpoint refuses the rest as already decided.
+func TestAFailureOffersAcknowledgeAlwaysAndRetryOnlyWhereItWouldRun(t *testing.T) {
+	svc := failedLaneService(&stubFailedEffects{rows: []FailedEffect{{
+		ID: ids.NewV7(), Kind: "send_email",
+		Sentence: "this was approved, but the work it released did not run",
+		FailedAt: readInstant, Retryable: true,
+	}, {
+		ID: ids.NewV7(), Kind: "volume_release",
+		Sentence: "the agent's window could not be widened, so the approval has not taken effect",
+		FailedAt: readInstant,
+	}}})
+
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	items := *out.DidNotRun
+	if len(items) != 2 {
+		t.Fatalf("lane carries %d items, want 2", len(items))
+	}
+	for _, item := range items {
+		if !slices.Contains(item.Actions, "acknowledge") {
+			t.Errorf("a failure offers no acknowledge, so nothing takes it off the list: %+v", item.Actions)
+		}
+	}
+	if !slices.Contains(items[0].Actions, "retry") {
+		t.Errorf("a failure whose work can run again offers no retry: %+v", items[0].Actions)
+	}
+	if slices.Contains(items[1].Actions, "retry") {
+		t.Errorf("a failure nothing can re-run offers retry: %+v", items[1].Actions)
+	}
+}

@@ -96,7 +96,7 @@ describe("the wait before the first assessment", () => {
     expect(live).toBeTruthy();
     expect(live?.textContent).toContain("Assessing this company");
     // And it must not have resolved into any of the panel's verdicts.
-    expect(screen.queryByText("Not enough to judge")).toBeNull();
+    expect(screen.queryByText("Not enough data")).toBeNull();
   });
 });
 
@@ -104,7 +104,7 @@ describe("how well this company fits what we sell", () => {
   it("says it could not judge, rather than showing a low score", async () => {
     await show(ABSTAINED);
 
-    expect(screen.getByText("Not enough to judge")).toBeTruthy();
+    expect(screen.getByText("Not enough data")).toBeTruthy();
     // The three real bands are verdicts. None of them may appear beside an
     // abstention, because a reader scanning for a verdict would take it.
     expect(screen.queryByText("Weak fit")).toBeNull();

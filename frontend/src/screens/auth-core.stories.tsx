@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IdentityRegion } from "./auth-core";
 import "./auth.css";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 
 /**
  * The identity region on its own, so its motion can be reviewed without a form

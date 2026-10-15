@@ -6,13 +6,29 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 // The settings harness, rather than a fourth copy of the same twenty lines:
 // this card is a settings card, and `render` there already provides the two
 // providers every one of them needs.
 import { jsonResponse, render } from "./settings.testkit";
-import { tableRowCells } from "./tablerow.testkit";
+
+// One composed unit with a title and its copy, so the lookup runs as composed.
+// A refused unit outside the registry keeps its key alone.
+vi.mock("@composition/extensions", () => ({
+  extensions: [
+    {
+      name: "openchannel",
+      title: "extOpenchannel.title",
+      secretScope: "workspace",
+      verbs: [],
+    },
+  ],
+}));
+vi.mock("@composition/copy", () => ({
+  extensionCopy: { en: { "extOpenchannel.title": "Open channel" } },
+}));
 
 // Every request the card could make, recorded: the ABSENCE of one is what the
 // withheld case is about (the harness shape the sibling health cards use).
@@ -64,6 +80,14 @@ const HEALTH = {
         { refusal: "key", refused: 3, last_refused_at: "2026-09-16T11:00:00Z" },
       ],
     },
+    {
+      unit: "retired-bridge",
+      refused: 2,
+      last_refused_at: "2026-09-15T08:00:00Z",
+      refusals: [
+        { refusal: "key", refused: 2, last_refused_at: "2026-09-15T08:00:00Z" },
+      ],
+    },
   ],
 };
 
@@ -77,7 +101,8 @@ it("names the unit and which check refused, so an operator knows what to fix", a
 
   render(<ExtensionIngestHealthCard />);
 
-  expect(await screen.findByText("openchannel")).toBeInTheDocument();
+  expect(await screen.findByText("Open channel")).toBeInTheDocument();
+  expect(screen.getByText("openchannel").tagName).toBe("CODE");
   // The class in the reader's words rather than the wire's token: the point of
   // the card is to say which mapping to look at.
   expect(await screen.findByText(/45 on participants/)).toBeInTheDocument();
@@ -86,6 +111,11 @@ it("names the unit and which check refused, so an operator knows what to fix", a
   const unit = await tableRowCells("Refused connector records", "openchannel");
   expect(unit.Refused).toHaveTextContent("48");
   expect(unit.Reasons).toHaveTextContent("45 on participants");
+  const unnamed = await tableRowCells(
+    "Refused connector records",
+    "retired-bridge",
+  );
+  expect(unnamed.Connector).toHaveTextContent(/^retired-bridge$/);
 });
 
 it("says nothing was refused rather than showing an empty card", async () => {

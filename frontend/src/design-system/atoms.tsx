@@ -1,5 +1,4 @@
 import {
-  ChevronRight,
   LoaderCircle,
   type LucideIcon,
   MoreHorizontal,
@@ -13,6 +12,7 @@ import {
   type FormEventHandler,
   type InputHTMLAttributes,
   type ReactNode,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -25,6 +25,7 @@ import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
 import {
   coveredByDialog,
+  InsideDialog,
   panelsOpenedFrom,
   useDialogFocus,
 } from "./dialogfocus";
@@ -1173,9 +1174,8 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// The dialog (modal.tsx) and the scroll-region hook (scrollregion.ts) are
-// published from here, because `./atoms` is where their call sites import them
-// from, and moving a file is not a reason to make every one say where it went.
+// Re-exported so call sites that name only `Disclosure` keep one import path.
+export { Disclosure } from "./disclosure";
 export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";
 
@@ -1215,24 +1215,6 @@ export function TableScroll({
   );
 }
 
-/**
- * Disclosure is a section the reader opens when they want it.
- *
- * For the surfaces a record page carries but does not lead with — one-off
- * tools, configuration, the occasional deep read. Kept as a standing card
- * each of those competes for the eye with the facts a reader came for; kept
- * behind a summary they cost one line until asked for.
- *
- * `open` forces it open for a state the reader must not miss (a tool that is
- * running, a result that just arrived); left undefined the reader decides.
- *
- * `summary` is a node rather than a string because a summary is a ROW, and
- * some of them carry more than a label — a count beside the name, a status
- * chip. Passing a string stays the ordinary case and reads identically; the
- * alternative was a second `<details>` implementation living beside this one,
- * which is how two disclosures on one screen end up disagreeing about their
- * own caret. `className` is the same bargain for the row's chrome.
- */
 // Whether an item SETS something rather than doing something — a toggle, or a
 // control that draws a region open — which is the one shape of item a menu must
 // not close under.
@@ -1307,6 +1289,7 @@ export function OverflowMenu({
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
+  const inDialog = useContext(InsideDialog);
   const at = useAnchoredToTrigger(open, trigger, panel);
 
   // Choosing an item closes the menu, one commit after the press.
@@ -1413,11 +1396,8 @@ export function OverflowMenu({
           in a list, and the announcement still has to describe what the
           keyboard will really do. Announcing a menu we do not implement is
           worse than announcing the expandable region we do. */}
-      {/* `iconOnly`, and not a class of this component's own: the ellipsis is
-          the whole label, so the control is the --controlHeight square the
-          catalog defines and drops the width floor a WORD needs. Geometry
-          belongs to the button — a padding rule beside it is a second author
-          of one box, and which of the two wins is a fact about sheet order. */}
+      {/* `iconOnly`: the ellipsis is the whole label, so the control is the
+          catalog's --controlHeight square and its geometry is the button's. */}
       <Button
         iconOnly
         ref={trigger}
@@ -1432,11 +1412,9 @@ export function OverflowMenu({
       >
         <MoreHorizontal aria-hidden="true" />
       </Button>
-      {/* Hidden, never unmounted once mounted. The items own their own dialogs,
-          so unmounting them on close would throw away the dialog the click just
-          opened. `hidden` also takes them out of the tab order, so a closed
-          menu is closed for a keyboard reader too. WHEN they first mount is
-          `keepMounted`'s question, and it is a real one — see the prop. */}
+      {/* Hidden, never unmounted once mounted: the items own their dialogs, and
+          `hidden` takes them out of the tab order. When they first mount is
+          `keepMounted`'s question. */}
       {createPortal(
         // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes that one of the caller's controls inside it was pressed
         // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path IS this handler; Enter and Space on a button dispatch a click that bubbles here
@@ -1444,6 +1422,7 @@ export function OverflowMenu({
           id={panelId}
           ref={panel}
           className="overflow-menu-items"
+          data-layer={inDialog ? "dialog" : undefined}
           hidden={!open}
           style={{
             top: `${at.top}px`,
@@ -1469,47 +1448,6 @@ export function OverflowMenu({
         </div>,
         document.body,
       )}
-    </div>
-  );
-}
-
-export function Disclosure({
-  summary,
-  action,
-  open,
-  onToggle,
-  className,
-  children,
-}: Readonly<{
-  summary: ReactNode;
-  /** A section-level action stays outside summary to avoid nested controls and
-   * remains visible while the section is closed. */
-  action?: ReactNode;
-  open?: boolean;
-  onToggle?: (open: boolean) => void;
-  className?: string;
-  children: ReactNode;
-}>) {
-  const details = (
-    <details
-      className={className ? `disclosure ${className}` : "disclosure"}
-      open={open}
-      onToggle={(event) => onToggle?.(event.currentTarget.open)}
-    >
-      <summary className="disclosure-summary">
-        <ChevronRight className="disclosure-chevron" aria-hidden="true" />
-        <span className="disclosure-label">{summary}</span>
-      </summary>
-      <div className="disclosure-body">{children}</div>
-    </details>
-  );
-  if (!action) {
-    return details;
-  }
-  return (
-    <div className="disclosure-wrap">
-      {details}
-      <span className="disclosure-action">{action}</span>
     </div>
   );
 }

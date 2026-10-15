@@ -80,22 +80,23 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if link.skip {
 		return predictUnwritable, link.problem, nil
 	}
-	outcome, refusal, err := w.predictLanding(ctx, row, typed)
-	if refusal != "" {
-		return outcome, &migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: refusal}, err
+	outcome, refusal, err := w.predictLanding(ctx, row, link.into(typed))
+	if refusal.Code != "" {
+		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)
+		return outcome, &why, err
 	}
 	return outcome, cmp.Or(link.problem, unknownOwner), err
 }
 
 // predictLanding is predictRow once the row's cells and links allow it to land.
-func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, string, error) {
+func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	// Mirrors Ensure, in the same order: a named record first, then the identity
 	// map. The two must answer alike or an approval decides one thing and the
 	// commit does another.
 	target := w.targetIDOf(ctx, row)
 	if target.named {
-		if target.reason != "" {
-			return predictUnwritable, target.reason, nil
+		if target.why.Code != "" {
+			return predictUnwritable, target.why, nil
 		}
 		// Linkable even when the update is refused, as ensureRow binds it.
 		w.links.markPending(w.object, row.ExternalID)
@@ -103,10 +104,10 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
 	if errors.Is(err, errBoundRecordArchived) {
-		return predictUnwritable, boundArchivedReason, nil
+		return predictUnwritable, boundArchivedWhy, nil
 	}
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
 	if !found {
 		return w.predictCreatePath(ctx, row, typed)
@@ -117,85 +118,48 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two questions, in this order and the order matters. First, createPathRefusal:
-// a row naming no record, or a unique key the estate already holds. The store
-// refuses a held key whoever holds it, so this is not a disclosure decision.
-// The outcome is the same whether or not the caller can see the incumbent,
-// which stops the answer being an existence oracle.
-//
+// Two questions, in this order and the order matters. First, createPathRefusal.
 // Second, whether the estate holds a record this row would duplicate. The CRM
 // may hold it from mail, by hand or from a seed, none of which the identity map
 // can see, so the create gets the same dedupe read the create path performs.
 // That one IS disclosure-filtered, whichever mode asked: passing the mode
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
-func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, string, error) {
+func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
+	if w.object == migration.ObjectDeal {
+		return w.predictDealCreate(ctx, row, typed)
+	}
 	refused, err := w.createPathRefusal(ctx, row, typed)
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
-	if refused != "" {
+	if refused.Code != "" {
 		return predictUnwritable, refused, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
 	if !collides {
-		return predictCreate, "", nil
+		return predictCreate, migration.Reason{}, nil
 	}
 	if w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
-		return predictCollidesSkipped, "", nil
+		return predictCollidesSkipped, migration.Reason{}, nil
 	}
-	return predictCollides, "", nil
+	return predictCollides, migration.Reason{}, nil
 }
 
-// createPathRefusal is why a create is refused before the collision check, or
-// "". It refuses a row naming no record, or a unique key the estate already
-// holds. The preview and the commit both ask it first, so a refused row reads
-// the same whoever holds the key.
-func (w *csvWriters) createPathRefusal(ctx context.Context, row migration.Row, typed map[string]any) (string, error) {
-	if reason := unnamedReason(w.object, textFields(row.Fields)); reason != "" {
-		return reason, nil
-	}
-	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return "", err
-	}
-	if claimed {
-		return contactEmailClaimedReason, nil
-	}
-	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil {
-		return "", err
-	}
-	if takenDomain {
-		return domainClaimedReason, nil
-	}
-	leadClaimed, err := w.leadEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return "", err
-	}
-	if leadClaimed {
-		return leadEmailClaimedReason, nil
-	}
-	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
-	if err != nil || !takenLinkedIn {
-		return "", err
-	}
-	return linkedInClaimedReason, nil
-}
-
-// unnamedReason is why a create is refused for naming no record, or "". An
-// update is not refused for it: an absent name leaves the stored one alone.
-func unnamedReason(object string, fields map[string]string) string {
+// unnamedWhy is why a create is refused for naming no record, or the zero
+// Reason. An update is not refused for it: an absent name leaves the stored
+// one alone.
+func unnamedWhy(object string, fields map[string]string) migration.Reason {
 	switch {
 	case object == migration.ObjectCompany && strings.TrimSpace(fields[fieldDisplayName]) == "":
-		return "the mapped display_name is empty, so the row names no company"
+		return companyNameEmptyWhy
 	case object == migration.ObjectContact && contactFullName(fields) == "":
-		return "the row carries neither a name nor an email, so it names no contact"
+		return contactUnnamedWhy
 	}
-	return ""
+	return migration.Reason{}
 }
 
 // predictReconcile is what reconcile would do to this record, without writing.
@@ -205,29 +169,32 @@ func unnamedReason(object string, fields map[string]string) string {
 // the file identified and another for a row the importer remembered.
 func (w *csvWriters) reconcilePrediction(
 	ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any,
-) (predictedOutcome, string, error) {
+) (predictedOutcome, migration.Reason, error) {
+	if w.object == migration.ObjectDeal {
+		return w.predictDealUpdate(ctx, id, row, typed)
+	}
 	current, err := w.read(ctx, id)
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
 	changed, err := changedFields(current, textFields(row.Fields), typed)
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
 	if len(changed) == 0 {
-		return predictUnchanged, "", nil
+		return predictUnchanged, migration.Reason{}, nil
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
-		return predictUnwritable, cannotEditReason(w.object), nil
+		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
 	refused, err := w.updateKeyRefusal(ctx, id, changed, typed)
 	if err != nil {
-		return predictCreate, "", err
+		return predictCreate, migration.Reason{}, err
 	}
-	if refused != "" {
+	if refused.Code != "" {
 		return predictUnwritable, refused, nil
 	}
-	return predictUpdate, "", nil
+	return predictUpdate, migration.Reason{}, nil
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row

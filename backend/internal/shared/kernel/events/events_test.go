@@ -80,6 +80,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"rejected": true, "superseded": true, "disqualified": true, "demoted": true,
 		// A rep said a Deal Scout suggestion is not a deal.
 		"dismissed": true,
+		// A deal's side took back a request it made, such as a legal review.
+		"withdrawn": true,
 		"received":  true, "normalized": true, "skipped": true,
 		// The recipient read the notice — the verb is its own past tense.
 		"read":               true,
@@ -184,6 +186,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// the recording, and "lifted" alone would not say which of the two
 		// happened.
 		"override_lifted": true,
+		// A decider took a failed approval off their list. The verb carries its
+		// object because this stream also carries the decision itself. Alone,
+		// "acknowledged" would not say which of the two the reader saw.
+		"failure_acknowledged": true,
 	}
 
 	for _, typ := range Types() {

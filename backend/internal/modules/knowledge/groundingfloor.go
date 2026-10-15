@@ -42,6 +42,12 @@ var measuredFloors = []FloorMeasurement{
 		MeasuredOn: time.Date(2026, time.August, 28, 0, 0, 0, 0, time.UTC), Owner: "ai-models",
 	},
 	{
+		// Covered 0.33–0.62, uncovered 0.07–0.25 on a one-document corpus at 1024
+		// dimensions; the bands do not touch and 0.29 splits them.
+		Model: "openai/text-embedding-3-large", Floor: 0.29, Separable: true,
+		MeasuredOn: time.Date(2026, time.October, 13, 0, 0, 0, 0, time.UTC), Owner: "ai-models",
+	},
+	{
 		// A covered question scored 0.670 and an unrelated one 0.672 against
 		// the same passage.
 		Model: "mistralai/mistral-embed-2312", Separable: false,

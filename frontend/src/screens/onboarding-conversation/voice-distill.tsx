@@ -87,8 +87,9 @@ function sequence(evidence: readonly string[], hears: readonly string[]) {
   let heard = 0;
   evidence.forEach((text, index) => {
     items.push({ kind: "evidence", text });
-    if (index % 2 === 1 && hears.length > 0) {
-      items.push({ kind: "hears", text: hears[heard % hears.length] });
+    const hear = hears[heard % hears.length];
+    if (index % 2 === 1 && hear !== undefined) {
+      items.push({ kind: "hears", text: hear });
       heard += 1;
     }
   });
@@ -172,8 +173,9 @@ export function VoiceDistillPanel({
   const span = count + closing;
   const shown = Array.from({ length: span }, (_, i) => {
     const index = (head - (span - 1) + i + items.length) % items.length;
-    return { item: items[index], index, age: span - 1 - i };
-  });
+    const item = items[index];
+    return item === undefined ? [] : [{ item, index, age: span - 1 - i }];
+  }).flat();
   return (
     <aside className="ob-distill" aria-hidden="true">
       <Eyebrow className="ob-distill-eyebrow">

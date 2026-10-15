@@ -12,14 +12,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { useHash } from "../app/router";
-import { UnsavedGuard } from "../app/unsaved";
+import { UnsavedGuard } from "../components/unsaved";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
-import type { FilterResource, FilterVocabulary } from "./filterdata";
-import { visitAnswer } from "./lists.fixtures";
-import type { List } from "./lists.queries";
+import type { FilterResource, FilterVocabulary } from "../lib/filterdata";
+import type { List } from "../lib/lists.queries";
+import { useHash } from "../lib/router";
+import { visitAnswer } from "../testing/lists.fixtures";
+import { meFixture } from "../testing/mefixture";
 import type { SavedView } from "./savedviews.queries";
 
 export type Sent = Readonly<{

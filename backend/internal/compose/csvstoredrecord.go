@@ -36,6 +36,12 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 			return nil, err
 		}
 		return encodeRecord(contact)
+	case migration.ObjectDeal:
+		deal, err := w.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.LiveOnly)
+		if err != nil {
+			return nil, err
+		}
+		return encodeRecord(deal)
 	default:
 		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
 	}
@@ -43,7 +49,7 @@ func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
 
 // encodeRecord renders one stored record as JSON. Generic so no wire type
 // is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Contact](record T) ([]byte, error) {
+func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Contact | crmcontracts.Deal](record T) ([]byte, error) {
 	encoded, err := json.Marshal(record)
 	if err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)

@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -18,10 +17,11 @@ import { middayInstant } from "../format/calendarday";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
+import { useRecordZone } from "../lib/recordzone";
+import { useMe } from "../lib/session";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
-import { useMe } from "./common";
-import { EntityRef } from "./entityref";
 import {
   type SettableState,
   useAskForHelp,

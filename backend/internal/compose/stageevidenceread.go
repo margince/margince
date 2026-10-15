@@ -215,6 +215,10 @@ func (r *StageEvidenceReader) criteriaOf(
 	out := make([]stageEvidenceCriterion, 0, len(rows))
 	byKey := make(map[string]ids.ExitCriterionID, len(rows))
 	for _, c := range rows {
+		// Legal's approval settles this kind; a reading of the mail never does.
+		if deals.CriterionKind(c.Kind) == deals.CriterionLegalReviewed {
+			continue
+		}
 		criterion := stageEvidenceCriterion{Key: c.Key, Label: c.Label}
 		if c.Hint != nil {
 			criterion.Hint = *c.Hint

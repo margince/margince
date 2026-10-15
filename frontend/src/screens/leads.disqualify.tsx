@@ -7,8 +7,8 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { leadWriteKeys } from "./leadkeys";
+import { leadWriteKeys } from "../lib/leadkeys";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
 type Lead = components["schemas"]["Lead"];

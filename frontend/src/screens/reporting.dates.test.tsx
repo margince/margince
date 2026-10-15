@@ -2,6 +2,11 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
 import {
   reportingStoryEvaluation,
@@ -9,7 +14,6 @@ import {
   reportingStoryScope,
 } from "./reporting.story-fixtures";
 import { ResultsSummary } from "./reporting.summary";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {

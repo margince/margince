@@ -91,6 +91,8 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// importWait is how long preview_import waits for its test's report.
+	importWait importWait
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -107,6 +109,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,
+		importWait:   defaultImportWait(),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -268,11 +271,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
-		// A replay hands over the records the ORIGINAL call was charged for, and
-		// claimFor has already re-proven and re-charged them. The COUNT still
-		// travels: a task settled from a replayed answer must record what that
-		// answer costs, or its own later polls would re-prove the evidence and
-		// charge nothing for it.
+		// A replay hands over the records the original call served, and claimFor
+		// has already re-proven them. The count still travels: a task settled from
+		// a replayed answer must record it, or its later polls would skip the
+		// visibility re-check.
 		return answered, records, err
 	}
 	redeemed, err := r.redeemPresented(ctx, spec, res)
@@ -338,7 +340,7 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// other order would spend the window on a result a marshalling failure was
 	// about to discard.
 	served := facts.servedCount()
-	if err := r.chargeAnswer(ctx, spec, served); err != nil {
+	if err := r.chargeAnswer(ctx, spec); err != nil {
 		return nil, 0, err
 	}
 	return sealed, served, nil

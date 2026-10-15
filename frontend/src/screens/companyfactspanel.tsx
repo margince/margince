@@ -10,10 +10,12 @@ import { Button, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
+import { invalidateCompany } from "../lib/recordwritekeys";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import {
@@ -79,11 +81,14 @@ const FACT_PREVIEW = 5;
  */
 export function CompanyFactsPanel({
   companyId,
+  anchor,
   canEdit,
   reasonId,
   onOpenHistory,
 }: Readonly<{
   companyId: string;
+  // The record's `is_anchor`: its facts are also the settings company profile.
+  anchor: boolean;
   canEdit: boolean;
   // The one sentence saying why this reader may not write, already on the page.
   // Every refused control points at it rather than carrying its own copy.
@@ -140,6 +145,7 @@ export function CompanyFactsPanel({
         <PanelBody>
           <AddFactForm
             companyId={companyId}
+            anchor={anchor}
             canEdit={canEdit}
             onDone={() => setAdding(false)}
           />
@@ -161,6 +167,7 @@ export function CompanyFactsPanel({
             <FactCategoryBlock
               key={group.category}
               companyId={companyId}
+              anchor={anchor}
               group={group}
               canEdit={canEdit}
               onOpenHistory={onOpenHistory}
@@ -174,11 +181,13 @@ export function CompanyFactsPanel({
 
 function FactCategoryBlock({
   companyId,
+  anchor,
   group,
   canEdit,
   onOpenHistory,
 }: Readonly<{
   companyId: string;
+  anchor: boolean;
   group: FactGroup;
   canEdit: boolean;
   onOpenHistory?: () => void;
@@ -200,13 +209,14 @@ function FactCategoryBlock({
         <FactRow
           key={`${fact.field}:${fact.value_key}`}
           companyId={companyId}
+          anchor={anchor}
           fact={fact}
           // A run of facts under one field shares the field's name once: the
           // first of the run prints it, and the rows that follow print only
           // what changed, which is the value. A reader scanning four
           // Locations is not asked to read the word "Location" four times.
           label={
-            index === 0 || shown[index - 1].field !== fact.field
+            index === 0 || shown[index - 1]?.field !== fact.field
               ? t(factFieldLabelKey(fact.field))
               : undefined
           }
@@ -231,9 +241,15 @@ function FactCategoryBlock({
 
 function AddFactForm({
   companyId,
+  anchor,
   canEdit,
   onDone,
-}: Readonly<{ companyId: string; canEdit: boolean; onDone: () => void }>) {
+}: Readonly<{
+  companyId: string;
+  anchor: boolean;
+  canEdit: boolean;
+  onDone: () => void;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const fieldId = useId();
@@ -251,7 +267,7 @@ function AddFactForm({
 
   const add = useMutation({
     mutationFn: async (stated: { field: string; value: string }) => {
-      const [category, name] = stated.field.split(":");
+      const [category, name = ""] = stated.field.split(":");
       unwrap(
         await api.POST("/companies/{id}/facts", {
           params: { path: { id: companyId } },
@@ -264,7 +280,7 @@ function AddFactForm({
       );
     },
     onSuccess: async () => {
-      await settleFacts(queryClient, companyId);
+      await settleFacts(queryClient, { id: companyId, is_anchor: anchor });
       setField("");
       setValue("");
       onDone();
@@ -333,12 +349,11 @@ function refusal(
 // mutation, which settles the same set.
 export async function settleFacts(
   queryClient: ReturnType<typeof useQueryClient>,
-  companyId: string,
+  company: Readonly<{ id: string; is_anchor: boolean }>,
 ) {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
-    queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
-    queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
+    queryClient.invalidateQueries({ queryKey: factsKey(company.id) }),
+    invalidateCompany(queryClient, company),
     queryClient.invalidateQueries({ queryKey: ["companies"] }),
   ]);
 }

@@ -4,9 +4,9 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import type { Screen } from "./app/router";
-import { forgetHashCredential } from "./app/router";
 import { LocaleProvider } from "./i18n";
+import type { Screen } from "./lib/router";
+import { forgetHashCredential } from "./lib/router";
 import { memoryStorage } from "./testing/appharness";
 
 // The two emailed links that carry a credential in the hash — the Deal Room's
@@ -17,8 +17,8 @@ import { memoryStorage } from "./testing/appharness";
 // stayed in the address bar and the history entry for as long as the
 // installation was mid-upgrade.
 //
-// The cases run TABLE-DRIVEN over both links, because the second link is how
-// the first one's fix was missed: a carrier added to app/router.tsx's table and
+// The cases run table-driven over both links, because the second link is how
+// the first one's fix was missed. A carrier added to lib/router.tsx's table and
 // not to this one is a carrier nobody proved anything about.
 //
 // Each test asserts on `location.hash` at a moment fixed with respect to the
@@ -27,8 +27,8 @@ import { memoryStorage } from "./testing/appharness";
 // The bundle's own release, which is empty in every local build and therefore
 // never skews. Supplied so the gate can be put into the one state this suite is
 // about; the probe, the comparison and the screen are all the real ones.
-vi.mock("./app/release", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./app/release")>()),
+vi.mock("./lib/release", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./lib/release")>()),
   SPA_RELEASE: "1970.41",
 }));
 

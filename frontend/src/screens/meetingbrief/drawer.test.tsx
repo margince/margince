@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jsonResponse, StoryProviders } from "../story-utils";
+import { jsonResponse, StoryProviders } from "../../testing/story-utils";
 import { ContactMeetingBrief } from "./drawer";
 import { briefReady } from "./fixtures";
 

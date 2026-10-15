@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ENTITY } from "../app/entity";
-import { routeHash } from "../app/router";
-import type { UrlParams } from "../app/urlstate";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
+import { ENTITY } from "../lib/entity";
+import { routeHash } from "../lib/router";
+import type { UrlParams } from "../lib/urlstate";
 import { subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";

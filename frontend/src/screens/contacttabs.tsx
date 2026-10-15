@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { GroupedTimelineList } from "../design-system/composed";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -9,7 +8,9 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { groupChronology } from "../design-system/timelinegroups";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { MeetingBriefAction } from "./contactmeetings";
 import { timelineState } from "./contacttimelinestate";
 import { RecordHistoryTab } from "./history";
@@ -22,9 +23,8 @@ import {
 } from "./recordchronology";
 import { ConversationList, useChronologyCut } from "./recordconversations";
 import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 import "./contact360.css";
-import { invalidateRecord } from "./recordwritekeys";
+import { invalidateRecord } from "../lib/recordwritekeys";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
 // rule the overview cards hold to (contactcards.tsx): a tab can never show a

@@ -5,27 +5,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
 import { type ReactNode, useEffect, useId } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanMutate } from "../app/capability";
+import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import {
+  QueryGate,
+  type QueryLike,
+  QueryStates,
+} from "../design-system/querystates";
+import { INTL_LOCALE } from "../format/format";
+import { objectLabel } from "../format/rbacobjects";
+import { useLocale, useT } from "../i18n";
+import { useCan, useCanMutate } from "../lib/capability";
 import {
   composedScreens,
   EXTENSION_SCREEN,
   findExtension,
-} from "../app/extensions";
-import { routeHash } from "../app/router";
-import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
-import { INTL_LOCALE } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemMessageOf,
-  QueryGate,
-  type QueryLike,
-  QueryStates,
-  useMe,
-} from "./common";
+} from "../lib/extensions";
+import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import "./extension-access.css";
 import {
   EXTENSIONS_KEY,
@@ -350,17 +349,6 @@ function UnitCard({
   );
 }
 
-// Not translated: the contract carries no label for an extension's object, so
-// its key, less the unit's own prefix, is the only name there is.
-export function objectLabel(unit: string, object: string): string {
-  const prefix = `ext_${unit}_`;
-  const bare = object.startsWith(prefix)
-    ? object.slice(prefix.length)
-    : object.replace(/^ext_/, "");
-  const words = (bare || unit).replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
 // Built-in and custom roles are told apart only where both kinds stand in the
 // grid. The mark goes on the fewer of the two, so it says what differs.
 function roleBadges(
@@ -505,7 +493,7 @@ function ObjectMatrix({
       <PanelGroupHead title={label} level="h3" id={headId} />
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
-        rows={rows}
+        sections={[{ key: object, rows }]}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
         name={{ labelledBy: headId }}

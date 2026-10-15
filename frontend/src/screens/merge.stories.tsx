@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { MergeAction } from "./merge";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // MergeAction owns its own open/search/target state — a play() interaction
 // opens the dialog, types a search term (past the 250ms debounce), and

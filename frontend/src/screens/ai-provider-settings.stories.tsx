@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProviderSettingsForm } from "./ai-provider-settings";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // One provider's own settings, under its key on the provider sheet. They are
 // the host for a broker, Gemini, Anthropic or a decision server, OpenRouter's

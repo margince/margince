@@ -202,16 +202,17 @@ func squashedCompanyName(name string) string {
 	return strings.Join(strings.FieldsFunc(companyNameForMatching(name), nameWordSeparators), "")
 }
 
-// sharesADistinctiveWord is the gate itself: may these two names be scored?
+// sharesADistinctiveWord is formsShareADistinctiveWord over raw names.
+func sharesADistinctiveWord(a, b string) bool {
+	return formsShareADistinctiveWord(companyNameFormOf(a), companyNameFormOf(b))
+}
+
+// formsShareADistinctiveWord is the gate itself: may these two names be scored?
 //
 // The SQUASHED NAME is asked first, because compounding hides a shared word
 // rather than removing it — "DigitalOcean" is one token and shares no word with
 // "Digital Ocean". The TOKEN PASS then asks whether they share a word that means
 // something.
-func sharesADistinctiveWord(a, b string) bool {
-	return formsShareADistinctiveWord(companyNameFormOf(a), companyNameFormOf(b))
-}
-
 func formsShareADistinctiveWord(a, b companyNameForm) bool {
 	// An EMPTY squashed name is not a match with another empty one: two names
 	// made entirely of punctuation have said nothing about being one company.

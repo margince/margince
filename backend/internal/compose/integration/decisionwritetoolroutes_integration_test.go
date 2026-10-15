@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // filedPair makes two contacts that share a phone, so the second file the pair,
@@ -154,7 +154,7 @@ type sharedPreviewReport struct {
 // A lead file previewed and then committed is the same run over either door: the
 // same report, and the same leads landed.
 func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
-	d := newTwoDoorsWith(t, "import-write-doors", []compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read", "write")
+	d := newTwoDoorsWith(t, "import-write-doors", nil, "read", "write")
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
 	csv := func(prefix string) string {
 		return "Email,Full Name\n" + prefix + "-one@imports.test," + prefix + " One\n" + prefix + "-two@imports.test," + prefix + " Two\n"
@@ -167,6 +167,8 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 	restRun := d.restStatus(t, "POST", "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef, "mapping": mapping,
 	}, http.StatusAccepted)
+	// One agent tests one run at a time, so the route's test ends before the tool's starts.
+	importjobtest.Drain(t, d.e)
 	toolRun := d.tool(t, "preview_import", map[string]any{"object": "lead", "csv": csv("tool"), "mapping": mapping})
 	var previewed struct {
 		Run struct {
@@ -182,6 +184,7 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 	if err := json.Unmarshal(restRun, &viaRESTRun); err != nil || viaRESTRun.Status != previewed.Run.State {
 		t.Errorf("the route's run is %q (%v) and the tool's %q, want the same state", viaRESTRun.Status, err, previewed.Run.State)
 	}
+	importjobtest.Drain(t, d.e)
 	report := func(id string) json.RawMessage {
 		return d.restStatus(t, "GET", "/v1/imports/"+id+"/report", nil, http.StatusOK)
 	}
@@ -194,6 +197,7 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	d.restStatus(t, "POST", "/v1/imports/"+viaREST+"/approve", nil, http.StatusAccepted)
 	d.tool(t, "commit_import", map[string]any{"run_id": viaTool})
+	importjobtest.Drain(t, d.e)
 	if got := leadCount(t, d.e); got != 4 {
 		t.Errorf("the two commits landed %d leads, want the 4 in the two files", got)
 	}

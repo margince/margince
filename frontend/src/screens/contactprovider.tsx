@@ -11,7 +11,6 @@ import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { type Fact, FactList } from "../design-system/factlist";
@@ -20,10 +19,12 @@ import {
   ProviderMark,
   providerBrandName,
 } from "../design-system/provider-mark";
+import { WriteRefused } from "../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { useBoughtSource } from "./boughtmarks";
-import { unwrap, WriteRefused } from "./common";
 import { useContact360 } from "./contact360";
 import { LookupRunning } from "./contactprovider.notices";
 import { categoryNames, categoryNamesTogether } from "./provider-categories";

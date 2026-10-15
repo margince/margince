@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { EvidenceVerdict, profileFieldClaim } from "./evidenceverdict";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { EvidenceVerdict, profileFieldClaim } from "./evidenceverdict";
 
 // The two verbs a human has over a machine's claim, and the states a press puts
 // them in. Both write through the REAL claim builder and the real endpoints:
@@ -55,6 +55,7 @@ function verdict(routes: RouteMap = {}) {
       <StoryProviders>
         <EvidenceVerdict
           companyId={COMPANY}
+          anchor={false}
           claim={profileFieldClaim(COMPANY, EXTRACTED)}
           canEdit
         />
@@ -219,6 +220,7 @@ export const SetByAnAgent: Story = {
       <StoryProviders>
         <EvidenceVerdict
           companyId={COMPANY}
+          anchor={false}
           claim={profileFieldClaim(COMPANY, { ...EXTRACTED, source: "agent" })}
           canEdit
         />

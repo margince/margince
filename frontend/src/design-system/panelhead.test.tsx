@@ -17,7 +17,7 @@ import {
 } from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 import { Card, SectionHeader } from "./atoms";
-import { Panel, PanelBody } from "./panel";
+import { Panel, PanelBody, PanelGroupHead } from "./panel";
 
 // A PANEL OR CARD HEAD IS A TITLE AND, OPTIONALLY, THE VERBS THAT ACT ON IT.
 // Never a description.
@@ -433,5 +433,38 @@ describe("a head title reads at one size however deeply it sits", () => {
     const title = headingAt("Purposes");
     expect(title.tagName).toBe("H3");
     expect(title.dataset.size).toBe("medium");
+  });
+});
+
+// The type size a heading's `data-size` stands for, read from the token sheet.
+function sizeRem(size: string | undefined): number {
+  const token = `--fontHeading${(size ?? "").replace(/^x*./, (lead) =>
+    lead.toUpperCase(),
+  )}`;
+  const tokens = withoutComments(
+    readFileSync(join(dsDir, "tokens.css"), "utf8"),
+  );
+  const declared = new RegExp(`${token}:[^;]*?([\\d.]+)rem\\s*/`).exec(tokens);
+  if (!declared) throw new Error(`tokens.css declares no ${token}`);
+  return Number(declared[1]);
+}
+
+// A group head labels the rows under it, at their size, so the pane keeps one
+// title. At the title's size the groups read as panes inside a pane.
+describe("a group head reads under the pane's title, at either level", () => {
+  it.each([["h3" as const], ["h4" as const]])("draws %s at xsmall", (level) => {
+    render(
+      <Panel title="Usage">
+        <PanelGroupHead title="Spend by task" level={level} id="spend" />
+      </Panel>,
+    );
+    const group = headingAt("Spend by task");
+    expect(group.tagName).toBe(level.toUpperCase());
+    expect(group.id).toBe("spend");
+    expect(group.dataset.size).toBe("xsmall");
+    const pane = headingAt("Usage");
+    expect(sizeRem(group.dataset.size)).toBeLessThan(
+      sizeRem(pane.dataset.size),
+    );
   });
 });

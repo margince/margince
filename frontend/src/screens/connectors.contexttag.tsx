@@ -4,8 +4,8 @@ import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
-import { useTagVocabulary } from "./tags.queries";
+import { unwrap } from "../lib/problem";
+import { useTagVocabulary } from "../lib/tags.queries";
 
 // The word a connector files what it captures under.
 //

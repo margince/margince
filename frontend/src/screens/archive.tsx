@@ -7,8 +7,8 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
-import "./common.css";
+import { problemMessageOf } from "../lib/problem";
+import "../design-system/querystates.css";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
 // soft-archives a contact/company/lead (sets archived_at; leads also

@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { KnowledgeCard } from "./knowledge";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { KnowledgeCard } from "./knowledge";
 
 // Settings → Knowledge → Document sets.
 //
@@ -65,6 +65,7 @@ const handbook: Corpus = {
     "How this installation is run, and what it promises the contacts who use it.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   coverage: {
     documents_total: 12,
     chunks_total: 1_180,
@@ -83,6 +84,7 @@ const priceBook: Corpus = {
     "What each line costs, and which discounts are ours to give.",
   min_similarity: 0.42,
   default_ask: false,
+  shipped: false,
   coverage: {
     documents_total: 4,
     chunks_total: 210,
@@ -101,10 +103,14 @@ function filed(
     id,
     corpus_id: SET_ID,
     filename,
+    title: null,
+    shipped: false,
     content_type: "text/markdown",
     byte_size: 4_096,
     ingest_status: status,
     chunk_count: 12,
+    chunks_embedded: status === "done" ? 12 : 0,
+    embed_state: status === "done" ? "complete" : "indexing",
     created_at: "2026-08-01T00:00:00Z",
   };
 }
@@ -248,6 +254,26 @@ export const DocumentsFiled: Story = {
   play: showDocuments,
 };
 
+// The set Margince ships: no archive verb and no dropzone, because the next
+// update files it again. Its pages are named by their headings.
+export const ShippedSet: Story = {
+  render: card(
+    sets(
+      administers,
+      [{ ...handbook, shipped: true }, priceBook],
+      documents([
+        {
+          ...searchable,
+          filename: "approvals.md",
+          title: "Approving agent proposals",
+          shipped: true,
+        },
+      ]),
+    ),
+  ),
+  play: showDocuments,
+};
+
 // A set created and not yet filled. This is the one absence on the screen that
 // IS honest — the set list itself never draws an empty state, because every
 // installation is filed with the operator handbook at boot and "no document
@@ -294,8 +320,8 @@ export const DeleteDocumentConfirm: Story = {
   },
 };
 
-// No embedding model is bound, so nothing is searchable. The row says so and
-// says why, instead of a quiet "0 of 1,180" beside documents that read fine.
+// No embedding model is bound, so nothing is searchable. The set says so and
+// why, once, instead of a quiet "0 of 1,180" beside documents that read fine.
 export const NoEmbeddingModel: Story = {
   render: card(
     sets(
@@ -310,7 +336,13 @@ export const NoEmbeddingModel: Story = {
           },
         },
       ],
-      documents([searchable]),
+      documents([
+        {
+          ...searchable,
+          chunks_embedded: 0,
+          embed_state: "no_embedding_model",
+        },
+      ]),
     ),
   ),
   play: showDocuments,

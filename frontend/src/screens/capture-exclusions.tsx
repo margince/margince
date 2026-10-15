@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -21,19 +20,21 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { useFolderOptions } from "./capture-exclusions.queries";
-import { PurgeDialog } from "./capture-purge-dialog";
-import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { useFolderOptions } from "./capture-exclusions.queries";
+import { PurgeDialog } from "./capture-purge-dialog";
+import { captureValueMessage } from "./capturevalue";
 import "./capture-exclusions.css";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
@@ -284,7 +285,14 @@ function ExclusionRow({
           <span className="capture-exclusions-value">{rule.value}</span>
         )
       }
-      description={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
+      description={[
+        words.scope[rule.scope],
+        words.kind[rule.kind],
+        rule.created_by_name &&
+          t("captureExclusions.addedBy", { name: rule.created_by_name }),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
       control={
         <span className="cell-actions" ref={verbs}>
           <OverflowMenu label={t("table.rowActions", { name: rule.value })}>

@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { StageMenu } from "./settings.stageverbs";
-import { StoryProviders, stubWithSession } from "./story-utils";
 
 // One stage's row menu on its own. A closing stage offers only Edit, because the
 // server refuses criteria and removal there.

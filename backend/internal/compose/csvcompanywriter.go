@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,10 +42,10 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		// A domain names one company across the estate, as an address names one
 		// contact. A row claiming a held one is a skip with a reason, not a
 		// failed run, so the rest of the file still lands.
-		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+		return skippedFor(domainClaimedWhy), nil
 	}
 	if linkedInClaimed(err) {
-		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
+		return skippedFor(linkedInClaimedWhy), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -54,8 +53,8 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// companyDomainAlreadyHeld answers whether the estate already holds this row's
-// domain, WITHOUT regard to which company holds it.
+// companyDomainHeld answers whether a live company other than except holds
+// this domain, without regard to which company holds it.
 //
 // Not visibility-filtered, and that is the opposite of the name-collision check
 // beside it — for the reason the contact email version gives. A duplicate NAME is
@@ -64,34 +63,19 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 // duplicate domain is not a judgement: the key is estate-wide, so the commit
 // refuses the row whoever holds the domain, and a preview promising a create
 // would simply be wrong.
-//
-// The reason text names the row's own value and never the incumbent.
-func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectCompany {
-		return false, nil
-	}
-	domain := strings.TrimSpace(textFields(row.Fields)[fieldDomain])
-	if domain == "" {
-		return false, nil
-	}
-	// Compared as the store will hold it, so a file spelling a URL does not read
-	// as a different domain from the host already on file.
-	domain = canonicalFor(fieldDomain, domain)
+func (w *csvWriters) companyDomainHeld(ctx context.Context, domain string, except *ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain WHERE domain = lower($1) AND archived_at IS NULL)`,
-			domain).Scan(&held)
+		return tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM company_domain
+			                WHERE domain = lower($1) AND archived_at IS NULL
+			                  AND ($2::uuid IS NULL OR company_id <> $2))`,
+			domain, except).Scan(&held)
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)
 	}
 	return held, nil
 }
-
-// linkedInClaimedReason is the report's word for a row whose LinkedIn URL
-// another live record holds. Like domainClaimedReason it names no incumbent.
-const linkedInClaimedReason = "this LinkedIn URL is already held by another record in the CRM, " +
-	"so the row cannot claim it"
 
 // linkedInClaimed reports whether the store refused a write because another
 // live company or lead holds its LinkedIn URL.
@@ -103,25 +87,30 @@ func linkedInClaimed(err error) bool {
 	return ok
 }
 
-// linkedInAlreadyHeld is linkedInClaimed asked before the write, so the
-// preview skips the row the commit will. A contact's handle is not a key.
-func (w *csvWriters) linkedInAlreadyHeld(ctx context.Context, typed map[string]any) (bool, error) {
-	url, ok := typed[fieldLinkedIn].(string)
-	if !ok || w.object == migration.ObjectContact {
-		return false, nil
-	}
+// companyLinkedInHeld is linkedInClaimed asked before the write, so the
+// preview skips the row the commit will.
+func (w *csvWriters) companyLinkedInHeld(ctx context.Context, url string, except *ids.UUID) (bool, error) {
 	var held bool
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		if w.object == migration.ObjectLead {
-			var err error
-			_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
-			return err
-		}
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL)`,
-			url).Scan(&held)
-	})
-	if err != nil {
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM company
+			                WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL
+			                  AND ($2::uuid IS NULL OR id <> $2))`,
+			url, except).Scan(&held)
+	}); err != nil {
+		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
+	}
+	return held, nil
+}
+
+// leadLinkedInHeld is the lead store's own probe, asked before a create.
+func (w *csvWriters) leadLinkedInHeld(ctx context.Context, url string) (bool, error) {
+	var held bool
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
+		return err
+	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
 	}
 	return held, nil

@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import { DraftOffer } from "./composedraftcontext";
-import { StoryProviders } from "./story-utils";
 // The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
 // which loads it.

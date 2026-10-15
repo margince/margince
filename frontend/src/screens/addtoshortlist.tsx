@@ -10,14 +10,14 @@ import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import {
   type ListRecordType,
   useChangeMember,
   useCreateList,
   useLists,
   useListsAvailable,
-} from "./lists.queries";
+} from "../lib/lists.queries";
+import { problemMessageOf } from "../lib/problem";
 
 /** The Select value that means "a Shortlist named in the box below". */
 const NEW_LIST = "__new__";
@@ -35,7 +35,13 @@ type AddInput = Readonly<{
 export function AddToShortlistAction({
   entityType,
   entityId,
-}: Readonly<{ entityType: ListRecordType; entityId: string }>) {
+  reasonId,
+}: Readonly<{
+  entityType: ListRecordType;
+  entityId: string;
+  // The page's sentence for a record that takes no changes, by id.
+  reasonId?: string;
+}>) {
   const t = useT();
   const available = useListsAvailable();
   const [open, setOpen] = useState(false);
@@ -44,7 +50,9 @@ export function AddToShortlistAction({
   }
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.addToShortlist")}</Button>
+      <Button reasonId={reasonId} onClick={() => setOpen(true)}>
+        {t("lists.addToShortlist")}
+      </Button>
       {open && (
         <AddToShortlistDialog
           entityType={entityType}

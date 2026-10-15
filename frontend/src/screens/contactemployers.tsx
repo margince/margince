@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
@@ -11,9 +10,10 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AddEmploymentModal } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
-import { problemMessageOf, unwrap } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,

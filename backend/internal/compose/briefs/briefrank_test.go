@@ -351,11 +351,10 @@ func queueDeals(queue []BriefQueueItem) []ids.UUID {
 // The evidence list is the DEAL row, then the activity rows behind momentum
 // and warmth — in that order, deduplicated.
 //
-// It is pinned because a consumer reads the shape rather than the values: the
-// agent surface charges every named row against the caller's read bound and has
-// to say what kind each one is, and the only thing that tells it is this
-// construction. A ranker that cited some other kind of row, or dropped the deal
-// from its own evidence, would have that consumer labelling rows wrongly with
+// It is pinned because a consumer reads the shape rather than the values. The
+// agent surface counts every named row as served and has to say what kind each
+// one is, and only this construction tells it. A ranker that cited another kind
+// of row, or dropped the deal from its evidence, would mislabel rows with
 // nothing failing.
 func TestBriefEvidenceIsTheDealThenItsActivityRows(t *testing.T) {
 	deal, overnight, warmth := uuidAt(1), uuidAt(2), uuidAt(3)

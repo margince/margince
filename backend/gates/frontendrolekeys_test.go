@@ -35,7 +35,7 @@ import (
 // two fixed-role helpers (useHoldsAdminRole, useHoldsOperatorSeat) that cover
 // authorities the RbacObject vocabulary does not name yet, and it documents
 // each as exceptional. Every other screen asks it, or asks useCan.
-const capabilityModule = "src/app/capability.ts"
+const capabilityModule = "src/lib/capability.ts"
 
 // roleKeyComparison matches a role key being COMPARED, not merely mentioned.
 //

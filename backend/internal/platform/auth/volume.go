@@ -10,8 +10,8 @@ package auth
 // they are the only ones that catch an agent doing something it was never
 // allowed to do. This one is the only one that catches an agent doing something
 // it IS allowed to do, at a volume nobody intended (api-rate-limits §2.5). It is
-// why an in-scope, correctly-tiered, read-only Passport reading the whole
-// workspace is a gated event rather than a Tuesday.
+// why an in-scope, correctly-tiered Passport calling in a loop is a gated event
+// rather than a Tuesday.
 //
 // This half REFUSES. The surface pays where records and effects leave it
 // (modules/agents), and a gate that could both admit and charge could admit
@@ -58,8 +58,8 @@ type VolumeExceededError struct {
 }
 
 // Releasable reports whether a human can answer this refusal — the difference
-// between BYO-STEP-1/2 (step-up and batch-confirm) and BYO-STEP-3/4 (hard stop
-// and suspension).
+// between BYO-STEP-2 (batch-confirm) and BYO-STEP-3/4 (hard stop and
+// suspension).
 func (e *VolumeExceededError) Releasable() bool { return e.Reading.Counter.Releasable() }
 
 // Unwrap makes every existing budget check see this as what it is.
@@ -75,18 +75,18 @@ func (e *VolumeExceededError) Unwrap() error { return apperrors.ErrBudgetExceede
 // somebody is looking at it would leave a REST caller waiting on an approval
 // that was never created.
 func (e *VolumeExceededError) Error() string {
-	what := "this agent"
+	lead := "this agent"
 	if e.Tool != "" {
-		what = e.Tool
+		lead = e.Tool + ": this agent"
 	}
 	if e.Releasable() {
 		return fmt.Sprintf(
-			"%s: this agent has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
-			what, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+			"%s has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
+			lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
 	}
 	return fmt.Sprintf(
-		"%s: this agent has spent %d of its %d %s for this window, and that limit holds until the window rolls; no approval lifts it",
-		what, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+		"%s has spent %d of its %d %s for this window, and that limit holds until the window rolls; no approval lifts it",
+		lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
 }
 
 // AdmitReplay is the admission a RECORDED answer takes before it is served
@@ -131,7 +131,13 @@ func (g *Gate) refuseOnVolume(ctx context.Context, spec mcp.ToolSpec) error {
 	if g.volume == nil {
 		return nil
 	}
-	for _, c := range []agentvolume.Counter{agentvolume.Calls, agentvolume.CounterFor(spec)} {
+	counters := []agentvolume.Counter{agentvolume.Calls}
+	// A read-only tool belongs to Calls itself, so asking twice would only repeat
+	// the same reading.
+	if own := agentvolume.CounterFor(spec); own != agentvolume.Calls {
+		counters = append(counters, own)
+	}
+	for _, c := range counters {
 		reading := g.volume.Read(ctx, c)
 		if reading.Exceeded {
 			return &VolumeExceededError{Tool: spec.Name, Reading: reading}

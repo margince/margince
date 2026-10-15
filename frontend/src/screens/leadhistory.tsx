@@ -10,7 +10,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { GroupedTimelineList } from "../design-system/composed";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -18,7 +17,10 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { groupChronology } from "../design-system/timelinegroups";
 import { useLocale, useT } from "../i18n";
+import { invalidateRecord } from "../lib/recordwritekeys";
+import { useRecordZone } from "../lib/recordzone";
 import { RecordHistoryTab } from "./history";
 import {
   ChronologyFilter,
@@ -28,9 +30,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { invalidateRecord } from "./recordwritekeys";
 import { TimelineActions } from "./timelineactions";
-import { groupChronology } from "./timelinegroups";
 
 type Lead = components["schemas"]["Lead"];
 

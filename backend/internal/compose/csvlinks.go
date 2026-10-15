@@ -38,7 +38,7 @@ type linkAnswer struct {
 	ID      ids.UUID
 	Pending bool
 	Found   bool
-	Reason  string
+	Why     migration.Reason
 }
 
 // resolves reports whether the link can be written when the run lands.
@@ -54,8 +54,8 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
-	// landed holds the rows of this run that named their record by id. They
-	// get no identity row, because undo archives every record the map names.
+	// landed holds the rows of this slice that named their record by id, so a
+	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
 	cache  map[linkKey]linkAnswer
 	// employers caches one answer per folded company name, bounded by the
@@ -83,10 +83,13 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 	return r
 }
 
-// linkNotFoundReason is the one sentence for a ref no step answers to, whether
+// linkNotFoundWhy is the one sentence for a ref no step answers to, whether
 // nothing carries it or only records the caller cannot see do.
-func linkNotFoundReason(ref string) string {
-	return fmt.Sprintf("no company with %q in this upload, in an earlier import, or in Margince", strings.TrimSpace(ref))
+func linkNotFoundWhy(object, ref string) migration.Reason {
+	if object == migration.ObjectContact {
+		return migration.Why(migration.ReasonContactNotFound, "ref", strings.TrimSpace(ref))
+	}
+	return migration.Why(migration.ReasonLinkNotFound, "ref", strings.TrimSpace(ref))
 }
 
 // markPending records a row the dry run predicts will land, so a later file's
@@ -143,7 +146,12 @@ func (r *linkResolver) markLanded(object, ref string, id ids.UUID) {
 // resolveCompany answers which company a link cell names. A ref is trimmed and
 // keeps its case, because it is an identifier.
 func (r *linkResolver) resolveCompany(ctx context.Context, raw string) (linkAnswer, error) {
-	key := linkKey{Object: migration.ObjectCompany, Key: strings.TrimSpace(raw)}
+	return r.resolveLink(ctx, migration.ObjectCompany, raw)
+}
+
+// resolveLink is resolveCompany for any object a link may name.
+func (r *linkResolver) resolveLink(ctx context.Context, object, raw string) (linkAnswer, error) {
+	key := linkKey{Object: object, Key: strings.TrimSpace(raw)}
 	if answer, ok := r.cache[key]; ok {
 		return answer, nil
 	}
@@ -167,7 +175,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 		return answer, err
 	}
 	// An ambiguous name stops here with its own reason: an id cannot carry it.
-	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Reason != "" {
+	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Why.Code != "" {
 		return answer, err
 	}
 	if _, parseErr := ids.Parse(key.Key); parseErr == nil {
@@ -175,7 +183,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 			return answer, err
 		}
 	}
-	return linkAnswer{Reason: linkNotFoundReason(key.Key)}, nil
+	return linkAnswer{Why: linkNotFoundWhy(key.Object, key.Key)}, nil
 }
 
 // bindingOf finds a row this source landed before, through the identity map,
@@ -213,8 +221,11 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 }
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
-// the one name it carries.
-func (r *linkResolver) naturalKeyOf(ctx context.Context, _, key string) (linkAnswer, error) {
+// the one name it carries. A contact's is its email address.
+func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
+	if object == migration.ObjectContact {
+		return r.visibleContactByEmail(ctx, key)
+	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
 		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))
@@ -235,7 +246,7 @@ func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	case hit.count == 1:
 		return linkAnswer{ID: hit.id.UUID, Found: true}
 	case hit.count > 1:
-		return linkAnswer{Reason: ambiguousEmployerReason(name)}
+		return linkAnswer{Why: ambiguousEmployerWhy(name)}
 	default:
 		return linkAnswer{}
 	}

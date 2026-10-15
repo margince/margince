@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PageAsideProvider, usePageAside } from "../app/pageaside";
+import { PageAsideProvider, usePageAside } from "../components/pageaside";
+import { StoryProviders } from "../testing/story-utils";
 import { ProjectTabs } from "./projecttabs";
-import { StoryProviders } from "./story-utils";
 
 // The strip on its own, away from the project page, because the thing to look
 // at is the ROW rather than the page under it: one tab that is already the

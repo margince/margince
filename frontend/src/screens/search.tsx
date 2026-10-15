@@ -5,9 +5,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { ENTITY } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
-import { navigate, routeHash } from "../app/router";
 import {
   groupSearchHits,
   SEARCH_FILTER_KEY,
@@ -19,18 +16,25 @@ import {
   searchHitHasCard,
   searchHitRoute,
 } from "../app/searchkinds";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Button, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
 import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import { LoadMoreButton, QueryGate, QueryStates, unwrap } from "./common";
+import { ENTITY } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate, routeHash, useRoute } from "../lib/router";
+import { useUrlParams } from "../lib/urlstate";
 import { companyTabRoute } from "./companytab";
-import { useOpenEmail } from "./openemail";
+import { type OpenHit, useSearchPanels } from "./searchpanels";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -68,14 +72,22 @@ function typeFilterFrom(value: string | undefined): TypeFilter {
   return SEARCH_HIT_ORDER.find((kind) => kind === value) ?? ALL_TYPES;
 }
 
+// The routed screen. The address's third segment picks the activity panel over
+// the email one, and only this screen reads it.
+export function SearchRoute(
+  props: Readonly<{ q: string; openActivityId?: string }>,
+) {
+  return <SearchScreen {...props} openAs={useRoute().id3} />;
+}
+
 export function SearchScreen({
   q,
   openActivityId,
-}: Readonly<{ q: string; openActivityId?: string }>) {
+  openAs,
+}: Readonly<{ q: string; openActivityId?: string; openAs?: string }>) {
   const t = useT();
   const [draft, setDraft] = useState(q);
-  const [openEmail, setOpenEmail] = useOpenEmail(openActivityId);
-  const zone = useRecordZone();
+  const { onOpen, drawers } = useSearchPanels(openActivityId, openAs);
   const [params, setParams] = useUrlParams();
   const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
 
@@ -145,24 +157,13 @@ export function SearchScreen({
             />
           </div>
           {filter === ALL_TYPES ? (
-            <GroupedResults
-              q={q}
-              onOpenEmail={setOpenEmail}
-              onNarrow={narrowTo}
-            />
+            <GroupedResults q={q} onOpen={onOpen} onNarrow={narrowTo} />
           ) : (
-            <NarrowedResults q={q} type={filter} onOpenEmail={setOpenEmail} />
+            <NarrowedResults q={q} type={filter} onOpen={onOpen} />
           )}
         </>
       )}
-      {/* One drawer over the whole results page, at page level rather than
-          inside a group: two mounted dialogs would be two `aria-modal`
-          elements, and the results stay legible behind the one that is open. */}
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
+      {drawers}
     </div>
   );
 }
@@ -171,11 +172,11 @@ export function SearchScreen({
 // the rest of any type the server says holds more.
 function GroupedResults({
   q,
-  onOpenEmail,
+  onOpen,
   onNarrow,
 }: Readonly<{
   q: string;
-  onOpenEmail: (activityId: string) => void;
+  onOpen: OpenHit;
   onNarrow: (type: SearchHitType) => void;
 }>) {
   const t = useT();
@@ -203,7 +204,7 @@ function GroupedResults({
         ) : (
           <SearchGroups
             results={data.data}
-            onOpenEmail={onOpenEmail}
+            onOpen={onOpen}
             more={{ types: data.types_with_more ?? [], onNarrow }}
           />
         )
@@ -216,11 +217,11 @@ function GroupedResults({
 function NarrowedResults({
   q,
   type,
-  onOpenEmail,
+  onOpen,
 }: Readonly<{
   q: string;
   type: SearchHitType;
-  onOpenEmail: (activityId: string) => void;
+  onOpen: OpenHit;
 }>) {
   const t = useT();
   const query = useInfiniteQuery({
@@ -250,7 +251,7 @@ function NarrowedResults({
         <EmptyState>{t("search.empty", { q })}</EmptyState>
       ) : (
         <>
-          <SearchGroups results={hits} onOpenEmail={onOpenEmail} />
+          <SearchGroups results={hits} onOpen={onOpen} />
           <LoadMoreButton query={query} />
         </>
       )}
@@ -260,11 +261,11 @@ function NarrowedResults({
 
 function SearchGroups({
   results,
-  onOpenEmail,
+  onOpen,
   more,
 }: Readonly<{
   results: SearchResult[];
-  onOpenEmail: (activityId: string) => void;
+  onOpen: OpenHit;
   // Which types hold more than is drawn, and how to show them. Absent on a
   // narrowed page, where the rest arrives by loading more instead.
   more?: Readonly<{
@@ -313,7 +314,7 @@ function SearchGroups({
                   <SearchHit
                     key={`${hit.type}:${hit.id}`}
                     hit={hit}
-                    onOpenEmail={onOpenEmail}
+                    onOpen={onOpen}
                   />
                 ))}
               </ul>
@@ -327,11 +328,8 @@ function SearchGroups({
 
 function SearchHit({
   hit,
-  onOpenEmail,
-}: Readonly<{
-  hit: SearchResult;
-  onOpenEmail: (activityId: string) => void;
-}>) {
+  onOpen,
+}: Readonly<{ hit: SearchResult; onOpen: OpenHit }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -348,7 +346,7 @@ function SearchHit({
         <EmailEntry
           summary={summary}
           timestamp={formatDateTime(summary.occurred_at, locale, zone)}
-          onOpen={() => onOpenEmail(summary.activity_id)}
+          onOpen={() => onOpen(summary.activity_id, "email")}
         />
       </li>
     );
@@ -359,25 +357,25 @@ function SearchHit({
   if (searchHitHasCard(type)) {
     return <RecordHit hit={hit} type={type} />;
   }
-  // Where this kind goes, asked of the one place that knows. A tag is not a
-  // record and a catalog row has no page of its own, and each used to be a
-  // branch spelled here as well as in the palette; an activity answers null
-  // because it is a link rather than a thing links hang off, and it renders as
-  // plain text.
+  // Where this kind goes, asked of the one place that knows. An activity has
+  // no page, so it opens in the panel beside the email one.
   const isTag = hit.type === "tag";
   const route = searchHitRoute(type, hit.id);
+  const opensPanel = !route && type === "activity";
+  const go = route
+    ? () => navigate(route)
+    : opensPanel && (() => onOpen(hit.id, "activity"));
   return (
     <li className="search-hit">
       <div className="search-hit-title">
-        {route ? (
-          // The search API already returns the hit's display name as
-          // `title` — routing through EntityRef here would re-fetch the
-          // same record per hit (an N+1 GET per result) just to re-derive
-          // a name we already have.
+        {go ? (
+          // The hit's own `title`, not EntityRef: that would re-fetch each
+          // record (one GET per hit) for a name the search already returned.
           <button
             type="button"
             className="entity-link"
-            onClick={() => navigate(route)}
+            aria-haspopup={opensPanel ? "dialog" : undefined}
+            onClick={go}
           >
             {hit.title ?? hit.id}
           </button>

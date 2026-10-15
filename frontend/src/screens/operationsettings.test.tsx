@@ -8,11 +8,11 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider, translate } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
 import { defaultOperations } from "./operationsettings.fixtures";
 
@@ -67,6 +67,13 @@ function render(
     <QueryClientProvider client={client}>
       <LocaleProvider>{node}</LocaleProvider>
     </QueryClientProvider>,
+  );
+}
+
+// The schedules sit behind a summary; the send-pacing card has none to open.
+async function openSchedules(user: UserEvent) {
+  await user.click(
+    await screen.findByText(translate("en", "operations.schedules.fold")),
   );
 }
 
@@ -131,6 +138,9 @@ describe("operation settings cards", () => {
       vi.stubGlobal("fetch", backend.fetchMock);
       const user = userEvent.setup();
       render(<Card />);
+      if (Card === BackgroundSchedulesCard) {
+        await openSchedules(user);
+      }
 
       const box = await screen.findByTestId<HTMLInputElement>(
         `operation-${property}`,
@@ -138,9 +148,7 @@ describe("operation settings cards", () => {
       expect(box.value).toBe(String(defaultOperations[property]));
       await user.clear(box);
       await user.type(box, `${bad}{Enter}`);
-      expect(
-        await screen.findByText(translate("en", "operations.refusal")),
-      ).toBeTruthy();
+      expect(box).toHaveAttribute("aria-invalid", "true");
       expect(backend.patches).toEqual([]);
 
       await user.clear(box);
@@ -151,18 +159,74 @@ describe("operation settings cards", () => {
     },
   );
 
-  // A bare 86400 hides a day; the reading follows the property's own unit, and
-  // a sweep's 0 reads as off rather than as zero seconds.
+  // The range is not repeated on every row; a refusal names it in the row's
+  // own unit, and the "0 is off" sweeps say so.
+  it.each([
+    [
+      "close_date_sweep_interval_seconds",
+      "59",
+      "operations.refusal.seconds",
+      { min: "3,600", max: "604,800" },
+    ],
+    [
+      "geocode_backfill_interval_seconds",
+      "299",
+      "operations.refusal.secondsOrOff",
+      { min: "300", max: "604,800" },
+    ],
+    [
+      "gmail_watch_renew_within_hours",
+      "145",
+      "operations.refusal.hours",
+      { min: "24", max: "144" },
+    ],
+  ] as const)(
+    "names %s's range only once a typed value breaks it",
+    async (property, bad, key, range) => {
+      vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR).fetchMock);
+      const user = userEvent.setup();
+      render(<BackgroundSchedulesCard />);
+      await openSchedules(user);
+
+      const refusal = translate("en", key, range);
+      const box = await screen.findByTestId<HTMLInputElement>(
+        `operation-${property}`,
+      );
+      expect(box).not.toHaveAccessibleDescription(
+        expect.stringContaining(range.max),
+      );
+      await user.clear(box);
+      await user.type(box, `${bad}{Enter}`);
+      expect(await screen.findByText(refusal)).toBeInTheDocument();
+    },
+  );
+
+  it("folds the schedules behind one summary", async () => {
+    vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR).fetchMock);
+    render(<BackgroundSchedulesCard />);
+
+    const summary = await screen.findByText(
+      translate("en", "operations.schedules.fold"),
+    );
+    expect(summary.closest("summary")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  // A bare 86400 hides a day. The reading names the box's unit and the span in
+  // words, and a sweep's 0 reads as off.
   it("reads each interval in words under its box, as typed", async () => {
     vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR).fetchMock);
     const user = userEvent.setup();
     render(<BackgroundSchedulesCard />);
+    await openSchedules(user);
 
     const daily = await screen.findByTestId<HTMLInputElement>(
       "operation-close_date_sweep_interval_seconds",
     );
     expect(daily).toHaveAccessibleDescription(
-      expect.stringContaining("= 1 day"),
+      expect.stringContaining("86,400 seconds = 1 day"),
     );
     const renew = screen.getByTestId<HTMLInputElement>(
       "operation-gmail_watch_renew_within_hours",

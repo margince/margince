@@ -147,6 +147,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			return created, patched
 		},
+		migration.ObjectDeal: dealRoundTrip,
 	} {
 		t.Run(object, func(t *testing.T) {
 			targets, err := importTargets(object, tierCatalog())
@@ -576,11 +577,12 @@ func TestColumnProfileReachesTheWireWithSamplesAndRate(t *testing.T) {
 // rather than left behind. A target absent from here must reach both the create
 // and the update input.
 var nonFieldTargets = gatekit.Waive(map[string]string{
-	csvTargetID:         "names the RECORD the row is — a selector, not a value",
-	csvEmployerName:     "names an EDGE from the record to a company — written as a relationship, not a column",
-	csvTargetCompanyRef: "names an EDGE from the record to a company by its ref — written as a relationship, not a column",
-	csvTargetRef:        "the row's id in the source system — the part's source key, not a value",
-	csvTargetTags:       "names tags applied beside the write and only ever added — never a column",
+	csvTargetID:          "names the RECORD the row is — a selector, not a value",
+	csvEmployerName:      "names an EDGE from the record to a company — written as a relationship, not a column",
+	csvTargetCompanyRef:  "names an EDGE from the record to a company by its ref — written as a relationship, not a column",
+	csvTargetRef:         "the row's id in the source system — the part's source key, not a value",
+	csvTargetTags:        "names tags applied beside the write and only ever added — never a column",
+	dealTargetContactRef: "names an EDGE from a deal to a contact — written as a stakeholder relationship, not a column",
 })
 
 // createOnlyTargets are columns the import writes when it creates a record and
@@ -588,7 +590,8 @@ var nonFieldTargets = gatekit.Waive(map[string]string{
 // reach NEITHER input: filing a create-only target there would hide it being
 // dropped on create.
 var createOnlyTargets = gatekit.Waive(map[string]string{
-	csvTargetAuthor: "who wrote the record where it came from is fixed when it lands; a later file does not rewrite it",
+	csvTargetAuthor:      "who wrote the record where it came from is fixed when it lands; a later file does not rewrite it",
+	dealTargetLostReason: "a lost reason is written when the deal closes; a later file does not rewrite a closed deal's reason",
 })
 
 func assertCreateOnlyTarget(t *testing.T, object, target string, created, patched map[string]bool) {

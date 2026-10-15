@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -81,19 +82,32 @@ func newBundleWriters(
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}
+	stages, err := runDealStages(ctx, db, parts, src)
+	if err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
-		w.owners, w.tagNames = b.owners, b.tags
+		w.owners, w.tagNames, w.dealStages = b.owners, b.tags, stages
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// runDealStages reads the pipelines a run's deal rows are checked against. An
+// undo, or a run with no deals file, checks no deal row and reads nothing.
+func runDealStages(ctx context.Context, db *database.DB, parts []migration.PartMapping, src migration.Source) (dealStages, error) {
+	if src == nil || !slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return p.Object == migration.ObjectDeal }) {
+		return dealStages{}, nil
+	}
+	return readDealStages(ctx, db)
 }
 
 // resolveOwnersAndTags reads every owner and tag cell of the run in import
@@ -168,44 +182,6 @@ func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy ma
 		}
 	}
 	return c.emails, c.names, nil
-}
-
-// bindNamedCompanies refills the ref of every company row the file names by id.
-// The binding lives in memory, so a resumed commit has none for the rows its
-// checkpoint passed. A contact linking to one would then find nothing.
-func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration.Source) error {
-	w, ok := b.parts[migration.ObjectCompany]
-	if !ok {
-		return nil
-	}
-	companies, err := partSourceOf(source, migration.ObjectCompany)
-	if err != nil {
-		return err
-	}
-	for offset := 0; ; offset += importPredictPage {
-		rows, err := companies.Rows(ctx, migration.ObjectCompany, offset, importPredictPage)
-		if err != nil {
-			return err
-		}
-		for _, row := range rows {
-			if target, lands := w.namedTarget(ctx, row); lands && target.named {
-				b.links.markLanded(migration.ObjectCompany, row.ExternalID, target.id)
-			}
-		}
-		if len(rows) < importPredictPage {
-			return nil
-		}
-	}
-}
-
-// namedTarget is the record a company row names by id, and whether the row
-// lands. It follows Ensure's order for a company row, which has no link to check.
-func (w *csvWriters) namedTarget(ctx context.Context, row migration.Row) (targetID, bool) {
-	if _, invalid := w.checkedCells(row); invalid != nil {
-		return targetID{}, false
-	}
-	target := w.targetIDOf(ctx, row)
-	return target, target.reason == ""
 }
 
 // part is the writer of one type. A run with no file of that type answers a

@@ -5,19 +5,29 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
-import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
-import { replaceDial, useUrlParams } from "../app/urlstate";
+import { useAssignableUserOptions } from "../components/assigneepicker";
+import { CreateAction } from "../components/create";
+import { useObjectCustomFields } from "../components/customfields.form";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
 import { SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { QueryGate } from "../design-system/querystates";
 import { useOwnToast } from "../design-system/toast";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useAssignableUserOptions } from "./assigneepicker";
-import { ProblemError, QueryGate, unwrap, useMe } from "./common";
-import { CreateAction } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
+import { ProblemError, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useMe } from "../lib/session";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { listQueryParams } from "../lib/tagfilter";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
 import { LeadBulkBar } from "./leadbulk";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
@@ -28,16 +38,8 @@ import {
   useLeadSettings,
   useLeadSources,
 } from "./leadsources";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
 import { mineEmptyNote, standardViews, useOwnerTagChips } from "./recordlist";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { listQueryParams } from "./tagfilter";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];

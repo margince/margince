@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
-import { LiveExplanation } from "./listexplain";
 import {
   LIVE_ID,
   listsMe,
@@ -11,8 +9,14 @@ import {
   liveWhy,
   MEMBER_ID,
   notOnLiveWhy,
-} from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+} from "../testing/lists.fixtures";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { LiveExplanation } from "./listexplain";
 
 // A Live List's filter judged for one record, clause by clause, with the
 // record's value beside each clause or "hidden" where the reader may not see it.

@@ -2,15 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
 import { Panel, PanelBody } from "../design-system/panel";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   AcceptSuggestionDialog,
   CompanySuggestions,
   DealSuggestionCard,
 } from "./dealsuggestion";
 import type { DealSuggestion } from "./dealsuggestions.queries";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // A Deal Scout suggestion: a deal the evidence says an account should have.
 // Drawn STAGED — the indigo edge and the agent's mark — because nobody has

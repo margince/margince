@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // A mailbox import is the one long run the AI-activity feed cannot carry, so
 // the rail reads it off the connections list instead (capture-progress.ts).
@@ -37,6 +37,7 @@ function mailbox(backfill?: BackfillStatus): Connector {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000c1",
     provider: "gmail",
+    can_backfill: true,
     status: "connected",
     scopes: [],
     account_label: "ada@acme.test",

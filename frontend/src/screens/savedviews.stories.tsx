@@ -3,10 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
-import type { ListQuery } from "./listquery";
+import type { ListQuery } from "../components/listquery";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SaveViewAction } from "./savedviews";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // A saved view is per-user list state, by name: saved beside a list's own
 // tools through the catalog's one naming dialog, and managed from the same

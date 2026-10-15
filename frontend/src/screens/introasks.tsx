@@ -12,7 +12,7 @@ import { useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
-import { useViewerId } from "./common";
+import { useViewerId } from "../lib/session";
 import { IntroDecisionDrawer } from "./introdecision";
 import {
   type IntroRequest,

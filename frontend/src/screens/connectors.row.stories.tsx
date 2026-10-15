@@ -6,9 +6,13 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { ConnectorRow } from "./connectors.row";
 import { ConnectionDrawer } from "./connectors.settings";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 import "./connectors.css";
 
 // One roster row per state. A healthy row carries no badge; a broken one says
@@ -19,6 +23,7 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 const gmail: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   scopes: [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -35,6 +40,7 @@ const gmail: CaptureConnection = {
 const gcalNoLabel: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c2",
   provider: "gcal",
+  can_backfill: false,
   status: "connected",
   scopes: ["https://www.googleapis.com/auth/calendar.events"],
   last_synced_at: "2026-07-23T09:10:00Z",
@@ -43,6 +49,7 @@ const gcalNoLabel: CaptureConnection = {
 const graphReauth: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c3",
   provider: "graph",
+  can_backfill: true,
   status: "reauth_required",
   scopes: ["Mail.Read"],
   account_label: "lars@example.de",
@@ -53,6 +60,7 @@ const graphReauth: CaptureConnection = {
 const imapError: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c4",
   provider: "imap",
+  can_backfill: false,
   status: "error",
   scopes: [],
   account_label: "sales@example.org",

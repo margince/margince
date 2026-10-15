@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { jsonResponse, meRoute } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import {
   bookingConnection,
@@ -6,7 +7,6 @@ import {
   bookingProfile,
 } from "./book.testkit";
 import { MeetingSettings } from "./meeting-settings";
-import { jsonResponse, meRoute } from "./story-utils";
 
 const meta: Meta<typeof MeetingSettings> = {
   title: "Settings/You/Meetings/Meeting settings",

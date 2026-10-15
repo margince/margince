@@ -53,7 +53,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
-		return migration.EnsureResult{Skipped: true, SkipReason: contactEmailClaimedReason}, nil
+		return skippedFor(contactEmailClaimedWhy), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -100,8 +100,8 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 	return err
 }
 
-// contactEmailIsClaimed answers whether the estate already holds this row's
-// address, WITHOUT regard to who holds it.
+// contactEmailHeld answers whether a live contact other than except holds this
+// address, without regard to who holds it. A create reads the page's answer.
 //
 // It is deliberately not visibility-filtered, and that is the opposite of the
 // rule the collision check below follows. The reason is that the two answer
@@ -116,27 +116,21 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 // why, and it does not: the reason names the row's own address, which the caller
 // supplied, and never the incumbent or their existence beyond the fact that this
 // address is spoken for.
-func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectContact {
-		return false, nil
-	}
-	email := strings.TrimSpace(textFields(row.Fields)[fieldEmail])
-	if email == "" {
-		return false, nil
-	}
-	if claimed, read := w.heldEmails[email]; read {
+func (w *csvWriters) contactEmailHeld(ctx context.Context, email string, except *ids.UUID) (bool, error) {
+	if claimed, read := w.heldEmails[email]; read && except == nil {
 		return claimed, nil
 	}
-	held, err := w.emailsHeld(ctx, []string{email})
+	held, err := w.emailsHeld(ctx, []string{email}, except)
 	if err != nil {
 		return false, err
 	}
 	return held[email], nil
 }
 
-// emailsHeld answers which of these addresses a live contact holds, in one
-// query. Postgres lowers each address, as the store's own key does.
-func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
+// emailsHeld answers which of these addresses a live contact other than except
+// holds, in one query. Postgres lowers each address, as the store's own key
+// does.
+func (w *csvWriters) emailsHeld(ctx context.Context, emails []string, except *ids.UUID) (map[string]bool, error) {
 	held := make(map[string]bool, len(emails))
 	for _, email := range emails {
 		held[email] = false
@@ -144,7 +138,9 @@ func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[strin
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT given FROM unnest($1::text[]) AS given
-			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = lower(given) AND archived_at IS NULL)`, emails)
+			 WHERE EXISTS (SELECT 1 FROM contact_email
+			                WHERE email = lower(given) AND archived_at IS NULL
+			                  AND ($2::uuid IS NULL OR contact_id <> $2))`, emails, except)
 		if err != nil {
 			return err
 		}
@@ -172,7 +168,7 @@ func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) e
 			emails = append(emails, email)
 		}
 	}
-	held, err := w.emailsHeld(ctx, emails)
+	held, err := w.emailsHeld(ctx, emails, nil)
 	if err != nil {
 		return err
 	}
@@ -188,42 +184,26 @@ func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher
 	}
 	return contacts.ContactCandidate{
 		FullName: contactFullName(fields), Emails: emails, ConsumerMail: consumerMail,
-		// The preview writes nothing and routes nothing, so it has no
-		// business filing a review pair for what it merely looked at.
+		// A collision check only reads, so it files no review pair for what it
+		// looked at. The create files its own.
 		QueueNameCollisions: false,
 	}
 }
 
-// leadEmailAlreadyHeld answers whether a live lead already holds this lead
-// row's address. Not visibility-filtered, for the reason the contact check
-// gives: the store refuses a second lead on one address whoever holds it.
-func (w *csvWriters) leadEmailAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectLead {
-		return false, nil
-	}
-	email := canonicalFor(fieldEmail, textFields(row.Fields)[fieldEmail])
-	if email == "" {
-		return false, nil
-	}
+// leadEmailHeld answers whether a live lead other than except holds this
+// address. Not visibility-filtered, for the reason the contact check gives:
+// the store refuses a second lead on one address whoever holds it.
+func (w *csvWriters) leadEmailHeld(ctx context.Context, email string, except *ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		_, found, err := storekit.LiveLeadByEmail(ctx, tx, email, nil)
-		held = found
+		holder, found, err := storekit.LiveLeadByEmail(ctx, tx, email, nil)
+		held = found && (except == nil || holder.UUID != *except)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)
 	}
 	return held, nil
 }
-
-// leadEmailClaimedReason names the row's own address and nothing about the
-// lead that holds it.
-const leadEmailClaimedReason = "this email address is already held by a lead in the CRM, so the row cannot create a second lead under it"
-
-// contactEmailClaimedReason is what the report says for such a row. It names the
-// address the file supplied and nothing else — not the incumbent, not their
-// owner, not whether the caller could have seen them.
-const contactEmailClaimedReason = "this email address is already held in the CRM, so the row cannot create a second contact under it"
 
 // contactCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.

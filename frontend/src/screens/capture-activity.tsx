@@ -6,30 +6,31 @@ import "./capture-activity.css";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import {
   Button,
   EmptyState,
   SegmentedControl,
   StatCard,
 } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import {
   Panel,
   PanelBody,
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
+import { throwProblem } from "../lib/problem";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";
 import { CaptureExclusionsCard } from "./capture-exclusions";
-import { QueryGate, throwProblem } from "./common";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { VerdictPassNote } from "./verdictpass";
 
 // Settings → Capture activity: what the pipeline did with the reader's own
@@ -168,31 +169,33 @@ function CaptureActivityWindow({
       <SettingList bleed="settings">
         {scopeRow}
         <QueryGate query={query} pendingLabel={t("captureActivity.title")}>
-          {(activity) => (
+          {({ pages: [firstPage] }) =>
             // The funnel counts the window, so it comes off the first page.
-            <SettingRow
-              label={t("captureActivity.outcomes")}
-              description={t("captureActivity.scopeNote")}
-              layout="stack"
-              control={
-                <>
-                  <CaptureFunnel
-                    funnel={activity.pages[0].funnel}
-                    selected={filter}
-                    onSelect={setFilter}
-                  />
-                  {/* Only while something waits; a cadence over nothing
-                      outstanding is furniture a reader learns to skip. */}
-                  {(activity.pages[0].funnel.deferred ?? 0) > 0 && (
-                    <VerdictPassNote
-                      clock={activity.pages[0].sender_verdict}
-                      subject="senders"
+            firstPage && (
+              <SettingRow
+                label={t("captureActivity.outcomes")}
+                description={t("captureActivity.scopeNote")}
+                layout="stack"
+                control={
+                  <>
+                    <CaptureFunnel
+                      funnel={firstPage.funnel}
+                      selected={filter}
+                      onSelect={setFilter}
                     />
-                  )}
-                </>
-              }
-            />
-          )}
+                    {/* Only while something waits; a cadence over nothing
+                      outstanding is furniture a reader learns to skip. */}
+                    {(firstPage.funnel.deferred ?? 0) > 0 && (
+                      <VerdictPassNote
+                        clock={firstPage.sender_verdict}
+                        subject="senders"
+                      />
+                    )}
+                  </>
+                }
+              />
+            )
+          }
         </QueryGate>
       </SettingList>
       {loaded && (
@@ -251,6 +254,7 @@ function CaptureLog({
   const t = useT();
   const { locale } = useLocale();
   const first = pages[0];
+  if (first === undefined) return null;
   const entries = pages.flatMap((page) => page.data);
   const shown = filter
     ? entries.filter((entry) => entry.outcome_now === filter)

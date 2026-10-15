@@ -8,7 +8,6 @@ import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import {
   type BoardColumn,
@@ -16,16 +15,18 @@ import {
   PipelineBoard,
 } from "../design-system/composed";
 import { ErrorLine } from "../design-system/errorline";
+import { LoadMoreButton } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, unwrap } from "./common";
 import {
   LEAD_STATUS_COUNTS_KEY,
   leadTerminalKey,
   leadWriteKeys,
-} from "./leadkeys";
+} from "../lib/leadkeys";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { openTaskCountLabel } from "./leadopentasks";
 import { DisqualifyDialog } from "./leads.disqualify";
 import { QualifyDialog } from "./leads.qualify";

@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { BoardDeal, BoardMoneyColumn } from "../design-system/composed";
-import { DealPipelineBoard } from "./dealpipelineboard";
+import { WriteToProvider } from "../lib/writeto";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
-import { WriteToProvider } from "./writeto";
+} from "../testing/story-utils";
+import { DealPipelineBoard } from "./dealpipelineboard";
 
 // The deals board with the screen's half of every card: the verbs, and the
 // summary drawer the first of them opens. The cards' own states are canvased in
@@ -123,6 +123,7 @@ const openSummary: Story["play"] = async ({ canvasElement }) => {
   const [first] = await canvas.findAllByRole("button", {
     name: /^Deal summary:/,
   });
+  if (!first) throw new Error("the board drew no deal summary");
   await userEvent.click(first);
   const page = within(canvasElement.ownerDocument.body);
   await expect(

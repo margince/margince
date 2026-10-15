@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { company360 } from "./company.fixtures";
 import { CompanyLastOffer } from "./companycommercial";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The account's commercial reading: the last offer put in front of it, named
 // off its own leading open deal. `leadingDeal` and `offerAmount` carry their

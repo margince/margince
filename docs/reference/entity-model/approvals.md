@@ -6,11 +6,12 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-30 columns · primary key `(id)` · referenced by 4 foreign keys
+32 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `acknowledged_effect_failed_at` | `timestamp with time zone` |  |  |
 | `bundle_id` | `uuid` |  | The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. |
 | `co_target_entity_id` | `uuid` |  |  |
 | `co_target_entity_type` | `text` |  |  |
@@ -23,6 +24,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `diff_hash` | `text` | yes | Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect. |
 | `effect_failed_at` | `timestamp with time zone` |  | When the work an APPROVED decision released failed to run. |
 | `effect_failure` | `text` |  | The sentence a reader is shown about that failure, written for them and never copied from the executor's error. |
+| `effect_ran_at` | `timestamp with time zone` |  |  |
 | `evidence` | `jsonb` |  | Per-claim evidence (snippet + source id) backing the proposal. |
 | `expires_at` | `timestamp with time zone` | yes | When the staged action expires unactioned (mirrors approval.requested.expires_at). |
 | `kind` | `text` | yes | Examples: coldstart \| send_email \| advance_deal \| promote_lead \| overnight \| deal_follow_up \| commitment_task. |

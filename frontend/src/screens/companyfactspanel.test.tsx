@@ -97,6 +97,7 @@ function mount(node: ReactNode) {
       <LocaleProvider initial="en">{node}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 afterEach(() => {
@@ -133,7 +134,7 @@ describe("the facts a contact can state and take away", () => {
         }),
       ),
     ]);
-    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" anchor={false} canEdit />);
 
     expect(await screen.findByText("Fleet Manager — telematics")).toBeTruthy();
     // Counted rather than sampled: an assertion on one row passes whenever the
@@ -162,7 +163,7 @@ describe("the facts a contact can state and take away", () => {
         version: 7,
       }),
     ]);
-    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" anchor={false} canEdit />);
 
     await user.click(await screen.findByRole("button", { name: /Remove ISO/ }));
     const dialog = await screen.findByRole("dialog");
@@ -189,7 +190,7 @@ describe("the facts a contact can state and take away", () => {
   it("states a new fact with the category its field belongs to", async () => {
     const user = userEvent.setup();
     const calls = stub([]);
-    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" anchor={false} canEdit />);
 
     await user.click(await screen.findByRole("button", { name: "Add fact" }));
     await user.click(screen.getByRole("combobox"));
@@ -210,6 +211,31 @@ describe("the facts a contact can state and take away", () => {
     });
   });
 
+  it.each([
+    { anchor: true, stale: true },
+    { anchor: false, stale: false },
+  ])(
+    "stales the settings company profile after a stated fact only when anchor is $anchor",
+    async ({ anchor, stale }) => {
+      const user = userEvent.setup();
+      const calls = stub([]);
+      const client = mount(
+        <CompanyFactsPanel companyId="o-1" anchor={anchor} canEdit />,
+      );
+      client.setQueryData(["company"], {});
+
+      await user.click(await screen.findByRole("button", { name: "Add fact" }));
+      await user.click(screen.getByRole("combobox"));
+      await user.click(await screen.findByRole("option", { name: "Customer" }));
+      await user.type(screen.getByLabelText("Value"), "Kaufhaus Norde");
+      await user.click(screen.getByRole("button", { name: "Save fact" }));
+      await waitFor(() => expect(screen.queryByLabelText("Value")).toBeNull());
+
+      expect(calls.some((one) => one.method === "POST")).toBe(true);
+      expect(client.getQueryState(["company"])?.isInvalidated).toBe(stale);
+    },
+  );
+
   it("refuses a reader who may not write, once, and issues no request", async () => {
     const user = userEvent.setup();
     const calls = stub([
@@ -219,7 +245,14 @@ describe("the facts a contact can state and take away", () => {
         value: "1998",
       }),
     ]);
-    mount(<CompanyFactsPanel companyId="o-1" canEdit={false} reasonId="why" />);
+    mount(
+      <CompanyFactsPanel
+        companyId="o-1"
+        anchor={false}
+        canEdit={false}
+        reasonId="why"
+      />,
+    );
 
     expect(await screen.findByText("1998")).toBeTruthy();
     // No remove control at all: a viewer who may not change a set is not a

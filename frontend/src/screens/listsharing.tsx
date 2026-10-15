@@ -5,14 +5,14 @@
 // and said back the same way wherever one is shown. The server's rule is
 // auth.listSharingPredicate; this file only puts it into the reader's words.
 
+import { rosterMissLabel } from "../components/entityref";
+import { useRoster, useRosterPartial } from "../components/roster";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useMe } from "./common";
-import { rosterMissLabel } from "./entityref";
-import type { List } from "./lists.queries";
-import { useRoster, useRosterPartial } from "./roster";
+import type { List } from "../lib/lists.queries";
+import { useMe } from "../lib/session";
 
 const SHARINGS = ["private", "team", "workspace"] as const;
 

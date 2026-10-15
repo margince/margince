@@ -11,9 +11,9 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
-import { useInstallationSettings } from "../../app/uploadlimit";
+import { EntityRef, rosterOwnerName } from "../../components/entityref";
 import { Popover } from "../../design-system/popover";
+import { provenanceOf } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
@@ -21,14 +21,15 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { provenanceOf, useViewerId } from "../common";
+import { useMemberName } from "../../lib/membernames";
+import { useRecordZone } from "../../lib/recordzone";
+import { useViewerId } from "../../lib/session";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import {
   LostReasonFact,
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
-import { EntityRef, rosterOwnerName } from "../entityref";
-import { useMemberName } from "../membernames";
 import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];
@@ -271,15 +272,21 @@ function CloseReading({
   // Through the reader's own plural rule, so a deal closing tomorrow does not
   // read "in 1 days".
   const days = calendarDaysUntil(deal.expected_close_date, zone);
-  const parts: string[] = [
-    days < 0
-      ? translatePlural(locale, "deal.strip.close.overdue", -days, {
-          days: formatNumber(-days, locale),
-        })
-      : translatePlural(locale, "deal.strip.close.inDays", days, {
-          days: formatNumber(days, locale),
-        }),
-  ];
+  // A won or lost deal's date is when it closed, so it is neither late nor
+  // upcoming. Only an open deal gets a count.
+  const closed = deal.status === "won" || deal.status === "lost";
+  const parts: string[] = [];
+  if (!closed) {
+    parts.push(
+      days < 0
+        ? translatePlural(locale, "deal.strip.close.overdue", -days, {
+            days: formatNumber(-days, locale),
+          })
+        : translatePlural(locale, "deal.strip.close.inDays", days, {
+            days: formatNumber(days, locale),
+          }),
+    );
+  }
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
@@ -297,7 +304,7 @@ function CloseReading({
     <span className="deal-fact-close">
       <span
         className={
-          deal.close_date_provisional || days < 0
+          deal.close_date_provisional || (!closed && days < 0)
             ? "deal-fact-close-warn"
             : undefined
         }
@@ -320,7 +327,8 @@ const FORECAST_LABELS: Record<string, MessageKey> = {
 };
 
 function forecastLabel(value: string, t: (key: MessageKey) => string): string {
-  return Object.hasOwn(FORECAST_LABELS, value)
-    ? t(FORECAST_LABELS[value])
-    : value.replaceAll("_", " ");
+  const key = Object.hasOwn(FORECAST_LABELS, value)
+    ? FORECAST_LABELS[value]
+    : undefined;
+  return key === undefined ? value.replaceAll("_", " ") : t(key);
 }

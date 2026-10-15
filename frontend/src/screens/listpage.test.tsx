@@ -17,7 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
-import { ListScreen } from "./listpage";
+import type { List } from "../lib/lists.queries";
 import {
   chosenListing,
   exportDependencies,
@@ -34,15 +34,15 @@ import {
   SHORTLIST_ID,
   shortlist,
   visitAnswer,
-} from "./lists.fixtures";
-import type { List } from "./lists.queries";
+} from "../testing/lists.fixtures";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ListScreen } from "./listpage";
 
 const vocabulary = { resource: "company", fields: [] };
 

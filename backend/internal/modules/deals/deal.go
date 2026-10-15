@@ -48,6 +48,7 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 	ownerChanged := in.OwnerID != nil && (current.OwnerId == nil || ids.UUID(*current.OwnerId) != in.OwnerID.UUID)
 	if ownerChanged {
 		payload := crmcontracts.PublicEventDealOwnerChanged{ToOwnerId: openapi_types.UUID(in.OwnerID.UUID)}
+		payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 		if current.OwnerId != nil {
 			payload.FromOwnerId = current.OwnerId
 		}
@@ -63,7 +64,9 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 		rest[field] = v
 	}
 	if len(rest) > 0 {
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: rest}); err != nil {
+		updated := crmcontracts.PublicEventDealUpdated{ChangedFields: rest}
+		updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 			return fmt.Errorf("emit deal.updated: %w", err)
 		}
 	}
@@ -366,11 +369,36 @@ func (s *Store) rejectPastCloseDate(ctx context.Context, tx pgx.Tx, expectedClos
 	if err != nil {
 		return err
 	}
-	y, m, d := expectedClose.Date()
-	if time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today) {
+	if CloseDateIsPast(*expectedClose, today) {
 		return &PastCloseDateError{}
 	}
 	return nil
+}
+
+// CloseDateIsPast reports whether the day a close date names is before today,
+// UTC midnight as installationToday answers it. An import checks its rows with it.
+func CloseDateIsPast(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today)
+}
+
+// CloseDateIsFuture reports whether the day a close date names is after today,
+// as CloseDateIsPast reads the day. A deal cannot have closed on a day that has
+// not come.
+func CloseDateIsFuture(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).After(today)
+}
+
+// InstallationToday is today in the installation's reporting zone, the day a
+// close date is held against.
+func (s *Store) InstallationToday(ctx context.Context) (time.Time, error) {
+	var today time.Time
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		today, err = s.installationToday(ctx, tx)
+		return err
+	})
+	return today, err
 }
 
 // installationToday reads "today" as the installation's reporting zone sees it

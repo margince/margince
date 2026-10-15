@@ -9,8 +9,8 @@ import { useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
-import { type List, useArchiveList } from "./lists.queries";
+import { type List, useArchiveList } from "../lib/lists.queries";
+import { problemMessageOf } from "../lib/problem";
 
 type ListUse = NonNullable<List["dependencies"]>[number];
 

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { DrawerHead } from "../../design-system/drawerbands";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { briefModel, briefReady, meetingFacts, preparedFor } from "./fixtures";
 import { BriefHeader } from "./header";
 // The band's own sheet. The drawer reaches it through view.tsx; a story that

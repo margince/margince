@@ -89,10 +89,12 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
-	"automation_run":  {"open", "retry"},
-	"bounce":          {"open"},
-	"undelivered":     {"open"},
-	"failed_approval": {"open"},
+	"automation_run": {"open", "retry"},
+	"bounce":         {"open"},
+	"undelivered":    {"open"},
+	// Drawn by FailedApprovalAnswer: `acknowledge` posts the failure
+	// acknowledgement, and `retry` approves the row once more.
+	"failed_approval": {"open", "acknowledge", "retry"},
 	// Answered IN PLACE, like an approval: `keep` makes the company from the
 	// domain's own label and `discard` writes this reader's own capture
 	// exclusion. Neither needs anything typed, which is what lets a domain
@@ -299,7 +301,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(), Retryable: true,
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},

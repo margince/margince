@@ -2,10 +2,10 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Route } from "../app/router";
-import * as router from "../app/router";
 import { SettingsRail } from "../app/shell";
 import { translate } from "../i18n";
+import type { Route } from "../lib/router";
+import * as router from "../lib/router";
 import { SettingsScreen } from "./settings";
 import {
   expectSnapshotResolved,
@@ -109,7 +109,9 @@ describe("the settings access boundary", () => {
       expect(screen.queryByText(/no access to this settings page/i)).toBeNull(),
     );
     expect(
-      screen.getByText(translate("en", "settings.tab.audit")),
+      await screen.findByRole("group", {
+        name: translate("en", "settings.auditFilters"),
+      }),
     ).toBeTruthy();
   });
 });

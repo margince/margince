@@ -3,7 +3,7 @@
 
 import { Field, Textarea } from "../design-system/atoms";
 import { RichText } from "../design-system/richtext";
-import { useRichTextLabels } from "./richtextlabels";
+import { useRichTextLabels } from "../lib/richtextlabels";
 
 /**
  * An activity's body as a field: markdown edited as formatted text, as the

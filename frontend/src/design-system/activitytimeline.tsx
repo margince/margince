@@ -5,11 +5,6 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
-import { provenanceOf } from "../screens/common";
-import {
-  isTranscriptActivity,
-  TranscriptReadCard,
-} from "../screens/transcriptread";
 import type { TimelineEntry } from "./composed";
 import {
   type ContactOn,
@@ -18,6 +13,8 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
+import { provenanceOf } from "./provenanceof";
+import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -39,6 +36,15 @@ const TIMELINE_KINDS: readonly TimelineEntry["kind"][] = [
   "task",
   "message",
 ];
+
+// What a rep writes is markdown, for the timeline row and the activity panel
+// alike; a mail, a chat and a transcript stay text.
+const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
+export function writtenAsMarkdown(
+  entry: Pick<TimelineEntry, "kind" | "transcript">,
+): boolean {
+  return WRITTEN_KINDS.has(entry.kind) && !entry.transcript;
+}
 
 function timelineKind(kind: string): TimelineEntry["kind"] {
   const known = TIMELINE_KINDS.find((candidate) => candidate === kind);

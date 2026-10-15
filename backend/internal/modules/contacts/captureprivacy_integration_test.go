@@ -117,7 +117,8 @@ func setupCapturePrivacy(t *testing.T) *privacyEnv {
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
+		WithInstallationRenamer(ignoreInstallationName)
 	return e
 }
 

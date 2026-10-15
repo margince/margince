@@ -15,11 +15,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { JobHealthCard } from "./jobhealth";
 import { DeadWorkCallout } from "./jobhealthdead";
-import { tableRowCells } from "./tablerow.testkit";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -171,6 +171,23 @@ describe("JobHealthCard", () => {
     ).toBeInTheDocument();
     // 4,500 seconds is one hour in its largest whole unit, never "0 hr".
     expect(kind["Oldest wait"]).toHaveTextContent(/^1 hour$/);
+  });
+
+  it("names a kind it knows over its key, and shows an unknown kind's key once", async () => {
+    stubRoutes();
+    render(<JobHealthCard />);
+    const counted = await tableRowCells("This company", "capture_classify");
+    expect(within(counted.Job).getByText("Mail sorting")).toBeInTheDocument();
+    expect(within(counted.Job).getByText("capture_classify").tagName).toBe(
+      "CODE",
+    );
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(within(failure.Job).getByText("Mail sorting")).toBeInTheDocument();
+    const unnamed = await tableRowCells(
+      "Fleet dispatchers",
+      "retention_sweep_dispatch",
+    );
+    expect(unnamed.Job).toHaveTextContent(/^retention_sweep_dispatch$/);
   });
 
   it("states nothing is runnable rather than claiming a wait of zero", async () => {
@@ -436,30 +453,5 @@ describe("JobHealthCard", () => {
     // and a list of empty rows reports it three times as three.
     expect(screen.queryByText("This company")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent failures")).not.toBeInTheDocument();
-    // The stamp stands even here. An operator acting on "nothing is queued" is
-    // trusting a reading, and a reading with no time on it cannot be trusted.
-    expect(screen.getByText(/\bas of\b/i)).toBeInTheDocument();
-  });
-
-  it("dates the report in the card's own footer, and only when there is one", async () => {
-    stubRoutes({
-      "GET /me": () => jsonResponse(meFixture({ roles: ["ops"] })),
-    });
-    render(<JobHealthCard />);
-    await screen.findByText(
-      /background job health covers the whole installation/i,
-    );
-    // No report, no stamp: a time under a withheld body would date a reading
-    // this card is not showing.
-    expect(screen.queryByText(/\bas of\b/i)).not.toBeInTheDocument();
-    cleanup();
-
-    stubRoutes();
-    render(<JobHealthCard />);
-    // When the report was read belongs to the whole card rather than to any one
-    // reading in it, so it stands in the panel's own footer band rather than as
-    // one more line after the last row.
-    const stamp = await screen.findByText(/\bas of\b/i);
-    expect(stamp.closest("footer")).not.toBeNull();
   });
 });

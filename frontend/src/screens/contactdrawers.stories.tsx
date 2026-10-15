@@ -10,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 
 // The research drawer's own gallery. The tab gallery lives in
 // contactresearch.stories.tsx; this is the WIDE drawer a rep works inside — the
@@ -110,6 +110,7 @@ export const MappingAClaim: Story = {
     const [picker] = await within(dialog).findAllByRole("combobox", {
       name: "Profile field",
     });
+    if (!picker) throw new Error("the drawer shows no Profile field picker");
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "Role" }));
   },

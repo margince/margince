@@ -7,9 +7,11 @@ package contacts
 // read, derived once, because one name is scored against many.
 type companyNameForm struct {
 	value string
-	// matching is companyNameForMatching: what the gate and the score compare.
+	// matching is companyNameForMatching. An empty one takes no part in a
+	// pairing; scored is what the score compares.
 	matching string
 	scored   string
+	// squashed, tokens and syllabic are what the distinctive-word gate reads.
 	squashed string
 	tokens   []string
 	syllabic bool

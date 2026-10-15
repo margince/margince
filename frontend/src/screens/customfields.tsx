@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -18,12 +17,12 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, unwrap, useMe } from "./common";
-import { objectLabels, typeLabels } from "./customfields.labels";
+import { useCan, useCanWrite } from "../lib/capability";
 import {
   apiKey,
   CF_OBJECTS,
@@ -34,7 +33,10 @@ import {
   ddlPreview,
   looksStructural,
   slug,
-} from "./customfields.logic";
+} from "../lib/customfields.logic";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
   AuditRail,

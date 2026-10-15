@@ -1,18 +1,18 @@
 // Which of the two custom-field surfaces is for what: customfields.card.tsx.
 import type { ReactNode } from "react";
-import { useCanWriteRecord } from "../app/capability";
-import { Button } from "../design-system/atoms";
-import { OffsiteLink } from "../design-system/offsitelink";
-import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
 import {
   type CustomField,
   customFieldHref,
   useCustomFieldDisplay,
   useObjectCustomFields,
-} from "./customfields.form";
+} from "../components/customfields.form";
+import { type FieldRecord, RecordFields } from "../components/recordfields";
+import { Button } from "../design-system/atoms";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { saveRecordEdit } from "./recordedit";
-import { type FieldRecord, RecordFields } from "./recordfields";
 
 type Kind = "company" | "contact" | "deal" | "lead";
 export function RecordCustomFields({

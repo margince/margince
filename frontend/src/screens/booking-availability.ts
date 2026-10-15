@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
 import { bookingWindowCode, throwBookingProblem } from "./booking-errors";
 import type { useWorkingHours } from "./working-hours";
@@ -15,7 +16,7 @@ export function useInviteAvailability(
 ) {
   const t = useT();
   const { locale } = useLocale();
-  const now = Date.now();
+  const now = useNow(60_000);
   const earliest = now + (profile?.notice_minutes ?? 120) * 60000;
   const latest = now + (profile?.horizon_days ?? 30) * 86400000;
   const outsideHorizon = new Date(from).getTime() >= latest;

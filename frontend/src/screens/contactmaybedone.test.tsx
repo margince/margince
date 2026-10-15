@@ -7,8 +7,12 @@ import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../testing/story-utils";
 import { ContactToday } from "./contacttoday";
-import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
 // A promise card asking whether our last email kept it. Done is the reader's
 // word for it and completes the promise; Not yet puts the question away.

@@ -178,7 +178,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		// The capture paths are unaffected. They carry OwnerScoped on the spec
 		// and still mint an owner-scoped contact where privacy demands one — an
 		// unjudged sender, and an advisor's record among them.
-		Visibility:   visibilityWorkspace,
+		Visibility:   TypedCreateVisibility,
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,

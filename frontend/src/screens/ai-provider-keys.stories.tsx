@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiProviderKeysCard } from "./ai-provider-keys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card draws a credential surface, so what these stories are for is
 // checking what is NOT on screen: a configured provider must read as
@@ -97,12 +101,12 @@ const jevCompatible = {
   credential_kind: "api_key" as const,
 };
 
-const meta: Meta<typeof AiProviderKeysCard> = {
-  title: "Settings/AI/AI models/Model provider keys",
+const meta = {
+  title: "Settings/AI/AI models/Providers",
   component: AiProviderKeysCard,
-};
+} satisfies Meta<typeof AiProviderKeysCard>;
 export default meta;
-type Story = StoryObj<typeof AiProviderKeysCard>;
+type Story = StoryObj<typeof meta>;
 
 // One provider keyed, one not — the ordinary reading, and the one that has to
 // distinguish the two states without printing either key.
@@ -229,5 +233,44 @@ export const Tested: Story = {
       ),
     );
     await userEvent.click(await body.findByRole("button", { name: /^test$/i }));
+  },
+};
+
+// A boot that fell back to the offline fake. The status line says where
+// answers come from, beside the missing key.
+export const AnsweringFromTestProvider: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: { ai_routing: ["read", "update"], ai_diagnostics: ["read"] },
+          }),
+        ),
+      "GET /ai/provider-keys": () =>
+        jsonResponse({ providers: [{ ...gemini, configured: false }] }),
+      "GET /ai/routing": () => jsonResponse(ROUTING),
+      "GET /ai/provider-health": () =>
+        jsonResponse({ providers: [], configured: ["fake"] }),
+      "GET /ai/call-stats": () => jsonResponse({ rows: [] }),
+      "GET /ai/calls": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+          tasks: [],
+          task_options: [],
+          payload_capture_enabled: false,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <AiProviderKeysCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      "answering from the built-in test provider",
+    );
   },
 };

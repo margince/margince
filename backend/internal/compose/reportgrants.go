@@ -55,6 +55,22 @@ func grantedNames(ctx context.Context, spec reportSpec, vocabulary map[string]st
 	return out
 }
 
+// grantedFilters is the spec's filter vocabulary minus the names this caller
+// may not read, as the expression map the analytics schema publishes.
+//
+// It returns the map rather than the names grantedNames gives, because the
+// schema serves each field's SQL beside its name.
+//
+// Narrowed here and not in grantedSpec, which feeds the row fetch. A filter
+// dropped there would widen the result set rather than refuse it.
+func grantedFilters(ctx context.Context, spec reportSpec) map[string]string {
+	out := map[string]string{}
+	for _, name := range grantedNames(ctx, spec, spec.filters) {
+		out[name] = spec.filters[name]
+	}
+	return out
+}
+
 // grantedDefaultAggregates is the spec's default plan minus the measures the
 // caller may not read. A count over the report's own rows survives, so the
 // narrower seat still gets an answer rather than a refusal for a plan it never

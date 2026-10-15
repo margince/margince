@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { useLocale, useT } from "../../i18n";
-import { useMe } from "../common";
+import { useMe } from "../../lib/session";
 import { InstallationSetup } from "../installation-setup";
 import { OnboardingGate } from "../onboarding-gate";
 import { CompanyActArtifact } from "./artifact";
@@ -96,6 +96,7 @@ export function CompanyAct({
   const { startRead, siteRead, proposal, prevSnapshot } = useCompanyRead({
     dispatch,
     machine,
+    activeReadId: state.activeReadId,
     setDraft,
     setSelectedFactKeys,
     answers: clarify.answers,

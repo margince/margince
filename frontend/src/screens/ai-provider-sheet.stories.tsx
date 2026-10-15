@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiProviderKeysCard } from "./ai-provider-keys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The Providers list and the sheet behind each row: whether a vendor is active,
 // its credential, and the prices its models are billed at — with the form for a

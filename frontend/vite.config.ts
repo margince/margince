@@ -63,6 +63,7 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
   .filter((host) => host.length > 0);
 
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
+const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
 export default defineConfig({
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
@@ -75,8 +76,8 @@ export default defineConfig({
   // The release this bundle was built from, compiled IN.
   //
   // It has to be in the bundle rather than read at run time, because the reader
-  // of this value is a browser: the SPA compares its own release against the one
-  // the api reports and refuses to render when they differ (src/app/release.ts).
+  // of this value is a browser. The SPA compares its own release against the one
+  // the api reports and refuses to render when they differ (src/lib/release.ts).
   // A customer pulls each role image by tag, two tag pulls are two requests, and
   // a publish landing between them serves a web tier and an api from different
   // releases — a set the registry cannot refuse at the pull.
@@ -87,6 +88,7 @@ export default defineConfig({
   // browser. Empty is the local default, and empty disables the comparison.
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
+    __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:
@@ -231,13 +233,12 @@ export default defineConfig({
     // The DESKTOP viewport, stated rather than inherited.
     //
     // A list header folds its verbs into one overflow menu at or under
-    // NARROW_MAX_WIDTH (1100, app/viewport.ts), and it asks matchMedia. Under
-    // jsdom that question was never really asked: jsdom ships no matchMedia, so
-    // vitest.setup.ts installed a stub answering `matches: false` to everything
-    // — which happens to mean "not narrow", and every suite asserting a primary
-    // action on a list header rested on that accident. happy-dom ships a real
-    // matchMedia over a 1024-wide window, so the same suites saw the narrow
-    // arrangement and could not find a button that was in the overflow.
+    // NARROW_MAX_WIDTH (1100, lib/viewport.ts). It asks matchMedia. jsdom ships
+    // no matchMedia, so vitest.setup.ts installed a stub that answers
+    // `matches: false` to everything. That reads as "not narrow", and every suite
+    // that checks a primary action on a list header rested on it. happy-dom
+    // ships a real matchMedia over a 1024-wide window. There the same suites saw
+    // the narrow arrangement, with the button inside the overflow menu.
     //
     // 1280 is a desktop, which is the arrangement those suites are about. A
     // suite testing the folded one sets its own width; what must not happen

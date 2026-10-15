@@ -53,7 +53,7 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 				apperrors.ErrNotFound)
 		}
 		var rerr error
-		doc, rerr = readDocument(ctx, tx, documentID)
+		doc, rerr = readDocument(ctx, tx, documentID, s.embedIdentity())
 		return rerr
 	}); err != nil {
 		return crmcontracts.KnowledgeDocument{}, nil, err

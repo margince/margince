@@ -26,7 +26,7 @@ func TestAFindingNamesTheDealItIsAbout(t *testing.T) {
 	t.Parallel()
 	in := exception("deal", "Fleet retrofit")
 
-	wire := exceptionsToWire([]Exception{in})
+	wire := ExceptionsToWire([]Exception{in})
 
 	if len(wire) != 1 {
 		t.Fatalf("got %d rows, want one", len(wire))
@@ -56,7 +56,7 @@ func TestAFindingNamesTheDealItIsAbout(t *testing.T) {
 // empty one is a record they were not shown rather than a record with no name.
 func TestAFindingWithNoNameCarriesNoSubject(t *testing.T) {
 	t.Parallel()
-	wire := exceptionsToWire([]Exception{exception("deal", "")})
+	wire := ExceptionsToWire([]Exception{exception("deal", "")})
 
 	if wire[0].Subject != nil {
 		t.Errorf("an unnamed finding produced a subject: %+v", *wire[0].Subject)
@@ -72,7 +72,7 @@ func TestAFindingWithNoNameCarriesNoSubject(t *testing.T) {
 func TestAFindingOnAKindWithNoScreenNamesNoSubject(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"offer", "contract", "signal"} {
-		wire := exceptionsToWire([]Exception{exception(kind, "Named anyway")})
+		wire := ExceptionsToWire([]Exception{exception(kind, "Named anyway")})
 		if wire[0].Subject != nil {
 			t.Errorf("a %s finding produced a subject: %+v", kind, *wire[0].Subject)
 		}

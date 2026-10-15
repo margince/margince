@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import { useProviderHealth } from "./ai-provider-health";
 import {
@@ -35,8 +37,8 @@ import {
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
 import { providerUsage, useRouting } from "./ai-routing-query";
+import { ProvidersStatus } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
-import { problemMessageOf, QueryGate } from "./common";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -113,6 +115,10 @@ export function AiProviderKeysCard() {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
+              <ProvidersStatus
+                providers={list.providers}
+                routing={routing.data?.routing}
+              />
               <ProviderTable
                 providers={list.providers}
                 canManage={canManage}

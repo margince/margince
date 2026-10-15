@@ -94,7 +94,7 @@ function agentToolsBackend() {
             name: "search_records",
             title: "Search records",
             description:
-              'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+              "Find contacts, companies, deals, leads and projects by name.",
             required_scope: "read",
             tier: "auto_execute",
             egress: false,
@@ -242,8 +242,7 @@ function agentToolsWithPassportsBackend() {
           {
             name: "list_pipelines",
             title: "List pipelines and their stages",
-            description:
-              'Every pipeline with its live stages. (Governance: runs immediately; requires passport scope "read".)',
+            description: "Every pipeline with its live stages.",
             required_scope: null,
             tier: "auto_execute",
             egress: false,
@@ -365,8 +364,7 @@ describe("AgentToolsCard passport scoping", () => {
               {
                 name: "list_pipelines",
                 title: "List pipelines and their stages",
-                description:
-                  'Every pipeline with its live stages. (Governance: runs immediately; requires passport scope "read".)',
+                description: "Every pipeline with its live stages.",
                 required_scope: null,
                 tier: "auto_execute",
                 egress: false,

@@ -40,9 +40,35 @@ build_server_binaries() {
   local role
   for role in api worker migrate; do
     log "building $role"
-    (cd "$ROOT/backend" && GOWORK="$composition" go build -o "$OUT/bin/$role" "./cmd/$role")
+    local output
+    if ! output="$( (cd "$ROOT/backend" && GOWORK="$composition" go build -o "$OUT/bin/$role" "./cmd/$role") 2>&1 )"; then
+      printf '%s\n' "$output" >&2
+      exit 1
+    fi
+    refuse_stale_objects "$role" "$output"
     sign_binary "$OUT/bin/$role"
   done
+}
+
+# refuse_stale_objects <role> <build output> — a reused object compiled under a
+# newer floor than this bundle declares.
+#
+# The linker reports it and carries on, stamping the link with the floor we
+# asked for, so assert_min_os passes and the bundle's real floor is whichever
+# objects the cache handed over. macos-target.sh puts the floor in CGO_CFLAGS to
+# keep those objects out of the cache, and this is what notices if that stops
+# working: the warning is the only place the mismatch is visible.
+refuse_stale_objects() {
+  local role="$1" output="$2" stale
+  stale="$(printf '%s\n' "$output" | grep -c "was built for newer" || true)"
+  if [[ "$stale" != "0" ]]; then
+    printf '%s\n' "$output" >&2
+    echo "FAIL: $role reused $stale object(s) built for a newer macOS than $MACOS_MIN." >&2
+    echo "      The link is stamped $MACOS_MIN anyway, so the floor this bundle" >&2
+    echo "      declares would not be the floor it has. Build with an empty" >&2
+    echo "      GOCACHE, or check that macos-target.sh still exports CGO_CFLAGS." >&2
+    exit 1
+  fi
 }
 
 # The signed binaries, in build order. Read by verify_runnable_os below.

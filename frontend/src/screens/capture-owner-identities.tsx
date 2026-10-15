@@ -11,7 +11,6 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import {
@@ -20,20 +19,25 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
 import {
   type MutationOutcome,
-  neighbourVerb,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { captureValueMessage } from "./capturevalue";
 import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
@@ -87,76 +91,87 @@ function useAddIdentity() {
   });
 }
 
-type Declared = Pick<OwnerIdentity, "kind" | "value">;
+// The way back from one removal is the id it took away.
+type Withdrawal = Readonly<{ id: string }>;
+
+// The server words these for an API reader; the reader gets the catalog's.
+const RESTORE_REFUSALS = new Map<string, MessageKey>([
+  ["not_found", "ownerIdentities.restoreGone"],
+  ["removal_moved_on", "ownerIdentities.restoreMovedOn"],
+  ["identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+]);
 
 // On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
-function useRemoveIdentity(outcome: MutationOutcome<Declared | null>) {
+function useRemoveIdentity(outcome: MutationOutcome<Withdrawal | null>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (identity: OwnerIdentity): Promise<Declared | null> => {
+    mutationFn: async (identity: OwnerIdentity): Promise<Withdrawal> => {
       unwrap(
         await api.DELETE("/capture/owner-identities/{id}", {
           params: { path: { id: identity.id } },
         }),
       );
-      // Declaring it again restores a typed address. A learned one would come
-      // back as typed, so it offers no undo.
-      return identity.source === "user"
-        ? { kind: identity.kind, value: identity.value }
-        : null;
+      return { id: identity.id };
     },
     onError: outcome.onError,
-    onSuccess: (declared) => {
+    onSuccess: (withdrawal) => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
-      outcome.onSuccess(declared);
+      outcome.onSuccess(withdrawal);
     },
   });
 }
 
-function useRestoreIdentity(outcome: MutationOutcome<Declared>) {
+function useRestoreIdentity(outcome: MutationOutcome<Withdrawal>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (declared: Declared) => {
+    mutationFn: async (withdrawal: Withdrawal) => {
       unwrap(
-        await api.POST("/capture/owner-identities", {
-          body: { kind: declared.kind, value: declared.value },
+        await api.POST("/capture/owner-identities/{id}/restore", {
+          params: { path: { id: withdrawal.id } },
         }),
       );
     },
-    onError: outcome.onError,
-    onSuccess: (_, declared) => {
+    // A refusal can mean the address is already back, so the list reads again.
+    onError: (error) => {
       queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
-      outcome.onSuccess(declared);
+      outcome.onError(error);
+    },
+    onSuccess: (_, withdrawal) => {
+      queryClient.invalidateQueries({ queryKey: ["capture-owner-identities"] });
+      outcome.onSuccess(withdrawal);
     },
   });
 }
 
-function useIdentityRemoval() {
+function useIdentityRemoval(removed: string) {
   const t = useT();
-  const toasts = useUndoableRemoval<Declared>({
-    removed: t("ownerIdentities.removedToast"),
+  const toasts = useUndoableRemoval<Withdrawal>({
+    removed,
     restored: t("ownerIdentities.restoredToast"),
+    restoreRefused: (error) => {
+      const key = RESTORE_REFUSALS.get(problemCodeOf(error) ?? "");
+      return key ? t(key) : problemMessageOf(error, t);
+    },
   });
   const restore = useRestoreIdentity(toasts.restored);
   return useRemoveIdentity(
-    toasts.removed((declared) => restore.mutate(declared)),
+    toasts.removed((withdrawal) => restore.mutate(withdrawal)),
   );
 }
-
-// Outlives the dialog's close, so its title keeps the address while it fades.
-type Asking = Readonly<{ identity: OwnerIdentity; from: HTMLElement | null }>;
 
 export function OwnerIdentitiesCard() {
   const t = useT();
   const query = useOwnerIdentities();
-  const remove = useIdentityRemoval();
+  const removeTyped = useIdentityRemoval(t("ownerIdentities.removedToast"));
+  // A withdrawn delivered-to alias is refused from then on, and the notice says so.
+  const removeLearned = useIdentityRemoval(
+    t("ownerIdentities.removedLearnedToast"),
+  );
+  const removing = [removeTyped, removeLearned].find(
+    (removal) => removal.isPending,
+  )?.variables?.id;
   const [declaring, setDeclaring] = useState(false);
-  const [asking, setAsking] = useState<Asking | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  // Set once a confirmed removal lands; the dialog hands focus there on close.
-  const handoff = useRef<HTMLElement | null>(null);
   const addVerb = useRef<HTMLButtonElement>(null);
-  const landing = () => addVerb.current;
   return (
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
@@ -182,45 +197,17 @@ export function OwnerIdentitiesCard() {
         {(list) => (
           <IdentityRows
             list={list.data}
-            removing={remove.isPending ? remove.variables?.id : undefined}
-            landing={landing}
-            onRemove={(identity, from) => {
-              if (identity.source === "user") {
-                remove.mutate(identity);
-                return;
-              }
-              handoff.current = null;
-              setAsking({ identity, from });
-              setConfirmOpen(true);
-            }}
+            removing={removing}
+            landing={() => addVerb.current}
+            onRemove={(identity) =>
+              (identity.source === "delivered_to"
+                ? removeLearned
+                : removeTyped
+              ).mutate(identity)
+            }
           />
         )}
       </QueryGate>
-      <ConfirmModal
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title={t("ownerIdentities.removeLearnedTitle", {
-          value: asking?.identity.value ?? "",
-        })}
-        confirmLabel={t("ownerIdentities.removeConfirm")}
-        confirmVariant="danger"
-        pending={remove.isPending}
-        returnFocusTo={() => handoff.current}
-        onConfirm={() => {
-          if (asking) {
-            // Read now: the refetch can detach the row before the dialog closes.
-            const next = neighbourVerb(asking.from);
-            remove.mutate(asking.identity, {
-              onSuccess: () => {
-                handoff.current = next?.isConnected ? next : landing();
-              },
-              onSettled: () => setConfirmOpen(false),
-            });
-          }
-        }}
-      >
-        <p>{t("ownerIdentities.removeLearnedBody")}</p>
-      </ConfirmModal>
       {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );
@@ -263,7 +250,7 @@ function IdentityRows({
   list: OwnerIdentity[];
   removing: string | undefined;
   landing: () => HTMLElement | null;
-  onRemove: (identity: OwnerIdentity, from: HTMLElement | null) => void;
+  onRemove: (identity: OwnerIdentity) => void;
 }>) {
   const t = useT();
   if (list.length === 0) {
@@ -299,7 +286,7 @@ function IdentityRow({
   identity: OwnerIdentity;
   pending: boolean;
   landing: () => HTMLElement | null;
-  onRemove: (identity: OwnerIdentity, from: HTMLElement | null) => void;
+  onRemove: (identity: OwnerIdentity) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -322,7 +309,7 @@ function IdentityRow({
             pending={pending}
             label={t("ownerIdentities.remove", { value: identity.value })}
             icon={<Trash2 aria-hidden />}
-            onClick={() => onRemove(identity, verbs.current)}
+            onClick={() => onRemove(identity)}
           />
         </span>
       }

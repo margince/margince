@@ -11,9 +11,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DateFormatsProvider } from "../app/dateformats";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { formatDate } from "../format/format";
 import { LocaleProvider, useLocale } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Installation: the company's name, reporting zone and base
@@ -131,8 +131,7 @@ describe("InstallationSettingsCard", () => {
     // Read by every role: a rep reading amounts benefits from knowing which
     // currency they are in, and hiding the facts would buy nothing the server
     // does not already enforce.
-    expect(await screen.findByText("Brandt Automotive")).toBeTruthy();
-    expect(screen.getByText("Europe/Berlin")).toBeTruthy();
+    expect(await screen.findByText("Europe/Berlin")).toBeTruthy();
     expect(screen.getByText("EUR")).toBeTruthy();
 
     // The VERB is what a permission denies, and it says why through
@@ -142,11 +141,7 @@ describe("InstallationSettingsCard", () => {
       "Only an administrator or operations user can change these settings.",
     );
     expect(reason.id).not.toBe("");
-    for (const fact of [
-      /edit company name/i,
-      /edit reporting timezone/i,
-      /edit base currency/i,
-    ]) {
+    for (const fact of [/edit reporting timezone/i, /edit base currency/i]) {
       const edit = screen.getByRole("button", { name: fact });
       expect((edit as HTMLButtonElement).disabled).toBe(true);
       expect(edit.getAttribute("aria-describedby") ?? "").toContain(reason.id);
@@ -164,16 +159,29 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
-    const name = within(dialog).getByLabelText(/company name/i);
-    await user.clear(name);
-    await user.type(name, "Brandt Group");
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vilnius");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    // The currency and zone were never touched, so they must not appear in the
-    // patch: re-sending an unchanged base currency would ask the server to
-    // write a value that may be frozen, for a field the operator never edited.
-    await waitFor(() => expect(patch()).toEqual({ name: "Brandt Group" }));
+    // The currency was never touched, so it must not appear in the patch. An
+    // unchanged base currency may be frozen, and the server would refuse it.
+    await waitFor(() =>
+      expect(patch()).toEqual({ timezone: "Europe/Vilnius" }),
+    );
+  });
+
+  // The company profile owns the name; a second editor here would let the two drift.
+  it("does not offer the installation name", async () => {
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    expect(await screen.findByText("Europe/Berlin")).toBeTruthy();
+    expect(screen.queryByText("Brandt Automotive")).toBeNull();
+    expect(screen.queryByRole("button", { name: /name/i })).toBeNull();
   });
 
   // The row's Edit is beside a fact, so it has to land on that fact. Three
@@ -256,10 +264,10 @@ describe("InstallationSettingsCard", () => {
     // The same sentence inside the dialog, where the refused field is.
     expect(within(dialog).getByText(reason)).not.toBeNull();
     // The editor can still change everything else.
-    const name = within(dialog).getByLabelText(
-      /company name/i,
+    const zone = within(dialog).getByLabelText(
+      /reporting timezone/i,
     ) as HTMLInputElement;
-    expect(name.disabled).toBe(false);
+    expect(zone.disabled).toBe(false);
   });
 
   // Three facts, ONE record, one save. The server takes ONE sparse PATCH, so
@@ -286,12 +294,11 @@ describe("InstallationSettingsCard", () => {
     // No input on the card itself: a row is an answer, and the three of them
     // line up in one column for a reader auditing the installation.
     expect(panel.querySelectorAll("input")).toHaveLength(0);
-    for (const value of ["Brandt Automotive", "Europe/Berlin", "EUR"]) {
+    for (const value of ["Europe/Berlin", "EUR"]) {
       expect(within(panel).getByText(value)).toBeTruthy();
     }
 
-    const dialog = await openFrom(user, /edit company name/i);
-    expect(within(dialog).getByLabelText(/company name/i)).toBeTruthy();
+    const dialog = await openFrom(user, /edit reporting timezone/i);
     expect(within(dialog).getByLabelText(/reporting timezone/i)).toBeTruthy();
     expect(within(dialog).getByLabelText(/base currency/i)).toBeTruthy();
 
@@ -307,24 +314,24 @@ describe("InstallationSettingsCard", () => {
     expect(saves).toHaveLength(1);
     expect(dialog.contains(saves[0])).toBe(true);
 
-    const name = within(dialog).getByLabelText(/company name/i);
-    await user.clear(name);
-    await user.type(name, "Brandt Group");
     const zone = within(dialog).getByLabelText(/reporting timezone/i);
     await user.clear(zone);
     await user.type(zone, "Europe/Vilnius");
+    const base = within(dialog).getByLabelText(/base currency/i);
+    await user.clear(base);
+    await user.type(base, "CHF");
     await user.click(saves[0]);
 
     await waitFor(() =>
       expect(patch()).toEqual({
-        name: "Brandt Group",
         timezone: "Europe/Vilnius",
+        base_currency: "CHF",
       }),
     );
     // The write landing closes the form and puts the new answers on the rows,
     // which is the only visible confirmation a sparse patch can give.
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(await screen.findByText("Brandt Group")).toBeTruthy();
+    expect(await screen.findByText("Europe/Vilnius")).toBeTruthy();
   });
 
   // An editable field must LOOK editable. `.input` is what carries the border,
@@ -340,12 +347,8 @@ describe("InstallationSettingsCard", () => {
 
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
-    for (const label of [
-      /company name/i,
-      /reporting timezone/i,
-      /base currency/i,
-    ]) {
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    for (const label of [/reporting timezone/i, /base currency/i]) {
       const control = within(dialog).getByLabelText(label);
       expect(control.className.split(/\s+/)).toContain("input");
     }
@@ -391,23 +394,27 @@ describe("InstallationSettingsCard", () => {
     const user = userEvent.setup();
     const { fetchMock } = backendFor(SETTINGS_EDITOR, {
       refuse: [
-        { field: "name", code: "too_long", message: "That name is too long." },
+        {
+          field: "timezone",
+          code: "too_long",
+          message: "That zone is too long.",
+        },
       ],
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    const dialog = await openFrom(user, /edit company name/i);
-    const name = within(dialog).getByLabelText(/company name/i);
-    await user.type(name, " GmbH");
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    await user.type(zone, "/Extra");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    const refusal = await screen.findByText("That name is too long.");
+    const refusal = await screen.findByText("That zone is too long.");
     // One occurrence, and it is the FIELD's. A refusal drawn on the input AND
     // repeated in a paragraph below states one problem twice, and the paragraph
     // is the copy a reader learns to skip — so the blanket summary carries only
     // what no field claimed.
-    expect(screen.getAllByText("That name is too long.")).toHaveLength(1);
+    expect(screen.getAllByText("That zone is too long.")).toHaveLength(1);
     expect(refusal.className).toContain("field-error");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });

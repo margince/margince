@@ -9,11 +9,15 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import type { BoardDeal, BoardMoneyColumn } from "../design-system/composed";
 import { LocaleProvider } from "../i18n";
+import {
+  type WriteTo,
+  WriteToProvider,
+  type WriteToTarget,
+} from "../lib/writeto";
+import { meFixture } from "../testing/mefixture";
 import { DealPipelineBoard } from "./dealpipelineboard";
-import { type WriteTo, WriteToProvider, type WriteToTarget } from "./writeto";
 
 // What a card on the deals board offers without leaving the board, and that
 // each verb opens what the deal page opens rather than a copy of it.

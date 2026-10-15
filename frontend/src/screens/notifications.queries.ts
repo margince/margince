@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
 // The notification query-hook family: the centre's own reads and writes, in one

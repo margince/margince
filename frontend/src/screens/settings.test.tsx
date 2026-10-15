@@ -6,9 +6,10 @@ import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { AccountMenu } from "../app/account";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { allowance } from "./ai-admin.testkit";
 import { SIGN_OFF_QUERY } from "./composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import {
@@ -62,11 +63,9 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// A principal holding the model-price grants and NOTHING else: enough to reach
-// the two AI diagnostics pages and author the price table, and not enough for
-// the cards whose endpoints ask for the automation grant. Shared by the two
-// cases below, which are one claim asserted on the two addresses it now spans.
-function aiRateReaderBackend() {
+// A principal holding the allowance read and the model-price grants, without
+// `ai_diagnostics:read`. Shared by the cases below, one claim on two addresses.
+function allowanceReaderBackend() {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -74,24 +73,20 @@ function aiRateReaderBackend() {
         meFixture({
           roles: ["ops"],
           allow: {
-            // What opens both pages. The price grant authors the table on one
-            // of them but reaches neither on its own, so a fixture without this
-            // would be testing the access boundary.
+            // Not `ai_diagnostics:read`, which is what the spend and trace
+            // cards check: reach the page, be refused the card.
             //
-            // NOT `ai_diagnostics:read`, which is what the cards check — that
-            // is the whole fixture: reach the page, be refused the card. The
-            // cards asked `automation:update` before the runtime's spend got an
-            // object of its own.
-            //
-            // Usage opens on `ai_model_rate` alone, so this reader gets there
-            // and finds the spend withheld. Model calls asks for the same grant
-            // its card does, so there is no such state on that page any more:
-            // a reader who reaches it can read it. The case below therefore
-            // asserts the page is UNREACHABLE rather than reachable-and-empty.
+            // Usage opens on the allowance read, so this reader gets there and
+            // finds the spend withheld. Model calls asks for the same grant its
+            // card does, so the case below asserts that page is unreachable.
             ai_model_rate: ["read", "update"],
+            ai_budget: ["read"],
           },
         }),
       );
+    }
+    if (url.endsWith("/v1/ai/budget")) {
+      return jsonResponse(allowance);
     }
     const keyed = keyedEnvelope(url);
     if (keyed) {
@@ -471,30 +466,18 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 
-  // The spend cards follow `automation:update` rather than any AI-named object,
-  // so the principal here holds the model-price grants that open AI usage and
-  // nothing else: the read reaches the page, the write authors the price table on
-  // it, and the card whose endpoint would 403 keeps its place and says why.
-  //
-  // The five-tab strip that used to carry these is gone — each card is its own
-  // address now — so the two withheld readings are asserted on the two pages
-  // that hold them rather than one page's tabs.
+  // The allowance opens AI usage for this principal; the spend card beside it
+  // asks `ai_diagnostics:read`, so it keeps its place and says why.
   it("withholds the AI spend from a principal without the diagnostics read", async () => {
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("usage")} />);
 
-    // The model prices this grant authors are on screen...
-    await waitFor(() =>
-      expect(screen.getByText("AI model costs")).toBeTruthy(),
-    );
+    // The allowance this grant reads is on screen...
+    expect(await screen.findByText("Monthly AI allowance")).toBeTruthy();
     // ...and the card whose endpoint requires `ai_diagnostics:read` KEEPS its
     // place and says it is withheld. Absent, it would claim the installation had
-    // spent nothing — a statement about the data, where the truth is only about
-    // who may read it. No request is made for it, so a rep never hits a 403
-    // error box (GET /ai/usage).
-    expect(
-      await screen.findByText("Estimated AI spend and usage"),
-    ).toBeTruthy();
+    // spent nothing. No request is made for it (GET /ai/usage).
+    expect(screen.getByRole("heading", { name: "AI spend" })).toBeTruthy();
     expect(
       await screen.findByText(
         /only an administrator or operations user can see AI spend/i,
@@ -512,25 +495,15 @@ describe("SettingsScreen RBAC surfaces", () => {
     // address reaches the access BOUNDARY, and nothing about the trace appears.
     // If the page and the card ever diverge again this fails, which is the
     // right alarm.
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
-    // Waited on the BOUNDARY's own words rather than on an absence: the trace
-    // is missing before /me resolves too, so an absence alone would pass
-    // against a page that goes on to render it.
-    //
-    // It used to wait on Account's content, because a denied address silently
-    // landed there. It does not any more — the reader is told, and the address
-    // they were given is left in the bar for them to quote.
-    // Waited on content only a RESOLVED /me draws — the AI rate card this
-    // principal DOES hold — before asserting the denial beside it. The boundary
-    // is also what renders while the snapshot is in flight, so asserting it
-    // alone would pass against a page that goes on to render the trace.
+    // The boundary's own words come only once /me has resolved, so an absence
+    // asserted after them is not the absence of a page still loading.
     await waitFor(() =>
       expect(screen.getByText(/no access to this settings page/i)).toBeTruthy(),
     );
-    // The chrome agrees: no page is current, where the fallback used to mark
-    // Account.
-    expect(screen.queryByText("AI call trace")).toBeNull();
+    // A trace card mounted for this reader would say it is withheld.
+    expect(screen.queryByText(translate("en", "aicalls.withheld"))).toBeNull();
   });
 
   // The way off the boundary leads to the settings home, which is the address
@@ -538,7 +511,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // a second name for one place. Read from the catalog, so renaming the row
   // renames this link and cannot leave the two saying different things.
   it("names the way off the boundary with the sidebar's own word for it", async () => {
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
     const back = await screen.findByRole("link", {
       name: translate("en", "settings.home"),
@@ -689,11 +662,11 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    expect(screen.queryByLabelText("Actor")).toBeNull();
     cleanup();
 
-    // ...and the trail, on the address it moved to: its filters — in a
-    // disclosure now, closed on arrival — and an entry answering them.
+    // ...and the trail, on the address it moved to: its filters, open above
+    // the table, and an entry answering them.
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
@@ -705,11 +678,9 @@ describe("SettingsScreen restructured pages", () => {
       }),
     );
     renderSettings("audit");
-    expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
-    ).toBeTruthy();
-    expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
-    expect(await screen.findByText("update")).toBeTruthy();
+    const filters = await screen.findByRole("group", { name: "Filters" });
+    expect(within(filters).getByLabelText("Actor")).toBeVisible();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The WRITE opens it, editor included. The page absorbed a route that nothing
@@ -738,7 +709,7 @@ describe("SettingsScreen restructured pages", () => {
     // The surface they came for, which is now the whole page rather than one tab
     // of five sharing an address.
     expect(
-      await screen.findByRole("heading", { name: "Automations" }),
+      await screen.findByRole("heading", { name: "Configured automations" }),
     ).toBeTruthy();
   });
 
@@ -753,13 +724,11 @@ describe("SettingsScreen restructured pages", () => {
     });
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
-    expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("group", { name: "Filters" })).toBeTruthy();
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The other half, and the reason opening the page is not the whole answer: a

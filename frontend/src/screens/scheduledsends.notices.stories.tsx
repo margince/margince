@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { WriteRefused } from "../design-system/querystates";
 import { en } from "../i18n/en";
-import { WriteRefused } from "./common";
+import { StoryProviders } from "../testing/story-utils";
 import { QueueSkewNotice } from "./scheduledsends.notices";
-import { StoryProviders } from "./story-utils";
 
 // What the scheduled queue says about itself. Read side by side because the
 // pair is the point: the milder notice is the one that carries a verb, and the

@@ -11,11 +11,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
-// Settings → AI → Model provider keys.
+// Settings → AI → AI models → Providers.
 //
 // The property this file exists for is a negative: the key has no read path, so
 // nothing here may render one. The server never returns it, and this screen must

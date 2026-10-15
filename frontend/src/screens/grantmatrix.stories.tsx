@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Panel, PanelGroupHead } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import { GrantMatrix, type GrantMatrixRow } from "./grantmatrix";
-import { StoryProviders } from "./story-utils";
 
 const NONE = { read: false, create: false, update: false, delete: false };
 
@@ -45,7 +45,7 @@ function story(canManage: boolean) {
         <PanelGroupHead title="Endpoint" level="h3" id="grants-endpoint" />
         <GrantMatrix
           rowHeader="Role"
-          rows={ROWS}
+          sections={[{ key: "endpoint", rows: ROWS }]}
           canManage={canManage}
           readOnlyReason="Your role can read this page. Changing a grant requires a full seat."
           name={{ labelledBy: "grants-endpoint" }}
@@ -64,6 +64,46 @@ export default meta;
 type Story = StoryObj<typeof GrantMatrix>;
 
 export const Editable: Story = { render: story(true) };
+
+// One table under named runs, so every verb column lines up across them; a
+// row may carry its raw key under the name.
+export const Grouped: Story = {
+  render: () => (
+    <StoryProviders>
+      <Panel title="Field sales">
+        <PanelGroupHead title="Permissions" level="h3" id="grants-grouped" />
+        <GrantMatrix
+          rowHeader="Object"
+          sections={[
+            {
+              key: "records",
+              title: "Records",
+              rows: [
+                row("contact", "Contacts", { read: true }),
+                { ...row("deal", "Deals", { read: true }), code: "deal" },
+              ],
+            },
+            {
+              key: "ext-notes",
+              title: "notes extension",
+              rows: [row("ext_notes_signing_key", "Signing key")],
+            },
+          ]}
+          canManage
+          readOnlyReason="Your role can read roles but not change them."
+          name={{ labelledBy: "grants-grouped" }}
+          bleed
+        />
+      </Panel>
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const groups = await within(canvasElement).findAllByRole("rowheader", {
+      name: /Records|notes extension/,
+    });
+    await expect(groups).toHaveLength(2);
+  },
+};
 
 // Every switch refused, its reason read out and kept out of sight.
 export const ReadOnly: Story = { render: story(false) };

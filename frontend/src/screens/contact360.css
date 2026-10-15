@@ -354,11 +354,8 @@
 }
 
 /* ---------------------------------------------------------------------------
-   The right rail (§5.11): one continuous panel, its six slices told apart by
-   a hairline rather than by a gap between cards — the company record's rail
-   anatomy (company360.css `.co-rail .co-sect`), mirrored here rather than
-   reinvented. It never becomes a grid — a rail that re-columns is a second
-   body rather than a margin.
+   The right rail (§5.11): one panel whose sections a hairline parts. It never
+   becomes a grid: a rail that re-columns is a second body, not a margin.
    --------------------------------------------------------------------------- */
 /* A row's overflow menu is positioned against the row, so it opens INSIDE the
    panel's box — and the panel clips its own overflow to keep full-bleed rows
@@ -375,29 +372,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.pe-rail .pe-sect {
-  border-top: 1px solid var(--borderSubtle);
-  padding-top: 0;
-  margin-bottom: 0;
-}
-.pe-rail .pe-sect > summary {
-  padding: var(--space-3) var(--space-5);
-  transition: background 0.15s;
-}
-.pe-rail .pe-sect > summary:hover {
-  background: var(--bgHover);
-}
-/* The rail's own sections carry the padding their summaries do, so a section
-   verb lines up with the name beside it rather than with the panel's edge. */
-.pe-rail .disclosure-action {
-  top: var(--space-2);
-  right: var(--space-5);
-}
-.pe-rail .pe-sect > .disclosure-body {
-  margin-top: 0;
-  padding: 0 var(--padPanel) var(--padPanel);
 }
 
 /* A rail row is one action or one reading: label left, value right. */

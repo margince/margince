@@ -5,9 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { routeHash } from "../app/router";
 import { useT } from "../i18n";
-import { unwrap, useMe } from "./common";
+import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import { settingsHref } from "./settingsrouting";
 import { SignatureHtml } from "./signaturehtml";
 

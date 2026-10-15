@@ -114,6 +114,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
@@ -141,6 +142,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
@@ -165,6 +167,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, fact)}
         canEdit
       />,
@@ -189,6 +192,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, fact)}
         canEdit
       />,
@@ -206,6 +210,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, fact)}
         canEdit
       />,
@@ -234,6 +239,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, { ...fact, version: undefined })}
         canEdit
       />,
@@ -266,6 +272,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, fact)}
         canEdit
       />,
@@ -295,6 +302,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={factClaim(COMPANY, fact)}
         canEdit
       />,
@@ -320,6 +328,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
@@ -352,6 +361,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, field)}
         canEdit
       />,
@@ -371,6 +381,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, field)}
         canEdit={false}
       />,
@@ -383,6 +394,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, {
           ...field,
           source: "human",
@@ -400,6 +412,7 @@ describe("a human's verdict on a machine's claim", () => {
     wrap(
       <EvidenceVerdict
         companyId={COMPANY}
+        anchor={false}
         claim={profileFieldClaim(COMPANY, { ...field, source: "agent" })}
         canEdit
       />,

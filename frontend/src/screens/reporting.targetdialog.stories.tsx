@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
 import { ReportingTargetDialog } from "./reporting.targetdialog";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Target editor" };
 export default meta;

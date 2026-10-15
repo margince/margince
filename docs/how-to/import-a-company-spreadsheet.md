@@ -14,19 +14,33 @@ before it writes, and nothing lands until the run is approved.
 
 The steps are the same over MCP and REST:
 
-1. **Preview**: hand over the file and a map of columns. This writes nothing, and returns a `run_id` and a report.
-2. **Read the report**: the counts, and the issues that name any row that will not land.
+1. **Preview**: hand over the file and a map of columns. This writes nothing. It returns a `run_id` at
+   once, and the worker then tests the file against your records.
+2. **Read the report** once the run is `awaiting_approval`. It holds the counts and the issues.
+   An issue names a row that will not land. A test that stops returns the run to `pending`, with the
+   reason in `error`.
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import` with `view: report`, and `commit_import`. `commit_import` answers at once while the run
-goes on, so read `read_import` with `view: report` again until `state` is `complete`.
+`read_import` with `view: report`, and `commit_import`. `preview_import` waits up to 20 seconds for
+the test. A test that ends inside the wait answers `state: awaiting_approval` with the `report`, so
+the second call is not needed. If the test takes longer, it answers `state: validating` with a
+`next` line; read `read_import` again until `state` is no longer `validating`. A test that refuses
+the file answers the refusal, and the run goes back to `pending`. A test that a user stopped answers
+`pending`, and one a newer preview replaced answers `cancelled`; both carry a `next` line.
+
+One assistant tests one run at a time. A second `preview_import` while its first test still runs is
+refused, and the refusal names the run still being tested. `commit_import` answers at once while the run
+goes on, so read `read_import` with `view: report` again until `state` is `complete`. On a run that
+`failed`, `commit_import` resumes the write.
 
 Over REST you upload the file first, so it is five calls:
 
 - `POST /v1/imports/sources`, with the file as `multipart`;
-- `POST /v1/imports`, which names the `source_ref` that the first call returns;
-- `GET /v1/imports/{id}/report`;
+- `POST /v1/imports`, which names the `source_ref` that the first call returns and answers at once
+  with the run `validating`;
+- `GET /v1/imports/{id}`, read again until `status` is `awaiting_approval`, then
+  `GET /v1/imports/{id}/report`;
 - `POST /v1/imports/{id}/approve`, which answers at once while the run goes on;
 - `GET /v1/imports/{id}`, read again until `status` is `complete`.
 
@@ -87,6 +101,10 @@ A row with an `id` **updates that company**. Read the companies out first to get
 file, and import it back. An empty `id` creates a company. An ID that matches no record is reported as a
 skip, never created under a new ID. Nothing is written to `id` itself.
 
+The column that names the row
+([below](#which-column-names-a-row)) names that company from then on, so a later import under the same
+`source_name` finds it. Undo does not archive it, because the run did not create it.
+
 ### Which column names a row
 
 Every row needs one column that names it *within your file*. That column makes an import of the same file
@@ -108,8 +126,9 @@ call undoes that. An ID fails in none of these ways.
 ## Importing a ZIP over REST
 
 A ZIP holds one CSV for each record type. The file name gives the type: `companies.csv`,
-`contacts.csv` or `leads.csv`. A run lands companies first, then contacts, then leads, so a contact can
-link to a company in the same ZIP.
+`contacts.csv`, `leads.csv` or `deals.csv`. A run lands companies first, then contacts, then leads, then
+deals. So a contact can link to a company in the same ZIP, and a deal to either. Undo goes the other way
+and archives deals first.
 
 1. Read `GET /v1/imports/format`. It lists each file, its columns and what goes in each one, and the
    order the files land in. `GET /v1/imports/template` returns the same as a ZIP to fill in.
@@ -117,7 +136,9 @@ link to a company in the same ZIP.
 3. Read `parts` in the answer: one profile per file, with a map for each type. `ignored` names the
    files no type takes.
 4. Call `POST /v1/imports` with `parts`. Each part names its `file`, its `object` and its `mapping`.
-5. Read the report, then approve the run as for one CSV.
+5. Read the report once the run is `awaiting_approval`, then approve the run as for one CSV.
+
+`GET /v1/imports/template` lists every pipeline with its stages in its `README.txt`.
 
 A ZIP holds at most 20 files, and the upload limit applies to the ZIP. Two files of one type are
 refused.
@@ -132,6 +153,37 @@ The upload's answer holds one in `suggested_source_name`.
 `GET /v1/imports/{id}/problems.csv` returns the report's issues as a spreadsheet, one row per issue.
 The template and this spreadsheet need a session where a human has signed in, as the upload does. A
 passport may read the format.
+
+### Importing deals
+
+A `deals.csv` row can map `name`, `pipeline`, `stage`, `amount`, `currency`, `close_date`,
+`company_ref`, `contact_ref`, `owner_email`, `tags`, `description` and `lost_reason`. A deal row needs a `ref`
+mapped, or the part is refused at staging, because two deals can share a name.
+
+- `pipeline` and `stage` are names, matched whatever their case. An empty `pipeline` is the default
+  pipeline. A caller without the `pipeline` read grant cannot have a stage checked, so every row is a
+  problem.
+- `amount` is a plain number with a dot, such as `12000.50`, and needs `currency`.
+- A stage that is won or lost lands the deal closed, on `close_date`, which may be in the past. A lost
+  stage needs `lost_reason`. An open deal's `close_date` cannot be in the past.
+- `contact_ref` names a contact by `ref`, email or ID, and seats it as a stakeholder.
+- The report's parts carry `closed_won` and `closed_lost` for the deals that land closed.
+
+A row the deals store would refuse is skipped with a coded reason, and never fails the run. The
+causes are:
+
+- a new row with no stage;
+- a move to another pipeline;
+- a deal that is already closed;
+- a currency with no rate;
+- a legal gate.
+
+Events of an imported deal carry `imported: true` and the `import_run_id`. Automations and commissions
+skip them. Webhooks get them with that mark, so a receiver decides for itself.
+
+Undo archives the deals an import created, before contacts, and keeps a deal someone edited since. Only
+an edit to the deal itself keeps it. A note, an email or a task logged against the deal does not keep
+it, and undo archives the deal.
 
 ## Importing several files over MCP
 

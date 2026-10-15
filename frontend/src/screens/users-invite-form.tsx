@@ -6,14 +6,18 @@ import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
+import {
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
+import { useHoldsAdminRole } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { roleOptions, useAssignableRoles } from "./roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 import "./users-admin.css";

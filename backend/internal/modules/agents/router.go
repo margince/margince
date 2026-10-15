@@ -73,6 +73,14 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		}
 		spec.MaxArgsBytes = max(spec.MaxArgsBytes, argsLimit(target))
 		spec.Egress = spec.Egress || target.Egress
+		// The router advertises the target's arguments at the same paths, so
+		// what a target says about an object's keys holds for the router too.
+		for path, why := range target.UnkeyedArguments {
+			if spec.UnkeyedArguments == nil {
+				spec.UnkeyedArguments = map[string]string{}
+			}
+			spec.UnkeyedArguments[path] = why
+		}
 	}
 	_, chooses := rt.(targetChooser)
 	field, picksByField := routeFieldOf(rt)
@@ -341,3 +349,13 @@ func (routed) Handle(context.Context, json.RawMessage) (json.RawMessage, error) 
 }
 
 var errRouterHandled = errors.New("crmagents: a router was handled instead of resolved")
+
+// dropNullMembers treats a null argument as absent, as the surface does
+// everywhere, and drops it: the target refuses an argument it does not take.
+func dropNullMembers(members map[string]json.RawMessage, names ...string) {
+	for _, name := range names {
+		if raw, ok := members[name]; ok && isNull(raw) {
+			delete(members, name)
+		}
+	}
+}

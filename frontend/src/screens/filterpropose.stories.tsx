@@ -4,7 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { type Group, newGroup, newLeaf } from "../lib/segmentpredicate";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import {
@@ -12,8 +18,6 @@ import {
   type UnusedPhrase,
   usePlainWords,
 } from "./filterpropose";
-import { type Group, newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // Describing a filter in plain words. The answer lands as rows marked as
 // proposed, with the bar above them that keeps, replaces or undoes them; the
@@ -186,7 +190,9 @@ export const OneRowEdited: Story = {
     const canvas = within(canvasElement);
     await askInWords(canvas);
     await canvas.findByText("Keep all");
-    await userEvent.type(canvas.getAllByLabelText("Value")[0], " and Austria");
+    const [value] = canvas.getAllByLabelText("Value");
+    if (!value) throw new Error("the proposal has no value field");
+    await userEvent.type(value, " and Austria");
   },
 };
 

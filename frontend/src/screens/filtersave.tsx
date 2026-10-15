@@ -7,27 +7,27 @@
 // by the same engine that previewed it.
 
 import { useState } from "react";
-import type { Route } from "../app/router";
 import { Field, Textarea, TextInput } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { useCreateList, useListsAvailable } from "../lib/lists.queries";
+import { problemMessageOf } from "../lib/problem";
+import type { Route } from "../lib/router";
+import { encode, type Node } from "../lib/segmentpredicate";
 import {
   type ObjectTab,
   RESOURCE_OF,
   UNIT_LABEL,
   VIEW_OF,
 } from "./filtersaddress";
-import { useCreateList, useListsAvailable } from "./lists.queries";
 import {
   DEFAULT_AUDIENCE,
   type ListAudience,
   ListAudienceFields,
 } from "./listsharing";
 import { filterStateFrom, useSaveView } from "./savedviews.queries";
-import { encode, type Node } from "./segmentpredicate";
 
 export type SavedKind = "view" | "list";
 

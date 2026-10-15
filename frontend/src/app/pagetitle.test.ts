@@ -4,9 +4,9 @@
 import { describe, expect, it } from "vitest";
 
 import { en } from "../i18n/en";
+import { SCREENS } from "../lib/router";
 import { NAV } from "./nav";
 import { OFF_RAIL_TITLE_KEYS, SELF_HEADED_SCREENS } from "./pagemeta";
-import { SCREENS } from "./router";
 
 // `resolveTitle` falls through to `shell.unknownPage` for a screen that is
 // neither on the NAV rail nor in OFF_RAIL_TITLE_KEYS, so a routed destination

@@ -191,10 +191,11 @@ To check the change, come back to **Recent calls** after some calls. A call's ow
 Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?
-To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card.
-**AI models** also shows a second badge on each provider under **Providers**.
-The card lists only providers that are not answering as normal, with why, **Started** and **Next check**. With none listed, it reads "All AI providers are answering."
-It shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can open it.
+To see whether an AI provider is working, open **Settings**, then **System health**. Read **AI provider status** in the **Status** row at the top.
+It says "Answering" while every provider answers. **AI models** also shows a second badge on each provider under **Providers**.
+
+When a provider is not answering as normal, the row says how many need attention, and the **AI provider status** card opens under it. The card lists each one with why, **Started** and **Next check**.
+The card shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can see it.
 Also called: is the AI down, AI outage, model provider health, AI provider status.
 
 ### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
@@ -217,6 +218,6 @@ Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
 
 ### What does a provider badge on AI models mean?
 A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
-Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card. Testing a new key under **Providers** clears it at once.
+Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card under the **Status** row. Testing a new key under **Providers** clears it at once.
 A rate limit reply or a "no permission for this model" refusal does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
 Also called: provider status, provider down, API key refused, out of credit.

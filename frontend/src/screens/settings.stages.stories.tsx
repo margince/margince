@@ -7,7 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
 import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
 import "./settings.pipelines.css";
@@ -16,7 +16,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 
 // The ladder inside one pipeline, as the pipelines page draws it. One table
 // holds the open stages a reader drags into order, then the closing pair.
@@ -263,6 +263,38 @@ export const CriteriaOpen: Story = {
     await expect(
       await canvas.findByText("Buyer confirmed the budget"),
     ).toBeInTheDocument();
+  },
+};
+
+/** One stage's criteria open at a time; adding a criterion opens its stage. */
+export const OneStageOpen: Story = {
+  render: served(sales, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    const discovery = canvas.getByRole("button", {
+      name: "Exit criteria for Discovery",
+    });
+    const proposal = canvas.getByRole("button", {
+      name: "Exit criteria for Proposal",
+    });
+    await userEvent.click(discovery);
+    await userEvent.click(proposal);
+    await expect(proposal).toHaveAttribute("aria-expanded", "true");
+    await expect(discovery).toHaveAttribute("aria-expanded", "false");
+    const actions = canvas.getByRole("button", {
+      name: "Actions for Discovery",
+    });
+    await userEvent.click(actions);
+    const menu = canvasElement.ownerDocument.getElementById(
+      actions.getAttribute("aria-controls") ?? "",
+    );
+    if (!menu) throw new Error("the row menu named no panel");
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Add criterion" }),
+    );
+    await expect(discovery).toHaveAttribute("aria-expanded", "true");
+    await expect(proposal).toHaveAttribute("aria-expanded", "false");
   },
 };
 

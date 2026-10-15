@@ -23,6 +23,7 @@ import {
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
+import { useNow } from "../format/now";
 import {
   type Locale,
   type Translator,
@@ -31,6 +32,11 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useAgentTierMap } from "../lib/autonomy";
+import type { LicensePosture } from "../lib/license-posture";
+import type { Route } from "../lib/router";
+import { routeHash } from "../lib/router";
+import { usePhoneViewport } from "../lib/viewport";
 import { settingsHref } from "../screens/settingsrouting";
 import {
   type AgentEdgeRegister,
@@ -63,12 +69,7 @@ import { type AiActivity, useAiActivity } from "./ai-activity";
 import { PANEL_HEADING } from "./ai-activity-lines";
 import { laneFor } from "./ai-activity-orb";
 import { plain, type SpokenLine, speak, spokenText } from "./ai-activity-speak";
-import { useAgentTierMap } from "./autonomy";
-import type { LicensePosture } from "./license-posture";
 import { usePopoverDismiss } from "./popover";
-import type { Route } from "./router";
-import { routeHash } from "./router";
-import { usePhoneViewport } from "./viewport";
 import "./agentrail.css";
 
 // The agent's place in the app: the foot of the workspace rail, under the
@@ -233,9 +234,9 @@ function Recap({
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  // Read once per open, so five rows share one reading of the clock and cannot
-  // disagree about what "now" is.
-  const now = Date.now();
+  // One reading of the clock per render, so five rows cannot disagree about
+  // what "now" is.
+  const now = useNow(60_000);
   if (settled === undefined) {
     // Nothing, not a sentence: the panel cannot tell a read still in flight
     // from one that failed, and both would be libelled by "nothing has
@@ -1188,10 +1189,10 @@ export function AgentRail({
   //
   // The runs that settled recently, for the rotation; the newest live one, for
   // the bar. The bar keeps the live run because that is what is true this
-  // second. Read once per render, so every line in one pass of the rotation
-  // shares one reading of the clock and they cannot disagree about which runs
-  // are still news.
-  const settled = stillNews(server.recent, Date.now()).flatMap((item) => {
+  // second. Every line in one pass of the rotation shares one reading of the
+  // clock, so they cannot disagree about which runs are still news.
+  const now = useNow(60_000);
+  const settled = stillNews(server.recent, now).flatMap((item) => {
     const said = speak(item, t);
     return said === null ? [] : [said];
   });
@@ -1229,7 +1230,8 @@ export function AgentRail({
   // about the same thing, and an amber orb captioned "Loading pipeline"
   // tells a reader the pipeline is the fault.
   const holdsFault = state === "warning" || state === "error";
-  const shown = ticker.length > 0 && !holdsFault ? plain(ticker[0].said) : line;
+  const [latest] = ticker;
+  const shown = latest !== undefined && !holdsFault ? plain(latest.said) : line;
   const ring = importRing(state, signals.capture);
   return (
     <section

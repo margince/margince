@@ -7,17 +7,9 @@
  * height, and a tall needs list beside a short one leaves the short one's row
  * half empty. */
 
-/* The 360's foot: the row that teases the thread and opens it, with the way to
-   the whole history at its end.
-
-   The panel already draws the seam above this body (panel.css's
-   `.panel-body + .panel-body` rule), so the fold draws no rule of its own —
-   two lines a hair apart read as a mistake rather than as a boundary. Its
-   padding-top STAYS: `.disclosure-action` is positioned against it, so zeroing
-   it drops "Full history" below the row it belongs to. The bottom margin goes
-   because the panel body's own padding already ends the section. */
+/* The 360's foot: the row that opens the thread, with the whole history at its
+   end. No bottom margin: the panel body's padding already ends the section. */
 .co-thread-fold.disclosure {
-  border-top: 0;
   margin-bottom: 0;
 }
 

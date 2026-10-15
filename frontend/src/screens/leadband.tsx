@@ -7,9 +7,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { WriteRefused } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap, WriteRefused } from "./common";
-import { leadWriteKeys } from "./leadkeys";
+import { leadWriteKeys } from "../lib/leadkeys";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];

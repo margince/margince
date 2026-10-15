@@ -13,6 +13,8 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
+import { BULK_MAX_ITEMS } from "../components/bulkchangeapi";
+import { BulkVerbs } from "../components/bulkverbs";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
@@ -22,17 +24,15 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { BULK_MAX_ITEMS } from "./bulkchangeapi";
-import { BulkVerbs } from "./bulkverbs";
-import { throwProblem, unwrap } from "./common";
-import { downloadBytes, filenameFromDisposition } from "./download";
+import { downloadBytes, filenameFromDisposition } from "../lib/download";
 import {
   LISTS_KEY,
   type List,
   type ListMember,
   type ListRecordType,
   listMembersAmong,
-} from "./lists.queries";
+} from "../lib/lists.queries";
+import { throwProblem, unwrap } from "../lib/problem";
 import "./lists.css";
 import "./listsection.css";
 

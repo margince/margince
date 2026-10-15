@@ -5,14 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { StageAutomationCard } from "./settings.stageautomation";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { StageAutomationCard } from "./settings.stageautomation";
 
 // What each stage transition has earned, and what each is allowed to do. Three
 // states are told apart on purpose: a report with rows, a pipeline nothing has
@@ -111,8 +111,8 @@ const populatedRoutes: RouteMap = {
         {
           id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
           pipeline_id: PIPELINE_ID,
-          from_stage_id: populated[0].from_stage_id,
-          to_stage_id: populated[0].to_stage_id,
+          from_stage_id: transition.from_stage_id,
+          to_stage_id: transition.to_stage_id,
           mode: "auto",
           clean_acceptance_threshold: 0.9,
           correction_reversal_threshold: 0.01,

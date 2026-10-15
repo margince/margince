@@ -6,21 +6,21 @@
 // put each record there; a Shortlist shows who chose each record, when, and
 // the note they left.
 
+import { EntityRef } from "../components/entityref";
 import { Badge } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { EntityRef } from "./entityref";
 import {
   customColumnLabel,
   fieldLabel,
   useFilterVocabulary,
-} from "./filterdata";
+} from "../lib/filterdata";
+import type { List } from "../lib/lists.queries";
+import { decode, fieldsNamed } from "../lib/segmentpredicate";
 import { useFieldValueText, vocabularyField } from "./listexplain";
 import { type MemberRow, memberName } from "./listmembers";
-import type { List } from "./lists.queries";
-import { decode, fieldsNamed } from "./segmentpredicate";
 
 /** How many filter fields are drawn at first; the rest wait in the Display menu. */
 export const SHOWN_FILTER_FIELDS = 4;

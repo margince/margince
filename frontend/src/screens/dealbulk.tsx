@@ -3,15 +3,15 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { BulkVerbs } from "../components/bulkverbs";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { dealRecordKeys } from "./activitykeys";
-import { BulkVerbs } from "./bulkverbs";
-import { ProblemError, problemMessageOf, unwrap } from "./common";
+import { dealRecordKeys } from "../lib/activitykeys";
+import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];

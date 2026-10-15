@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { routeHash } from "../app/router";
+import { EntityRef } from "../components/entityref";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
+import { routeHash } from "../lib/router";
 import {
   type CalendarDay,
   calendarDay,
   nextMeetingDay,
   sourceComplete,
 } from "./brief.facts";
-import { EntityRef } from "./entityref";
 import { settingsHref } from "./settingsrouting";
 import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";

@@ -20,9 +20,9 @@ func TestCompanyBatchFindsTheLookAlikesTheLadderWouldScore(t *testing.T) {
 		{CompanyCandidate{DisplayName: "  "}, false},
 	}
 	for _, tc := range cases {
-		spelled, scored := batch.scoredRivals(tc.candidate)
-		if got := spelled || len(scored) > 0; got != tc.want {
-			t.Errorf("scoredRivals(%q) found a rival = %v, want %v", tc.candidate.DisplayName, got, tc.want)
+		rivals := batch.Rivals(tc.candidate)
+		if got := rivals.spelled || len(rivals.scored) > 0; got != tc.want {
+			t.Errorf("Rivals(%q) found a rival = %v, want %v", tc.candidate.DisplayName, got, tc.want)
 		}
 	}
 }
@@ -43,9 +43,8 @@ func TestContactBatchNeedsTheSharedEmployerDomainTheLadderNeeds(t *testing.T) {
 	}
 	for _, tc := range cases {
 		candidate := ContactCandidate{FullName: tc.name, Emails: []string{tc.email}}
-		names, _ := batch.scoredRivals(candidate)
-		if got := len(names) > 0; got != tc.want {
-			t.Errorf("scoredRivals(%q <%s>) found a rival = %v, want %v", tc.name, tc.email, got, tc.want)
+		if got := batch.Rivals(candidate).Any(); got != tc.want {
+			t.Errorf("Rivals(%q <%s>) found a rival = %v, want %v", tc.name, tc.email, got, tc.want)
 		}
 	}
 }

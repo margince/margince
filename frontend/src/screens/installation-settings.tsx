@@ -2,16 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../app/aicaches";
-import { useCanWrite } from "../app/capability";
-import { useUnsavedGuard } from "../app/unsaved";
-// Shared with every upload form, which reads the ceiling off this same record.
-// One query, one key: two hooks on one key would let whichever mounted first
-// decide how a failure behaves for the other.
-import {
-  INSTALLATION_SETTINGS_KEY,
-  useInstallationSettings,
-} from "../app/uploadlimit";
+import { useUnsavedGuard } from "../components/unsaved";
 import {
   Button,
   Field,
@@ -27,19 +18,24 @@ import {
   DrawerHead,
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { fiscalYearLabel } from "../format/fiscalyear";
 import { identifierNumber, monthName } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../lib/aicaches";
+import { useCanWrite } from "../lib/capability";
+import { problemFieldErrorsOf, problemMessageOf, unwrap } from "../lib/problem";
+// Shared with every upload form, which reads the ceiling off this same record.
+// One query, one key: two hooks on one key would let whichever mounted first
+// decide how a failure behaves for the other.
 import {
-  problemFieldErrorsOf,
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-} from "./common";
+  INSTALLATION_SETTINGS_KEY,
+  useInstallationSettings,
+} from "../lib/uploadlimit";
 import {
   RegionalSettingsFields,
   RegionalSettingsRows,
@@ -60,7 +56,6 @@ type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 // field added to the form cannot be left out of one of the three — which is
 // how a value silently stops saving, or stops noticing another admin's change.
 const EDITABLE_FACTS = [
-  "name",
   "timezone",
   "base_currency",
   "base_language",
@@ -327,19 +322,12 @@ function InstallationSettingsForm({
 
   return (
     <Panel title={t("installationSettings.companyTitle")}>
-      <PanelBody>
-        <PanelIntro>{t("installationSettings.companySub")}</PanelIntro>
-        {!canManage && (
+      {!canManage && (
+        <PanelBody>
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
       <SettingList bleed="settings">
-        <SettingRow
-          label={t("installationSettings.name")}
-          description={t("installationSettings.nameHint")}
-          value={settings.name}
-          control={editVerb("name", t("installationSettings.name"))}
-        />
         <SettingRow
           label={t("installationSettings.timezone")}
           description={t("installationSettings.timezoneHint")}
@@ -490,24 +478,6 @@ function InstallationProfileDialog({
             onSubmit();
           }}
         >
-          <Field
-            label={t("installationSettings.name")}
-            hint={t("installationSettings.nameHint")}
-            error={refused.get("name")}
-          >
-            {(control) => (
-              <TextInput
-                {...control}
-                aria-describedby={describe(control)}
-                ref={focus === "name" ? asked : undefined}
-                value={draft.name}
-                disabled={!canManage}
-                onChange={(event) =>
-                  onChange({ ...draft, name: event.target.value })
-                }
-              />
-            )}
-          </Field>
           <Field
             label={t("installationSettings.timezone")}
             hint={t("installationSettings.timezoneHint")}

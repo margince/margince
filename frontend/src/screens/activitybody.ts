@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { EntityKind } from "../app/entity";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import type { EntityKind } from "../lib/entity";
 
 // One drafted entry and the wire body it becomes: the shape the composer holds
 // and the `POST /activities` payload it projects to. The React form that edits

@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { BriefScreen } from "./brief";
 import {
   beforeHistoryWeeklyNumbers,

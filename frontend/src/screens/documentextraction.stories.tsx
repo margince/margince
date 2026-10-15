@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DocumentExtractionPanel } from "./documentextraction";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // What a reading of one attachment offers a human, and what it refuses to
 // offer. Every state below is a different answer and the differences are the
@@ -113,7 +117,7 @@ export const OmittedForBothReasons: Story = {
   render: () => (
     <Panel
       reading={extraction({
-        fields: [grounded[0], grounded[1]],
+        fields: grounded.slice(0, 2),
         omitted: [
           { field: "expected_close_date", reason: "not_stated_in_file" },
           { field: "amount_minor", reason: "not_confidently_stated" },

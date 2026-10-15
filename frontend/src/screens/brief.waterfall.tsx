@@ -1,5 +1,4 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
@@ -7,6 +6,7 @@ import { middayInstant } from "../format/calendarday";
 import { formatDate, formatMoney, formatMoneyOrAbsent } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 
 type Review = components["schemas"]["WeeklyReview"];
 type Outlook = NonNullable<Review["outlook"]>[number];
@@ -40,7 +40,8 @@ export function OutlookPanel({
   // A review written before a forecast was composed carries none. Said in
   // words, because a week nobody forecast and a week that landed on nothing
   // are different facts and zeros would claim the second.
-  if (outlook.length === 0) {
+  const [first] = outlook;
+  if (first === undefined) {
     return (
       // It stands WHERE the panel would, and the panel's own heading was
       // restated as the notice's — so it is the empty state, not a remark
@@ -49,8 +50,7 @@ export function OutlookPanel({
     );
   }
 
-  const shown =
-    outlook.find((one) => one.period_kind === horizon) ?? outlook[0];
+  const shown = outlook.find((one) => one.period_kind === horizon) ?? first;
   // A STAT CARD'S VALUE IS A READING, and an em dash is not one. The word for
   // the absence belongs to the slot: on a frozen outlook it means the period
   // was never forecast in a currency this review could convert to.

@@ -2,15 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { company360 } from "./company.fixtures";
-import { CompanyRail } from "./companyrail";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { company360 } from "./company.fixtures";
+import { CompanyRail } from "./companyrail";
 
 // The record's left rail (mockup State A): one panel, a details grid over
 // collapsible sections. Every seeded demo account grants full RBAC and
@@ -125,7 +126,7 @@ const withheld: View = {
   sections_omitted: ["health", "contacts"],
 };
 
-function Rail({ view }: Readonly<{ view: View }>) {
+function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
   installFetchStub({
     // Without a routed session useCan("company","update") fails closed
     // (useMe's no-authorization fallback) and canEdit is false for every field
@@ -160,6 +161,7 @@ function Rail({ view }: Readonly<{ view: View }>) {
       <div style={{ maxWidth: 340 }}>
         <CompanyRail
           companyId="o-1"
+          company={row}
           view={view}
           loading={false}
           onTab={() => {}}
@@ -171,6 +173,34 @@ function Rail({ view }: Readonly<{ view: View }>) {
 
 export const Populated: Story = { render: () => <Rail view={populated} /> };
 
+export const OneSectionOpen: Story = {
+  render: () => <Rail view={populated} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const summary = (name: string) =>
+      canvas.getByText(name).closest("summary") ?? canvasElement;
+    const contacts = summary("Key contacts");
+    const registration = summary("Registration");
+    const deals = summary("Active deals");
+    await expect(contacts).toHaveAttribute("aria-expanded", "true");
+    await expect(registration).toHaveAttribute("aria-expanded", "false");
+    await expect(deals).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(deals);
+    await expect(deals).toHaveAttribute("aria-expanded", "true");
+    await expect(contacts).toHaveAttribute("aria-expanded", "false");
+  },
+};
+
 export const SectionWithheld: Story = {
   render: () => <Rail view={withheld} />,
+};
+
+// The server refuses an archived account's 360 and lists, so the rail keeps
+// the row's own sections and draws none that would read as failed.
+export const Archived: Story = {
+  render: () => (
+    <Rail
+      row={{ ...company, writable: false, archived_at: "2026-08-14T09:00:00Z" }}
+    />
+  ),
 };

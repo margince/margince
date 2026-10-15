@@ -75,7 +75,6 @@ const CARDS_THE_REGISTER_REACHED = [
   "AiProviderKeysCard",
   "AutomationsAdmin",
   "AiUsageCard",
-  "ModelCostsCard",
   "AiCallsCard",
   "ConsentPurposesCard",
   "RetentionCard",

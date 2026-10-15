@@ -7,58 +7,116 @@ package contacts
 // A batch writer lands its rows one at a time, so its commit meets each earlier
 // row as an incumbent. A dry run writes nothing and carries those rows itself.
 // A member is a rival only when the ladder would both admit and score it. The
-// scorers run in Go. The query's admission predicate then runs in Postgres,
-// over the members the scorer kept.
+// scorers run in Go first, so a row with no scored member costs no query. The
+// query's admission predicate then runs in Postgres, over the members kept.
 
 import (
 	"context"
 	"fmt"
-	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-// CompanyBatch is the companies a batch will create, in the order it decided.
+// CompanyBatch is the companies a batch will create.
 type CompanyBatch struct {
 	members []batchCompany
+	// byWord files each member under its squashed names and distinctive
+	// words. The gate scores no pairing that shares neither, so every member a
+	// candidate could rival is filed under a word of its own.
+	byWord  map[string][]int
+	domains map[string]bool
 }
 
 type batchCompany struct {
 	display, legal string
 	names          companyNamePair
-	domains        []string
 }
 
 // Add records a company the batch will create.
 func (b *CompanyBatch) Add(c CompanyCandidate) {
-	domains := make([]string, 0, len(c.Domains))
-	for _, d := range c.Domains {
-		domains = append(domains, normalizeDomain(d))
+	if b.byWord == nil {
+		b.byWord, b.domains = map[string][]int{}, map[string]bool{}
 	}
-	b.members = append(b.members, batchCompany{
-		display: c.DisplayName, legal: c.LegalName,
-		names: companyNamePairOf(c.DisplayName, c.LegalName), domains: domains,
-	})
+	member := batchCompany{display: c.DisplayName, legal: c.LegalName, names: companyNamePairOf(c.DisplayName, c.LegalName)}
+	for _, word := range member.names.gateWords() {
+		b.byWord[word] = append(b.byWord[word], len(b.members))
+	}
+	b.members = append(b.members, member)
+	for _, d := range c.Domains {
+		b.domains[normalizeDomain(d)] = true
+	}
 }
 
-// HasRival answers whether DedupeCompany would name an earlier member as a
-// duplicate of c, had that member been written. Either c's display name spells
-// a member's domain, or the fuzzy tier admits a member and scores it over the
-// threshold.
-func (b *CompanyBatch) HasRival(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (bool, error) {
-	spelled, scored := b.scoredRivals(c)
-	if spelled || len(scored) == 0 {
-		return spelled, nil
+// gateWords are the keys formsShareADistinctiveWord can match a pair on.
+func (p companyNamePair) gateWords() []string {
+	var words []string
+	for _, form := range []companyNameForm{p.display, p.legal} {
+		if form.squashed != "" {
+			words = append(words, "squashed:"+form.squashed)
+		}
+		for _, token := range form.tokens {
+			words = append(words, "token:"+token)
+		}
 	}
-	displays := make([]string, 0, len(scored))
-	legals := make([]string, 0, len(scored))
-	for _, m := range scored {
+	return words
+}
+
+// CompanyRivals is the Go half of DedupeCompany's verdict on one candidate.
+// It says whether the display name spells a member's domain, and which members
+// the fuzzy scorer puts over the threshold.
+type CompanyRivals struct {
+	candidate CompanyCandidate
+	spelled   bool
+	scored    []batchCompany
+}
+
+// Rivals scores c against the members it shares a gate word with.
+func (b *CompanyBatch) Rivals(c CompanyCandidate) CompanyRivals {
+	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
+		return CompanyRivals{}
+	}
+	if spelled, ok := displayNameDomain(c.DisplayName); ok && b.domains[spelled] {
+		return CompanyRivals{spelled: true}
+	}
+	candidate := companyNamePairOf(c.DisplayName, c.LegalName)
+	rivals := CompanyRivals{candidate: c}
+	seen := map[int]bool{}
+	for _, word := range candidate.gateWords() {
+		for _, at := range b.byWord[word] {
+			if seen[at] {
+				continue
+			}
+			seen[at] = true
+			if _, rival := companyPairRival(candidate, b.members[at].names); rival {
+				rivals.scored = append(rivals.scored, b.members[at])
+			}
+		}
+	}
+	return rivals
+}
+
+// Settled reports whether Go alone decided, and then whether it found a rival.
+// An unsettled verdict needs Admitted.
+func (r CompanyRivals) Settled() (settled, rival bool) {
+	return r.spelled || len(r.scored) == 0, r.spelled
+}
+
+// Admitted answers whether the fuzzy tier's query admits a scored member.
+func (r CompanyRivals) Admitted(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if settled, rival := r.Settled(); settled {
+		return rival, nil
+	}
+	displays := make([]string, 0, len(r.scored))
+	legals := make([]string, 0, len(r.scored))
+	for _, m := range r.scored {
 		displays = append(displays, m.display)
 		legals = append(legals, m.legal)
 	}
-	args := []any{displays, legals}
-	arms := companyAdmissionArms(&args, c)
+	var args []any
+	displaysAt, legalsAt := bindParam(&args, displays), bindParam(&args, legals)
+	arms := companyAdmissionArms(&args, r.candidate)
 	if len(arms) == 0 {
 		return false, nil
 	}
@@ -68,31 +126,17 @@ func (b *CompanyBatch) HasRival(ctx context.Context, tx pgx.Tx, c CompanyCandida
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM (SELECT d AS display_name, NULLIF(l, '') AS legal_name
-		                   FROM unnest($1::text[], $2::text[]) AS m(d, l)) AS company
+		                   FROM unnest(`+displaysAt+`::text[], `+legalsAt+`::text[]) AS m(d, l)) AS company
 		   WHERE `+strings.Join(arms, " OR ")+`)`, args...).Scan(&admitted); err != nil {
 		return false, fmt.Errorf("dedupe company batch admission: %w", err)
 	}
 	return admitted, nil
 }
 
-// scoredRivals is HasRival's Go half: whether c's display name spells a
-// member's domain, and the members the fuzzy scorer puts over the threshold.
-func (b *CompanyBatch) scoredRivals(c CompanyCandidate) (bool, []batchCompany) {
-	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
-		return false, nil
-	}
-	candidate := companyNamePairOf(c.DisplayName, c.LegalName)
-	spelled, spellsDomain := displayNameDomain(c.DisplayName)
-	var scored []batchCompany
-	for _, held := range b.members {
-		if spellsDomain && slices.Contains(held.domains, spelled) {
-			return true, nil
-		}
-		if _, rival := companyPairRival(candidate, held.names); rival {
-			scored = append(scored, held)
-		}
-	}
-	return false, scored
+// bindParam appends value to args and answers its placeholder.
+func bindParam[T any](args *[]any, value T) string {
+	*args = append(*args, value)
+	return "$" + strconv.Itoa(len(*args))
 }
 
 // ContactBatch is the contacts a batch will create, filed under the mail
@@ -102,34 +146,76 @@ func (b *CompanyBatch) scoredRivals(c CompanyCandidate) (bool, []batchCompany) {
 // domain is then the only employer evidence between two rows, and a name alone
 // cannot clear the threshold.
 type ContactBatch struct {
-	namesByDomain map[string][]string
+	byDomain map[string][]batchContact
+}
+
+// batchContact is a member's name as given, and as the scorer compares it.
+type batchContact struct {
+	name, normalized string
 }
 
 // Add records a contact the batch will create. A consumer mail domain is not
 // filed: the ladder never reads one as a shared employer.
 func (b *ContactBatch) Add(c ContactCandidate) {
-	if b.namesByDomain == nil {
-		b.namesByDomain = map[string][]string{}
+	if b.byDomain == nil {
+		b.byDomain = map[string][]batchContact{}
 	}
+	member := batchContact{name: c.FullName, normalized: normalizeName(c.FullName)}
 	for _, e := range c.Emails {
 		if domain := emailDomain(e); domain != "" && sharedEmployerDomain(c, domain) {
-			b.namesByDomain[domain] = append(b.namesByDomain[domain], c.FullName)
+			b.byDomain[domain] = append(b.byDomain[domain], member)
 		}
 	}
 }
 
-// BestRival is the fuzzy tier's confidence in the best earlier member it
-// admits, had that member been written. It is 0 when none clears the
-// threshold. An address two rows share is the exact tier's question, which the
-// batch asks first.
-func (b *ContactBatch) BestRival(ctx context.Context, tx pgx.Tx, c ContactCandidate) (float64, error) {
-	names, confidences := b.scoredRivals(c)
-	if len(names) == 0 {
+// ContactRivals is the Go half of the fuzzy tier's verdict on one candidate.
+// It holds the members on a shared employer domain scored over the threshold.
+type ContactRivals struct {
+	candidate   ContactCandidate
+	names       []string
+	confidences []float64
+}
+
+// Rivals scores c against the members filed under its own mail domains.
+func (b *ContactBatch) Rivals(c ContactCandidate) ContactRivals {
+	rivals := ContactRivals{candidate: c}
+	if NormalizeContactName(c.FullName) == "" {
+		return rivals
+	}
+	name := normalizeName(c.FullName)
+	for _, e := range c.Emails {
+		domain := emailDomain(e)
+		// Every member filed here shares only this domain with c, so the
+		// employer term is one number for all of them.
+		employer := companyMatch(c, contactCandidateRow{mailDomains: []string{domain}})
+		for _, member := range b.byDomain[domain] {
+			confidence := contactScore(normalizedNameSimilarity(name, member.normalized), employer)
+			if confidence >= dedupeReviewThreshold {
+				rivals.names = append(rivals.names, member.name)
+				rivals.confidences = append(rivals.confidences, confidence)
+			}
+		}
+	}
+	return rivals
+}
+
+// Any reports whether a member was scored, so Best has a query to run.
+func (r ContactRivals) Any() bool {
+	return len(r.names) > 0
+}
+
+// Best is the fuzzy tier's confidence in the best scored member it admits,
+// had that member been written. It is 0 when it admits none. An address two
+// rows share is the exact tier's question, which the batch asks first.
+func (r ContactRivals) Best(ctx context.Context, tx pgx.Tx) (float64, error) {
+	if !r.Any() {
 		return 0, nil
 	}
+	var args []any
+	namesAt, candidateAt := bindParam(&args, r.names), bindParam(&args, r.candidate.FullName)
 	rows, err := tx.Query(ctx, `
-		SELECT ord FROM unnest($1::text[]) WITH ORDINALITY AS p(full_name, ord)
-		 WHERE `+contactNameAdmitsSQL("p.full_name", "$2"), names, c.FullName)
+		SELECT ord FROM unnest(`+namesAt+`::text[]) WITH ORDINALITY AS p(full_name, ord)
+		 WHERE `+contactNameAdmitsSQL("p.full_name", candidateAt), args...)
 	if err != nil {
 		return 0, fmt.Errorf("dedupe contact batch admission: %w", err)
 	}
@@ -139,28 +225,7 @@ func (b *ContactBatch) BestRival(ctx context.Context, tx pgx.Tx, c ContactCandid
 	}
 	best := 0.0
 	for _, ord := range admitted {
-		best = max(best, confidences[ord-1])
+		best = max(best, r.confidences[ord-1])
 	}
 	return best, nil
-}
-
-// scoredRivals is BestRival's Go half: the members on a shared employer domain
-// that the scorer puts over the threshold, with their confidences.
-func (b *ContactBatch) scoredRivals(c ContactCandidate) ([]string, []float64) {
-	if NormalizeContactName(c.FullName) == "" {
-		return nil, nil
-	}
-	var names []string
-	var confidences []float64
-	for _, e := range c.Emails {
-		domain := emailDomain(e)
-		for _, name := range b.namesByDomain[domain] {
-			row := contactCandidateRow{fullName: name, mailDomains: []string{domain}}
-			if confidence := contactConfidence(c, row); confidence >= dedupeReviewThreshold {
-				names = append(names, name)
-				confidences = append(confidences, confidence)
-			}
-		}
-	}
-	return names, confidences
 }

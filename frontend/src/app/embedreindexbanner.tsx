@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { unwrap } from "../screens/common";
+import { useCan } from "../lib/capability";
 import {
-  embedReindexStatusQueryKey,
   useEmbedReindexAvailable,
+  useEmbedReindexStatus,
 } from "../screens/embedreindex";
-import { useCan } from "./capability";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
 // on an identity mismatch (configured_identity ≠ populated_identity) — the
@@ -31,18 +28,7 @@ export function EmbedReindexBanner() {
   const canRead = useCan("embedding_reindex", "read");
   const bound = useEmbedReindexAvailable();
   const enabled = canRead && bound;
-  const query = useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled,
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
+  const query = useEmbedReindexStatus(enabled, 5 * 60_000);
   // Advisory only: a failed status probe must not block the app shell — the
   // settings card (screens/embedreindex.tsx) surfaces the same read's error
   // state to the accountable audience.

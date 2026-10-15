@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { DealRoomPage } from "./dealroompage";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealRoomPage } from "./dealroompage";
 
 // The seller's whole Deal Room: the header and its verbs, the state banner, the
 // editable welcome text, the conversation, and the access card beside them.

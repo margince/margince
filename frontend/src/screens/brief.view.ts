@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { NO_URL_PARAMS, type UrlParams } from "../app/urlstate";
+import { NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";
 
 // WHICH BRIEF the reader is looking at, and whose.
 //

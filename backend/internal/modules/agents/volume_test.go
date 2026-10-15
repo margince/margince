@@ -46,9 +46,6 @@ func (c *countingCharger) Consume(_ context.Context, counter agentvolume.Counter
 	return nil
 }
 
-// reads is what the counter every pre-existing spec here is about was charged.
-func (c *countingCharger) reads() int { return c.charged[agentvolume.Reads] }
-
 // servingTool hands back the records it was built with, through the ONE place
 // a datasource.Record becomes tool output — so it exercises the charge point
 // the real tools ride rather than a parallel one written for the test.
@@ -139,121 +136,6 @@ func withNoCharger() chargeTestOption {
 	return func(c *chargeTest) { c.noCharger = true }
 }
 
-// The charge is PER RECORD, taken where records leave the surface. One call
-// answering twenty records costs twenty, which is the whole of what
-// "per-record, not per-call" means — and the reason it is charged here rather
-// than in each tool is that the tool added next is the one that would forget.
-func TestAnAnswerChargesForEveryRecordItServed(t *testing.T) {
-	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records"), records: 20})
-
-	if _, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-
-	if charger.reads() != 20 {
-		t.Errorf("a 20-record answer charged %d records", charger.reads())
-	}
-}
-
-// The same record served twice in one answer is charged twice. The envelope's
-// evidence list dedupes by value — one record read twice is one thing to cite —
-// and reusing that count for the bound would let a handler that reads a page
-// twice pay for it once.
-func TestARecordServedTwiceIsChargedTwice(t *testing.T) {
-	r, charger, ctx := chargingRegistry(t, &repeatingTool{spec: readToolSpec("read_record"), id: ids.NewV7(), times: 3})
-
-	if _, err := r.Invoke(ctx, "read_record", json.RawMessage(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-
-	if charger.reads() != 3 {
-		t.Errorf("one record served three times charged %d; the bound counts what was handed over, not what is citable", charger.reads())
-	}
-}
-
-type repeatingTool struct {
-	spec  mcp.ToolSpec
-	id    ids.UUID
-	times int
-}
-
-func (rt *repeatingTool) Spec() mcp.ToolSpec { return rt.spec }
-
-func (rt *repeatingTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	for range rt.times {
-		newWireRecord(ctx, datasource.Record{Ref: datasource.EntityRef{Type: "contact", ID: rt.id}})
-	}
-	return json.RawMessage(`{}`), nil
-}
-
-// A failed handler served nothing, so it costs nothing. Charging it would step
-// an agent up for records it never received — and an agent could be locked out
-// by a fault on our side rather than by its own reading.
-func TestAFailedAnswerChargesNothing(t *testing.T) {
-	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records"), records: 20, fail: true})
-
-	if _, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`)); err == nil {
-		t.Fatal("the failing handler reported success")
-	}
-
-	if charger.times[agentvolume.Reads] != 0 {
-		t.Errorf("a failed answer charged the read bound %d times", charger.times[agentvolume.Reads])
-	}
-}
-
-// An answer that carries no records at all does not touch the meter. Worth
-// pinning because the alternative — charging one per CALL as a floor — is the
-// per-call metering A139 rejects, and it would arrive by accident.
-func TestAnAnswerWithNoRecordsChargesNothing(t *testing.T) {
-	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("list_pipelines")})
-
-	if _, err := r.Invoke(ctx, "list_pipelines", json.RawMessage(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-
-	if charger.times[agentvolume.Reads] != 0 {
-		t.Errorf("a record-free answer charged the read bound %d times", charger.times[agentvolume.Reads])
-	}
-}
-
-// A read that cannot be COUNTED is not served. Logging and answering anyway
-// looks contained — the gate fails closed while the counter is down — but a
-// charge lost to a transient write error is lost for good: the counter comes
-// back short and those records are read again for free. Every blip would
-// quietly raise the ceiling.
-func TestAnAnswerThatCannotBeCountedIsWithheld(t *testing.T) {
-	r, _, ctx := chargingRegistry(t,
-		&servingTool{spec: readToolSpec("search_records"), records: 5},
-		withChargerError(errors.New("redis is unreachable")))
-
-	out, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
-
-	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
-		t.Fatalf("an uncountable read → %v, want ErrBudgetExceeded", err)
-	}
-	if out != nil {
-		t.Error("the answer was served anyway; a read that cannot be counted must not be handed over")
-	}
-}
-
-// A write tool that hands a record back still COUNTS toward the window, even
-// though the bound never refuses one. The read bound measures records handed
-// over; a surface where a read-back was free would meter one door and leave
-// the other open beside it.
-func TestAWriteThatReturnsARecordStillCharges(t *testing.T) {
-	spec := readToolSpec("update_record")
-	spec.RequiredScope = principal.ScopeWrite
-	r, charger, ctx := chargingRegistry(t, &servingTool{spec: spec, records: 1}, withScope(principal.ScopeWrite))
-
-	if _, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-
-	if charger.reads() != 1 {
-		t.Errorf("a write's read-back charged %d records", charger.reads())
-	}
-}
-
 // A registry composed without a charger records nothing and does not crash.
 // The Surface-B runner builds one, and it runs as the human or the system that
 // started it — neither of whom this bound governs.
@@ -262,40 +144,6 @@ func TestARegistryWithNoChargerServesNormally(t *testing.T) {
 
 	if _, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`)); err != nil {
 		t.Fatalf("a registry with no read charger failed to serve: %v", err)
-	}
-}
-
-// namingTool answers the way the intent tools do — with ids and derived prose
-// rather than rows, through noteEvidence.
-type namingTool struct {
-	spec  mcp.ToolSpec
-	names int
-}
-
-func (n *namingTool) Spec() mcp.ToolSpec { return n.spec }
-
-func (n *namingTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	noteDerivedContent(ctx)
-	for range n.names {
-		noteEvidence(ctx, "deal", ids.NewV7())
-	}
-	return json.RawMessage(`{}`), nil
-}
-
-// A tool that NAMES records without holding their rows still charges for them.
-// The intent family — the slipping sweep, the coverage reads, the catch-up —
-// answers this way, and each surfaces many records per call. If only the tools
-// that hold rows charged, the ones that surface the most records would be the
-// cheapest reads on the surface: A139's failure, one tool family over.
-func TestAToolThatNamesRecordsChargesForThem(t *testing.T) {
-	r, charger, ctx := chargingRegistry(t, &namingTool{spec: readToolSpec("whats_slipping_this_week"), names: 50})
-
-	if _, err := r.Invoke(ctx, "whats_slipping_this_week", json.RawMessage(`{}`)); err != nil {
-		t.Fatal(err)
-	}
-
-	if charger.reads() != 50 {
-		t.Errorf("a 50-record answer built from named records charged %d", charger.reads())
 	}
 }
 
@@ -311,7 +159,7 @@ func TestAWriteIsServedEvenWhenItsChargeCannotBeRecorded(t *testing.T) {
 		// The ANSWER-stage charge is the one that fails here: by then the send
 		// has happened. A meter that failed the call-ceiling charge too would
 		// refuse before the handler ran, which is the opposite property.
-		withChargerErrorOn(agentvolume.Reads, errors.New("redis is unreachable")))
+		withChargerErrorOn(agentvolume.Egress, errors.New("redis is unreachable")))
 
 	out, err := r.Invoke(ctx, "send_email", json.RawMessage(`{}`))
 	if err != nil {
@@ -323,8 +171,8 @@ func TestAWriteIsServedEvenWhenItsChargeCannotBeRecorded(t *testing.T) {
 }
 
 // Every admitted call spends the ceiling every other counter sits under, and it
-// spends exactly one however many records the answer carried. Charging it per
-// record would make MCP-SESS-CALLS a second read bound with a different number.
+// spends one however many records the answer carried. A per-record charge would
+// make MCP-SESS-CALLS a record count under another name.
 func TestEveryAdmittedCallSpendsOneOfTheCallCeiling(t *testing.T) {
 	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records"), records: 20})
 
@@ -354,8 +202,8 @@ func TestACallThatCannotBeCountedIsNotRun(t *testing.T) {
 	if out != nil {
 		t.Error("the answer was served anyway")
 	}
-	if charger.times[agentvolume.Reads] != 0 {
-		t.Error("the handler ran: records were charged for a call that was never counted")
+	if len(charger.times) != 1 {
+		t.Errorf("the handler ran: %v were charged for a call that was never counted", charger.times)
 	}
 }
 
@@ -397,21 +245,17 @@ func TestTheActIsChargedAgainstTheCounterItsKindNames(t *testing.T) {
 	}
 }
 
-// A read-only tool is charged ONCE, per record, and never a second time for the
-// act. Its act IS its records; a separate call-shaped charge on top would meter
-// the same answer twice against the same counter.
-func TestAReadOnlyToolIsChargedForItsRecordsAndNotAlsoForTheAct(t *testing.T) {
+// A read-only tool spends one call and nothing else. Its act is a call, so a
+// second charge would meter the same answer twice against one counter.
+func TestAReadOnlyToolSpendsOneCallAndNothingElse(t *testing.T) {
 	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records"), records: 4})
 
 	if _, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`)); err != nil {
 		t.Fatal(err)
 	}
 
-	if charger.reads() != 4 {
-		t.Errorf("a 4-record read charged %d", charger.reads())
-	}
-	if charger.times[agentvolume.Reads] != 1 {
-		t.Errorf("a read-only answer touched the read counter %d times, want one", charger.times[agentvolume.Reads])
+	if got := charger.charged[agentvolume.Calls]; got != 1 || charger.times[agentvolume.Calls] != 1 || len(charger.times) != 1 {
+		t.Errorf("a read-only tool charged %v, want one call and no other counter", charger.charged)
 	}
 }
 
@@ -434,11 +278,6 @@ func TestTheRestDoorChargesTheSameCountersTheMCPDoorDoes(t *testing.T) {
 	}
 	if got := charger.charged[agentvolume.Writes]; got != 1 {
 		t.Errorf("a REST mutation spent %d of the write quota, want 1", got)
-	}
-	// And no records: a mutation's own read-back is not this call's to count,
-	// and the REST read path is charged separately and per record.
-	if got := charger.charged[agentvolume.Reads]; got != 0 {
-		t.Errorf("a REST mutation spent %d records", got)
 	}
 }
 
@@ -471,9 +310,7 @@ func TestARestEffectThatCannotBeCountedIsStillDone(t *testing.T) {
 	}
 }
 
-// A read-only REST call has no ACT to charge beyond the records it served, and
-// those are counted where records leave the surface. Charging one here would
-// meter a GET twice against two different counters.
+// A read-only REST call has no ACT to charge beyond the call it already spent.
 func TestARestReadHasNoActToCharge(t *testing.T) {
 	spec := readToolSpec("search_records")
 	r, charger, ctx := chargingRegistry(t, &servingTool{spec: spec})
@@ -482,6 +319,30 @@ func TestARestReadHasNoActToCharge(t *testing.T) {
 
 	if len(charger.times) != 0 {
 		t.Errorf("a read-only REST call charged %v", charger.times)
+	}
+}
+
+// A REST read spends one call, wherever the request came in.
+func TestARestReadSpendsOneCall(t *testing.T) {
+	r, charger, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records")})
+
+	if err := r.ChargeAdmittedRead(ctx); err != nil {
+		t.Fatalf("charging an admitted REST read: %v", err)
+	}
+
+	if got := charger.charged[agentvolume.Calls]; got != 1 || len(charger.times) != 1 {
+		t.Errorf("a REST read charged %v, want one call", charger.charged)
+	}
+}
+
+// A REST read the meter cannot count is not run. Serving it would raise the
+// ceiling by one per blip.
+func TestARestReadThatCannotBeCountedIsRefused(t *testing.T) {
+	r, _, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records")},
+		withChargerError(errors.New("redis is unreachable")))
+
+	if err := r.ChargeAdmittedRead(ctx); !errors.Is(err, apperrors.ErrBudgetExceeded) {
+		t.Fatalf("an uncountable REST read → %v, want ErrBudgetExceeded", err)
 	}
 }
 

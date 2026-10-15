@@ -21,26 +21,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// A record type create_record's own write path cannot make at all still
-// stages through createResolver — unlike patch, create has no target to
-// read, so there is no seam to stand down on, but the same door-agnostic
-// principle holds: whether this VERB can make a custom_field is a fact about
-// create_record's own Handle, not about the operation, and the resolver has
-// no way to tell whether a REST create (whose own module's handler performs
-// it fine) or a raw tool call (which cannot) supplied this command. That
-// question is asked at the door that owns the answer —
-// TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite below, on
-// createRecord.StageInfo itself, before the command is ever built.
+// A record type create_record's own write path cannot make still stages
+// through createResolver. Whether the verb can make a product is a fact about
+// create_record's Handle, not about the operation. The resolver cannot tell a
+// REST create from a tool call. The tool door asks it instead:
+// TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite, below.
 func TestCreateStagesARecordTypeTheResolverHasNoOpinionOn(t *testing.T) {
-	call := NewCreateCall(nil, CreateCommand{RecordType: "custom_field", Fields: json.RawMessage(`{"name":"x"}`)})
+	call := NewCreateCall(nil, CreateCommand{RecordType: "product", Fields: json.RawMessage(`{"name":"x"}`)})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
-		t.Fatalf("staging a custom_field create through the resolver answered %v, want it staged — "+
+		t.Fatalf("staging a product create through the resolver answered %v, want it staged — "+
 			"createResolver.Guards has no opinion on whether create_record itself can write this type", err)
 	}
-	if info.TargetType != "custom_field" {
-		t.Errorf("staged target_type = %q, want \"custom_field\"", info.TargetType)
+	if info.TargetType != "product" {
+		t.Errorf("staged target_type = %q, want \"product\"", info.TargetType)
 	}
 	if !info.TargetID.IsZero() {
 		t.Errorf("staged target_id = %s, want zero", info.TargetID)
@@ -59,7 +54,7 @@ func TestCreateStagesARecordTypeTheResolverHasNoOpinionOn(t *testing.T) {
 func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 	tool := createRecord{}
 
-	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"record_type":"custom_field","fields":{}}`))
+	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"record_type":"product","fields":{}}`))
 	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("staging a create_record call naming a type this verb cannot create answered %v, want a "+
 			"BadArgsError — an approval for it could never be carried out", err)
@@ -183,16 +178,16 @@ func TestPatchStagesAServedRecordAndID(t *testing.T) {
 func TestPatchStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 	id := ids.NewV7()
 	call := NewPatchCall(unreadableProvider{}, nil, PatchCommand{
-		RecordType: "webhook_subscription", ID: id, Fields: json.RawMessage(`{"state":"paused"}`),
+		RecordType: "product", ID: id, Fields: json.RawMessage(`{"name":"Renamed package"}`),
 	})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
-		t.Fatalf("staging a webhook_subscription patch answered %v, want it staged — PATCH "+
-			"/v1/webhook-subscriptions/{id} is a governed operation whose target the seam simply does not serve", err)
+		t.Fatalf("staging a product patch answered %v, want it staged — PATCH /v1/products/{id} "+
+			"is a governed operation whose target the seam does not serve", err)
 	}
-	if info.TargetType != "webhook_subscription" || info.TargetID != id {
-		t.Errorf("staged target = (%s,%s), want (webhook_subscription,%s)",
+	if info.TargetType != "product" || info.TargetID != id {
+		t.Errorf("staged target = (%s,%s), want (product,%s)",
 			info.TargetType, info.TargetID, id)
 	}
 }

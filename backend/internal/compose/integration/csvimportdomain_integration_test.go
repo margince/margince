@@ -46,7 +46,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -132,7 +132,7 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	}
 
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -181,7 +181,7 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
 	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
 
@@ -223,7 +223,7 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 		t.Fatalf("create second run → %d, want 202", run2Status)
 	}
 	var approved2 importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run2.ID+"/approve", nil, nil, &approved2); s != http.StatusAccepted {
+	if s := importCall(t, e, run2.ID, "approve", nil, &approved2); s != http.StatusAccepted {
 		t.Fatalf("approve second → %d, want 202", s)
 	}
 

@@ -6,9 +6,12 @@ import "@testing-library/jest-dom/vitest";
 
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { useTagChips } from "./listquery";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { useTagChips } from "../components/listquery";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 
 // An empty vocabulary is three different answers: still loading, a workspace
 // with no words, and a caller who may not read them. The REQUEST carries the

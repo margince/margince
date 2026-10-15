@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ChangePasswordCard } from "./passwordcard";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
  * Changing the password you sign in with, from Settings → Account.

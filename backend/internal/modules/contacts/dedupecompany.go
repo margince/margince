@@ -410,9 +410,14 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 	return arms
 }
 
-// bestCompanyNamePairing scores every pairing of the two name axes and reports
-// which one won, with the raw values behind it so the queue can show the
-// comparison that was actually made.
+// bestCompanyNamePairing is bestCompanyFormPairing over raw names.
+func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) CompanyCandidateScore {
+	return bestCompanyFormPairing(companyNamePairOf(candidateDisplay, candidateLegal), companyNamePairOf(rowDisplay, rowLegal))
+}
+
+// bestCompanyFormPairing scores every pairing of the two name axes and reports
+// which one won. It keeps the raw values behind the winner, so the queue can
+// show the comparison that was actually made.
 //
 // An empty axis scores nothing rather than matching every other empty one: two
 // companies that both lack a registered name have said nothing about being the
@@ -429,10 +434,6 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 // name carries its legal form in front, where Jaro-Winkler's prefix boost is
 // strongest, so scoring the unstripped name put two unrelated companies over
 // the threshold on their boilerplate alone.
-func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) CompanyCandidateScore {
-	return bestCompanyFormPairing(companyNamePairOf(candidateDisplay, candidateLegal), companyNamePairOf(rowDisplay, rowLegal))
-}
-
 func bestCompanyFormPairing(candidate, row companyNamePair) CompanyCandidateScore {
 	sides := []struct {
 		form  companyNameForm

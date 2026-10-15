@@ -13,15 +13,15 @@ import {
   type FilterVocabulary,
   useFilterVocabulary,
   type VocabularyField,
-} from "./filterdata";
-import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
+} from "../lib/filterdata";
 import type {
   ListClauseVerdict,
   ListExplanation,
   ListRecordType,
-} from "./lists.queries";
-import { useMemberNames } from "./membernames";
-import type { FilterOp } from "./segmentpredicate";
+} from "../lib/lists.queries";
+import { useMemberNames } from "../lib/membernames";
+import type { FilterOp } from "../lib/segmentpredicate";
+import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
 export function LiveExplanation({

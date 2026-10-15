@@ -4,8 +4,9 @@
 package compose
 
 // The owner-identity surface: list the caller's own other addresses, declare
-// one, withdraw one. Thin transport — the capture store owns the gate (a human
-// seat, and the row must be theirs) and the audited write.
+// one, withdraw one, put a withdrawn one back. Thin transport: the capture
+// store owns the gate (a human seat, and the row must be theirs) and the
+// audited write.
 
 import (
 	"net/http"
@@ -56,6 +57,15 @@ func (h captureOwnerIdentityHandlers) DeleteCaptureOwnerIdentity(w http.Response
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h captureOwnerIdentityHandlers) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	identity, err := h.store.RestoreRemoval(r.Context(), ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractOwnerIdentity(identity))
 }
 
 func toContractOwnerIdentity(identity capture.OwnerIdentity) crmcontracts.CaptureOwnerIdentity {

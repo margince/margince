@@ -6,11 +6,11 @@ package migration
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,6 +34,7 @@ const (
 	ObjectLead    = "lead"
 	ObjectCompany = "company"
 	ObjectContact = "contact"
+	ObjectDeal    = "deal"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). The column's CHECK also admits salesforce — the DDL is the
 	// chapter's pinned arrival shape — but it gets its Go constant when that
@@ -52,6 +53,7 @@ var ErrObjectNotInSource = errors.New("object is not in this import source")
 type SkippedLine struct {
 	Line   int
 	Reason string
+	Why    Reason
 }
 
 // CSVSource reads an uploaded delimited file out of the blobstore as a
@@ -76,6 +78,8 @@ type CSVSource struct {
 
 	// body is the stored file's bytes, read on first use.
 	body []byte
+	// rows is the file's row count once Counts has walked it; body is fixed by then.
+	rows *int
 	// cursor is where the last page of Rows stopped.
 	cursor *rowCursor
 
@@ -84,7 +88,18 @@ type CSVSource struct {
 	// before it — so this needs no lock, and giving it one would suggest a
 	// concurrency the rest of the type does not actually support.
 	skipped []SkippedLine
+
+	// observe hears where each page of Rows ended; nil hears nothing.
+	observe RowsRead
 }
+
+// RowsRead hears that a source has delivered its object's rows up to the
+// given position. An error it answers ends the read with that error.
+type RowsRead func(ctx context.Context, object string, delivered int) error
+
+// ObserveRows sets what hears each page of Rows end, so a reader can report
+// how far a walk of the file has come.
+func (s *CSVSource) ObserveRows(observe RowsRead) { s.observe = observe }
 
 // NewCSVSource binds one uploaded file to one object and one mapping.
 // sourceKeyColumn names the column that identifies a row for idempotent upsert
@@ -106,15 +121,18 @@ func (s *CSVSource) Objects() []string { return []string{s.object} }
 
 // Counts reports how many rows the file holds, for the run's progress figure.
 func (s *CSVSource) Counts(ctx context.Context) (map[string]int, error) {
-	rows := 0
-	err := s.walk(ctx, func(int, []string, map[string]int) error {
-		rows++
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	if s.rows == nil {
+		rows := 0
+		err := s.walk(ctx, func(int, []string, map[string]int) error {
+			rows++
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		s.rows = &rows
 	}
-	return map[string]int{s.object: rows}, nil
+	return map[string]int{s.object: *s.rows}, nil
 }
 
 // Skipped reports the rows no page could deliver, with the line to open and the
@@ -149,6 +167,11 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 		}
 		if s.cursor.delivered > offset {
 			out = append(out, row)
+		}
+	}
+	if s.observe != nil {
+		if err := s.observe(ctx, s.object, s.cursor.delivered); err != nil {
+			return nil, err
 		}
 	}
 	return out, nil
@@ -200,10 +223,8 @@ func (c *rowCursor) next(s *CSVSource) (Row, bool, error) {
 		// arrived as one skip and a phantom `unchanged`, and the four counts
 		// stopped summing to rows_read.
 		if first, seen := c.claimed[row.ExternalID]; seen {
-			s.skip(line, fmt.Sprintf(
-				"the %q value %q is already used by line %d; each row needs its own, because it is "+
-					"what a re-import matches on and what an undo finds this row by",
-				s.sourceKey, row.ExternalID, first))
+			s.skip(line, Why(ReasonRowKeyRepeated,
+				"column", s.sourceKey, "value", row.ExternalID, "line", strconv.Itoa(first)))
 			continue
 		}
 		c.claimed[row.ExternalID] = line
@@ -243,13 +264,13 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		external = strings.TrimSpace(record[at])
 	}
 	if external == "" {
-		s.skip(line, fmt.Sprintf("the %q column is empty, so this row cannot be identified for re-import or undo", s.sourceKey))
+		s.skip(line, Why(ReasonRowKeyEmpty, "column", s.sourceKey))
 		return Row{}, false
 	}
 	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
 }
 
-func (s *CSVSource) skip(line int, reason string) {
+func (s *CSVSource) skip(line int, why Reason) {
 	for _, already := range s.skipped {
 		if already.Line == line {
 			// A page re-read after a resume walks the same rows again; the
@@ -257,7 +278,7 @@ func (s *CSVSource) skip(line int, reason string) {
 			return
 		}
 	}
-	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: reason})
+	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: why.English(), Why: why})
 }
 
 // Header names the file's own columns, and reads no further.
@@ -278,7 +299,7 @@ func (s *CSVSource) Header(ctx context.Context) ([]string, error) {
 // at the first data record, and the header it just read.
 type openFile struct {
 	body    io.ReadCloser
-	records *csv.Reader
+	records recordReader
 	header  []string
 	key     string
 }

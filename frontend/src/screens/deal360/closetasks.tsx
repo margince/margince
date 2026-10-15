@@ -11,23 +11,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  type BulkBatch,
+  type BulkChangeRequest,
+  useBulkOutcome,
+} from "../../components/bulkchange";
+import {
+  BULK_MAX_ITEMS,
+  executeBulkChange,
+  previewBulkChange,
+} from "../../components/bulkchangeapi";
+import { SkipReason } from "../../components/bulkwords";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import {
-  type BulkBatch,
-  type BulkChangeRequest,
-  useBulkOutcome,
-} from "../bulkchange";
-import {
-  BULK_MAX_ITEMS,
-  executeBulkChange,
-  previewBulkChange,
-} from "../bulkchangeapi";
-import { SkipReason } from "../bulkwords";
-import { unwrap } from "../common";
+import { unwrap } from "../../lib/problem";
 
 type Activity = components["schemas"]["Activity"];
 

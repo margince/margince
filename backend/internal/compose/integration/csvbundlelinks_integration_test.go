@@ -14,7 +14,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // contactRefParts is one contacts.csv whose company column names a company_ref.
@@ -132,10 +136,10 @@ func TestABrokenLinkSkipsTheRowUnlessTheRunSaysImportAnyway(t *testing.T) {
 func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importRunDTO {
 	t.Helper()
 	var run importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": uploadZip(t, e, "b.zip", zipBytes(t, files)).SourceRef,
 		"source_name": "b", "on_broken_link": policy, "parts": contactRefParts(),
-	}, nil, &run); status != http.StatusAccepted {
+	}, &run); status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
 	return run
@@ -219,10 +223,10 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 			e := setupImportApp(t)
 			files := map[string]string{"contacts.csv": "ref,email,name,company\nP-1,lu@" + policy + ".example,Lu,Nowhere Ltd\n"}
 			var run importRunDTO
-			if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+			if status := testCall(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "source_ref": uploadZip(t, e, "c.zip", zipBytes(t, files)).SourceRef,
 				"source_name": "c", "on_broken_link": policy, "parts": nameParts,
-			}, nil, &run); status != http.StatusAccepted {
+			}, &run); status != http.StatusAccepted {
 				t.Fatalf("stage → %d, want 202", status)
 			}
 			wantKind, wantCreated := "broken_link", 0
@@ -318,22 +322,73 @@ func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importR
 	return stageBundle(t, e, uploadZip(t, e, "n.zip", zipBytes(t, files)).SourceRef, "n", parts)
 }
 
+// failAfterTheCompanyRow leaves the run as an attempt that landed the company
+// row and died: failed past it, with the bound ref that row wrote.
+func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string) {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	user := ids.NewV7()
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	company, err := ids.Parse(named)
+	if err != nil {
+		t.Fatal(err)
+	}
+	system := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV + ":n"
+	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+		run, err := ids.Parse(runID)
+		if err != nil {
+			return err
+		}
+		if err := migration.NewRunStore(e.DB()).RecordIdentityTx(ctx, tx, migration.RunID(run),
+			system, migration.ObjectCompany, "CO-7", company, migration.OriginBound); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `
+			UPDATE import_run SET status = 'failed', checkpoint = 1, approved_at = now() WHERE id = $1`, runID)
+		return err
+	}); err != nil {
+		t.Fatalf("failing the run after its company row: %v", err)
+	}
+}
+
 // A resumed commit has passed the company row, yet the contact still finds the
 // company that row named by id, as the test run said.
 func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
-	ctx := e.DealWriterContext(t)
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE import_run SET status = 'failed', checkpoint = 1 WHERE id = $1`, run.ID)
-		return err
-	}); err != nil {
-		t.Fatalf("failing the run after its company row: %v", err)
-	}
+	failAfterTheCompanyRow(t, e, run.ID, named)
 	approveAndRead(t, e, run.ID)
 	if employer := employerOf(t, e, "ida@named.example"); employer != "Named Works" {
 		t.Fatalf("employer = %q, want the company the passed row named", employer)
+	}
+}
+
+// A resumed commit checks the company a passed row named by id under the
+// principal resuming it. One the importer can no longer see is a broken link.
+func TestAResumedCommitDoesNotLinkACompanyTheCallerCanNoLongerSee(t *testing.T) {
+	e := setupImportApp(t)
+	e.DescribeCompany(t)
+	colleague := createdID(t, e, "/v1/users", AnyMap{
+		"email": "colleague@named-hidden.test", "display_name": "Colleague", "role": "rep",
+	})
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
+	failAfterTheCompanyRow(t, e, run.ID, named)
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, named, colleague); err != nil {
+		t.Fatalf("making the named company private to the colleague: %v", err)
+	}
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if !hasIssue(committed, "broken_link", "CO-7") || committed.Disposition.Created != 0 {
+		t.Fatalf("committed = %+v, want CO-7 a broken link and the contact skipped", committed)
 	}
 }
 
@@ -356,5 +411,51 @@ func TestARefusedUpdateStillBindsTheCompanyItNamed(t *testing.T) {
 	}
 	if employer := employerOf(t, e, "ida@named.example"); employer != "Named Works" {
 		t.Fatalf("employer = %q, want the company the row named", employer)
+	}
+}
+
+// A company row naming its record by id binds its ref for good. A later import
+// under the same source name links a contact to it by that ref.
+func TestALaterImportFindsTheRefOfAnIdNamedCompany(t *testing.T) {
+	e := setupImportApp(t)
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	approveAndRead(t, e, namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n").ID)
+
+	later := map[string]string{"contacts.csv": "ref,email,name,company\nP-2,ivo@named.example,Ivo,CO-7\n"}
+	run := stageBundle(t, e, uploadZip(t, e, "later.zip", zipBytes(t, later)).SourceRef, "n", contactRefParts())
+	if predicted := readImportReport(t, e, run.ID); hasIssue(predicted, "broken_link", "CO-7") {
+		t.Fatalf("dry run = %+v, want CO-7 found through the earlier import", predicted)
+	}
+	approveAndRead(t, e, run.ID)
+	if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != 1 || hasIssue(committed, "broken_link", "CO-7") {
+		t.Fatalf("committed = %+v, want the contact created and no broken link", committed)
+	}
+	if employer := employerOf(t, e, "ivo@named.example"); employer != "Named Works" {
+		t.Fatalf("employer = %q, want the company the earlier file named by id", employer)
+	}
+}
+
+// Undo archives what a run created. The company a row named by id existed
+// before the run, so it stays live while the contact the run created goes.
+func TestUndoLeavesTheCompanyAFileNamedByID(t *testing.T) {
+	e := setupImportApp(t)
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
+	approveAndRead(t, e, run.ID)
+
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", status)
+	}
+	var report importReportWithUndoDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report after undo → %d, want 200", status)
+	}
+	if report.Undo == nil || report.Undo.ReversedCount != 1 {
+		t.Fatalf("undo = %+v, want only the created contact reversed", report.Undo)
+	}
+	var live bool
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT archived_at IS NULL FROM company WHERE id = $1`, named).Scan(&live); err != nil || !live {
+		t.Fatalf("the named company live = %v, %v; want it untouched by the undo", live, err)
 	}
 }

@@ -225,7 +225,7 @@ function TierCell({
         />
       )}
       <CellStack>
-        <KeyedName name={tierLabel(lane.name, t)} code={lane.name} />
+        <span>{tierLabel(lane.name, t)}</span>
         {gloss && <span className="t-caption ai-tier-gloss">{gloss}</span>}
       </CellStack>
     </span>

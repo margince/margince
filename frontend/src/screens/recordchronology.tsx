@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { EmptyState, PendingBody } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
 import { FilterPills } from "../design-system/filterpills";
+import { LoadMoreButton } from "../design-system/querystates";
 import type { RecordTimeline } from "../design-system/recordtimeline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, useViewerId } from "./common";
+import type { EntityKind } from "../lib/entity";
+import { historyFieldLabel } from "../lib/historyfieldlabels";
+import { useViewerId } from "../lib/session";
 import { changeTimeline, useFieldHistory } from "./history";
-import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 
 // A record's History, for every record page. All is what was said: threads,

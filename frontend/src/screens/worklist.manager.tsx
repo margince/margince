@@ -13,23 +13,25 @@
 // They are drawn only on a named contact's queue. On the reader's own day there
 // is nobody to reassign work to and nobody to coach.
 
-import { UserRoundArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { useAssignableUserOptions } from "../components/assigneepicker";
+import {
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../components/entityref";
 import {
   Button,
   Field,
   SegmentedControl,
   Textarea,
 } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useAssignableUserOptions } from "./assigneepicker";
-import { problemCodeOf, useMe } from "./common";
-import { useRosterPartial, useRosterPartialHint } from "./entityref";
+import { problemCodeOf } from "../lib/problem";
+import { useMe } from "../lib/session";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -116,20 +118,20 @@ function useAssigneeOptions(exclude: string | undefined) {
   );
 }
 
-// Hand one task to somebody else.
+// Hand one task to somebody else, in a form the row opens from its menu.
 //
 // The row leaves this queue when the refetch lands, not on the press. The queue
 // is ranked and counted server-side — a row removed locally would leave the
 // summary above it counting work that is no longer here, and the rank numbers
 // beside every remaining row wrong. So the press reports itself through the
 // toast, and the list reconciles.
-export function ReassignControl({
+export function ReassignForm({
   item,
   owner,
-}: Readonly<{ item: WorklistItem; owner: string }>) {
+  onClose,
+}: Readonly<{ item: WorklistItem; owner: string; onClose: () => void }>) {
   const t = useT();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
   const [assignee, setAssignee] = useState("");
   // Whose queue is being read, which is the contact a reassignment moves work
   // AWAY from. On a rep's drill-down that is the selected rep; on the reader's
@@ -149,20 +151,6 @@ export function ReassignControl({
   const settled = holder !== undefined;
   const reassign = useReassignTask();
 
-  if (!open) {
-    // A GLYPH while it is closed. This control sits in a queue row's one line
-    // of verbs beside a move, an Open, three judgements and the row's own
-    // answer, and the hand-off is the rarest of them — a word for it took the
-    // width the reader needed for the work. `IconAction` keeps the name on
-    // hover and in the accessible tree, which a bare square would not.
-    return (
-      <IconAction
-        icon={<UserRoundArrowLeft aria-hidden="true" />}
-        label={t("worklist.manager.reassign")}
-        onClick={() => setOpen(true)}
-      />
-    );
-  }
   // ONE LINE, ending in the answer. The form stands where the row's verbs were,
   // so it keeps their reading: the quiet way out before the call to action, and
   // the call to action on the trailing edge where every other verb on this page
@@ -178,7 +166,7 @@ export function ReassignControl({
         placeholder={t("worklist.manager.reassignTo")}
         aria-label={t("worklist.manager.reassignTo")}
       />
-      <Button variant="ghost" onClick={() => setOpen(false)}>
+      <Button variant="ghost" onClick={onClose}>
         {t("worklist.manager.cancel")}
       </Button>
       <Button
@@ -193,7 +181,7 @@ export function ReassignControl({
             },
             {
               onSuccess: () => {
-                setOpen(false);
+                onClose();
                 toast.show(t("worklist.manager.reassigned"));
               },
               // No completion mark on a refusal: the green dot is the region's

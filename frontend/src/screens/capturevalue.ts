@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../i18n/en";
-import { problemFieldErrorsOf, problemMessageOf } from "./common";
+import { problemFieldErrorsOf, problemMessageOf } from "../lib/problem";
 
 const VALUE_FIELDS: ReadonlySet<string> = new Set(["value", "domain"]);
 const VALUE_REFUSAL_CODES: ReadonlySet<string> = new Set([

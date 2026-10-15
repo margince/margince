@@ -6,8 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { unwrap } from "./common";
-import type { MutationOutcome } from "./undoableremoval";
+import { unwrap } from "../lib/problem";
+import type { MutationOutcome } from "../lib/undoableremoval";
 
 export type Tag = components["schemas"]["Tag"];
 /** The palette, from the contract rather than restated beside it. */

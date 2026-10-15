@@ -1,0 +1,28 @@
+name: golangci-cache-key
+description: >-
+  Hand back the key of golangci-lint's analysis cache, so the ci lane that reads
+  it and the scheduled main job that writes it spell the key in one place.
+
+outputs:
+  key:
+    description: The primary key, ending in the commit SHA so every run saves its refreshed cache.
+    value: ${{ steps.key.outputs.key }}
+  restore-keys:
+    description: The prefix that matches the newest entry with the same dependencies and lint config.
+    value: ${{ steps.key.outputs.restore-keys }}
+
+runs:
+  using: composite
+  steps:
+    # A toolchain, dependency or lint-config change shifts the prefix and starts
+    # clean. The golangci version pin is not in the key: golangci versions its
+    # cache entries itself, and hashing the whole Makefile went cold on every edit.
+    - name: Compute the golangci cache key
+      id: key
+      shell: bash
+      run: |
+        prefix="golangci-analysis-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml', 'backend/.golangci.strict.yml') }}"
+        {
+          echo "key=$prefix-${{ github.sha }}"
+          echo "restore-keys=$prefix-"
+        } >> "$GITHUB_OUTPUT"

@@ -27,3 +27,38 @@ export function needsStory(file) {
   if (TEST_ONLY_NAME.test(file)) return false;
   return !TESTING_DIRECTORY.test(file);
 }
+
+export const ALL_STORIES_FLAG = "--all-stories";
+
+export function scopeFor(argv) {
+  return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
+}
+
+export function storiesInScope(entries, scope, importPaths) {
+  const stories = entries.filter((entry) => entry.type === "story");
+  if (scope === "all") return stories;
+  return stories.filter((entry) => importPaths.has(entry.importPath));
+}
+
+// A story file on disk that no story entry came from: the build dropped it.
+export function unresolvedStoryFiles(importPaths, stories) {
+  const registered = new Set(stories.map((entry) => entry.importPath));
+  return [...importPaths].filter((path) => !registered.has(path));
+}
+
+export function uatVerdict({
+  scope,
+  results,
+  unresolved,
+  missing,
+  allowMissing,
+}) {
+  // An all-stories run that captured nothing read a broken index, not a clean tree.
+  const emptyCensus = scope === "all" && results.length === 0;
+  const pass =
+    !emptyCensus &&
+    results.every((result) => result.pass) &&
+    unresolved.length === 0 &&
+    (allowMissing || missing.length === 0);
+  return { pass, emptyCensus };
+}
