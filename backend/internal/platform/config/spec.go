@@ -48,6 +48,9 @@ type Store struct {
 	Freeze           func(context.Context, pgx.Tx) (bool, string, error)
 	MachineryApplied bool
 	SecretReference  bool
+	// SurvivesDataReset keeps the row through a data reset: the installation's
+	// own identity, which a reset of its records must not take with them.
+	SurvivesDataReset bool
 }
 
 // Setting is a declared setting, read through Val or StoredVal.
@@ -75,6 +78,9 @@ func DefineStored[T any](s Spec[T], st Store) *Setting[T] {
 	}
 	if st.SecretReference {
 		row = row.AsSecretReference()
+	}
+	if st.SurvivesDataReset {
+		row = row.AsInstallationIdentity()
 	}
 	setting.row = row
 	return setting

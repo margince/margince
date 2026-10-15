@@ -16,8 +16,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // SetBaseLanguage stores one language code as the installation's base
@@ -43,7 +43,7 @@ func SetBaseLanguage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, code
 			`DELETE FROM setting WHERE key = $1`, identity.BaseLanguage.Key()); err != nil {
 			return err
 		}
-		stored, err := settings.SeedValue(ctx, tx, identity.BaseLanguage, code, nil)
+		stored, err := config.SeedTx(ctx, tx, nil, identity.BaseLanguage, code)
 		if err != nil {
 			return err
 		}

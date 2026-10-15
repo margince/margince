@@ -11,7 +11,6 @@ package compose
 import (
 	"io/fs"
 	"sync"
-	"sync/atomic"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -19,16 +18,16 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
-var bootConfig atomic.Pointer[config.Config]
-
 // UseConfig hands compose the configuration this program loaded. A program
 // that reads stored settings calls it once, after Load and before it composes.
-func UseConfig(c *config.Config) { bootConfig.Store(c) }
+// It binds the process's configuration, which the modules' package-level
+// readers take their locks from too.
+func UseConfig(c *config.Config) { config.Bind(c) }
 
 // loadedConfig is the program's configuration, or for a process that loaded
 // none, such as a test composing stores, one where no boot source sets anything.
 func loadedConfig() *config.Config {
-	if c := bootConfig.Load(); c != nil {
+	if c := config.Bound(); c != nil {
 		return c
 	}
 	return unsetConfig()

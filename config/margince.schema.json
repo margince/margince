@@ -549,6 +549,67 @@
         "agent_window_next_from": {
           "description": "When the saved window length takes over, in Unix seconds, 0 when none waits. The product writes it.",
           "type": "integer"
+        },
+        "name": {
+          "description": "The company's name. Set at boot, it also refuses a different name on the company profile.",
+          "type": "string"
+        },
+        "country": {
+          "description": "Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none.",
+          "type": "string"
+        },
+        "base_language": {
+          "description": "The language AI writes the shared record in: en, de or vi.",
+          "type": "string"
+        },
+        "date_format": {
+          "description": "How dates are written: locale, dmy, mdy or ymd.",
+          "type": "string"
+        },
+        "time_format": {
+          "description": "How times of day are written: locale, 24h or 12h.",
+          "type": "string"
+        },
+        "fiscal_year_start_month": {
+          "description": "The month the business year begins, 1 to 12.",
+          "type": "integer"
+        },
+        "dead_work_banner_hours": {
+          "description": "Hours the job-health banner looks back before it calls dead work a problem.",
+          "type": "integer"
+        },
+        "forecast_forward_measure": {
+          "description": "Which remaining-pipeline reading a projected landing is built from.",
+          "type": "string"
+        }
+      }
+    },
+    "identity": {
+      "description": "The sign-in settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled_oidc_providers": {
+          "description": "The sign-in providers offered, as a list of provider keys. Unset offers every provider the deployment configured.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "require_sso": {
+          "description": "Members other than admins sign in only through a sign-in provider.",
+          "type": "boolean"
+        },
+        "require_mfa": {
+          "description": "Every member must sign in with a second factor.",
+          "type": "boolean"
+        },
+        "oidc_group_role_map": {
+          "description": "The role each directory group grants at sign-in, as group:role pairs. Grants only; it never takes a role away.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     }

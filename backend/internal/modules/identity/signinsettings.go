@@ -14,7 +14,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // The ceilings on the provider list, mirroring the contract's maxItems and
@@ -44,18 +44,16 @@ const (
 // installation that upgrades into this setting keeps the login screen it had
 // and nobody has to be told to go and re-enable Google.
 //
-// It SURVIVES A DATA RESET, which is what AsInstallationIdentity buys and is
-// the reason for it here — the marker reads as "identity" but what it decides
-// is whether a wipe spares the row. Absent means every configured provider, so
+// It SURVIVES A DATA RESET, which is what Store.SurvivesDataReset buys and is
+// the reason for it here. Absent means every configured provider, so
 // a reset that deleted this would silently re-open a sign-in method an admin
 // had deliberately closed. A data reset clears customers and deals; it is not a
 // decision to change who may sign in.
-var EnabledOidcProviders = settings.Define[[]string](
-	"identity.enabled_oidc_providers",
-	installationSettingsObject,
-	"update",
-	nil,
-	func(keys []string) error {
+var EnabledOidcProviders = config.DefineStored(config.Spec[[]string]{
+	Key:  "identity.enabled_oidc_providers",
+	Env:  "MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS",
+	Type: config.List(config.String),
+	Validate: func(keys []string) error {
 		// Bounded HERE and not only in the contract, because this value is read
 		// back on an ANONYMOUS request: the capabilities probe unmarshals it on
 		// every login screen, so an oversized list stored once would be paid for
@@ -84,7 +82,8 @@ var EnabledOidcProviders = settings.Define[[]string](
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "The sign-in providers offered, as a list of provider keys. Unset offers every provider the deployment configured.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // RequireSSO closes the password path: when true, an ordinary member may sign
 // in only through a configured provider, and only an admin keeps the password
@@ -98,13 +97,13 @@ var EnabledOidcProviders = settings.Define[[]string](
 // It SURVIVES A DATA RESET for the same reason its sibling does: a wipe clears
 // customers and deals, never a deliberate decision about who may sign in, and
 // re-opening the password path on a reset would be exactly that.
-var RequireSSO = settings.Define[bool](
-	"identity.require_sso",
-	installationSettingsObject,
-	"update",
-	false,
-	nil,
-).AsInstallationIdentity()
+var RequireSSO = config.DefineStored(config.Spec[bool]{
+	Key:     "identity.require_sso",
+	Env:     "MARGINCE_IDENTITY_REQUIRE_SSO",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Members other than admins sign in only through a sign-in provider.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // The ceilings on the group→role map, mirroring the contract's maxProperties.
 // Bounded for the same reason the provider list is: the map is read on the
@@ -149,13 +148,13 @@ const (
 // The read stays free for the same reason its siblings' do — SignInPolicy takes
 // authentication_policy/read once and then reads as the installation, and the
 // login-path read is anonymous by construction.
-var OidcGroupRoleMap = settings.Define[map[string]string](
-	"identity.oidc_group_role_map",
-	authenticationPolicyObject,
-	"update",
-	nil,
-	validateGroupRoleMap,
-).AsInstallationIdentity()
+var OidcGroupRoleMap = config.DefineStored(config.Spec[map[string]string]{
+	Key:      "identity.oidc_group_role_map",
+	Env:      "MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP",
+	Type:     config.Map(config.String),
+	Validate: validateGroupRoleMap,
+	Doc:      "The role each directory group grants at sign-in, as group:role pairs. Grants only; it never takes a role away.",
+}, config.Store{RBACObject: authenticationPolicyObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // validateGroupRoleMap holds the map's bounds and vocabulary at the write.
 // The allowed values are DERIVED from systemRoles rather than restated, so a
@@ -206,10 +205,10 @@ func isSystemRoleKey(key string) bool {
 // password. Defined and read on the same terms as RequireSSO, and it survives a
 // data reset for the same reason — a wipe clears customers, never a decision
 // about how members must sign in.
-var RequireMFA = settings.Define[bool](
-	"identity.require_mfa",
-	installationSettingsObject,
-	"update",
-	false,
-	nil,
-).AsInstallationIdentity()
+var RequireMFA = config.DefineStored(config.Spec[bool]{
+	Key:     "identity.require_mfa",
+	Env:     "MARGINCE_IDENTITY_REQUIRE_MFA",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Every member must sign in with a second factor.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})

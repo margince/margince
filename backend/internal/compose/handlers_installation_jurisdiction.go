@@ -25,9 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/compliancedocs"
@@ -106,7 +106,7 @@ func (h installationSettingsHandlers) readJurisdiction(ctx context.Context, fn f
 }
 
 func gatedCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := settings.GetTx(ctx, tx, identity.Country)
+	code, err := config.StoredValTx(ctx, tx, loadedConfig(), identity.Country)
 	return jurisdiction.Code(code), err
 }
 

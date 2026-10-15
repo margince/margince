@@ -123,6 +123,18 @@ value gets a 409 that names the source, and a save of the same value changes not
 
 | Env | Default | Key |
 |---|---|---|
+| `MARGINCE_INSTALLATION_NAME` | — | `installation.name` |
+| `MARGINCE_INSTALLATION_COUNTRY` | — (none) | `installation.country` |
+| `MARGINCE_INSTALLATION_BASE_LANGUAGE` | `en` (`en`, `de` or `vi`) | `installation.base_language` |
+| `MARGINCE_INSTALLATION_DATE_FORMAT` | `locale` (`dmy`, `mdy` or `ymd`) | `installation.date_format` |
+| `MARGINCE_INSTALLATION_TIME_FORMAT` | `locale` (`24h` or `12h`) | `installation.time_format` |
+| `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | `1` (1 to 12) | `installation.fiscal_year_start_month` |
+| `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | `24` (1 to 168) | `installation.dead_work_banner_hours` |
+| `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | `commit_evidence` (`weighted` or `manager_call`) | `installation.forecast_forward_measure` |
+| `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — (every provider the deployment sets up) | `identity.enabled_oidc_providers`, a `,` list |
+| `MARGINCE_IDENTITY_REQUIRE_SSO` | `false` | `identity.require_sso` |
+| `MARGINCE_IDENTITY_REQUIRE_MFA` | `false` | `identity.require_mfa` |
+| `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `identity.oidc_group_role_map`, as `group:role` pairs in a `,` list |
 | `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | `43200` (5 to 129600) | `installation.oauth_access_token_ttl_minutes` |
 | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.agent_runner_interval_seconds` |
 | `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.webhook_retry_interval_seconds` |
@@ -145,6 +157,10 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | `24` (1 to 168) | `installation.agent_window_hours` |
 | `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_HOURS` | `0` | `installation.agent_window_next_hours` |
 | `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_FROM` | `0` | `installation.agent_window_next_from` |
+
+A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
+`identity.oidc_group_role_map`, and deletes the rest. A boot-set `installation.name` refuses a different name on the
+company profile.
 
 A boot-set `installation.agent_window_hours` also keeps a window length an admin saved for the next
 reset from taking over. The product writes the two `agent_window_next_*` settings itself; do not set them.

@@ -28,7 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -252,7 +252,7 @@ func enabledOidcProviders(pool *pgxpool.Pool, svc *identity.Service, configured 
 		}
 		readCtx := principal.SystemActing(
 			principal.WithWorkspaceID(ctx, wsID.UUID), enabledOidcProvidersReadActor)
-		chosen, err := settings.Get(readCtx, NewSettingsStore(pool), identity.EnabledOidcProviders)
+		chosen, err := config.StoredVal(readCtx, StoredConfig(pool), identity.EnabledOidcProviders)
 		if err != nil {
 			return nil, fmt.Errorf("reading the enabled sign-in providers: %w", err)
 		}

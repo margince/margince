@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -26,7 +27,7 @@ import (
 func SeedCountryOnce(ctx context.Context, pool *pgxpool.Pool, code string) (stored bool, err error) {
 	err = database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var seedErr error
-		stored, seedErr = settings.SeedValue(ctx, tx, Country, code, nil)
+		stored, seedErr = config.SeedTx(ctx, tx, config.Bound(), Country, code)
 		return seedErr
 	})
 	return stored, err

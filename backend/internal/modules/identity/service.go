@@ -348,6 +348,9 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if err != nil {
 			return err
 		}
+		if name, ok := config.BootVal(config.Bound(), Name); ok {
+			id.WorkspaceName = name
+		}
 		id.UserID = userID
 		// NULL stays empty: somebody who never chose a language is not somebody
 		// who chose English, and only the reader's own browser can answer for

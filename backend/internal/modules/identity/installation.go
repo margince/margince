@@ -15,10 +15,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -327,7 +330,10 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 	currency, language = in.BaseCurrency, in.BaseLanguage
 	if origin == originClaimed {
 		for _, ask := range []struct {
-			entry *settings.Entry[string]
+			entry interface {
+				Key() string
+				ValidateJSON(json.RawMessage) error
+			}
 			value string
 		}{
 			{BaseCurrency, currency},
@@ -374,33 +380,28 @@ type installationIdentity struct {
 // new workspace beside the old settings and every value the operator supplied is
 // discarded — which is #863. What should happen then is undecided; this only
 // makes sure the caller can say it happened.
+//
+// A key a boot source sets is not seeded and not reported: its value is the
+// one the operator supplied.
 func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, id installationIdentity) (discarded []string, err error) {
-	for _, seed := range []struct {
-		entry *settings.Entry[string]
-		value string
-	}{
-		{Name, id.name},
-		{Timezone, id.zone},
-		{BaseCurrency, id.currency},
-		{BaseLanguage, id.language},
-	} {
-		stored, err := settings.SeedValue(ctx, tx, seed.entry, seed.value, nil)
+	boot := config.Bound()
+	seeds := map[string]func() (bool, error){
+		Name.Key():         func() (bool, error) { return config.SeedTx(ctx, tx, boot, Name, id.name) },
+		Timezone.Key():     func() (bool, error) { return settings.SeedValue(ctx, tx, Timezone, id.zone, nil) },
+		BaseCurrency.Key(): func() (bool, error) { return settings.SeedValue(ctx, tx, BaseCurrency, id.currency, nil) },
+		BaseLanguage.Key(): func() (bool, error) { return config.SeedTx(ctx, tx, boot, BaseLanguage, id.language) },
+	}
+	if id.country != nil {
+		seeds[Country.Key()] = func() (bool, error) { return config.SeedTx(ctx, tx, boot, Country, *id.country) }
+	}
+	for _, key := range slices.Sorted(maps.Keys(seeds)) {
+		stored, err := seeds[key]()
 		if err != nil {
 			return nil, err
 		}
-		if !stored {
-			discarded = append(discarded, seed.entry.Key())
+		if _, locked := boot.Locked(key); !stored && !locked {
+			discarded = append(discarded, key)
 		}
-	}
-	if id.country == nil {
-		return discarded, nil
-	}
-	stored, err := settings.SeedValue(ctx, tx, Country, *id.country, nil)
-	if err != nil {
-		return nil, err
-	}
-	if !stored {
-		discarded = append(discarded, Country.Key())
 	}
 	return discarded, nil
 }

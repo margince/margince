@@ -82,6 +82,38 @@ func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]
 	return settings.GetTx(ctx, tx, s.row)
 }
 
+// StoredRequireTx is StoredValTx for a value the installation is measured in:
+// with no boot value, an absent row is an error rather than the default.
+func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	var zero T
+	if err := requireStored(s); err != nil {
+		return zero, err
+	}
+	if err := settings.RequireRead(ctx, s.row); err != nil {
+		return zero, err
+	}
+	if v, _, ok := bootValue(c, s); ok {
+		return v, nil
+	}
+	return settings.RequireTx(ctx, tx, s.row)
+}
+
+// SeedTx writes a bootstrap value once, unless a boot source sets the setting.
+// A row written then would take effect only once that source is removed.
+func SeedTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T], v T) (stored bool, err error) {
+	if err := requireStored(s); err != nil {
+		return false, err
+	}
+	return settings.SeedValue(ctx, tx, s.row, v, c.BootLocked())
+}
+
+// BootVal is the value a boot source sets, for a raw reader that runs before a
+// principal exists and so has no gate to take.
+func BootVal[T any](c *Config, s *Setting[T]) (T, bool) {
+	v, _, ok := bootValue(c, s)
+	return v, ok
+}
+
 // ValidateJSON refuses a wire value the way a save would. A caller uses it to
 // refuse a value before it writes anything else in the same transaction.
 func (s *Setting[T]) ValidateJSON(raw json.RawMessage) error {
@@ -176,6 +208,9 @@ func requireStored[T any](s *Setting[T]) error {
 
 func bootValue[T any](c *Config, s *Setting[T]) (T, Origin, bool) {
 	var zero T
+	if c == nil {
+		return zero, Origin{}, false
+	}
 	r, ok := c.values[s.Key()]
 	if !ok || !r.origin.FromBoot() {
 		return zero, Origin{}, false
@@ -193,6 +228,9 @@ func (c *Config) database(key string) (*settings.Store, error) {
 
 // Locked reports the boot source that sets key, when one does.
 func (c *Config) Locked(key string) (Origin, bool) {
+	if c == nil {
+		return Origin{}, false
+	}
 	r, ok := c.values[key]
 	return r.origin, ok && r.origin.FromBoot()
 }
@@ -201,6 +239,9 @@ func (c *Config) Locked(key string) (Origin, bool) {
 // or a reset of the settings takes.
 func (c *Config) BootLocked() map[string]bool {
 	out := map[string]bool{}
+	if c == nil {
+		return out
+	}
 	for _, s := range c.reg.All() {
 		if _, locked := c.Locked(s.Key()); locked && s.Stored() {
 			out[s.Key()] = true

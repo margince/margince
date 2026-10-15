@@ -204,7 +204,7 @@ func (s *InstallationSettingsStore) WithClock(now func() time.Time) *Installatio
 // whose waivers say plainly that neither has a principal to gate yet. A
 // distinct name keeps those two honestly reported as ungated.
 func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (InstallationSettings, error) {
-	name, err := settings.Get(ctx, s.settings, Name)
+	name, err := config.StoredVal(ctx, s.config, Name)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -216,15 +216,15 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	language, err := settings.Get(ctx, s.settings, BaseLanguage)
+	language, err := config.StoredVal(ctx, s.config, BaseLanguage)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	fiscalStart, err := settings.Get(ctx, s.settings, FiscalYearStartMonth)
+	fiscalStart, err := config.StoredVal(ctx, s.config, FiscalYearStartMonth)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	bannerHours, err := settings.Get(ctx, s.settings, DeadWorkBannerHours)
+	bannerHours, err := config.StoredVal(ctx, s.config, DeadWorkBannerHours)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -232,11 +232,11 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
+	measure, err := config.StoredVal(ctx, s.config, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	providers, err := settings.Get(ctx, s.settings, EnabledOidcProviders)
+	providers, err := config.StoredVal(ctx, s.config, EnabledOidcProviders)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -304,7 +304,7 @@ func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (curre
 // first field whose type has a MarshalJSON that can fail arrives without
 // touching this function.
 func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
-	name, err := encodePatchField(Name, in.Name)
+	name, err := encodeStoredField(Name, in.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -316,15 +316,15 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	language, err := encodePatchField(BaseLanguage, in.BaseLanguage)
+	language, err := encodeStoredField(BaseLanguage, in.BaseLanguage)
 	if err != nil {
 		return nil, err
 	}
-	fiscal, err := encodePatchField(FiscalYearStartMonth, in.FiscalYearStartMonth)
+	fiscal, err := encodeStoredField(FiscalYearStartMonth, in.FiscalYearStartMonth)
 	if err != nil {
 		return nil, err
 	}
-	bannerHours, err := encodePatchField(DeadWorkBannerHours, in.DeadWorkBannerHours)
+	bannerHours, err := encodeStoredField(DeadWorkBannerHours, in.DeadWorkBannerHours)
 	if err != nil {
 		return nil, err
 	}
@@ -332,35 +332,35 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
+	measure, err := encodeStoredField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
 	}
-	providers, err := encodePatchField(EnabledOidcProviders, in.EnabledOidcProviders)
+	providers, err := encodeStoredField(EnabledOidcProviders, in.EnabledOidcProviders)
 	if err != nil {
 		return nil, err
 	}
-	dateFormat, err := encodePatchField(DateFormat, in.DateFormat)
+	dateFormat, err := encodeStoredField(DateFormat, in.DateFormat)
 	if err != nil {
 		return nil, err
 	}
-	timeFormat, err := encodePatchField(TimeFormat, in.TimeFormat)
+	timeFormat, err := encodeStoredField(TimeFormat, in.TimeFormat)
 	if err != nil {
 		return nil, err
 	}
-	requireSSO, err := encodePatchField(RequireSSO, in.RequireSSO)
+	requireSSO, err := encodeStoredField(RequireSSO, in.RequireSSO)
 	if err != nil {
 		return nil, err
 	}
-	requireMFA, err := encodePatchField(RequireMFA, in.RequireMFA)
+	requireMFA, err := encodeStoredField(RequireMFA, in.RequireMFA)
 	if err != nil {
 		return nil, err
 	}
-	groupRoleMap, err := encodePatchField(OidcGroupRoleMap, in.OidcGroupRoleMap)
+	groupRoleMap, err := encodeStoredField(OidcGroupRoleMap, in.OidcGroupRoleMap)
 	if err != nil {
 		return nil, err
 	}
-	country, err := encodePatchField(Country, in.Country)
+	country, err := encodeStoredField(Country, in.Country)
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func refuseRenameTx(ctx context.Context, tx pgx.Tx, next *string) error {
 	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
 		return err
 	}
-	current, err := settings.GetTx(ctx, tx, Name)
+	current, err := config.StoredValTx(ctx, tx, config.Bound(), Name)
 	if err != nil {
 		return err
 	}
