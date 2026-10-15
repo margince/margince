@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { contactQuery } from "./contact.queries";
+import { contactQuery } from "../features/contacts/contact.queries";
 
 type Contact360 = components["schemas"]["Contact360"];
 

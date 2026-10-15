@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SRC_ROOT, screenFiles } from "../testing/screenfiles";
 import { SELF_HEADED_SCREENS } from "./pagemeta";
 
 // Fitness function for the ONE h1 a page is allowed.
@@ -35,23 +35,11 @@ const HEADS_ITSELF_WITHOUT_THE_HOOK: Readonly<Record<string, string>> = {
   lists: "heads itself with the list",
 };
 
-const screensDir = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../screens",
-);
-
 /** Every screen the `usePageName` hook is called in, by the route it names. */
 function screensThatNameThemselves(): Set<string> {
   const named = new Set<string>();
-  for (const file of readdirSync(screensDir)) {
-    if (
-      !file.endsWith(".tsx") ||
-      file.includes(".test.") ||
-      file.includes(".stories.")
-    ) {
-      continue;
-    }
-    const source = readFileSync(resolve(screensDir, file), "utf8");
+  for (const file of screenFiles()) {
+    const source = readFileSync(join(SRC_ROOT, file), "utf8");
     for (const [, screen] of source.matchAll(/usePageName\("([^"]+)"\)/g)) {
       named.add(screen);
     }

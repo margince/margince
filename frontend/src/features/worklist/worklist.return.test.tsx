@@ -7,7 +7,7 @@ import { en } from "../../i18n/en";
 import { readingsDay, taskRow } from "../../screens/brief.fixtures";
 import { BriefQueue } from "../../screens/brief.queue";
 import { jsonResponse, render, stubApi } from "../../screens/brief.testkit";
-import { runContactMomentAction } from "../../screens/contactpage";
+import { runContactMomentAction } from "../contacts/contactpage";
 import {
   keptWorklistReturn,
   WorklistReturnLink,

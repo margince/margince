@@ -6,11 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { meshOf, meshStyle } from "../design-system/avatarmesh";
+import { mount, view } from "../features/contacts/contactpage.testkit";
 import { LocaleProvider } from "../i18n";
 import { CompaniesScreen, CompanyScreen } from "./companies";
 import { company, company360, jsonResponse } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
-import { mount, view } from "./contactpage.testkit";
 import { WriteToHost } from "./writetohost";
 
 // One record, one mark: the list a reader found it in, the card another record
