@@ -77,7 +77,10 @@ func (w *csvWriters) planDealUpdate(
 	if w.staysOpenOnPastDate(fields, plan.patch, stored) {
 		return plan, migration.Why(migration.ReasonCloseDatePast, "value", fields[dealTargetCloseDate]), nil
 	}
-	plan.stakeholder, err = w.stakeholderToSeat(ctx, id, typed)
+	contact, seat, err := w.stakeholderToSeat(ctx, id, typed)
+	if seat {
+		plan.stakeholder = &contact
+	}
 	return plan, migration.Reason{}, err
 }
 
@@ -96,11 +99,11 @@ func (w *csvWriters) staysOpenOnPastDate(fields map[string]string, patch dealPat
 }
 
 // stakeholderToSeat is the contact the row names when the deal does not hold
-// it yet, nil when there is none to add.
-func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typed map[string]any) (*ids.UUID, error) {
+// it yet, and whether there is one to add.
+func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typed map[string]any) (ids.UUID, bool, error) {
 	contact, ok := linkedRecord(typed, dealTargetContactRef)
 	if !ok {
-		return nil, nil
+		return ids.UUID{}, false, nil
 	}
 	var seated bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
@@ -112,12 +115,9 @@ func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typ
 			                  AND r.archived_at IS NULL)`,
 			relationshipKindStakeholder, dealID, contact).Scan(&seated)
 	}); err != nil {
-		return nil, fmt.Errorf("import: reading the deal's stakeholders: %w", err)
+		return ids.UUID{}, false, fmt.Errorf("import: reading the deal's stakeholders: %w", err)
 	}
-	if seated {
-		return nil, nil
-	}
-	return &contact, nil
+	return contact, !seated, nil
 }
 
 // reconcileDeal brings a deal up to what the file now says: its fields, its

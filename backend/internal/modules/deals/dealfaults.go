@@ -128,5 +128,5 @@ func (e *PipelineHasNoOpenStageError) Error() string {
 
 // FieldFault refuses a pipeline with no open stage.
 func (e *PipelineHasNoOpenStageError) FieldFault() (field, code, message string) {
-	return "pipeline_id", "pipeline_has_no_open_stage", e.Error()
+	return filterPipelineID, "pipeline_has_no_open_stage", e.Error()
 }

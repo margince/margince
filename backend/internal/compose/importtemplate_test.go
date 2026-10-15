@@ -6,14 +6,15 @@ package compose
 import (
 	"archive/zip"
 	"bytes"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 	"io"
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 

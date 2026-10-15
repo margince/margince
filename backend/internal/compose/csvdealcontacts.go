@@ -54,7 +54,7 @@ func (r *linkResolver) visibleContactByEmail(ctx context.Context, key string) (l
 			return err
 		}
 		if scope == "" {
-			scope = "TRUE"
+			scope = sqlUnnarrowed
 		}
 		err = tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT c.id FROM contact_email e JOIN contact c ON c.id = e.contact_id

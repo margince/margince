@@ -74,9 +74,9 @@ func dealNamed(t *testing.T, e *apptest.AppEnv, name string) importedDeal {
 
 // importDeals uploads a deals file (with any other files), stages it, commits
 // it and answers the finished report.
-func importDeals(t *testing.T, e *apptest.AppEnv, name string, files map[string]string, parts []AnyMap) (importRunDTO, importReportDTO) {
+func importDeals(t *testing.T, e *apptest.AppEnv, files map[string]string, parts []AnyMap) (importRunDTO, importReportDTO) {
 	t.Helper()
-	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, name, parts)
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
 	approveAndRead(t, e, run.ID)
 	return run, readImportReport(t, e, run.ID)
 }
@@ -84,7 +84,7 @@ func importDeals(t *testing.T, e *apptest.AppEnv, name string, files map[string]
 func TestAnImportedWonDealClosesInThePastThroughTheAdvance(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, won, lost := seededStages(t, e)
-	_, report := importDeals(t, e, "crm", map[string]string{"deals.csv": "ref,name,pipeline,stage,amount,currency,close_date,lost_reason\n" +
+	_, report := importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage,amount,currency,close_date,lost_reason\n" +
 		fmt.Sprintf("D-1,Open one,%s,%s,,,2099-01-31,\n", pipeline, open) +
 		fmt.Sprintf("D-2,Won one,%s,%s,,,2025-06-30,\n", pipeline, won) +
 		fmt.Sprintf("D-3,Lost one,%s,%s,,,2024-03-01,Went with a rival\n", pipeline, lost)}, dealImportParts("ref,name,pipeline,stage,amount,currency,close_date,lost_reason"))
@@ -128,7 +128,7 @@ func TestADealLinksToACompanyAndAContactInTheSameZip(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	existing := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Eve Held", "emails": []AnyMap{{"email": "eve@deal-links.example", "email_type": "work", "is_primary": true}}})
-	_, report := importDeals(t, e, "crm", map[string]string{
+	_, report := importDeals(t, e, map[string]string{
 		"companies.csv": "ref,name\nCO-1,Deal Links GmbH\n",
 		"contacts.csv":  "ref,email,name\nP-1,jo@deal-links.example,Jo Tran\n",
 		"deals.csv": "ref,name,pipeline,stage,company_ref,contact_ref\n" +
@@ -198,7 +198,7 @@ func TestADealLinkToAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
 func TestADealRowWithoutAStageIsSkippedWithItsReason(t *testing.T) {
 	e := setupImportApp(t)
 	parts := []AnyMap{{"file": "deals.csv", "object": "deal", "mapping": AnyMap{"ref": "ref", "name": "name"}}}
-	_, report := importDeals(t, e, "crm", map[string]string{"deals.csv": "ref,name\nD-1,No stage\n"}, parts)
+	_, report := importDeals(t, e, map[string]string{"deals.csv": "ref,name\nD-1,No stage\n"}, parts)
 	if report.Disposition.Created != 0 || report.Disposition.Skipped != 1 {
 		t.Fatalf("report = %+v, want the deal skipped, not the run failed", report)
 	}
@@ -211,7 +211,7 @@ func TestACorrectedFileUpdatesAMovesAndRefusesWhatTheStoreWould(t *testing.T) {
 		fmt.Sprintf("D-1,Moves up,%s,%s,2099-01-01\n", pipeline, open) +
 		fmt.Sprintf("D-2,Dates back,%s,%s,2099-01-01\n", pipeline, open) +
 		fmt.Sprintf("D-3,Closed by a colleague,%s,%s,2099-01-01\n", pipeline, open)
-	importDeals(t, e, "crm", map[string]string{"deals.csv": first}, dealImportParts("ref,name,pipeline,stage,close_date"))
+	importDeals(t, e, map[string]string{"deals.csv": first}, dealImportParts("ref,name,pipeline,stage,close_date"))
 	closedByAColleague := dealNamed(t, e, "Closed by a colleague")
 	if _, err := e.Owner.Exec(context.Background(), `
 		UPDATE deal SET status = 'won', closed_at = now(), won_without_contract_reason = 'imported',
@@ -223,7 +223,7 @@ func TestACorrectedFileUpdatesAMovesAndRefusesWhatTheStoreWould(t *testing.T) {
 		fmt.Sprintf("D-1,Moves up,%s,%s,2025-01-01\n", pipeline, won) +
 		fmt.Sprintf("D-2,Dates back,%s,%s,2020-01-01\n", pipeline, open) +
 		fmt.Sprintf("D-3,Closed by a colleague,%s,%s,2099-01-01\n", pipeline, open)
-	_, report := importDeals(t, e, "crm", map[string]string{"deals.csv": second}, dealImportParts("ref,name,pipeline,stage,close_date"))
+	_, report := importDeals(t, e, map[string]string{"deals.csv": second}, dealImportParts("ref,name,pipeline,stage,close_date"))
 	if report.Disposition.Updated != 1 || report.Disposition.Skipped != 2 {
 		t.Fatalf("report = %+v, issues %+v, want one move and two refusals", report.Disposition, report.Issues)
 	}
@@ -241,9 +241,9 @@ func TestACorrectedFileUpdatesAMovesAndRefusesWhatTheStoreWould(t *testing.T) {
 func TestAnOpenDealIsNotGivenAPastCloseDateByAFileWithNoStageColumn(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
-	importDeals(t, e, "crm", map[string]string{"deals.csv": "ref,name,pipeline,stage,close_date\n" +
+	importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage,close_date\n" +
 		fmt.Sprintf("D-1,Stays open,%s,%s,2099-01-01\n", pipeline, open)}, dealImportParts("ref,name,pipeline,stage,close_date"))
-	_, report := importDeals(t, e, "crm", map[string]string{"deals.csv": "ref,name,close_date\nD-1,Stays open,2020-01-01\n"},
+	_, report := importDeals(t, e, map[string]string{"deals.csv": "ref,name,close_date\nD-1,Stays open,2020-01-01\n"},
 		dealImportParts("ref,name,close_date"))
 	if report.Disposition.Skipped != 1 || len(report.Issues) != 1 || report.Issues[0].Reason == "" {
 		t.Fatalf("report = %+v, want the row skipped with the past-date reason rather than the run failed", report)
@@ -256,7 +256,7 @@ func TestAnOpenDealIsNotGivenAPastCloseDateByAFileWithNoStageColumn(t *testing.T
 func TestUndoArchivesImportedDealsBeforeContacts(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
-	run, _ := importDeals(t, e, "crm", map[string]string{
+	run, _ := importDeals(t, e, map[string]string{
 		"companies.csv": "ref,name\nCO-1,Undo Deals GmbH\n",
 		"contacts.csv":  "ref,email,name\nP-1,jo@undo-deals.example,Jo\n",
 		"deals.csv":     fmt.Sprintf("ref,name,pipeline,stage,contact_ref\nD-1,Undone,%s,%s,P-1\n", pipeline, open),
@@ -273,7 +273,7 @@ func TestUndoArchivesImportedDealsBeforeContacts(t *testing.T) {
 func TestUndoKeepsADealSomeoneEditedSinceTheImport(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
-	run, _ := importDeals(t, e, "crm", map[string]string{"deals.csv": "ref,name,pipeline,stage\n" +
+	run, _ := importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage\n" +
 		fmt.Sprintf("D-1,Edited by a rep,%s,%s\nD-2,Left alone,%s,%s\n", pipeline, open, pipeline, open)}, dealImportParts("ref,name,pipeline,stage"))
 	edited := dealNamed(t, e, "Edited by a rep")
 	if status := e.Call(t, http.MethodPatch, "/v1/deals/"+edited.ID, AnyMap{"description": "Called them"}, nil, nil); status != http.StatusOK {
@@ -323,7 +323,7 @@ func TestPromotionAndImportWriteTheStakeholderEdgeThroughOneFunction(t *testing.
 		AnyMap{"trigger": "human_qualify", "deal": AnyMap{"name": "Promoted deal"}}, nil, nil); status != http.StatusOK {
 		t.Fatalf("promote with a deal → %d", status)
 	}
-	importDeals(t, e, "crm", map[string]string{
+	importDeals(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@one-writer.example,Jo\n",
 		"deals.csv":    fmt.Sprintf("ref,name,pipeline,stage,contact_ref\nD-1,Imported deal,%s,%s,P-1\n", pipeline, open),
 	}, append(bundleParts()[:1], dealImportParts("ref,name,pipeline,stage,contact_ref")...))

@@ -17,7 +17,7 @@ import (
 func TestEveryEventOfAnImportedWonDealNamesTheRunSoNoAutomationOrCommissionStarts(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, won, _ := seededStages(t, e)
-	run, _ := importDeals(t, e, "crm", map[string]string{
+	run, _ := importDeals(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@marked.example,Jo\n",
 		"deals.csv":    fmt.Sprintf("ref,name,pipeline,stage,close_date,contact_ref\nD-1,Marked win,%s,%s,2025-06-30,P-1\nD-2,Marked open,%s,%s,2099-01-01,\n", pipeline, won, pipeline, open),
 	}, append(bundleParts()[:1], dealImportParts("ref,name,pipeline,stage,close_date,contact_ref")...))
@@ -54,7 +54,7 @@ func TestEveryEventOfAnImportedWonDealNamesTheRunSoNoAutomationOrCommissionStart
 func TestTheArchiveAnUndoWritesOnAnImportedDealNamesTheRunToo(t *testing.T) {
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
-	run, _ := importDeals(t, e, "crm", map[string]string{
+	run, _ := importDeals(t, e, map[string]string{
 		"deals.csv": fmt.Sprintf("ref,name,pipeline,stage,close_date\nD-1,Undone open,%s,%s,2099-01-01\n", pipeline, open),
 	}, dealImportParts("ref,name,pipeline,stage,close_date"))
 	deal := dealNamed(t, e, "Undone open")

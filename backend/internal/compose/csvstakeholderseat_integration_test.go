@@ -29,8 +29,8 @@ func TestAContactAlreadySeatedOnADealIsNotSeatedAgainWhateverTheCallerCanListOf(
 		t.Fatalf("seating the contact: %v", err)
 	}
 	e.MakeCapturePrivate(t, "contact", contact, e.Rep3)
-	again, err := w.stakeholderToSeat(ctx, deal, typed)
-	if err != nil || again != nil {
-		t.Fatalf("stakeholderToSeat = %v, %v, want nothing to add: the seat is held, whether or not the caller's scope lists its edge", again, err)
+	again, add, err := w.stakeholderToSeat(ctx, deal, typed)
+	if err != nil || add {
+		t.Fatalf("stakeholderToSeat = %v, %v, %v, want nothing to add: the seat is held, whether or not the caller's scope lists its edge", again, add, err)
 	}
 }

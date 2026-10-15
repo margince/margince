@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+// Reason codes for deal rows, each with its reasons text in the catalog below.
 const (
 	ReasonCannotReadPipelines    ReasonCode = "cannot_read_pipelines"
 	ReasonStageUnnamed           ReasonCode = "stage_unnamed"
@@ -56,27 +57,27 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Nennen Sie die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
 		textlang.Vietnamese: "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
 	}},
-	ReasonPipelineUnknown: {params: []string{"value", "names"}, text: map[textlang.Lang]string{
+	ReasonPipelineUnknown: {params: []string{paramValue, "names"}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a pipeline. The pipelines are: {names}.",
 		textlang.German:     "{value:q} ist keine Pipeline. Es gibt: {names}.",
 		textlang.Vietnamese: "{value:q} không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
 	}},
-	ReasonStageUnknown: {params: []string{"value", "pipeline", "names"}, text: map[textlang.Lang]string{
+	ReasonStageUnknown: {params: []string{paramValue, "pipeline", "names"}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
 		textlang.German:     "{value:q} ist keine Phase der Pipeline {pipeline:q}. Mögliche Phasen: {names}.",
 		textlang.Vietnamese: "{value:q} không phải giai đoạn của quy trình {pipeline:q}. Các giai đoạn: {names}.",
 	}},
-	ReasonCurrencyNotACode: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonCurrencyNotACode: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a currency code. Write its three letters, like EUR.",
 		textlang.German:     "{value:q} ist kein Währungscode. Schreiben Sie die drei Buchstaben, etwa EUR.",
 		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
 	}},
-	ReasonCloseDatePast: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonCloseDatePast: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",
 		textlang.German:     "{value:q} liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
 		textlang.Vietnamese: "{value:q} đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
 	}},
-	ReasonCloseDateFuture: {params: []string{"value"}, text: map[textlang.Lang]string{
+	ReasonCloseDateFuture: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is in the future, and a closed deal’s close date cannot be.",
 		textlang.German:     "{value:q} liegt in der Zukunft, und das Abschlussdatum eines abgeschlossenen Deals darf das nicht sein.",
 		textlang.Vietnamese: "{value:q} ở tương lai, mà ngày chốt của deal đã đóng không được ở tương lai.",
