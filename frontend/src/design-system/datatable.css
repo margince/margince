@@ -230,6 +230,15 @@
     display: block;
     flex-basis: 100%;
   }
+  /* A folded row has no columns to hold, so the grow column's one-line rule
+     gives way and its cells wrap inside the pane. */
+  .table-scroll-fold
+    > .table:has(.datatable-grow)
+    > tbody
+    > tr:not(.datatable-detail)
+    > :is(th, td) {
+    white-space: normal;
+  }
 }
 
 @container table-fold (width < 36rem) {

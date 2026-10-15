@@ -1602,8 +1602,10 @@ span.error-line {
 }
 @supports (animation-timeline: scroll()) {
   /* The shade shares the table's grid cell, and sticks to the visible end. */
+  /* One track the box's width: a table sized to it must not grow to its content. */
   .table-scroll {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
   .table-scroll > :first-child {
     grid-area: 1 / 1;
