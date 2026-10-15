@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 187347,
+    "tool_catalog_bytes": 187645,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 47726,
+    "approx_wire_tokens_total": 47801,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 50338,
-      "input_schema_bytes": 58665,
+      "input_schema_bytes": 58963,
       "output_schema_bytes": 64136,
-      "description_plus_input_schema_bytes": 109003
+      "description_plus_input_schema_bytes": 109301
     }
   },
   "tools": {
@@ -8344,6 +8344,9 @@
             "evaluation_key": {
               "type": "string"
             },
+            "facts_only": {
+              "type": "string"
+            },
             "framework_revision": {
               "type": "string"
             },
@@ -8381,10 +8384,16 @@
             "q": {
               "type": "string"
             },
+            "readId": {
+              "type": "string"
+            },
             "record_id": {
               "type": "string"
             },
             "record_type": {
+              "type": "string"
+            },
+            "refresh": {
               "type": "string"
             },
             "report": {
@@ -8420,6 +8429,9 @@
             "target_basis": {
               "type": "string"
             },
+            "thread_cursor": {
+              "type": "string"
+            },
             "view": {
               "enum": [
                 "acquisition_sources",
@@ -8438,15 +8450,19 @@
                 "company_hierarchy_rollup",
                 "company_profile_fields",
                 "company_strength",
+                "company_vat_check",
                 "consent_purposes",
                 "contact_360",
                 "contact_graph",
                 "contact_strength",
                 "custom_field_live_lists",
                 "deal_commitments",
+                "deal_outcome_reviews",
                 "deal_stakeholders",
+                "deal_status",
                 "dedupe_candidate",
                 "dedupe_candidates",
+                "email_presentation",
                 "email_signature_template",
                 "explain_report",
                 "export_reporting_edition",
@@ -8455,6 +8471,9 @@
                 "follow_up_settings",
                 "forecast_calls",
                 "import_run",
+                "latest_site_read",
+                "latest_technical_enrich",
+                "latest_transcript_read",
                 "lead_disqualify_reasons",
                 "lead_settings",
                 "lead_sources",
@@ -8481,12 +8500,14 @@
                 "signal_intro_path",
                 "signal_warmth",
                 "signals",
+                "site_read",
                 "stage",
                 "stage_automation_report",
                 "stage_evidence",
                 "stage_exit_criteria",
                 "stages",
                 "teams",
+                "transcript_read",
                 "transition_policies"
               ],
               "type": "string"

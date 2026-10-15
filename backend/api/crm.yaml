@@ -4317,7 +4317,7 @@ paths:
 
         404 when the account has never been looked up, which is the honest difference between
         "never tried" and "tried and found nothing".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: What each source last did for this account.
@@ -4348,7 +4348,7 @@ paths:
 
         404 when the number has never been consulted, which is the honest difference between
         "never asked" and "asked and told no".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The current standing, and the proof it was checked.
@@ -4407,7 +4407,7 @@ paths:
         industry, no description, no facts — and a draft written from it had nothing to
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The newest read's report.
@@ -4428,7 +4428,7 @@ paths:
       tags: [Companies]
       operationId: getSiteRead
       summary: One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
-      x-mcp-tool: { verb: read_record, record_type: company, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The read report.
@@ -7307,7 +7307,7 @@ paths:
         statutory retention obligation — a held row is outside every ordinary read, so there
         is no presentation of it to refuse. A caller who may discover the row but stands
         outside its audience gets `content_state: withheld`: the markers, and nothing said.
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       parameters:
         - name: thread_cursor
           in: query
@@ -7793,7 +7793,7 @@ paths:
         after the rep left the page could not be found again — and a transcript nobody had read looked
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The newest reading's report.
@@ -7814,7 +7814,7 @@ paths:
       tags: [Activities]
       operationId: getTranscriptRead
       summary: One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
-      x-mcp-tool: { verb: read_record, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The read report.
@@ -23888,7 +23888,7 @@ paths:
 
         Each review names the closing it is about, so a caller comparing against the deal's
         own `closing_occurrence_id` can tell which one is current.
-      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The deal's reviews.
@@ -26639,7 +26639,7 @@ paths:
       x-waits-on-model: on-miss
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
       summary: Where the deal stands, what could lose it, and the one thing to do next.
-      x-mcp-tool: { verb: read_record, record_type: deal, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       description: |
         The deal page's one written card, replacing the three that stood beside each
         other and disagreed: a brief that restated records, a health score with no

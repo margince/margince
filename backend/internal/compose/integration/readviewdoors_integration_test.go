@@ -28,4 +28,19 @@ func TestReadViewAnswersAsItsRoutes(t *testing.T) {
 	sameDoorRecords(t, "pipeline",
 		d.rest(t, "GET", "/v1/pipelines/"+stages.PipelineID, nil),
 		d.tool(t, "read_view", map[string]any{"view": "pipeline", "id": stages.PipelineID}), stages.PipelineID)
+
+	deal := openDeal(t, d.e, stages, "View renewal")
+	status := sameRecords[dealStatusCard](t, "deal_status",
+		d.rest(t, "GET", "/v1/deals/"+deal+"/status?facts_only=true", nil),
+		d.tool(t, "read_view", map[string]any{"view": "deal_status", "id": deal, "facts_only": true}))
+	if status.DealID != deal {
+		t.Errorf("deal_status answered deal %q, want %q", status.DealID, deal)
+	}
+}
+
+// dealStatusCard is what both doors answer about a deal's status, less the
+// time it was written.
+type dealStatusCard struct {
+	DealID      string `json:"deal_id"`
+	GeneratedBy string `json:"generated_by"`
 }

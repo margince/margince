@@ -263,8 +263,6 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 // being a gap fails the test above.
 var parameterGapsPendingParity = []string{
 	"GET /v1/activities#q",
-	"GET /v1/activities/{id}/email-presentation#thread_cursor",
-	"GET /v1/activities/{id}/transcript-proposals/{readId}#readId",
 	"GET /v1/analytics/editions/compare#left_id",
 	"GET /v1/analytics/evaluate#end_at",
 	"GET /v1/analytics/evaluate#scope_id",
@@ -284,7 +282,6 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/companies/{id}/documents#contract_id",
 	"GET /v1/companies/{id}/documents#doc_state",
 	"GET /v1/companies/{id}/documents#pinned_only",
-	"GET /v1/companies/{id}/site-reads/{readId}#readId",
 	"GET /v1/contacts#q",
 	"GET /v1/custom-fields#object",
 	"GET /v1/custom-fields#sort",
@@ -292,8 +289,6 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/deals#q",
 	"GET /v1/deals/{id}/documents#category",
 	"GET /v1/deals/{id}/documents#include_hidden",
-	"GET /v1/deals/{id}/status#facts_only",
-	"GET /v1/deals/{id}/status#refresh",
 	"GET /v1/imports/format#lang",
 	"GET /v1/leads#q",
 	"GET /v1/lists#include_archived",

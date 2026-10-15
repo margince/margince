@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 183.0 KB |
+| Tool catalog | 183.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 47726 |
+| Approx. wire tokens | 47801 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 62.6 KB | 34% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.2 KB | 26% | Yes, every step |
-| Input schemas | 57.3 KB | 31% | Yes, every step |
+| Input schemas | 57.6 KB | 31% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
-| **Description + input schema** | **106.4 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **106.7 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -102,7 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 566 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
-| [`read_view`](#read_view) | Read a view | yes |  | 772 |
+| [`read_view`](#read_view) | Read a view | yes |  | 847 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
@@ -9115,6 +9115,9 @@ view refuses an argument it does not take and names the ones it does.
     "evaluation_key": {
       "type": "string"
     },
+    "facts_only": {
+      "type": "string"
+    },
     "framework_revision": {
       "type": "string"
     },
@@ -9152,10 +9155,16 @@ view refuses an argument it does not take and names the ones it does.
     "q": {
       "type": "string"
     },
+    "readId": {
+      "type": "string"
+    },
     "record_id": {
       "type": "string"
     },
     "record_type": {
+      "type": "string"
+    },
+    "refresh": {
       "type": "string"
     },
     "report": {
@@ -9191,6 +9200,9 @@ view refuses an argument it does not take and names the ones it does.
     "target_basis": {
       "type": "string"
     },
+    "thread_cursor": {
+      "type": "string"
+    },
     "view": {
       "enum": [
         "acquisition_sources",
@@ -9209,15 +9221,19 @@ view refuses an argument it does not take and names the ones it does.
         "company_hierarchy_rollup",
         "company_profile_fields",
         "company_strength",
+        "company_vat_check",
         "consent_purposes",
         "contact_360",
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
         "deal_commitments",
+        "deal_outcome_reviews",
         "deal_stakeholders",
+        "deal_status",
         "dedupe_candidate",
         "dedupe_candidates",
+        "email_presentation",
         "email_signature_template",
         "explain_report",
         "export_reporting_edition",
@@ -9226,6 +9242,9 @@ view refuses an argument it does not take and names the ones it does.
         "follow_up_settings",
         "forecast_calls",
         "import_run",
+        "latest_site_read",
+        "latest_technical_enrich",
+        "latest_transcript_read",
         "lead_disqualify_reasons",
         "lead_settings",
         "lead_sources",
@@ -9252,12 +9271,14 @@ view refuses an argument it does not take and names the ones it does.
         "signal_intro_path",
         "signal_warmth",
         "signals",
+        "site_read",
         "stage",
         "stage_automation_report",
         "stage_evidence",
         "stage_exit_criteria",
         "stages",
         "teams",
+        "transcript_read",
         "transition_policies"
       ],
       "type": "string"
