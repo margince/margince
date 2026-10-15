@@ -20,9 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An undo archives the companies a run created, and a live deal or a live
-// contact's employment that still names one must not be left pointing at an
-// archived company.
+// An undo archives the companies a run created. A live deal or a contact's
+// employment that still names one must not be left pointing at it.
 func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)

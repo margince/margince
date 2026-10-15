@@ -47,8 +47,8 @@ func (w *csvWriters) Reverse(
 	case migration.ObjectLead:
 		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched)
 	case migration.ObjectCompany:
-		// A live deal or contact that still names the company keeps it: the
-		// archive would leave that record pointing at a company that no list shows.
+		// A live deal or contact that still names the company keeps it.
+		// Archiving would leave that record pointing at a hidden company.
 		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched, contacts.KeepWhileReferenced())
 	case migration.ObjectContact:
 		// The archive cascades to the contact's addresses, numbers and
