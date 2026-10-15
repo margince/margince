@@ -263,6 +263,7 @@ func (s *Store) advanceOnTx(
 // two independently-drifting map literals.
 func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, toStatus string, winProbability int, frozenFx *string) crmcontracts.PublicEventDealStageChanged {
 	payload := crmcontracts.PublicEventDealStageChanged{
+		DealName:            &current.Name,
 		FromStageId:         current.StageId,
 		ToStageId:           openapi_types.UUID(toStageID.UUID),
 		FromStatus:          string(current.Status),
