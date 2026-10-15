@@ -7,6 +7,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -304,5 +305,62 @@ func TestWriteJSONKeepsEachScalarsYAMLType(t *testing.T) {
 func TestWriteJSONRefusesANumberJSONCannotCarry(t *testing.T) {
 	if _, err := asJSON(t, "limit: .inf\n"); err == nil {
 		t.Error("writeJSON accepted .inf, which has no JSON form")
+	}
+}
+
+func TestWriteJSONFollowsAnAliasToItsAnchor(t *testing.T) {
+	got, err := asJSON(t, "base: &shared {x: 1}\ncopy: *shared\n")
+	if err != nil {
+		t.Fatalf("writeJSON: %v", err)
+	}
+	if want := `{"base":{"x":1},"copy":{"x":1}}`; got != want {
+		t.Errorf("writeJSON = %s, want %s", got, want)
+	}
+}
+
+func TestWriteJSONRefusesAValueItsTagCannotHold(t *testing.T) {
+	for _, src := range []string{
+		"flag: !!bool maybe\n",
+		"count: !!int many\n",
+		"ratios: [!!float half]\n",
+	} {
+		if _, err := asJSON(t, src); err == nil {
+			t.Errorf("writeJSON accepted %q", src)
+		}
+	}
+}
+
+func TestWriteJSONRefusesANodeOfNoKind(t *testing.T) {
+	var out bytes.Buffer
+	if err := writeJSON(&out, &yaml.Node{}); err == nil {
+		t.Error("writeJSON accepted a node with no kind")
+	}
+}
+
+func TestABuilderAnswersARepeatedBaseFromItsCacheAndKeepsOnlyTheRecentFew(t *testing.T) {
+	builder := &Builder{}
+	first, err := builder.SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	again, err := builder.SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	if &first[0] != &again[0] {
+		t.Error("a repeated base built its contract a second time")
+	}
+	for i := range recentBases + 1 {
+		if _, err := builder.Build(fmt.Sprintf("https://host%d.test.example/v1", i)); err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+	}
+	if len(builder.recent) != recentBases {
+		t.Errorf("the builder keeps %d bases, want %d", len(builder.recent), recentBases)
+	}
+	for _, entry := range builder.recent {
+		if entry.base == testBase {
+			t.Error("the oldest base is still kept after more than recentBases newer ones")
+		}
 	}
 }
