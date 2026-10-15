@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -28,6 +29,13 @@ import (
 // message is still followed up on. Past it the conversation belongs to the
 // record's timeline, the same fortnight the worklist's other reminders keep.
 const AwaitingReplyLookbackDays = 14
+
+// importedHistorySQL is the test that an activity on alias a came from an
+// import. A reminder to follow up is about what happened lately, and an import
+// brings history that may be inside the lookback without anybody having acted
+// on it in this CRM. The importer's namespace is reserved, so no live write
+// carries it.
+const importedHistorySQL = "starts_with(COALESCE(a.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
 // AwaitingReplyScanCap bounds one read. Newest first, so the cap drops the
 // oldest reminders, which are the closest to aging out anyway.
@@ -217,6 +225,7 @@ var awaitingRepliesSQL = `
 	 WHERE a.kind = 'email'
 	   AND a.direction = 'outbound'
 	   AND a.archived_at IS NULL
+	   AND NOT ` + importedHistorySQL + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s

@@ -10371,15 +10371,18 @@ func (e ImportIgnoredEntryReason) Valid() bool {
 
 // Defines values for ImportObject.
 const (
-	ImportObjectCompany ImportObject = "company"
-	ImportObjectContact ImportObject = "contact"
-	ImportObjectDeal    ImportObject = "deal"
-	ImportObjectLead    ImportObject = "lead"
+	ImportObjectActivity ImportObject = "activity"
+	ImportObjectCompany  ImportObject = "company"
+	ImportObjectContact  ImportObject = "contact"
+	ImportObjectDeal     ImportObject = "deal"
+	ImportObjectLead     ImportObject = "lead"
 )
 
 // Valid indicates whether the value is a known member of the ImportObject enum.
 func (e ImportObject) Valid() bool {
 	switch e {
+	case ImportObjectActivity:
+		return true
 	case ImportObjectCompany:
 		return true
 	case ImportObjectContact:
@@ -10429,6 +10432,21 @@ func (e ImportOnDuplicate) Valid() bool {
 	}
 }
 
+// Defines values for ImportPresetLinkType.
+const (
+	ImportPresetLinkTypeContact ImportPresetLinkType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the ImportPresetLinkType enum.
+func (e ImportPresetLinkType) Valid() bool {
+	switch e {
+	case ImportPresetLinkTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportProblemKind.
 const (
 	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
@@ -10467,90 +10485,127 @@ func (e ImportProblemKind) Valid() bool {
 
 // Defines values for ImportReasonCode.
 const (
-	ImportReasonCodeAuthorTooLong              ImportReasonCode = "author_too_long"
-	ImportReasonCodeCannotCreate               ImportReasonCode = "cannot_create"
-	ImportReasonCodeCannotCreateTags           ImportReasonCode = "cannot_create_tags"
-	ImportReasonCodeCannotEdit                 ImportReasonCode = "cannot_edit"
-	ImportReasonCodeCannotEditAndTag           ImportReasonCode = "cannot_edit_and_tag"
-	ImportReasonCodeCannotLinkStakeholders     ImportReasonCode = "cannot_link_stakeholders"
-	ImportReasonCodeCannotReadPipelines        ImportReasonCode = "cannot_read_pipelines"
-	ImportReasonCodeCannotReadTags             ImportReasonCode = "cannot_read_tags"
-	ImportReasonCodeCannotWriteType            ImportReasonCode = "cannot_write_type"
-	ImportReasonCodeCloseDateFuture            ImportReasonCode = "close_date_future"
-	ImportReasonCodeCloseDatePast              ImportReasonCode = "close_date_past"
-	ImportReasonCodeCompanyDuplicateFound      ImportReasonCode = "company_duplicate_found"
-	ImportReasonCodeCompanyDuplicateSkipped    ImportReasonCode = "company_duplicate_skipped"
-	ImportReasonCodeCompanyNameEmpty           ImportReasonCode = "company_name_empty"
-	ImportReasonCodeContactDuplicateFound      ImportReasonCode = "contact_duplicate_found"
-	ImportReasonCodeContactDuplicateSkipped    ImportReasonCode = "contact_duplicate_skipped"
-	ImportReasonCodeContactEmailHeld           ImportReasonCode = "contact_email_held"
-	ImportReasonCodeContactNotFound            ImportReasonCode = "contact_not_found"
-	ImportReasonCodeContactNotFoundDropped     ImportReasonCode = "contact_not_found_dropped"
-	ImportReasonCodeContactUnnamed             ImportReasonCode = "contact_unnamed"
-	ImportReasonCodeCurrencyNotACode           ImportReasonCode = "currency_not_a_code"
-	ImportReasonCodeCurrencyUnset              ImportReasonCode = "currency_unset"
-	ImportReasonCodeDealAlreadyClosed          ImportReasonCode = "deal_already_closed"
-	ImportReasonCodeDealLegalGate              ImportReasonCode = "deal_legal_gate"
-	ImportReasonCodeDealPipelineFixed          ImportReasonCode = "deal_pipeline_fixed"
-	ImportReasonCodeDescriptionTooLong         ImportReasonCode = "description_too_long"
-	ImportReasonCodeDomainHeld                 ImportReasonCode = "domain_held"
-	ImportReasonCodeDuplicateEmail             ImportReasonCode = "duplicate_email"
-	ImportReasonCodeEmployerColumnEmpty        ImportReasonCode = "employer_column_empty"
-	ImportReasonCodeEmployerColumnEmptyDropped ImportReasonCode = "employer_column_empty_dropped"
-	ImportReasonCodeEmployerNotFound           ImportReasonCode = "employer_not_found"
-	ImportReasonCodeEmployerNotFoundDropped    ImportReasonCode = "employer_not_found_dropped"
-	ImportReasonCodeEmptyPayload               ImportReasonCode = "empty_payload"
-	ImportReasonCodeFieldInactive              ImportReasonCode = "field_inactive"
-	ImportReasonCodeFxRateMissing              ImportReasonCode = "fx_rate_missing"
-	ImportReasonCodeIdNotACompanyId            ImportReasonCode = "id_not_a_company_id"
-	ImportReasonCodeIdNotVisible               ImportReasonCode = "id_not_visible"
-	ImportReasonCodeIdOnNonCompany             ImportReasonCode = "id_on_non_company"
-	ImportReasonCodeLinkAmbiguous              ImportReasonCode = "link_ambiguous"
-	ImportReasonCodeLinkAmbiguousDropped       ImportReasonCode = "link_ambiguous_dropped"
-	ImportReasonCodeLinkContactNotImported     ImportReasonCode = "link_contact_not_imported"
-	ImportReasonCodeLinkEdgeUnsupported        ImportReasonCode = "link_edge_unsupported"
-	ImportReasonCodeLinkNotFound               ImportReasonCode = "link_not_found"
-	ImportReasonCodeLinkNotFoundDropped        ImportReasonCode = "link_not_found_dropped"
-	ImportReasonCodeLinkRowNotImported         ImportReasonCode = "link_row_not_imported"
-	ImportReasonCodeLinkedinHeld               ImportReasonCode = "linkedin_held"
-	ImportReasonCodeLostReasonMissing          ImportReasonCode = "lost_reason_missing"
-	ImportReasonCodeNaturalKeyTaken            ImportReasonCode = "natural_key_taken"
-	ImportReasonCodeNotADate                   ImportReasonCode = "not_a_date"
-	ImportReasonCodeNotADomain                 ImportReasonCode = "not_a_domain"
-	ImportReasonCodeNotANumber                 ImportReasonCode = "not_a_number"
-	ImportReasonCodeNotAnAmount                ImportReasonCode = "not_an_amount"
-	ImportReasonCodeNotAnEmail                 ImportReasonCode = "not_an_email"
-	ImportReasonCodeNotYesNo                   ImportReasonCode = "not_yes_no"
-	ImportReasonCodeOptionNotAllowed           ImportReasonCode = "option_not_allowed"
-	ImportReasonCodeOptionNotInList            ImportReasonCode = "option_not_in_list"
-	ImportReasonCodeOptionsNeedSemicolons      ImportReasonCode = "options_need_semicolons"
-	ImportReasonCodeOwnerRefused               ImportReasonCode = "owner_refused"
-	ImportReasonCodeOwnerUnknown               ImportReasonCode = "owner_unknown"
-	ImportReasonCodePhoneNeedsCountry          ImportReasonCode = "phone_needs_country"
-	ImportReasonCodePipelineNoOpenStage        ImportReasonCode = "pipeline_no_open_stage"
-	ImportReasonCodePipelineUnknown            ImportReasonCode = "pipeline_unknown"
-	ImportReasonCodePipelineUnnamed            ImportReasonCode = "pipeline_unnamed"
-	ImportReasonCodeRecordArchived             ImportReasonCode = "record_archived"
-	ImportReasonCodeRefTakenByAnotherCompany   ImportReasonCode = "ref_taken_by_another_company"
-	ImportReasonCodeRowKeyEmpty                ImportReasonCode = "row_key_empty"
-	ImportReasonCodeRowKeyRepeated             ImportReasonCode = "row_key_repeated"
-	ImportReasonCodeSizeBandInvalid            ImportReasonCode = "size_band_invalid"
-	ImportReasonCodeStageUnknown               ImportReasonCode = "stage_unknown"
-	ImportReasonCodeStageUnnamed               ImportReasonCode = "stage_unnamed"
-	ImportReasonCodeTagCreated                 ImportReasonCode = "tag_created"
-	ImportReasonCodeTagNameInvalid             ImportReasonCode = "tag_name_invalid"
-	ImportReasonCodeTagNew                     ImportReasonCode = "tag_new"
-	ImportReasonCodeUndoFailed                 ImportReasonCode = "undo_failed"
-	ImportReasonCodeUndoGrantLost              ImportReasonCode = "undo_grant_lost"
-	ImportReasonCodeUndoNotVisible             ImportReasonCode = "undo_not_visible"
-	ImportReasonCodeUndoRuleProtects           ImportReasonCode = "undo_rule_protects"
-	ImportReasonCodeValueRefused               ImportReasonCode = "value_refused"
-	ImportReasonCodeValueUnreadable            ImportReasonCode = "value_unreadable"
+	ImportReasonCodeActivityHeld                 ImportReasonCode = "activity_held"
+	ImportReasonCodeActivityLinkAmbiguous        ImportReasonCode = "activity_link_ambiguous"
+	ImportReasonCodeActivityLinkAmbiguousDropped ImportReasonCode = "activity_link_ambiguous_dropped"
+	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
+	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
+	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
+	ImportReasonCodeCannotCreate                 ImportReasonCode = "cannot_create"
+	ImportReasonCodeCannotCreateTags             ImportReasonCode = "cannot_create_tags"
+	ImportReasonCodeCannotEdit                   ImportReasonCode = "cannot_edit"
+	ImportReasonCodeCannotEditAndTag             ImportReasonCode = "cannot_edit_and_tag"
+	ImportReasonCodeCannotLinkStakeholders       ImportReasonCode = "cannot_link_stakeholders"
+	ImportReasonCodeCannotReadPipelines          ImportReasonCode = "cannot_read_pipelines"
+	ImportReasonCodeCannotReadTags               ImportReasonCode = "cannot_read_tags"
+	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
+	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
+	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
+	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
+	ImportReasonCodeCompanyNameEmpty             ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
+	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
+	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactNotFound              ImportReasonCode = "contact_not_found"
+	ImportReasonCodeContactNotFoundDropped       ImportReasonCode = "contact_not_found_dropped"
+	ImportReasonCodeContactUnnamed               ImportReasonCode = "contact_unnamed"
+	ImportReasonCodeCurrencyNotACode             ImportReasonCode = "currency_not_a_code"
+	ImportReasonCodeCurrencyUnset                ImportReasonCode = "currency_unset"
+	ImportReasonCodeDealAlreadyClosed            ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealLegalGate                ImportReasonCode = "deal_legal_gate"
+	ImportReasonCodeDealNotFound                 ImportReasonCode = "deal_not_found"
+	ImportReasonCodeDealNotFoundDropped          ImportReasonCode = "deal_not_found_dropped"
+	ImportReasonCodeDealPipelineFixed            ImportReasonCode = "deal_pipeline_fixed"
+	ImportReasonCodeDescriptionTooLong           ImportReasonCode = "description_too_long"
+	ImportReasonCodeDirectionUnknown             ImportReasonCode = "direction_unknown"
+	ImportReasonCodeDomainHeld                   ImportReasonCode = "domain_held"
+	ImportReasonCodeDuplicateEmail               ImportReasonCode = "duplicate_email"
+	ImportReasonCodeDurationNotValidForKind      ImportReasonCode = "duration_not_valid_for_kind"
+	ImportReasonCodeDurationOutOfRange           ImportReasonCode = "duration_out_of_range"
+	ImportReasonCodeEmployerColumnEmpty          ImportReasonCode = "employer_column_empty"
+	ImportReasonCodeEmployerColumnEmptyDropped   ImportReasonCode = "employer_column_empty_dropped"
+	ImportReasonCodeEmployerNotFound             ImportReasonCode = "employer_not_found"
+	ImportReasonCodeEmployerNotFoundDropped      ImportReasonCode = "employer_not_found_dropped"
+	ImportReasonCodeEmptyPayload                 ImportReasonCode = "empty_payload"
+	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
+	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
+	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
+	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
+	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
+	ImportReasonCodeLinkAmbiguous                ImportReasonCode = "link_ambiguous"
+	ImportReasonCodeLinkAmbiguousDropped         ImportReasonCode = "link_ambiguous_dropped"
+	ImportReasonCodeLinkContactNotImported       ImportReasonCode = "link_contact_not_imported"
+	ImportReasonCodeLinkEdgeUnsupported          ImportReasonCode = "link_edge_unsupported"
+	ImportReasonCodeLinkMalformed                ImportReasonCode = "link_malformed"
+	ImportReasonCodeLinkNotAttachable            ImportReasonCode = "link_not_attachable"
+	ImportReasonCodeLinkNotFound                 ImportReasonCode = "link_not_found"
+	ImportReasonCodeLinkNotFoundDropped          ImportReasonCode = "link_not_found_dropped"
+	ImportReasonCodeLinkRowNotImported           ImportReasonCode = "link_row_not_imported"
+	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
+	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
+	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
+	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
+	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
+	ImportReasonCodeNaturalKeyTaken              ImportReasonCode = "natural_key_taken"
+	ImportReasonCodeNotADate                     ImportReasonCode = "not_a_date"
+	ImportReasonCodeNotADomain                   ImportReasonCode = "not_a_domain"
+	ImportReasonCodeNotANumber                   ImportReasonCode = "not_a_number"
+	ImportReasonCodeNotAnAmount                  ImportReasonCode = "not_an_amount"
+	ImportReasonCodeNotAnEmail                   ImportReasonCode = "not_an_email"
+	ImportReasonCodeNotYesNo                     ImportReasonCode = "not_yes_no"
+	ImportReasonCodeOccurredAtFuture             ImportReasonCode = "occurred_at_future"
+	ImportReasonCodeOccurredAtUnnamed            ImportReasonCode = "occurred_at_unnamed"
+	ImportReasonCodeOptionNotAllowed             ImportReasonCode = "option_not_allowed"
+	ImportReasonCodeOptionNotInList              ImportReasonCode = "option_not_in_list"
+	ImportReasonCodeOptionsNeedSemicolons        ImportReasonCode = "options_need_semicolons"
+	ImportReasonCodeOwnerRefused                 ImportReasonCode = "owner_refused"
+	ImportReasonCodeOwnerUnknown                 ImportReasonCode = "owner_unknown"
+	ImportReasonCodePhoneNeedsCountry            ImportReasonCode = "phone_needs_country"
+	ImportReasonCodePipelineNoOpenStage          ImportReasonCode = "pipeline_no_open_stage"
+	ImportReasonCodePipelineUnknown              ImportReasonCode = "pipeline_unknown"
+	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
+	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
+	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
+	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
+	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
+	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
+	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
+	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
+	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
+	ImportReasonCodeTaskNotImportable            ImportReasonCode = "task_not_importable"
+	ImportReasonCodeTimestampNeedsZone           ImportReasonCode = "timestamp_needs_zone"
+	ImportReasonCodeTooManyLinks                 ImportReasonCode = "too_many_links"
+	ImportReasonCodeUndoFailed                   ImportReasonCode = "undo_failed"
+	ImportReasonCodeUndoGrantLost                ImportReasonCode = "undo_grant_lost"
+	ImportReasonCodeUndoNotVisible               ImportReasonCode = "undo_not_visible"
+	ImportReasonCodeUndoRuleProtects             ImportReasonCode = "undo_rule_protects"
+	ImportReasonCodeValueRefused                 ImportReasonCode = "value_refused"
+	ImportReasonCodeValueUnreadable              ImportReasonCode = "value_unreadable"
 )
 
 // Valid indicates whether the value is a known member of the ImportReasonCode enum.
 func (e ImportReasonCode) Valid() bool {
 	switch e {
+	case ImportReasonCodeActivityHeld:
+		return true
+	case ImportReasonCodeActivityLinkAmbiguous:
+		return true
+	case ImportReasonCodeActivityLinkAmbiguousDropped:
+		return true
+	case ImportReasonCodeActivityTypeUnknown:
+		return true
+	case ImportReasonCodeActivityTypeUnnamed:
+		return true
+	case ImportReasonCodeActivityUnlinked:
+		return true
 	case ImportReasonCodeAuthorTooLong:
 		return true
 	case ImportReasonCodeCannotCreate:
@@ -10577,6 +10632,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeCompanyDuplicateSkipped:
 		return true
+	case ImportReasonCodeCompanyLinkOnMeeting:
+		return true
 	case ImportReasonCodeCompanyNameEmpty:
 		return true
 	case ImportReasonCodeContactDuplicateFound:
@@ -10599,13 +10656,23 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
+	case ImportReasonCodeDealNotFound:
+		return true
+	case ImportReasonCodeDealNotFoundDropped:
+		return true
 	case ImportReasonCodeDealPipelineFixed:
 		return true
 	case ImportReasonCodeDescriptionTooLong:
 		return true
+	case ImportReasonCodeDirectionUnknown:
+		return true
 	case ImportReasonCodeDomainHeld:
 		return true
 	case ImportReasonCodeDuplicateEmail:
+		return true
+	case ImportReasonCodeDurationNotValidForKind:
+		return true
+	case ImportReasonCodeDurationOutOfRange:
 		return true
 	case ImportReasonCodeEmployerColumnEmpty:
 		return true
@@ -10627,6 +10694,10 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeIdOnNonCompany:
 		return true
+	case ImportReasonCodeLeadNotFound:
+		return true
+	case ImportReasonCodeLeadNotFoundDropped:
+		return true
 	case ImportReasonCodeLinkAmbiguous:
 		return true
 	case ImportReasonCodeLinkAmbiguousDropped:
@@ -10635,15 +10706,27 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeLinkEdgeUnsupported:
 		return true
+	case ImportReasonCodeLinkMalformed:
+		return true
+	case ImportReasonCodeLinkNotAttachable:
+		return true
 	case ImportReasonCodeLinkNotFound:
 		return true
 	case ImportReasonCodeLinkNotFoundDropped:
 		return true
 	case ImportReasonCodeLinkRowNotImported:
 		return true
+	case ImportReasonCodeLinkTypeUnknown:
+		return true
 	case ImportReasonCodeLinkedinHeld:
 		return true
 	case ImportReasonCodeLostReasonMissing:
+		return true
+	case ImportReasonCodeMeetingStatusNotValidForKind:
+		return true
+	case ImportReasonCodeMeetingStatusUnknown:
+		return true
+	case ImportReasonCodeMessageNotImportable:
 		return true
 	case ImportReasonCodeNaturalKeyTaken:
 		return true
@@ -10658,6 +10741,10 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeNotAnEmail:
 		return true
 	case ImportReasonCodeNotYesNo:
+		return true
+	case ImportReasonCodeOccurredAtFuture:
+		return true
+	case ImportReasonCodeOccurredAtUnnamed:
 		return true
 	case ImportReasonCodeOptionNotAllowed:
 		return true
@@ -10696,6 +10783,12 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeTagNameInvalid:
 		return true
 	case ImportReasonCodeTagNew:
+		return true
+	case ImportReasonCodeTaskNotImportable:
+		return true
+	case ImportReasonCodeTimestampNeedsZone:
+		return true
+	case ImportReasonCodeTooManyLinks:
 		return true
 	case ImportReasonCodeUndoFailed:
 		return true
@@ -33484,6 +33577,10 @@ type CreateImportRunRequest struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -33549,6 +33646,12 @@ type CreateImportRunRequest struct {
 
 	// Parts The files of a ZIP to import, one type per file. Two files naming one type are refused.
 	Parts *[]ImportPartRequest `json:"parts,omitempty"`
+
+	// PresetLinks The record every imported activity is filed under, so the file needs
+	// no `links` column. Only for a run whose files are all `activity`.
+	// The contact must be visible to the caller; one that is not, or does
+	// not exist, is answered `404` the same way.
+	PresetLinks *[]ImportPresetLink `json:"preset_links,omitempty"`
 
 	// SourceKey The source column holding the row's stable id. For a row this run
 	// CREATES it is written to the row's provenance, so a re-uploaded file
@@ -37051,6 +37154,10 @@ type ImportFormatFile struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37094,6 +37201,10 @@ type ImportIgnoredEntryReason string
 // `deal` creates deals, after the companies and contacts of the same
 // upload. A deal row needs a `ref`, and names its pipeline and stage by
 // name.
+//
+// `activity` creates notes, calls, meetings and emails, after every
+// other type of the same upload. A row needs a `ref` and at least one
+// link to a company, contact, lead or deal.
 //
 // `lead` and `contact` are two answers to one question about a file of
 // humans, and the caller picks the one that matches where the file came
@@ -37173,6 +37284,10 @@ type ImportPartProfile struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37226,6 +37341,10 @@ type ImportPartReport struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37267,6 +37386,10 @@ type ImportPartRequest struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37293,6 +37416,15 @@ type ImportPartRequest struct {
 	// SourceKey The column holding the row's stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it.
 	SourceKey *string `json:"source_key,omitempty"`
 }
+
+// ImportPresetLink A record a whole run's activities are filed under.
+type ImportPresetLink struct {
+	Id   openapi_types.UUID   `json:"id"`
+	Type ImportPresetLinkType `json:"type"`
+}
+
+// ImportPresetLinkType defines model for ImportPresetLink.Type.
+type ImportPresetLinkType string
 
 // ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
 type ImportProblemKind string
@@ -37382,6 +37514,10 @@ type ImportRun struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37423,6 +37559,9 @@ type ImportRun struct {
 
 	// PhaseObject The object the run is working on in `phase`, when it is working on one.
 	PhaseObject *string `json:"phase_object,omitempty"`
+
+	// PresetLinks The record every activity of this run is filed under. Absent when the run names none.
+	PresetLinks *[]ImportPresetLink `json:"preset_links,omitempty"`
 
 	// Profile What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.
 	Profile *ImportSourceProfile `json:"profile,omitempty"`
@@ -37536,6 +37675,10 @@ type ImportRunPart struct {
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
+	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -37674,6 +37817,10 @@ type ImportSourceProfile struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -37757,6 +37904,10 @@ type ImportUndoReport struct {
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
 		// name.
 		//
+		// `activity` creates notes, calls, meetings and emails, after every
+		// other type of the same upload. A row needs a `ref` and at least one
+		// link to a company, contact, lead or deal.
+		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
 		// from.
@@ -37798,6 +37949,10 @@ type ImportUndoReport struct {
 		// `deal` creates deals, after the companies and contacts of the same
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
 		// name.
+		//
+		// `activity` creates notes, calls, meetings and emails, after every
+		// other type of the same upload. A row needs a `ref` and at least one
+		// link to a company, contact, lead or deal.
 		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
@@ -48245,6 +48400,10 @@ type UpdateImportRunRequest struct {
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
 	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -48308,6 +48467,9 @@ type UpdateImportRunRequest struct {
 	// the count is separate from `created`.
 	OnDuplicate *ImportOnDuplicate   `json:"on_duplicate,omitempty"`
 	Parts       *[]ImportPartRequest `json:"parts,omitempty"`
+
+	// PresetLinks The record every imported activity is filed under, as on `CreateImportRunRequest`. An empty list clears it.
+	PresetLinks *[]ImportPresetLink `json:"preset_links,omitempty"`
 
 	// SourceKey Empty means the mapped natural key.
 	SourceKey  *string `json:"source_key,omitempty"`
@@ -55022,7 +55184,7 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -55032,6 +55194,10 @@ type UploadImportSourceMultipartBody struct {
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
+	//
+	// `activity` creates notes, calls, meetings and emails, after every
+	// other type of the same upload. A row needs a `ref` and at least one
+	// link to a company, contact, lead or deal.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came

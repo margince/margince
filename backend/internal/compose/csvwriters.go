@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -77,6 +78,8 @@ type csvWriters struct {
 	// links finds the record a link cell names. One resolver serves every part
 	// of the run, so a contact can name a company of the same upload.
 	links *linkResolver
+	// preset is the run's record every activity row is filed under.
+	preset presetSet
 	// companyRefColumn is the file's column mapped to company_ref, empty when
 	// none is; onBrokenLink decides a row whose ref finds nothing.
 	companyRefColumn, onBrokenLink string
@@ -95,8 +98,13 @@ type csvWriters struct {
 	dealStages dealStages
 	// deals is the store a deal part's rows land through.
 	deals *deals.Store
+	// activities is the store an activity part's rows land through.
+	activities *activities.Store
 	// columns is the part's mapping, file header → target.
 	columns map[string]string
+	// now is the clock an activity's timestamp is held against; nil is the
+	// system clock.
+	now func() time.Time
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -120,6 +128,7 @@ func newCSVWriters(
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
+		activities:       activities.NewStore(db),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,
@@ -127,6 +136,7 @@ func newCSVWriters(
 		sourceSystem:     links.sourceSystem,
 		onDuplicate:      run.OnDuplicate,
 		links:            links,
+		preset:           presetSet{links: run.PresetLinks},
 		companyRefColumn: columnFor(part.Fields, csvTargetCompanyRef),
 		onBrokenLink:     run.OnBrokenLink,
 		// An unparseable id files nothing rather than failing the run. The wire
@@ -296,6 +306,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 		return w.createContact(ctx, row, typed)
 	case migration.ObjectDeal:
 		return w.createDeal(ctx, row, typed)
+	case migration.ObjectActivity:
+		return w.createActivity(ctx, row, typed)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -303,8 +315,11 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 
 // reconcile brings an already-landed record up to what the file now says.
 func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	if w.object == migration.ObjectDeal {
+	switch w.object {
+	case migration.ObjectDeal:
 		return w.reconcileDeal(ctx, id, row, typed)
+	case migration.ObjectActivity:
+		return w.reconcileActivity(ctx, id, row, typed)
 	}
 	current, err := w.read(ctx, id)
 	if err != nil {

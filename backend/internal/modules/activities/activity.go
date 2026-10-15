@@ -30,8 +30,11 @@ const (
 // direct-log path (this package's only emit site of the event's two) — it
 // never names a source_system, which is exclusive to the capture
 // auto-create path (capture/sink.go's own local builder).
-func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEventActivityCaptured {
+func activityCapturedPayload(ctx context.Context, kind, channelProvider string) crmcontracts.PublicEventActivityCaptured {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: kind}
+	// An import's activities are history, so consumers that react to new work
+	// read the mark and skip them.
+	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
 	// Carried only when there is one, so the envelope's omitempty leaves it
 	// absent rather than publishing an empty transport. A subscriber reads the
 	// pair: since ADR-0107/A158 the kind alone no longer says what carried a

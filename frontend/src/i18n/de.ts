@@ -5832,6 +5832,7 @@ export const de = {
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
   "import.object.deal": "Deals",
+  "import.object.activity": "Aktivitäten",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -5963,6 +5964,10 @@ export const de = {
   "import.files.columns_other": "{count} Spalten",
   "import.files.skip": "Datei überspringen",
   "import.files.typeFor": "Datensatztyp für {file}",
+  "import.preset.into": "Import in {name}",
+  "import.preset.intoUnnamed": "Import in diesen Kontakt",
+  "import.preset.hint":
+    "Jede Zeile wird unter diesem Kontakt abgelegt, deine Datei braucht also keine Spalte „links“.",
   "import.files.ignoredTitle": "Ausgelassene Dateien",
   "import.files.ignored.unknown_name":
     "der Name entspricht keinem Datensatztyp",
@@ -6216,6 +6221,56 @@ export const de = {
     "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.contact_not_found_dropped":
     "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.activity_type_unnamed":
+    "Nenne den Typ der Aktivität: note, call, meeting oder email.",
+  "import.reason.activity_type_unknown":
+    "„{value}“ ist kein Aktivitätstyp. Es gibt: {allowed}.",
+  "import.reason.message_not_importable":
+    "Eine Nachricht braucht einen Kanal und lässt sich daher nicht aus einer Datei importieren. Nimm stattdessen eine Notiz oder eine E-Mail.",
+  "import.reason.task_not_importable":
+    "Eine Aufgabe würde offen auf deiner eigenen Liste landen und wird daher nicht importiert. Nimm stattdessen eine Notiz.",
+  "import.reason.occurred_at_unnamed":
+    "Gib den Tag an, an dem die Aktivität stattfand, als YYYY-MM-DD oder mit Zeitzone.",
+  "import.reason.timestamp_needs_zone":
+    "„{value}“ hat eine Uhrzeit, aber keine Zeitzone. Ergänze die Zone, etwa 2026-03-02T10:00:00+07:00.",
+  "import.reason.occurred_at_future":
+    "„{value}“ liegt in der Zukunft, und eine importierte Aktivität muss bereits stattgefunden haben.",
+  "import.reason.duration_not_valid_for_kind":
+    "Nur ein Anruf oder ein Termin hat eine Dauer. Entferne sie aus dieser Zeile.",
+  "import.reason.duration_out_of_range":
+    "„{value}“ Minuten liegen außerhalb dessen, was eine Aktivität dauern kann: null bis 31 Tage.",
+  "import.reason.meeting_status_unknown":
+    "„{value}“ ist kein Terminstatus. Es gibt: {allowed}.",
+  "import.reason.meeting_status_not_valid_for_kind":
+    "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
+  "import.reason.direction_unknown":
+    "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
+  "import.reason.activity_unlinked":
+    "Diese Aktivität nennt keinen Datensatz, unter dem sie abgelegt wird. Ergänze eine Verknüpfung wie deal:D-1001 oder contact:jo@acme.com.",
+  "import.reason.link_malformed":
+    "„{value}“ ist keine Verknüpfung. Schreibe den Typ, einen Doppelpunkt und den Schlüssel, etwa deal:D-1001.",
+  "import.reason.link_type_unknown":
+    "„{value}“ ist kein Verknüpfungstyp. Es gibt: {allowed}.",
+  "import.reason.too_many_links":
+    "Eine Aktivität kann höchstens {max} Verknüpfungen nennen.",
+  "import.reason.company_link_on_meeting":
+    "Ein Anruf oder Termin findet mit einem Kontakt statt, nicht mit einem Unternehmen. Verknüpfe den Kontakt, der dabei war.",
+  "import.reason.link_not_attachable":
+    "Du kannst bei einem der Datensätze, mit denen diese Zeile verknüpft ist, keine Aktivitäten hinzufügen, daher wird die Zeile übersprungen.",
+  "import.reason.activity_held":
+    "Diese Aktivität unterliegt einer Aufbewahrungspflicht, daher kann die Zeile sie nicht ändern.",
+  "import.reason.lead_not_found":
+    "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.lead_not_found_dropped":
+    "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.deal_not_found":
+    "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.deal_not_found_dropped":
+    "Kein Deal mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.activity_link_ambiguous":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, um welches es in dieser Aktivität geht.",
+  "import.reason.activity_link_ambiguous_dropped":
+    "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, um welches es in dieser Aktivität geht. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
@@ -11601,6 +11656,7 @@ export const de = {
   "contact.action.openLead": "Lead öffnen",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
+  "contact.action.importActivities": "Aktivitäten importieren",
 
   "contact.strip.never": "Nie",
   "contact.strip.today": "Heute",

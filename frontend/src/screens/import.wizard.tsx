@@ -14,6 +14,7 @@ import { useLocale, useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { FilesStep, ImportDropzone } from "./import.files";
 import { ImportRefusal } from "./import.notices";
+import { ImportPresetTarget } from "./import.preset";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
 import { runHref } from "./importaddress";
@@ -50,6 +51,7 @@ export function ImportWizardPage() {
   // which type a CSV's name gives. The page holds it, so a page closed before
   // then drops it rather than uploading it on a later visit.
   const { upload } = wizard;
+  const presetObject = wizard.presetContact ? "activity" : undefined;
   const handedOver = useRef<File | null>(null);
   useEffect(() => {
     handedOver.current ??= takeHandedOverUpload();
@@ -61,12 +63,12 @@ export function ImportWizardPage() {
     if (file) {
       upload.mutate({
         file,
-        object: uploadObjectFor(file.name, format.data),
+        object: uploadObjectFor(file.name, format.data, presetObject),
         recent: recent.data,
         retype: false,
       });
     }
-  }, [format.data, recent.data, upload]);
+  }, [format.data, recent.data, upload, presetObject]);
   return <ImportWizard wizard={wizard} />;
 }
 
@@ -115,6 +117,9 @@ export function ImportWizard({
           };
         })}
       />
+      {wizard.presetContact ? (
+        <ImportPresetTarget contactId={wizard.presetContact} />
+      ) : null}
       {wizard.conflict ? (
         <Callout
           tone="danger"
@@ -230,10 +235,15 @@ function UploadStep({
     <div className="import">
       <ImportDropzone
         sizeLimitMb={format.size_limit_mb}
+        csvOnly={wizard.presetContact !== null}
         onPick={(file) =>
           upload.mutate({
             file,
-            object: uploadObjectFor(file.name, format),
+            object: uploadObjectFor(
+              file.name,
+              format,
+              wizard.presetContact ? "activity" : undefined,
+            ),
             recent: recent.data,
             retype: false,
           })

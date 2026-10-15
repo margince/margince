@@ -1964,6 +1964,13 @@ components:
           description: >-
             The originating source system (capture ingestion only;
             absent on a direct log).
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventAttachmentCreated:
@@ -2079,7 +2086,17 @@ components:
       x-event-type: activity.archived
       x-entity-type: activity
       x-version: 1
-      description: Payload for activity.archived — an activity was archived. Carries no data.
+      description: >-
+        Payload for activity.archived: an activity was archived. Carries only the
+        import mark, when an import's undo wrote the event.
+      properties:
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventActivityRelinkedRef:
@@ -2219,6 +2236,13 @@ components:
       properties:
         changed_fields:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventForecastCreated:

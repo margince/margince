@@ -84,11 +84,14 @@ type reasonEntry struct {
 // droppedTwin names the code a link problem takes once the run dropped the link
 // instead of skipping the row.
 var droppedTwin = map[ReasonCode]ReasonCode{
-	ReasonLinkNotFound:        ReasonLinkNotFoundDropped,
-	ReasonContactNotFound:     ReasonContactNotFoundDropped,
-	ReasonLinkAmbiguous:       ReasonLinkAmbiguousDropped,
-	ReasonEmployerColumnEmpty: ReasonEmployerColumnEmptyDropped,
-	ReasonEmployerNotFound:    ReasonEmployerNotFoundDropped,
+	ReasonLinkNotFound:          ReasonLinkNotFoundDropped,
+	ReasonContactNotFound:       ReasonContactNotFoundDropped,
+	ReasonLinkAmbiguous:         ReasonLinkAmbiguousDropped,
+	ReasonEmployerColumnEmpty:   ReasonEmployerColumnEmptyDropped,
+	ReasonEmployerNotFound:      ReasonEmployerNotFoundDropped,
+	ReasonLeadNotFound:          ReasonLeadNotFoundDropped,
+	ReasonDealNotFound:          ReasonDealNotFoundDropped,
+	ReasonActivityLinkAmbiguous: ReasonActivityLinkAmbiguousDropped,
 }
 
 // Parameter names and a text three reasons share.
@@ -102,7 +105,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",
@@ -413,4 +416,4 @@ var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-})
+}))

@@ -889,6 +889,13 @@ export interface components {
             channel_provider?: string;
             /** @description The originating source system (capture ingestion only; absent on a direct log). */
             source_system?: string;
+            /** @description True when a data import wrote the event. Absent otherwise. */
+            imported?: boolean;
+            /**
+             * Format: uuid
+             * @description The import run that wrote the event. Present when `imported` is true.
+             */
+            import_run_id?: string;
         };
         /**
          * @description Payload for attachment.created. A file was uploaded against a record.
@@ -952,8 +959,16 @@ export interface components {
              */
             byte_size?: number | null;
         };
-        /** @description Payload for activity.archived — an activity was archived. Carries no data. */
-        PublicEventActivityArchived: Record<string, never>;
+        /** @description Payload for activity.archived: an activity was archived. Carries only the import mark, when an import's undo wrote the event. */
+        PublicEventActivityArchived: {
+            /** @description True when a data import wrote the event. Absent otherwise. */
+            imported?: boolean;
+            /**
+             * Format: uuid
+             * @description The import run that wrote the event. Present when `imported` is true.
+             */
+            import_run_id?: string;
+        };
         /** @description The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb. */
         PublicEventActivityRelinkedRef: {
             /** @description The relink target's kind (contact | company | deal | lead). */
@@ -1023,6 +1038,13 @@ export interface components {
         /** @description Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map. */
         PublicEventActivityUpdated: {
             changed_fields: components["schemas"]["PublicEventActivityChangedFields"];
+            /** @description True when a data import wrote the event. Absent otherwise. */
+            imported?: boolean;
+            /**
+             * Format: uuid
+             * @description The import run that wrote the event. Present when `imported` is true.
+             */
+            import_run_id?: string;
         };
         /**
          * @description Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a contact and that contact is who it is attributable to.

@@ -11,6 +11,7 @@ import { useCanWrite } from "../lib/capability";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
+import { ImportActivitiesAction } from "./contactimportaction";
 import { WorkAsLeadAction } from "./contactleadaction";
 import { ContactRecordActions } from "./contactrecordactions";
 import type { Transport, TransportSource } from "./contacttransports";
@@ -199,6 +200,10 @@ export function ContactActions({
               <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>
+              <ImportActivitiesAction
+                contactId={contactId}
+                reasonId={archived}
+              />
               <Button reasonId={archived} onClick={onResearch}>
                 {t("contact.action.research")}
               </Button>

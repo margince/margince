@@ -219,3 +219,21 @@ func TestAStrangerOnTheThreadDoesNotSettleTheFollowUp(t *testing.T) {
 		t.Error("a message from another customer on the same thread key settled the follow-up")
 	}
 }
+
+// An import brings history that may sit inside the lookback. Nobody left a
+// message unanswered in this CRM, so no reminder is about it.
+func TestAnImportedMessageIsNotAFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	customer := e.customerAt(t, "customer")
+	live, _ := e.sentTo(t, customer, "", 3*24*time.Hour)
+	imported, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+	e.exec(t, `UPDATE activity SET source_system = 'mirror:csv:old-crm' WHERE id = $1`, imported)
+
+	if !awaited(t, s, e, live) {
+		t.Error("the reader's own live message is not a follow-up, so the test cannot tell an exclusion from an empty read")
+	}
+	if awaited(t, s, e, imported) {
+		t.Error("a message an import brought in is a follow-up")
+	}
+}

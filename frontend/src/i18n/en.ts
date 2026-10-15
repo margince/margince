@@ -5964,6 +5964,7 @@ export const en = {
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
+  "import.object.activity": "Activities",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
@@ -6092,6 +6093,10 @@ export const en = {
   "import.files.columns_other": "{count} columns",
   "import.files.skip": "Skip this file",
   "import.files.typeFor": "Record type for {file}",
+  "import.preset.into": "Importing into {name}",
+  "import.preset.intoUnnamed": "Importing into this contact",
+  "import.preset.hint":
+    "Every row is filed under this contact, so the file needs no links column.",
   "import.files.ignoredTitle": "Files left out",
   "import.files.ignored.unknown_name": "the name matches no record type",
   "import.files.ignored.not_yet_importable":
@@ -6334,6 +6339,55 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.activity_type_unnamed":
+    "Name the activity’s type: note, call, meeting or email.",
+  "import.reason.activity_type_unknown":
+    "“{value}” is not an activity type. The types are: {allowed}.",
+  "import.reason.message_not_importable":
+    "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
+  "import.reason.task_not_importable":
+    "A task would land open on your own list, so it is not imported. Use a note instead.",
+  "import.reason.occurred_at_unnamed":
+    "Give the day the activity happened, as YYYY-MM-DD or with its time zone.",
+  "import.reason.timestamp_needs_zone":
+    "“{value}” has a time but no time zone. Add the zone, like 2026-03-02T10:00:00+07:00.",
+  "import.reason.occurred_at_future":
+    "“{value}” is in the future, and an imported activity must already have happened.",
+  "import.reason.duration_not_valid_for_kind":
+    "Only a call or a meeting has a duration. Remove it from this row.",
+  "import.reason.duration_out_of_range":
+    "“{value}” minutes is outside what an activity can last: zero up to 31 days.",
+  "import.reason.meeting_status_unknown":
+    "“{value}” is not a meeting status. The statuses are: {allowed}.",
+  "import.reason.meeting_status_not_valid_for_kind":
+    "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.direction_unknown":
+    "“{value}” is not a direction. The directions are: {allowed}.",
+  "import.reason.activity_unlinked":
+    "This activity names no record to be filed under. Add a link like deal:D-1001 or contact:jo@acme.com.",
+  "import.reason.link_malformed":
+    "“{value}” is not a link. Write the type, a colon and the key, like deal:D-1001.",
+  "import.reason.link_type_unknown":
+    "“{value}” is not a link type. The types are: {allowed}.",
+  "import.reason.too_many_links": "An activity can name at most {max} links.",
+  "import.reason.company_link_on_meeting":
+    "A call or a meeting is with a contact, not a company. Link the contact who was there.",
+  "import.reason.link_not_attachable":
+    "You cannot add activities to one of the records this row links to, so the row is skipped.",
+  "import.reason.activity_held":
+    "This activity is held under a retention obligation, so the row cannot change it.",
+  "import.reason.lead_not_found":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.lead_not_found_dropped":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.deal_not_found_dropped":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
+  "import.reason.activity_link_ambiguous_dropped":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
@@ -11670,6 +11724,7 @@ export const en = {
   "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
+  "contact.action.importActivities": "Import activities",
 
   "contact.strip.never": "Never",
   "contact.strip.today": "Today",

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -58,6 +59,10 @@ func (w *csvWriters) Reverse(
 		// The archive takes the deal's stakeholder edges with it, so the edges
 		// this run seated go too.
 		_, err = w.deals.ArchiveDeal(ctx, ids.From[ids.DealKind](nativeID), nil, deals.NotTouchedByHumanSince(importedAt))
+	case migration.ObjectActivity:
+		// The archive takes the activity's links with it, so the contact's last
+		// activity falls back to what was there before the import.
+		_, err = w.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](nativeID), nil, activities.NotTouchedByHumanSince(importedAt))
 	default:
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}

@@ -152,7 +152,13 @@ const IMPORT_NAMESPACE = "mirror:";
 const IMPORT_CONNECTOR = "csv";
 
 /** The objects an import stamps after its upload name. */
-const IMPORT_OBJECTS = new Set(["company", "contact", "lead", "deal"]);
+const IMPORT_OBJECTS = new Set([
+  "company",
+  "contact",
+  "lead",
+  "deal",
+  "activity",
+]);
 
 /**
  * The import arm a row's `source` stamp reads as, or undefined when no import

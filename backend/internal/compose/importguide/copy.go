@@ -21,7 +21,7 @@ type Column struct {
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
-var Columns = map[string]Column{
+var Columns = withActivityColumns(map[string]Column{
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
@@ -217,7 +217,7 @@ var Columns = map[string]Column{
 		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal anlegt.",
 		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
-}
+})
 
 // Custom is the guide of a custom field, by its type. A picklist's
 // example is replaced by its first option where the caller may read them.
@@ -267,9 +267,9 @@ var KeyRules = []langcopy.Phrase{
 		Vi: "Mỗi dòng được nhận biết qua ref và tên nguồn của lần nhập. Tải lên lại tệp với cùng ref và tên nguồn, hồ sơ sẽ được cập nhật chứ không bị tạo hai lần.",
 	},
 	{
-		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email. A deal needs a ref.",
-		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse. Ein Deal braucht eine Ref.",
-		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead. Deal bắt buộc có ref.",
+		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email. A deal or an activity needs a ref.",
+		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse. Ein Deal oder eine Aktivität braucht eine Ref.",
+		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead. Deal hoặc hoạt động bắt buộc có ref.",
 	},
 	{
 		En: "Files are imported in the order above, so a contact's company_ref can name a company from the same upload.",

@@ -126,9 +126,9 @@ call undoes that. An ID fails in none of these ways.
 ## Importing a ZIP over REST
 
 A ZIP holds one CSV for each record type. The file name gives the type: `companies.csv`,
-`contacts.csv`, `leads.csv` or `deals.csv`. A run lands companies first, then contacts, then leads, then
-deals. So a contact can link to a company in the same ZIP, and a deal to either. Undo goes the other way
-and archives deals first.
+`contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. A run lands companies first, then contacts,
+then leads, then deals, then activities. So a contact can link to a company in the same ZIP, a deal to
+either, and an activity to any of them. Undo goes the other way and archives activities first.
 
 1. Read `GET /v1/imports/format`. It lists each file, its columns and what goes in each one, and the
    order the files land in. `GET /v1/imports/template` returns the same as a ZIP to fill in.
@@ -184,6 +184,43 @@ skip them. Webhooks get them with that mark, so a receiver decides for itself.
 Undo archives the deals an import created, before contacts, and keeps a deal someone edited since. Only
 an edit to the deal itself keeps it. A note, an email or a task logged against the deal does not keep
 it, and undo archives the deal.
+
+### Importing activities
+
+An `activities.csv` row can map `type`, `subject`, `body`, `occurred_at`, `links`, `duration_minutes`,
+`meeting_status`, `direction`, `author` and `owner_email`. A file called `notes.csv` is read as an
+activities file. A row needs a `ref`, or the part is refused at staging. An activity has no other key.
+
+- `type` is `note`, `call`, `meeting` or `email`, in any case. A `message` is refused, because it needs a
+  channel a file cannot name. A `task` is refused, because it would land open on your own task list.
+- `occurred_at` is `YYYY-MM-DD`, which is 00:00 UTC of that day, or a full date and time with its zone,
+  such as `2026-03-02T10:00:00+07:00`. A time with no zone is refused. So is a time after now.
+- `duration_minutes` is whole minutes, and only a call or a meeting takes it. `meeting_status` is
+  `booked`, `held`, `no_show` or `canceled`, and only a meeting takes it. The activities store's own rule
+  decides both, as it does for the create endpoint.
+- `links` is `type:key` pairs, split by `;`. The type is `company`, `contact`, `lead` or `deal`. The key
+  is a `ref` of this upload or an earlier one, a contact's email, a company's domain or exact name, or an
+  ID. A lead and a deal are never matched by name. A row with no link is refused, and a call or a meeting
+  cannot link to a company.
+- `owner_email` names the user who wrote the activity, and who hosts a meeting. An address no user holds
+  leaves you as the author, and the preview says so. `author` keeps the source system's own words.
+  Neither changes when the file is uploaded again, and `type`, `direction` and `links` do not either.
+
+An imported activity is dated by `occurred_at`. A contact's last activity becomes the newest imported
+date when it is newer than the one there. A `no_show` or `canceled` meeting does not count, as for any
+meeting. An activity is filed with no source key, so one imported again after an undo lands as a new row.
+
+Events of an imported activity carry `imported: true` and the `import_run_id`, and automations skip
+them. An imported email to a lead does not stamp the lead's first response or move its status. An
+imported email or meeting from the last 14 days is not on the follow-up reminders, because nobody left
+it with no reply in this CRM.
+
+A file started from a contact's page needs no `links` column. The request carries `preset_links` with one
+`{type: contact, id}`, and every row is filed under that contact, besides any links the row names. The run
+refuses a preset when any of its files is not `activity`. A contact the caller cannot see answers `404`,
+the same as an unknown one. The test run and the commit read the same preset from the run.
+
+Undo archives activities first and keeps an activity someone edited since.
 
 ## Importing several files over MCP
 

@@ -201,6 +201,13 @@ describe("a row the CSV importer wrote", () => {
     });
   });
 
+  it("names the upload of an imported activity", () => {
+    expect(imported("mirror:csv:pipedrive-export:activity:a-9")).toEqual({
+      kind: "import",
+      uploadName: "pipedrive-export",
+    });
+  });
+
   it("names the upload and never the stamp that carries it", () => {
     const provenance = imported("mirror:csv:Q3 leads.v2:contact:a@b.example");
 

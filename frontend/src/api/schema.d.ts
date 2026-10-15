@@ -23951,6 +23951,10 @@ export interface components {
          *     upload. A deal row needs a `ref`, and names its pipeline and stage by
          *     name.
          *
+         *     `activity` creates notes, calls, meetings and emails, after every
+         *     other type of the same upload. A row needs a `ref` and at least one
+         *     link to a company, contact, lead or deal.
+         *
          *     `lead` and `contact` are two answers to one question about a file of
          *     humans, and the caller picks the one that matches where the file came
          *     from.
@@ -23974,7 +23978,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "company" | "lead" | "contact" | "deal";
+        ImportObject: "company" | "lead" | "contact" | "deal" | "activity";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -24089,7 +24093,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
          * @enum {string}
          */
-        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_pipeline_fixed" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "linkedin_held" | "lost_reason_missing" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -24174,6 +24178,20 @@ export interface components {
              *     only touched.
              */
             context_tag_id?: string;
+            /**
+             * @description The record every imported activity is filed under, so the file needs
+             *     no `links` column. Only for a run whose files are all `activity`.
+             *     The contact must be visible to the caller; one that is not, or does
+             *     not exist, is answered `404` the same way.
+             */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
+        };
+        /** @description A record a whole run's activities are filed under. */
+        ImportPresetLink: {
+            /** @enum {string} */
+            type: "contact";
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description What to do with a row naming a record the estate ALREADY holds — found
@@ -24395,6 +24413,8 @@ export interface components {
              */
             context_tag_id?: string | null;
             draft_step?: components["schemas"]["ImportDraftStep"];
+            /** @description The record every imported activity is filed under, as on `CreateImportRunRequest`. An empty list clears it. */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
         };
         /** @description The run's `version` a call was made on. */
         ImportRunVersion: {
@@ -24485,6 +24505,8 @@ export interface components {
              */
             readonly context_tag_id?: string;
             on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /** @description The record every activity of this run is filed under. Absent when the run names none. */
+            readonly preset_links?: components["schemas"]["ImportPresetLink"][];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
@@ -74994,7 +75016,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];

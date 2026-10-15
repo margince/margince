@@ -5693,6 +5693,7 @@ export const vi = {
   "import.object.company": "Công ty",
   "import.object.contact": "Liên hệ",
   "import.object.deal": "Deal",
+  "import.object.activity": "Hoạt động",
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
@@ -5820,6 +5821,10 @@ export const vi = {
   "import.files.columns_other": "{count} cột",
   "import.files.skip": "Bỏ qua tệp này",
   "import.files.typeFor": "Loại hồ sơ cho {file}",
+  "import.preset.into": "Đang nhập vào {name}",
+  "import.preset.intoUnnamed": "Đang nhập vào liên hệ này",
+  "import.preset.hint":
+    "Mọi dòng được gắn vào liên hệ này, nên tệp không cần cột links.",
   "import.files.ignoredTitle": "Tệp bị bỏ qua",
   "import.files.ignored.unknown_name": "tên tệp không khớp loại hồ sơ nào",
   "import.files.ignored.not_yet_importable": "loại hồ sơ này chưa nhập được",
@@ -6061,6 +6066,56 @@ export const vi = {
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.contact_not_found_dropped":
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.activity_type_unnamed":
+    "Hãy nêu loại hoạt động: “note”, “call”, “meeting” hoặc “email”.",
+  "import.reason.activity_type_unknown":
+    "“{value}” không phải loại hoạt động. Các loại: {allowed}.",
+  "import.reason.message_not_importable":
+    "Tin nhắn cần một kênh nên không thể nhập từ tệp. Hãy dùng ghi chú hoặc email.",
+  "import.reason.task_not_importable":
+    "Nhiệm vụ sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Hãy dùng ghi chú.",
+  "import.reason.occurred_at_unnamed":
+    "Hãy nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
+  "import.reason.timestamp_needs_zone":
+    "“{value}” có giờ nhưng không có múi giờ. Hãy thêm múi giờ, ví dụ 2026-03-02T10:00:00+07:00.",
+  "import.reason.occurred_at_future":
+    "“{value}” ở tương lai, mà hoạt động được nhập phải đã xảy ra.",
+  "import.reason.duration_not_valid_for_kind":
+    "Chỉ cuộc gọi hoặc cuộc họp mới có thời lượng. Hãy bỏ giá trị này khỏi hàng.",
+  "import.reason.duration_out_of_range":
+    "“{value}” phút nằm ngoài thời lượng một hoạt động có thể có: từ không đến 31 ngày.",
+  "import.reason.meeting_status_unknown":
+    "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
+  "import.reason.meeting_status_not_valid_for_kind":
+    "Chỉ cuộc họp mới có trạng thái cuộc họp. Hãy bỏ giá trị này khỏi hàng.",
+  "import.reason.direction_unknown":
+    "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
+  "import.reason.activity_unlinked":
+    "Hoạt động này không nêu hồ sơ nào để gắn vào. Hãy thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
+  "import.reason.link_malformed":
+    "“{value}” không phải liên kết. Hãy viết loại, dấu hai chấm và khóa, ví dụ deal:D-1001.",
+  "import.reason.link_type_unknown":
+    "“{value}” không phải loại liên kết. Các loại: {allowed}.",
+  "import.reason.too_many_links":
+    "Một hoạt động chỉ được nêu tối đa {max} liên kết.",
+  "import.reason.company_link_on_meeting":
+    "Cuộc gọi hoặc cuộc họp diễn ra với một liên hệ, không phải với công ty. Hãy liên kết liên hệ đã tham gia.",
+  "import.reason.link_not_attachable":
+    "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
+  "import.reason.activity_held":
+    "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+  "import.reason.lead_not_found":
+    "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.lead_not_found_dropped":
+    "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.deal_not_found":
+    "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.deal_not_found_dropped":
+    "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.activity_link_ambiguous":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào.",
+  "import.reason.activity_link_ambiguous_dropped":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào. Hàng đã được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
@@ -11311,6 +11366,7 @@ export const vi = {
   "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",
+  "contact.action.importActivities": "Nhập hoạt động",
 
   "contact.strip.never": "Chưa có",
   "contact.strip.today": "Hôm nay",

@@ -8,7 +8,7 @@ import { useSettledValue } from "../design-system/debouncedsearch";
 import { postMultipart } from "../lib/multipart";
 import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { useAddressedRun } from "./importaddress";
+import { useAddressedRun, usePresetContact } from "./importaddress";
 import {
   choicesOf,
   type DraftPatch,
@@ -62,6 +62,10 @@ export function useImportWizard() {
   const latest = useRef(edits);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
+  // The contact a file of activities is filed under: the address names it for
+  // a new upload, and the run keeps it after that.
+  const presetContact =
+    usePresetContact() ?? run.data?.preset_links?.[0]?.id ?? null;
   const status = run.data?.status;
   const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
@@ -229,6 +233,8 @@ export function useImportWizard() {
     setContextTagID: (contextTagID: string) =>
       edit((current) => ({ ...current, contextTagID })),
     runId,
+    /** The contact every activity of this run is filed under, if one is. */
+    presetContact,
     run,
     report,
     upload,
@@ -239,7 +245,7 @@ export function useImportWizard() {
         sent.current = latest.current;
         test.mutate({
           id: runId,
-          patch: fullPatch(files, zip, choices, run.data),
+          patch: fullPatch(files, zip, choices, run.data, presetContact),
         });
       }
     },

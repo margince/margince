@@ -19,7 +19,13 @@ import type { ImportWizardState } from "./importwizard";
 export function ImportDropzone({
   sizeLimitMb,
   onPick,
-}: Readonly<{ sizeLimitMb?: number; onPick: (file: File) => void }>) {
+  csvOnly = false,
+}: Readonly<{
+  sizeLimitMb?: number;
+  onPick: (file: File) => void;
+  /** A file for one contact's activities is a single CSV, never a ZIP. */
+  csvOnly?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -33,7 +39,7 @@ export function ImportDropzone({
             })
       }
       emptyLabel={t("import.hub.uploadEmpty")}
-      accept=".zip,.csv"
+      accept={csvOnly ? ".csv" : ".zip,.csv"}
       onPick={onPick}
     />
   );
@@ -119,20 +125,23 @@ export function FilesStep({
           {
             key: "type",
             header: t("import.files.col.type"),
-            render: (file) => (
-              <Select
-                options={types}
-                value={wizard.objects[file.file] ?? ""}
-                disabled={wizard.upload.isPending}
-                onChange={(next) =>
-                  wizard.setFileObject(
-                    file.file,
-                    isImportObject(next) ? next : null,
-                  )
-                }
-                aria-label={t("import.files.typeFor", { file: file.file })}
-              />
-            ),
+            render: (file) =>
+              wizard.presetContact ? (
+                t("import.object.activity")
+              ) : (
+                <Select
+                  options={types}
+                  value={wizard.objects[file.file] ?? ""}
+                  disabled={wizard.upload.isPending}
+                  onChange={(next) =>
+                    wizard.setFileObject(
+                      file.file,
+                      isImportObject(next) ? next : null,
+                    )
+                  }
+                  aria-label={t("import.files.typeFor", { file: file.file })}
+                />
+              ),
           },
         ]}
       />

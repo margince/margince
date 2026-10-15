@@ -234,7 +234,7 @@ All the detail is in [What is kept, what is destroyed](retention-exports-and-del
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
-  prospects (leads) and deals, up to 10 MB unless the installation sets another.
+  prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
   Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the
   AI finds.
@@ -260,16 +260,16 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ## Data import
 
-The Data import page in Settings (group **Data**) brings in companies, contacts, prospects and deals from a ZIP of CSV files, or from one CSV. Only an admin or ops user can import. Undoing an import is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+The Data import page in Settings (group **Data**) brings in your records from a ZIP of CSV files, or from one CSV. It takes companies, contacts, prospects, deals and activities. Only an admin or ops user can import. Undoing an import is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
 ### What is in the template?
-**Download template** on **Data import** gives a ZIP with one CSV for each record type: `companies.csv`, `contacts.csv`, `leads.csv` and `deals.csv`. Each file has a column for each field the import takes. A custom field has its label as the column name.
+**Download template** on **Data import** gives a ZIP with one CSV for each record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` and `activities.csv`. Each file has a column for each field the import takes. A custom field has its label as the column name.
 
 The `README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column, or choose it, to see what goes in it, an example, and if a new row needs it.
 Also called: import template, column help, import format.
 
 ### How does Margince know which file is which?
-In a ZIP, the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv` or `deals.csv`. On **Check your files**, change the type in **Import as**, or choose **Skip this file**. Each type takes one file. Files whose name gives no type are listed under **Files left out**. One CSV starts as the type its name gives, or as **Prospects**.
+In a ZIP, the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. On **Check your files**, change the type in **Import as**, or choose **Skip this file**. Each type takes one file. Files whose name gives no type are listed under **Files left out**. One CSV starts as the type its name gives, or as **Prospects**.
 Also called: file types, wrong record type, skip a file.
 
 ### What is the source name?
@@ -306,8 +306,33 @@ A row is skipped, with its reason, in these cases:
 Companies and contacts land before deals, so a deal can link to either in the same ZIP.
 Also called: import opportunities, import closed deals, import pipeline history.
 
+### How do I import activities?
+An `activities.csv` row is one note, call, meeting or email, put on the timeline at the day it happened. Each row needs a `ref`, a `type`, an `occurred_at` and at least one entry in `links`.
+
+| Column | What goes in it |
+|---|---|
+| `type` | `note`, `call`, `meeting` or `email`. A message and a task are not imported. |
+| `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A time without a zone, or after now, is refused. |
+| `links` | Records as `type:key`, split by `;`, such as `deal:D-1001; contact:jo@acme.com`. The type is company, contact, lead or deal. |
+| `duration_minutes` | Whole minutes, for a call or a meeting. |
+| `meeting_status` | `booked`, `held`, `no_show` or `canceled`, for a meeting. |
+| `direction` | `inbound` or `outbound`. |
+| `owner_email` | The Margince user the activity is attributed to. If none has this email, you are. |
+
+A contact's last activity becomes the newest imported date when it is newer than what the contact had. Imported activities start no automation, and an imported email to a lead does not count as a first response. They are not on your follow-up reminders either.
+
+A row is skipped, with its reason, in four cases. Its type is a message or a task. Its time has no zone. It links a call or a meeting to a company. None of its links finds a record.
+
+Companies, contacts, prospects and deals land before activities, so an activity can link to any of them in the same ZIP.
+Also called: import notes, import calls, import emails, import history, import timeline.
+
+### How do I import activities for one contact?
+On the contact, choose **More actions**, then **Import activities**, and upload one CSV. It opens as **Importing into** the contact's name, and every row goes on that contact's timeline, so no `links` column is needed. A ZIP is not taken here, and only an admin or ops user sees the item.
+
 ### What if a link is broken?
-A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. Tick the box to bring those rows in without the link. The test runs again, and the button says **Import anyway**.
+A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email.
+
+A row whose link finds no record is skipped and listed as **Broken link**. Tick the box to bring those rows in without the link. An activity keeps its other links, and one with none left is still skipped. The test runs again, and the button says **Import anyway**.
 Also called: missing company, link not found, keep rows with broken links.
 
 ### What happens if I import the same file again?

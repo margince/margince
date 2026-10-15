@@ -86,10 +86,16 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 // linkNotFoundWhy is the one sentence for a ref no step answers to, whether
 // nothing carries it or only records the caller cannot see do.
 func linkNotFoundWhy(object, ref string) migration.Reason {
-	if object == migration.ObjectContact {
-		return migration.Why(migration.ReasonContactNotFound, "ref", strings.TrimSpace(ref))
+	code := migration.ReasonLinkNotFound
+	switch object {
+	case migration.ObjectContact:
+		code = migration.ReasonContactNotFound
+	case migration.ObjectLead:
+		code = migration.ReasonLeadNotFound
+	case migration.ObjectDeal:
+		code = migration.ReasonDealNotFound
 	}
-	return migration.Why(migration.ReasonLinkNotFound, "ref", strings.TrimSpace(ref))
+	return migration.Why(code, "ref", strings.TrimSpace(ref))
 }
 
 // markPending records a row the dry run predicts will land, so a later file's
@@ -221,10 +227,15 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 }
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
-// the one name it carries. A contact's is its email address.
+// the one name it carries. A contact's is its email address. A lead or a deal
+// has none a file can write, so it is found by ref or id and never by a name
+// that happens to be a company's.
 func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
-	if object == migration.ObjectContact {
+	switch object {
+	case migration.ObjectContact:
 		return r.visibleContactByEmail(ctx, key)
+	case migration.ObjectLead, migration.ObjectDeal:
+		return linkAnswer{}, nil
 	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {

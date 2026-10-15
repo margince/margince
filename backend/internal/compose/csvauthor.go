@@ -30,27 +30,39 @@ const csvTargetAuthor = "author"
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
-// where it came from, and a lost reason why the deal closed; a later file
-// rewrites neither.
+// where it came from, a lost reason why the deal closed, and an activity's
+// type, direction and links what it was and about whom; a later file rewrites
+// none of them.
 func isCreateOnlyTarget(field string) bool {
-	return field == csvTargetAuthor || field == dealTargetLostReason
+	switch field {
+	case csvTargetAuthor, dealTargetLostReason, activityTargetType, activityTargetDirection, activityTargetLinks:
+		return true
+	}
+	return false
+}
+
+// isCreateOnly is isCreateOnlyTarget for one object. An activity's owner_email
+// names its author, which the activities store cannot rewrite.
+func isCreateOnly(object, field string) bool {
+	return isCreateOnlyTarget(field) || (object == migration.ObjectActivity && field == csvTargetOwner)
 }
 
 // refuseAuthorFromNonImporter keeps the author column behind the same door as
 // the create wires: only a declared importer states who wrote a record. The
 // import writes through the stores, not the wire mappers, so it asks itself.
 // It asks at staging and again at commit, and an agent's tools reach both.
-// Every part of a ZIP is asked, since each file carries its own mapping.
+// Every part of a ZIP is asked, since each file carries its own mapping. An
+// activity's owner column is its author, so it is behind the same door.
 func refuseAuthorFromNonImporter(ctx context.Context, mapping migration.RunMapping) error {
 	if auth.DeclaredImporter(ctx) {
 		return nil
 	}
 	for _, part := range mapping.PartList() {
 		for _, target := range part.Fields {
-			if target == csvTargetAuthor {
+			if target == csvTargetAuthor || (part.Object == migration.ObjectActivity && target == csvTargetOwner) {
 				return &provenance.AuthorError{
 					Field: "mapping", Code: "reserved_source_author",
-					Message: "the author column is imported only by a signed-in person holding import_run:create; unmap it",
+					Message: "the author column, and an activity's owner column, are imported only by a signed-in person holding import_run:create; unmap it",
 				}
 			}
 		}

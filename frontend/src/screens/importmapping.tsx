@@ -195,8 +195,16 @@ export function MapStep({
   if (!current) return null;
   const name = current.file.file;
   const mapping = wizard.mapping[name] ?? {};
-  const targets =
+  const formatColumns =
     format.files.find((file) => file.object === current.object)?.columns ?? [];
+  // A contact's page fills the links, so the column is no longer required.
+  const targets = wizard.presetContact
+    ? formatColumns.map((column) =>
+        column.name === "links"
+          ? { ...column, required_on_new_row: false }
+          : column,
+      )
+    : formatColumns;
   const test = wizard.test;
   const refused = test.error ?? wizard.saveFailure;
   // A test run that stopped left the run a draft, with the reason on it.
