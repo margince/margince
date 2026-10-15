@@ -25,7 +25,6 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
-import { searchCompanies } from "../../screens/filterreference";
 import {
   createdColumn,
   lastActivityColumn,
@@ -35,8 +34,9 @@ import {
   tagsColumn,
   useOwnerTagChips,
 } from "../../screens/recordlist";
-import { SaveViewAction, useSavedViewTabs } from "../../screens/savedviews";
 import { VCardImportAction, VCardImportPage } from "../../screens/vcard-import";
+import { searchCompanies } from "../lists/filterreference";
+import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { contactCreateFields, mapContactBody } from "./contactformfields";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its

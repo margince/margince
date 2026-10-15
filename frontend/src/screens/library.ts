@@ -6,19 +6,22 @@
 // by what the reader typed and pressed. Pure, so the rules the page draws by
 // are proved here without a page.
 
-import { forReader, stable } from "../format/collate";
-import type { Locale } from "../i18n";
-import type { FilterResource } from "../lib/filterdata";
-import type { List } from "../lib/lists.queries";
-import { decode, type Node, rootGroup } from "../lib/segmentpredicate";
 import {
   type LibraryType,
   libraryTypeOfList,
   type ObjectTab,
   RESOURCE_OF,
   tabOfViewResource,
-} from "./filtersaddress";
-import { filterTreeOf, type SavedView } from "./savedviews.queries";
+} from "../features/lists/filtersaddress";
+import {
+  filterTreeOf,
+  type SavedView,
+} from "../features/lists/savedviews.queries";
+import { forReader, stable } from "../format/collate";
+import type { Locale } from "../i18n";
+import type { FilterResource } from "../lib/filterdata";
+import type { List } from "../lib/lists.queries";
+import { decode, type Node, rootGroup } from "../lib/segmentpredicate";
 
 export type LibraryItem =
   | Readonly<{ kind: "view"; view: SavedView; tree: Node; tab: ObjectTab }>

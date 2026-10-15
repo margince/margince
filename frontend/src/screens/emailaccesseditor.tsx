@@ -29,10 +29,6 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { emailDetailKey } from "../design-system/emaildetail";
 import { ErrorLine } from "../design-system/errorline";
 import { VisibilityLine } from "../design-system/visibility";
-import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../lib/problem";
 import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,
@@ -41,8 +37,15 @@ import {
   AudienceMembers,
   memberKey,
   useAudienceCandidates,
-} from "./audiencemembers";
-import { useMessageAudience, useThreadAudience } from "./audienceservice";
+} from "../features/lists/audiencemembers";
+import {
+  useMessageAudience,
+  useThreadAudience,
+} from "../features/lists/audienceservice";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { problemMessageOf } from "../lib/problem";
 import "./emailaccesseditor.css";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];

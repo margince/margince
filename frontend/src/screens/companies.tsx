@@ -45,6 +45,7 @@ import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
+import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import {
   TaskDetailModal,
   TaskQuickActions,
@@ -144,7 +145,6 @@ import {
   tagsColumn,
 } from "./recordlist";
 import { RelationshipsTab } from "./relationshiprows";
-import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { TimelineActions } from "./timelineactions";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:

@@ -9,11 +9,11 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { opensAFocusedFiltersPage } from "../features/lists/filtersaddress";
 import type { MessageKey } from "../i18n/en";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import type { Route, Screen } from "../lib/router";
-import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import {
   type NavLevelEntry,
@@ -103,7 +103,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // The agreement, not the furniture it is filed in: a deal is a bargain
       // two parties strike, and a board is one way this screen happens to draw
       // them. `Handshake` is already the deal glyph where a search result names
-      // one (screens/tagresult.tsx), so the product draws this noun once. A
+      // one (features/lists/tagresult.tsx), so the product draws this noun once. A
       // reader scanning five glyphs on a phone bar with no labels under them
       // has only the shape to go on.
       {

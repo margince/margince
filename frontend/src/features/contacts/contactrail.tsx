@@ -5,7 +5,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { CounterpartyHoldRow } from "../../screens/counterparty-hold";
-import { TagsPanel } from "../../screens/tagspanel";
+import { TagsPanel } from "../lists/tagspanel";
 import { ContactBillingRoles } from "./contactbillingroles";
 import { ContactConfirmCallout } from "./contactconfirm";
 import { ConsentAndChannels } from "./contactconsentpanel";

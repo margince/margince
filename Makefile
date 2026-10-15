@@ -510,6 +510,7 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing-roles.sh
 	bash frontend/scripts/check-ds-spacing-roles.test.sh
 	frontend/scripts/check-space-tokens.sh
+	bash frontend/scripts/check-space-tokens.test.sh
 	frontend/scripts/check-contract-fetch.sh
 	bash frontend/scripts/check-contract-fetch.test.sh
 	bash frontend/scripts/check-ext-frontend-walk.test.sh

@@ -5,14 +5,14 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { en } from "../i18n/en";
-import { parseHash, type Route } from "../lib/router";
-import { FiltersScreen } from "../screens/filters";
+import { FiltersScreen } from "../features/lists/filters";
 import {
   type FiltersServer,
   mountFilters,
   type Sent,
-} from "../screens/filters.testkit";
+} from "../features/lists/filters.testkit";
+import { en } from "../i18n/en";
+import { parseHash, type Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import type { NavSection } from "./nav";
 import {

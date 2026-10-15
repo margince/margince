@@ -19,6 +19,7 @@ import { SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { QueryGate } from "../design-system/querystates";
 import { useOwnToast } from "../design-system/toast";
+import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -39,7 +40,6 @@ import {
   useLeadSources,
 } from "./leadsources";
 import { mineEmptyNote, standardViews, useOwnerTagChips } from "./recordlist";
-import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];

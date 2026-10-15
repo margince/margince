@@ -2,16 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Crumb } from "../design-system/breadcrumb";
-import { useT } from "../i18n";
-import { useList } from "../lib/lists.queries";
-import { type Route, routeHash } from "../lib/router";
 import {
   type FiltersAddress,
   filtersAddressOf,
   NEW_FILTER_LABEL,
   opensAFocusedFiltersPage,
-} from "../screens/filtersaddress";
-import { openableTree, useSavedView } from "../screens/savedviews.queries";
+} from "../features/lists/filtersaddress";
+import {
+  openableTree,
+  useSavedView,
+} from "../features/lists/savedviews.queries";
+import { useT } from "../i18n";
+import { useList } from "../lib/lists.queries";
+import { type Route, routeHash } from "../lib/router";
 
 /** The list a page names: one list's own page, or its filter's. */
 function listIdOf(

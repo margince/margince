@@ -19,7 +19,7 @@ import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
-import "./listsection.css";
+import "../features/lists/listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];
 

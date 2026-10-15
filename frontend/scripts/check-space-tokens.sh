@@ -30,6 +30,7 @@ cd "$SCRIPT_DIR/.."
 # is why both trees feed BOTH sides of the comparison, not just the used side.
 # EXT_DIR is overridable so the gate's own test can point it at a fixture.
 EXT_DIR="${MARGINCE_EXT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/extensions}"
+SRC_DIR="${MARGINCE_SRC_DIR:-src}"
 
 # A unit ships no frontend at all in a backend-only downstream, so an empty
 # result here is a true statement about an empty tree rather than a miswiring —
@@ -40,18 +41,18 @@ ext_frontend() {
     -not -path "*/node_modules/*" 2>/dev/null || true
 }
 
-TOKENS="src/design-system/tokens.css"
+TOKENS="$SRC_DIR/design-system/tokens.css"
 if [[ ! -f "$TOKENS" ]]; then
   echo "FAIL: $TOKENS not found"
   exit 1
 fi
 
 styles=$(
-  find src -type f -name '*.css'
+  find "$SRC_DIR" -type f -name '*.css'
   ext_frontend -name '*.css'
 )
 sources=$(
-  find src -type f \( -name '*.css' -o -name '*.tsx' -o -name '*.ts' \)
+  find "$SRC_DIR" -type f \( -name '*.css' -o -name '*.tsx' -o -name '*.ts' \)
   ext_frontend -name '*.css' -o -name '*.tsx' -o -name '*.ts'
 )
 if [[ -z "$styles" || -z "$sources" ]]; then
@@ -59,17 +60,30 @@ if [[ -z "$styles" || -z "$sources" ]]; then
   exit 1
 fi
 
+# matches runs grep over the NUL-separated files on stdin. xargs runs grep in
+# batches, and a batch that matches nothing makes xargs exit 123 (GNU) or 1
+# (BSD). That is no error here.
+matches() {
+  local status=0
+  xargs -0 grep "$@" 2>/dev/null || status=$?
+  ((status == 0 || status == 1 || status == 123)) || return "$status"
+}
+
 # A declaration in any stylesheet counts: tokens.css owns the design scale, and
 # a component sheet may own a property of its own (--shellAnim, --pageColumn).
-declared=$(echo "$styles" | tr '\n' '\0' | xargs -0 grep -hoE -- '^[[:space:]]*--[a-zA-Z0-9-]+[[:space:]]*:' 2>/dev/null \
+declared=$(echo "$styles" | tr '\n' '\0' | matches -hoE -- '^[[:space:]]*--[a-zA-Z0-9-]+[[:space:]]*:' \
   | tr -d ' \t' | sed 's/:$//' | sort -u)
 # A component may also mint one on an element it renders: style={{ "--x": … }}.
-inline=$(echo "$sources" | tr '\n' '\0' | xargs -0 grep -hoE -- '"--[a-zA-Z0-9-]+":' 2>/dev/null \
+inline=$(echo "$sources" | tr '\n' '\0' | matches -hoE -- '"--[a-zA-Z0-9-]+":' \
   | tr -d '"' | sed 's/:$//' | sort -u)
-defined=$(printf '%s\n%s\n' "$declared" "$inline" | grep -v '^$' | sort -u)
 
-used=$(echo "$sources" | tr '\n' '\0' | xargs -0 grep -hoE -- 'var\(--[a-zA-Z0-9-]+\)' 2>/dev/null \
+used=$(echo "$sources" | tr '\n' '\0' | matches -hoE -- 'var\(--[a-zA-Z0-9-]+\)' \
   | sed 's/^var(//;s/)$//' | sort -u)
+if [[ -z "$declared" || -z "$used" ]]; then
+  echo "FAIL: read no declared or no used custom property — the gate is miswired"
+  exit 1
+fi
+defined=$(printf '%s\n%s\n' "$declared" "$inline" | grep -v '^$' | sort -u)
 
 missing=$(comm -13 <(echo "$defined") <(echo "$used"))
 
@@ -79,7 +93,7 @@ if [[ -n "$missing" ]]; then
   while read -r token; do
     [[ -z "$token" ]] && continue
     echo "  $token — used in:"
-    echo "$sources" | tr '\n' '\0' | xargs -0 grep -ln -- "var($token)" 2>/dev/null \
+    echo "$sources" | tr '\n' '\0' | matches -ln -- "var($token)" \
       | sed 's/^/      /'
   done <<< "$missing"
   echo ""

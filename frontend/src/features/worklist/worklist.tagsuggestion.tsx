@@ -16,14 +16,14 @@ import { ProvenanceTag, StagingCard } from "../../design-system/trust";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { ContactsTagOffer, EmployerTagOffer } from "../../screens/tagfollow";
+import { ContactsTagOffer, EmployerTagOffer } from "../lists/tagfollow";
 import {
   type TagSuggestion,
   useContactEmployer,
   useDecideTagSuggestion,
   useTagSuggestion,
   useTagSuggestionSettled,
-} from "../../screens/tagsuggestion.queries";
+} from "../lists/tagsuggestion.queries";
 import type { WorklistItem } from "./worklist.queries";
 
 export function TagSuggestionDecision({

@@ -123,7 +123,9 @@ const DealRoomPage = lazy(
 );
 const FiltersScreen = lazy(
   routed(() =>
-    import("./screens/filters").then((m) => ({ default: m.FiltersScreen })),
+    import("./features/lists/filters").then((m) => ({
+      default: m.FiltersScreen,
+    })),
   ),
 );
 const BriefScreen = lazy(
@@ -242,7 +244,9 @@ const ScheduledSendsScreen = lazy(
   ),
 );
 const TagResultScreen = lazy(() =>
-  import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
+  import("./features/lists/tagresult").then((m) => ({
+    default: m.TagResultScreen,
+  })),
 );
 
 const SearchRoute = lazy(

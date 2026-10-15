@@ -18,6 +18,8 @@ import { useOwnerChips } from "../components/ownerdials";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
+import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
+import { useSavedViews } from "../features/lists/savedviews.queries";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
@@ -31,8 +33,6 @@ import {
   type ProjectPhase,
 } from "./projects.form";
 import { lastActivityColumn, ownerColumn } from "./recordlist";
-import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { useSavedViews } from "./savedviews.queries";
 import "./projects.css";
 
 // The projects list: every body of work the reader may see, newest activity

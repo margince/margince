@@ -9,7 +9,7 @@ import { ADDRESS_FIELDS, addressFrom } from "../../screens/companyform";
 import { RecordCustomFields } from "../../screens/recordcustomfields";
 import { saveRecordEdit } from "../../screens/recordedit";
 import { useRecordOwners } from "../../screens/recordreferences";
-import { TagsPanel } from "../../screens/tagspanel";
+import { TagsPanel } from "../lists/tagspanel";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { contactEditFields, mapContactUpdate } from "./contactformfields";

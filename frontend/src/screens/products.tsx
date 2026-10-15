@@ -25,7 +25,7 @@ import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
-import "./listsection.css";
+import "../features/lists/listsection.css";
 
 type Product = components["schemas"]["Product"];
 

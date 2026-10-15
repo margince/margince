@@ -12,6 +12,8 @@ import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
+import { LiveExplanation } from "../features/lists/listexplain";
+import { ListKindBadge } from "../features/lists/listlibrary";
 import { useT } from "../i18n";
 import {
   type List,
@@ -25,9 +27,7 @@ import {
   useRestoreMember,
 } from "../lib/lists.queries";
 import { navigate } from "../lib/router";
-import { LiveExplanation } from "./listexplain";
-import { ListKindBadge } from "./listlibrary";
-import "./lists.css";
+import "../features/lists/lists.css";
 import { useUndoableRemoval } from "../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;

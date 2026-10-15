@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { useReferenceOptions } from "../features/lists/filterreference";
 import { useT } from "../i18n";
 import { valueLabel } from "./analytics.questions.values";
 import { fieldReference } from "./analytics.questions.vocab";
-import { useReferenceOptions } from "./filterreference";
 
 type IdLabels = components["schemas"]["AnalyticsIdLabels"];
 

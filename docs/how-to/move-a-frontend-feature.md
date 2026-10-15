@@ -99,6 +99,12 @@ A move touches many import lines, so it often conflicts with work that lands fir
 5. Search `vi.mock` paths by hand. `tsc` does not check them.
 6. Run `make check` again before you push.
 
+## When SonarCloud fails on coverage
+
+SonarCloud reads a moved file as new code. So a move takes on the old test gaps of its files, and
+the gate can fail below 80% coverage of new code. Find the moved files with the most lines that no
+test runs. Write a real test for one or two of them in the same PR. Do not lower the gate.
+
 ## After the merge
 
 Remove your worktree, delete the branch on your machine and on GitHub, and comment on the issue that
