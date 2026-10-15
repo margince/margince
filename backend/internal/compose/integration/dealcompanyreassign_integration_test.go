@@ -277,8 +277,7 @@ func TestAnArchivedAgreementStillBlocksTheMove(t *testing.T) {
 	}
 
 	_, err = e.Deals.UpdateDeal(admin, dealID, deals.UpdateDealInput{CompanyID: &contoso})
-	var blocked *contracts.DealContractsCrossCompanyError
-	if !errors.As(err, &blocked) {
+	if _, blocked := errors.AsType[*contracts.DealContractsCrossCompanyError](err); !blocked {
 		t.Fatalf("the move was admitted over an archived agreement (err = %v)", err)
 	}
 }

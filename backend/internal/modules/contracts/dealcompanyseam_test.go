@@ -44,8 +44,7 @@ func TestTheCrossCompanyRefusalTellsARepWhatToDo(t *testing.T) {
 	if code == "" || message != blocked.Error() {
 		t.Errorf("FieldFault = (%q, %q, %q), want the typed code and the message itself", field, code, message)
 	}
-	var fault apperrors.FieldFault
-	if !errors.As(err, &fault) {
+	if _, ok := errors.AsType[apperrors.FieldFault](err); !ok {
 		t.Error("the refusal does not classify as a field fault, so the transport answers 500 rather than 422")
 	}
 }

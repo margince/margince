@@ -76,10 +76,6 @@ func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) in
 // The unlocked read the caller already did is fine for an audit before-image;
 // it is not fine for a decision about what may be assigned. Deal first, then
 // the catalog row, which is the order every writer in this package takes.
-//
-// The authority to write is taken a frame up. dealUpdatePatch runs inside
-// updateDealInTx, which probes auth.EnsureWritable on this row and transaction
-// first. This only takes the lock.
 func lockedAcquisitionSource(
 	ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
 ) (*string, error) {

@@ -63,12 +63,9 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 // A contract with a deal is visible through that deal alone. So a deal moved to
 // company B would publish company A's agreements to everyone who can see it.
 //
-// The deal row is held before the agreements are read. A contract filed against
-// this deal at the same time takes a share lock on that row. The second
-// transaction waits and reads what the first committed.
-//
-// The hold comes after the company link probe, which locks `company`. Every
-// other deal write takes the company first and the deal second.
+// The agreements are read under updateDealInTx's lock on the deal row. A
+// contract filed against this deal meanwhile takes a share lock on that row.
+// The second transaction waits and reads what the first committed.
 //
 // Clearing the company stays on the clear path. A deal naming nobody shows its
 // agreements only to readers its own scope already admits.
@@ -80,9 +77,6 @@ func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.
 		return err
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(current.Id))
-	if err := auth.HoldWritableLive(ctx, tx, dealTable, dealID.UUID); err != nil {
-		return err
-	}
 	if err := ensureContractsShareCompany(ctx, tx, dealID, companyID); err != nil {
 		return err
 	}
