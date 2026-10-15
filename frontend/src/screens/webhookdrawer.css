@@ -1,0 +1,310 @@
+/* The subscription drawer (Settings → Integrations → Webhooks). Every class
+ * the drawer, its event picker, header rows and template editor name is here. */
+
+.webhook-drawer {
+  min-width: 0;
+}
+
+/* A section with a title, an aside and verbs on one line, wrapping on a phone. */
+.webhook-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.webhook-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.webhook-section-title,
+.webhook-section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.webhook-section-actions {
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+/* Name, value, remove: the value takes the extra room. */
+.webhook-header-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.webhook-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.webhook-sealed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--textSecondary);
+}
+
+.webhook-sealed > svg {
+  flex: none;
+}
+
+/* The chosen events: a field-shaped frame holding the tags and the trigger. */
+.webhook-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.webhook-events-frame {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-height: var(--inputHeight);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+}
+
+.webhook-events-invalid {
+  border-color: var(--dangerText);
+}
+
+.webhook-picker-panel {
+  width: min(28rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.webhook-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.webhook-picker-count,
+.webhook-picker-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.webhook-picker-list {
+  max-height: 400px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.webhook-picker-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.webhook-picker-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-block: var(--space-1);
+}
+
+.webhook-picker-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.webhook-picker-label code,
+.webhook-event-fields code {
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+
+.webhook-picker-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.webhook-event-fields {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Template | Preview on the left, the variable menu on the right. */
+.webhook-template {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.webhook-template-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Long JSON lines wrap inside the box instead of widening the drawer. */
+.webhook-code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.webhook-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .webhook-header-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .webhook-header-row > :nth-child(2) {
+    grid-column: 1;
+  }
+}
+
+/* The ⓘ beside a heading: a bare glyph in the secondary ink. */
+.webhook-help {
+  color: var(--textSecondary);
+}
+
+/* Target and state at two to one, as the mockup sets them. */
+.webhook-target-row > .field:first-child {
+  flex: 2 1 280px;
+}
+
+.webhook-target-row > .field:last-child:not(:first-child) {
+  flex: 1 1 160px;
+}
+
+/* A rule above each section of the form. */
+.webhook-section,
+.webhook-body-row {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.webhook-events-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.webhook-events-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.webhook-events-add {
+  margin-inline-start: auto;
+}
+
+/* A stored value: one dashed box holding the lock, the mark and Replace. */
+.webhook-sealed {
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+  border: 1px dashed var(--borderStrong);
+  border-radius: var(--r-sm);
+}
+
+.webhook-sealed > button {
+  margin-inline-start: auto;
+}
+
+.webhook-sealed-dots {
+  letter-spacing: 0.1em;
+}
+
+.webhook-insert-panel {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.webhook-insert-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.webhook-help svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+}
+
+/* The ⓘ sits right after its label, as on every other section here. */
+.webhook-body-row .field-label-row {
+  justify-content: flex-start;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.webhook-body-row {
+  align-items: flex-start;
+}
+
+/* The picker reads three lines per event, so it is wider than a pick list. */
+.popover-panel.webhook-picker-panel {
+  inline-size: min(28rem, calc(100vw - 2 * var(--space-4)));
+  max-inline-size: none;
+}
+
+.webhook-picker-group {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  background: var(--bgWell);
+}
+
+.webhook-picker-group-name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.webhook-picker-row {
+  padding-inline: var(--space-2);
+}
+
+.webhook-picker-foot {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.webhook-picker-name {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+}
+
+.webhook-picker-label code,
+.webhook-event-fields code {
+  font: var(--fontBodySmall);
+  font-family: var(--fontFamilyMono);
+}
+
+.webhook-sealed > svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+}
