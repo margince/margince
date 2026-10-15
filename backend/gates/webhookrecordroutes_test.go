@@ -14,9 +14,8 @@ import (
 )
 
 // A webhook's record link must open the page the app routes that record to.
-// The frontend's ENTITY table is the owner of those routes, so this reads it
-// and fails both ways: a link to a screen the app does not have, and a record
-// page the links leave out.
+// The frontend's ENTITY table owns those routes, so this reads it. It fails
+// both ways: a link to a screen the app lacks, and a page the links leave out.
 func TestWebhookRecordLinksFollowTheAppRoutes(t *testing.T) {
 	src, err := os.ReadFile(filepath.Join("..", "frontend", "src", "lib", "entity.ts"))
 	if err != nil {

@@ -1642,7 +1642,7 @@ type PublicEventDealStageChanged struct {
 	// CurrencyAtChange The deal's currency, frozen at the moment of the move.
 	CurrencyAtChange *string `json:"currency_at_change,omitempty"`
 
-	// DealName The deal's name at the moment of the move, so a receiver such as a chat channel can say which deal moved without reading it back.
+	// DealName The deal's name at the moment of the move. A receiver can say which deal moved without reading it back.
 	DealName *string `json:"deal_name,omitempty"`
 
 	// FromStageId Stage the deal left (absent on first placement).

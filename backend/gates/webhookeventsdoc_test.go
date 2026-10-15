@@ -205,6 +205,8 @@ func fieldType(f eventFieldSpec) string {
 }
 
 // typeName reads a 3.1 type, which is a word or a list that may name null.
+//
+//craft:ignore naked-any yaml decodes a 3.1 type as either a string or a list, and the switch narrows it
 func typeName(t any) string {
 	switch v := t.(type) {
 	case string:

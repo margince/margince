@@ -436,7 +436,7 @@ export interface components {
              * @description Stage the deal entered.
              */
             to_stage_id: string;
-            /** @description The deal's name at the moment of the move, so a receiver such as a chat channel can say which deal moved without reading it back. */
+            /** @description The deal's name at the moment of the move. A receiver can say which deal moved without reading it back. */
             deal_name?: string;
             /** @description The stage name when the move happened, when available. */
             from_stage_name?: string;
