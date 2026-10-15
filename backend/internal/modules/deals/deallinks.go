@@ -30,12 +30,12 @@ import (
 func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
+	ensureContractsShareCompany EnsureContractsShareCompany,
 ) error {
 	if in.CompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+		if err := applyCompanyLinkPatch(ctx, tx, current, *in.CompanyID, p, ensureContractsShareCompany); err != nil {
 			return err
 		}
-		p.Set("company_id", current.CompanyId, *in.CompanyID)
 	}
 	if in.OwnerID != nil {
 		// Handing the deal on is an assignment, and the destination is checked
@@ -55,4 +55,31 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		p.Set("project_id", current.ProjectId, *in.ProjectID)
 	}
 	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
+}
+
+// applyCompanyLinkPatch re-points a deal at another company: a read of that
+// company, and a question about the agreements already filed against the deal.
+//
+// A contract with a deal is visible through that deal alone. So a deal moved to
+// company B would publish company A's agreements to everyone who can see it.
+//
+// The agreements are read under updateDealInTx's lock on the deal row. A
+// contract filed against this deal meanwhile takes a share lock on that row.
+// The second transaction waits and reads what the first committed.
+//
+// Clearing the company stays on the clear path. A deal naming nobody shows its
+// agreements only to readers its own scope already admits.
+func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
+	companyID ids.CompanyID, p *storekit.Patch,
+	ensureContractsShareCompany EnsureContractsShareCompany,
+) error {
+	if err := auth.EnsureLinkTarget(ctx, tx, "company", companyID.UUID); err != nil {
+		return err
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(current.Id))
+	if err := ensureContractsShareCompany(ctx, tx, dealID, companyID); err != nil {
+		return err
+	}
+	p.Set("company_id", current.CompanyId, companyID)
+	return nil
 }
