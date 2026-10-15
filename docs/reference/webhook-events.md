@@ -180,9 +180,12 @@ Every delivery with the standard body is this envelope, with the event's own fie
 
 Record: `activity` · version 1
 
-Payload for activity.archived, an activity was archived. Carries no data.
+Payload for activity.archived: an activity was archived. Carries only the import mark, when an import's undo wrote the event.
 
-`data` is an empty object.
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
+| `data.imported` | boolean | no | True when a data import wrote the event. Absent otherwise. |
 
 ### `activity.captured`
 
@@ -193,6 +196,8 @@ Payload for activity.captured, the first-class capture verb, emitted instead of 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.channel_provider` | string | no | Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. |
+| `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
+| `data.imported` | boolean | no | True when a data import wrote the event. Absent otherwise. |
 | `data.kind` | string | yes | The activity kind (email \| call \| meeting \| note \| task \| message). Decoded by automation/handlers_event.go's post_meeting_recap trigger, this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. |
 | `data.source_system` | string | no | The originating source system (capture ingestion only; absent on a direct log). |
 
@@ -226,6 +231,8 @@ Payload for activity.updated, a bounded delta. The contact, company, deal and le
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.changed_fields` | PublicEventActivityChangedFields | yes |  |
+| `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
+| `data.imported` | boolean | no | True when a data import wrote the event. Absent otherwise. |
 
 ### `approval.decided`
 
