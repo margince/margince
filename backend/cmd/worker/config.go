@@ -128,7 +128,7 @@ func workerFaults(c *config.Config, posture runtimeenv.Environment) []error {
 			faults = append(faults, err)
 		}
 	}
-	return faults
+	return append(faults, compose.MailFaults(c)...)
 }
 
 // defaultFxBootstrapCurrencies is the candidate set the FX refresh proposes on

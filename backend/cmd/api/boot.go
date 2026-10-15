@@ -156,7 +156,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// worse than a refused boot: the message goes out looking correct and
 	// its unsubscribe promise is dead. Checked here, at boot, so an
 	// operator learns from a startup failure rather than from a customer.
-	if senderConfigured(cfg, deployCfg) {
+	if senderConfigured(cfg) {
 		if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {
 			return deployconfig.Config{}, nil, fmt.Errorf("api: %w", err)
 		}
@@ -177,7 +177,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// keyvaultOptions wiring, because an installation that has sealed its token
 	// and dropped the declaration reads it out of the vault: the license
 	// question cannot be answered before the vault exists.
-	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, cfg.settings, logger); err != nil {
 		return deployconfig.Config{}, nil, err
 	}
 	license, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
@@ -263,7 +263,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 		opts = append(opts, compose.WithMCPConnector())
 	}
 
-	passwordOpts, err := passwordResetOptions(ctx, deployCfg, pool, vault, cfg.publicBaseURL, logger, stdout)
+	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)
 	if err != nil {
 		return nil, nil, err
 	}

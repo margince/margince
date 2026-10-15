@@ -43,6 +43,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
+// SecretRemoved is the reference spelling that declares a credential absent.
+// Only email.smtp.password takes it, and that key is a setting config.Load
+// reads; every secret here refuses it.
+const SecretRemoved = "${none}"
+
 // secretFileLimit bounds what a reference may pull in. A secret is a password,
 // a key or a token; anything larger is a path typed wrong, and reading it into
 // memory to find that out is the wrong order.

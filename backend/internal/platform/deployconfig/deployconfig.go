@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Email          Email           `yaml:"email"`
 	AI             AIConfig        `yaml:"ai"`
 	Rates          RatesConfig     `yaml:"rates"`
 	MCP            MCP             `yaml:"mcp"`
@@ -223,49 +222,6 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Email configures the outbound transactional-email transport
-// (A74/ADR-0056). Its first consumer is password-reset delivery; when
-// disabled the forgot-password flow is absent rather than broken.
-type Email struct {
-	Enabled     bool   `yaml:"enabled"`
-	SMTP        SMTP   `yaml:"smtp"`
-	FromAddress string `yaml:"from_address"`
-}
-
-// SMTP names the operator's outbound relay; the credential arrives as a
-// reference, never a value.
-type SMTP struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Username string `yaml:"username"`
-	// Password is the reference form: ${file:...} or ${env:...}, or ${none}
-	// for a relay that takes no credential.
-	Password RemovableSecret `yaml:"password"`
-	// PasswordFile is the original spelling, still honoured so an existing
-	// deployment boots unchanged. Prefer `password`.
-	PasswordFile string `yaml:"password_file"`
-}
-
-// SMTPPassword resolves the SMTP credential; empty when none is configured,
-// which is an unauthenticated relay rather than a mistake.
-func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
-	switch {
-	case e.SMTP.Password.Removed():
-		return "", nil
-	case e.SMTP.Password.Configured():
-		return e.SMTP.Password.withField("email.smtp.password").Resolve(lookup)
-	case e.SMTP.PasswordFile != "":
-		return Secret{kind: secretFromFile, arg: e.SMTP.PasswordFile, field: "email.smtp.password_file"}.Resolve(lookup)
-	default:
-		return "", nil
-	}
-}
-
-// SMTPPasswordRemoved reports whether the deployment declared the relay
-// password absent (`password: ${none}`), which removes any sealed
-// copy and sends mail without authenticating.
-func (e Email) SMTPPasswordRemoved() bool { return e.SMTP.Password.Removed() }
-
 // AIConfig carries operator-posture switches for the AI runtime. It names
 // no providers or models (that is `seeds.ai_routing`, and the stored binding
 // once an installation is running) and holds no secret —
@@ -377,13 +333,7 @@ func (c Config) validate() error {
 	if err := c.Uploads.validate(); err != nil {
 		return err
 	}
-	if err := c.Web.validate(); err != nil {
-		return err
-	}
-	if c.Email.Enabled {
-		return c.Email.validate()
-	}
-	return nil
+	return c.Web.validate()
 }
 
 func (b BootstrapAdmin) validate() error {
@@ -403,22 +353,6 @@ func (b BootstrapAdmin) validate() error {
 	// one field: Parse refused a document ResolvePassword handles perfectly.
 	if !b.Password.Configured() && b.PasswordFile == "" {
 		return errors.New("deployconfig: bootstrap_admin names no password — set bootstrap_admin.password to ${file:/run/secrets/admin-password} or ${env:MARGINCE_ADMIN_PASSWORD}")
-	}
-	return nil
-}
-
-func (e Email) validate() error {
-	if e.SMTP.Host == "" {
-		return errors.New("deployconfig: email.enabled requires email.smtp.host")
-	}
-	if e.SMTP.Port < 1 || e.SMTP.Port > 65535 {
-		return errors.New("deployconfig: email.smtp.port must be between 1 and 65535")
-	}
-	if _, err := values.ParseEmail(e.FromAddress); err != nil {
-		return fmt.Errorf("deployconfig: email.from_address: %w", err)
-	}
-	if e.SMTP.Password.Removed() && e.SMTP.PasswordFile != "" {
-		return errors.New("deployconfig: email.smtp.password declares the relay password absent while email.smtp.password_file names one — keep one of the two")
 	}
 	return nil
 }

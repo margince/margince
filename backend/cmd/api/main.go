@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -382,8 +381,8 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 // canonical external base — with email enabled, a missing
 // --public-base-url is a boot error, never a link derived from a
 // request Host.
-func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, pool *pgxpool.Pool, vault keyvault.Vault, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
-	if !deployCfg.Email.Enabled {
+func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pgxpool.Pool, vault keyvault.Vault, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
+	if !config.Val(settings, compose.EmailEnabled) {
 		return nil, nil
 	}
 	if publicBaseURL == "" {
@@ -391,7 +390,7 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	m, err := compose.OperatorMailer(ctx, pool, vault, deployCfg, config.FromOS, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, settings, logger)
 	if err != nil {
 		return nil, err
 	}

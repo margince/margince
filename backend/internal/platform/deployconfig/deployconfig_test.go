@@ -62,9 +62,6 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	if cfg.Seeds.StarterAutomations == nil || *cfg.Seeds.StarterAutomations {
 		t.Fatal("starter_automations: false did not parse")
 	}
-	if !cfg.Email.Enabled {
-		t.Fatalf("email switch lost: %+v", cfg.Email)
-	}
 	if cfg.CompanyContext.EffectiveRollout() != CompanyContextTasks {
 		t.Fatalf("company-context rollout = %q", cfg.CompanyContext.EffectiveRollout())
 	}
@@ -83,8 +80,6 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"duplicate stage":         "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 10 }, { name: A, probability: 20 } ] } }\n",
 		"probability out of band": "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 140 } ] } }\n",
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
-		"email without smtp":      "version: 1\nemail: { enabled: true, from_address: a@b.co }\n",
-		"smtp port out of range":  "version: 1\nemail: { enabled: true, from_address: a@b.co, smtp: { host: h, port: 70000 } }\n",
 		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
 	}
 	for name, doc := range cases {

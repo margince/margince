@@ -28,6 +28,7 @@ func allSettings() []config.Any {
 		blobstore.Settings(),
 		ai.Settings(),
 		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile},
+		[]config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile},
 	)
 }
 

@@ -160,7 +160,7 @@ func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	if err := ps.FakeModelFault(c, posture); err != nil {
 		faults = append(faults, err)
 	}
-	return faults
+	return append(faults, compose.MailFaults(c)...)
 }
 
 // senderConfigured reports whether this deployment can put a message in
@@ -170,8 +170,8 @@ func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 // It is the trigger for the public-origin rule: an installation that
 // sends nothing may be configured however an operator likes, because no
 // recipient ever sees a link built from it.
-func senderConfigured(cfg apiConfig, deployCfg deployconfig.Config) bool {
-	return deployCfg.Email.Enabled ||
+func senderConfigured(cfg apiConfig) bool {
+	return config.Val(cfg.settings, compose.EmailEnabled) ||
 		(cfg.gmailClientID != "" && cfg.gmailClientSecret != "") ||
 		(cfg.graphClientID != "" && cfg.graphClientSecret != "")
 }

@@ -175,7 +175,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, vault, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
@@ -395,13 +395,13 @@ func admitBoot(
 	if err != nil {
 		return nil, err
 	}
-	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, cfg.settings, logger); err != nil {
 		return nil, err
 	}
 	if err := ensureLicense(ctx, logger, pool, vault, cfg); err != nil {
 		return nil, err
 	}
-	return vault, requireUsablePublicOrigin(cfg, deployCfg)
+	return vault, requireUsablePublicOrigin(cfg)
 }
 
 // requireUsablePublicOrigin refuses to start a sending worker whose
@@ -420,8 +420,8 @@ func admitBoot(
 // link: the send-time guard in activities refuses every tokenized message
 // on the same rule. What is lost is the early failure, not the
 // protection.
-func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) error {
-	if !deployCfg.Email.Enabled && !cfg.gmailAppWired() {
+func requireUsablePublicOrigin(cfg workerConfig) error {
+	if !config.Val(cfg.settings, compose.EmailEnabled) && !cfg.gmailAppWired() {
 		return nil
 	}
 	if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {

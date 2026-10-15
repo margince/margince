@@ -41,7 +41,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -268,11 +267,11 @@ var (
 //
 // An empty result is an unauthenticated relay, which is a posture rather than a
 // mistake: it is what an installation that names no password has always had.
-func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, lookup config.Lookup, log *slog.Logger) (string, error) {
-	if cfg.Email.SMTPPasswordRemoved() {
+func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) (string, error) {
+	if smtpPasswordRemoved(cfg) {
 		return "", nil
 	}
-	declared, err := cfg.Email.SMTPPassword(lookup)
+	declared, err := declaredSMTPPassword(cfg)
 	if err != nil {
 		return "", err
 	}
@@ -338,8 +337,8 @@ func sealedSecret(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault,
 // credential the deployment declares absent. Both serving roles call it at
 // boot, whether or not outbound mail is enabled. A removal is a revocation: a
 // leaked password must not stay sealed for the day mail is turned back on.
-func RemoveDeclaredAbsentCredentials(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, log *slog.Logger) error {
-	if !cfg.Email.SMTPPasswordRemoved() {
+func RemoveDeclaredAbsentCredentials(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) error {
+	if !smtpPasswordRemoved(cfg) {
 		return nil
 	}
 	return unsealSecret(ctx, pool, vault, smtpPassword, log)

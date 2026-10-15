@@ -84,6 +84,13 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_AUTH_PASSWORD_ENABLED` | `true` | `auth.password.enabled` |
 | `MARGINCE_LICENSE` | — | `license.token` (secret) |
 | `MARGINCE_LICENSE_TOKEN_FILE` | — | `license.token_file` |
+| `MARGINCE_EMAIL_ENABLED` | `false` | `email.enabled` |
+| `MARGINCE_EMAIL_FROM_ADDRESS` | — | `email.from_address` |
+| `MARGINCE_EMAIL_SMTP_HOST` | — | `email.smtp.host` |
+| `MARGINCE_EMAIL_SMTP_PORT` | `0` | `email.smtp.port` |
+| `MARGINCE_EMAIL_SMTP_USERNAME` | — | `email.smtp.username` |
+| `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `email.smtp.password` (secret; `${none}` removes it) |
+| `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `email.smtp.password_file` |
 
 ## Common log flags (api, worker)
 

@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,26 +38,32 @@ import (
 )
 
 // mailConfig is a deployment that declares a relay password as a reference,
-// parsed through the real decoder rather than assembled field by field: Secret
-// refuses a literal at decode time, so a hand-built one would be a shape the
-// product never produces.
-func mailConfig(t *testing.T, passwordVar string) deployconfig.Config {
+// loaded with environ as the whole environment. Load refuses a literal secret
+// in the file, so a hand-built one would be a shape the product never produces.
+func mailConfig(t *testing.T, passwordVar string, environ ...string) *config.Config {
 	t.Helper()
 	body := "version: 1\nemail:\n  enabled: true\n  from_address: ops@example.test\n  smtp:\n    host: relay.example.test\n    port: 587\n    username: margince\n"
 	if passwordVar != "" {
 		body += "    password: ${env:" + passwordVar + "}\n"
 	}
-	cfg, err := deployconfig.Parse([]byte(body))
+	return mailSettings(t, body, environ...)
+}
+
+// mailSettings loads the relay settings from a margince.yaml body.
+func mailSettings(t *testing.T, body string, environ ...string) *config.Config {
+	t.Helper()
+	cfg, err := configtest.Load(t, body, environ, compose.MailFaults, compose.EmailEnabled, compose.EmailFromAddress,
+		compose.SMTPHost, compose.SMTPPort, compose.SMTPUsername, compose.SMTPPassword, compose.SMTPPasswordFile)
 	if err != nil {
-		t.Fatalf("parsing the deployment file: %v", err)
+		t.Fatalf("loading the deployment file: %v", err)
 	}
 	return cfg
 }
 
 // relayPassword is the credential the operator mailer would present, read
 // through the same constructor the api and the worker build their relay with.
-func relayPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, env config.Lookup, log *slog.Logger) (string, error) {
-	relay, err := compose.OperatorMailer(ctx, pool, vault, cfg, env, log)
+func relayPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) (string, error) {
+	relay, err := compose.OperatorMailer(ctx, pool, vault, cfg, log)
 	return relay.Password, err
 }
 
@@ -145,9 +150,8 @@ func TestTheRelayPasswordIsSealedAndAnsweredFromTheVaultOnceTheDeclarationIsGone
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	env := config.Static(map[string]string{"SMTP_PASSWORD": "a-relay-password"})
 
-	got, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"), env, log)
+	got, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password"), log)
 	if err != nil {
 		t.Fatalf("sealing the relay password: %v", err)
 	}
@@ -166,7 +170,7 @@ func TestTheRelayPasswordIsSealedAndAnsweredFromTheVaultOnceTheDeclarationIsGone
 
 	// The boot after the operator drops the variable: nothing is declared, and
 	// the sealed copy is the only one left.
-	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), config.Static(nil), log)
+	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("reading the sealed relay password: %v", err)
 	}
@@ -181,17 +185,16 @@ func TestASecondBootRepointsNothing(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	env := config.Static(map[string]string{"SMTP_PASSWORD": "a-relay-password"})
-	cfg := mailConfig(t, "SMTP_PASSWORD")
+	cfg := mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password")
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, env, log); err != nil {
+	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, log); err != nil {
 		t.Fatalf("first boot: %v", err)
 	}
 	first, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
 	if err != nil {
 		t.Fatalf("reading the recorded ref: %v", err)
 	}
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, env, log); err != nil {
+	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg, log); err != nil {
 		t.Fatalf("second boot: %v", err)
 	}
 	second, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
@@ -210,10 +213,8 @@ func TestARotatedDeclarationIsResealed(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	cfg := mailConfig(t, "SMTP_PASSWORD")
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg,
-		config.Static(map[string]string{"SMTP_PASSWORD": "the-old-password"}), log); err != nil {
+	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-old-password"), log); err != nil {
 		t.Fatalf("first boot: %v", err)
 	}
 	superseded, err := settings.Get(readCtx(e.WS), compose.NewSettingsStore(e.Pool), identity.SMTPPasswordRef)
@@ -221,12 +222,11 @@ func TestARotatedDeclarationIsResealed(t *testing.T) {
 		t.Fatalf("reading the recorded ref: %v", err)
 	}
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, cfg,
-		config.Static(map[string]string{"SMTP_PASSWORD": "the-new-password"}), log); err != nil {
+	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=the-new-password"), log); err != nil {
 		t.Fatalf("boot after rotation: %v", err)
 	}
 
-	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), config.Static(nil), log)
+	after, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("reading the sealed relay password: %v", err)
 	}
@@ -286,14 +286,13 @@ func TestTwoRolesSealingAtOnceLeaveExactlyOneCopy(t *testing.T) {
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
-	cfg := mailConfig(t, "SMTP_PASSWORD")
-	env := config.Static(map[string]string{"SMTP_PASSWORD": "a-relay-password"})
+	cfg := mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password")
 
 	var wg sync.WaitGroup
 	errs := make([]error, 2)
 	for i := range errs {
 		wg.Go(func() {
-			_, errs[i] = relayPassword(sealCtx(), e.Pool, vault, cfg, env, log)
+			_, errs[i] = relayPassword(sealCtx(), e.Pool, vault, cfg, log)
 		})
 	}
 	wg.Wait()
@@ -336,8 +335,7 @@ func TestTheLedgerRecordsTheSealWithoutTheAddress(t *testing.T) {
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
 
-	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD"),
-		config.Static(map[string]string{"SMTP_PASSWORD": "a-relay-password"}), log); err != nil {
+	if _, err := relayPassword(sealCtx(), e.Pool, vault, mailConfig(t, "SMTP_PASSWORD", "SMTP_PASSWORD=a-relay-password"), log); err != nil {
 		t.Fatalf("sealing the relay password: %v", err)
 	}
 
