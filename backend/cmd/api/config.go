@@ -68,6 +68,8 @@ type apiConfig struct {
 	// passwordLogin is auth.password.enabled: whether the email+password
 	// method is offered and served.
 	passwordLogin bool
+	// mcpConnector is mcp.connector_enabled, the connector's deployment gate.
+	mcpConnector bool
 }
 
 // loadAPIConfig resolves the boot settings from args and environ and checks the
@@ -118,7 +120,8 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 		webhookKey: config.Val(loaded, ps.WebhookKey), metricsToken: config.Val(loaded, ps.MetricsToken), metricsAccess: config.Val(loaded, ps.MetricsAccess),
 		vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL), geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL),
 		passwordLogin: config.Val(loaded, ps.PasswordLogin), settings: loaded,
-		posture: posture,
+		mcpConnector: config.Val(loaded, ps.MCPConnector),
+		posture:      posture,
 	}
 	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, ps.TrustedProxies))
 	if err != nil {

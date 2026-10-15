@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
 	Analytics      Analytics       `yaml:"analytics"`
@@ -218,13 +217,6 @@ type ConsentPurpose struct {
 	Key         string `yaml:"key"`
 	Label       string `yaml:"label"`
 	DoubleOptIn bool   `yaml:"double_opt_in"`
-}
-
-// MCP is the connector's deployment gate (Gate 1, DESIGN §5.5). Off by
-// default: turning it on exposes an internet-facing authorization server
-// plus the agent tool surface, so it is an explicit operator decision.
-type MCP struct {
-	ConnectorEnabled bool `yaml:"connector_enabled"`
 }
 
 // Parse strictly decodes and validates a single configuration document.

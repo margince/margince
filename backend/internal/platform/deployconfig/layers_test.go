@@ -31,13 +31,13 @@ func layered(t *testing.T, env runtimeenv.Environment, base, overlay string) (Co
 
 func TestTheOverlayForThisPostureWinsKeyByKey(t *testing.T) {
 	cfg, err := layered(t, runtimeenv.Development,
-		"version: 1\nworkspace:\n  name: Acme\n  timezone: Europe/Berlin\nmcp:\n  connector_enabled: false\n",
-		"mcp:\n  connector_enabled: true\n")
+		"version: 1\nworkspace:\n  name: Acme\n  timezone: Europe/Berlin\nseeds:\n  booking_page: false\n",
+		"seeds:\n  booking_page: true\n")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if !cfg.MCP.ConnectorEnabled {
-		t.Error("the overlay set mcp.connector_enabled: true and the base's false survived")
+	if bp := cfg.Seeds.BookingPage; bp == nil || !*bp {
+		t.Error("the overlay set seeds.booking_page: true and the base's false survived")
 	}
 	// The keys the overlay is silent about are the reason for having a base at
 	// all: an overlay states a difference, not a whole configuration.
@@ -94,7 +94,7 @@ func TestACommentOnlyOverlayIsNotAFailure(t *testing.T) {
 func TestATypoInTheOverlayFailsTheBootAndNamesTheFile(t *testing.T) {
 	_, err := layered(t, runtimeenv.Development,
 		"version: 1\n",
-		"mcp:\n  conector_enabled: true\n")
+		"workspace:\n  nme: Acme\n")
 	if err == nil {
 		t.Fatal("a misspelled key in the overlay booted; a typo must never silently do nothing")
 	}

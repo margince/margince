@@ -145,7 +145,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// both derived from --public-base-url, never from the Host header an
 	// attacker controls — so the gate that turns the connector on cannot
 	// be satisfied without it.
-	if deployCfg.MCP.ConnectorEnabled {
+	if cfg.mcpConnector {
 		if cfg.publicBaseURL == "" {
 			return deployconfig.Config{}, nil, errors.New("api: mcp.connector_enabled requires --public-base-url: the OAuth " +
 				"audience and the advertised MCP resource must not be derived from the Host header")
@@ -261,7 +261,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// server and both discovery documents — exists only when the deployment
 	// declared it. The boot check in bindInstallation already proved the
 	// canonical base URL those routes advertise.
-	if deployCfg.MCP.ConnectorEnabled {
+	if cfg.mcpConnector {
 		opts = append(opts, compose.WithMCPConnector())
 	}
 

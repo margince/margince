@@ -100,3 +100,14 @@ func TestAConfigFileReplacesAListAndKeepsTheBasesOtherKeys(t *testing.T) {
 		t.Errorf("fx_source = %q; a key the config file leaves out keeps the base's value", got)
 	}
 }
+
+// An unset gate must never expose /mcp.
+func TestTheMCPConnectorIsOffUnlessTheFileTurnsItOn(t *testing.T) {
+	t.Parallel()
+	if config.Val(configtest.MustLoad(t, "version: 1\nworkspace:\n  name: T\n", ps.FileSettings()...), ps.MCPConnector) {
+		t.Fatal("the connector gate must default off")
+	}
+	if !config.Val(configtest.MustLoad(t, "version: 1\nmcp:\n  connector_enabled: true\n", ps.FileSettings()...), ps.MCPConnector) {
+		t.Fatal("mcp.connector_enabled: true read as off")
+	}
+}

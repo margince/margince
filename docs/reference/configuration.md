@@ -94,6 +94,7 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_AI_CAPTURE_PAYLOADS` | `false` | `ai.capture_payloads` |
 | `MARGINCE_RATES_FX_SOURCE` | — | `rates.fx_source` |
 | `MARGINCE_RATES_FX_CURRENCIES` | — | `rates.fx_currencies` |
+| `MARGINCE_MCP_CONNECTOR_ENABLED` | `false` | `mcp.connector_enabled` |
 | `MARGINCE_RATES_MODEL_PRICING` | — | `rates.model_pricing` (ignored) |
 
 ## Common log flags (api, worker)

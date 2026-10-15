@@ -114,17 +114,8 @@ func TestLoadMissingFileBootsExistingInstallation(t *testing.T) {
 // new deployment (and every `make dev`, which copies it) a config that fails at
 // boot. It also guards the now-active rates block against a typo.
 func TestShippedExampleConfigParses(t *testing.T) {
-	cfg, err := Load("../../../../config/margince.example.yaml", runtimeenv.Production)
-	if err != nil {
+	if _, err := Load("../../../../config/margince.example.yaml", runtimeenv.Production); err != nil {
 		t.Fatalf("config/margince.example.yaml no longer parses: %v", err)
-	}
-	// The example declares the connector so a local stack serves /mcp without a
-	// hand edit. It is safe to ship on only because the api refuses to boot on
-	// this gate with no --public-base-url; the CODE default stays off
-	// (TestMCPConnectorGateDefaultsOff), which is what protects an installation
-	// that writes its own file.
-	if !cfg.MCP.ConnectorEnabled {
-		t.Fatal("example mcp.connector_enabled must stay true — commenting it out silently costs every local stack the /mcp surface")
 	}
 }
 
@@ -177,23 +168,6 @@ func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
 	}
 	if off.Lists.Enabled {
 		t.Fatal("lists.enabled: false must switch lists off")
-	}
-}
-
-func TestMCPConnectorGateDefaultsOff(t *testing.T) {
-	cfg, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.MCP.ConnectorEnabled {
-		t.Fatal("the connector gate must default OFF — an unset flag must never expose /mcp")
-	}
-	on, err := Load(writeTemp(t, "version: 1\nworkspace:\n  name: T\nmcp:\n  connector_enabled: true\n"), runtimeenv.Production)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !on.MCP.ConnectorEnabled {
-		t.Fatal("mcp.connector_enabled: true must parse")
 	}
 }
 
