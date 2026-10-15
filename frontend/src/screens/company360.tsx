@@ -37,6 +37,7 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
+import { EntityRef } from "../components/entityref";
 import { FactList } from "../design-system/factlist";
 import { HealthStat, WITHHELD_READING } from "./company360health";
 import { LastTouchStat } from "./company360lasttouch";
@@ -51,7 +52,6 @@ import {
   DismissFailed,
   useCompanySetAside,
 } from "./companysetaside";
-import { EntityRef } from "./entityref";
 import {
   EvidenceSources,
   FoundMove,

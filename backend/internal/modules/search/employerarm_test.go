@@ -22,7 +22,7 @@ func TestARefusedEmployerArmBindsNothing(t *testing.T) {
 		}
 		var bound []any
 		arg := func(v any) int { bound = append(bound, v); return len(bound) }
-		arm, err := employerArmSQL(teamReaderFor(objects...), 1, 2, true, bindIdentifier("acme", arg), arg)
+		arm, err := employerArmSQL(teamReaderFor(objects...), "acme", 1, 2, true, bindIdentifier("acme", arg), arg)
 		if err != nil {
 			t.Fatalf("without %s: %v", missing, err)
 		}
@@ -36,10 +36,10 @@ func TestARefusedEmployerArmBindsNothing(t *testing.T) {
 // currency rule rather than its own.
 func TestAnAdmittedEmployerArmUsesWhatItBinds(t *testing.T) {
 	t.Parallel()
-	bound := []any{"", "acme"}
+	bound := []any{"alice", "acme"}
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
-	arm, err := employerArmSQL(teamReaderFor(entityContact, entityCompany, objectRelationship), 1, 2, true,
-		bindIdentifier("acme", arg), arg)
+	arm, err := employerArmSQL(teamReaderFor(entityContact, entityCompany, objectRelationship), "alice acme", 1, 2, true,
+		bindIdentifier("alice acme", arg), arg)
 	if err != nil {
 		t.Fatal(err)
 	}

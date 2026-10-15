@@ -84,7 +84,7 @@ function CounterMeter({
   );
 }
 
-// All four allowances, for a row opened to show them.
+// All three allowances, for a row opened to show them.
 export function AgentUsageMeters({ usage }: Readonly<{ usage: CounterSet }>) {
   return (
     <div className="agent-usage-meters">
@@ -121,7 +121,7 @@ export function PassportUsageLine({
   ) : null;
 }
 
-// Opens a passport row onto all four allowances.
+// Opens a passport row onto all three allowances.
 export function usePassportUsageDetail<Row extends PassportSummary>(
   nameOf: (row: Row) => string,
 ): DataTableDetail<Row> {

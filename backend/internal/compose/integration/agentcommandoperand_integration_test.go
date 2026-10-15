@@ -13,12 +13,8 @@ package integration
 // TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing below
 // is the proof that matters: their restCommands entries make Guards run before
 // anything stages. TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable
-// does NOT prove that — diff_hash and summary are both derived from the
-// concrete request path upstream of the resolver (canonicalRESTCall,
-// restSummary), so it holds whether or not a resolver was consulted at all.
-// It stays because it is the one place production's chi parameter
-// names (factKey, field, contact_id) are exercised through the REAL router
-// rather than hand-bound in a unit test's route context.
+// does not prove that. Its diff_hash and summary come from the request itself
+// (canonicalRESTCall, restSummary), so it holds with or without a resolver.
 
 import (
 	"context"
@@ -98,22 +94,25 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.
 // one approval could redeem the other and a human triaging the inbox cannot see
 // which of the two they are answering.
 //
-// Driven through createWebhookSubscription, which the contract still floors:
-// two subscriptions naming different URLs are the same verb on the same
-// (absent) target, which is exactly the shape this needs. It used to use two
-// fact keys on one company, until confirming a fact stopped asking a
-// second time — a passport does what its holder could do unaided.
+// Driven through two overwrites of one human-written contact name: the same
+// verb on the same row, differing only in the value proposed.
 func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	bearer := agentBearer(t, e, "subscription agent")
+	contactID := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Hana Human"})
+	bearer := agentBearer(t, e, "overwrite agent")
 
-	approvalA := stageWebhookCreate(t, e, bearer, "https://example.test/alpha")
-	approvalB := stageWebhookCreate(t, e, bearer, "https://example.test/beta")
+	approvalA := stageNameOverwrite(t, e, bearer, contactID, "Hana Alpha")
+	approvalB := stageNameOverwrite(t, e, bearer, contactID, "Hana Beta")
 
-	_, _, hashA, summaryA := readApproval(t, e, approvalA)
-	_, _, hashB, summaryB := readApproval(t, e, approvalB)
+	typeA, targetA, hashA, summaryA := readApproval(t, e, approvalA)
+	typeB, targetB, hashB, summaryB := readApproval(t, e, approvalB)
 
+	// Same verb, same row: only the arguments are left to tell the two apart.
+	if typeA != typeB || targetA == nil || targetB == nil || *targetA != *targetB {
+		t.Fatalf("the two stagings name different targets (%s %v, %s %v) — this fixture no longer "+
+			"isolates the arguments", typeA, targetA, typeB, targetB)
+	}
 	if hashA == hashB {
 		t.Error("two calls differing in their arguments staged the SAME diff_hash — one approval " +
 			"could redeem either")
@@ -136,18 +135,16 @@ func readApproval(t *testing.T, e *apptest.AppEnv, approvalID string) (targetTyp
 	return targetType, targetID, diffHash, summary
 }
 
-// stageWebhookCreate provokes a refused agent subscription create and returns
-// the approval id it staged.
-func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]string, url string) string {
+// stageNameOverwrite provokes a refused agent overwrite of a human-written
+// contact name and returns the approval id it staged.
+func stageNameOverwrite(t *testing.T, e *apptest.AppEnv, bearer map[string]string, contactID, fullName string) string {
 	t.Helper()
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": url, "event_types": []string{"company.created"},
-	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
-		t.Fatalf("agent subscription create %q → %d %q, want 403 approval_required", url, status, problem.Code)
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"full_name": fullName}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
+		t.Fatalf("agent overwrite to %q → %d %q, want 403 approval_required", fullName, status, problem.Code)
 	}
 	return ExtractStagedApprovalID(t, problem.Detail)
 }

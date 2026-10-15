@@ -45,19 +45,25 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	_, body := o.exchange(t, url.Values{"code": {code}})
 	agentBearer := map[string]string{"Authorization": "Bearer " + body["access_token"].(string)}
 
-	// A webhook subscription create, because it is one of the few writes the
-	// contract still declares confirm-first. Archiving a contact staged this
-	// call until #2426 moved 32 verbs to auto_execute under ADR-0055: a
-	// passport carries the granting human's own seat and grants, so a verb it
-	// can spend is one its holder could spend unaided. The claim under test is
-	// the SHAPE of the approval token, not which verb earned it.
+	// An overwrite of a field a human last wrote is one of the calls that still
+	// asks a human first. The claim under test is the SHAPE of the approval
+	// token, not which call earned it.
+	var contact struct {
+		ID      string `json:"id"`
+		Version int64  `json:"version"`
+	}
+	if status := o.Call(t, "POST", "/v1/contacts", integration.AnyMap{
+		"source": "manual", "full_name": "Jo Human",
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("human contact create → %d", status)
+	}
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := o.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
-		"target_url": "https://jws.example/hook", "event_types": []string{"company.created"},
+	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, integration.AnyMap{
+		"full_name": "Jo Machine",
 	}, agentBearer, &problem); status != http.StatusForbidden {
-		t.Fatalf("agent webhook-subscription create → %d, want staged 403", status)
+		t.Fatalf("agent overwrite of a human-written name → %d, want staged 403", status)
 	}
 	approvalID := integration.ExtractStagedApprovalID(t, problem.Detail)
 
@@ -88,14 +94,18 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	// A CREATE binds by diff, not by target: there is no row yet to name, so
-	// TargetID and TargetVersion are legitimately absent and asserting them
-	// would be asserting the shape of a different verb. The binding that must
-	// hold for every kind is the one checked here — this approval, this
-	// passport, this diff.
-	if claims.ApprovalID.String() != approvalID || claims.Kind != "create_record" ||
+	// The token binds this approval, this passport, this diff, and the row and
+	// version the human saw. A token missing the target would release the same
+	// patch against any contact.
+	if claims.ApprovalID.String() != approvalID || claims.Kind != "update_record" ||
 		claims.DiffHash == "" || claims.PassportID == nil {
 		t.Fatalf("claims not effect-bound: %+v", claims)
+	}
+	if claims.TargetID == nil || claims.TargetID.String() != contact.ID {
+		t.Errorf("token target_id = %v, want the staged contact %s", claims.TargetID, contact.ID)
+	}
+	if claims.TargetVersion == nil || *claims.TargetVersion != contact.Version {
+		t.Errorf("token target_version = %v, want the contact's own %d", claims.TargetVersion, contact.Version)
 	}
 
 	// The token carries NO workspace claim, and a token minted with one still

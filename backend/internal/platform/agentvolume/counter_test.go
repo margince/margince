@@ -34,7 +34,7 @@ func TestAnEgressToolSpendsTheEgressQuotaEvenThoughItAlsoWrites(t *testing.T) {
 		expect Counter
 	}{
 		{"a send that also writes an activity", spec(principal.ScopeSend, true), Egress},
-		{"a read-only tool", spec(principal.ScopeRead, false), Reads},
+		{"a read-only tool", spec(principal.ScopeRead, false), Calls},
 		{"an ordinary mutation", spec(principal.ScopeWrite, false), Writes},
 		{"a draft, which the scope model does not call read-only", spec(principal.ScopeDraft, false), Writes},
 		{"a read-scoped tool flagged egress anyway", spec(principal.ScopeRead, true), Egress},
@@ -52,7 +52,7 @@ func TestAnEgressToolSpendsTheEgressQuotaEvenThoughItAlsoWrites(t *testing.T) {
 // every other volume budget sits — releasing either would release the control itself.
 func TestOnlyTheStepUpQuotasCanBeReleasedByAHuman(t *testing.T) {
 	releasable := map[Counter]bool{
-		Reads: true, Writes: true,
+		Writes: true,
 		Egress: false, Calls: false, Cost: false,
 	}
 	for c, want := range releasable {
@@ -67,7 +67,7 @@ func TestOnlyTheStepUpQuotasCanBeReleasedByAHuman(t *testing.T) {
 // itself governed would hard-stop an agent on a budget share, which no rung of
 // the ladder asks for.
 func TestOnlyTheHardQuotasGovernAdmission(t *testing.T) {
-	for _, c := range []Counter{Reads, Writes, Egress, Calls} {
+	for _, c := range []Counter{Writes, Egress, Calls} {
 		if !c.Governed() {
 			t.Errorf("%s does not govern admission, so nothing refuses on it", c)
 		}
@@ -82,11 +82,8 @@ func TestOnlyTheHardQuotasGovernAdmission(t *testing.T) {
 // operator setting one counter does not silently unbound — or suspend — the
 // other three.
 func TestAnUnusableThresholdFallsBackWithoutDisturbingItsNeighbours(t *testing.T) {
-	got := Limits{Reads: 0, Writes: -1, Egress: 5}.withDefaults()
+	got := Limits{Writes: -1, Egress: 5}.withDefaults()
 
-	if got.Reads != DefaultReads {
-		t.Errorf("a zero read limit resolved to %d, not the %d default", got.Reads, DefaultReads)
-	}
 	if got.Writes != DefaultWrites {
 		t.Errorf("a negative write limit resolved to %d, not the %d default", got.Writes, DefaultWrites)
 	}
@@ -107,7 +104,7 @@ func TestTheDefaultThresholdsAreTheOnesTheSpecNames(t *testing.T) {
 	for _, c := range []struct {
 		counter Counter
 		want    int
-	}{{Reads, 2000}, {Writes, 200}, {Egress, 20}, {Calls, 1000}} {
+	}{{Writes, 200}, {Egress, 20}, {Calls, 1000}} {
 		if got := l.of(c.counter); got != c.want {
 			t.Errorf("%s defaults to %d, and api-rate-limits §2.2 says %d", c.counter, got, c.want)
 		}

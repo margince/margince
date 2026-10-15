@@ -83,12 +83,11 @@ const suppressibleKind = "subject_request"
 // validation refusal names the field the caller actually sent.
 const auditFieldKind = "kind"
 
-// auditFieldSuppressionKind is a DIFFERENT name from the wire field above,
-// deliberately: the audit payload's key is read back by historyFieldLabel
-// (frontend/src/screens/historyfieldlabels.ts) with no entity context, and
-// "kind" already names activities' own audited create field
-// (backend/internal/modules/activities/activity.go's fieldKind) — the same
-// bare key on two writers would mislabel whichever ships second.
+// auditFieldSuppressionKind is a different name from the wire field above.
+// historyFieldLabel in frontend/src/lib/historyfieldlabels.ts reads the audit
+// key back with no entity context. "kind" already names the audited create
+// field of activities (fieldKind in backend/internal/modules/activities/activity.go).
+// One bare key on two writers would mislabel whichever ships second.
 const auditFieldSuppressionKind = "suppression_kind"
 
 // auditFieldDecidedByLevel is the audit payload key every writer of this

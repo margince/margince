@@ -9,7 +9,7 @@ import { useState } from "react";
 import { Button } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useTagVocabulary } from "./tags.queries";
+import { useTagVocabulary } from "../lib/tags.queries";
 
 export type PickedTag = Readonly<{ id: string; name: string }>;
 

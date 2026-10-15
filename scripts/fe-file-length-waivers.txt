@@ -32,8 +32,8 @@
 936 frontend/src/screens/worklist.row.tsx
 1125 frontend/src/screens/analytics.test.tsx
 1289 frontend/src/screens/company-context.tsx
-1278 frontend/src/screens/listquery.test.tsx
-1384 frontend/src/screens/listquery.tsx
+1278 frontend/src/components/listquery.test.tsx
+1384 frontend/src/components/listquery.tsx
 1279 frontend/src/screens/offers.tsx
 1365 frontend/src/app/agentrail.test.tsx
 1504 frontend/src/screens/onboarding-conversation/confirm-card.tsx
@@ -43,7 +43,7 @@
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1903 frontend/src/screens/contactpage.stories.tsx
 1122 frontend/src/screens/analytics.tsx
-1514 frontend/src/design-system/atoms.tsx
+1453 frontend/src/design-system/atoms.tsx
 1521 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
 1509 frontend/src/screens/leads.tsx
@@ -93,5 +93,5 @@
 888 frontend/src/screens/share.tsx
 850 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
-855 frontend/src/screens/create.tsx
+855 frontend/src/components/create.tsx
 815 frontend/src/design-system/decisioncard.tsx

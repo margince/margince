@@ -24,7 +24,7 @@ import {
 import { ConversationList, useChronologyCut } from "./recordconversations";
 import { TimelineActions } from "./timelineactions";
 import "./contact360.css";
-import { invalidateRecord } from "./recordwritekeys";
+import { invalidateRecord } from "../lib/recordwritekeys";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
 // rule the overview cards hold to (contactcards.tsx): a tab can never show a

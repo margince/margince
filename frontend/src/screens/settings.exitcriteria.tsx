@@ -8,19 +8,19 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { type CreateField, CreateRecordModal } from "../components/create";
+import { EditAction } from "../components/edit";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { type CreateField, CreateRecordModal } from "./create";
 import {
   CRITERION_KIND_LABEL,
   CRITERION_KINDS,
   type CriterionKind,
   criterionKindOf,
 } from "./criterionkinds";
-import { EditAction } from "./edit";
 import { useLegalReviewAvailable } from "./legalreviews.queries";
 
 type Criterion = components["schemas"]["StageExitCriterion"];

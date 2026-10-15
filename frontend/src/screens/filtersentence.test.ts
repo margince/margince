@@ -6,13 +6,13 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, translate, translatePlural } from "../i18n";
 import { de } from "../i18n/de";
 import { en as enCatalog } from "../i18n/en";
-import type { VocabularyField } from "./filterdata";
+import type { VocabularyField } from "../lib/filterdata";
+import { decode, type Node, newGroup, newLeaf } from "../lib/segmentpredicate";
 import {
   clauseWords,
   filterSentence,
   type SentenceWords,
 } from "./filtersentence";
-import { decode, type Node, newGroup, newLeaf } from "./segmentpredicate";
 
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.

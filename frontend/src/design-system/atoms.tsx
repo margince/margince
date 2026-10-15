@@ -1,5 +1,4 @@
 import {
-  ChevronRight,
   LoaderCircle,
   type LucideIcon,
   MoreHorizontal,
@@ -1175,9 +1174,8 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// The dialog (modal.tsx) and the scroll-region hook (scrollregion.ts) are
-// published from here, because `./atoms` is where their call sites import them
-// from, and moving a file is not a reason to make every one say where it went.
+// Re-exported so call sites that name only `Disclosure` keep one import path.
+export { Disclosure } from "./disclosure";
 export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";
 
@@ -1217,24 +1215,6 @@ export function TableScroll({
   );
 }
 
-/**
- * Disclosure is a section the reader opens when they want it.
- *
- * For the surfaces a record page carries but does not lead with — one-off
- * tools, configuration, the occasional deep read. Kept as a standing card
- * each of those competes for the eye with the facts a reader came for; kept
- * behind a summary they cost one line until asked for.
- *
- * `open` forces it open for a state the reader must not miss (a tool that is
- * running, a result that just arrived); left undefined the reader decides.
- *
- * `summary` is a node rather than a string because a summary is a ROW, and
- * some of them carry more than a label — a count beside the name, a status
- * chip. Passing a string stays the ordinary case and reads identically; the
- * alternative was a second `<details>` implementation living beside this one,
- * which is how two disclosures on one screen end up disagreeing about their
- * own caret. `className` is the same bargain for the row's chrome.
- */
 // Whether an item SETS something rather than doing something — a toggle, or a
 // control that draws a region open — which is the one shape of item a menu must
 // not close under.
@@ -1468,47 +1448,6 @@ export function OverflowMenu({
         </div>,
         document.body,
       )}
-    </div>
-  );
-}
-
-export function Disclosure({
-  summary,
-  action,
-  open,
-  onToggle,
-  className,
-  children,
-}: Readonly<{
-  summary: ReactNode;
-  /** A section-level action stays outside summary to avoid nested controls and
-   * remains visible while the section is closed. */
-  action?: ReactNode;
-  open?: boolean;
-  onToggle?: (open: boolean) => void;
-  className?: string;
-  children: ReactNode;
-}>) {
-  const details = (
-    <details
-      className={className ? `disclosure ${className}` : "disclosure"}
-      open={open}
-      onToggle={(event) => onToggle?.(event.currentTarget.open)}
-    >
-      <summary className="disclosure-summary">
-        <ChevronRight className="disclosure-chevron" aria-hidden="true" />
-        <span className="disclosure-label">{summary}</span>
-      </summary>
-      <div className="disclosure-body">{children}</div>
-    </details>
-  );
-  if (!action) {
-    return details;
-  }
-  return (
-    <div className="disclosure-wrap">
-      {details}
-      <span className="disclosure-action">{action}</span>
     </div>
   );
 }

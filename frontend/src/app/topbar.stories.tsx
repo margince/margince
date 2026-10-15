@@ -6,9 +6,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Card } from "../design-system/atoms";
+import { LISTS_KEY, type List } from "../lib/lists.queries";
 import type { Route } from "../lib/router";
-import { LIVE_ID, liveList } from "../screens/lists.fixtures";
-import { LISTS_KEY, type List } from "../screens/lists.queries";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   meRoute,

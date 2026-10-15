@@ -22,6 +22,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
+import { useUndoableRemoval } from "../lib/undoableremoval";
 import type { Tag } from "./tagadmin.queries";
 import {
   useArchiveTag,
@@ -30,7 +31,6 @@ import {
   useRestoreTag,
 } from "./tagadmin.queries";
 import { TagDialog } from "./tagdialog";
-import { useUndoableRemoval } from "./undoableremoval";
 import "./tagadmin.css";
 
 type TagVerbs = Readonly<{ canEdit: boolean; canArchive: boolean }>;

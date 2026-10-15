@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SCREEN_ROOTS } from "../testing/screenfiles";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 
 /**
@@ -14,7 +15,10 @@ import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
  * it is not one.
  */
 
-const SCREENS = join(__dirname, "..", "screens");
+// The screen folders, and lib/ where shared queries live.
+const QUERY_ROOTS = [...SCREEN_ROOTS, "lib"].filter((root) =>
+  existsSync(join(__dirname, "..", root)),
+);
 
 /**
  * The names that mark a surface as model-written. Matched against the FIRST
@@ -35,8 +39,8 @@ const NOT_PROSE: Record<string, string> = {};
 // top level saw a smaller tree, reported PASS, and had no failing assertion to
 // notice — which is the one way a census must not break.
 function everyQueryKeyFirstSegment(
-  dir: string = SCREENS,
-  prefix = "",
+  dir: string,
+  prefix: string,
 ): {
   key: string;
   file: string;
@@ -62,12 +66,18 @@ function everyQueryKeyFirstSegment(
   return found;
 }
 
+function everyScreenQueryKey(): { key: string; file: string }[] {
+  return QUERY_ROOTS.flatMap((root) =>
+    everyQueryKeyFirstSegment(join(__dirname, "..", root), `${root}/`),
+  );
+}
+
 describe("the language-dependent cache list", () => {
   it("names every model-written surface the screens query", () => {
     const named = new Set<string>(
       LANGUAGE_DEPENDENT_QUERY_PREFIXES.map((prefix) => prefix[0]),
     );
-    const missing = everyQueryKeyFirstSegment().filter(
+    const missing = everyScreenQueryKey().filter(
       ({ key }) =>
         MODEL_WRITTEN.test(key) && !named.has(key) && !(key in NOT_PROSE),
     );
@@ -84,7 +94,7 @@ describe("the language-dependent cache list", () => {
     // The other direction. A prefix nobody queries invalidates nothing, and
     // reads as coverage that is not there — which is worse than an obviously
     // short list, because it looks complete.
-    const queried = new Set(everyQueryKeyFirstSegment().map(({ key }) => key));
+    const queried = new Set(everyScreenQueryKey().map(({ key }) => key));
     const stale = LANGUAGE_DEPENDENT_QUERY_PREFIXES.map(
       (prefix) => prefix[0],
     ).filter((key) => !queried.has(key));

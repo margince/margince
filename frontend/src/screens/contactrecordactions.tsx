@@ -9,10 +9,10 @@ import { ifMatch, requireVersion } from "../api/version";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { invalidateRecord } from "../lib/recordwritekeys";
 import { navigate } from "../lib/router";
 import { ArchiveAction } from "./archive";
 import { MergeAction } from "./merge";
-import { invalidateRecord } from "./recordwritekeys";
 
 // The contact header's merge and archive commands.
 

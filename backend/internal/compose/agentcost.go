@@ -3,13 +3,13 @@
 
 package compose
 
-// MCP-SESS-COST, joined up: the AI runtime knows what a call cost, the volume budget
-// meter knows whose window to put it in, and neither may import the other.
+// MCP-SESS-COST, joined up. The AI runtime knows what a call cost and the volume
+// meter knows whose window to put it in. Neither may import the other.
 //
-// The spec words this volume budget as "tenant budget ÷ active sessions, soft". ADR-0092
-// deletes the divisor's subject — there are no sessions once the registry goes —
-// so the share is re-keyed exactly as the read bound was: the workspace's own
-// budget, divided by the credentials sharing it.
+// The spec words this volume budget as "tenant budget ÷ active sessions, soft".
+// ADR-0092 deletes the divisor's subject, because there are no sessions once the
+// registry goes. So the share is re-keyed as the volume counters are: the
+// workspace's own budget, divided by the credentials sharing it.
 
 import (
 	"context"

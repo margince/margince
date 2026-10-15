@@ -107,9 +107,9 @@
 .form-stack > .panel-intro {
   margin-bottom: calc(var(--space-4) - var(--space-3));
 }
-/* A group's head inside the pane: its name at the eyebrow's weight and its verb
-   at the far end, on a shorter interval than a body — it labels the rows under
-   it rather than standing as a block of its own. */
+/* A group's head inside the pane: its name and its verb at the far end, on a
+   shorter interval than a body — it labels the rows under it rather than
+   standing as a block of its own. */
 .panel-grouphead {
   display: flex;
   align-items: center;
@@ -119,22 +119,18 @@
   padding-bottom: var(--space-2);
 }
 
-/* THE SEAM RULE: a rule between content is inset to the pane's padding, except
- * beside a list that bleeds. A pseudo-element, as a border cannot be inset. */
+/* THE SEAM RULE: one line between two bands of a pane, edge to edge like the
+ * head's, whatever band stands above. `panelseams.test.tsx` renders the shapes.
+ * A pseudo-element, so a screen can drop one seam without restyling the band. */
 .panel-body + .panel-body::before,
 .panel-row + .panel-body::before,
 .panel > .settinglist-bleed + .panel-body::before,
 .panel > .table-scroll-bleed + .panel-body::before {
   content: "";
   position: absolute;
-  inset: 0 var(--padPanel) auto;
+  inset: 0 0 auto;
   height: 1px;
   background: var(--borderSubtle);
-}
-.panel-row-record + .panel-body::before,
-.panel > .settinglist-bleed + .panel-body::before,
-.panel > .table-scroll-bleed + .panel-body::before {
-  inset: 0 0 auto;
 }
 /* No seam between a group's head and the body under it: the head names that
    body, and a rule between the two cut a label from what it labels. The head is
@@ -221,6 +217,35 @@
 .panel > .disclosure > .disclosure-body {
   margin-top: 0;
 }
+/* In a body it bleeds too, so its line is as wide as the seams. First in the
+ * body it gives that line up to the seam above the body, or to the head's. */
+.panel > .panel-body > .disclosure,
+.panel > .panel-body > .disclosure-wrap {
+  margin-inline: calc(-1 * var(--padPanel));
+  padding-inline: var(--padPanel);
+}
+/* With an `action` the wrap draws the line, so it runs over the action too. */
+.panel > .panel-body > .disclosure-wrap {
+  border-top: 1px solid var(--borderSubtle);
+  margin-bottom: var(--space-4);
+}
+.panel > .panel-body > .disclosure-wrap > .disclosure {
+  border-top: 0;
+  margin-bottom: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child {
+  border-top: 0;
+}
+.panel > .panel-body > .disclosure:first-child,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure,
+.panel > .panel-body > .disclosure-wrap:first-child > .disclosure-action {
+  padding-top: 0;
+}
+.panel > .panel-body > .disclosure:last-child,
+.panel > .panel-body > .disclosure-wrap:last-child {
+  margin-bottom: 0;
+}
 
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
@@ -244,7 +269,8 @@
 
 /* A hairline row whose CONTENT runs edge to edge, in the panel's own margin
  * rather than the body's — the shape every list inside a panel wants. The rule
- * between two rows is inset to that margin, and a `record` row's spans the pane.
+ * between two rows is inset to that margin. A `record` row's spans the pane, and
+ * so does a first row's under another band, because that rule is a seam.
  * No rule on the first row: the header above it already draws that line.
  *
  * The rule and the hover are TWO shapes, and this one is only the rule. Held
@@ -283,7 +309,8 @@
 .panel-row-record:hover {
   background: var(--bgHover);
 }
-.panel-row-record::before {
+.panel-row-record::before,
+.panel > :not(.panel-row) + .panel-row::before {
   inset: 0 0 auto;
 }
 .panel-row-opens {

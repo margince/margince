@@ -55,12 +55,11 @@ var (
 	egressSpec = mcp.ToolSpec{Name: "send_email", RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true}
 )
 
-// AC-MCP-1: an agent past MCP-SESS-READS is stepped up on its NEXT read call.
-// The sentinel is the spec's own for MCP-SESS-* (interfaces.md §0,
-// ErrBudgetExceeded), so a client branches on the registry rather than on
-// prose.
-func TestAReadIsRefusedOnceTheAgentHasPassedItsReadBound(t *testing.T) {
-	gate := quotaGate(over(agentvolume.Reads, 2001, 2000))
+// An agent past MCP-SESS-CALLS is refused on its NEXT read call: a read spends a
+// call like any other. The refusal wraps ErrBudgetExceeded, so a client branches
+// on the sentinel rather than on prose.
+func TestAReadIsRefusedOnceTheAgentHasPassedItsCallCeiling(t *testing.T) {
+	gate := quotaGate(over(agentvolume.Calls, 1001, 1000))
 
 	_, err := gate.Admit(agentCtx(principal.ScopeRead), readSpec, noResolve)
 
@@ -69,8 +68,8 @@ func TestAReadIsRefusedOnceTheAgentHasPassedItsReadBound(t *testing.T) {
 	}
 	// The numbers are what a human is asked to confirm against, so they have to
 	// reach the caller rather than only the log.
-	if msg := err.Error(); !strings.Contains(msg, "2001") || !strings.Contains(msg, "2000") {
-		t.Errorf("the refusal does not say what was read against what limit: %q", msg)
+	if msg := err.Error(); !strings.Contains(msg, "1001") || !strings.Contains(msg, "1000") {
+		t.Errorf("the refusal does not say what was spent against what limit: %q", msg)
 	}
 }
 
@@ -84,7 +83,6 @@ func TestEachQuotaRefusesOnlyTheCallsItGoverns(t *testing.T) {
 		refused mcp.ToolSpec
 		allowed []mcp.ToolSpec
 	}{
-		{agentvolume.Reads, readSpec, []mcp.ToolSpec{writeSpec, egressSpec}},
 		{agentvolume.Writes, writeSpec, []mcp.ToolSpec{readSpec, egressSpec}},
 		{agentvolume.Egress, egressSpec, []mcp.ToolSpec{readSpec, writeSpec}},
 	}
@@ -141,8 +139,10 @@ func TestASuspendedPassportIsRefusedForEveryVerbAndLearnsNothingElse(t *testing.
 		if refusal.Reading.Counter != agentvolume.Calls {
 			t.Errorf("%s under suspension was refused on %s, not on the call ceiling", spec.Name, refusal.Reading.Counter)
 		}
-		if quota.askedFor(agentvolume.CounterFor(spec)) {
-			t.Errorf("a suspended caller learned the state of its %s allowance", agentvolume.CounterFor(spec))
+		// A read's own counter is the call ceiling, so there is no other
+		// allowance for it to learn.
+		if own := agentvolume.CounterFor(spec); own != agentvolume.Calls && quota.askedFor(own) {
+			t.Errorf("a suspended caller learned the state of its %s allowance", own)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func TestASuspendedPassportIsRefusedForEveryVerbAndLearnsNothingElse(t *testing.
 // would eventually stage a release for a counter nothing can release.
 func TestARefusalSaysWhetherAHumanCanAnswerIt(t *testing.T) {
 	releasable := map[agentvolume.Counter]bool{
-		agentvolume.Reads: true, agentvolume.Writes: true,
+		agentvolume.Writes: true,
 		agentvolume.Egress: false, agentvolume.Calls: false,
 	}
 	for counter, want := range releasable {
@@ -163,7 +163,7 @@ func TestARefusalSaysWhetherAHumanCanAnswerIt(t *testing.T) {
 			spec = writeSpec
 		case agentvolume.Egress:
 			spec = egressSpec
-		case agentvolume.Reads, agentvolume.Calls, agentvolume.Cost:
+		case agentvolume.Calls, agentvolume.Cost:
 		}
 		_, err := quotaGate(over(counter, 500, 100)).Admit(agentCtx(scopeFor(spec)), spec, noResolve)
 
@@ -187,7 +187,7 @@ func TestARefusalSaysWhetherAHumanCanAnswerIt(t *testing.T) {
 // ceiling waits forever.
 func TestAHardStopTellsTheAgentNoApprovalWillLiftIt(t *testing.T) {
 	_, hard := quotaGate(over(agentvolume.Egress, 21, 20)).Admit(agentCtx(principal.ScopeSend), egressSpec, noResolve)
-	_, soft := quotaGate(over(agentvolume.Reads, 2001, 2000)).Admit(agentCtx(principal.ScopeRead), readSpec, noResolve)
+	_, soft := quotaGate(over(agentvolume.Writes, 201, 200)).Admit(agentCtx(principal.ScopeWrite), writeSpec, noResolve)
 
 	if !strings.Contains(hard.Error(), "no approval lifts it") {
 		t.Errorf("a hard stop does not say that no approval lifts it: %q", hard)
@@ -207,7 +207,7 @@ func TestAHardStopTellsTheAgentNoApprovalWillLiftIt(t *testing.T) {
 // let alone how much of it is spent. Scope is checked first, and the meter is
 // never asked.
 func TestAnOutOfScopeCallerNeverLearnsTheQuotaExists(t *testing.T) {
-	quota := over(agentvolume.Reads, 9999, 2000)
+	quota := over(agentvolume.Calls, 9999, 1000)
 
 	_, err := quotaGate(quota).Admit(agentCtx(principal.ScopeWrite), readSpec, noResolve)
 
@@ -236,7 +236,7 @@ func TestTheSeatCeilingIsAnsweredBeforeTheQuota(t *testing.T) {
 	}
 }
 
-// Under every bound, a call is admitted exactly as before. Stated so the control
+// Under every bound, a call is admitted. Stated so the control
 // is proven to be a threshold rather than a refusal that happens to fire.
 func TestACallUnderEveryBoundIsAdmitted(t *testing.T) {
 	quota := &spentQuota{}
@@ -244,18 +244,17 @@ func TestACallUnderEveryBoundIsAdmitted(t *testing.T) {
 	if _, err := quotaGate(quota).Admit(agentCtx(principal.ScopeRead), readSpec, noResolve); err != nil {
 		t.Fatalf("a read under every bound → %v, want admitted", err)
 	}
-	// WHICH two, not how many: a regression that asked Reads twice — dropping
-	// the call ceiling entirely — would satisfy a count and lose the ceiling
-	// every other counter sits under.
-	if len(quota.asked) != 2 || quota.asked[0] != agentvolume.Calls || quota.asked[1] != agentvolume.Reads {
-		t.Errorf("one read consulted %v; it owes the call ceiling FIRST and then its own counter", quota.asked)
+	// A read belongs to the call ceiling itself, so it is asked once. Asking
+	// twice would only repeat the same reading.
+	if len(quota.asked) != 1 || quota.asked[0] != agentvolume.Calls {
+		t.Errorf("one read consulted %v, want the call ceiling alone", quota.asked)
 	}
 }
 
 // A human never enters this path at all — the gate returns before any agent
 // check — so a busy agent cannot lock its own operator out of the product.
 func TestAHumanIsNeverRefusedByAQuota(t *testing.T) {
-	quota := over(agentvolume.Reads, 9999, 2000)
+	quota := over(agentvolume.Calls, 9999, 1000)
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 
@@ -280,35 +279,19 @@ func TestAGateWithNoQuotaDoesNotEnforceOne(t *testing.T) {
 	}
 }
 
-// The REST door refuses on the SAME bound the MCP door charges. Without this a
-// Passport could spend its window through /mcp and then keep reading the very
-// same records through /v1 — one credential, two doors, one of them unbounded,
-// which is exactly what ADR-0055 says must not be possible.
-func TestTheRestReadPathRefusesOnTheSameBound(t *testing.T) {
-	quota := over(agentvolume.Reads, 2001, 2000)
+// The REST door refuses on the same ceiling the MCP door charges. Without this a
+// Passport could spend its window through /mcp and keep reading the same records
+// through /v1. That is one credential at two doors, with one of them unbounded.
+func TestTheRestReadPathRefusesOnTheSameCeiling(t *testing.T) {
+	quota := over(agentvolume.Calls, 1001, 1000)
 
 	err := quotaGate(quota).AdmitRead(agentCtx(principal.ScopeRead))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a REST agent read past the bound → %v, want ErrBudgetExceeded", err)
 	}
-	if len(quota.asked) != 1 || quota.asked[0] != agentvolume.Reads {
-		t.Errorf("a REST read consulted %v, want the read counter alone", quota.asked)
-	}
-}
-
-// A REST GET is not a TOOL call, so the call ceiling is not applied to it.
-// Charging it there would meter one credential against a ceiling written for a
-// surface this request never touched, and the two doors would then disagree
-// about what a call is.
-func TestARestReadIsNotChargedAgainstTheToolCallCeiling(t *testing.T) {
-	quota := over(agentvolume.Calls, 5000, 1000)
-
-	if err := quotaGate(quota).AdmitRead(agentCtx(principal.ScopeRead)); err != nil {
-		t.Fatalf("a REST read was suspended by the TOOL call ceiling: %v", err)
-	}
-	if quota.askedFor(agentvolume.Calls) {
-		t.Error("the tool-call ceiling was consulted for a REST read")
+	if len(quota.asked) != 1 || quota.asked[0] != agentvolume.Calls {
+		t.Errorf("a REST read consulted %v, want the call ceiling alone", quota.asked)
 	}
 }
 
@@ -322,7 +305,7 @@ func TestARestReadUnderTheBoundIsAdmitted(t *testing.T) {
 // A human's REST read is never touched by the agent bound — their authority is
 // RBAC at the store, and a busy agent must not lock its operator out of the UI.
 func TestAHumansRestReadIsNeverRefusedByTheBound(t *testing.T) {
-	quota := over(agentvolume.Reads, 9999, 2000)
+	quota := over(agentvolume.Calls, 9999, 1000)
 	ctx := principal.WithWorkspaceID(context.Background(), testWorkspace)
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep"})
 

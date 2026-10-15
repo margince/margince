@@ -14,7 +14,8 @@
 #   2. an UNNAMED package keeps the order it arrived in — a stale baseline must
 #      degrade to no-hint behaviour, not to an order the sort invented;
 #   3. the measured hint beats the committed baseline, and an empty or missing
-#      file is not a hint at all.
+#      file is not a hint at all;
+#   4. the shard split holds every test once and spreads slow tests apart.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -170,6 +171,81 @@ else
     fail "no package named in $baseline still exists — the baseline orders nothing"
   fi
 fi
+
+# 4. Shard assignment. A wrong split never turns the lane red by itself: a
+# missing or doubled test is caught by the fan-in, and a lopsided one is only a
+# slow PR. So both halves are checked here.
+# TestNew is in no timing line, so it weighs ./small's `*` row; ./gone is in no
+# discovery line. The union check below covers both.
+cat > "$work/discovery" <<'TESTS'
+backend|./big|TestA
+backend|./big|TestB
+backend|./big|TestC
+backend|./big|TestD
+backend|./big|TestE
+backend|./big|TestF
+backend|./small|TestG
+backend|./small|TestH
+backend|./small|TestNew
+TESTS
+cat > "$work/timing" <<'TIMES'
+# a header
+backend|./big|TestA|60.0
+backend|./big|TestB|1.0
+backend|./big|TestC|1.0
+backend|./big|TestD|30.0
+backend|./big|TestE|30.0
+backend|./big|TestF|1.0
+backend|./small|TestG|2.0
+backend|./small|TestH|4.0
+backend|./small|*|3.0
+backend|./gone|TestOld|90.0
+TIMES
+
+union=""
+for k in 1 2 3; do
+  assign_shard "$work/discovery" "$work/timing" "$k" 3 > "$work/shard$k"
+  union+="$(cat "$work/shard$k")"$'\n'
+done
+expect_order "the shards together must hold every test exactly once" \
+  "$(LC_ALL=C sort "$work/discovery")" "$(printf '%s' "$union" | LC_ALL=C sort)"
+expect_order "the same inputs must give the same split" \
+  "$(cat "$work/shard2")" "$(assign_shard "$work/discovery" "$work/timing" 2 3)"
+# Split by count, TestA and TestD share shard 1 (90 s against 31 s and 2 s).
+# By time, the 60 s test runs with no other test of its package.
+if ! grep -qx 'backend|./big|TestA' "$work/shard1" || grep -q 'TestD\|TestE' "$work/shard1"; then
+  fail "the slowest test must not share a shard with the next slowest ones
+  shard1: $(tr '\n' ' ' < "$work/shard1")"
+fi
+for k in 1 2 3; do
+  load=$(awk -F'|' 'NR == FNR { if (NF == 4) t[$1 "|" $2 "|" $3] = $4; next } $2 == "./big" { s += t[$0] } END { print s + 0 }' "$work/timing" "$work/shard$k")
+  if (( ${load%.*} > 61 )); then
+    fail "shard $k holds ${load}s of ./big; balanced, no shard holds more than the 60 s test plus a 1 s one"
+  fi
+done
+
+# The `*` row weighs the tests the file does not name. At 6 s each, one of the
+# three unnamed tests joins the named 10 s one; at the 1 s default, none would.
+printf 'backend|./mid|TestP\nbackend|./mid|TestQ\nbackend|./mid|TestR\nbackend|./mid|TestS\n' > "$work/middisc"
+printf 'backend|./mid|TestP|10.0\nbackend|./mid|*|6.0\n' > "$work/midtime"
+count=$(assign_shard "$work/middisc" "$work/midtime" 1 2 | wc -l | tr -d ' ')
+[[ "$count" -eq 2 ]] || fail "shard 1 of 2 got $count of ./mid's tests; the * row weighs the unnamed ones at 6 s, so it must hold 2"
+
+: > "$work/notiming"
+for k in 1 2 3; do
+  count=$(assign_shard "$work/discovery" "$work/notiming" "$k" 3 | grep -c '|./big|' || true)
+  [[ "$count" -eq 2 ]] || fail "with no timing, shard $k got $count of ./big's 6 tests; it must split by count, 2 each"
+done
+
+# The committed shard timing has to be readable by assign_shard: four fields,
+# a number last. A line it cannot read silently weighs its test at the mean.
+shard_timing="$root_dir/scripts/integration-test-timing.txt"
+bad=$(grep -v '^#' "$shard_timing" | awk -F'|' 'NF != 4 || $4 !~ /^[0-9]+(\.[0-9]+)?$/' | head -3)
+[[ -z "$bad" ]] || fail "$shard_timing has lines assign_shard cannot read: $bad"
+live=$(grep -v '^#' "$shard_timing" | cut -d'|' -f2 | LC_ALL=C sort -u | while read -r pkg; do
+  [[ -d "$root_dir/backend/${pkg#./}" ]] && echo "$pkg"
+done | wc -l | tr -d ' ')
+(( live > 0 )) || fail "no package named in $shard_timing still exists — every shard splits by count"
 
 if (( fails > 0 )); then
   echo "test-laneorder: $fails failure(s)" >&2

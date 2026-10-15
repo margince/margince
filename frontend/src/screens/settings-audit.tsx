@@ -6,6 +6,7 @@ import { Box, Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import { NAV } from "../app/nav";
+import { EntityRef } from "../components/entityref";
 import {
   Avatar,
   Badge,
@@ -32,7 +33,6 @@ import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { ACTOR_ICON, actorAttribution, humanizeToken } from "./audit";
-import { EntityRef } from "./entityref";
 import { AuditDetail } from "./settings-audit.detail";
 import {
   ACTION_TONE,

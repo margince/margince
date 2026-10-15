@@ -34,7 +34,6 @@ const PAGE = {
       user_id: "u-minh",
       display_name: "Minh Tran",
       passport_count: 2,
-      reads: counter(1_990, 4_000),
       writes: counter(400, 400),
       egress: counter(20, 40),
       calls: counter(980, 2_000),
@@ -97,8 +96,8 @@ describe("AgentUsageByUserCard", () => {
         name: "Show this window’s usage for Minh Tran",
       }),
     );
-    expect(screen.getByText("1,990 of 4,000")).toBeTruthy();
-    expect(screen.getAllByRole("meter")).toHaveLength(5);
+    expect(screen.getByText("980 of 2,000")).toBeTruthy();
+    expect(screen.getAllByRole("meter")).toHaveLength(4);
     expect(
       screen.getByText(/Every allowance resets .*2026.* UTC/),
     ).toBeTruthy();

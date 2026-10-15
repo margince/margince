@@ -141,8 +141,8 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			// something must not give the key back — see settleClaim.
 			ctx, effect := withWriteEffect(r.Context())
 			next.ServeHTTP(rec, r.WithContext(ctx))
-			// Zero records: this door charges no read bound, so its claims carry
-			// no cost to record (0198).
+			// Zero records: this door records no served count, so its claims carry
+			// none (0198).
 			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec, effect.committed); err != nil {
 				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
 			}
@@ -154,8 +154,8 @@ type storedResponse struct {
 	status      int
 	body        string
 	contentType string
-	// records is what the recorded answer cost the caller's read bound, for the
-	// surface that charges one. Zero for a REST claim, which charges none.
+	// records is how many records the recorded answer handed over, for the
+	// surface that tells an empty answer from a full one. Zero for a REST claim.
 	records int
 }
 

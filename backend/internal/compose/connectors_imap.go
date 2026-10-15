@@ -147,11 +147,9 @@ func (h connectorHandlers) persistIMAPConnection(w http.ResponseWriter, r *http.
 	for _, v := range views {
 		if v.Provider == providerIMAP {
 			conn := toContractConnection(v)
-			// Through the shared writer, like every other record this surface
-			// answers with. That is the one place a record becomes a REST
-			// response, which is what lets the agent read bound count what
-			// leaves; a private encode here is a second spelling the meter
-			// cannot see.
+			// Through the shared writer, like every other record this surface answers with.
+			// It keeps the empty-list normalisation in one place, and a private encode here
+			// would be a second spelling of it.
 			httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{
 				Connection: &conn,
 			})

@@ -13,7 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
 import { FiltersScreen } from "./filters";
 import { type FiltersServer, mountFilters, type Sent } from "./filters.testkit";
 

@@ -118,7 +118,7 @@ of it must hold:
 
 - the contract is not archived, and is past draft;
 - it carries a **signed date**;
-- it has a live attachment filed under **Contract** or **Legal**, in the
+- it has a live attachment filed under **SOW/Contract** or **NDA/Legal**, in the
   **Current** or **Final** state.
 
 A contract record with no paper on it does not clear the bar.

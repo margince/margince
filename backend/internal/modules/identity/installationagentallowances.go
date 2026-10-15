@@ -20,7 +20,6 @@ import (
 // left as it is. WindowHours is scheduled, never written straight
 // (scheduleAgentWindowTx).
 type AgentAllowancePatch struct {
-	ReadsPerWindow  *int
 	WritesPerWindow *int
 	EgressPerWindow *int
 	CallsPerWindow  *int
@@ -28,12 +27,11 @@ type AgentAllowancePatch struct {
 }
 
 func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
-	out := make([]pendingWrite, 0, 4)
+	out := make([]pendingWrite, 0, 3)
 	for _, v := range []struct {
 		entry *settings.Entry[int]
 		value *int
 	}{
-		{AgentReadsPerWindow, p.ReadsPerWindow},
 		{AgentWritesPerWindow, p.WritesPerWindow},
 		{AgentEgressPerWindow, p.EgressPerWindow},
 		{AgentCallsPerWindow, p.CallsPerWindow},
@@ -49,22 +47,22 @@ func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 
 // agentAllowanceEntries is the order both readers fill allowanceValues in.
 var agentAllowanceEntries = []*settings.Entry[int]{
-	AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
+	AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
 	AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
 }
 
 // allowanceValues holds the settings in agentAllowanceEntries order.
-type allowanceValues [7]int
+type allowanceValues [6]int
 
-// policy is the one reading of the seven values, for the meter and the page alike.
+// policy is the one reading of the six values, for the meter and the page alike.
 func (v allowanceValues) policy() agentvolume.Policy {
-	plan := agentvolume.WindowPlan{Length: time.Duration(v[4]) * time.Hour}
-	if v[5] > 0 {
-		plan.Next = time.Duration(v[5]) * time.Hour
-		plan.NextFrom = time.Unix(int64(v[6]), 0).UTC()
+	plan := agentvolume.WindowPlan{Length: time.Duration(v[3]) * time.Hour}
+	if v[4] > 0 {
+		plan.Next = time.Duration(v[4]) * time.Hour
+		plan.NextFrom = time.Unix(int64(v[5]), 0).UTC()
 	}
 	return agentvolume.Policy{
-		Limits: agentvolume.Limits{Reads: v[0], Writes: v[1], Egress: v[2], Calls: v[3]},
+		Limits: agentvolume.Limits{Writes: v[0], Egress: v[1], Calls: v[2]},
 		Window: plan,
 	}
 }
@@ -74,7 +72,7 @@ func (v allowanceValues) policy() agentvolume.Policy {
 // shows the values to a user reads them through readAgentPolicy instead.
 func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 	raw, err := settings.ApplyManyTx(ctx, tx,
-		AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
+		AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
 		AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom)
 	if err != nil {
 		return agentvolume.Policy{}, err

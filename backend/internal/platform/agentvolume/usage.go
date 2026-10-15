@@ -25,13 +25,13 @@ type CounterUsage struct {
 	Released int
 }
 
-// Usage is one subject's use of the four governed allowances in the running window.
+// Usage is one subject's use of the three governed allowances in the running window.
 type Usage struct {
-	Reads, Writes, Egress, Calls CounterUsage
-	ResetsAt                     time.Time
+	Writes, Egress, Calls CounterUsage
+	ResetsAt              time.Time
 }
 
-// UsageState is the worst of the four allowances.
+// UsageState is the worst of the three allowances.
 type UsageState string
 
 // The three states a Usage reports.
@@ -48,7 +48,7 @@ const nearShare = 0.8
 // more, and ok otherwise.
 func (u Usage) State() UsageState {
 	state := UsageOK
-	for _, c := range []CounterUsage{u.Reads, u.Writes, u.Egress, u.Calls} {
+	for _, c := range []CounterUsage{u.Writes, u.Egress, u.Calls} {
 		switch {
 		case c.Limit > 0 && c.Used >= c.Limit:
 			return UsageStopped
@@ -61,7 +61,7 @@ func (u Usage) State() UsageState {
 
 // usageCounters is the order Usage reads the counters in, one count key and
 // one release key each.
-var usageCounters = []Counter{Reads, Writes, Egress, Calls}
+var usageCounters = []Counter{Writes, Egress, Calls}
 
 // Usage reads the running window of every subject (SubjectOf) in one round
 // trip. Like Release it names its subjects, because the caller is the human
@@ -120,8 +120,6 @@ func (w window) counterUsage(c Counter, count, release any) (CounterUsage, error
 
 func (u *Usage) of(c Counter) *CounterUsage {
 	switch c {
-	case Reads:
-		return &u.Reads
 	case Writes:
 		return &u.Writes
 	case Egress:
@@ -145,7 +143,7 @@ func (u Usage) Plus(o Usage) Usage {
 		return CounterUsage{Used: a.Used + b.Used, Limit: a.Limit + b.Limit, Released: a.Released + b.Released}
 	}
 	return Usage{
-		Reads: add(u.Reads, o.Reads), Writes: add(u.Writes, o.Writes),
+		Writes: add(u.Writes, o.Writes),
 		Egress: add(u.Egress, o.Egress), Calls: add(u.Calls, o.Calls), ResetsAt: u.ResetsAt,
 	}
 }

@@ -4,7 +4,9 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
+import { EntityRef, useEntityName } from "../components/entityref";
+import { PageAsideToggle, usePageAside } from "../components/pageaside";
+import { RecordFields } from "../components/recordfields";
 import {
   Badge,
   Button,
@@ -43,7 +45,6 @@ import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
 import { useClaimRecord } from "./claimrecord";
-import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
 import { LeadBrief } from "./leadbrief";
@@ -72,7 +73,6 @@ import { RecordReading, TimelineThread, TodayPanel } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
 import { RecordEmailVerb } from "./recordemail";
-import { RecordFields } from "./recordfields";
 import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
 import "./leads.css";
@@ -95,8 +95,8 @@ import { sourcePickOptions, useLeadSources } from "./leadsources";
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
+import { leadKey, leadScoreKey, leadWriteKeys } from "../lib/leadkeys";
 import { AddToShortlistAction } from "./addtoshortlist";
-import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { RecordListsPanel } from "./recordlists";
 import { useAddressedTab } from "./recordtab";
 import { WorklistReturnLink } from "./worklist.return";

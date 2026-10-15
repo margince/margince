@@ -5,8 +5,8 @@ An agent in Margince acts for the human who gave it a **passport**, the credenti
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
 Most tools run at once. Three always wait for a human to approve them: `merge_tags`, `invite_meeting` and `enrich`.
-A few more wait only in some cases, such as moving a deal to `won` or `lost`: `create_record`, `update_record`,
-`progress_deal`, `relink_activity` and `relink_activities`. A waiting call changes nothing until a human approves it in
+A few more wait only in some cases, such as moving a deal to `won` or `lost`: `update_record`, `progress_deal`,
+`relink_activity` and `relink_activities`. A waiting call changes nothing until a human approves it in
 the CRM. The agent then repeats the call with the approval's ID.
 
 ## Which page do you need?
@@ -24,11 +24,12 @@ The reasons behind the rules are in [authorization.md](../explanation/authorizat
 
 ## How to read the tables
 
-**Does a human have to approve it?** Only for rows marked 🟡, dynamic or 🟢 / 🟡. Every other tool runs at once.
+**Does a human have to approve it?** Only for rows marked 🟡 or dynamic, and for the 🟡 part of `update_record`. Every
+other tool runs at once.
 
 | Column | Meaning |
 |---|---|
-| **Tier** | 🟢 runs at once. 🟡 does nothing until a human approves it. **dynamic** is decided on each call: a deal moved to `won` waits, a move to an open stage runs. 🟢 / 🟡 waits only for some record types or fields. |
+| **Tier** | 🟢 runs at once. 🟡 does nothing until a human approves it. **dynamic** is decided on each call: a deal moved to `won` waits, a move to an open stage runs. |
 | **Scope** | The kind of action the passport must allow: `read`, `draft`, `write`, `send` or `enrich`. [What each scope buys](#what-each-scope-buys) says more. |
 | **Egress** | Whether the tool leaves Margince, for example to send an email. |
 
@@ -81,7 +82,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
 | `change_tags` | 🟢 | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply_tag` `create_tag` `remove_tag` `update_tag`</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
-| `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
+| `create_record` | 🟢 | `write` | no | Create a record |
 | `create_task` | 🟢 | `write` | no | Create a task |
 | `decide_approvals` | 🟢 | `write` | no | 🔀 Approve or reject staged actions <details><summary>actions</summary>`decide_approval_bundle` `decide_approval`</details> |
 | `log_activity` | 🟢 | `write` | no | Log an activity |
@@ -91,7 +92,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | `relink_activities` | dynamic | `write` | no | Move a set of activities to another record <details><summary>Replaces an old action</summary>`relink_thread` refuses every call</details> |
 | `relink_activity` | dynamic | `write` | no | Move an activity to another record |
 | `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records, or keep both <details><summary>actions</summary>`decide_duplicate` `merge_records`</details> |
-| `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
+| `update_record` | 🟢 | `write` | no | Update a record |
 | `book_meeting` | 🟢 | `send` | yes | Book a meeting |
 | `invite_meeting` | 🟡 | `send` | yes | Send a meeting invite |
 | `send_outbound` | 🟢 | `send` | yes | 🔀 Send a message <details><summary>actions</summary>`send_company_email` `send_email` `send_message`</details> |
@@ -123,8 +124,6 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 - It may not when the activity is limited, archived, under a legal hold or covered by an open request to erase. Nor
   when Margince keeps it for another reason: a `won` deal, a sent offer, a pin by the data controller. A member gives
   the approval for such a relink in the CRM.
-- **Mixed rows.** A 🟢 / 🟡 tool waits for `custom_field` and `webhook_subscription`, which the contract declares
-  confirm-first, and runs for the other record types.
 - **Why the rest run at once.** A tool is 🟢 when the human who gave the passport could do the same act alone. The tier
   with the last word is `agentPolicies` in `compose/agentpolicy_gen.go`, generated from `crm.yaml`.
 
@@ -135,7 +134,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
   looks. A match set cut down per caller would let one payload create a second record for one rep and not for
   another.
 - Every ID it names is read back through the datasource seam before Margince serves it. That read applies object
-  RBAC and row scope, marks the trust tier, and counts the record against the reads counter of the passport.
+  RBAC and row scope, marks the trust tier, and counts the record as served on the answer.
 - A match the caller may not read answers `unresolved`, the same word a real miss gets. So a caller cannot test one
   address at a time for records they may not know exist.
 - An `ambiguous` answer stays `ambiguous` when only one other match is still there. So what the caller cannot see
@@ -175,12 +174,36 @@ Many operations carry it. These are the ones an agent may expect to reach:
 |---|---|
 | `coldStartReadback`, `coldStartPreview` | They *create* the company, so there is no record for a verb that works on a record to point at. The `enrich` tool keeps the company routes. |
 | `createRecordGrant`, `revokeRecordGrant` | The grant verbs refuse a principal that is not human when a staged approval is carried out. So when an agent staged a share and a human approved it, the share was still refused each time. |
+| `listRecordGrants` | Who was given a record by hand is access control, read and changed by humans only. |
+| `createCustomField`, `renameCustomField`, `updateCustomFieldOptions`, `retireCustomField` | A custom field is a definition the whole workspace shares, down to its label. An agent reads the live fields through `describe_vocabulary` (action `describe_query_vocabulary`, the verb `listCustomFields` names). |
+| `createWebhookSubscription`, `updateWebhookSubscription` | A subscription decides where events leave the installation. Every other webhook operation is `human-only` too. |
+| `listSavedViews`, `getSavedView`, `createSavedView`, `updateSavedView`, `archiveSavedView` | A saved view is one member's own screen, not data an agent works on. |
 | `renderOffer`, `regenerateOffer` | No tool backs them, and none can today. |
 | `sendOffer` | It *is* the sales promise: the version can no longer change, and how it converts to the base currency is fixed from then on. Nothing leaves the installation: to send an offer moves nothing over the wire, and delivery to the other party is a separate feature that does not exist yet. |
 
 An intent tool built over many operations, such as `catch_me_up_on` or `progress_deal`, has a route of its own. That
 route runs the tool through the registry (`served_by: registry`), so the verb is declared like any other. Its
 `OpenAPIOp` names that route.
+
+## Operations a passport reaches on REST only
+
+Some operations name a tool verb whose `record_type` that tool does not accept, so no MCP tool serves them yet. They
+carry `served_by: rest_only` in `x-mcp-tool`. A passport still calls them over `/v1`, under the verb's tier, scope and
+budget; on `/mcp` the verb refuses the type. `TestEveryPolicyRecordTypeIsOneItsToolCanSend` fails a route whose tool
+refuses its type without the marker, and a marker the tool no longer needs.
+
+| Record type | Operations |
+|---|---|
+| `product` | list, read, create, update, archive |
+| `offer_template` | list, read, create, update, archive |
+| `offer` | list for a deal, read, create, update, archive, line items |
+| `deal_room` | list, read, create |
+| `deal_room_thread` | list, open a thread |
+| `deal_room_comment` | reply to a thread |
+| `deal_room_document`, `deal_room_participant` | list |
+| `commission` | list, read |
+| `activity` | the list (`GET /v1/activities`); one activity is served by the record tools |
+| `tag` | archive (`DELETE /v1/tags/{id}`) |
 
 ## What a live server can show differently
 

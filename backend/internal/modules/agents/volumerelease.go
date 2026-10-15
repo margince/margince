@@ -131,9 +131,5 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 // It states the volume, the ceiling and the consequence of saying yes, because a
 // human answering "continue?" with no numbers is answering nothing.
 func stepUpSummary(said summaryCopy, p agentvolume.ReleaseProposal) string {
-	sentence := said.stepUpRecords
-	if p.Counter != agentvolume.Reads {
-		sentence = said.stepUpChanges
-	}
-	return fmt.Sprintf(sentence, p.Observed, p.Limit, p.Tool, p.Allowance)
+	return fmt.Sprintf(said.stepUpChanges, p.Observed, p.Limit, p.Tool, p.Allowance)
 }

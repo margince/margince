@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { BulkVerbs } from "../components/bulkverbs";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
@@ -11,7 +12,6 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { dealRecordKeys } from "../lib/activitykeys";
 import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
-import { BulkVerbs } from "./bulkverbs";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];

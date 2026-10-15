@@ -23178,22 +23178,28 @@ type AdvanceProjectPhaseRequest struct {
 // AdvanceProjectPhaseRequestToPhase defines model for AdvanceProjectPhaseRequest.ToPhase.
 type AdvanceProjectPhaseRequestToPhase string
 
+// AgentAllowanceDefaults What each agent allowance is before an admin changes it, so a screen never restates them.
+type AgentAllowanceDefaults struct {
+	AgentCallsPerWindow  int `json:"agent_calls_per_window"`
+	AgentEgressPerWindow int `json:"agent_egress_per_window"`
+	AgentWindowHours     int `json:"agent_window_hours"`
+	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+}
+
 // AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
 // a connected MCP client has one allowance for all its passports, so a renewed credential
 // keeps counting where the last one stopped. An agent that reaches a count is refused on
-// its next call until the window resets or the user who lent it releases more. A change to
+// its next call until the window resets or, for changing calls, the user who lent it releases
+// more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
 // a count applies within a minute, in the window that is running: a raised count gives
 // headroom within that minute, and a lowered one refuses an agent already past it on its
 // next call. The per-minute limits are fixed by the build and shown here read-only.
 type AgentAllowanceSettings struct {
-	// AgentCallsPerWindow How many tool calls of any kind one passport or connection may make per window. Default 1000.
+	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window"`
 
 	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
-
-	// AgentReadsPerWindow How many records one passport or connection may read per window. Default 2000.
-	AgentReadsPerWindow int `json:"agent_reads_per_window"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
 	// resets at the same moment, a whole number of windows since 1970-01-01 UTC.
@@ -23213,6 +23219,9 @@ type AgentAllowanceSettings struct {
 
 	// AgentWritesPerWindow How many changing calls one passport or connection may make per window. Default 200.
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+
+	// Defaults What each agent allowance is before an admin changes it, so a screen never restates them.
+	Defaults AgentAllowanceDefaults `json:"defaults"`
 
 	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
 	McpCallsPerMinute int `json:"mcp_calls_per_minute"`
@@ -23438,7 +23447,7 @@ type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
 }
 
-// AgentUsage One window's use of the four agent allowances, and when they reset.
+// AgentUsage One window's use of the three agent allowances, and when they reset.
 type AgentUsage struct {
 	// Calls One allowance in the running window.
 	Calls AgentCounterUsage `json:"calls"`
@@ -23446,13 +23455,10 @@ type AgentUsage struct {
 	// Egress One allowance in the running window.
 	Egress AgentCounterUsage `json:"egress"`
 
-	// Reads One allowance in the running window.
-	Reads AgentCounterUsage `json:"reads"`
-
 	// ResetsAt When the window resets and every count starts again from zero.
 	ResetsAt time.Time `json:"resets_at"`
 
-	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 	State AgentUsageState `json:"state"`
 
@@ -23469,7 +23475,7 @@ type AgentUsageByUser struct {
 	ResetsAt time.Time `json:"resets_at"`
 }
 
-// AgentUsageState The worst of the four allowances. `stopped` when one is used up, so the next call of
+// AgentUsageState The worst of the three allowances. `stopped` when one is used up, so the next call of
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
 
@@ -23487,10 +23493,7 @@ type AgentUserUsage struct {
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count"`
 
-	// Reads One allowance in the running window.
-	Reads AgentCounterUsage `json:"reads"`
-
-	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 	State  AgentUsageState    `json:"state"`
 	UserId openapi_types.UUID `json:"user_id"`
@@ -37966,7 +37969,8 @@ type InstallationSettings struct {
 	// AgentAllowances How much one agent may do in one window. A passport a user minted has its own allowance;
 	// a connected MCP client has one allowance for all its passports, so a renewed credential
 	// keeps counting where the last one stopped. An agent that reaches a count is refused on
-	// its next call until the window resets or the user who lent it releases more. A change to
+	// its next call until the window resets or, for changing calls, the user who lent it releases
+	// more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
 	// a count applies within a minute, in the window that is running: a raised count gives
 	// headroom within that minute, and a lowered one refuses an agent already past it on its
 	// next call. The per-minute limits are fixed by the build and shown here read-only.
@@ -48314,9 +48318,6 @@ type UpdateInstallationSettingsRequest struct {
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty"`
 
-	// AgentReadsPerWindow Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.
-	AgentReadsPerWindow *int `json:"agent_reads_per_window,omitempty"`
-
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty"`
 
@@ -54183,15 +54184,6 @@ type CreateCustomFieldParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // RenameCustomFieldParams defines parameters for RenameCustomField.
@@ -54237,15 +54229,6 @@ type UpdateCustomFieldOptionsParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // RetireCustomFieldParams defines parameters for RetireCustomField.
@@ -54265,15 +54248,6 @@ type RetireCustomFieldParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
 // ListDataSubjectRequestsParams defines parameters for ListDataSubjectRequests.
@@ -57689,29 +57663,8 @@ type ListWebhookSubscriptionsParams struct {
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
-// CreateWebhookSubscriptionParams defines parameters for CreateWebhookSubscription.
-type CreateWebhookSubscriptionParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
-}
-
 // UpdateWebhookSubscriptionParams defines parameters for UpdateWebhookSubscription.
 type UpdateWebhookSubscriptionParams struct {
-	// XApprovalToken A signed, single-use approval token (see schema `ApprovalToken`) minted by
-	// POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-	// compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-	// principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-	// expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
-	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
-
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
 	// the last-seen entity `version`. If the row's current `version` differs, the write is
 	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
@@ -70563,19 +70516,19 @@ type ServerInterface interface {
 	// List custom fields for an object (admin read; includes retired by default).
 	// (GET /custom-fields)
 	ListCustomFields(w http.ResponseWriter, r *http.Request, params ListCustomFieldsParams)
-	// Define a new custom field on an existing core object (🟡 — a schema change).
+	// Define a new custom field on an existing core object (a schema change).
 	// (POST /custom-fields)
 	CreateCustomField(w http.ResponseWriter, r *http.Request, params CreateCustomFieldParams)
-	// Rename a custom field's display label (🟢 — not a schema change).
+	// Rename a custom field's display label (not a schema change).
 	// (PATCH /custom-fields/{id})
 	RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams)
 	// The Live Lists whose filter names this custom field.
 	// (GET /custom-fields/{id}/lists)
 	ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id)
-	// Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
+	// Edit a picklist custom field's allowed options (regenerates the column's CHECK).
 	// (PATCH /custom-fields/{id}/options)
 	UpdateCustomFieldOptions(w http.ResponseWriter, r *http.Request, id Id, params UpdateCustomFieldOptionsParams)
-	// Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+	// Retire (soft-retire) a custom field. It cannot be undone.
 	// (POST /custom-fields/{id}/retire)
 	RetireCustomField(w http.ResponseWriter, r *http.Request, id Id, params RetireCustomFieldParams)
 	// List GDPR data-subject requests (B-E11.30).
@@ -71915,7 +71868,7 @@ type ServerInterface interface {
 	ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams)
 	// Register an outbound webhook subscription (returns the signing secret once).
 	// (POST /webhook-subscriptions)
-	CreateWebhookSubscription(w http.ResponseWriter, r *http.Request, params CreateWebhookSubscriptionParams)
+	CreateWebhookSubscription(w http.ResponseWriter, r *http.Request)
 	// Archive a webhook subscription (stops all delivery).
 	// (DELETE /webhook-subscriptions/{id})
 	ArchiveWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id)
@@ -74175,13 +74128,13 @@ func (_ Unimplemented) ListCustomFields(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Define a new custom field on an existing core object (🟡 — a schema change).
+// Define a new custom field on an existing core object (a schema change).
 // (POST /custom-fields)
 func (_ Unimplemented) CreateCustomField(w http.ResponseWriter, r *http.Request, params CreateCustomFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Rename a custom field's display label (🟢 — not a schema change).
+// Rename a custom field's display label (not a schema change).
 // (PATCH /custom-fields/{id})
 func (_ Unimplemented) RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -74193,13 +74146,13 @@ func (_ Unimplemented) ListCustomFieldLiveLists(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
+// Edit a picklist custom field's allowed options (regenerates the column's CHECK).
 // (PATCH /custom-fields/{id}/options)
 func (_ Unimplemented) UpdateCustomFieldOptions(w http.ResponseWriter, r *http.Request, id Id, params UpdateCustomFieldOptionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+// Retire (soft-retire) a custom field. It cannot be undone.
 // (POST /custom-fields/{id}/retire)
 func (_ Unimplemented) RetireCustomField(w http.ResponseWriter, r *http.Request, id Id, params RetireCustomFieldParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -76877,7 +76830,7 @@ func (_ Unimplemented) ListWebhookSubscriptions(w http.ResponseWriter, r *http.R
 
 // Register an outbound webhook subscription (returns the signing secret once).
 // (POST /webhook-subscriptions)
-func (_ Unimplemented) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request, params CreateWebhookSubscriptionParams) {
+func (_ Unimplemented) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92194,8 +92147,6 @@ func (siw *ServerInterfaceWrapper) CreateCustomField(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -92221,25 +92172,6 @@ func (siw *ServerInterfaceWrapper) CreateCustomField(w http.ResponseWriter, r *h
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -92270,8 +92202,6 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -92382,8 +92312,6 @@ func (siw *ServerInterfaceWrapper) UpdateCustomFieldOptions(w http.ResponseWrite
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -92409,25 +92337,6 @@ func (siw *ServerInterfaceWrapper) UpdateCustomFieldOptions(w http.ResponseWrite
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -92459,8 +92368,6 @@ func (siw *ServerInterfaceWrapper) RetireCustomField(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -92486,25 +92393,6 @@ func (siw *ServerInterfaceWrapper) RetireCustomField(w http.ResponseWriter, r *h
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -105595,8 +105483,6 @@ func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110476,8 +110362,6 @@ func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110527,8 +110411,6 @@ func (siw *ServerInterfaceWrapper) CreateSavedView(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110560,8 +110442,6 @@ func (siw *ServerInterfaceWrapper) ArchiveSavedView(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -110595,8 +110475,6 @@ func (siw *ServerInterfaceWrapper) GetSavedView(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110628,8 +110506,6 @@ func (siw *ServerInterfaceWrapper) UpdateSavedView(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111788,43 +111664,14 @@ func (siw *ServerInterfaceWrapper) ListWebhookSubscriptions(w http.ResponseWrite
 // CreateWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateWebhookSubscriptionParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
-
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateWebhookSubscription(w, r, params)
+		siw.Handler.CreateWebhookSubscription(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111915,8 +111762,6 @@ func (siw *ServerInterfaceWrapper) UpdateWebhookSubscription(w http.ResponseWrit
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111925,25 +111770,6 @@ func (siw *ServerInterfaceWrapper) UpdateWebhookSubscription(w http.ResponseWrit
 	var params UpdateWebhookSubscriptionParams
 
 	headers := r.Header
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
-
-	}
 
 	// ------------- Optional header parameter "If-Match" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {

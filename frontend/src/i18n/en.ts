@@ -4717,9 +4717,9 @@ export const en = {
   "extraction.field.closeDate": "Expected close date",
   "docs.filterLabel": "Document category",
   "docs.category.all": "All",
-  "docs.category.contract": "Contract",
-  "docs.category.offer": "Offer",
-  "docs.category.legal": "Legal",
+  "docs.category.contract": "SOW/Contract",
+  "docs.category.offer": "Proposal/Offer",
+  "docs.category.legal": "NDA/Legal",
   "docs.category.email": "Email attachment",
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
@@ -5929,8 +5929,7 @@ export const en = {
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
     "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
-  "settings.tierWait":
-    "Enrichment, custom fields, webhooks, tag merges: wait in Approvals.",
+  "settings.tierWait": "Enrichment and tag merges: wait in Approvals.",
   "settings.tierAdvance":
     "Advance a deal stage: waits only when the move closes the deal as won or lost.",
   "settings.locked": "Locked",
@@ -10853,26 +10852,41 @@ export const en = {
   "agentAllowances.title": "Agent passport allowances",
   "agentAllowances.sub":
     "What one passport or MCP connection may do in each window before it stops. A change to a count applies within a minute, in the window that is running. A passport can never change its own allowance.",
-  "agentAllowances.reads.label": "Records read",
-  "agentAllowances.reads.help":
-    "Records an agent may read per window, 100 to 20,000. Past it, reads wait for its owner to release more.",
   "agentAllowances.writes.label": "Changes",
   "agentAllowances.writes.help":
-    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to release more.",
+    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to approve more.",
   "agentAllowances.egress.label": "Sends",
   "agentAllowances.egress.help":
     "Emails and other calls that leave Margince. Sends stop until the window resets, 1 to 200.",
   "agentAllowances.calls.label": "Calls in total",
   "agentAllowances.calls.help":
-    "Every tool or API call. The passport pauses until the window resets, 50 to 20,000.",
-  "agentAllowances.window.label": "Window (hours)",
+    "Every call, a tool call or an API request, reads included. The passport pauses until the window resets, 50 to 20,000.",
+  "agentAllowances.window.label": "Window",
   "agentAllowances.window.help":
-    "How long one allowance lasts, 1 to 168. A new length starts at the next reset.",
+    "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
   "agentAllowances.burst":
     "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport.",
   "agentAllowances.pending.title": "Window change waiting",
   "agentAllowances.pending.body":
     "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
+  "agentAllowances.windowLine": "Window: {interval}",
+  "agentAllowances.note.release": "Its owner can approve more",
+  "agentAllowances.note.stop": "Stops until the window resets",
+  "agentAllowances.default": "Default {value}",
+  "agentAllowances.state.defaults": "At the defaults",
+  "agentAllowances.state.changed": "Changed from the defaults",
+  "agentAllowances.state.body":
+    "A change to a count applies to every passport within a minute, in the window that is running.",
+  "agentAllowances.edit": "Edit allowances",
+  "agentAllowances.save": "Save",
+  "agentAllowances.cancel": "Cancel",
+  "agentAllowances.useDefaults": "Use defaults",
+  "agentAllowances.diff.title": "Applies when you save",
+  "agentAllowances.diff.count": "{label} {from} → {to}",
+  "agentAllowances.diff.counts":
+    "A count applies within a minute, in the window that is running. An agent already past a lowered count is refused on its next call.",
+  "agentAllowances.diff.window":
+    "Window {from} → {to}, starting at the next reset.",
   "agentUsage.title": "Agent usage by user",
   "agentUsage.sub":
     "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
@@ -10881,12 +10895,11 @@ export const en = {
   "agentUsage.empty": "No user has a live passport or connection.",
   "agentUsage.resets": "Every allowance resets {date} UTC.",
   "agentUsage.ofLimit": "{used} of {limit}",
-  "agentUsage.counter.reads": "Records read",
   "agentUsage.counter.writes": "Changes",
   "agentUsage.counter.egress": "Sends",
   "agentUsage.counter.calls": "Calls",
   "agentUsage.col.user": "User",
-  "agentUsage.col.passports": "Passports",
+  "agentUsage.col.passports": "Passports and apps",
   "agentUsage.state.ok": "Working",
   "agentUsage.state.near": "Near a limit",
   "agentUsage.state.stopped": "Stopped",
@@ -14088,10 +14101,10 @@ export const en = {
   "legalReview.packNoOffer": "No offer on this deal.",
   "legalReview.packDocuments": "Documents",
   "legalReview.packNoDocuments":
-    "No contract, legal or offer document you can open.",
-  "legalReview.docCategory.contract": "Contract",
-  "legalReview.docCategory.offer": "Offer",
-  "legalReview.docCategory.legal": "Legal",
+    "No SOW/Contract, NDA/Legal or Proposal/Offer document you can open.",
+  "legalReview.docCategory.contract": "SOW/Contract",
+  "legalReview.docCategory.offer": "Proposal/Offer",
+  "legalReview.docCategory.legal": "NDA/Legal",
   "legalReview.docState.draft": "Draft",
   "legalReview.docState.current": "Current",
   "legalReview.docState.final": "Final",

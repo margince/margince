@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle } from "../components/pageaside";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useT } from "../i18n";
 

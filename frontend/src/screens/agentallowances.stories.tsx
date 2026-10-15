@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,8 +12,8 @@ import {
 import { AgentAllowancesCard } from "./agentallowances";
 import { defaultAgentAllowances } from "./agentallowances.fixtures";
 
-// What one passport may do per window, editable and refused, and with a
-// window change saved and waiting for its reset.
+// What one passport may do per window. The stories cover rest, the edit form, a
+// reader and a window change waiting for its reset.
 function story(
   allow: Parameters<typeof meRoute>[0],
   allowances: object = defaultAgentAllowances,
@@ -46,6 +47,22 @@ export default meta;
 type Story = StoryObj<typeof AgentAllowancesCard>;
 
 export const Allowances: Story = { render: story(MANAGER) };
+
+export const EditingAllowances: Story = {
+  render: story(MANAGER),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit allowances" }),
+    );
+    const calls = await canvas.findByTestId("allowance-agent_calls_per_window");
+    await userEvent.clear(calls);
+    await userEvent.type(calls, "500");
+    await expect(
+      await canvas.findByText(/Calls in total 1,000 → 500/),
+    ).toBeVisible();
+  },
+};
 
 export const CannotChange: Story = { render: story(READER) };
 

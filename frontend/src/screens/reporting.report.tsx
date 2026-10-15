@@ -139,11 +139,15 @@ export function ReportingReportDetail({
       label: editionLabel(item, locale),
     })),
   ];
-  const showHistory =
-    historyOpen ||
-    editions.isError ||
-    schedules.isError ||
-    capturePending === true;
+  // A failed read or a capture under way opens the history once; the reader
+  // may still close it.
+  const forcedHistory =
+    editions.isError || schedules.isError || capturePending === true;
+  const [forcedBefore, setForcedBefore] = useState(false);
+  if (forcedHistory !== forcedBefore) {
+    setForcedBefore(forcedHistory);
+    if (forcedHistory) setHistoryOpen(true);
+  }
   const reportActions = (report: ReportingReport) =>
     (canEditReport || canCreate || canArchiveReport) && (
       <OverflowMenu label={t("reporting.actions")}>
@@ -284,7 +288,7 @@ export function ReportingReportDetail({
           )}
           <Disclosure
             summary={t("reporting.history")}
-            open={showHistory}
+            open={historyOpen}
             onToggle={setHistoryOpen}
           >
             {canReadSchedules && (

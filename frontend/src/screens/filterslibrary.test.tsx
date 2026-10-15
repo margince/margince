@@ -17,11 +17,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { en } from "../i18n/en";
+import type { List } from "../lib/lists.queries";
+import { liveList, liveVocabulary, shortlist } from "../testing/lists.fixtures";
 import { meFixture } from "../testing/mefixture";
 import { FiltersScreen } from "./filters";
 import { filterView, mountFilters, type Sent } from "./filters.testkit";
-import { liveList, liveVocabulary, shortlist } from "./lists.fixtures";
-import type { List } from "./lists.queries";
 
 // The page `#/filters` opens on: one library of every saved view and list,
 // fed by one read of each, cut by what the address holds, and never a builder.

@@ -3,10 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_DEBOUNCE_MS } from "../components/listquery";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import { auditEntry, jsonResponse, render } from "./settings.testkit";
 import { AuditLogCard } from "./settings-audit";
 

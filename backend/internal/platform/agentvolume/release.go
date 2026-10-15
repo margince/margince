@@ -24,10 +24,9 @@ import (
 // that read ctx would silently release the approver's own counter — which is not
 // metered at all, so it would appear to work and do nothing.
 //
-// It applies only to a RELEASABLE counter (BYO-STEP-1 and -2). Egress and calls
-// are hard stops the spec ends with the window, and cost refuses nothing, so
-// there is nothing there to release; a request to release one is a defect in the
-// caller, answered as an error rather than as a quiet success.
+// It applies only to a releasable counter (BYO-STEP-2). Egress and calls are
+// hard stops the window ends, and cost refuses nothing. A request to release one
+// is a defect in the caller, answered as an error and not as a quiet success.
 //
 // It applies only to the CURRENT window. A release names the bucket the human
 // was shown, so an approval answered after that window rolled applies to

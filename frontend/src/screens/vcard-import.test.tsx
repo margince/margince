@@ -6,7 +6,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { UnsavedGuard, useHasUnsavedChanges } from "../app/unsaved";
+import { UnsavedGuard, useHasUnsavedChanges } from "../components/unsaved";
 import { LocaleProvider } from "../i18n";
 import { VCardImportAction, VCardImportPage } from "./vcard-import";
 

@@ -17,6 +17,7 @@
 }
 
 .table {
+  --tableCellPadBlock: 10px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -26,7 +27,7 @@
   border-bottom: 1px solid var(--borderStrong);
 }
 .table td {
-  padding: 10px 12px;
+  padding: var(--tableCellPadBlock) 12px;
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
@@ -48,11 +49,63 @@
   background: var(--bgHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
-   so the first column lines up with a PanelBody's text. */
-.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+   so the first column lines up with a PanelBody's text. A table opened from a
+   disclosure that bleeds spans the pane with it. */
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel > .table-scroll-bleed > .table > * > tr > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child {
   padding-inline-start: var(--padPanel);
 }
-.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+.panel > .table-scroll-bleed > .table > * > tr > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child {
   padding-inline-end: var(--padPanel);
 }
 /* The pinned first column is opaque because the rest scrolls under it. Any
@@ -1534,7 +1587,8 @@ span.error-line {
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open
-   and closed leaves the reader unsure whether the click did anything. */
+   and closed leaves the reader unsure whether the click did anything. It turns
+   with `.expander-chevron`, at the end of the row. */
 .disclosure {
   border-top: 1px solid var(--borderSubtle);
   padding-top: var(--space-3);
@@ -1572,14 +1626,10 @@ span.error-line {
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
-.disclosure-chevron {
+.disclosure-summary > .expander-chevron {
   width: 14px;
   height: 14px;
   flex: none;
-  transition: transform var(--dur-state);
-}
-.disclosure[open] .disclosure-chevron {
-  transform: rotate(90deg);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1605,6 +1655,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
@@ -1612,25 +1668,25 @@ span.error-line {
   padding-top: var(--space-3);
 }
 
-/* The chevron on a control that opens something which is NOT a `<details>` —
-   the next table row, a panel below the button. `Disclosure` owns its own; this
-   is for the two screens that had each written the turn as an inline
-   `style={{ transform: expanded ? "rotate(180deg)" : undefined }}`, which is
-   the open state spelled twice per call site: once for the reader who sees the
-   glyph and once, separately, for the one who hears `aria-expanded`. Keyed off
-   that attribute instead, the two cannot disagree.
-
-   The turn is unconditional — a reader who asked for less motion still needs
-   the chevron to point at an opened row — and only the tween is conditional. */
+/* Keyed off `aria-expanded`, so the glyph and a screen reader agree. Reduced
+   motion keeps the turn and drops the tween, which runs on the fold's time. */
 .expander-chevron {
-  transition: transform var(--dur-state) var(--ease-in-out);
+  transition: transform var(--dur-move) var(--ease-in-out);
 }
 [aria-expanded="true"] > .expander-chevron,
 [aria-expanded="true"] .expander-chevron {
   transform: rotate(180deg);
 }
+/* In-out: a fold travels between two resting places. Clipped on the block axis
+   only, so a focus ring inside keeps its sides. */
+[data-folding] {
+  box-sizing: border-box;
+  overflow: visible clip;
+  transition: height var(--dur-move) var(--ease-in-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .expander-chevron {
+  .expander-chevron,
+  [data-folding] {
     transition: none;
   }
 }

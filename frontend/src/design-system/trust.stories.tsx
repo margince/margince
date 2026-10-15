@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, type ReactNode, useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
@@ -175,6 +175,23 @@ export const AutonomyWithLabel: Story = {
 
 export const Evidence: Story = {
   render: () => <EvidenceDemo />,
+  play: async ({ canvasElement }) => {
+    const toggle = within(canvasElement).getByRole("button", {
+      name: "Evidence from transcript",
+    });
+    const chip = toggle.parentElement;
+    await expect(toggle.lastElementChild).toHaveClass("expander-chevron");
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      chip?.querySelector(".evidence-chip-snippet"),
+    ).toHaveTextContent("I'll send the revised quote on Monday.");
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() =>
+      expect(chip?.querySelector(".evidence-chip-snippet")).toBeNull(),
+    );
+  },
 };
 
 // A stored value can be a whole jsonb document, so the long side is capped and

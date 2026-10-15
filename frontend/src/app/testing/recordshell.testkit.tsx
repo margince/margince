@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { PageAsideProvider } from "../pageaside";
+import { PageAsideProvider } from "../../components/pageaside";
 
-// The record pages' details pane is claimed through the shell's own memory
-// (app/pageaside.tsx): without the provider around it a record screen has no
-// pane to open, and every assertion about the cards in it fails for a reason
-// that has nothing to do with the record.
+// A record page claims its details pane through components/pageaside.tsx.
+// Without that provider a record screen has no pane to open. Every assertion
+// about the cards in it then fails for a reason unrelated to the record.
 //
 // The answer is the real provider rather than a stand-in — a test that supplied
 // its own column would prove nothing about the one the product draws. It lives

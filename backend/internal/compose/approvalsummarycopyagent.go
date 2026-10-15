@@ -74,12 +74,10 @@ var agentActsGerman = agentActVocabulary{
 	},
 
 	operations: map[string]string{
-		opScrapeCompany:            "Website dieses Unternehmens lesen",
-		opDeepReadCompany:          "Gesamte Website dieses Unternehmens lesen",
-		opTechnicalEnrichCompany:   "Nachsehen, welche Technik dieses Unternehmen öffentlich einsetzt",
-		opRetireCustomField:        "Benutzerdefiniertes Feld stilllegen",
-		opUpdateCustomFieldOptions: "Optionen eines benutzerdefinierten Felds ändern",
-		opMergeTags:                "Ein Tag in ein anderes überführen und seinen Namen freigeben",
+		opScrapeCompany:          "Website dieses Unternehmens lesen",
+		opDeepReadCompany:        "Gesamte Website dieses Unternehmens lesen",
+		opTechnicalEnrichCompany: "Nachsehen, welche Technik dieses Unternehmen öffentlich einsetzt",
+		opMergeTags:              "Ein Tag in ein anderes überführen und seinen Namen freigeben",
 	},
 }
 
@@ -128,11 +126,9 @@ var agentActsVietnamese = agentActVocabulary{
 	},
 
 	operations: map[string]string{
-		opScrapeCompany:            "Đọc website của công ty này",
-		opDeepReadCompany:          "Đọc toàn bộ website của công ty này",
-		opTechnicalEnrichCompany:   "Tra cứu những gì công ty này vận hành công khai",
-		opRetireCustomField:        "Ngừng sử dụng một trường tùy chỉnh",
-		opUpdateCustomFieldOptions: "Thay đổi các tùy chọn của một trường tùy chỉnh",
-		opMergeTags:                "Gộp một thẻ vào thẻ khác và giải phóng tên của nó",
+		opScrapeCompany:          "Đọc website của công ty này",
+		opDeepReadCompany:        "Đọc toàn bộ website của công ty này",
+		opTechnicalEnrichCompany: "Tra cứu những gì công ty này vận hành công khai",
+		opMergeTags:              "Gộp một thẻ vào thẻ khác và giải phóng tên của nó",
 	},
 }

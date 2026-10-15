@@ -3,7 +3,6 @@
 
 import { type ReactNode, useId } from "react";
 import { opensRow } from "./datatable";
-import { Eyebrow } from "./eyebrow";
 import { Heading, type HeadingElement } from "./heading";
 import {
   type SectionDetail,
@@ -162,13 +161,8 @@ export function PanelPlate({
   );
 }
 
-// PanelGroupHead names one GROUP inside a pane — the deals, then the projects,
-// under the one head that names the pane. One level in from the pane's own
-// title, as an eyebrow, so the groups read as parts of one reading rather than
-// as two more panes; and its verb rides the same line, so a group keeps one
-// place for it whatever state its rows are in — moved into an empty plate it
-// changed position with the content, and a reader who has just read one group
-// looks for the next verb where the last one was.
+// Two rungs under the pane's title, at the size of its rows, so the groups
+// read as parts of one pane.
 export function PanelGroupHead({
   title,
   level,
@@ -185,9 +179,9 @@ export function PanelGroupHead({
 }>) {
   return (
     <PanelBody className="panel-grouphead">
-      <Eyebrow as={level} id={id}>
+      <Heading size="xsmall" as={level} id={id}>
         {title}
-      </Eyebrow>
+      </Heading>
       {action}
     </PanelBody>
   );

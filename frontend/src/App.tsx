@@ -22,7 +22,7 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
-import { UnsavedGuard } from "./app/unsaved";
+import { UnsavedGuard } from "./components/unsaved";
 import {
   Card,
   EmptyState,

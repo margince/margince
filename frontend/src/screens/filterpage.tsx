@@ -9,12 +9,13 @@
 // line under the editor says what would make there be.
 
 import { useState } from "react";
-import { useGuardedLeave } from "../app/unsaved";
+import { useGuardedLeave } from "../components/unsaved";
 import { SegmentedControl } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
-import { useFilterVocabulary } from "./filterdata";
+import { useFilterVocabulary } from "../lib/filterdata";
+import { type Group, isComplete, newGroup } from "../lib/segmentpredicate";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import { useFilterExport } from "./filterexport";
@@ -32,7 +33,6 @@ import {
   UNIT_LABEL,
 } from "./filtersaddress";
 import { SaveFilterModal, useLandOnSaved } from "./filtersave";
-import { type Group, isComplete, newGroup } from "./segmentpredicate";
 import "./filters.css";
 
 export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {

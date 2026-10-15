@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -27,7 +28,6 @@ import {
 import { ContractPaper } from "./contractpaperchip";
 import { ContractTerm, ContractTerms } from "./contractterms";
 import { CustomFieldsPanel } from "./customfields.card";
-import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

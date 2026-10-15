@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -241,8 +242,8 @@ func TestAReplayAnswersTheFirstResultWithoutRunningTheToolAgain(t *testing.T) {
 	if f.reader.reads != 1 {
 		t.Fatalf("the replay probed %d records, want 1", f.reader.reads)
 	}
-	if f.charger.reads() != 1 {
-		t.Fatalf("the replay charged %d records against the read bound, want 1", f.charger.reads())
+	if len(f.charger.charged) != 1 || f.charger.charged[agentvolume.Calls] != 1 {
+		t.Fatalf("the replay charged %v, want the one call it was", f.charger.charged)
 	}
 }
 
@@ -273,8 +274,8 @@ func TestAReplayIsRefusedWhenTheCallerCanNoLongerSeeWhatItCarries(t *testing.T) 
 			if out != nil {
 				t.Fatalf("part of the recorded document was served anyway: %s", out)
 			}
-			if f.charger.reads() != 0 {
-				t.Fatalf("a refused replay charged %d records", f.charger.reads())
+			if f.charger.charged[agentvolume.Writes] != 0 || f.charger.charged[agentvolume.Egress] != 0 {
+				t.Fatalf("a refused replay charged %v", f.charger.charged)
 			}
 		})
 	}
@@ -805,37 +806,5 @@ func TestAnExtensionToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 	}
 	if ext.runs != 1 {
 		t.Fatalf("the unkeyed call ran %d times, want 1", ext.runs)
-	}
-}
-
-// A replay costs what the CALL cost, recorded with the result — not the length
-// of the evidence list, which dedupes and so is the smaller number every time
-// they differ. Deriving the charge from the document would make retrying an
-// answer cheaper than asking for it.
-func TestAReplayCostsWhatTheCallCostAndNotWhatItCanName(t *testing.T) {
-	f := newRetryFixture(t)
-	same := ids.NewV7()
-	f.tool.records = []ids.UUID{same, same, ids.NewV7()} // one record served twice
-	f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
-
-	out, err := f.invoke(t, `{"idempotency_key":"k-1"}`)
-	if err != nil {
-		t.Fatalf("invoke: %v", err)
-	}
-	if f.charger.reads() != 3 {
-		t.Fatalf("the call charged %d, want 3 records served", f.charger.reads())
-	}
-	if f.claims.storedRecords != 3 {
-		t.Fatalf("recorded cost %d, want the 3 the call was charged", f.claims.storedRecords)
-	}
-
-	replayed := newRetryFixture(t)
-	replayed.claims.verdict = Claim{State: ClaimReplay, Result: out, Records: f.claims.storedRecords}
-	if _, err := replayed.invoke(t, `{"idempotency_key":"k-1"}`); err != nil {
-		t.Fatalf("replay: %v", err)
-	}
-	if replayed.charger.reads() != 3 {
-		t.Fatalf("the replay charged %d, want the 3 the call cost — its evidence list names only 2",
-			replayed.charger.reads())
 	}
 }

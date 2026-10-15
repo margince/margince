@@ -18,6 +18,8 @@ import { ifMatch, requireVersion } from "../api/version";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { CreateField, FormRows } from "../components/create";
+import { splitMultiselectValue } from "../components/create";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
@@ -27,8 +29,6 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
-import type { CreateField, FormRows } from "./create";
-import { splitMultiselectValue } from "./create";
 
 type Company = components["schemas"]["Company"];
 type CreateCompanyRequest = components["schemas"]["CreateCompanyRequest"];

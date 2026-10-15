@@ -11,6 +11,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { EntityRef, rosterOwnerName } from "../../components/entityref";
 import { Popover } from "../../design-system/popover";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
@@ -29,7 +30,6 @@ import {
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
-import { EntityRef, rosterOwnerName } from "../entityref";
 import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];
