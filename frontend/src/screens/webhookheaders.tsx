@@ -1,7 +1,7 @@
 import { Info, KeyRound, Lock, Plus, Trash2 } from "lucide-react";
 import { Button, TextInput } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
 

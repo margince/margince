@@ -1,7 +1,8 @@
-import { subscribableEventTypeValues } from "../api/public-events";
+import type { subscribableEventTypeValues } from "../api/public-events";
 import type { MessageKey } from "../i18n/en";
 
-export type SubscribableEventType = (typeof subscribableEventTypeValues)[number];
+export type SubscribableEventType =
+  (typeof subscribableEventTypeValues)[number];
 
 // The subscribable catalog grouped by the record each event is about, in the
 // order a reader looks for them. webhookevents.test.ts holds that every
@@ -95,11 +96,7 @@ export const WEBHOOK_EVENT_GROUPS: readonly WebhookEventGroup[] = [
   },
   {
     key: "files",
-    types: [
-      "attachment.created",
-      "attachment.updated",
-      "attachment.archived",
-    ],
+    types: ["attachment.created", "attachment.updated", "attachment.archived"],
   },
   {
     key: "projects",
@@ -121,10 +118,7 @@ export const WEBHOOK_EVENT_GROUPS: readonly WebhookEventGroup[] = [
   },
   {
     key: "commissions",
-    types: [
-      "commission.accrued",
-      "commission.decided",
-    ],
+    types: ["commission.accrued", "commission.decided"],
   },
   {
     key: "lists",
@@ -179,10 +173,7 @@ export const WEBHOOK_EVENT_GROUPS: readonly WebhookEventGroup[] = [
   },
   {
     key: "signals",
-    types: [
-      "signal.detected",
-      "signal.resolved",
-    ],
+    types: ["signal.detected", "signal.resolved"],
   },
   {
     key: "forecasts_weekly_plans",

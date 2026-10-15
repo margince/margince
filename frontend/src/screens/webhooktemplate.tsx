@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { Braces, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { Button, Field, SegmentedControl } from "../design-system/atoms";
-import { Popover } from "../design-system/popover";
 import { JsonField } from "../design-system/jsonfield";
+import { Popover } from "../design-system/popover";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
