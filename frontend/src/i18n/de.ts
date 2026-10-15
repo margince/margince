@@ -6170,7 +6170,7 @@ export const de = {
   "import.reason.owner_refused":
     "Du darfst dieses Mitglied nicht als zuständig eintragen, daher bist du für seine Zeilen zuständig.",
   "import.reason.owner_unknown":
-    "Kein Mitglied hat diese E-Mail-Adresse, daher bist du zuständig.",
+    "Kein Mitglied hat diese E-Mail-Adresse, daher bist du zuständig. Betroffene Zeilen: {rows}.",
   "import.reason.phone_needs_country":
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":

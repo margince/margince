@@ -6016,7 +6016,7 @@ export const vi = {
   "import.reason.owner_refused":
     "Bạn không thể đặt thành viên này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
   "import.reason.owner_unknown":
-    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu.",
+    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu. Số hàng nêu email này: {rows}.",
   "import.reason.phone_needs_country":
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":

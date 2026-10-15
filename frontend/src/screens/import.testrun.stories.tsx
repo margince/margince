@@ -63,7 +63,7 @@ const ISSUES: ImportRowIssue[] = [
     column: "owner_email",
     kind: "unknown_owner",
     value: "mai@old-crm.com",
-    reason: "No user has this email, so you become the owner.",
+    reason: "No user has this email, so you become the owner. Rows naming it: 1.",
   },
 ];
 

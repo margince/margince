@@ -91,7 +91,7 @@ A row without a `ref` is matched by a company's display name, or by a contact's 
 Also called: ID from another system, key column, record ID from my old system.
 
 ### How do owners, tags and custom fields import?
-- **Owner:** put the email of a Margince user in `owner_email`. If no user has it, you become the owner, and the test run says so.
+- **Owner:** put the email of a Margince user in `owner_email`. If no user has it, you become the owner. The test run lists each such address once, with the number of rows that name it.
 - **Tags:** separate tags with `;` in `tags`. A new tag is created, and the test run lists it. A tag column only adds tags, and never removes one. **Tag for this import** files every record the import creates under one more tag. Records it only updates keep their own tags.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.

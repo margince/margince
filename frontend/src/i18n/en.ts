@@ -6289,7 +6289,7 @@ export const en = {
   "import.reason.owner_refused":
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
-    "No user has this email, so you become the owner.",
+    "No user has this email, so you become the owner. Rows naming it: {rows}.",
   "import.reason.phone_needs_country":
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":

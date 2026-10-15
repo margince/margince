@@ -77,6 +77,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		appendIssues(&out.Issues, seenWarnings, warningKey, o, o.Warnings)
 	}
 	out.Parts = &parts
+	out.Issues = collapseUnknownOwners(out.Issues)
 	if committed && run.Error != importTagsFailedCause {
 		reportTagsCreated(out.Issues)
 	}

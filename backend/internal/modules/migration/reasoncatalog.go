@@ -169,10 +169,10 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Sie dürfen dieses Mitglied nicht als zuständig eintragen, daher sind Sie für dessen Zeilen zuständig.",
 		textlang.Vietnamese: "Bạn không thể đặt người dùng này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
 	}},
-	ReasonOwnerUnknown: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "No user has this email, so you become the owner.",
-		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig.",
-		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu.",
+	ReasonOwnerUnknown: {params: []string{"rows"}, text: map[textlang.Lang]string{
+		textlang.English:    "No user has this email, so you become the owner. Rows naming it: {rows}.",
+		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig. Betroffene Zeilen: {rows}.",
+		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu. Số hàng nêu email này: {rows}.",
 	}},
 	ReasonTagNew: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No tag has this name yet, so the import creates it.",
