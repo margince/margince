@@ -135,6 +135,10 @@ type bornDeal struct {
 	// deal_partner_attribution_pairing CHECK admits populated together or not
 	// at all.
 	attribution *string
+	// pastCloseAllowed lets an imported deal that is born into history keep
+	// the close date its source recorded. Only ImportDealTx sets it, and only
+	// when the deal is about to be closed in the same transaction.
+	pastCloseAllowed bool
 }
 
 // readyDealCreate runs what a create settles BEFORE any transaction opens —
@@ -256,7 +260,7 @@ const (
 // input with its owner settled. They are one step because they share a
 // moment: each reads the transaction and none of them writes, so a gate that
 // slipped past the insert would be refusing a row that already exists.
-func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInput) (CreateDealInput, error) {
+func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool) (CreateDealInput, error) {
 	// A decided owner arrives already settled: the qualify seam carries the
 	// LEAD's owner over rather than assigning one, and the suggestion seam
 	// asks auth.EnsureAssignee itself before it decides.
@@ -278,8 +282,10 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 	// INV-CLOSE-PAST (formulas §11): deals are born open, and an open
 	// deal never claims a past close date — reject at source rather
 	// than let the nightly corrector inherit a knowingly-invalid row.
-	if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
-		return in, err
+	if !pastCloseAllowed {
+		if err := s.rejectPastCloseDate(ctx, tx, in.ExpectedClose); err != nil {
+			return in, err
+		}
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return in, err
@@ -313,7 +319,7 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 // stage-history row, and runs the write shape — all inside the caller's
 // transaction.
 func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, born bornDeal, active []fieldcatalog.Column) (crmcontracts.Deal, error) {
-	in, err := s.clearedForBirth(ctx, tx, in)
+	in, err := s.clearedForBirth(ctx, tx, in, born.pastCloseAllowed)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -362,11 +368,12 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, err
 	}
 
+	imported, importRun := storekit.ImportMark(ctx)
 	auditID, err := storekit.Audit(ctx, tx, "create", "deal", id.UUID, nil, map[string]any{dealNameColumn: in.Name})
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("audit deal create: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealCreated{Name: in.Name}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealCreated{Name: in.Name, Imported: imported, ImportRunId: importRun}); err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("emit deal.created: %w", err)
 	}
 	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)

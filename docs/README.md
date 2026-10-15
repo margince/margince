@@ -170,6 +170,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you

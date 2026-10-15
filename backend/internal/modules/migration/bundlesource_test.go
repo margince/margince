@@ -93,7 +93,7 @@ func TestTwoPartsForOneObjectAreRefused(t *testing.T) {
 
 func TestAPartOfAnObjectOutsideTheImportOrderIsRefused(t *testing.T) {
 	bs := seedBundle(t, map[string]string{"a.csv": "ref\nx\n"})
-	odd := NewZipPartSource(bs, ZipPart{Key: bundleKey, Entry: "a.csv", Budget: 1 << 20}, "deal", map[string]string{"ref": "ref"}, "ref")
+	odd := NewZipPartSource(bs, ZipPart{Key: bundleKey, Entry: "a.csv", Budget: 1 << 20}, "activity", map[string]string{"ref": "ref"}, "ref")
 	if _, err := NewBundleSource(odd); !errors.Is(err, ErrBundleRefused) {
 		t.Fatalf("err = %v, want ErrBundleRefused", err)
 	}

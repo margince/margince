@@ -41,7 +41,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","properties":{
-			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
+			"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
 			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
@@ -49,7 +49,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			  "description":"Several files as one run, in place of object, csv and mapping.",
 			  "items":{"type":"object","required":["name","object","csv"],"properties":{
 				"name":{"type":"string"},
-				"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
+				"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 				"csv":{"type":"string","description":"The file's contents, header row first."},
 				"mapping":{"type":"object","additionalProperties":{"type":"string"},"description":"As mapping, for this file."}},
 				"additionalProperties":false}},

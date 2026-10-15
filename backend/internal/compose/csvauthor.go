@@ -30,9 +30,10 @@ const csvTargetAuthor = "author"
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
-// where it came from, fixed when it landed; a later file does not rewrite that.
+// where it came from, and a lost reason why the deal closed; a later file
+// rewrites neither.
 func isCreateOnlyTarget(field string) bool {
-	return field == csvTargetAuthor
+	return field == csvTargetAuthor || field == dealTargetLostReason
 }
 
 // refuseAuthorFromNonImporter keeps the author column behind the same door as

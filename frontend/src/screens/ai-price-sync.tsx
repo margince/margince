@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { EmptyState } from "../design-system/atoms";
+import { Button, EmptyState } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
@@ -12,14 +13,17 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
-import { useCan, useCanWrite } from "../lib/capability";
+import { useCan, useCanUpsert, useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
 import { providerName } from "./ai-provider-names";
 import {
   ProviderRefreshLine,
   RefreshModelPricesButton,
+  RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
+import { ModelPriceDialog } from "./rate-manual";
+import { ModelPriceSheet } from "./rates";
 import "./ai-settings.css";
 
 type PriceSyncRun = components["schemas"]["AiPriceSyncRun"];
@@ -60,15 +64,21 @@ function useSetAutoSync() {
   });
 }
 
-/** Where model prices come from, whether they sync daily, and what the last sync did. */
+/**
+ * Model prices: whether they sync daily, what the last sync did, and the
+ * prices in force per provider.
+ */
 export function ModelPricesCard() {
   const t = useT();
   const canRead = useCan("ai_model_rate", "read");
   // The switch is an update of the sheet's setting; a run also creates the rows
-  // it adds, so Refresh now asks for both.
+  // it adds, so Refresh asks for both.
   const canManage = useCanWrite("ai_model_rate", "update");
   const canCreate = useCanWrite("ai_model_rate", "create");
   const canRefresh = canManage && canCreate;
+  // One endpoint, insert or replace, the verb resolved inside the transaction.
+  const canSetPrice = useCanUpsert("ai_model_rate");
+  const [adding, setAdding] = useState(false);
   const query = usePriceSync(canRead);
   const refresh = useRefreshModelPrices();
   const setAutoSync = useSetAutoSync();
@@ -84,8 +94,17 @@ export function ModelPricesCard() {
   return (
     <Panel
       title={t("aiPriceSync.title")}
-      titleAction={
-        canRefresh ? <RefreshModelPricesButton refresh={refresh} /> : undefined
+      actions={
+        query.data !== undefined && (canRefresh || canSetPrice) ? (
+          <>
+            {canRefresh ? <RefreshModelPricesButton refresh={refresh} /> : null}
+            {canSetPrice ? (
+              <Button onClick={() => setAdding(true)}>
+                {t("settings.rates.modelAdd")}
+              </Button>
+            ) : null}
+          </>
+        ) : undefined
       }
     >
       <QueryGate query={query} pendingLabel={t("aiPriceSync.title")}>
@@ -108,15 +127,19 @@ export function ModelPricesCard() {
                   />
                 )}
               />
+              <SettingRow
+                label={t("aiPriceSync.lastSyncedLabel")}
+                description={t("aiPriceSync.sources")}
+                value={<LastSynced run={state.last_run} />}
+                control={null}
+              />
             </SettingList>
-            <PanelBody className="form-stack">
-              <p className="t-caption">{t("aiPriceSync.sources")}</p>
-              <LastSynced run={state.last_run} />
-              {refresh.error ? <ErrorLine error={refresh.error} /> : null}
-              {setAutoSync.error ? (
+            <RefreshSummary refresh={refresh} />
+            {setAutoSync.error ? (
+              <PanelBody>
                 <ErrorLine error={setAutoSync.error} />
-              ) : null}
-            </PanelBody>
+              </PanelBody>
+            ) : null}
             {state.last_run?.report.providers
               .filter((p) => !QUIET.has(p.outcome))
               .map((p) => (
@@ -130,6 +153,8 @@ export function ModelPricesCard() {
           </>
         )}
       </QueryGate>
+      <ModelPriceSheet />
+      {adding ? <ModelPriceDialog onClose={() => setAdding(false)} /> : null}
     </Panel>
   );
 }
@@ -139,8 +164,7 @@ function LastSynced({ run }: Readonly<{ run: PriceSyncRun | undefined }>) {
   const { locale } = useLocale();
   const now = useNow(60_000);
   if (!run) {
-    return <p className="t-caption">{t("aiPriceSync.never")}</p>;
+    return t("aiPriceSync.never");
   }
-  const ago = formatElapsed(now - Date.parse(run.ran_at), t, locale);
-  return <p className="t-caption">{t("aiPriceSync.lastSynced", { ago })}</p>;
+  return formatElapsed(now - Date.parse(run.ran_at), t, locale);
 }

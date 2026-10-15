@@ -558,16 +558,17 @@ export const de = {
   "aiAdmin.allowance": "Monatliches KI-Kontingent",
   "aiAdmin.pool":
     "Gemeinsamer Pool des Unternehmens. Kein individuelles Kontingent und kein Ausgabenlimit in Dollar.",
-  "aiAdmin.consumption": "{spent} von {total} Tokens verbraucht · {pct} %",
-  "aiAdmin.remaining": "{tokens} Tokens verbleibend",
-  "aiAdmin.reset": "Wird am {date} UTC zurückgesetzt",
+  "aiAdmin.consumption": "{spent} von {total} Tokens · {pct} %",
+  "aiAdmin.used": "Verbraucht",
+  "aiAdmin.resets": "Wird zurückgesetzt am",
+  "aiAdmin.basis": "Berechnung",
+  "aiAdmin.reset": "{date} UTC",
   "aiAdmin.fixed":
     "Ein festes Kontingent für das Unternehmen ersetzt die Berechnung pro Nutzerkonto.",
   "aiAdmin.formula":
     "Aktive Nutzende mit vollem Platz: {users} × {tokens} Tokens pro Nutzerkonto und Monat.",
   "aiAdmin.floor":
     "Ohne berechtigte Nutzende wird das Kontingent für 1 Nutzerkonto berechnet.",
-  "aiAdmin.normal": "Im normalen Rahmen des Kontingents",
   "aiAdmin.degraded":
     "Schwelle von 80 % erreicht: Routing auf niedrigere Modellstufen ist aktiv",
   "aiAdmin.queued":
@@ -587,7 +588,8 @@ export const de = {
     "Modellzuordnungen wurden während der Bearbeitung geändert",
   "aiAdmin.stale": "Dieses Kontingent wurde während der Bearbeitung geändert",
   "aiAdmin.staleHelp":
-    "Brich ab und öffne den Editor erneut, um die aktuellen Einstellungen zu verwenden.",
+    "Lade die Werte neu, um die aktuellen Einstellungen zu bearbeiten. Deine Eingaben werden ersetzt.",
+  "aiAdmin.reload": "Werte neu laden",
   "aiAdmin.failed": "Änderung nicht übernommen",
   "aiAdmin.preview": "Auswirkungen vorab ansehen",
   "aiAdmin.previewHint":
@@ -1157,7 +1159,6 @@ export const de = {
   "nav.deals": "Deals",
   "nav.analytics": "Analytics",
   "nav.settings": "Einstellungen",
-  "nav.automations": "Automatisierungen",
   "nav.group.records": "Datensätze",
   "nav.group.work": "Arbeit",
   "nav.group.intelligence": "Insights",
@@ -5830,6 +5831,7 @@ export const de = {
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
+  "import.object.deal": "Deals",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -6034,6 +6036,12 @@ export const de = {
     "1 Zeile hat ungültige Werte und wird übersprungen",
   "import.test.invalid_other":
     "{count} Zeilen haben ungültige Werte und werden übersprungen",
+  "import.test.closedDeals_one":
+    "1 Deal wird als abgeschlossene Historie importiert",
+  "import.test.closedDeals_other":
+    "{count} Deals werden als abgeschlossene Historie importiert",
+  "import.test.closedDealsBody":
+    "{won} gewonnen und {lost} verloren. Die Deals behalten das Abschlussdatum aus der Datei, und für sie läuft keine Automatisierung und keine Provision.",
   "import.test.invalidBody":
     "Korrigiere die Zeilen in der Datei und lade die Datei erneut hoch, um die Zeilen zu übernehmen.",
   "import.test.anyway_one":
@@ -6175,6 +6183,39 @@ export const de = {
   "import.reason.tag_new":
     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",
+  "import.reason.cannot_read_pipelines":
+    "Du darfst keine Pipelines lesen, daher wird eine Zeile übersprungen, die eine Phase nennt.",
+  "import.reason.stage_unnamed": "Nenne die Phase des Deals.",
+  "import.reason.pipeline_unnamed":
+    "Nenne die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
+  "import.reason.pipeline_unknown":
+    "„{value}“ ist keine Pipeline. Es gibt: {names}.",
+  "import.reason.stage_unknown":
+    "„{value}“ ist keine Phase der Pipeline „{pipeline}“. Mögliche Phasen: {names}.",
+  "import.reason.currency_not_a_code":
+    "„{value}“ ist kein Währungscode. Schreibe die drei Buchstaben, etwa EUR.",
+  "import.reason.close_date_future":
+    "„{value}“ liegt in der Zukunft, und das Abschlussdatum eines abgeschlossenen Deals darf das nicht sein.",
+  "import.reason.close_date_past":
+    "„{value}“ liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
+  "import.reason.lost_reason_missing":
+    "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
+  "import.reason.deal_pipeline_fixed":
+    "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "import.reason.deal_already_closed":
+    "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
+  "import.reason.fx_rate_missing":
+    "Für {currency} liegt kein Wechselkurs für den Abschlusstag dieses Deals vor, daher wird die Zeile übersprungen. Hinterlege den Kurs und importiere erneut.",
+  "import.reason.deal_legal_gate":
+    "Eine Phase vor der Phase dieses Deals erfordert eine rechtliche Prüfung, daher kann der Deal nicht über diese Phase hinaus importiert werden.",
+  "import.reason.pipeline_no_open_stage":
+    "Die Pipeline hat keine offene Phase, in der ein abgeschlossener Deal beginnen kann.",
+  "import.reason.cannot_link_stakeholders":
+    "Du kannst keine Stakeholder zu Deals hinzufügen, daher wird der Kontakt dieser Zeile nicht verknüpft.",
+  "import.reason.contact_not_found":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
+  "import.reason.contact_not_found_dropped":
+    "Kein Kontakt mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
   "import.reason.value_unreadable": "„{value}“ kann nicht gelesen werden.",
   "import.problem.broken_link": "Fehlerhafte Verknüpfung",
   "import.problem.dropped_link": "Verknüpfung ausgelassen",
@@ -6249,7 +6290,6 @@ export const de = {
   "jobs.failingSince": "fehlerhaft seit {when}",
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den die Job-Schicht nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
-  "jobs.generatedAt": "Stand: {time}",
   "jobs.kind.account_scan": "Unternehmensanalyse",
   "jobs.kind.agent_task_retention": "Bereinigung von Agentenaufgaben",
   "jobs.kind.ai_price_sync_sweep": "Aktualisierung der Modellpreise",
@@ -6329,6 +6369,29 @@ export const de = {
   "settings.providerHealth": "Status der KI-Anbieter",
   "settings.providerHealthSub":
     "Ob jeder KI-Anbieter antwortet, wie dieser Server es beobachtet hat.",
+  "systemHealth.strip": "Status",
+  "systemHealth.asOf": "Stand: {time}",
+  "systemHealth.checking": "Wird geprüft…",
+  "systemHealth.unread": "Prüfung fehlgeschlagen",
+  "systemHealth.notSetUp": "Nicht eingerichtet",
+  "systemHealth.jobs.idle": "Leerlauf",
+  "systemHealth.jobs.keepingUp": "Hält Schritt",
+  "systemHealth.jobs.dead_one": "{count} gestoppt",
+  "systemHealth.jobs.dead_other": "{count} gestoppt",
+  "systemHealth.jobs.retrying_one": "{count} wird wiederholt",
+  "systemHealth.jobs.retrying_other": "{count} werden wiederholt",
+  "systemHealth.intake.label": "Connector-Datensätze",
+  "systemHealth.intake.none": "Keine",
+  "systemHealth.intake.refused_one": "{count} abgelehnt",
+  "systemHealth.intake.refused_other": "{count} abgelehnt",
+  "systemHealth.providers.answering": "Erreichbar",
+  "systemHealth.providers.affected_one": "{count} mit Störung",
+  "systemHealth.providers.affected_other": "{count} mit Störung",
+  "systemHealth.providers.standIn": "Integrierter Testanbieter",
+  "systemHealth.providers.standInDetail":
+    "Die zugeordneten Modelle sind nicht aufrufbar. Füge unter KI-Modelle einen Schlüssel hinzu.",
+  "systemHealth.providers.standInPartialDetail":
+    "Einige Stufen antworten vom integrierten Testanbieter. Füge unter KI-Modelle ihre Schlüssel hinzu.",
   "providerHealth.adminOnly":
     "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "providerHealth.healthy": "Alle KI-Anbieter antworten.",
@@ -6381,7 +6444,6 @@ export const de = {
   "extIngest.col.lastRefused": "Zuletzt abgewiesen",
   "extIngest.noDetail":
     "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, da das abgewiesene Feld eingesendete Inhalte zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
-  "extIngest.generatedAt": "Stand: {time}",
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt getestet wurde und wie lange sie gedauert hat.",
@@ -6411,7 +6473,6 @@ export const de = {
   "recoveryHealth.lastBackupHint":
     "Backups laufen außerhalb von Margince. Prüfe die Backups in deinem Backup-Werkzeug.",
   "recoveryHealth.backupNotObserved": "Von Margince nicht erfasst",
-  "recoveryHealth.generatedAt": "Stand {time}",
   "settings.captureHealth": "Prüfungen der E-Mail-Erfassung",
   "settings.captureHealthSub":
     "Ob die E-Mail-Erfassung mit den Fragen Schritt hält, die sie beantworten muss.",
@@ -6445,6 +6506,7 @@ export const de = {
   "captureHealth.fact.unsure":
     "Absendeadressen, bei denen die Prüfung unsicher ist",
   "captureHealth.fact.exhausted": "Absendeadressen ohne verbleibende Versuche",
+  "captureHealth.fact.mailboxes": "Postfächer mit wartenden Einträgen",
   "captureHealth.oldestWaited": "längste Wartezeit: {age}",
   "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
   "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
@@ -6455,13 +6517,10 @@ export const de = {
   "captureHealth.mailboxes": "Postfächer",
   "captureHealth.noDetail":
     "Nur Zahlen. Welche Kontakte und Threads warten, sieht allein, wem das Postfach gehört.",
-  "captureHealth.mailboxesEmpty": "In keinem Postfach wartet etwas.",
   "captureHealth.unnamedMailbox": "Postfach ohne Namen",
-  "captureHealth.installation": "Gesamte Installation",
   "captureHealth.heldMeetings": "Zurückgehaltene Termine",
   "captureHealth.heldMeetingsSub":
     "Zugeordnete Termine, die das Team noch nicht sieht. Der nächtliche Lauf gibt die Termine frei.",
-  "captureHealth.generatedAt": "Stand: {time}",
 
   "audit.you": "Du",
   "audit.system": "System",
@@ -6472,12 +6531,9 @@ export const de = {
   "audit.viaDealRoom": "im Deal Room",
   "audit.viaNamed": "über {client}",
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
-  "settings.auditSub":
-    "Jede Aktion, zugeordnet zu Nutzerkonto, Agent oder Connector.",
   "settings.auditAdminOnly":
     "Deine Rolle darf das vollständige Audit-Log nicht lesen. Das Audit-Log verzeichnet alle Handelnden und jeden Datensatz, auf den sie zugegriffen haben.",
   "settings.auditFilters": "Filter",
-  "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
   "settings.auditActor": "Ausgeführt von",
   "settings.auditEntity": "Objekttyp",
@@ -6485,6 +6541,56 @@ export const de = {
   "settings.auditAction": "Aktion",
   "settings.auditFrom": "Von",
   "settings.auditTo": "Bis",
+  "audit.action.create": "Erstellt",
+  "audit.action.update": "Aktualisiert",
+  "audit.action.archive": "Archiviert",
+  "audit.action.merge": "Zusammengeführt",
+  "audit.action.promote": "Hochgestuft",
+  "audit.action.demote": "Herabgestuft",
+  "audit.action.disqualify": "Disqualifiziert",
+  "audit.action.restore": "Wiederhergestellt",
+  "audit.action.export": "Exportiert",
+  "audit.action.erase": "Endgültig gelöscht",
+  "audit.action.anonymize": "Anonymisiert",
+  "audit.action.assign": "Zugewiesen",
+  "audit.action.advanceStage": "Phase gewechselt",
+  "audit.action.advancePhase": "Projektphase gewechselt",
+  "audit.action.sendEmail": "E-Mail gesendet",
+  "audit.action.consentGrant": "Einwilligung erteilt",
+  "audit.action.consentWithdraw": "Einwilligung widerrufen",
+  "audit.action.approve": "Freigegeben",
+  "audit.action.reject": "Abgelehnt",
+  "audit.action.recordShare": "Geteilt",
+  "audit.action.recordUnshare": "Nicht mehr geteilt",
+  "audit.action.activityRelink": "Aktivität neu verknüpft",
+  "audit.action.import": "Importiert",
+  "audit.action.importUndo": "Import rückgängig gemacht",
+  "audit.action.resetData": "Daten zurückgesetzt",
+  "audit.action.passwordLinkIssued": "Passwort-Link gesendet",
+  "audit.action.connect": "Verbunden",
+  "audit.action.disconnect": "Getrennt",
+  "audit.action.schedule": "Geplant",
+  "audit.action.reschedule": "Verschoben",
+  "audit.action.cancel": "Abgebrochen",
+  "audit.action.release": "Zurückhaltung aufgehoben",
+  "audit.action.hold": "Zurückgehalten",
+  "audit.action.expire": "Abgelaufen",
+  "audit.action.resolve": "Erledigt",
+  "audit.action.restrict": "Eingeschränkt",
+  "audit.action.pin": "Angeheftet",
+  "audit.action.accrue": "Angefallen",
+  "audit.action.pay": "Bezahlt",
+  "audit.action.publish": "Veröffentlicht",
+  "audit.action.pause": "Pausiert",
+  "audit.action.resume": "Fortgesetzt",
+  "audit.action.close": "Geschlossen",
+  "audit.action.invite": "Eingeladen",
+  "audit.action.revoke": "Widerrufen",
+  "audit.action.delete": "Gelöscht",
+  "audit.action.placeLegalHold": "Legal Hold gesetzt",
+  "audit.action.liftLegalHold": "Legal Hold aufgehoben",
+  "audit.action.requestLegalReview": "Rechtsprüfung angefragt",
+  "audit.action.withdrawLegalReview": "Rechtsprüfung zurückgezogen",
   "settings.auditExpandEntry":
     "Änderungsdetails anzeigen: {action} an {entity}",
   "settings.auditLoading": "Aufgezeichnete Aktionen werden geladen…",
@@ -6500,11 +6606,6 @@ export const de = {
   "settings.auditAllowedBy": "Erlaubt durch",
   "settings.auditRecordId": "Datensatz-ID",
   "settings.auditEvidence": "Nachweis",
-  "settings.auditChanges": "Geänderte Felder",
-  "settings.auditColField": "Feld",
-  "settings.auditColValue": "Wert",
-  "settings.auditColChange": "Vorher und nachher",
-  "settings.auditColRemoved": "Entfernter Wert",
   "settings.auditNoValue": "Kein Wert",
   "settings.auditRuleSystem": "System, ohne Rollenprüfung",
   "settings.auditRuleDealRoom": "Sitzung im Deal Room",
@@ -8656,11 +8757,13 @@ export const de = {
 
   "auto.tier.approval": "Freigabe erforderlich",
   "auto.sub":
-    "Regeln handeln selbstständig. Eine Regel mit „Freigabe erforderlich“ sendet ihre Aktionen zuerst an die Freigaben.",
+    "Eine Regel mit „Freigabe erforderlich“ sendet ihre Aktionen zuerst an die Freigaben.",
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",
   "auto.instances": "Eingerichtete Automatisierungen",
+  "auto.instances.empty":
+    "Noch keine Automatisierungen. Starte eine aus der Vorlagenbibliothek.",
   "auto.use": "Vorlage verwenden",
   "auto.useNamed": "Vorlage verwenden: {name}",
   "auto.modeAuto": "Läuft selbstständig",
@@ -8694,7 +8797,6 @@ export const de = {
   "auto.dateField.loadError":
     "Die Datumsfelder konnten nicht geladen werden. Bitte versuche es erneut.",
   "auto.enabledFor": "{name} ist aktiv",
-  "auto.colMode": "Modus",
   "auto.colLastRun": "Letzter Lauf",
   "auto.colRuns30": "Läufe (30 Tage)",
   "auto.colStatus": "Status",
@@ -8730,7 +8832,7 @@ export const de = {
   "auto.runs.open": "Läufe",
   "auto.runs.title": "Bisherige Läufe",
   "auto.runsFor": "Bisherige Läufe von {name}",
-  "auto.runs.filterAll": "Alle",
+  "auto.runs.filterAll": "Alle Ergebnisse",
   "auto.runs.filterFired": "Ausgelöst",
   "auto.runs.filterFailed": "Fehlgeschlagen",
   "auto.runs.filterBlocked": "Blockiert",
@@ -8748,6 +8850,7 @@ export const de = {
   "auto.runs.outcomeBlocked": "Blockiert",
   "auto.runs.outcomeSkipped": "Übersprungen",
   "auto.runs.outcomeQueued": "Wartet auf Freigabe",
+  "auto.runs.outcome": "Ergebnis",
 
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Auswirkung des Probelaufs",
@@ -9450,8 +9553,6 @@ export const de = {
     "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Frühere Kurse ändern sich nie.",
   "settings.rates.fxWithheld":
     "Nur Admins und Operations sehen Wechselkurse. Jede Gesamtsumme in der Installation wird damit umgerechnet.",
-  "settings.rates.modelWithheld":
-    "Nur Admins und Operations sehen Modellpreise.",
   "settings.rates.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Kurse ändern.",
   "settings.rates.fxTableLabel": "Geltende Kurse",
@@ -9459,9 +9560,6 @@ export const de = {
   "settings.rates.fxEmpty": "Noch keine Wechselkurse.",
   "settings.rates.fxModalTitle": "Wechselkurs festlegen",
   "settings.rates.rateToBase": "Kurs (zur Basiswährung)",
-  "settings.rates.modelTitle": "KI-Modellkosten",
-  "settings.rates.modelIntro":
-    "Preis pro Modell in USD pro Million Tokens, zur Schätzung der KI-Kosten. Preise beeinflussen das Modell-Routing nie.",
   "settings.rates.modelTableLabel": "Geltende Preise",
   "settings.rates.modelAdd": "Modellpreis hinzufügen",
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
@@ -10067,6 +10165,9 @@ export const de = {
   "settings.companyManualSub":
     "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
+  "settings.auditActorExample": "agent:sdr",
+  "settings.auditEntityExample": "deal",
+  "settings.auditAnyAction": "Alle Aktionen",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",
@@ -10142,11 +10243,11 @@ export const de = {
   "tools.noMatch": "Keine Werkzeuge entsprechen dieser Suche.",
   "tools.descriptionToggle": "Vollständige Beschreibung von {tool}",
 
-  "aiusage.title": "Geschätzte KI-Kosten und Nutzung",
+  "aiusage.title": "KI-Kosten",
   "aiusage.withheld":
     "Nur Admins und Operations sehen die KI-Kosten. Die Zahlen umfassen die gesamte Installation.",
   "aiusage.sub":
-    "Bisherige Nutzung im gewählten Monat. Die Schätzungen sind unabhängig vom aktuellen Token-Kontingent und von der Rechnung deines Anbieters.",
+    "Schätzungen für den gewählten Monat, unabhängig vom Token-Kontingent und von der Rechnung deines Anbieters.",
   "aiusage.col.task": "Aufgabe",
   "aiTier.decide": "Entscheidungsmodell",
   "aiTier.local_small": "Lokal, klein",
@@ -10159,15 +10260,20 @@ export const de = {
   "aiusage.col.cached": "Aus dem Cache",
   "aiusage.col.cost": "Geschätzte Kosten",
   "aiusage.col.tokens": "Tokens ein / aus",
-  "aiusage.days.label": "Aufrufe nach Tag",
+  "aiusage.days.label": "Kosten nach Tag",
   "aiusage.days.col.day": "Tag",
   "aiusage.costNote":
     "Die Kosten sind Schätzungen auf Basis der konfigurierten Preise.",
-  "aiusage.costPartial":
-    "Diese Summe umfasst nur Aufrufe mit Preis. Für {calls} weitere Aufrufe war kein Preis konfiguriert. Die Nutzung dieser Aufrufe erscheint nur in den Token-Zahlen.",
-  "aiusage.monthLabel": "Monat",
   "aiusage.spendLabel": "Kosten nach Aufgabe",
-  "aiusage.days.show": "Tage anzeigen",
+  "aiusage.totals": "Summen des Monats",
+  "aiusage.notPriced": "Ohne Preis",
+  "aiusage.unpriced_one": "{count} Aufruf ohne Preis fehlt in dieser Summe.",
+  "aiusage.unpriced_other":
+    "{count} Aufrufe ohne Preis fehlen in dieser Summe.",
+  "aiusage.view.label": "Aufschlüsselung der Kosten",
+  "aiusage.view.task": "Nach Aufgabe",
+  "aiusage.view.day": "Nach Tag",
+  "aiusage.pricesLink": "Preise legst du unter KI-Modelle fest",
   "aiusage.empty": "Keine KI-Aufrufe in diesem Monat.",
   "aiusage.prevMonth": "Vorheriger Monat",
   "aiusage.nextMonth": "Nächster Monat",
@@ -10197,8 +10303,6 @@ export const de = {
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
     "Nur Admins und Operations können das Aufrufprotokoll lesen. Es verzeichnet jeden Modellaufruf der Installation.",
-  "aicalls.sub":
-    "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
   "aicalls.col.detail": "Details",
   "aicalls.expandCall": "Versuche für {task} ({when}) anzeigen",
   "aicalls.col.when": "Zeitpunkt",
@@ -10452,18 +10556,13 @@ export const de = {
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Schlüssel nicht gespeichert",
   "firstRun.ai.bindFailed": "Anbieter nicht zugeordnet",
-  "aiSettings.withheld": "Eingeschränkt",
-  "aiSettings.unread": "Nicht verfügbar",
-  "aiSettings.pending": "Wird geladen…",
-  "aiSettings.spend.estimated": "≈ {amount} ausgegeben",
-  "aiSettings.spend.notPriced": "Ohne Preis",
-  "aiSettings.providers.label": "Anbieterschlüssel",
-  "aiSettings.providers.value": "{count} von {total}",
+  "aiSettings.providers.value": "Hinterlegte Schlüssel: {count} von {total}",
   "aiSettings.providers.missing": "Zugeordnet ohne Schlüssel: {count}",
   "aiSettings.providers.lastCall": "letzter Aufruf {elapsed}",
-  "aiSettings.providers.lastCallOnly": "Letzter Aufruf {elapsed}",
-  "aiSettings.providers.neverCalled": "Noch nie aufgerufen",
+  "aiSettings.providers.neverCalled": "noch nie aufgerufen",
   "aiSettings.providers.traceFailed": "Aufrufprotokoll nicht verfügbar",
+  "aiSettings.providers.standIn":
+    "Antworten kommen vom integrierten Testanbieter",
   "elapsed.justNow": "gerade eben",
   "elapsed.minutes": "vor {minutes} min",
   "elapsed.hours": "vor {hours} h",
@@ -10487,7 +10586,6 @@ export const de = {
     "Trägt Host und Modell ein. Der Schlüssel gehört in JEV_COMPATIBLE_API_KEY.",
   "aiRouting.decisions.absent":
     "Kein Entscheidungsmodell. Jede Aufgabe nutzt die Modellstufen.",
-  "aiRouting.priceSheet": "Preisliste",
   "aiRouting.provider.label": "Anbieter",
   "aiProviderKeys.title": "Anbieter",
   "aiProviderKeys.keyless": "Kein Schlüssel nötig",
@@ -10535,7 +10633,7 @@ export const de = {
   "aiRouting.location.loading":
     "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
   "aiRouting.location.noKey":
-    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge den Schlüssel unter „Anbieterschlüssel“ hinzu. Dann erscheinen hier die Standorte, die er erreicht.",
+    "Noch ist kein Dienstkonto-Schlüssel hinterlegt. Füge den Schlüssel unter „Anbieter“ hinzu. Dann erscheinen hier die Standorte, die er erreicht.",
   "aiRouting.location.unreachable":
     "Nur der gespeicherte Standort steht zur Wahl, da Google nicht geantwortet hat. Beim Speichern wird der Standort erneut geprüft.",
   "aiRouting.location.noModels":
@@ -10650,17 +10748,13 @@ export const de = {
   "aiProviderKeys.reason.unreachable":
     "Der Anbieter hat nicht geantwortet. Prüfe den Host und das Netzwerk.",
   "aiRouting.intro":
-    "Wähle Anbieter und Modell für jede Stufe, für Embeddings und optional für das Entscheidungsmodell. Gespeicherte Zuordnungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
+    "Jede Stufe ordnet eine Art von Arbeit einem Anbieter und einem Modell zu. Gespeicherte Änderungen gelten innerhalb einer Minute.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Das Profil begrenzt, welche Anbieter eine Stufe nutzen kann, und wird von der Systemadministration festgelegt.",
   "aiRouting.notBound": "Nicht zugeordnet",
   "aiRouting.lastResponse": "Letzte Antwort {when}",
   "aiTerms.provider": "Anbieter",
-  "aiTerms.providerGloss": "wer aufgerufen wird",
   "aiTerms.tier": "Stufe",
-  "aiTerms.tierGloss": "eine Art von Arbeit, einem Modell zugeordnet",
-  "aiTerms.task": "Aufgabe",
-  "aiTerms.taskGloss": "was das Produkt tut",
   "aiRouting.taskCount_one": "{count} Aufgabe",
   "aiRouting.taskCount_other": "{count} Aufgaben",
   "aiRouting.colTasks": "Aufgaben",
@@ -10669,6 +10763,9 @@ export const de = {
   "aiRouting.unkeyed.title": "Einige Modellstufen können nicht antworten",
   "aiRouting.unkeyed.body":
     "Für {providers} ist kein Schlüssel hinterlegt. Füge unter „Anbieter“ einen Schlüssel hinzu. Bis dahin können diese Modellstufen nicht antworten: {lanes}.",
+  "aiRouting.standIn.title": "Modellstufen antworten über den Testanbieter",
+  "aiRouting.standIn.body":
+    "Für {providers} ist kein Schlüssel hinterlegt, daher antworten diese Modellstufen mit Testtext vom integrierten Testanbieter: {lanes}. Füge unter „Anbieter“ einen Schlüssel hinzu.",
   "aiRouting.noPrice": "Kein Preis hinterlegt. Beim Anbieter ergänzen.",
   "aiRouting.editTitle": "Zuordnung {lane} bearbeiten",
   "aiRouting.saveBinding": "Zuordnung speichern",
@@ -10682,7 +10779,7 @@ export const de = {
   "aiRouting.median": "Median {ms} ms",
   "aiTasks.title": "KI-Aufgaben",
   "aiTasks.intro":
-    "Jede Zeile zeigt die Stufe einer Aufgabe. Das Modell der Stufe legst du unter Modellstufen fest. Wähle den Namen einer Aufgabe, um zu sehen, was sie tut, wie ihr Zustand ist und was sie tut, während ihr Anbieter ausfällt. Öffne die Zeile, um Denkstufe und Zeitlimits festzulegen. Die Stufe ist vertraglich festgelegt.",
+    "Aufgaben, gruppiert nach der Stufe, die sie ausführt. Wähle den Namen einer Aufgabe, um zu sehen, was sie tut, oder öffne eine Zeile, um Denkstufe und Zeitlimits festzulegen.",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
@@ -10861,60 +10958,67 @@ export const de = {
   "operations.schedules.title": "Zeitpläne der Hintergrund-Jobs",
   "operations.schedules.sub":
     "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
+  "operations.schedules.fold": "Alle Zeitpläne",
   "operations.pacing.title": "Versandtempo",
   "operations.pacing.sub":
     "Wie schnell ein Postfach senden darf. Eine Änderung gilt ab dem nächsten Versand.",
   "operations.adminOnly": "Nur Admins und Operations können das ändern.",
   "operations.updateFailed": "Einstellung nicht geändert",
-  "operations.refusal": "Gib eine ganze Zahl im angegebenen Bereich ein.",
-  "operations.inWords": "= {interval}",
   "operations.off": "Aus",
-  "operations.agentRunner.label": "Agentenläufe (Sekunden)",
+  "operations.agentRunner.label": "Agentenläufe",
   "operations.agentRunner.help":
-    "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
-  "operations.webhookRetry.label": "Webhook-Wiederholungen (Sekunden)",
+    "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden.",
+  "operations.webhookRetry.label": "Webhook-Wiederholungen",
   "operations.webhookRetry.help":
-    "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden, 10 bis 3.600.",
-  "operations.timeScan.label": "Zeitgesteuerte Automatisierungen (Sekunden)",
-  "operations.timeScan.help":
-    "Wie oft zeitgesteuerte Regeln geprüft werden, 60 bis 86.400.",
-  "operations.closeDate.label": "Überfällige Abschlussdaten (Sekunden)",
+    "Wie oft fehlgeschlagene Webhook-Zustellungen wiederholt werden.",
+  "operations.timeScan.label": "Zeitgesteuerte Automatisierungen",
+  "operations.timeScan.help": "Wie oft zeitgesteuerte Regeln geprüft werden.",
+  "operations.closeDate.label": "Überfällige Abschlussdaten",
   "operations.closeDate.help":
-    "Wie oft Deals mit überschrittenem Abschlussdatum markiert werden, 3.600 bis 604.800.",
-  "operations.followUp.label": "Follow-up-Vorschläge (Sekunden)",
+    "Wie oft Deals mit überschrittenem Abschlussdatum markiert werden.",
+  "operations.followUp.label": "Follow-up-Vorschläge",
   "operations.followUp.help":
-    "Wie oft stockende Deals auf ein vorzuschlagendes Follow-up geprüft werden, 3.600 bis 604.800.",
-  "operations.retention.label": "Datenaufbewahrung (Sekunden)",
+    "Wie oft stockende Deals auf ein vorzuschlagendes Follow-up geprüft werden.",
+  "operations.retention.label": "Datenaufbewahrung",
   "operations.retention.help":
-    "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden, 3.600 bis 604.800. Immer aktiv.",
-  "operations.geocode.label": "Adressabgleich (Sekunden)",
+    "Wie oft Daten nach Ablauf ihrer Aufbewahrungsfrist gelöscht werden. Immer aktiv.",
+  "operations.geocode.label": "Adressabgleich",
   "operations.geocode.help":
-    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden, 300 bis 604.800, oder 0 zum Deaktivieren.",
-  "operations.technical.label": "Technische Abfragen (Sekunden)",
+    "Wie oft Adressen ohne Koordinaten nachgeschlagen werden. 0 deaktiviert den Abgleich.",
+  "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
-    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden, 300 bis 604.800, oder 0 zum Deaktivieren.",
-  "operations.gmailWatchScan.label": "Gmail-Push-Prüfung (Sekunden)",
+    "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 deaktiviert die Abfragen.",
+  "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
-    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
-  "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung (Sekunden)",
+    "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",
+  "operations.graphWatchScan.label": "Microsoft-365-Push-Prüfung",
   "operations.graphWatchScan.help":
-    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden, 600 bis 43.200.",
-  "operations.gmailWatchRenew.label": "Gmail: Vorlauf der Erneuerung (Stunden)",
+    "Wie oft Microsoft-365-Mail-Abos auf Erneuerung geprüft werden.",
+  "operations.gmailWatchRenew.label": "Gmail: Vorlauf der Erneuerung",
   "operations.gmailWatchRenew.help":
-    "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird, 24 bis 144.",
-  "operations.graphWatchRenew.label":
-    "Microsoft 365: Vorlauf der Erneuerung (Stunden)",
+    "Wie lange vor dem Ablauf nach 7 Tagen ein Gmail-Abo erneuert wird.",
+  "operations.graphWatchRenew.label": "Microsoft 365: Vorlauf der Erneuerung",
   "operations.graphWatchRenew.help":
-    "Wie lange vor dem Ablauf nach 3 Tagen ein Microsoft-365-Abo erneuert wird, 24 bis 60.",
+    "Wie lange vor dem Ablauf nach 3 Tagen ein Microsoft-365-Abo erneuert wird.",
   "operations.sendRateLimit.label": "Nachrichten pro Zeitfenster",
   "operations.sendRateLimit.help":
-    "Wie viele Nachrichten ein Postfach in einem Zeitfenster senden darf, 1 bis 1.000.",
-  "operations.sendRateWindow.label": "Zeitfenster (Sekunden)",
+    "Wie viele Nachrichten ein Postfach in einem Zeitfenster senden darf.",
+  "operations.sendRateWindow.label": "Zeitfenster",
   "operations.sendRateWindow.help":
-    "Das Zeitfenster, über das Nachrichten gezählt werden, 10 bis 3.600.",
-  "operations.sendMaxAge.label": "Längste Wartezeit (Stunden)",
+    "Das Zeitfenster, über das Nachrichten gezählt werden.",
+  "operations.sendMaxAge.label": "Längste Wartezeit",
   "operations.sendMaxAge.help":
-    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird, 1 bis 168.",
+    "Wie lange eine zurückgehaltene Nachricht warten darf, bevor sie mit einer Begründung gestoppt wird.",
+  "operations.reading": "{amount} = {interval}",
+  "operations.unit.seconds_one": "{count} Sekunde",
+  "operations.unit.seconds_other": "{count} Sekunden",
+  "operations.unit.hours_one": "{count} Stunde",
+  "operations.unit.hours_other": "{count} Stunden",
+  "operations.refusal.seconds": "Gib ganze Sekunden von {min} bis {max} ein.",
+  "operations.refusal.secondsOrOff":
+    "Gib 0 zum Deaktivieren ein oder ganze Sekunden von {min} bis {max}.",
+  "operations.refusal.hours": "Gib ganze Stunden von {min} bis {max} ein.",
+  "operations.refusal.count": "Gib eine ganze Zahl von {min} bis {max} ein.",
   "captureMailSync.title": "E-Mail-Abgleich",
   "captureMailSync.sub":
     "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
@@ -13309,7 +13413,7 @@ export const de = {
   "aiPriceSync.autoSync.help":
     "Liest die Preise jedes eingerichteten Anbieters einmal täglich. Manuell gesetzte Preise bleiben erhalten.",
   "aiPriceSync.sources": "Quellen: models.dev · OpenRouter",
-  "aiPriceSync.lastSynced": "Zuletzt abgeglichen {ago}",
+  "aiPriceSync.lastSyncedLabel": "Zuletzt abgeglichen",
   "aiPriceSync.never": "Noch nicht abgeglichen",
   "aiPriceSync.adminOnly": "Deine Rolle kann das nicht ändern.",
   "aiPriceSync.withheld": "Modellpreise sind für dich nicht sichtbar.",
@@ -13767,6 +13871,9 @@ export const de = {
   "aiFigures.line.prefix": "7 T: {sentence}",
   "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
   "aicalls.filtered.clear": "Alle Aufrufe zeigen",
+  "aicalls.filters": "Filter",
+  "aicalls.folded.tokens": "Tokens: {in} ein, {out} aus",
+  "aicalls.folded.latency": "Latenz: {value} ms",
   "aiOpenRouter.title": "OpenRouter-Einstellungen",
   "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
   "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",

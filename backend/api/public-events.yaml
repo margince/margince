@@ -252,6 +252,16 @@ components:
         name:
           type: string
           description: The deal's name at creation.
+        imported:
+          type: boolean
+          description: >-
+            True when a data import wrote the event. An outside system can tell a deal
+            brought in from another system from one a rep worked in Margince. Absent
+            otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventCommissionAccrued:
@@ -909,6 +919,13 @@ components:
           type: string
           format: uuid
           description: The previous owner (absent when the deal had none).
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealStageChanged:
@@ -979,6 +996,16 @@ components:
             The native→base rate frozen at close, carried because REOPENING a deal clears
             it: a consumer reading the deal back after a reopen could not recover the rate
             the win was priced at.
+        imported:
+          type: boolean
+          description: >-
+            True when a data import wrote the event. An outside system can tell a deal
+            brought in from another system from one a rep worked in Margince. Absent
+            otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealArchived:
@@ -986,7 +1013,17 @@ components:
       x-event-type: deal.archived
       x-entity-type: deal
       x-version: 1
-      description: Payload for deal.archived — a deal was archived. Carries no data.
+      description: >-
+        Payload for deal.archived: a deal was archived. Carries only the import
+        mark, when an import's undo wrote the event.
+      properties:
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealUpdated:
@@ -1012,6 +1049,13 @@ components:
             recompute/routing/relationship sites carry a `{delta: {...}}`
             sub-object (occasionally with a sibling `source`). Read a
             key's value as either form.
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventDealRestored:
@@ -1020,9 +1064,17 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.restored — an archived deal was brought back, with
-        the relationships, list memberships and tags its archive took down
-        where they can still come back. Carries no data.
+        Payload for deal.restored: an archived deal was brought back. Its
+        archive took down relationships, list memberships and tags, and those
+        that can still come back return. Carries only the import mark.
+      properties:
+        imported:
+          type: boolean
+          description: True when a data import wrote the event. Absent otherwise.
+        import_run_id:
+          type: string
+          format: uuid
+          description: The import run that wrote the event. Present when `imported` is true.
       additionalProperties: false
 
     PublicEventOfferCreated:

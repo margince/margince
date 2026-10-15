@@ -93,26 +93,25 @@ func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(readImport{})
 }
 
-// importObjectEnum is what a file's rows may be.
-//
-// `deal` and `activity` are not here: no import writer exists for either, so
-// offering them would advertise a door the REST contract does not have. The
-// first cut of this tool listed all four and
-// TestEveryToolEnumMatchesTheContractItMirrors caught it, which is what that
-// gate is for.
+// importObjectEnum is what a file's rows may be, held to the contract by
+// TestEveryToolEnumMatchesTheContractItMirrors.
 //
 // `lead` and `contact` are BOTH here and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
 // business already knows lands as contacts. Neither skips the identity ladder.
-var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact}
+var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact, importObjectDeal}
 
-// The three things a file's rows may be, spelled once. They mirror the
-// contract's ImportObject enum, and the tool's schema is built from them so
-// the two cannot drift.
+// importObjectEnumJSON is importObjectEnum as the JSON array a tool schema's enum takes.
+func importObjectEnumJSON() string { return `["` + strings.Join(importObjectEnum, `","`) + `"]` }
+
+// The things a file's rows may be, spelled once. They mirror the contract's
+// ImportObject enum, and the tool's schema is built from them so the two
+// cannot drift.
 const (
 	importObjectCompany = "company"
 	importObjectLead    = "lead"
 	importObjectContact = "contact"
+	importObjectDeal    = "deal"
 )
 
 // maxImportCSVBytes caps the pasted file.

@@ -31,7 +31,8 @@ import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
-import { PanelTitle, TermLegend } from "./ai-terms";
+import { useAnswersFromStandIn } from "./ai-settings";
+import { PanelTitle } from "./ai-terms";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 
@@ -91,20 +92,28 @@ function UnkeyedNote({
   const stranded = lanes.filter(
     (lane) => lane.binding && unkeyed?.has(lane.binding.provider),
   );
+  const standIn = useAnswersFromStandIn();
   if (stranded.length === 0) return null;
   const providers = [
     ...new Set(stranded.flatMap((lane) => lane.binding?.provider ?? [])),
   ];
-  return (
+  const names = {
+    providers: providers.map((p) => providerName(p, t)).join(", "),
+    lanes: stranded.map((lane) => tierLabel(lane.name, t)).join(", "),
+  };
+  // On the offline stand-in these tiers answer with canned text, so "cannot
+  // answer" would contradict the green dots beside them.
+  return standIn ? (
+    <Callout tone="info" kind="standing" title={t("aiRouting.standIn.title")}>
+      {t("aiRouting.standIn.body", names)}
+    </Callout>
+  ) : (
     <Callout
       tone="warning"
       kind="standing"
       title={t("aiRouting.unkeyed.title")}
     >
-      {t("aiRouting.unkeyed.body", {
-        providers: providers.map((p) => providerName(p, t)).join(", "),
-        lanes: stranded.map((lane) => tierLabel(lane.name, t)).join(", "),
-      })}
+      {t("aiRouting.unkeyed.body", names)}
     </Callout>
   );
 }
@@ -242,14 +251,12 @@ function ModelTiers({
   return (
     <Panel
       title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}
-      footer={<SheetFooter catalogue={catalogue.data} />}
+      footer={
+        <SheetFooter catalogue={catalogue.data} profile={routing.profile} />
+      }
     >
-      <PanelBody>
+      <PanelBody className="form-stack">
         <PanelIntro>{t("aiRouting.intro")}</PanelIntro>
-        <TermLegend />
-        <p className="t-sub" data-testid="ai-routing-profile">
-          {t("aiRouting.profileLine", { profile: routing.profile })}
-        </p>
         <UnkeyedNote lanes={lanes} unkeyed={unkeyed} />
       </PanelBody>
       <TiersTable
@@ -278,7 +285,13 @@ function ModelTiers({
 // What the model lists in the editor are, and how to move them on. The sheet is
 // a SNAPSHOT somebody took on a day; undated it reads as "these are the models",
 // and the refresh is the way past it.
-function SheetFooter({ catalogue }: Readonly<{ catalogue: ModelCatalogue }>) {
+//
+// The profile is a reading, never a control here: it decides which vendors a
+// lane may name, and a Save it refuses says so.
+function SheetFooter({
+  catalogue,
+  profile,
+}: Readonly<{ catalogue: ModelCatalogue; profile: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const asOf = sheetAsOf(catalogue);
@@ -290,6 +303,9 @@ function SheetFooter({ catalogue }: Readonly<{ catalogue: ModelCatalogue }>) {
               date: formatDate(asOf, locale, viewerZone()),
             })
           : t("aiRouting.sheetUnknown")}
+      </span>
+      <span className="t-caption" data-testid="ai-routing-profile">
+        {t("aiRouting.profileLine", { profile })}
       </span>
     </div>
   );

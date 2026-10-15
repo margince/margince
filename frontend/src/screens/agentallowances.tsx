@@ -13,6 +13,7 @@ import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
+import { boundsText } from "../format/bounds";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
 import { UTC_ZONE } from "../format/timezone";
@@ -300,7 +301,13 @@ function AllowanceForm({
                   />
                   <span id={`${control.id}-note`} className="t-caption">
                     {refused
-                      ? t("operations.refusal")
+                      ? t(
+                          "operations.refusal.count",
+                          boundsText(
+                            AGENT_ALLOWANCE_BOUNDS[row.property],
+                            locale,
+                          ),
+                        )
                       : t("agentAllowances.default", {
                           value: formatNumber(
                             allowances.defaults[row.property],

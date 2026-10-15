@@ -20,8 +20,9 @@
 # It covers AI inference only — docs/how-to/connect-a-cloud-model-provider.md §5.
 #
 # Needs one service-account JSON key, from GEMINI_VERTEX_SA_JSON or Settings →
-# Provider keys, on an account holding roles/aiplatform.user in a project with the
-# Vertex AI API enabled. Not loaded automatically — see README.md.
+# AI → AI models → Providers, on an account holding roles/aiplatform.user in a
+# project with the Vertex AI API enabled. Not loaded automatically — see
+# README.md.
 version: 1
 
 seeds:

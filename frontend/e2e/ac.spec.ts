@@ -77,6 +77,9 @@ async function settleAnimations(page: Page) {
       running: document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
+        // A scroll-driven animation follows the scroll position, not the
+        // clock, so axe reads the frame a reader at that position sees.
+        .filter((animation) => animation.timeline instanceof DocumentTimeline)
         .map((animation) => {
           const effect = animation.effect;
           return effect instanceof KeyframeEffect &&
@@ -1116,9 +1119,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
   // The settings sidebar's own group heading also reads "Du", so the actor
-  // label is read inside the trail's panel — the count-0 below proves the
-  // filter dropped the ROW rather than that the sidebar went missing.
-  const trail = page.getByRole("region", { name: "Audit-Log" });
+  // label is read inside the trail's table. The count-0 below then proves the
+  // filter dropped the ROW, not the sidebar.
+  const trail = page.getByRole("table", {
+    name: de["settings.auditTrailLabel"],
+  });
   await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
@@ -1130,14 +1135,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   await expect(
     page.getByText("connector:gmail", { exact: true }),
   ).toBeVisible();
-  // The dials are the card's SECONDARY half — a reader arrives to read what
-  // happened and narrows it second — so they sit in a disclosure closed on
-  // arrival and the filter has to be opened before it can be typed in.
-  await page
-    .locator("details")
-    .filter({ has: page.getByText("Filter", { exact: true }) })
-    .locator("summary")
-    .click();
+  // The dials stand open on a bar above the trail, each applying on its own.
   // The actor filter still speaks the API's `type:id` vocabulary, which is the
   // spelling the column itself carries.
   await page

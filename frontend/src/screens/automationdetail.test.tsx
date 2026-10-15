@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import {
   AutomationPreview,
@@ -165,10 +166,13 @@ describe("AutomationRuns", () => {
     await waitFor(() =>
       expect(screen.getByText("unfiltered-run")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Failed" }));
+    const user = userEvent.setup();
+    await pickOption(user, screen.getByRole("combobox"), "Failed");
     await waitFor(() =>
       expect(screen.getByText("No runs with this outcome.")).toBeTruthy(),
     );
+    // A narrowing that found nothing keeps its dial, so it can be undone.
+    expect(screen.getByRole("combobox").textContent).toContain("Failed");
     // the request that produced the empty state carried the outcome filter
     expect(
       fetchMock.mock.calls.some(([input]) =>
@@ -177,6 +181,17 @@ describe("AutomationRuns", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("draws the outcome filter while the first page loads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    render(<AutomationRuns automationId="au-1" />);
+    expect(
+      await screen.findByRole("combobox", { name: "Outcome" }),
+    ).toBeTruthy();
   });
 
   it("shows the never-fired empty state distinct from an error", async () => {
@@ -192,6 +207,8 @@ describe("AutomationRuns", () => {
         screen.getByText("This automation has not fired yet."),
       ).toBeTruthy(),
     );
+    // Nothing to narrow yet: the empty history is its one line, no dial.
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("surfaces the RFC 7807 detail on error", async () => {

@@ -325,16 +325,15 @@ describe("the grant that opens one settings page", () => {
     await waitFor(() => expect(offeredPages()).toEqual(floorPlus("company")));
   });
 
-  it("opens AI usage for a lone ai_model_rate read", async () => {
-    // Model prices joined the usage figures they price, and either term of that
-    // page's requirement opens it on its own — so the union has to be read as a
-    // union and not as one object with a decorative second term.
+  it("opens AI models for a lone ai_model_rate read", async () => {
+    // Model prices sit beside the models they price. Any term of that page's
+    // requirement opens it on its own, so the union is read as a union.
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({ roles: ["ops"], allow: readOn("ai_model_rate") }),
     );
     renderHome();
-    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("usage")));
+    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("models")));
   });
 
   it("opens both AI diagnostics pages for a lone ai_diagnostics read", async () => {

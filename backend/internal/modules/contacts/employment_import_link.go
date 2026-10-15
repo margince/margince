@@ -103,7 +103,7 @@ func recordEmploymentOutcome(ctx context.Context, tx pgx.Tx, contact ids.Contact
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, contact.UUID, relationshipUpdatedPayload(contactEntity, map[string]any{eventKeyDelta: map[string]any{employmentImportField: state}}))
+	return storekit.EmitEvent(ctx, tx, auditID, contact.UUID, relationshipUpdatedPayload(ctx, contactEntity, map[string]any{eventKeyDelta: map[string]any{employmentImportField: state}}))
 }
 
 // Each purchase keeps its own support even when the episode was already resolved.

@@ -27,6 +27,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
+  // Audit filter examples in the stored spelling the filter matches.
+  "settings.auditActorExample",
+  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The name of the network, offered as a profile field in the research drawer.
@@ -268,7 +271,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
   "aicalls.ms",
-  "operations.inWords",
+  "operations.reading",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
   "share.ceiling.post",

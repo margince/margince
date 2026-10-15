@@ -272,15 +272,21 @@ function CloseReading({
   // Through the reader's own plural rule, so a deal closing tomorrow does not
   // read "in 1 days".
   const days = calendarDaysUntil(deal.expected_close_date, zone);
-  const parts: string[] = [
-    days < 0
-      ? translatePlural(locale, "deal.strip.close.overdue", -days, {
-          days: formatNumber(-days, locale),
-        })
-      : translatePlural(locale, "deal.strip.close.inDays", days, {
-          days: formatNumber(days, locale),
-        }),
-  ];
+  // A won or lost deal's date is when it closed, so it is neither late nor
+  // upcoming. Only an open deal gets a count.
+  const closed = deal.status === "won" || deal.status === "lost";
+  const parts: string[] = [];
+  if (!closed) {
+    parts.push(
+      days < 0
+        ? translatePlural(locale, "deal.strip.close.overdue", -days, {
+            days: formatNumber(-days, locale),
+          })
+        : translatePlural(locale, "deal.strip.close.inDays", days, {
+            days: formatNumber(days, locale),
+          }),
+    );
+  }
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
@@ -298,7 +304,7 @@ function CloseReading({
     <span className="deal-fact-close">
       <span
         className={
-          deal.close_date_provisional || days < 0
+          deal.close_date_provisional || (!closed && days < 0)
             ? "deal-fact-close-warn"
             : undefined
         }

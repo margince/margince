@@ -2,10 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { Disclosure, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { formatDayMonth, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
@@ -16,14 +14,7 @@ type AiUsage = components["schemas"]["AiUsage"];
 type UsageTask = AiUsage["days"][number]["tasks"][number];
 type UsageDay = AiUsage["days"][number];
 
-export type SpendRow = Readonly<{
-  key: string;
-  task: string;
-  name: string;
-  summary?: string;
-  // The tier a single-tier task ran on, or the tier of a subrow.
-  tier?: string;
-  subrow: boolean;
+type Figures = Readonly<{
   calls: number;
   cached: number;
   tokensIn: number;
@@ -33,6 +24,17 @@ export type SpendRow = Readonly<{
   // Some calls behind a priced line had no rate, so the cost is short.
   partlyPriced: boolean;
 }>;
+
+export type SpendRow = Figures &
+  Readonly<{
+    key: string;
+    task: string;
+    name: string;
+    summary?: string;
+    // The tier a single-tier task ran on, or the tier of a subrow.
+    tier?: string;
+    subrow: boolean;
+  }>;
 
 export function aggregate(days: AiUsage["days"]): UsageTask[] {
   const rows = new Map<string, UsageTask>();
@@ -68,13 +70,7 @@ function line(task: UsageTask, subrow: boolean): SpendRow {
     summary: task.task_summary,
     tier: task.tier,
     subrow,
-    calls: task.calls,
-    cached: task.cached_hits ?? 0,
-    tokensIn: task.tokens_in,
-    tokensOut: task.tokens_out,
-    cost: task.cost_est_minor,
-    partlyPriced:
-      task.cost_est_minor !== undefined && (task.unpriced_calls ?? 0) > 0,
+    ...figuresOf([task]),
   };
 }
 
@@ -85,28 +81,36 @@ function sum(
   return lines.reduce((total, entry) => total + pick(entry), 0);
 }
 
+// One rule for every sum of lines: a task over its tiers, a day over its
+// tasks, the month over everything.
+function figuresOf(lines: readonly UsageTask[]): Figures {
+  const priced = lines.filter((entry) => entry.cost_est_minor !== undefined);
+  return {
+    calls: sum(lines, (entry) => entry.calls),
+    cached: sum(lines, (entry) => entry.cached_hits ?? 0),
+    tokensIn: sum(lines, (entry) => entry.tokens_in),
+    tokensOut: sum(lines, (entry) => entry.tokens_out),
+    cost:
+      priced.length === 0
+        ? undefined
+        : sum(priced, (entry) => entry.cost_est_minor ?? 0),
+    partlyPriced:
+      priced.length > 0 &&
+      lines.some(
+        (entry) =>
+          entry.cost_est_minor === undefined || (entry.unpriced_calls ?? 0) > 0,
+      ),
+  };
+}
+
 function total(first: UsageTask, tiers: readonly UsageTask[]): SpendRow {
-  const priced = tiers.filter((tier) => tier.cost_est_minor !== undefined);
   return {
     key: first.task,
     task: first.task,
     name: first.task_display_name ?? first.task,
     summary: first.task_summary,
     subrow: false,
-    calls: sum(tiers, (tier) => tier.calls),
-    cached: sum(tiers, (tier) => tier.cached_hits ?? 0),
-    tokensIn: sum(tiers, (tier) => tier.tokens_in),
-    tokensOut: sum(tiers, (tier) => tier.tokens_out),
-    cost:
-      priced.length === 0
-        ? undefined
-        : sum(priced, (tier) => tier.cost_est_minor ?? 0),
-    partlyPriced:
-      priced.length > 0 &&
-      tiers.some(
-        (tier) =>
-          tier.cost_est_minor === undefined || (tier.unpriced_calls ?? 0) > 0,
-      ),
+    ...figuresOf(tiers),
   };
 }
 
@@ -137,34 +141,13 @@ export function spendRows(lines: readonly UsageTask[]): SpendRow[] {
   return groups.flat();
 }
 
-function spendColumns(
+function figureColumns<Row extends Figures>(
   showCost: boolean,
   currency: string,
   locale: Locale,
   t: Translator,
-): DataTableColumn<SpendRow>[] {
-  const columns: DataTableColumn<SpendRow>[] = [
-    {
-      key: "task",
-      header: t("aiusage.col.task"),
-      grow: true,
-      render: (row) =>
-        row.subrow ? (
-          <span className="aiusage-subrow">
-            <span className="sr-only">{row.name}: </span>
-            {tierLabel(row.tier ?? "", t)}
-          </span>
-        ) : (
-          <span className="aiusage-task">
-            <CellStack>
-              <TaskName name={row.name} summary={row.summary} />
-              {row.tier !== undefined && (
-                <span className="t-caption">{tierLabel(row.tier, t)}</span>
-              )}
-            </CellStack>
-          </span>
-        ),
-    },
+): DataTableColumn<Row>[] {
+  const columns: DataTableColumn<Row>[] = [
     {
       key: "calls",
       header: t("aiusage.col.calls"),
@@ -210,80 +193,108 @@ function spendColumns(
   ];
 }
 
+function taskColumn(t: Translator): DataTableColumn<SpendRow> {
+  return {
+    key: "task",
+    header: t("aiusage.col.task"),
+    grow: true,
+    render: (row) =>
+      row.subrow ? (
+        <span className="aiusage-subrow">
+          <span className="sr-only">{row.name}: </span>
+          {tierLabel(row.tier ?? "", t)}
+        </span>
+      ) : (
+        <span className="aiusage-task">
+          <CellStack>
+            <TaskName name={row.name} summary={row.summary} />
+            {row.tier !== undefined && (
+              <span className="t-caption">{tierLabel(row.tier, t)}</span>
+            )}
+          </CellStack>
+        </span>
+      ),
+  };
+}
+
+export type SpendView = "task" | "day";
+
+export const SPEND_VIEWS: readonly SpendView[] = ["task", "day"];
+
+/** The month's sums over every task and tier, for the strip above the table. */
+export function monthTotals(lines: readonly UsageTask[]) {
+  return {
+    ...figuresOf(lines),
+    unpricedCalls: sum(lines, (entry) => entry.unpriced_calls ?? 0),
+  };
+}
+
 export function SpendByTask({
   rows,
   showCost,
   currency,
-  note,
 }: Readonly<{
   rows: readonly SpendRow[];
   showCost: boolean;
   currency: string;
-  note?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <>
-      <PanelGroupHead title={t("aiusage.spendLabel")} level="h3" />
-      {rows.length === 0 ? (
-        <PanelBody>
-          <EmptyState>{t("aiusage.empty")}</EmptyState>
-        </PanelBody>
-      ) : (
-        <DataTable
-          bleed
-          stickyFirst
-          label={t("aiusage.spendLabel")}
-          columns={spendColumns(showCost, currency, locale, t)}
-          rows={[...rows]}
-          rowKey={(row) => row.key}
-          rowTestId={(row) => `spend-${row.key.replace("\u0000", "-")}`}
-        />
-      )}
-      {note !== undefined && (
-        <PanelBody>
-          <p className="t-caption">{note}</p>
-        </PanelBody>
-      )}
-    </>
+    <DataTable
+      bleed
+      stickyFirst
+      label={t("aiusage.spendLabel")}
+      columns={[
+        taskColumn(t),
+        ...figureColumns<SpendRow>(showCost, currency, locale, t),
+      ]}
+      rows={[...rows]}
+      rowKey={(row) => row.key}
+      rowTestId={(row) => `spend-${row.key.replace("\u0000", "-")}`}
+    />
   );
 }
 
-export function CallsByDay({ days }: Readonly<{ days: readonly UsageDay[] }>) {
+type DayRow = Figures & Readonly<{ date: string }>;
+
+function dayRow(day: UsageDay): DayRow {
+  return { date: day.date, ...figuresOf(day.tasks) };
+}
+
+export function SpendByDay({
+  days,
+  showCost,
+  currency,
+}: Readonly<{
+  days: readonly UsageDay[];
+  showCost: boolean;
+  currency: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   return (
-    <PanelBody>
-      <Disclosure summary={t("aiusage.days.show")}>
-        <DataTable<UsageDay>
-          label={t("aiusage.days.label")}
-          rows={[...days]}
-          rowKey={(day) => day.date}
-          columns={[
-            {
-              key: "day",
-              header: t("aiusage.days.col.day"),
-              render: (day) => (
-                <time dateTime={day.date}>
-                  {formatDayMonth(day.date, locale, zone)}
-                </time>
-              ),
-            },
-            {
-              key: "calls",
-              header: t("aiusage.col.calls"),
-              align: "end",
-              render: (day) =>
-                formatNumber(
-                  day.tasks.reduce((calls, task) => calls + task.calls, 0),
-                  locale,
-                ),
-            },
-          ]}
-        />
-      </Disclosure>
-    </PanelBody>
+    <DataTable<DayRow>
+      bleed
+      stickyFirst
+      label={t("aiusage.days.label")}
+      rows={days.map(dayRow)}
+      rowKey={(day) => day.date}
+      rowTestId={(day) => `spend-day-${day.date}`}
+      columns={[
+        {
+          key: "day",
+          header: t("aiusage.days.col.day"),
+          grow: true,
+          render: (day) => (
+            <time dateTime={day.date}>
+              {formatDayMonth(day.date, locale, zone)}
+            </time>
+          ),
+        },
+        ...figureColumns<DayRow>(showCost, currency, locale, t),
+      ]}
+    />
   );
 }

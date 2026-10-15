@@ -199,7 +199,9 @@ describe("the Providers list", () => {
     const gemini = await row("gemini");
     await within(gemini).findByText("Everyday cloud");
     expect(within(gemini).getByText("Embedding model")).toBeTruthy();
-    expect(within(gemini).getByText("gemini")).toBeTruthy();
+    // The vendor's key belongs to its sheet, not to the row.
+    expect(within(gemini).getByText("Google Gemini")).toBeTruthy();
+    expect(within(gemini).queryByText("gemini")).toBeNull();
     expect(within(gemini).queryByText("Active")).toBeNull();
     expect((await row("anthropic")).textContent).toContain("Ready");
     expect((await row("anthropic")).textContent).not.toContain("Not used");
