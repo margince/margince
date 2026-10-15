@@ -103,6 +103,8 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 		return productListFilters.Names()
 	case datasource.EntityOfferTemplate:
 		return offerTemplateListFilters.Names()
+	case datasource.EntityOffer:
+		return offerListFilters.Names()
 	default:
 		return nil
 	}

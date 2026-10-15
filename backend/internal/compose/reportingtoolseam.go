@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -18,10 +19,18 @@ import (
 
 func reportingReader(pool *pgxpool.Pool) agents.ReportingReader {
 	service := newReportingService(pool, time.Now)
+	ledger := commissions.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, in agents.ReportingRead) (agents.ReportingAnswer, error) {
+		if in.Mode == reportingCommissionSummary {
+			out, err := ledger.Summary(ctx)
+			return agents.ReportingAnswer{CommissionSummary: &out}, err
+		}
 		return readReportingResult(ctx, service, in)
 	}
 }
+
+// reportingCommissionSummary is the mode GET /commissions/summary is asked as.
+const reportingCommissionSummary = "commission_summary"
 
 func readReportingResult(ctx context.Context, s *reporting.Service, in agents.ReportingRead) (agents.ReportingAnswer, error) {
 	cursor, err := reportingToolCursor(in)

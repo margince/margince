@@ -56,7 +56,7 @@ var archivableRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
 	string(datasource.EntityRelationship), string(datasource.EntityActivity),
-	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate),
+	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate), string(datasource.EntityOffer),
 }
 
 // archivableHere answers what the ROUTED executor archives, falling back to the
@@ -111,9 +111,9 @@ func (t archiveRecord) Spec() mcp.ToolSpec {
 		Description:   archiveRecordCopy.render(),
 		Instead:       archiveRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity/archiveProduct/archiveOfferTemplate",
+		OpenAPIOp: "archiveContact/archiveCompany/archiveDeal/archiveProject/archiveRelationship/archiveActivity/archiveProduct/archiveOfferTemplate/archiveOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity","product","offer_template"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","project","relationship","activity","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),

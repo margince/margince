@@ -88,6 +88,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	if features.lists {
 		provider = provider.WithListMembers(NewCollectionsStore(pool).MemberFilter)
 	}
+	if features.served != nil {
+		provider = provider.WithRetiredRendering(features.served.deleteBlob)
+	}
 	// Every mutating tool shares retry claims and replay authorization on every host role.
 	opts = append(opts, withContractTierFloor(),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
@@ -99,6 +102,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCoreTools(registry, provider, provider, provider, fieldOwnership{pool: pool}, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
+	agents.RegisterOfferLinesTool(registry, provider)
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})

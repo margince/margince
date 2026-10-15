@@ -7,15 +7,19 @@ package agents
 // REQUIRED by the contract; `?` marks one the body may omit.
 
 var createRecordShapes = map[string]string{
-	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, title?: string}",
-	"company":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string}",
-	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, stage_id: uuid}",
-	"lead":           "{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, phone?: string, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
-	"activity":       "{assignee_id?: uuid, attendee_user_ids?: [uuid], body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, host_user_id?: uuid, ical_instance?: string, ical_uid?: string, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"contact\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, participants?: {cc?: [string], from?: string, to?: [string]}, raw?: object, remind_at?: rfc3339, request_activity_id?: uuid, rfc_message_id?: string, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, subject?: string, thread_key?: string}",
-	"project":        "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
-	"relationship":   "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \"current\"|\"former\"|\"unknown\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
-	"product":        "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", currency: string, default_tax_rate?: number, description?: string, name: string, sku?: string, source?: string, unit?: string, unit_price_minor: integer}",
-	"offer_template": "{is_default?: boolean, layout: object, locale?: string, name: string}",
+	"contact":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, title?: string}",
+	"company":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string}",
+	"deal":              "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, stage_id: uuid}",
+	"lead":              "{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, phone?: string, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
+	"activity":          "{assignee_id?: uuid, attendee_user_ids?: [uuid], body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, host_user_id?: uuid, ical_instance?: string, ical_uid?: string, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"contact\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, participants?: {cc?: [string], from?: string, to?: [string]}, raw?: object, remind_at?: rfc3339, request_activity_id?: uuid, rfc_message_id?: string, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, subject?: string, thread_key?: string}",
+	"project":           "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
+	"relationship":      "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \"current\"|\"former\"|\"unknown\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
+	"product":           "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", currency: string, default_tax_rate?: number, description?: string, name: string, sku?: string, source?: string, unit?: string, unit_price_minor: integer}",
+	"offer_template":    "{is_default?: boolean, layout: object, locale?: string, name: string}",
+	"offer":             "{deal_id: uuid, buyer_company_id?: uuid, currency: string, intro_text?: string, line_items?: [{billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", description?: string, discount_pct?: number, interval_count?: integer, position?: integer, product_id?: uuid, quantity: number, tax_rate?: number, unit?: string, unit_price_minor?: integer}], source?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}",
+	"deal_room":         "{deal_id: uuid, expires_at?: rfc3339, source?: string, steward_user_id?: uuid, title: string, welcome_message?: string}",
+	"deal_room_thread":  "{deal_room_id: uuid, body: string, document_id?: uuid, request_id?: uuid, required_change?: boolean, source?: string}",
+	"deal_room_comment": "{deal_room_id: uuid, thread_id: uuid, body: string, request_id?: uuid, source?: string}",
 }
 
 var updateRecordShapes = map[string]string{
@@ -28,6 +32,15 @@ var updateRecordShapes = map[string]string{
 	"relationship":   "{clear_ended_at?: boolean, clear_started_at?: boolean, employment_status?: \"current\"|\"former\"|\"unknown\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
 	"product":        "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\"|\"not_specified\", currency?: string, default_tax_rate?: number, description?: string, name?: string, sku?: string, unit?: string, unit_price_minor?: integer}",
 	"offer_template": "{is_default: boolean, layout: object, locale: string, name: string}",
+	"offer":          "{buyer_company_id?: uuid, currency?: string, intro_text?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}",
+}
+
+// createParentFields are the parent ids a create names among its fields: its
+// REST route carries them in its path.
+var createParentFields = map[string][]string{
+	"offer":             {"deal_id"},
+	"deal_room_thread":  {"deal_room_id"},
+	"deal_room_comment": {"deal_room_id", "thread_id"},
 }
 
 // The contract's own closed vocabularies, as JSON arrays a tool's InputSchema
@@ -150,5 +163,32 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "sort", Type: "string"},
 		{Name: "thread_key", Type: "string"},
 		{Name: "waiting_reply", Type: "boolean"},
+	},
+	"offer": {
+		{Name: "deal_id", Type: "string"},
+		{Name: "status", Type: "string", Enum: []string{"draft", "sent", "accepted", "rejected", "expired", "superseded"}},
+	},
+	"commission": {
+		{Name: "deal_id", Type: "string"},
+		{Name: "partner_company_id", Type: "string"},
+		{Name: "status", Type: "string"},
+	},
+	"deal_room": {
+		{Name: "deal_id", Type: "string"},
+		{Name: "include_archived", Type: "boolean"},
+		{Name: "participant_email", Type: "string"},
+		{Name: "sort", Type: "string"},
+		{Name: "state", Type: "string"},
+	},
+	"deal_room_thread": {
+		{Name: "deal_room_id", Type: "string"},
+		{Name: "document_id", Type: "string"},
+	},
+	"deal_room_document": {
+		{Name: "deal_room_id", Type: "string"},
+	},
+	"deal_room_participant": {
+		{Name: "active_only", Type: "boolean"},
+		{Name: "deal_room_id", Type: "string"},
 	},
 }

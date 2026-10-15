@@ -13,11 +13,11 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 56 |
+| Tools | 57 |
 | Resources | 9 |
-| Tool catalog | 175.0 KB |
+| Tool catalog | 178.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45701 |
+| Approx. wire tokens | 46522 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.0 KB | 27% | Yes, every step |
-| Input schemas | 52.5 KB | 30% | Yes, every step |
-| _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **100.6 KB** | **57%** | **the recurring cost** |
+| Output schemas | 62.0 KB | 34% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.6 KB | 27% | Yes, every step |
+| Input schemas | 54.0 KB | 30% | Yes, every step |
+| _Names, annotations, punctuation_ | 13.7 KB | 7% | Partly |
+| **Description + input schema** | **102.6 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -55,13 +55,13 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (56)
+### Tools (57)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 416 |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 299 |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 301 |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 212 |
 | [`attach_document`](#attach_document) | Attach a file to a record |  |  | 399 |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 344 |
@@ -69,11 +69,12 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
+| [`change_offer`](#change_offer) | Change an offer's line items |  |  | 348 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 497 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 634 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 649 |
 | [`create_task`](#create_task) | Create a task |  |  | 221 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 349 |
@@ -82,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 707 |
+| [`list_records`](#list_records) | List records | yes |  | 778 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
@@ -97,9 +98,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
-| [`read_record`](#read_record) | Read a record | yes |  | 298 |
+| [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 544 |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 566 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
@@ -112,7 +113,7 @@ descriptions and input schemas are what each step pays for.
 | [`search_records`](#search_records) | Search records | yes |  | 456 |
 | [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 335 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 588 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 590 |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 273 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -663,7 +664,8 @@ has answered. (Runs immediately; requires passport scope "write".)
         "relationship",
         "activity",
         "product",
-        "offer_template"
+        "offer_template",
+        "offer"
       ],
       "type": "string"
     }
@@ -2420,6 +2422,207 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 
 </details>
 
+### change_offer
+
+**Change an offer's line items**
+
+```text
+Add a line item to an offer, change one, or remove one. Prices are in minor units; read a product
+for its unit_price_minor rather than inventing one. Totals are computed from the lines and cannot be
+supplied. A sent or accepted offer keeps its lines. It answers the whole offer with its new totals.
+Use create_record with record_type offer to make an offer, with its first lines, and update_record
+for its other fields. (Runs immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "add_line",
+        "update_line",
+        "remove_line"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "line": {
+      "additionalProperties": false,
+      "description": "The line to add, or the fields of it to change. quantity is required to add one; product_id is taken only on add.",
+      "properties": {
+        "billing_interval_months": {
+          "enum": [
+            "1",
+            "3",
+            "6",
+            "12"
+          ],
+          "type": "string"
+        },
+        "billing_model": {
+          "enum": [
+            "one_time",
+            "recurring"
+          ],
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount_pct": {
+          "type": "number"
+        },
+        "interval_count": {
+          "type": "integer"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "tax_rate": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "unit_price_minor": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "line_item_id": {
+      "description": "The line to update or remove",
+      "format": "uuid",
+      "type": "string"
+    },
+    "offer_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "action",
+    "offer_id"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "offer": {
+          "description": "The offer after the change, with its lines and its new totals",
+          "type": "object"
+        }
+      },
+      "required": [
+        "offer"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### change_tags
 
 **Change tags**
@@ -3198,7 +3401,11 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "project",
         "relationship",
         "product",
-        "offer_template"
+        "offer_template",
+        "offer",
+        "deal_room",
+        "deal_room_thread",
+        "deal_room_comment"
       ],
       "type": "string"
     }
@@ -4615,6 +4822,9 @@ advising an approach as though the record were unowned.
         "active": {
           "type": "string"
         },
+        "active_only": {
+          "type": "string"
+        },
         "ai_written": {
           "type": "string"
         },
@@ -4631,6 +4841,15 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "company_id": {
+          "type": "string"
+        },
+        "deal_id": {
+          "type": "string"
+        },
+        "deal_room_id": {
+          "type": "string"
+        },
+        "document_id": {
           "type": "string"
         },
         "domain": {
@@ -4684,6 +4903,9 @@ advising an approach as though the record were unowned.
         "owner_team_id": {
           "type": "string"
         },
+        "participant_email": {
+          "type": "string"
+        },
         "partner_attribution": {
           "type": "string"
         },
@@ -4726,6 +4948,9 @@ advising an approach as though the record were unowned.
         "stalled": {
           "type": "string"
         },
+        "state": {
+          "type": "string"
+        },
         "status": {
           "type": "string"
         },
@@ -4761,7 +4986,13 @@ advising an approach as though the record were unowned.
         "project",
         "product",
         "offer_template",
-        "activity"
+        "activity",
+        "offer",
+        "commission",
+        "deal_room",
+        "deal_room_thread",
+        "deal_room_document",
+        "deal_room_participant"
       ],
       "type": "string"
     }
@@ -8247,7 +8478,10 @@ were unowned.
         "project",
         "partner",
         "product",
-        "offer_template"
+        "offer_template",
+        "offer",
+        "commission",
+        "deal_room"
       ],
       "type": "string"
     }
@@ -8444,13 +8678,14 @@ no name is one this caller may not read, so report the gap and do not guess.
 
 ```text
 Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report
-definitions and frozen editions. Read only. Catalog returns permitted metric IDs and blocks.
-Evaluate requires a selection. Report and editions require a report id; edition requires an edition
-id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact
-reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting
-numbers. Use read_directory (list: pipelines) to discover pipeline and stage IDs. Use
-run_analytics_query for custom groupings and compose_analytics_report for a document. Configure
-targets, report sharing and schedules in Analytics.
+definitions and frozen editions. Read only. commission_summary answers the open partner commission
+liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report
+and editions require a report id; edition requires an edition id. Evidence requires the evaluation
+receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs.
+Always retain coverage and capture times when quoting numbers. Use read_directory (list: pipelines)
+to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and
+compose_analytics_report for a document. Configure targets, report sharing and schedules in
+Analytics.
 ```
 
 <details><summary>Input schema</summary>
@@ -8489,7 +8724,8 @@ targets, report sharing and schedules in Analytics.
         "editions",
         "edition",
         "evidence",
-        "compare"
+        "compare",
+        "commission_summary"
       ],
       "type": "string"
     },
@@ -8611,6 +8847,9 @@ targets, report sharing and schedules in Analytics.
       "additionalProperties": false,
       "properties": {
         "catalog": {
+          "type": "object"
+        },
+        "commission_summary": {
           "type": "object"
         },
         "comparison": {
@@ -11131,7 +11370,8 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
         "project",
         "relationship",
         "product",
-        "offer_template"
+        "offer_template",
+        "offer"
       ],
       "type": "string"
     }

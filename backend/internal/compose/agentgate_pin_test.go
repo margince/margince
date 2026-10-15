@@ -100,6 +100,12 @@ var unpinnableConfirmFirstTypes = gatekit.Waive(map[agentRecordType]string{
 		"refuse on state before any pin could speak. The residue is the diff_hash identical-call " +
 		"binding, and it is narrower here than elsewhere: the only argument is the run id, so a " +
 		"drifted call is a different run and fails the hash.",
+	"deal_room": "the only agent route that stages against a room is createDealRoom, a CREATE: it names no " +
+		"existing row, so there is no version to pin, and the diff_hash binds the call that makes it.",
+	"deal_room_thread": "openDealRoomThread is a CREATE of a thread: no existing row, so nothing to pin; " +
+		"the diff_hash binds the call.",
+	"deal_room_comment": "replyDealRoomThread CREATES a reply: no existing row, so nothing to pin; the " +
+		"diff_hash binds the call.",
 })
 
 // Every operation that can stage against a concrete record type must have a type

@@ -207,7 +207,19 @@ func createRoomItemCommand(pol agentPolicy, deps restCommandDeps, r *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	fields, err := withRoomID(body, roomID)
+	parents := map[string]ids.UUID{"deal_room_id": roomID}
+	if pol.RecordType == recordTypeDealRoomComment {
+		raw, err := pathOperand(r, "threadId")
+		if err != nil {
+			return nil, err
+		}
+		threadID, perr := ids.Parse(raw)
+		if perr != nil {
+			return nil, apperrors.ErrNotFound
+		}
+		parents["thread_id"] = threadID
+	}
+	fields, err := withParents(body, parents)
 	if err != nil {
 		return nil, err
 	}
@@ -256,22 +268,24 @@ func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request
 	}), nil
 }
 
-// withRoomID folds the routed room into a create body so the staged approval
-// names where the item lands. A body that is not an object is refused here
-// rather than reaching the handler, because a create whose fields cannot carry
-// the room would stage an item belonging to no room at all.
-func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
+// withParents folds the routed parents into a create body, under the names a
+// create_record call gives them. The staged approval names where the item
+// lands, and both doors stage one command. A body that is not an object is
+// refused here: a create whose fields cannot carry its room belongs nowhere.
+func withParents(body []byte, parents map[string]ids.UUID) (json.RawMessage, error) {
 	fields := map[string]json.RawMessage{}
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &fields); err != nil {
 			return nil, httperr.Validation("body", "invalid", "the request body must be a JSON object")
 		}
 	}
-	encoded, err := json.Marshal(roomID)
-	if err != nil {
-		return nil, httperr.Validation("id", "invalid", "the room in the path is not a uuid")
+	for name, id := range parents {
+		encoded, err := json.Marshal(id)
+		if err != nil {
+			return nil, httperr.Validation(name, "invalid", "the "+name+" in the path is not a uuid")
+		}
+		fields[name] = encoded
 	}
-	fields["room_id"] = encoded
 	merged, err := json.Marshal(fields)
 	if err != nil {
 		return nil, httperr.Validation("body", "invalid", "the request body could not be read as fields")

@@ -32,6 +32,15 @@ var listRecordsCopy = toolCopy{
 		"A result's `owner` says who holds it. " + sayWhoseItIs,
 }
 
+var changeOfferCopy = toolCopy{
+	Purpose: "Add a line item to an offer, change one, or remove one. Prices are in minor units; " +
+		"read a product for its unit_price_minor rather than inventing one.",
+	Limits: "Totals are computed from the lines and cannot be supplied. A sent or accepted offer " +
+		"keeps its lines. It answers the whole offer with its new totals.",
+	Instead: "Use create_record with record_type offer to make an offer, with its first lines, and " +
+		"update_record for its other fields.",
+}
+
 var readRecordCopy = toolCopy{
 	Purpose: "Read one record's own stored fields — the values a reader would see on its detail " +
 		"page — when you already know which record you mean.",

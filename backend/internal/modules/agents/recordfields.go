@@ -42,15 +42,19 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:       reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:          reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:       reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
-		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.CreateProductRequest](),
-		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
+		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
+		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -67,6 +71,7 @@ var (
 		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
 		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.UpdateProductRequest](),
 		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.UpdateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.UpdateOfferRequest](),
 	}
 )
 
@@ -100,6 +105,14 @@ func contractFieldNames(t reflect.Type) []string {
 		}
 		names = append(names, name)
 	}
+	sort.Strings(names)
+	return names
+}
+
+// acceptedFieldNames is what a write's fields may name: the contract body's own
+// fields and the parent ids its route carries in its path, sorted.
+func acceptedFieldNames(shape reflect.Type, parents []string) []string {
+	names := append(contractFieldNames(shape), parents...)
 	sort.Strings(names)
 	return names
 }
@@ -188,7 +201,7 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
-	for _, name := range contractFieldNames(shape) {
+	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType]) {
 		accepted[name] = struct{}{}
 	}
 	var unknown []string
@@ -308,10 +321,13 @@ type writeShapes struct {
 	// with its JSON type, its closed vocabulary where it has one, and a `?` on
 	// the ones the body may omit.
 	rendered map[string]string
+	// parents are the parent ids a create names among its fields, which its
+	// REST route carries in its path.
+	parents map[string][]string
 }
 
 var (
-	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes}
+	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes, parents: createParentFields}
 	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
 )
 

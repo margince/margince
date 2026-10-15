@@ -182,6 +182,40 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"archiveActivity":      archiveDoors("activities", "activity"),
 	"archiveProduct":       archiveDoors("products", "product"),
 	"archiveOfferTemplate": archiveDoors("offer-templates", "offer_template"),
+	"archiveOffer":         archiveDoors("offers", "offer"),
+	"updateOffer":          updateDoors("offers", "offer", `{"intro_text":"Thank you for your time"}`),
+	"createDealRoom": createDoors("deal-rooms", "deal_room",
+		`{"title":"Renewal room","deal_id":"019ff000-0000-7000-8000-000000000015"}`),
+	// Each of these is created ON a parent its route names in its path and a
+	// create_record call among its fields.
+	"createOffer": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/deals/"+primary.String()+"/offers", primary, `{"currency":"EUR"}`)
+		},
+		args: func(primary, _ ids.UUID) string {
+			return `{"record_type":"offer","fields":{"deal_id":"` + primary.String() + `","currency":"EUR"}}`
+		},
+	},
+	"openDealRoomThread": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPost, "/v1/deal-rooms/"+primary.String()+"/threads", primary, `{"body":"Questions?"}`)
+		},
+		args: func(primary, _ ids.UUID) string {
+			return `{"record_type":"deal_room_thread","fields":{"deal_room_id":"` + primary.String() + `","body":"Questions?"}}`
+		},
+	},
+	"replyDealRoomThread": {
+		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
+			req, body := doorRequest(http.MethodPost,
+				"/v1/deal-rooms/"+primary.String()+"/threads/"+secondary.String()+"/comments", primary, `{"body":"Yes"}`)
+			chi.RouteContext(req.Context()).URLParams.Add("threadId", secondary.String())
+			return req, body
+		},
+		args: func(primary, secondary ids.UUID) string {
+			return `{"record_type":"deal_room_comment","fields":{"deal_room_id":"` + primary.String() +
+				`","thread_id":"` + secondary.String() + `","body":"Yes"}}`
+		},
+	},
 
 	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),

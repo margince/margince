@@ -68,6 +68,18 @@ const (
 	// owner or a row scope. A passport keeps the catalog on MCP as on REST.
 	EntityProduct       EntityType = "product"
 	EntityOfferTemplate EntityType = "offer_template"
+	// EntityOffer is a priced proposal on a deal, and EntityCommission a row of
+	// the partner commission ledger. Both take their deal's row scope.
+	EntityOffer      EntityType = "offer"
+	EntityCommission EntityType = "commission"
+	// The deal room and what it holds: its threads, a reply in one, the
+	// documents it shows its buyer and the buyers it admits. Each takes the
+	// room's deal's row scope.
+	EntityDealRoom            EntityType = "deal_room"
+	EntityDealRoomThread      EntityType = "deal_room_thread"
+	EntityDealRoomComment     EntityType = "deal_room_comment"
+	EntityDealRoomDocument    EntityType = "deal_room_document"
+	EntityDealRoomParticipant EntityType = "deal_room_participant"
 )
 
 // EntityTypes returns the vocabulary in a stable order, for the callers
@@ -85,7 +97,9 @@ func EntityTypes() []EntityType {
 	return []EntityType{
 		EntityContact, EntityCompany, EntityDeal, EntityLead,
 		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
-		EntityProduct, EntityOfferTemplate,
+		EntityProduct, EntityOfferTemplate, EntityOffer, EntityCommission,
+		EntityDealRoom, EntityDealRoomThread, EntityDealRoomComment,
+		EntityDealRoomDocument, EntityDealRoomParticipant,
 	}
 }
 

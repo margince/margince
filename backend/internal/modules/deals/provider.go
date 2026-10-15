@@ -25,6 +25,7 @@ import (
 type Provider struct {
 	store       *Store
 	listMembers storekit.ListMemberFilterResolver
+	reclaim     RetiredRendering
 }
 
 // WithListMembers lets the deal list narrow to one list's members, through
@@ -62,6 +63,8 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 		return datasource.NewRecord(r, v, v.Version)
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.readCatalog(ctx, r)
+	case datasource.EntityOffer:
+		return p.readOffer(ctx, r)
 	default:
 		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}
@@ -102,6 +105,8 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return records, page.NextCursor, page.HasMore, nil
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.searchCatalog(ctx, t, text, limit, cursor, filters)
+	case datasource.EntityOffer:
+		return p.searchOffers(ctx, text, limit, cursor, filters)
 	default:
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
@@ -127,6 +132,8 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.createCatalog(ctx, in.EntityType, raw, in.Source)
+	case datasource.EntityOffer:
+		return p.createOffer(ctx, raw, in.Source)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
 	}
@@ -153,6 +160,8 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.updateCatalog(ctx, in, raw)
+	case datasource.EntityOffer:
+		return p.updateOffer(ctx, in, raw)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
@@ -165,7 +174,9 @@ func (p *Provider) Archive(ctx context.Context, r datasource.EntityRef) (datasou
 // ArchivableTypes is datasource.RecordArchiverV2's: the one this module's
 // switch below actually serves.
 func (p *Provider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
-	return []datasource.EntityType{datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate}, nil
+	return []datasource.EntityType{
+		datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
+	}, nil
 }
 
 // RefuseArchive is datasource.RecordArchiverV2's stage-time half: each store's
@@ -176,6 +187,8 @@ func (p *Provider) RefuseArchive(ctx context.Context, r datasource.EntityRef) er
 		return p.store.RefuseArchiveDeal(ctx, ids.From[ids.DealKind](r.ID))
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.refuseArchiveCatalog(ctx, r)
+	case datasource.EntityOffer:
+		return p.refuseArchiveOffer(ctx, r)
 	default:
 		return &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}
@@ -189,6 +202,8 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.archiveCatalog(ctx, in.Ref)
+	case datasource.EntityOffer:
+		return p.archiveOffer(ctx, in.Ref)
 	default:
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}

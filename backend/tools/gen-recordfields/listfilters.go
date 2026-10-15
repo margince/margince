@@ -35,6 +35,12 @@ var listOperations = []struct{ recordType, operationID string }{
 	{"product", "listProducts"},
 	{"offer_template", "listOfferTemplates"},
 	{"activity", "listActivities"},
+	{"offer", "listDealOffers"},
+	{"commission", "listCommissionEntries"},
+	{"deal_room", "listDealRooms"},
+	{"deal_room_thread", "listDealRoomThreads"},
+	{"deal_room_document", "listDealRoomDocuments"},
+	{"deal_room_participant", "listDealRoomParticipants"},
 }
 
 // notAFieldFilter names the inline parameters that are NOT filters on the
@@ -64,6 +70,9 @@ type listFilter struct {
 type operation struct {
 	OperationID string       `yaml:"operationId"`
 	Parameters  []*parameter `yaml:"parameters"`
+	// path is where the operation is mounted, which names the parent a nested
+	// list hangs off.
+	path string
 }
 
 type parameter struct {
@@ -89,6 +98,7 @@ func operationsByID(paths map[string]map[string]yaml.Node) (map[string]*operatio
 				return nil, fmt.Errorf("decoding %s %s: %w", strings.ToUpper(key), path, err)
 			}
 			if op.OperationID != "" {
+				op.path = path
 				byID[op.OperationID] = &op
 			}
 		}
@@ -124,8 +134,31 @@ func listFiltersFor(op *operation, shared map[string]*parameter) ([]listFilter, 
 			Enum: enumValues(p.Schema),
 		})
 	}
+	filters = append(filters, parentFilters(op.path)...)
 	sort.Slice(filters, func(i, j int) bool { return filters[i].Name < filters[j].Name })
 	return filters, nil
+}
+
+// parentFilters names the parent a nested list hangs off: /deals/{id}/offers is
+// listed by deal_id. A list route is asked for one parent's children, so the
+// seam asks for the same parent by name.
+func parentFilters(path string) []listFilter {
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	var out []listFilter
+	for i, segment := range segments {
+		if i == 0 || !strings.HasPrefix(segment, "{") {
+			continue
+		}
+		parent := strings.ReplaceAll(segments[i-1], "-", "_")
+		switch {
+		case strings.HasSuffix(parent, "ies"):
+			parent = strings.TrimSuffix(parent, "ies") + "y"
+		default:
+			parent = strings.TrimSuffix(parent, "s")
+		}
+		out = append(out, listFilter{Name: parent + "_id", Type: "string"})
+	}
+	return out
 }
 
 // firstTypeName reduces a parameter's declared type to the one JSON type name

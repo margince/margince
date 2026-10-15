@@ -354,6 +354,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
+	RegisterOfferLinesTool(r, seamProbeOfferLines{})
 	RegisterBriefTool(r, func(context.Context) (ReadBriefResult, error) {
 		return ReadBriefResult{}, errSeamReached
 	})
@@ -633,4 +634,19 @@ type seamProbeInviter struct{}
 
 func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
 	return crmcontracts.MeetingInvitation{}, errSeamReached
+}
+
+// seamProbeOfferLines reports that change_offer's arguments reached its seam.
+type seamProbeOfferLines struct{}
+
+func (seamProbeOfferLines) AddOfferLine(context.Context, ids.UUID, json.RawMessage) (crmcontracts.Offer, error) {
+	return crmcontracts.Offer{}, errSeamReached
+}
+
+func (seamProbeOfferLines) UpdateOfferLine(context.Context, ids.UUID, ids.UUID, json.RawMessage) (crmcontracts.Offer, error) {
+	return crmcontracts.Offer{}, errSeamReached
+}
+
+func (seamProbeOfferLines) RemoveOfferLine(context.Context, ids.UUID, ids.UUID) (crmcontracts.Offer, error) {
+	return crmcontracts.Offer{}, errSeamReached
 }

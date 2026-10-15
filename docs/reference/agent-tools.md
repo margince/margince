@@ -80,6 +80,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
 | `change_lead_state` | 🟢 | `write` | no | 🔀 Change a lead's state <details><summary>actions</summary>`demote_lead` `disqualify_lead` `promote_lead` `qualify_lead`</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
+| `change_offer` | 🟢 | `write` | no | Change an offer's line items |
 | `change_tags` | 🟢 | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply_tag` `archive_tag` `create_tag` `remove_tag` `update_tag`</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 | `write` | no | Create a record |

@@ -66,6 +66,9 @@ var listRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
 	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate), string(datasource.EntityActivity),
+	string(datasource.EntityOffer), string(datasource.EntityCommission), string(datasource.EntityDealRoom),
+	string(datasource.EntityDealRoomThread), string(datasource.EntityDealRoomDocument),
+	string(datasource.EntityDealRoomParticipant),
 }
 
 // RegisterListTool joins list_records to the surface.
@@ -109,9 +112,9 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		Description:   listRecordsCopy.render(),
 		Instead:       listRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities",
+		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities/listDealOffers/listCommissionEntries/listDealRooms/listDealRoomThreads/listDealRoomDocuments/listDealRoomParticipants",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity"]},` +
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant"]},` +
 			t.filtersProperty() + `
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},

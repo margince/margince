@@ -124,14 +124,14 @@ The 10 tables owned by `platform`, as the migrations build them. [Back to the en
 | `evidence_ref` | `text` |  |  |
 | `field_name` | `text` | yes |  |
 | `object_id` | `uuid` | yes |  |
-| `object_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 4 more. |
+| `object_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 11 more. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Rules**
 
 - `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
-- `field_provenance_object_type_check`: `CHECK ((object_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template'])))`
+- `field_provenance_object_type_check`: `CHECK ((object_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
 
 **Indexes**
 

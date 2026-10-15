@@ -62,7 +62,9 @@ const (
 // gate break on a rename that changed nothing about the vocabulary.
 var filterSetModules = []string{
 	"internal/modules/activities",
+	"internal/modules/commissions",
 	"internal/modules/contacts",
+	"internal/modules/dealrooms",
 	"internal/modules/deals",
 	"internal/modules/projects",
 }

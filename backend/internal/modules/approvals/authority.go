@@ -179,6 +179,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
+	// A line-item change is an offer write, gated on `offer.update` where the
+	// store performs it, so a floored one is decided on that grant.
+	"change_offer": {{targetOffer, principal.ActionUpdate}},
 	// A phase transition writes the project row and one phase-history row in
 	// one transaction (deals/project_advance.go); the gated effect is the
 	// project move, so the approver needs the project's update grant.

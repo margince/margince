@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 56,
+    "tools": 57,
     "system_frame_tokens": 597,
-    "tokens": 24657,
+    "tokens": 25125,
     "median_tool_tokens": 393,
-    "mean_tool_tokens": 439
+    "mean_tool_tokens": 440
   },
   "agents": [
     {
@@ -46,12 +46,12 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 56,
-      "tokens": 3695,
-      "listing_tokens": 1835,
-      "step_schema_tokens": 1263,
+      "of_served_tools": 57,
+      "tokens": 3854,
+      "listing_tokens": 1914,
+      "step_schema_tokens": 1343,
       "percent_of_ceiling": 11,
-      "headroom_tokens": 19515,
+      "headroom_tokens": 19356,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 56,
-      "tokens": 5362,
-      "listing_tokens": 2832,
-      "step_schema_tokens": 1933,
+      "of_served_tools": 57,
+      "tokens": 5522,
+      "listing_tokens": 2912,
+      "step_schema_tokens": 2013,
       "percent_of_ceiling": 16,
-      "headroom_tokens": 17848,
+      "headroom_tokens": 17688,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -109,12 +109,12 @@
       "tokens": 786
     },
     {
-      "name": "read_lists",
-      "tokens": 745
+      "name": "list_records",
+      "tokens": 778
     },
     {
-      "name": "list_records",
-      "tokens": 707
+      "name": "read_lists",
+      "tokens": 745
     },
     {
       "name": "read_forecast",
@@ -122,7 +122,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 634
+      "tokens": 649
     },
     {
       "name": "change_lists",
@@ -130,11 +130,11 @@
     },
     {
       "name": "update_record",
-      "tokens": 588
+      "tokens": 590
     },
     {
       "name": "read_reporting",
-      "tokens": 544
+      "tokens": 566
     },
     {
       "name": "query_workspace",
@@ -217,6 +217,10 @@
       "tokens": 348
     },
     {
+      "name": "change_offer",
+      "tokens": 348
+    },
+    {
       "name": "read_input_checks",
       "tokens": 346
     },
@@ -241,16 +245,16 @@
       "tokens": 322
     },
     {
+      "name": "read_record",
+      "tokens": 307
+    },
+    {
       "name": "relink_activity",
       "tokens": 303
     },
     {
       "name": "archive_record",
-      "tokens": 299
-    },
-    {
-      "name": "read_record",
-      "tokens": 298
+      "tokens": 301
     },
     {
       "name": "read_project",

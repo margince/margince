@@ -141,6 +141,31 @@ func readThread(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threadID 
 	return threads[0], nil
 }
 
+// GetThread reads one thread by its own id, under its room's read. The room is
+// what the caller's deal scope admits; a thread of a hidden room is absent.
+func (s *Store) GetThread(ctx context.Context, threadID ids.UUID) (crmcontracts.DealRoomThread, error) {
+	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+		return crmcontracts.DealRoomThread{}, err
+	}
+	var out crmcontracts.DealRoomThread
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var roomID ids.DealRoomID
+		err := tx.QueryRow(ctx, `SELECT room_id FROM deal_room_thread WHERE id = $1`, threadID).Scan(&roomID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("find the thread's room: %w", err)
+		}
+		if _, err := readRoom(ctx, tx, roomID); err != nil {
+			return err
+		}
+		out, err = readThread(ctx, tx, roomID, threadID)
+		return err
+	})
+	return out, err
+}
+
 // ListThreads is the seller's read.
 func (s *Store) ListThreads(ctx context.Context, roomID ids.DealRoomID, documentID *ids.UUID) ([]crmcontracts.DealRoomThread, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {

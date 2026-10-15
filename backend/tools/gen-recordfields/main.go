@@ -47,6 +47,21 @@ var recordBodies = []struct{ recordType, create, update string }{
 	{"relationship", "CreateRelationshipRequest", "UpdateRelationshipRequest"},
 	{"product", "CreateProductRequest", "UpdateProductRequest"},
 	{"offer_template", "CreateOfferTemplateRequest", "UpdateOfferTemplateRequest"},
+	{"offer", "CreateOfferRequest", "UpdateOfferRequest"},
+	{"deal_room", "CreateDealRoomRequest", ""},
+	{"deal_room_thread", "OpenDealRoomThreadRequest", ""},
+	{"deal_room_comment", "PostDealRoomCommentRequest", ""},
+}
+
+// createParents names the parent a record is created under, which its REST
+// route carries in its path and a create_record call among its fields.
+var createParents = []struct {
+	recordType string
+	fields     []string
+}{
+	{"offer", []string{"deal_id"}},
+	{"deal_room_thread", []string{"deal_room_id"}},
+	{"deal_room_comment", []string{"deal_room_id", "thread_id"}},
 }
 
 // schemas is the components/schemas map, kept whole so a $ref resolves against
@@ -131,6 +146,9 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 		b.WriteString("\nvar " + table.name + " = map[string]string{\n")
 		for _, entry := range recordBodies {
 			name := table.pick(entry)
+			if name == "" {
+				continue // created and never updated through the seam
+			}
 			schema, ok := all[name]
 			if !ok {
 				return nil, fmt.Errorf("crm.yaml declares no %s (the %s body for %s)", name, table.which, entry.recordType)
@@ -139,10 +157,27 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", name, err)
 			}
+			if table.which == "create" {
+				shape = withParents(shape, entry.recordType)
+			}
 			b.WriteString("\t" + strconv.Quote(entry.recordType) + ": " + strconv.Quote(shape) + ",\n")
 		}
 		b.WriteString("}\n")
 	}
+	b.WriteString("\n// createParentFields are the parent ids a create names among its fields: its\n")
+	b.WriteString("// REST route carries them in its path.\n")
+	b.WriteString("var createParentFields = map[string][]string{\n")
+	for _, entry := range createParents {
+		b.WriteString("\t" + strconv.Quote(entry.recordType) + ": {")
+		for i, field := range entry.fields {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(strconv.Quote(field))
+		}
+		b.WriteString("},\n")
+	}
+	b.WriteString("}\n")
 	if err := renderEnums(&b, all); err != nil {
 		return nil, err
 	}
@@ -420,4 +455,20 @@ func resolve(prop *node, all schemas) (*node, error) {
 		return &node{}, nil
 	}
 	return prop, nil
+}
+
+// withParents adds the parent ids a record type is created under to the front
+// of its rendered create shape, as required keys.
+func withParents(shape, recordType string) string {
+	for _, entry := range createParents {
+		if entry.recordType != recordType {
+			continue
+		}
+		var keys []string
+		for _, field := range entry.fields {
+			keys = append(keys, field+": uuid")
+		}
+		return "{" + strings.Join(keys, ", ") + ", " + strings.TrimPrefix(shape, "{")
+	}
+	return shape
 }

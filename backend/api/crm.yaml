@@ -4670,7 +4670,7 @@ paths:
         margin tier as it stood that day. A clawback is a reversal row plus a void on the
         original, never an edit — so the ledger reads the same tomorrow as it did when a
         partner was told what they had earned.
-      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -4699,7 +4699,7 @@ paths:
       tags: [Commissions]
       operationId: getCommissionSummary
       summary: What is owed, by partner and status — the open-liability figure.
-      x-mcp-tool: { verb: run_report, record_type: commission, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_reporting, tier: auto_execute, scope: read }
       responses:
         '200':
           description: One row per partner and status.
@@ -4716,7 +4716,7 @@ paths:
       tags: [Commissions]
       operationId: getCommissionEntry
       summary: One ledger entry.
-      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The entry.
@@ -23002,7 +23002,7 @@ paths:
       description: |
         Scoped by the parent deal's visibility: a room whose deal the caller cannot
         see is absent, indistinguishable from one that does not exist.
-      x-mcp-tool: { verb: search_records, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23044,7 +23044,7 @@ paths:
         The steward defaults to the deal's owner and is the named human a buyer is
         pointed at for help; a room whose steward left the company points its buyers
         at nobody, so the field transfers deliberately rather than following the deal.
-      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23073,7 +23073,7 @@ paths:
       tags: [Deals]
       operationId: getDealRoom
       summary: Get a Deal Room by id.
-      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The Deal Room.
@@ -23296,7 +23296,7 @@ paths:
         Revoked participants are included by default and marked: their comments and
         decisions stay attributed to them, so a roster that hid them would
         leave unexplained names on the room's history.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_participant, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_participant, tier: auto_execute, scope: read }
       parameters:
         - name: active_only
           in: query
@@ -23468,7 +23468,7 @@ paths:
         Each entry points at an attachment already filed on the room's deal; the room
         holds no bytes of its own. Grouped by one of four fixed groups and ordered
         within each.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_document, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_document, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The room's documents.
@@ -23570,7 +23570,7 @@ paths:
       description: |
         Live on both sides: nothing here waits for a publish. Optionally narrowed to
         one document. A room-level thread has no `document_id`.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_thread, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: deal_room_thread, tier: auto_execute, scope: read }
       parameters:
         - name: document_id
           in: query
@@ -23592,7 +23592,7 @@ paths:
         The first comment is the body. Refused once the room can no longer reach a
         buyer (closed, expired, archived). A document thread is pinned to the
         document's current version.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -23621,7 +23621,7 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: Refused on a resolved thread and in a room that can no longer reach a buyer.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -23920,7 +23920,7 @@ paths:
       tags: [Offers]
       operationId: listDealOffers
       summary: List a deal's offers, newest revision first.
-      x-mcp-tool: { verb: search_records, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: offer, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23942,7 +23942,7 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
-      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23968,7 +23968,7 @@ paths:
       tags: [Offers]
       operationId: getOffer
       summary: Get an offer with its line items and computed totals.
-      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The offer.
@@ -23980,7 +23980,7 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -24006,7 +24006,7 @@ paths:
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
       description: An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
-      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived offer.
@@ -24023,7 +24023,7 @@ paths:
       tags: [Offers]
       operationId: addOfferLineItem
       summary: Add a line item to a draft offer (position defaults to next; totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24049,7 +24049,7 @@ paths:
       tags: [Offers]
       operationId: updateOfferLineItem
       summary: Update a draft offer's line item (totals recomputed; totals themselves are not settable).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24067,7 +24067,7 @@ paths:
       tags: [Offers]
       operationId: removeOfferLineItem
       summary: Remove a line item from a draft offer (totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
       responses:
         '200':
           description: The offer without the line, totals recomputed.

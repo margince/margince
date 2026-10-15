@@ -214,9 +214,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Description:   readRecordCopy.render(),
 		Instead:       readRecordCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner/getProduct/getOfferTemplate",
+		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner/getProduct/getOfferTemplate/getOffer/getCommissionEntry/getDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template","offer","commission","deal_room"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[recordWithOwner](),
@@ -260,9 +260,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom/openDealRoomThread/replyDealRoomThread",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room","deal_room_thread","deal_room_comment"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -338,6 +338,22 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 // in Handle, and that is the point: the approved retry re-enters through
 // Handle, so a rule enforced only there is one a human's yes is spent
 // discovering.
+// takeParent lifts a parent id out of a create's fields: the route names it in
+// its path, a create_record call among its fields.
+func takeParent(fields json.RawMessage, name string) (ids.UUID, json.RawMessage, error) {
+	var named map[string]json.RawMessage
+	if err := json.Unmarshal(fields, &named); err != nil {
+		return ids.UUID{}, nil, &BadArgsError{Field: fieldsArg, Cause: fmt.Errorf("fields must be a JSON object: %w", err)}
+	}
+	var id ids.UUID
+	if err := json.Unmarshal(named[name], &id); err != nil || id.IsZero() {
+		return ids.UUID{}, nil, &BadArgsError{Field: name, Cause: fmt.Errorf("%s names the record this one is created on", name)}
+	}
+	delete(named, name)
+	rest, err := json.Marshal(named)
+	return id, rest, err
+}
+
 func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
 	var args struct {
 		RecordType string          `json:"record_type"`
@@ -351,6 +367,15 @@ func (t createRecord) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 		return StageInfo{}, &BadArgsError{Cause: fmt.Errorf(
 			"this verb does not create %q records, so no approval of it could ever be carried out",
 			args.RecordType)}
+	}
+	// An offer is made ON a deal, as POST /deals/{id}/offers makes it, so both
+	// doors stage the one command that names the deal.
+	if args.RecordType == string(datasource.EntityOffer) {
+		dealID, fields, err := takeParent(args.Fields, "deal_id")
+		if err != nil {
+			return StageInfo{}, err
+		}
+		return StageSubject(ctx, NewCreateOfferCall(t.p, t.language, CreateOfferCommand{DealID: dealID, Fields: fields}))
 	}
 	// This door's wire shape IS the command's field set (same reasoning as
 	// archiveRecord.StageInfo, command.go), so it converts rather than
