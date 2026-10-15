@@ -410,7 +410,7 @@ func WithBootstrapSeeds(seeds deployconfig.Seeds) Option {
 // is the only arrangement in which they cannot disagree. Without the option the
 // compiled-in defaults stand — the composition is still fully bounded, it just
 // was never told about a deployment file.
-func WithUploadLimits(limits deployconfig.UploadLimits) Option {
+func WithUploadLimits(limits UploadLimits) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.uploadLimits = limits
 		s.activitiesHandlers = s.activitiesHandlers.WithUploadLimit(limits.Attachment)

@@ -284,7 +284,7 @@ type Server struct {
 	// publishes to a client. Defaulted in New, so a composition never told
 	// about a deployment file still gets the compiled-in ceilings rather than
 	// zero — which would refuse every upload.
-	uploadLimits deployconfig.UploadLimits
+	uploadLimits UploadLimits
 
 	// blob is the object store, injected by WithBlobstore. When configured
 	// it feeds a /readyz probe and backs the attachment handlers; nil means

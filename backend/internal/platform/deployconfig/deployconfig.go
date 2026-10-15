@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Uploads        Uploads         `yaml:"uploads"`
 	Web            Web             `yaml:"web"`
 }
 
@@ -249,9 +248,6 @@ func (c Config) validate() error {
 		}
 	}
 	if err := c.Seeds.validate(); err != nil {
-		return err
-	}
-	if err := c.Uploads.validate(); err != nil {
 		return err
 	}
 	return c.Web.validate()

@@ -108,6 +108,10 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_LISTS_ENABLED` | `true` | `lists.enabled` |
 | `MARGINCE_OPERATIONS_ALLOW_DATA_RESET` | `false` | `operations.allow_data_reset` |
 | `MARGINCE_OPERATIONS_ALLOW_TEST_MAILBOX` | `false` | `operations.allow_test_mailbox` |
+| `MARGINCE_UPLOADS_ATTACHMENT_MB` | `25` | `uploads.attachment_mb` |
+| `MARGINCE_UPLOADS_CSV_IMPORT_MB` | `10` | `uploads.csv_import_mb` |
+| `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | `8` | `uploads.linkedin_import_mb` |
+| `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | `5` | `uploads.knowledge_document_mb` |
 
 ## Common log flags (api, worker)
 

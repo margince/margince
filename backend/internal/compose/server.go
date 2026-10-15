@@ -42,7 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
@@ -155,7 +154,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
-	limits := deployconfig.Config{}.EffectiveUploads()
+	limits := DefaultUploadLimits()
 	// ONE introductions store for the two surfaces that read it: the ask's own
 	// handlers, and the Network tab asking which routes are already spoken
 	// for. Two stores would be two clocks, and an ask could be born already

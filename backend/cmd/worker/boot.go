@@ -67,7 +67,6 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	if err != nil {
 		return deployconfig.Config{}, err
 	}
-	cfg.csvImportCap = deployCfg.EffectiveUploads().CSVImport
 	return deployCfg, nil
 }
 

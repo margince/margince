@@ -29,6 +29,7 @@ func allSettings() []config.Any {
 		ai.Settings(),
 		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile, RatesModelPricing},
 		captureSettings(),
+		uploadSettings(),
 		[]config.Any{CompanyContextRollout},
 		[]config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile},
 	)

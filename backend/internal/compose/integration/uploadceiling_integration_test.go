@@ -30,13 +30,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
 // uploadCeiling is the shipped attachment default, read from the deployment
 // config rather than restated, so a test never disagrees with the file about
 // what an unconfigured installation allows.
-var uploadCeiling = deployconfig.Config{}.EffectiveUploads().Attachment
+var uploadCeiling = compose.DefaultUploadLimits().Attachment
 
 // The ceilings these suites configure. Deliberately UNUSUAL — small enough to
 // exceed in a test, and nothing like a shipped default, so a composition that
@@ -50,18 +50,18 @@ const (
 	betweenTheCeilings = 2_500_000
 )
 
-func configuredUploads(t *testing.T) deployconfig.UploadLimits {
+func configuredUploads(t *testing.T) compose.UploadLimits {
 	t.Helper()
-	cfg, err := deployconfig.Parse([]byte(`version: 1
+	cfg, err := configtest.Load(t, `version: 1
 uploads:
   attachment_mb: 3
   csv_import_mb: 2
   linkedin_import_mb: 1
-`))
+`, nil, nil, compose.UploadAttachmentMB, compose.UploadCSVImportMB, compose.UploadLinkedInImportMB, compose.UploadKnowledgeDocumentMB)
 	if err != nil {
 		t.Fatalf("the uploads section was refused: %v", err)
 	}
-	return cfg.EffectiveUploads()
+	return compose.UploadLimitsFrom(cfg)
 }
 
 // appWithUploads starts the real /v1 surface with an object store, the ceilings
@@ -361,7 +361,7 @@ func linkedInForm(t *testing.T, size int) (*bytes.Buffer, string) {
 func TestAnUnwiredImportCeilingIsOurFaultNotTheCallers(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithBlobstore(blobstore.NewMemory()),
-		compose.WithUploadLimits(deployconfig.UploadLimits{}))
+		compose.WithUploadLimits(compose.UploadLimits{}))
 	e.BootstrapWorkspace(t)
 
 	form, contentType := importForm(t, 1000)
