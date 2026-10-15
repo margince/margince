@@ -283,3 +283,31 @@ func TestAnActivityLinksToADealAndAContactInTheSameZip(t *testing.T) {
 		t.Fatalf("%d live copies of the activity whose deal link names a company, want none", n)
 	}
 }
+
+func TestACorrectedFileWithNoTypeColumnHoldsADurationToTheStoredKind(t *testing.T) {
+	e := setupImportApp(t)
+	contacts := "ref,email,name\nP-1,jo@act-fix.example,Jo\n"
+	parts := contactAndActivityParts()
+	importActivities(t, e, map[string]string{
+		"contacts.csv":   contacts,
+		"activities.csv": activityHeader + "\nA-1,note,Fix note,,2025-03-02,contact:P-1,,,\n",
+	}, parts)
+	untyped := []AnyMap{parts[0], {"file": "activities.csv", "object": "activity",
+		"mapping": AnyMap{"ref": "ref", "subject": "subject", "occurred_at": "occurred_at", "links": "links", "duration_minutes": "duration_minutes"}}}
+	files := map[string]string{
+		"contacts.csv":   contacts,
+		"activities.csv": "ref,subject,occurred_at,links,duration_minutes\nA-1,Fix note,2025-03-02,contact:P-1,30\n",
+	}
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", untyped)
+	preview := readImportReport(t, e, run.ID)
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	for name, r := range map[string]importReportDTO{"preview": preview, "commit": committed} {
+		if r.Disposition.Updated != 0 || r.Disposition.Skipped != 1 {
+			t.Errorf("%s = %+v, issues %+v, want the note skipped and not rewritten", name, r.Disposition, r.Issues)
+		}
+	}
+	if note := activityNamed(t, e, "Fix note"); note.DurationSeconds != nil {
+		t.Fatalf("note duration = %d seconds, want none: the row was refused whole", *note.DurationSeconds)
+	}
+}
