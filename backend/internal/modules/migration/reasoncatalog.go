@@ -406,7 +406,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonLeadStatusNotImportable: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
 		textlang.English:    "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
-		textlang.German:     "Eine Datei kann den Status {value:q} nicht setzen. Nutze Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
+		textlang.German:     "Eine Datei kann den Status {value:q} nicht setzen. Nutzen Sie Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
 		textlang.Vietnamese: "Tệp không thể đặt trạng thái {value:q}. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
 	}},
 	ReasonUndoGrantLost: {params: nil, text: map[textlang.Lang]string{

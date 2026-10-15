@@ -71,12 +71,12 @@ var activityReasons = map[ReasonCode]reasonEntry{
 	}},
 	ReasonMessageNotImportable: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
-		textlang.German:     "Eine Nachricht braucht einen Kanal und lässt sich daher nicht aus einer Datei importieren. Nimm stattdessen eine Notiz oder eine E-Mail.",
+		textlang.German:     "Eine Nachricht braucht einen Kanal und lässt sich daher nicht aus einer Datei importieren. Nehmen Sie stattdessen eine Notiz oder eine E-Mail.",
 		textlang.Vietnamese: "Tin nhắn cần một kênh nên không thể nhập từ tệp. Hãy dùng ghi chú hoặc email.",
 	}},
 	ReasonTaskNotImportable: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "A task would land open on your own list, so it is not imported. Use a note instead.",
-		textlang.German:     "Eine Aufgabe würde offen auf deiner eigenen Liste landen und wird daher nicht importiert. Nimm stattdessen eine Notiz.",
+		textlang.German:     "Eine Aufgabe würde offen auf Ihrer eigenen Liste landen und wird daher nicht importiert. Nehmen Sie stattdessen eine Notiz.",
 		textlang.Vietnamese: "Nhiệm vụ sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Hãy dùng ghi chú.",
 	}},
 	ReasonOccurredAtUnnamed: {params: nil, text: map[textlang.Lang]string{
@@ -122,7 +122,7 @@ var activityReasons = map[ReasonCode]reasonEntry{
 	ReasonActivityUnlinked: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This activity names no record to be filed under. Add a link like deal:D-1001 or contact:jo@acme.com.",
 		textlang.German:     "Diese Aktivität nennt keinen Datensatz, unter dem sie abgelegt wird. Ergänze eine Verknüpfung wie deal:D-1001 oder contact:jo@acme.com.",
-		textlang.Vietnamese: "Hoạt động này không nêu hồ sơ nào để gắn vào. Hãy thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
+		textlang.Vietnamese: "Hoạt động này không nêu bản ghi nào để gắn vào. Hãy thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
 	}},
 	ReasonLinkMalformed: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a link. Write the type, a colon and the key, like deal:D-1001.",
@@ -146,8 +146,8 @@ var activityReasons = map[ReasonCode]reasonEntry{
 	}},
 	ReasonLinkNotAttachable: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot add activities to one of the records this row links to, so the row is skipped.",
-		textlang.German:     "Du kannst bei einem der Datensätze, mit denen diese Zeile verknüpft ist, keine Aktivitäten hinzufügen, daher wird die Zeile übersprungen.",
-		textlang.Vietnamese: "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
+		textlang.German:     "Sie dürfen bei einem der Datensätze, mit denen diese Zeile verknüpft ist, keine Aktivitäten hinzufügen, daher wird die Zeile übersprungen.",
+		textlang.Vietnamese: "Bạn không thể thêm hoạt động vào một trong các bản ghi mà hàng này liên kết nên hàng bị bỏ qua.",
 	}},
 	ReasonActivityHeld: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This activity is held under a retention obligation, so the row cannot change it.",
