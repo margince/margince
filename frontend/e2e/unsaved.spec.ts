@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
 /**
@@ -28,10 +29,15 @@ type Page = import("@playwright/test").Page;
 // the guard exists to notice. A sign-off half-typed into a dialog nobody
 // reopened is discarded by design, so it never reaches the guard at all.
 const timezone = (page: Page) =>
-  page.getByRole("textbox", { name: "Berichtszeitzone" });
+  page.getByRole("textbox", { name: de["installationSettings.timezone"] });
 
 const editTimezone = (page: Page) =>
-  page.getByRole("button", { name: "Berichtszeitzone bearbeiten" });
+  page.getByRole("button", {
+    name: de["installationSettings.editField"].replace(
+      "{field}",
+      de["installationSettings.timezone"],
+    ),
+  });
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
