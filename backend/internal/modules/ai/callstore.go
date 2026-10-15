@@ -154,7 +154,7 @@ type Call struct {
 // ReportsItsServedModel reports whether the provider named the model that
 // served this call, rather than the trace echoing or assuming the configured one.
 func (c Call) ReportsItsServedModel() bool {
-	return c.ServedIdentitySource == servedIdentitySourceResponse
+	return reportsServedModel(c.ServedIdentitySource)
 }
 
 // Payload is the Layer-3 opt-in content: the post-SecretStripper request

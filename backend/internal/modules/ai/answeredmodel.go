@@ -15,11 +15,16 @@ import (
 // switched calls to.
 const switchedModelWindow = 30 * 24 * time.Hour
 
+// reportsServedModel is whether a served identity source is the provider naming
+// the model itself. answeredModelSQL and switchedModelSQL test the same grade.
+func reportsServedModel(servedIdentitySource string) bool {
+	return servedIdentitySource == servedIdentitySourceResponse
+}
+
 // gradedServedModel is the model a provider itself named as the one that
-// answered, or "" when the trace only echoed or assumed the binding. Only a
-// "response" grade counts, here and in answeredModelSQL alike.
+// answered, or "" when the trace only echoed or assumed the binding.
 func gradedServedModel(servedModel, servedIdentitySource string) string {
-	if servedIdentitySource != servedIdentitySourceResponse {
+	if !reportsServedModel(servedIdentitySource) {
 		return ""
 	}
 	return servedModel

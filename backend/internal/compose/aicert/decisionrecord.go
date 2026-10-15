@@ -200,7 +200,7 @@ func (leg decisionLeg) decisionUsage(calls []ai.Call, runs int) (Record, error) 
 	rec.MeanTokensIn = pooled.TokensIn / runs
 	rec.MeanTokens = rec.MeanTokensIn
 	served := ""
-	if (ai.Call{ServedIdentitySource: rec.ServedIdentitySource}).ReportsItsServedModel() {
+	if calls[0].ReportsItsServedModel() {
 		served = rec.ServedModel
 	}
 	if rate, ok := servedRateFor(leg.lane.Provider, served, leg.lane.Model, ranAt); ok {

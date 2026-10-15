@@ -238,3 +238,24 @@ func TestAFailedAttemptIsNotCountedAsASwitch(t *testing.T) {
 		t.Errorf("figures = %+v, want one failed attempt and no switch", rows)
 	}
 }
+
+func TestServedTaskTotalsSplitASliceByTheModelThatAnswered(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	totals, err := NewCallReadStore(f.db).ServedTaskTotals(f.ctx, f.tasks, time.Now().Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	byTask := map[Task]string{}
+	for _, slice := range totals {
+		byTask[slice.Task] = slice.AnsweredModel
+	}
+	for i, c := range answeredCases {
+		want := boundGemini
+		if c.servedSource == servedIdentitySourceResponse {
+			want = c.servedModel
+		}
+		if got := byTask[f.tasks[i]]; got != want {
+			t.Errorf("%s: answered model = %q, want %q", c.name, got, want)
+		}
+	}
+}

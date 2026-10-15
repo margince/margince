@@ -121,8 +121,9 @@ func (p *pricePlan) broker(src PriceSources, sheet []ModelRateRow, inForce map[[
 	}
 }
 
-// vendor prices one models.dev provider: its sheet rows, plus each model its key
-// lists that the catalogue prices. Out of scope or unreadable, it writes nothing.
+// vendor prices one models.dev provider: its sheet rows, each model its key lists
+// that the catalogue prices, and each model it switched calls to. Out of scope
+// or unreadable, it writes nothing.
 func (p *pricePlan) vendor(src PriceSources, provider string, sheet []ModelRateRow, inForce map[[2]string]ModelRateRow) {
 	line := p.line(provider)
 	key, _ := modelsDevKeyFor(provider)
@@ -144,8 +145,9 @@ func (p *pricePlan) vendor(src PriceSources, provider string, sheet []ModelRateR
 	}
 }
 
-// vendorTargets is one vendor's scope in id order: its sheet rows filed where
-// they are, and the listed models the catalogue prices, in the lane both agree on.
+// vendorTargets is one vendor's scope in id order. It holds its sheet rows filed
+// where they are, and the listed models the catalogue prices in the lane both
+// agree on. It also holds the models the vendor switched calls to.
 func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow) []catalogueTarget {
 	byID := map[string]catalogueTarget{}
 	for _, row := range sheet {
