@@ -41,9 +41,20 @@ type viewDoor struct {
 // charge it again. It is a context value, which no client can send.
 type admittedByTheToolKey struct{}
 
+// admittedByTheTool reports a request read_view runs that landed on a view's
+// own route. A path value can spell a fixed sibling segment, which the router
+// prefers. A request that lands anywhere else is gated like any agent read.
 func admittedByTheTool(r *http.Request) bool {
 	admitted, _ := r.Context().Value(admittedByTheToolKey{}).(bool)
-	return admitted
+	if !admitted || r.Method != http.MethodGet {
+		return false
+	}
+	route := chi.RouteContext(r.Context())
+	if route == nil {
+		return false
+	}
+	pol := agentPolicies[http.MethodGet+" "+route.RoutePattern()]
+	return pol.Tool == agents.ReadViewTool && pol.Access == accessTool
 }
 
 var pathParameter = regexp.MustCompile(`\{([^}]+)\}`)
@@ -53,7 +64,7 @@ var pathParameter = regexp.MustCompile(`\{([^}]+)\}`)
 func readViews(policies map[string]agentPolicy) []agents.ReadView {
 	var views []agents.ReadView
 	for route, pol := range policies {
-		if pol.Tool != agents.ReadViewTool || pol.Access != accessTool || !strings.HasPrefix(route, http.MethodGet+" ") {
+		if pol.Tool != agents.ReadViewTool || pol.Access != accessTool || pol.Scope != scopeRead || !strings.HasPrefix(route, http.MethodGet+" ") {
 			continue
 		}
 		pattern := strings.SplitN(route, " ", 2)[1]

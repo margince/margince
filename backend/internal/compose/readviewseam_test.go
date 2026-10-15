@@ -55,9 +55,9 @@ func TestAViewPastTheAnswerCapIsRefused(t *testing.T) {
 // or a write that names the verb by mistake is never served.
 func TestOnlyAnAgentReadIsAView(t *testing.T) {
 	views := readViews(map[string]agentPolicy{
-		"GET /v1/companies/{id}/360":    {Op: "getCompany360", Access: accessTool, Tool: agents.ReadViewTool},
-		"GET /v1/installation":          {Op: "getInstallationSettings", Access: accessHumanOnly, Tool: agents.ReadViewTool},
-		"POST /v1/companies/{id}/merge": {Op: "mergeCompany", Access: accessTool, Tool: agents.ReadViewTool},
+		"GET /v1/companies/{id}/360":    {Op: "getCompany360", Access: accessTool, Tool: agents.ReadViewTool, Scope: scopeRead},
+		"GET /v1/installation":          {Op: "getInstallationSettings", Access: accessHumanOnly, Tool: agents.ReadViewTool, Scope: scopeRead},
+		"POST /v1/companies/{id}/merge": {Op: "mergeCompany", Access: accessTool, Tool: agents.ReadViewTool, Scope: scopeRead},
 	})
 	if len(views) != 1 || views[0].Name != "company_360" {
 		t.Fatalf("the views are %+v, want company_360 alone", views)
@@ -114,5 +114,26 @@ func TestAViewRefusalKeepsItsKind(t *testing.T) {
 	var detailed *httperr.DetailedError
 	if err == nil || errors.As(err, &detailed) {
 		t.Errorf("a route failing with 500 surfaced as %v, want a server fault, not the caller's bad argument", err)
+	}
+}
+
+// The marker read_view sets admits only a view's own route. A path value that
+// spells a fixed sibling lands on that route instead, and a human-only one must
+// still be refused there.
+func TestTheViewMarkerAdmitsOnlyAViewsOwnRoute(t *testing.T) {
+	for pattern, want := range map[string]bool{
+		"/v1/imports/{id}":     true,
+		"/v1/imports/template": false,
+	} {
+		route := chi.NewRouteContext()
+		route.RoutePatterns = []string{pattern}
+		ctx := context.WithValue(context.WithValue(context.Background(), admittedByTheToolKey{}, true), chi.RouteCtxKey, route)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/x", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := admittedByTheTool(req); got != want {
+			t.Errorf("a marked request on %s is admitted %v, want %v", pattern, got, want)
+		}
 	}
 }

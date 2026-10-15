@@ -44,3 +44,13 @@ type dealStatusCard struct {
 	DealID      string `json:"deal_id"`
 	GeneratedBy string `json:"generated_by"`
 }
+
+// A view's path value that spells a fixed sibling route lands on that route.
+// import_run's {id} as "template" reaches the human-only import template, which
+// read_view must refuse rather than serve.
+func TestReadViewCannotReachAHumanOnlySiblingRoute(t *testing.T) {
+	d := newTwoDoors(t, "read-view-sibling", "read")
+	if refused := d.toolRefused(t, "read_view", map[string]any{"view": "import_run", "id": "template"}); refused == "" {
+		t.Fatal("read_view served the human-only import template through a view's path value")
+	}
+}
