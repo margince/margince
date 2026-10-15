@@ -16,7 +16,7 @@
 # Usage: check-test-budget.sh <go-test-log>...
 set -euo pipefail
 
-if [ "$#" -eq 0 ]; then
+if [[ "$#" -eq 0 ]]; then
   echo "usage: $0 <go-test-log>..." >&2
   exit 2
 fi
