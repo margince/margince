@@ -199,7 +199,9 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
-	fields["source"], _ = json.Marshal(in.Source)
+	if fields["source"], err = json.Marshal(in.Source); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	switch in.EntityType {
 	case datasource.EntityDealRoom:
 		return p.createRoom(ctx, fields)

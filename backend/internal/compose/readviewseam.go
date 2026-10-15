@@ -16,6 +16,7 @@ import (
 	"strings"
 	"unicode"
 
+	chi "github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -25,6 +26,9 @@ import (
 
 // read_view serves a REST read by running that route's own handler, in
 // process, as the caller: one engine, so the two doors cannot answer apart.
+
+// viewQuery is how the generated table spells a view's query parameter.
+type viewQuery = agents.ViewQuery
 
 // viewDoor holds the contract router once the server has built it. The tool
 // registry is built first, so the seam reaches the router through this.
@@ -44,12 +48,12 @@ func admittedByTheTool(r *http.Request) bool {
 
 var pathParameter = regexp.MustCompile(`\{([^}]+)\}`)
 
-// readViews lists the views the contract declares: every route whose x-mcp-tool
-// names read_view.
-func readViews() []agents.ReadView {
+// readViews lists the views the contract declares: every agent GET route whose
+// x-mcp-tool names read_view. A human-only or writing route is never a view.
+func readViews(policies map[string]agentPolicy) []agents.ReadView {
 	var views []agents.ReadView
-	for route, pol := range agentPolicies {
-		if pol.Tool != "read_view" {
+	for route, pol := range policies {
+		if pol.Tool != agents.ReadViewTool || pol.Access != accessTool || !strings.HasPrefix(route, http.MethodGet+" ") {
 			continue
 		}
 		pattern := strings.SplitN(route, " ", 2)[1]
@@ -68,7 +72,7 @@ func readViews() []agents.ReadView {
 // viewName spells an operation as a caller asks for it: getCompany360 is
 // company_360 and listLeadSources is lead_sources.
 func viewName(op string) string {
-	for _, prefix := range []string{"get", "list"} {
+	for _, prefix := range []string{"get", "list"} { //nolint:goconst // an operationId's verb prefixes, not record types
 		if rest, ok := strings.CutPrefix(op, prefix); ok && rest != "" && unicode.IsUpper(rune(rest[0])) {
 			op = rest
 			break
@@ -114,26 +118,64 @@ func readViewThrough(door *viewDoor) agents.ViewReader {
 		if len(query) > 0 {
 			target += "?" + query.Encode()
 		}
-		req := httptest.NewRequestWithContext(context.WithValue(ctx, admittedByTheToolKey{}, true), http.MethodGet, target, nil)
-		rec := httptest.NewRecorder()
+		// A fresh chi route context, so an outer chi request's matched route and
+		// URL parameters never carry into this one.
+		inner := context.WithValue(context.WithValue(ctx, admittedByTheToolKey{}, true), chi.RouteCtxKey, (*chi.Context)(nil))
+		req := httptest.NewRequestWithContext(inner, http.MethodGet, target, nil)
+		rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder()}
 		door.api.ServeHTTP(rec, req)
+		if rec.overflowed {
+			return nil, httperr.Validation("view", "view_too_large", fmt.Sprintf(
+				"the view answered more than %d MB; narrow it with its filters, or fetch it from its REST route",
+				maxViewAnswerBytes>>20))
+		}
 		return viewAnswer(rec.Result())
 	}
+}
+
+// maxViewAnswerBytes bounds what one view may hold in memory. An answer past
+// it, such as a whole CSV export, is no use to a model either.
+const maxViewAnswerBytes = 4 << 20
+
+// cappedRecorder keeps at most maxViewAnswerBytes of a route's body and notes
+// what it dropped. The handler runs to its end on bounded memory.
+type cappedRecorder struct {
+	*httptest.ResponseRecorder
+	overflowed bool
+}
+
+func (c *cappedRecorder) Write(p []byte) (int, error) {
+	if c.overflowed || c.Body.Len()+len(p) > maxViewAnswerBytes {
+		c.overflowed = true
+		return len(p), nil
+	}
+	return c.ResponseRecorder.Write(p)
+}
+
+// viewRefusals are the route answers that mean the same on the tool's side. A
+// refusal keeps its kind instead of reading as the caller's bad argument.
+var viewRefusals = map[int]error{
+	http.StatusUnauthorized:       apperrors.ErrPermissionDenied,
+	http.StatusForbidden:          apperrors.ErrPermissionDenied,
+	http.StatusNotFound:           apperrors.ErrNotFound,
+	http.StatusConflict:           apperrors.ErrConflict,
+	http.StatusPreconditionFailed: apperrors.ErrVersionSkew,
+	http.StatusTooManyRequests:    apperrors.ErrBudgetExceeded,
 }
 
 // viewAnswer turns the route's answer into the tool's. A JSON body passes as it
 // is, any other body is wrapped with its type, and a refusal is its error.
 func viewAnswer(res *http.Response) (json.RawMessage, error) {
-	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
+	if refusal, known := viewRefusals[res.StatusCode]; known {
+		return nil, refusal
+	}
 	switch {
-	case res.StatusCode == http.StatusNotFound:
-		return nil, apperrors.ErrNotFound
-	case res.StatusCode == http.StatusForbidden:
-		return nil, apperrors.ErrPermissionDenied
+	case res.StatusCode >= http.StatusInternalServerError:
+		return nil, fmt.Errorf("read_view: the route failed with %d", res.StatusCode)
 	case res.StatusCode >= http.StatusBadRequest:
 		var problem struct {
 			Detail string `json:"detail"`
@@ -150,7 +192,10 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 		}
 		return body, nil
 	}
-	return json.Marshal(map[string]string{"content_type": res.Header.Get("Content-Type"), "body": string(body)})
+	return json.Marshal(struct {
+		ContentType string `json:"content_type"`
+		Text        string `json:"text"`
+	}{res.Header.Get("Content-Type"), string(body)})
 }
 
 // viewDoorOf is the serving process's router door, or none for a registry
@@ -168,8 +213,11 @@ func withServerSeams(provider *Provider, pool *pgxpool.Pool, features registryFe
 	if features.lists {
 		provider = provider.WithListMembers(NewCollectionsStore(pool).MemberFilter)
 	}
-	if features.served != nil {
+	switch {
+	case features.served != nil:
 		provider = provider.WithRetiredRendering(features.served.deleteBlob)
+	case features.reclaim != nil:
+		provider = provider.WithRetiredRendering(features.reclaim)
 	}
 	return provider
 }

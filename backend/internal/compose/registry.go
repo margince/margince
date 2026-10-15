@@ -58,15 +58,17 @@ type registryFeatures struct {
 	lists       bool
 	firstDrafts *firstMessageEngines
 	served      *Server
+	// reclaim deletes a retired offer rendering where no Server holds the store.
+	reclaim deals.RetiredRendering
 }
 
-func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
+func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), registryFeatures{})
+	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -98,7 +100,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
-	agents.RegisterReadViewTool(registry, readViews(), readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer)
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})

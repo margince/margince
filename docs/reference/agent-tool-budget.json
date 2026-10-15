@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 58,
     "system_frame_tokens": 597,
-    "tokens": 26620,
+    "tokens": 26718,
     "median_tool_tokens": 397,
-    "mean_tool_tokens": 458
+    "mean_tool_tokens": 460
   },
   "agents": [
     {
@@ -98,7 +98,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 927
+      "tokens": 990
     },
     {
       "name": "list_records",
@@ -142,7 +142,7 @@
     },
     {
       "name": "change_record_parts",
-      "tokens": 569
+      "tokens": 567
     },
     {
       "name": "query_workspace",
@@ -293,6 +293,10 @@
       "tokens": 220
     },
     {
+      "name": "list_documents",
+      "tokens": 216
+    },
+    {
       "name": "at_risk_relationships",
       "tokens": 212
     },
@@ -303,10 +307,6 @@
     {
       "name": "merge_tags",
       "tokens": 198
-    },
-    {
-      "name": "list_documents",
-      "tokens": 180
     },
     {
       "name": "read_approval",

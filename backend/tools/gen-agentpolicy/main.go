@@ -90,7 +90,7 @@ func main() {
 
 	// The emitted table must be gofmt-clean like any committed Go file
 	// (map-literal alignment shifts as route keys change length).
-	views, vErr := readViewQueries(doc.Paths, doc.Components.Parameters, policies)
+	views, vErr := readViewQueries(doc.Paths, doc.Components.Parameters, doc.Components.Schemas, policies)
 	if vErr != nil {
 		log.Fatalf("gen-agentpolicy: %v", vErr)
 	}
@@ -240,79 +240,6 @@ var agentPolicies = map[string]agentPolicy{
 		// Written only where declared, so the marker stands out in the table.
 		if p.ServedBy != "" {
 			fmt.Fprintf(&b, ", ServedBy: %q", p.ServedBy)
-		}
-		b.WriteString("},\n")
-	}
-	b.WriteString("}\n")
-	return b.String()
-}
-
-// readViewVerb is the tool every read with no verb of its own is served by.
-const readViewVerb = "read_view"
-
-// queryParameter is one parameter of an operation, decoded for its name and
-// where it sits.
-type queryParameter struct {
-	Ref  string `yaml:"$ref"`
-	Name string `yaml:"name"`
-	In   string `yaml:"in"`
-}
-
-// readViewQueries names the query parameters of each route read_view serves,
-// keyed as agentPolicies is, so the tool can pass on what the route takes.
-func readViewQueries(paths map[string]map[string]yaml.Node, shared map[string]queryParameter, policies []policy,
-) (map[string][]string, error) {
-	out := map[string][]string{}
-	for _, p := range policies {
-		if p.Tool != readViewVerb {
-			continue
-		}
-		path := strings.TrimPrefix(strings.SplitN(p.Route, " ", 2)[1], "/v1")
-		var op struct {
-			Parameters []queryParameter `yaml:"parameters"`
-		}
-		node := paths[path]["get"]
-		if err := node.Decode(&op); err != nil {
-			return nil, fmt.Errorf("%s: %w", p.Route, err)
-		}
-		names := []string{}
-		for _, param := range op.Parameters {
-			if param.Ref != "" {
-				resolved, ok := shared[strings.TrimPrefix(param.Ref, "#/components/parameters/")]
-				if !ok {
-					return nil, fmt.Errorf("%s names parameter %s, which components.parameters does not declare", p.Route, param.Ref)
-				}
-				param = resolved
-			}
-			if param.In == "query" {
-				names = append(names, param.Name)
-			}
-		}
-		sort.Strings(names)
-		out[p.Route] = names
-	}
-	return out, nil
-}
-
-func renderViews(views map[string][]string) string {
-	var b strings.Builder
-	b.WriteString(`
-// readViewQueries are the query parameters of each route read_view serves, so
-// the tool passes on every one the route takes.
-var readViewQueries = map[string][]string{
-`)
-	routes := make([]string, 0, len(views))
-	for route := range views {
-		routes = append(routes, route)
-	}
-	sort.Strings(routes)
-	for _, route := range routes {
-		fmt.Fprintf(&b, "\t%q: {", route)
-		for i, name := range views[route] {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			fmt.Fprintf(&b, "%q", name)
 		}
 		b.WriteString("},\n")
 	}

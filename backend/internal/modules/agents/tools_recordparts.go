@@ -60,21 +60,37 @@ type recordPartArgs struct {
 	IfVersion  *int64          `json:"if_version"`
 }
 
+// The arguments an action may need, shared by its needs and its check.
+const (
+	partOfferID    = "offer_id"
+	partLineItemID = "line_item_id"
+	partLine       = "line"
+	partCompanyID  = "company_id"
+	partProjectID  = "project_id"
+	partContactID  = "contact_id"
+	partFactKey    = "fact_key"
+	partCategory   = "category"
+	partField      = "field"
+	partValue      = "value"
+	partRole       = "role"
+	partAction     = "action"
+)
+
 // recordPartActions names what each action needs, in the order a refusal says it.
 var recordPartActions = map[string][]string{
-	"add_offer_line":                {"offer_id", "line"},
-	"update_offer_line":             {"offer_id", "line_item_id", "line"},
-	"remove_offer_line":             {"offer_id", "line_item_id"},
-	"add_company_fact":              {"company_id", "category", "field", "value"},
-	"update_company_fact":           {"company_id", "fact_key", "value"},
-	"confirm_company_fact":          {"company_id", "fact_key"},
-	"remove_company_fact":           {"company_id", "fact_key"},
-	"update_company_profile_field":  {"company_id", "field", "value"},
-	"confirm_company_profile_field": {"company_id", "field"},
-	"set_project_company":           {"project_id", "company_id"},
-	"remove_project_company":        {"project_id", "company_id"},
-	"set_project_stakeholder":       {"project_id", "contact_id", "role"},
-	"remove_project_stakeholder":    {"project_id", "contact_id"},
+	"add_offer_line":                {partOfferID, partLine},
+	"update_offer_line":             {partOfferID, partLineItemID, partLine},
+	"remove_offer_line":             {partOfferID, partLineItemID},
+	"add_company_fact":              {partCompanyID, partCategory, partField, partValue},
+	"update_company_fact":           {partCompanyID, partFactKey, partValue},
+	"confirm_company_fact":          {partCompanyID, partFactKey},
+	"remove_company_fact":           {partCompanyID, partFactKey},
+	"update_company_profile_field":  {partCompanyID, partField, partValue},
+	"confirm_company_profile_field": {partCompanyID, partField},
+	"set_project_company":           {partProjectID, partCompanyID},
+	"remove_project_company":        {partProjectID, partCompanyID},
+	"set_project_stakeholder":       {partProjectID, partContactID, partRole},
+	"remove_project_stakeholder":    {partProjectID, partContactID},
 }
 
 func (t changeRecordParts) Spec() mcp.ToolSpec {
@@ -105,7 +121,7 @@ func (t changeRecordParts) Spec() mcp.ToolSpec {
 				"tax_rate":{"type":"number"},
 				"position":{"type":"integer"},
 				"billing_model":{"type":"string","enum":["one_time","recurring"]},
-				"billing_interval_months":{"type":"string","enum":["1","3","6","12"]},
+				"billing_interval_months":{"type":"integer","enum":[1,3,6,12]},
 				"interval_count":{"type":"integer"}},"additionalProperties":false},
 			"company_id":{"type":"string","format":"uuid"},
 			"project_id":{"type":"string","format":"uuid"},
@@ -128,7 +144,7 @@ func (t changeRecordParts) Handle(ctx context.Context, in json.RawMessage) (json
 	}
 	needs, known := recordPartActions[a.Action]
 	if !known {
-		return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf("%q is not an action", a.Action)}
+		return nil, &BadArgsError{Field: partAction, Cause: fmt.Errorf("%q is not an action", a.Action)}
 	}
 	for _, need := range needs {
 		if !a.names(need) {
@@ -177,27 +193,27 @@ func (t changeRecordParts) run(ctx context.Context, a recordPartArgs) (json.RawM
 // names reports whether the call named the argument an action needs.
 func (a recordPartArgs) names(arg string) bool {
 	switch arg {
-	case "offer_id":
+	case partOfferID:
 		return !a.OfferID.IsZero()
-	case "line_item_id":
+	case partLineItemID:
 		return !a.LineItemID.IsZero()
-	case "line":
+	case partLine:
 		return len(a.Line) > 0
-	case "company_id":
+	case partCompanyID:
 		return !a.CompanyID.IsZero()
-	case "project_id":
+	case partProjectID:
 		return !a.ProjectID.IsZero()
-	case "contact_id":
+	case partContactID:
 		return !a.ContactID.IsZero()
-	case "fact_key":
+	case partFactKey:
 		return a.FactKey != ""
-	case "category":
+	case partCategory:
 		return a.Category != ""
-	case "field":
+	case partField:
 		return a.Field != ""
-	case "value":
+	case partValue:
 		return a.Value != nil
-	case "role":
+	case partRole:
 		return a.Role != nil
 	default:
 		return false

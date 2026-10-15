@@ -8,6 +8,7 @@ package integration
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -57,6 +58,21 @@ func TestReferenceListsTakeTheirRoutesWidenings(t *testing.T) {
 		listedPipelineIDs(t, d.rest(t, "GET", "/v1/pipelines?include_archived=true", nil)),
 		listedPipelineIDs(t, d.tool(t, "list_pipelines", map[string]any{"include_archived": true})),
 		retired)
+}
+
+// An invited colleague is listed when asked for, as GET /users lists them.
+func TestListColleaguesTakesTheRostersWidening(t *testing.T) {
+	d := newTwoDoors(t, "roster-doors", "read")
+	d.e.DescribeCompany(t)
+	invited := createdID(t, d.e, "/v1/users", AnyMap{"email": "invited@roster-doors.test", "display_name": "Ines Invited", "role": "rep"})
+
+	bothDoorsName(t, "the roster with invited seats",
+		d.rest(t, "GET", "/v1/users?include_invited=true", nil),
+		d.tool(t, "list_colleagues", map[string]any{"include_invited": true}),
+		invited)
+	if slices.Contains(documentRecords(d.tool(t, "list_colleagues", map[string]any{})), invited) {
+		t.Error("list_colleagues lists an invited seat without being asked, which cannot yet receive work")
+	}
 }
 
 // listedPipelineIDs reduces either door's pipeline list to its pipelines' ids,

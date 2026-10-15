@@ -90,22 +90,33 @@ func colleagueLister(pool *pgxpool.Pool) agents.ColleagueLister {
 }
 
 // widenedRoster answers a roster widened past who can receive work, through
-// GET /users' own read, so the widening is authorized as the route's is.
+// GET /users' own read, so the widening is authorized as the route's is. It
+// walks the route's pages up to the cap the narrow roster has, and says when
+// more remain, which q then narrows.
 func widenedRoster(ctx context.Context, service *identity.Service, q agents.ColleagueQuery) ([]agents.Colleague, bool, error) {
+	//nolint:staticcheck // include_invited is deprecated on GET /users and still served there, so the tool serves it too
 	in := identity.ListUsersInput{IncludeInactive: q.IncludeInactive, IncludeInvited: q.IncludeInvited}
 	if q.Q != "" {
 		in.Q = &q.Q
 	}
-	roster, err := service.ListUsers(ctx, in)
-	if err != nil {
-		return nil, false, err
+	out := []agents.Colleague{}
+	for {
+		roster, err := service.ListUsers(ctx, in)
+		if err != nil {
+			return nil, false, err
+		}
+		for _, u := range roster.Users {
+			if len(out) == identity.ColleagueCap {
+				return out, true, nil
+			}
+			out = append(out, agents.Colleague{
+				UserID: u.ID, DisplayName: u.DisplayName, Email: u.Email,
+				SeatType: string(u.SeatType), IsAgent: u.IsAgent, Status: u.Status,
+			})
+		}
+		if !roster.Page.HasMore || roster.Page.NextCursor == "" {
+			return out, false, nil
+		}
+		in.Cursor = &roster.Page.NextCursor
 	}
-	out := make([]agents.Colleague, 0, len(roster.Users))
-	for _, u := range roster.Users {
-		out = append(out, agents.Colleague{
-			UserID: u.ID, DisplayName: u.DisplayName, Email: u.Email,
-			SeatType: string(u.SeatType), IsAgent: u.IsAgent, Status: u.Status,
-		})
-	}
-	return out, roster.Page.HasMore, nil
 }

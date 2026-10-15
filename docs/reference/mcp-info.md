@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 185.0 KB |
+| Tool catalog | 185.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 48259 |
+| Approx. wire tokens | 48357 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 62.8 KB | 33% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 49.3 KB | 26% | Yes, every step |
-| Input schemas | 59.2 KB | 31% | Yes, every step |
+| Descriptions (incl. governance clause) | 49.4 KB | 26% | Yes, every step |
+| Input schemas | 59.4 KB | 32% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
-| **Description + input schema** | **108.4 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **108.8 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -69,7 +69,7 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 569 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 497 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -82,7 +82,7 @@ descriptions and input schemas are what each step pays for.
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 396 |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 338 |
-| [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`list_records`](#list_records) | List records | yes |  | 846 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
@@ -102,7 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 603 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 927 |
+| [`read_view`](#read_view) | Read a view | yes |  | 990 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
@@ -2494,12 +2494,12 @@ record's own fields, and create_record with record_type offer to make an offer w
       "properties": {
         "billing_interval_months": {
           "enum": [
-            "1",
-            "3",
-            "6",
-            "12"
+            1,
+            3,
+            6,
+            12
           ],
-          "type": "string"
+          "type": "integer"
         },
         "billing_model": {
           "enum": [
@@ -4640,7 +4640,8 @@ bundle_id when one act staged several, and next_cursor.
 List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
 type, size, who added them and the contract each is filed against. It lists and never returns a
 file's contents. Check it before attaching a file again, so the record does not carry the same file
-twice. Keep next_cursor to read the next page.
+twice. Use read_view with view company_documents or deal_documents for a company's or deal's
+document register, filtered by category, contract or state. Keep next_cursor to read the next page.
 ```
 
 <details><summary>Input schema</summary>
@@ -9146,16 +9147,25 @@ view refuses an argument it does not take and names the ones it does.
   "additionalProperties": false,
   "properties": {
     "agg": {
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "as_of": {
       "type": "string"
     },
     "blocks": {
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "by": {
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "category": {
       "type": "string"
@@ -9185,6 +9195,7 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "entity_id": {
+      "description": "one value; a list of values for list_members",
       "type": "string"
     },
     "entity_type": {
@@ -9197,34 +9208,38 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "facts_only": {
-      "type": "string"
+      "type": "boolean"
     },
     "framework_revision": {
-      "type": "string"
+      "type": "integer"
     },
     "handle_version": {
       "type": "string"
     },
     "id": {
+      "description": "one value; a list of values for name_seats",
       "type": "string"
     },
     "include_archived": {
-      "type": "string"
+      "type": "boolean"
     },
     "include_hidden": {
-      "type": "string"
+      "type": "boolean"
     },
     "kind": {
       "type": "string"
     },
     "limit": {
-      "type": "string"
+      "type": "integer"
     },
     "list_type": {
       "type": "string"
     },
     "metrics": {
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "object": {
       "type": "string"
@@ -9236,7 +9251,7 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "pinned_only": {
-      "type": "string"
+      "type": "boolean"
     },
     "pipeline_id": {
       "description": "comes from read_directory (list: pipelines)",
@@ -9258,7 +9273,7 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "refresh": {
-      "type": "string"
+      "type": "boolean"
     },
     "report": {
       "type": "string"
@@ -9270,7 +9285,7 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "retired": {
-      "type": "string"
+      "type": "boolean"
     },
     "scope": {
       "type": "string"
@@ -9282,7 +9297,10 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "sharing": {
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "sort": {
       "type": "string"
@@ -9385,7 +9403,7 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "window_days": {
-      "type": "string"
+      "type": "integer"
     }
   },
   "required": [

@@ -73,7 +73,7 @@ func (p RecordParts) DeleteCompanyFact(ctx context.Context, companyID ids.UUID, 
 	if err := p.store.DeleteCompanyFact(ctx, ids.From[ids.CompanyKind](companyID), key, FactWriteInput{IfVersion: ifVersion}); err != nil {
 		return nil, err
 	}
-	return json.Marshal(map[string]bool{"removed": true})
+	return removedPart()
 }
 
 // UpdateCompanyProfileField states or corrects a profile field.
@@ -116,7 +116,7 @@ func (p RecordParts) RemoveProjectCompany(ctx context.Context, projectID, compan
 	if err := p.store.RemoveProjectCompany(ctx, ids.From[ids.ProjectKind](projectID), ids.From[ids.CompanyKind](companyID)); err != nil {
 		return nil, err
 	}
-	return json.Marshal(map[string]bool{"removed": true})
+	return removedPart()
 }
 
 // SetProjectStakeholder attaches a contact to a project with a role.
@@ -135,5 +135,10 @@ func (p RecordParts) RemoveProjectStakeholder(ctx context.Context, projectID, co
 	if err := p.store.RemoveProjectStakeholder(ctx, ids.From[ids.ProjectKind](projectID), ids.From[ids.ContactKind](contactID)); err != nil {
 		return nil, err
 	}
-	return json.Marshal(map[string]bool{"removed": true})
+	return removedPart()
+}
+
+// removedPart is what a removal answers: the part is gone, so no row describes it.
+func removedPart() (json.RawMessage, error) {
+	return json.RawMessage(`{"removed":true}`), nil
 }

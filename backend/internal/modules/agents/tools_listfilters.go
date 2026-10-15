@@ -46,16 +46,16 @@ func (t describeListFilters) Handle(_ context.Context, in json.RawMessage) (json
 	if err := decodeNoArguments(in); err != nil {
 		return nil, err
 	}
-	return json.Marshal(listFiltersDocument(t.filters))
+	return json.Marshal(describedListFilters(t.filters))
 }
 
 // ListFiltersDocument is the document describe_list_filters answers over
 // these stores: the contract's list parameters each one binds.
 func ListFiltersDocument(vocabulary FilterVocabulary) DescribeListFiltersResult {
-	return listFiltersDocument(bindableFilters(vocabulary))
+	return describedListFilters(bindableFilters(vocabulary))
 }
 
-func listFiltersDocument(filters map[string][]listFilter) DescribeListFiltersResult {
+func describedListFilters(filters map[string][]listFilter) DescribeListFiltersResult {
 	out := DescribeListFiltersResult{RecordTypes: make(map[string][]ListFilterEntry, len(filters))}
 	for _, recordType := range listRecordTypes {
 		entries := []ListFilterEntry{}

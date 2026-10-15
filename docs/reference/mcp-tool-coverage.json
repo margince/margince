@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 16,
     "permitted_but_never_required": 11,
-    "tokens_served_but_never_driven": 6518,
+    "tokens_served_but_never_driven": 6615,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1787,7 +1787,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 927,
+      "tokens": 990,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1836,7 +1836,7 @@
     },
     {
       "name": "change_record_parts",
-      "tokens": 569,
+      "tokens": 567,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2068,6 +2068,21 @@
       "measured_by_model": {}
     },
     {
+      "name": "list_documents",
+      "tokens": 216,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case57_put_it_on_the_file",
+        "case59_file_it_on_the_meeting_and_the_contract"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "read_brief",
       "tokens": 205,
       "agents": [
@@ -2081,21 +2096,6 @@
       "graded_by_certification_tasks": [
         "agent_loop"
       ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "list_documents",
-      "tokens": 180,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case57_put_it_on_the_file",
-        "case59_file_it_on_the_meeting_and_the_contract"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
       "measured_by_model": {}
     },
     {

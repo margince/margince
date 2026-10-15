@@ -37,14 +37,20 @@ func TestListRecordsTakesTheControlsTheRoutesTake(t *testing.T) {
 
 	sameDoorRecords(t, "with the archived",
 		d.rest(t, "GET", "/v1/contacts?include_archived=true&limit=10", nil),
-		d.tool(t, "list_records", map[string]any{"record_type": "contact", "limit": 10,
-			"filters": map[string]any{"include_archived": "true"}}), kept, gone, other)
+		d.tool(t, "list_records", map[string]any{
+			"record_type": "contact", "limit": 10,
+			"filters": map[string]any{"include_archived": "true"},
+		}), kept, gone, other)
 	sameDoorRecords(t, "one list's members",
 		d.rest(t, "GET", "/v1/contacts?list_id="+list.ID+"&limit=10", nil),
-		d.tool(t, "list_records", map[string]any{"record_type": "contact", "limit": 10,
-			"filters": map[string]any{"list_id": list.ID}}), kept)
+		d.tool(t, "list_records", map[string]any{
+			"record_type": "contact", "limit": 10,
+			"filters": map[string]any{"list_id": list.ID},
+		}), kept)
 	sameDoorRecords(t, "sorted by name",
 		d.rest(t, "GET", "/v1/contacts?sort=-full_name&limit=10", nil),
-		d.tool(t, "list_records", map[string]any{"record_type": "contact", "limit": 10,
-			"filters": map[string]any{"sort": "-full_name"}}), kept, other)
+		d.tool(t, "list_records", map[string]any{
+			"record_type": "contact", "limit": 10,
+			"filters": map[string]any{"sort": "-full_name"},
+		}), kept, other)
 }

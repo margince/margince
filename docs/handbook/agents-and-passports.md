@@ -292,8 +292,8 @@ shown once and never again: "Passport created. It is shown only once, so copy it
 Margince keeps no copy it can read, so nobody, including an administrator, can
 get it back for you.
 
-A passport does the same through the REST API as through MCP: the same records,
-filters, permissions and approvals, and an MCP page holds at most 50 rows. Some
+A passport does the same through the REST API as through MCP. It sees the same
+records, filters, permissions and approvals; an MCP page holds 50 rows. Some
 reads are for humans only either way: installation, capture and integration
 settings, the digest, backfill progress, rates, AI prices, access and consent.
 

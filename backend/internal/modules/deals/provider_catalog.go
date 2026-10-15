@@ -177,6 +177,8 @@ func (p *Provider) archiveCatalog(ctx context.Context, r datasource.EntityRef) (
 }
 
 // statesAValue reports whether a body names key with a value other than null.
+// The product handler asks the same through httperr.PresentField, which reads
+// the body the HTTP door decoded; the seam holds the raw body itself.
 func statesAValue(raw json.RawMessage, key string) bool {
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(raw, &fields) != nil {

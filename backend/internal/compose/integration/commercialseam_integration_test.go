@@ -58,7 +58,7 @@ func TestTheCommercialRecordsTakeTheirDealsScopeOnTheSeam(t *testing.T) {
 	ledger := datasource.SearchQuery{
 		EntityTypes: []datasource.EntityType{datasource.EntityCommission}, Filters: map[string]string{"deal_id": fx.deal.String()},
 	}
-	entry := commissionOn(t, seam, onTheTeam, ledger)
+	entry := commissionOn(onTheTeam, t, seam, ledger)
 	if _, err := seam.Read(elsewhere, datasource.EntityRef{Type: datasource.EntityCommission, ID: entry}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a rep on another team read a commission on a deal they do not own: %v, want not found", err)
 	}
@@ -81,7 +81,7 @@ func TestTheCommercialRecordsTakeTheirDealsScopeOnTheSeam(t *testing.T) {
 }
 
 // commissionOn is the one ledger row the fixture accrued on its deal.
-func commissionOn(t *testing.T, seam *compose.Provider, ctx context.Context, ledger datasource.SearchQuery) ids.UUID {
+func commissionOn(ctx context.Context, t *testing.T, seam *compose.Provider, ledger datasource.SearchQuery) ids.UUID {
 	t.Helper()
 	page, err := seam.Search(ctx, ledger)
 	if err != nil || len(page.Records) != 1 {

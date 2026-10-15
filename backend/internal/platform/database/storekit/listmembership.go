@@ -30,7 +30,7 @@ func ResolveListMembership(ctx context.Context, listID *ids.UUID, resolve ListMe
 	entityType string,
 ) (ListMemberFilter, error) {
 	if listID == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a nil filter is the absence of a narrowing, which no list named means
 	}
 	if resolve == nil {
 		return nil, apperrors.ErrNotFound

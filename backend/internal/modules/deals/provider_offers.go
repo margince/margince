@@ -88,7 +88,10 @@ func (p *Provider) createOffer(ctx context.Context, raw json.RawMessage, source 
 		return datasource.EntityRef{}, httperr.Validation(filterOfferDealID, "required", "an offer is made on a deal: name its deal_id")
 	}
 	delete(fields, filterOfferDealID)
-	fields["source"], _ = json.Marshal(source)
+	var err error
+	if fields["source"], err = json.Marshal(source); err != nil {
+		return datasource.EntityRef{}, err
+	}
 	body, err := json.Marshal(fields)
 	if err != nil {
 		return datasource.EntityRef{}, err

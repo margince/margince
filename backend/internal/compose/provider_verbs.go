@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// Merge folds one contact or company into another, in the contacts module.
 func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	switch in.Type {
 	case datasource.EntityContact, datasource.EntityCompany:
@@ -26,6 +27,7 @@ func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasou
 	}
 }
 
+// AdvanceDeal moves a deal to a stage, in the deals module.
 func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
 	return p.deals.AdvanceDeal(ctx, in)
 }
@@ -54,6 +56,7 @@ func (p *Provider) ListObjects(context.Context) ([]datasource.ObjectDef, error) 
 	return schemaObjects, nil
 }
 
+// ListFields answers one entity type's field descriptors.
 func (p *Provider) ListFields(_ context.Context, entity datasource.EntityType) ([]datasource.FieldDef, error) {
 	fields, ok := schemaFields(entity)
 	if !ok {

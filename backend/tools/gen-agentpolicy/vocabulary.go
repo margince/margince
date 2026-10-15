@@ -30,6 +30,8 @@ import (
 // names to their declared enum, or — for an array property — its items' enum.
 type schemaNode struct {
 	Properties map[string]schemaProperty `yaml:"properties"`
+	// Type is read for a query parameter whose schema is a component.
+	Type any `yaml:"type"`
 }
 
 // schemaProperty is one property's declaration: a scalar's own enum, or an

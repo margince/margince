@@ -699,5 +699,5 @@ func (seamProbeRecordParts) RemoveProjectStakeholder(_ context.Context, _, _ ids
 // view, addressed by id, and a reference list with a filter.
 var probeViews = []ReadView{
 	{Name: "company_360", Op: "getCompany360", Pattern: "/v1/companies/{id}/360", PathParams: []string{"id"}},
-	{Name: "stages", Op: "listStages", Pattern: "/v1/stages", Query: []string{"pipeline_id"}},
+	{Name: "stages", Op: "listStages", Pattern: "/v1/stages", Query: []ViewQuery{{Name: "pipeline_id", Type: "string"}}},
 }

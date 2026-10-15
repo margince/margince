@@ -17,11 +17,12 @@ package compose
 // narrows.
 
 import (
-	"github.com/margince/margince/backend/internal/modules/agents"
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -38,10 +39,7 @@ import (
 // registration, and no part of answering it touches the database.
 func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 	published := agents.ListFiltersDocument(NewProvider(nil))
-	for _, recordType := range []datasource.EntityType{
-		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead,
-		datasource.EntityProject, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityActivity,
-	} {
+	for _, recordType := range listedRecordTypes(t) {
 		bound := NewProvider(nil).ListFilters(recordType)
 		if len(bound) == 0 {
 			t.Errorf("%s binds no filters at all, so it can only be listed whole — "+
@@ -78,4 +76,25 @@ func TestTheTimelineIsListedButNeverSwept(t *testing.T) {
 	if strings.Contains(string(search.InputSchema), `"activity"`) {
 		t.Errorf("search_records offers activity in its record_type enum:\n%s", search.InputSchema)
 	}
+}
+
+// listedRecordTypes reads the record types list_records publishes, so a type
+// it starts to list is checked without anyone adding it here.
+func listedRecordTypes(t *testing.T) []datasource.EntityType {
+	t.Helper()
+	spec, listed := NewRegistry(nil, SendPath{}).Spec("list_records")
+	if !listed {
+		t.Fatal("list_records is not registered, so no record type can be checked")
+	}
+	var schema struct {
+		Properties struct {
+			RecordType struct {
+				Enum []datasource.EntityType `json:"enum"`
+			} `json:"record_type"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil || len(schema.Properties.RecordType.Enum) == 0 {
+		t.Fatalf("list_records publishes no record_type enum (%v)", err)
+	}
+	return schema.Properties.RecordType.Enum
 }
