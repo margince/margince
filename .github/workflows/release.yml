@@ -31,7 +31,7 @@ name: Release
 # bake file (docker-bake.hcl), push them to the constellation registry, add
 # them to the draft as digest-pinned image references, and finally publish
 # the release. The dist service publishes only a complete draft (patch + all
-# three SBOMs), so a release that drafted without a patch stays a draft.
+# three SBOMs).
 #
 # Both the patch cut and the release upload go through the release-management
 # CLI (a closed-source tool built and published from
@@ -41,16 +41,12 @@ name: Release
 # publisher token (the MARGINCE_DIST_PUBLISHER_TOKEN secret — only CI holds
 # it) against the dist service URL below.
 #
-# A dispatch carries no push range, so the patch range is HEAD~1..HEAD — the
-# parent commit only, however many commits landed since the last release. That
-# is a known gap, not a property worth relying on: the base belongs at the last
-# PUBLISHED release, which is
-# https://github.com/margince/margince/issues/1798. Until that lands, a
-# dispatched release's patch describes one commit, and a consumer applying
-# patches in order cannot use this stream to move forward. Nothing consumes it
-# today, which is why this is recorded rather than blocking. The step below keeps
-# reading github.event.before so that restoring a push trigger is a one-line
-# change; under a dispatch it is always empty and the fallback always applies.
+# The patch starts at the patch base: the newest release that went out on the
+# release's line, withdrawn included, as the dist service records it. The release
+# CLI's resolve-patch-base names its version and git revision from one dist row,
+# the patch is cut from that revision, and the draft names that version as
+# --patch-base. With no release that went out, the release is the first one and
+# its patch is the whole tree.
 on:
   workflow_dispatch:
 
@@ -82,14 +78,6 @@ env:
   # both draft into it; this becomes a per-ref selection when a production
   # constellation exists.
   MARGINCE_RELEASE_MANAGEMENT_DIST_URL: https://dist.test.margince.com
-  # The tag naming the last revision that actually PUBLISHED, moved by the job
-  # at the end of this file once publish-release has succeeded. It is what the
-  # next patch is cut from — a consumer's tree is the last release they
-  # received, not this ref's previous tip — and it is a cache of the dist
-  # service's own answer rather than a second authority: written only after a
-  # success, so the worst a lost write can do is make the next patch wider
-  # than necessary.
-  PUBLISHED_TAG: released
 
 jobs:
   draft:
@@ -108,13 +96,12 @@ jobs:
       packages: read
     outputs:
       version: ${{ steps.draft.outputs.version }}
-      patched: ${{ steps.draft.outputs.patched }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Full history so both ends of the range resolve; the shallow default
-          # would not carry the before commit.
+          # Full history so the patch base's revision resolves; the shallow
+          # default carries only the release commit.
           fetch-depth: 0
       - name: Log in to ghcr.io
         env:
@@ -136,7 +123,6 @@ jobs:
       - name: Cut the patch and draft the release
         id: draft
         env:
-          BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
@@ -146,43 +132,43 @@ jobs:
           # release, so nothing cut here can ever shadow one.
           version="1970.${GITHUB_RUN_NUMBER}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # The base is the last PUBLISHED revision, not this push's previous
-          # tip: a patch is applied by somebody whose tree is the last release
-          # they received, and the two agree only while every lane publishes.
-          # A cancelled or failed run leaves a commit published by nobody, and
-          # basing on BEFORE then drops its files from every patch a consumer
-          # will ever apply. scripts/release-patch-base.sh states the rule and
-          # its fallbacks, and its own test walks the three-commit sequence
-          # that made this a defect rather than a hazard.
-          base="$(bash scripts/release-patch-base.sh "$PUBLISHED_TAG" "$BEFORE" HEAD~1)"
-          patch_args=()
+          # The CLI picks the base; the script checks the record and fails
+          # closed on anything but a base or the first-release mark.
+          docker run --rm \
+            -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
+            -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
+            "$RELEASE_MANAGEMENT_IMAGE" \
+            resolve-patch-base --version "$version" --jsonl > "$RUNNER_TEMP/patch-base.jsonl"
+          bash scripts/release-patch-base.sh < "$RUNNER_TEMP/patch-base.jsonl" > "$RUNNER_TEMP/patch-base.env"
+          # shellcheck source=/dev/null
+          . "$RUNNER_TEMP/patch-base.env"
+          if [ "$first_release" = true ]; then
+            patch_from=(--first-release)
+            patch_base=(--first-release)
+          else
+            patch_from=(--from "$base_revision")
+            patch_base=(--patch-base "$base_version")
+          fi
           # The ref name is part of the patch filename; a branch name with a
           # slash would make it a path into a directory that does not exist
           # inside the CLI's mount, so flatten the separators.
           patch_file="${GITHUB_REF_NAME//\//-}-$AFTER.patch"
-          if [ -n "$base" ]; then
-            # The image ENTRYPOINT is the CLI (WORKDIR /work); mount the checkout
-            # there and diff it with -repo. The image's own user is non-root and
-            # does not own the runner's checkout, so run as the runner's uid/gid —
-            # the CLI then writes the patch as the mount's owner. That uid has no
-            # passwd entry in the image, so point HOME at a writable path, and
-            # inject safe.directory via git's env config (no writable config file
-            # needed) for the CLI's git subprocess.
-            docker run --rm \
-              --user "$(id -u):$(id -g)" \
-              -v "$PWD":/work \
-              -e HOME=/tmp \
-              -e GIT_CONFIG_COUNT=1 \
-              -e GIT_CONFIG_KEY_0=safe.directory \
-              -e GIT_CONFIG_VALUE_0='*' \
-              "$RELEASE_MANAGEMENT_IMAGE" \
-              create-patch -from "$base" -to "$AFTER" -repo . -out "$patch_file"
-            patch_args=(-patch "$patch_file")
-            echo "patched=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No ancestor commit to diff from; drafting the release without a patch." >&2
-            echo "patched=false" >> "$GITHUB_OUTPUT"
-          fi
+          # The image ENTRYPOINT is the CLI (WORKDIR /work); mount the checkout
+          # there and diff it with --repo. The image's own user is non-root and
+          # does not own the runner's checkout, so run as the runner's uid/gid —
+          # the CLI then writes the patch as the mount's owner. That uid has no
+          # passwd entry in the image, so point HOME at a writable path, and
+          # inject safe.directory via git's env config (no writable config file
+          # needed) for the CLI's git subprocess.
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD":/work \
+            -e HOME=/tmp \
+            -e GIT_CONFIG_COUNT=1 \
+            -e GIT_CONFIG_KEY_0=safe.directory \
+            -e GIT_CONFIG_VALUE_0='*' \
+            "$RELEASE_MANAGEMENT_IMAGE" \
+            create-patch "${patch_from[@]}" --to "$AFTER" --repo . --out "$patch_file"
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -v "$PWD":/work \
@@ -190,10 +176,11 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            draft-release -version "$version" -revision "$AFTER" "${patch_args[@]}" \
-            -sbom-cyclonedx sboms/margince.cdx.json \
-            -sbom-spdx22 sboms/margince.spdx221.json \
-            -sbom-spdx30 sboms/margince.spdx300.json
+            draft-release --version "$version" --revision "$AFTER" \
+            --patch "$patch_file" "${patch_base[@]}" \
+            --sbom-cyclonedx sboms/margince.cdx.json \
+            --sbom-spdx22 sboms/margince.spdx221.json \
+            --sbom-spdx30 sboms/margince.spdx300.json
 
   # Build the three role images through the bake file (docker-bake.hcl), push
   # them to ghcr, and add all three to the drafted release in ONE add-artifacts
@@ -306,19 +293,17 @@ jobs:
           images=()
           for role in api web worker; do
             digest="$(jq -er --arg role "$role" '.[$role]."containerimage.digest"' bake-metadata.json)"
-            images+=(-image "$role=$REPO/$role:$VERSION@$digest")
+            images+=(--image "$role=$REPO/$role:$VERSION@$digest")
           done
           docker run --rm \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            add-artifacts -version "$VERSION" "${images[@]}"
+            add-artifacts --version "$VERSION" "${images[@]}"
 
   # Publish only after the images are attached, so a published release always
   # carries its images even though the dist completeness gate only requires
-  # the patch and the SBOMs. A release that drafted without a patch cannot
-  # pass that gate, so it deliberately stays a draft (the degenerate
-  # branch-creation/force-push case).
+  # the patch and the SBOMs.
   publish:
     name: Publish release
     timeout-minutes: 30
@@ -332,14 +317,6 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-publish-${{ github.ref }}
       cancel-in-progress: false
-    # `!= 'false'`, not `== 'true'`: on a re-run of failed jobs the draft job
-    # does not re-execute and GitHub drops its outputs, so an equality test
-    # against 'true' silently skipped the publish of a fully patched release.
-    # Fail open on a missing output — the only release that must not publish
-    # is one that KNOWS it has no patch, and the dist completeness gate backs
-    # this up server-side with a 409. The implicit success() still applies, so
-    # a failed draft or image job keeps blocking the publish.
-    if: needs.draft.outputs.patched != 'false'
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
@@ -361,53 +338,5 @@ jobs:
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            publish-release -version "$VERSION"
+            publish-release --version "$VERSION"
 
-  # What was PUBLISHED, recorded where the next patch can read it.
-  #
-  # The patch a consumer applies has to start from the tree they are holding,
-  # which is the last release that actually reached them — and a lane that
-  # cancelled or failed published nothing while still moving this ref's tip. So
-  # the base cannot be the tip, and this job is what makes the true answer
-  # available to a later run: a moving tag on the revision publish-release just
-  # accepted.
-  #
-  # AFTER the publish, and only on its success, which is what makes a tag safe
-  # as a cache of the dist service's own record. A write that is lost leaves the
-  # next patch WIDER than it needs to be — a consumer applies it without harm —
-  # while a write that ran too early is the narrow patch this whole change
-  # exists to prevent.
-  #
-  # Its own job rather than a step in the publish, so `contents: write` does not
-  # join the job holding the dist publisher token. It carries no secrets of its
-  # own beyond the default token the push needs.
-  mark-published:
-    name: Record the published revision
-    timeout-minutes: 10
-    needs: [publish]
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: write
-    steps:
-      # The whole history, because the move is ORDERED: the script refuses a
-      # revision the tag's current one does not lead to, and a shallow checkout
-      # cannot answer that question about anything.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: Move the published tag
-        env:
-          PUBLISHED: ${{ github.sha }}
-        # The tag MOVES: it names one revision, the newest published one, and a
-        # reader asking "what does a consumer have" wants exactly that. The
-        # history of what was published lives in the dist service, which is its
-        # owner; this is a pointer.
-        #
-        # FORWARD ONLY, and in a script of its own so that rule has a test. This
-        # job is outside the publish concurrency group — it has to be, or a
-        # release would hold the group while tagging — so two releases in flight
-        # are serialized at the publish and not here, and an older one's move
-        # can land last. Moving the tag backward cuts every later patch from a
-        # base ahead of what consumers have, which is the defect this whole
-        # change is about, arriving by the other door.
-        run: bash scripts/publish-released-tag.sh "$PUBLISHED_TAG" "$PUBLISHED" origin
