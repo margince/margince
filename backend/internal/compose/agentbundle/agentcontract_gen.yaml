@@ -5585,6 +5585,24 @@ paths:
               schema: {$ref: '#/components/schemas/RecordFieldsVocabulary'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /list-filters:
+    get:
+      tags: [Search]
+      operationId: describeListFilters
+      security: [{bearerAuth: []}]
+      summary: The filters a record list may be narrowed by, for each record type.
+      description: |-
+        The answer the `describe_list_filters` agent tool gives, run by the same tool on
+        both doors: for each record type, the filters `list_records` takes (the list
+        route's own query parameters), the operand each takes and its closed values.
+      responses:
+        '200':
+          description: The record list filter vocabulary.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListFiltersVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /search:
     get:
       tags: [Search]
@@ -12354,6 +12372,31 @@ components:
       required: [vocabulary]
       properties:
         vocabulary: {type: string}
+    ListFiltersVocabulary:
+      description: 'What `describe_list_filters` answers.'
+      type: object
+      required: [record_types]
+      properties:
+        record_types:
+          type: object
+          description: For each record type list_records takes, the filters it may be narrowed by.
+          additionalProperties:
+            type: array
+            items: {$ref: '#/components/schemas/ListFilter'}
+    ListFilter:
+      description: One filter a record list may be narrowed by.
+      type: object
+      required: [name, operand]
+      properties:
+        name: {type: string, description: "The filter's key in list_records' filters object, and the list route's query parameter."}
+        operand:
+          type: string
+          enum: [string, boolean, integer, number, array]
+          description: 'What the string operand spells: a boolean is "true" or "false", an array is comma-separated.'
+        values:
+          type: array
+          items: {type: string}
+          description: The closed vocabulary the filter takes, when it has one.
     RecordFieldsVocabulary:
       description: 'What `describe_record_fields` answers.'
       type: object

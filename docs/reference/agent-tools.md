@@ -45,7 +45,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | `catch_me_up_on` | 🟢 | `read` | no | Get a short account of a record |
 | `check_availability` | 🟢 | `read` | no | Check free times on a calendar |
 | `compose_analytics_report` | 🟢 | `read` | no | Build a report from data |
-| `describe_vocabulary` | 🟢 | `read` | no | 🔀 Describe what a tool accepts <details><summary>actions</summary>`describe_analytics_vocabulary` `describe_query_vocabulary` `describe_record_fields` `describe_report_blocks` `describe_report_vocabulary`</details> |
+| `describe_vocabulary` | 🟢 | `read` | no | 🔀 Describe what a tool accepts <details><summary>actions</summary>`describe_analytics_vocabulary` `describe_list_filters` `describe_query_vocabulary` `describe_record_fields` `describe_report_blocks` `describe_report_vocabulary`</details> |
 | `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
 | `list_documents` | 🟢 | `read` | no | List a record's documents |
 | `list_records` | 🟢 | `read` | no | List records |

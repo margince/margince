@@ -34,6 +34,7 @@ var listOperations = []struct{ recordType, operationID string }{
 	{"project", "listProjects"},
 	{"product", "listProducts"},
 	{"offer_template", "listOfferTemplates"},
+	{"activity", "listActivities"},
 }
 
 // notAFieldFilter names the inline parameters that are NOT filters on the

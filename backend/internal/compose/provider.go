@@ -100,7 +100,7 @@ var searchable = []datasource.EntityType{datasource.EntityContact, datasource.En
 // name?". Conflating them is how naming a type became impossible by the act
 // of keeping it out of the sweep — a type left out of the default set stopped
 // being reachable at all, which is the opposite of what excluding it meant.
-var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner, datasource.EntityProduct, datasource.EntityOfferTemplate)
+var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityActivity)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
@@ -135,6 +135,8 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 		return p.deals.ListFilters(t)
 	case datasource.EntityProject:
 		return p.projects.ListFilters(t)
+	case datasource.EntityActivity:
+		return p.activities.ListFilters(t)
 	default:
 		return nil
 	}
@@ -227,6 +229,8 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
 		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityActivity:
+		records, next, _, err = p.activities.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}

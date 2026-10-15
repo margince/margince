@@ -22,16 +22,14 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
-		"being delivered.",
-	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
-		"the schema lists per type, and it answers ONE page: the set continues past it.",
-	Instead: "Use search_records when the question is what a record is called rather than which " +
-		"records meet a condition, and run_report when the answer is a count or a total rather " +
-		"than the records themselves.",
-	Retain: "Keep next_cursor and pass it back to read the next page — a second call without it " +
-		"re-reads the first one. A result's `owner` says who holds it. " + sayWhoseItIs,
+	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
+		"pipeline, the leads one rep owns, a contact's timeline.",
+	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
+		"the set continues past it.",
+	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
+		"or a total.",
+	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
+		"A result's `owner` says who holds it. " + sayWhoseItIs,
 }
 
 var readRecordCopy = toolCopy{

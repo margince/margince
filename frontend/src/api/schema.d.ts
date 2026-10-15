@@ -9020,6 +9020,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/list-filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The filters a record list may be narrowed by, for each record type.
+         * @description The answer the `describe_list_filters` agent tool gives, run by the same tool on
+         *     both doors: for each record type, the filters `list_records` takes (the list
+         *     route's own query parameters), the operand each takes and its closed values.
+         */
+        get: operations["describeListFilters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -29196,6 +29218,25 @@ export interface components {
         /** @description What `describe_analytics_vocabulary` answers. */
         AnalyticsVocabulary: {
             vocabulary: string;
+        };
+        /** @description What `describe_list_filters` answers. */
+        ListFiltersVocabulary: {
+            /** @description For each record type list_records takes, the filters it may be narrowed by. */
+            record_types: {
+                [key: string]: components["schemas"]["ListFilter"][];
+            };
+        };
+        /** @description One filter a record list may be narrowed by. */
+        ListFilter: {
+            /** @description The filter's key in list_records' filters object, and the list route's query parameter. */
+            name: string;
+            /**
+             * @description What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+             * @enum {string}
+             */
+            operand: "string" | "boolean" | "integer" | "number" | "array";
+            /** @description The closed vocabulary the filter takes, when it has one. */
+            values?: string[];
         };
         /** @description What `describe_record_fields` answers. */
         RecordFieldsVocabulary: {
@@ -61667,6 +61708,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordFieldsVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeListFilters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record list filter vocabulary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListFiltersVocabulary"];
                 };
             };
             401: components["responses"]["Unauthorized"];

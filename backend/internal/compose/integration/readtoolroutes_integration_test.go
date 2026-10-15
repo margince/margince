@@ -144,7 +144,7 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 		{"lead", "leads", lead, true},
 		{"deal", "deals", deal, true},
 		{"project", "projects", project, true},
-		{"activity", "activities", note, false},
+		{"activity", "activities", note, true},
 		{"product", "products", product, true},
 		{"offer_template", "offer-templates", template, true},
 	} {

@@ -2163,6 +2163,10 @@ func (stubs) WithdrawLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "WithdrawLegalReview")
 }
 
+func (stubs) DescribeListFilters(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DescribeListFilters")
+}
+
 func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {
 	httperr.NotImplemented(w, r, "ListLists")
 }

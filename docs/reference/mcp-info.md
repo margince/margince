@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 176.2 KB |
+| Tool catalog | 175.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 46003 |
+| Approx. wire tokens | 45701 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
-| Input schemas | 53.5 KB | 30% | Yes, every step |
+| Descriptions (incl. governance clause) | 48.0 KB | 27% | Yes, every step |
+| Input schemas | 52.5 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **101.7 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **100.6 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -76,13 +76,13 @@ descriptions and input schemas are what each step pays for.
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 634 |
 | [`create_task`](#create_task) | Create a task |  |  | 221 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
-| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 346 |
+| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 349 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 396 |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 1012 |
+| [`list_records`](#list_records) | List records | yes |  | 707 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
@@ -3674,6 +3674,7 @@ figure is cited from a saved run, never written into a block.
       "description": "Which tool's names to describe",
       "enum": [
         "analytics",
+        "list_filters",
         "query",
         "record_fields",
         "report_blocks",
@@ -4584,13 +4585,11 @@ twice. Keep next_cursor to read the next page.
 **List records**
 
 ```text
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every
-deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by
-the filters this workspace publishes for that record_type, which the schema lists per type, and it
-answers ONE page: the set continues past it. Use search_records when the question is what a record
-is called rather than which records meet a condition, and run_report when the answer is a count or a
-total rather than the records themselves. Keep next_cursor and pass it back to read the next page
-— a second call without it re-reads the first one. A result's `owner` says who holds it. When
+List the records of one record_type that meet exact conditions: every deal in one pipeline, the
+leads one rep owns, a contact's timeline. It narrows only by the filters listed for that
+record_type, and answers ONE page: the set continues past it. Use search_records to find a record by
+what it is called, and run_report for a count or a total. Pass next_cursor back to read the next
+page; a call without it re-reads the first. A result's `owner` says who holds it. When
 `owner.is_you` is false, say whose it is when you report the record (or that its owner could not be
 named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than
 advising an approach as though the record were unowned.
@@ -4608,7 +4607,7 @@ advising an approach as though the record were unowned.
     },
     "filters": {
       "additionalProperties": false,
-      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — only the shared lines company — domain, industry, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), size_band (1-10|11-50|51-200|201-500|501-1000|1001-5000|5000+) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), forecast_category (commit|best_case|pipeline|omitted), partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost) lead — from_contact_id, min_score (i), sla_state (within_target|at_risk|breached), source, status (new|contacted|engaged|promoted|disqualified) project — key, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale contact/company/deal/lead — list_id, tag_id (a), tag_mode (any|all|none) contact/company/deal/lead/project — owner_id, owner_team_id, unassigned (b) contact/company/deal/lead/project/product/offer_template — include_archived (b), sort contact/company/lead — ai_written (b), captured_by_kind (human|agent|connector|system) contact/deal/project — company_id (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string. Which filters each record_type takes, and the values each takes, is in describe_vocabulary (topic: list_filters). A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
       "properties": {
         "acquisition_source": {
           "type": "string"
@@ -4619,7 +4618,13 @@ advising an approach as though the record were unowned.
         "ai_written": {
           "type": "string"
         },
+        "assignee_id": {
+          "type": "string"
+        },
         "captured_by_kind": {
+          "type": "string"
+        },
+        "channel_provider": {
           "type": "string"
         },
         "commercial_motion": {
@@ -4629,6 +4634,12 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "domain": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
           "type": "string"
         },
         "forecast_category": {
@@ -4646,6 +4657,9 @@ advising an approach as though the record were unowned.
         "key": {
           "type": "string"
         },
+        "kind": {
+          "type": "string"
+        },
         "lifecycle": {
           "type": "string"
         },
@@ -4656,6 +4670,12 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "min_score": {
+          "type": "string"
+        },
+        "occurred_after": {
+          "type": "string"
+        },
+        "occurred_before": {
           "type": "string"
         },
         "owner_id": {
@@ -4715,7 +4735,13 @@ advising an approach as though the record were unowned.
         "tag_mode": {
           "type": "string"
         },
+        "thread_key": {
+          "type": "string"
+        },
         "unassigned": {
+          "type": "string"
+        },
+        "waiting_reply": {
           "type": "string"
         }
       },
@@ -4734,7 +4760,8 @@ advising an approach as though the record were unowned.
         "lead",
         "project",
         "product",
-        "offer_template"
+        "offer_template",
+        "activity"
       ],
       "type": "string"
     }

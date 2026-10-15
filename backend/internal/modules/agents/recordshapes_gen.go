@@ -137,4 +137,18 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "locale", Type: "string"},
 		{Name: "sort", Type: "string"},
 	},
+	"activity": {
+		{Name: "assignee_id", Type: "string"},
+		{Name: "channel_provider", Type: "string"},
+		{Name: "entity_id", Type: "string"},
+		{Name: "entity_type", Type: "string", Enum: []string{"contact", "company", "deal", "lead", "project"}},
+		{Name: "include_archived", Type: "boolean"},
+		{Name: "kind", Type: "string", Enum: []string{"email", "call", "meeting", "note", "task", "message"}},
+		{Name: "occurred_after", Type: "string"},
+		{Name: "occurred_before", Type: "string"},
+		{Name: "project_id", Type: "string"},
+		{Name: "sort", Type: "string"},
+		{Name: "thread_key", Type: "string"},
+		{Name: "waiting_reply", Type: "boolean"},
+	},
 }

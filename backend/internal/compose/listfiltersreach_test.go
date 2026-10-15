@@ -17,6 +17,7 @@ package compose
 // narrows.
 
 import (
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"slices"
 	"strings"
 	"testing"
@@ -36,16 +37,10 @@ import (
 // A nil pool is enough: the vocabulary is a property of the code, resolved at
 // registration, and no part of answering it touches the database.
 func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
-	registry := NewRegistry(nil, SendPath{})
-	spec, ok := registry.Spec("list_records")
-	if !ok {
-		t.Fatal("list_records is not registered, so the surface has no enumeration verb at all")
-	}
-	published := string(spec.InputSchema)
-
+	published := agents.ListFiltersDocument(NewProvider(nil))
 	for _, recordType := range []datasource.EntityType{
-		datasource.EntityContact, datasource.EntityCompany,
-		datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead,
+		datasource.EntityProject, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityActivity,
 	} {
 		bound := NewProvider(nil).ListFilters(recordType)
 		if len(bound) == 0 {
@@ -54,10 +49,13 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 				recordType)
 			continue
 		}
-		offered := publishedFilterLine(t, published, string(recordType))
+		var offered []string
+		for _, filter := range published.RecordTypes[string(recordType)] {
+			offered = append(offered, filter.Name)
+		}
 		for _, name := range bound {
-			if !strings.Contains(offered, name) {
-				t.Errorf("%s binds %q and list_records publishes %q for that type: capability nobody "+
+			if !slices.Contains(offered, name) {
+				t.Errorf("%s binds %q and describe_list_filters publishes %v for that type: capability nobody "+
 					"can reach. A filter is published only when crm.yaml's list operation declares it "+
 					"too, so the fix is usually the missing parameter there.", recordType, name, offered)
 			}
@@ -65,44 +63,19 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 	}
 }
 
-// publishedFilterLine is what the tool tells a caller ONE record type may be
-// narrowed by. The schema carries the per-type vocabulary as prose, because a
-// name means different things per type: `status` is open|won|lost on a deal.
-// Each line is headed by the types that take it, one or several joined by "/".
-// This joins every line whose heading names the type asked about.
-func publishedFilterLine(t *testing.T, published, recordType string) string {
-	t.Helper()
-	segments := strings.Split(published, " — ")
-	var lines []string
-	for i := 0; i+1 < len(segments); i++ {
-		words := strings.Fields(segments[i])
-		if len(words) == 0 || !slices.Contains(strings.Split(words[len(words)-1], "/"), recordType) {
-			continue
-		}
-		body := segments[i+1]
-		if i+2 < len(segments) {
-			if boundary := strings.LastIndex(body, " "); boundary >= 0 {
-				body = body[:boundary]
-			}
-		}
-		lines = append(lines, body)
-	}
-	if len(lines) == 0 {
-		t.Fatalf("list_records publishes no filter line for %s at all:\n%s", recordType, published)
-	}
-	return strings.Join(lines, ", ")
-}
-
-// The one record type the enumeration deliberately excludes stays excluded. A
-// timeline is reached through the record it hangs off, and sweeping it is what
-// search_records' own copy tells a caller it will not do.
-func TestTheEnumerationDoesNotOfferActivities(t *testing.T) {
+// The timeline is listed by name, as GET /activities lists it, and never swept.
+// search_records sweeps every type when none is named, so it does not offer it.
+func TestTheTimelineIsListedButNeverSwept(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
-	spec, ok := registry.Spec("list_records")
-	if !ok {
-		t.Fatal("list_records is not registered, so this proves nothing about what it offers")
+	list, listed := registry.Spec("list_records")
+	search, searched := registry.Spec("search_records")
+	if !listed || !searched {
+		t.Fatal("list_records or search_records is not registered, so this proves nothing about what they offer")
 	}
-	if strings.Contains(string(spec.InputSchema), `"activity"`) {
-		t.Errorf("list_records offers activity in its record_type enum:\n%s", spec.InputSchema)
+	if !strings.Contains(string(list.InputSchema), `"activity"`) {
+		t.Errorf("list_records does not offer activity, so a passport cannot list the timeline it lists on REST:\n%s", list.InputSchema)
+	}
+	if strings.Contains(string(search.InputSchema), `"activity"`) {
+		t.Errorf("search_records offers activity in its record_type enum:\n%s", search.InputSchema)
 	}
 }

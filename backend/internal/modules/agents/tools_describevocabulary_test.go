@@ -29,6 +29,7 @@ func TestDescribeVocabularyRoutesEveryTopic(t *testing.T) {
 	r.Register(describeQueryVocabulary{})
 	r.Register(describeAnalyticsVocabulary{})
 	r.Register(describeRecordFields{})
+	r.Register(describeListFilters{})
 	r.Register(describeReportBlocks{})
 	r.Register(describeReportVocabulary{})
 	r.Register(describeVocabulary{})

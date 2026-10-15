@@ -61,6 +61,7 @@ const (
 // its sets in is the module's business, and naming files here would make this
 // gate break on a rename that changed nothing about the vocabulary.
 var filterSetModules = []string{
+	"internal/modules/activities",
 	"internal/modules/contacts",
 	"internal/modules/deals",
 	"internal/modules/projects",

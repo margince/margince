@@ -29,6 +29,7 @@ func (describeVocabulary) routeTargets() map[string]string {
 		topicQuery:          "describe_query_vocabulary",
 		"analytics":         "describe_analytics_vocabulary",
 		"record_fields":     "describe_record_fields",
+		"list_filters":      "describe_list_filters",
 		"report_blocks":     "describe_report_blocks",
 		"report_vocabulary": "describe_report_vocabulary",
 	}

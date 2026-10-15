@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 56,
     "system_frame_tokens": 597,
-    "tokens": 24958,
+    "tokens": 24657,
     "median_tool_tokens": 393,
-    "mean_tool_tokens": 445
+    "mean_tool_tokens": 439
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 56,
-      "tokens": 4225,
-      "listing_tokens": 2115,
-      "step_schema_tokens": 1513,
-      "percent_of_ceiling": 12,
-      "headroom_tokens": 18985,
+      "tokens": 3695,
+      "listing_tokens": 1835,
+      "step_schema_tokens": 1263,
+      "percent_of_ceiling": 11,
+      "headroom_tokens": 19515,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 56,
-      "tokens": 5892,
-      "listing_tokens": 3112,
-      "step_schema_tokens": 2183,
-      "percent_of_ceiling": 17,
-      "headroom_tokens": 17318,
+      "tokens": 5362,
+      "listing_tokens": 2832,
+      "step_schema_tokens": 1933,
+      "percent_of_ceiling": 16,
+      "headroom_tokens": 17848,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -93,10 +93,6 @@
       "tokens": 1014
     },
     {
-      "name": "list_records",
-      "tokens": 1012
-    },
-    {
       "name": "preview_import",
       "tokens": 993
     },
@@ -115,6 +111,10 @@
     {
       "name": "read_lists",
       "tokens": 745
+    },
+    {
+      "name": "list_records",
+      "tokens": 707
     },
     {
       "name": "read_forecast",
@@ -209,12 +209,12 @@
       "tokens": 359
     },
     {
-      "name": "catch_me_up_on",
-      "tokens": 348
+      "name": "describe_vocabulary",
+      "tokens": 349
     },
     {
-      "name": "describe_vocabulary",
-      "tokens": 346
+      "name": "catch_me_up_on",
+      "tokens": 348
     },
     {
       "name": "read_input_checks",

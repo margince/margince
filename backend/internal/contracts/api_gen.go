@@ -11956,6 +11956,33 @@ func (e ListDependencyRole) Valid() bool {
 	}
 }
 
+// Defines values for ListFilterOperand.
+const (
+	ListFilterOperandArray   ListFilterOperand = "array"
+	ListFilterOperandBoolean ListFilterOperand = "boolean"
+	ListFilterOperandInteger ListFilterOperand = "integer"
+	ListFilterOperandNumber  ListFilterOperand = "number"
+	ListFilterOperandString  ListFilterOperand = "string"
+)
+
+// Valid indicates whether the value is a known member of the ListFilterOperand enum.
+func (e ListFilterOperand) Valid() bool {
+	switch e {
+	case ListFilterOperandArray:
+		return true
+	case ListFilterOperandBoolean:
+		return true
+	case ListFilterOperandInteger:
+		return true
+	case ListFilterOperandNumber:
+		return true
+	case ListFilterOperandString:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListHistoryEntryKind.
 const (
 	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
@@ -39905,6 +39932,27 @@ type ListFieldValue struct {
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`
+}
+
+// ListFilter One filter a record list may be narrowed by.
+type ListFilter struct {
+	// Name The filter's key in list_records' filters object, and the list route's query parameter.
+	Name string `json:"name"`
+
+	// Operand What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+	Operand ListFilterOperand `json:"operand"`
+
+	// Values The closed vocabulary the filter takes, when it has one.
+	Values *[]string `json:"values,omitempty"`
+}
+
+// ListFilterOperand What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
+type ListFilterOperand string
+
+// ListFiltersVocabulary What `describe_list_filters` answers.
+type ListFiltersVocabulary struct {
+	// RecordTypes For each record type list_records takes, the filters it may be narrowed by.
+	RecordTypes map[string][]ListFilter `json:"record_types"`
 }
 
 // ListHistoryEntry defines model for ListHistoryEntry.
@@ -71400,6 +71448,9 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The filters a record list may be narrowed by, for each record type.
+	// (GET /list-filters)
+	DescribeListFilters(w http.ResponseWriter, r *http.Request)
 	// Find the lists this caller may see, by name.
 	// (GET /lists)
 	ListLists(w http.ResponseWriter, r *http.Request, params ListListsParams)
@@ -75540,6 +75591,12 @@ func (_ Unimplemented) DecideLegalReview(w http.ResponseWriter, r *http.Request,
 // Take back an open request.
 // (POST /legal-reviews/{id}/withdraw)
 func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The filters a record list may be narrowed by, for each record type.
+// (GET /list-filters)
+func (_ Unimplemented) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100024,6 +100081,28 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeListFilters operation middleware
+func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeListFilters(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLists operation middleware
 func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
 
@@ -114842,6 +114921,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/legal-reviews/{id}/withdraw", wrapper.WithdrawLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/list-filters", wrapper.DescribeListFilters)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lists", wrapper.ListLists)

@@ -150,6 +150,10 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
+		if in.WaitingReply && in.WaitingReplyAsOf == nil {
+			asOf := s.now()
+			in.WaitingReplyAsOf = &asOf
+		}
 		// Measured only when the waiting filter is actually asked for. Every
 		// activity list runs through here, and the spread is a percentile over
 		// a year — a scan no read that never mentions waiting should pay for.

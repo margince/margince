@@ -59,14 +59,13 @@ type FilterVocabulary interface {
 	ListFilters(t datasource.EntityType) []string
 }
 
-// listRecordTypes is the enumeration vocabulary, in the order the schema and
-// the description present it. It is the set that has BOTH a contract list
-// operation and a store behind the seam; `activity` is deliberately absent,
-// since a timeline is reached through the record it hangs off rather than swept.
+// listRecordTypes is the enumeration vocabulary, in schema order. A type here
+// has a contract list operation and a store behind the seam. An untyped sweep
+// still leaves activity out; a list names it, as GET /activities does.
 var listRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
-	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate),
+	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate), string(datasource.EntityActivity),
 }
 
 // RegisterListTool joins list_records to the surface.
@@ -77,7 +76,9 @@ var listRecordTypes = []string{
 // required rather than optional — every deployment has stores, so a missing one
 // is a wiring defect, not a configuration.
 func RegisterListTool(r *Registry, p datasource.SystemOfRecordProvider, vocabulary FilterVocabulary) {
-	r.Register(listRecords{p: p, filters: bindableFilters(vocabulary), name: r.seats})
+	filters := bindableFilters(vocabulary)
+	r.Register(listRecords{p: p, filters: filters, name: r.seats})
+	r.Register(describeListFilters{filters: filters})
 }
 
 // bindableFilters intersects the contract's declared filters with the ones the
@@ -108,9 +109,9 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		Description:   listRecordsCopy.render(),
 		Instead:       listRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates",
+		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template"]},` +
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity"]},` +
 			t.filtersProperty() + `
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
@@ -157,75 +158,12 @@ func (t listRecords) publishedFilterNames() []string {
 	return slices.Sorted(maps.Keys(seen))
 }
 
-// describeFilters writes the per-type vocabulary into the one place a caller
-// reads it: which record type takes which key, and the operand each takes.
-// Filters several types take alike sit on one line headed by all of them
-// (contact/deal), because the listing rides in every prompt against a ceiling.
+// describeFilters points at the per-type vocabulary rather than reciting it:
+// recited, it rode in every prompt and grew with each type a list serves.
 func (t listRecords) describeFilters() string {
-	lines := []string{"Narrow the list. Every operand is a string. Each record_type takes only its own:"}
-	used := map[string]bool{}
-	takers := map[string][]string{}
-	for _, recordType := range listRecordTypes {
-		for _, filter := range t.filters[recordType] {
-			used[filter.Type] = true
-			takers[filter.describe()] = append(takers[filter.describe()], recordType)
-		}
-	}
-	shared := map[string][]string{}
-	for _, recordType := range listRecordTypes {
-		var own []string
-		for _, filter := range t.filters[recordType] {
-			if types := takers[filter.describe()]; len(types) > 1 {
-				shared[strings.Join(types, "/")] = appendOnce(shared[strings.Join(types, "/")], filter.describe())
-				continue
-			}
-			own = append(own, filter.describe())
-		}
-		switch {
-		case len(t.filters[recordType]) == 0:
-			lines = append(lines, recordType+" — none; it can only be listed whole")
-		case len(own) > 0:
-			lines = append(lines, recordType+" — "+strings.Join(own, ", "))
-		default:
-			lines = append(lines, recordType+" — only the shared lines")
-		}
-	}
-	for _, types := range slices.Sorted(maps.Keys(shared)) {
-		lines = append(lines, types+" — "+strings.Join(shared[types], ", "))
-	}
-	lines = append(lines, operandKey(used)...)
+	lines := []string{"Narrow the list. Every operand is a string. Which filters each record_type takes, " +
+		"and the values each takes, is in describe_vocabulary (topic: list_filters)."}
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
-}
-
-func appendOnce(list []string, item string) []string {
-	if slices.Contains(list, item) {
-		return list
-	}
-	return append(list, item)
-}
-
-// operandCodes abbreviates the non-string operand types, and says what each
-// code means, because the code alone does not: `(a)` is a comma-separated list.
-var operandCodes = []struct{ schemaType, code, meaning string }{
-	{schemaArray, "(a)", "a comma-separated list"},
-	{schemaBoolean, "(b)", `"true" or "false"`},
-	{schemaInteger, "(i)", "a whole number"},
-	{schemaNumber, "(n)", "a number"},
-}
-
-// operandKey states the meaning of each code the vocabulary uses, and nothing
-// for a code it does not.
-func operandKey(used map[string]bool) []string {
-	var key []string
-	for _, operand := range operandCodes {
-		if used[operand.schemaType] {
-			key = append(key, operand.code+" is "+operand.meaning)
-		}
-	}
-	if len(key) == 0 {
-		return nil
-	}
-	return []string{strings.Join(key, ", ") + "."}
 }
 
 // sourceOfStageIDs says where a pipeline or stage id comes from, when the
@@ -245,31 +183,6 @@ func (t listRecords) sourceOfStageIDs() []string {
 		}
 	}
 	return nil
-}
-
-// describe renders one filter as a caller must spell it: the closed vocabulary
-// where the contract declares one, since a plausible-looking word outside it is
-// the operand a caller gets wrong, and otherwise the operand's own type where it
-// is not a string — every operand travels as a string on this wire, so `true`
-// and `3` are the two a caller would otherwise have to guess the spelling of.
-//
-// The non-string types are abbreviated to an operandCodes code, which
-// operandKey explains once: the whole listing rides in every Surface-B prompt
-// against a hard ceiling, so the meaning is paid once rather than per filter. A
-// type with no code is spelled out, so no code is ever printed unexplained.
-func (f listFilter) describe() string {
-	switch {
-	case len(f.Enum) > 0:
-		return f.Name + " (" + strings.Join(f.Enum, "|") + ")"
-	case f.Type == "" || f.Type == schemaString:
-		return f.Name
-	}
-	for _, operand := range operandCodes {
-		if operand.schemaType == f.Type {
-			return f.Name + " " + operand.code
-		}
-	}
-	return f.Name + " (" + f.Type + ")"
 }
 
 func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
