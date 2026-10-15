@@ -84,12 +84,12 @@ func TestValidatePublicBaseURLRefusesUserinfoWithoutEchoingIt(t *testing.T) {
 // time: the first return said only what it had reached, and the next run
 // answered with a fault that had been true all along.
 func TestParseReportsEveryConfigurationFaultAtOnce(t *testing.T) {
-	t.Setenv("MARGINCE_DSN", "")
-	_, err := parseAPIFlags([]string{"--metrics-access", "sometimes"})
+	t.Parallel()
+	_, _, err := loadAPIConfig([]string{"--metrics-access", "sometimes"}, nil)
 	if err == nil {
 		t.Fatal("parsing answered no error, want both faults reported")
 	}
-	for _, want := range []string{"--dsn", "--metrics-access"} {
+	for _, want := range []string{"MARGINCE_DSN", "--metrics-access"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the error does not mention %s — an operator fixing one fault at a time "+
 				"pays a boot per fault:\n%s", want, err)
@@ -100,8 +100,8 @@ func TestParseReportsEveryConfigurationFaultAtOnce(t *testing.T) {
 // One fault still reads as one sentence: a list of one is a worse message than
 // the sentence it replaces.
 func TestOneFaultIsNotRenderedAsAList(t *testing.T) {
-	t.Setenv("MARGINCE_DSN", "")
-	_, err := parseAPIFlags(nil)
+	t.Parallel()
+	_, _, err := loadAPIConfig(nil, nil)
 	if err == nil {
 		t.Fatal("parsing answered no error, want the missing DSN")
 	}
@@ -156,10 +156,10 @@ func TestTheBootLineNamesWhichHalfOfTheEnvironmentAppIsMissing(t *testing.T) {
 // exactly why somebody would put the list here.
 func TestTheCaptureTenantRefusesAListAndSaysWhereItGoes(t *testing.T) {
 	t.Parallel()
-	_, err := parseAPIFlags([]string{
+	_, _, err := loadAPIConfig([]string{
 		"--dsn", "postgres://x/y",
 		"--graph-tenant", "11111111-2222-3333-4444-555555555555,9188040d-6c67-4c5b-b112-36a304b66dad",
-	})
+	}, nil)
 	if err == nil {
 		t.Fatal("a list of directories was accepted as the capture authority")
 	}
@@ -169,7 +169,7 @@ func TestTheCaptureTenantRefusesAListAndSaysWhereItGoes(t *testing.T) {
 
 	// ONE authority still boots, including the alias capture defaults to.
 	for _, tenant := range []string{"common", "11111111-2222-3333-4444-555555555555"} {
-		if _, err := parseAPIFlags([]string{"--dsn", "postgres://x/y", "--graph-tenant", tenant}); err != nil {
+		if _, _, err := loadAPIConfig([]string{"--dsn", "postgres://x/y", "--graph-tenant", tenant}, nil); err != nil {
 			t.Errorf("--graph-tenant %s was refused: %v", tenant, err)
 		}
 	}
@@ -180,7 +180,7 @@ func TestTheCaptureTenantRefusesAListAndSaysWhereItGoes(t *testing.T) {
 // authenticate nothing while the operator believed it did.
 func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 	t.Run("unset is token", func(t *testing.T) {
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		cfg, _, err := loadAPIConfig([]string{"--dsn", testDSN}, nil)
 		if err != nil {
 			t.Fatalf("parsing: %v", err)
 		}
@@ -190,8 +190,7 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 	})
 
 	t.Run("the environment opens it", func(t *testing.T) {
-		t.Setenv("MARGINCE_METRICS_ACCESS", "open")
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		cfg, _, err := loadAPIConfig([]string{"--dsn", testDSN}, []string{"MARGINCE_METRICS_ACCESS=open"})
 		if err != nil {
 			t.Fatalf("parsing: %v", err)
 		}
@@ -201,13 +200,13 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 	})
 
 	t.Run("a token with the default posture boots", func(t *testing.T) {
-		if _, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-token", "stands-in-for-a-token"}); err != nil {
+		if _, _, err := loadAPIConfig([]string{"--dsn", testDSN, "--metrics-token", "stands-in-for-a-token"}, nil); err != nil {
 			t.Fatalf("parsing: %v", err)
 		}
 	})
 
 	t.Run("open with a token fails the boot", func(t *testing.T) {
-		_, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-access", "open", "--metrics-token", "stands-in-for-a-token"})
+		_, _, err := loadAPIConfig([]string{"--dsn", testDSN, "--metrics-access", "open", "--metrics-token", "stands-in-for-a-token"}, nil)
 		if err == nil || !strings.Contains(err.Error(), "--metrics-access=open") {
 			t.Fatalf("err = %v, want a boot error naming --metrics-access=open", err)
 		}
@@ -217,9 +216,9 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 	})
 
 	t.Run("an unknown posture fails the boot", func(t *testing.T) {
-		_, err := parseAPIFlags([]string{"--dsn", testDSN, "--metrics-access", "public"})
-		if err == nil || !strings.Contains(err.Error(), `--metrics-access "public" is not a posture`) {
-			t.Fatalf("err = %v, want a boot error naming the unknown posture", err)
+		_, _, err := loadAPIConfig([]string{"--dsn", testDSN, "--metrics-access", "public"}, nil)
+		if err == nil || !strings.Contains(err.Error(), "--metrics-access") || !strings.Contains(err.Error(), "token, open") {
+			t.Fatalf("err = %v, want a boot error naming the flag and both postures", err)
 		}
 	})
 }
@@ -227,9 +226,9 @@ func TestMetricsAccessIsTokenByDefaultAndRefusesAContradiction(t *testing.T) {
 // The trusted-proxy list is a boot fault when it cannot be honoured safely,
 // never a silent empty set: an operator who set it believes the limits key on
 // the client, and an ignored value would leave them keyed on the proxy.
-func TestParseAPIFlags_TrustedProxies(t *testing.T) {
+func TestLoadAPIConfig_TrustedProxies(t *testing.T) {
 	t.Run("unset trusts nobody", func(t *testing.T) {
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		cfg, _, err := loadAPIConfig([]string{"--dsn", testDSN}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -238,8 +237,7 @@ func TestParseAPIFlags_TrustedProxies(t *testing.T) {
 		}
 	})
 	t.Run("env value is parsed", func(t *testing.T) {
-		t.Setenv("MARGINCE_TRUSTED_PROXIES", "10.0.0.0/16")
-		cfg, err := parseAPIFlags([]string{"--dsn", testDSN})
+		cfg, _, err := loadAPIConfig([]string{"--dsn", testDSN}, []string{"MARGINCE_TRUSTED_PROXIES=10.0.0.0/16"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -249,10 +247,22 @@ func TestParseAPIFlags_TrustedProxies(t *testing.T) {
 	})
 	for _, bad := range []string{"0.0.0.0/0", "ingress-nginx"} {
 		t.Run("refuses "+bad, func(t *testing.T) {
-			_, err := parseAPIFlags([]string{"--dsn", testDSN, "--trusted-proxies", bad})
+			_, _, err := loadAPIConfig([]string{"--dsn", testDSN, "--trusted-proxies", bad}, nil)
 			if err == nil || !strings.Contains(err.Error(), "--trusted-proxies") {
 				t.Fatalf("want a --trusted-proxies boot fault, got %v", err)
 			}
 		})
+	}
+}
+
+// The faults Load finds and the ones a single setting's own check finds arrive
+// in one error, so a boot names all of them.
+func TestTheAPIReportsEveryConfigurationFaultTogether(t *testing.T) {
+	t.Parallel()
+	_, _, err := loadAPIConfig([]string{"--metrics-access=open", "--graph-tenant=a,b"}, nil)
+	for _, want := range []string{"MARGINCE_DSN: required", "--graph-tenant takes ONE authority"} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("missing %q in %v", want, err)
+		}
 	}
 }

@@ -3,7 +3,10 @@
 
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestFlagsAreTheRegisteredOnesPlusTheLoaderOwn(t *testing.T) {
 	reg := mustRegistry(t,
@@ -40,4 +43,21 @@ func mustRegistry(t *testing.T, s ...Any) *Registry {
 		t.Fatal(err)
 	}
 	return r
+}
+
+func TestUsageNamesEveryFlagAndNoDefault(t *testing.T) {
+	reg := mustRegistry(t,
+		Define(Spec[string]{Key: "addr", Env: "X_ADDR", Flag: "addr", Type: String, Default: Some(":8080"), Doc: "listen address"}),
+		Define(Spec[string]{Key: "token", Env: "X_TOKEN", Flag: "token", Type: String, Secret: true, Doc: "a bearer"}),
+	)
+	var out strings.Builder
+	PrintUsage(&out, reg)
+	for _, want := range []string{"-addr", "listen address", "-token", "a bearer", "-config-file"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("usage lacks %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), ":8080") {
+		t.Errorf("usage prints a default:\n%s", out.String())
+	}
 }

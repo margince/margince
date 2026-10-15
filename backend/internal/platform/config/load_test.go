@@ -211,3 +211,19 @@ func TestASecretValidatorThatEchoesItsInputIsRedacted(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+// A secret may carry no default, so a type that takes empty text is what makes
+// it optional; NonEmpty keeps it required.
+func TestUnsetIsAFaultOnlyForATypeWithNoEmptyForm(t *testing.T) {
+	optional := config.Define(config.Spec[string]{Key: "metrics_token", Env: "MARGINCE_METRICS_TOKEN", Type: config.String, Secret: true, Doc: "d"})
+	cfg, err := load(t, fixture{env: []string{"MARGINCE_DSN=postgres://x"}}, optional, dsn)
+	if err != nil {
+		t.Fatalf("an unset optional secret failed the load: %v", err)
+	}
+	if v, origin := config.ValWithSource(cfg, optional); v != "" || origin.Source != config.SourceUnset {
+		t.Errorf("got %q from %s, want empty and unset", v, origin.Source)
+	}
+	if _, err := load(t, fixture{}, optional, dsn); err == nil || !strings.Contains(err.Error(), "MARGINCE_DSN: required") {
+		t.Errorf("an unset NonEmpty setting was not a fault: %v", err)
+	}
+}

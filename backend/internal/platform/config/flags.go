@@ -20,11 +20,31 @@ type flagValues struct {
 
 // parseFlags keeps every flag as text. The setting's Type parses it with the
 // same code that parses env, so a flag and a variable never disagree on a
-// value's meaning. Usage text names flags and docs only, never a default.
+// value's meaning.
 func parseFlags(r *Registry, args []string) (flagValues, error) {
-	fs := flag.NewFlagSet("margince", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
 	out := flagValues{raw: map[string]string{}, given: map[string]bool{}}
+	fs := newFlagSet(r, &out)
+	fs.SetOutput(io.Discard)
+	if err := fs.Parse(args); err != nil {
+		return flagValues{}, err
+	}
+	if fs.NArg() > 0 {
+		return flagValues{}, fmt.Errorf("unexpected argument at position %d; flags take --name=value", len(args)-fs.NArg()+1)
+	}
+	fs.Visit(func(f *flag.Flag) { out.given[f.Name] = true })
+	return out, nil
+}
+
+// PrintUsage writes every flag with its doc and never a default: each flag is
+// registered without one, so a secret's value cannot reach the text.
+func PrintUsage(w io.Writer, r *Registry) {
+	fs := newFlagSet(r, &flagValues{raw: map[string]string{}})
+	fs.SetOutput(w)
+	fs.PrintDefaults()
+}
+
+func newFlagSet(r *Registry, out *flagValues) *flag.FlagSet {
+	fs := flag.NewFlagSet("margince", flag.ContinueOnError)
 	fs.StringVar(&out.config, "config", "", "base YAML file (default margince.yaml)")
 	fs.StringVar(&out.configFile, "config-file", "", "YAML file layered over the base file")
 	fs.StringVar(&out.envFile, "env-file", "", ".env file to read")
@@ -44,12 +64,5 @@ func parseFlags(r *Registry, args []string) (flagValues, error) {
 			fs.Func(name, s.Doc(), record)
 		}
 	}
-	if err := fs.Parse(args); err != nil {
-		return flagValues{}, err
-	}
-	if fs.NArg() > 0 {
-		return flagValues{}, fmt.Errorf("unexpected argument at position %d; flags take --name=value", len(args)-fs.NArg()+1)
-	}
-	fs.Visit(func(f *flag.Flag) { out.given[f.Name] = true })
-	return out, nil
+	return fs
 }

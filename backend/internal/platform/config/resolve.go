@@ -40,6 +40,11 @@ func resolve(s Any, layers []layer, readFile func(string) ([]byte, error), geten
 	if v, ok := s.defaultValue(); ok {
 		return resolved{value: v, origin: Origin{Source: SourceDefault}, set: true}, nil
 	}
+	// The type decides whether unset is allowed: String takes empty text, so an
+	// optional secret needs no default, which a secret may not carry.
+	if _, err := parseChecked(s, ""); err == nil {
+		return resolved{origin: Origin{Source: SourceUnset}}, nil
+	}
 	return resolved{}, fmt.Errorf("%s: required", s.Env())
 }
 

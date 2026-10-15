@@ -1366,7 +1366,7 @@ up)
   # double-ship.
   MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
-    ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" \
+    ./bin/api --addr ":${api_port}" --dsn "$dev_app_url" --config "$deploy_cfg" --config-file "$dev_cfg" \
     --redis "${REDIS_ADDR}" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]+"${ai_flag[@]}"}" "${gmail_api_flags[@]+"${gmail_api_flags[@]}"}" > >(log_as api) 2>&1 &

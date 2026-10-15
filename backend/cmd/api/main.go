@@ -56,7 +56,7 @@ func main() {
 // listener — and the order it reads in is the order the process depends on;
 // boot.go holds the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	cfg, err := parseAPIFlags(args)
+	cfg, loaded, err := loadAPIConfig(args, config.Environ())
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	config.WarnUndeclared(logger, cfg.unknownVars)
+	reportConfiguration(logger, loaded, cfg.unknownVars)
 
 	pool, vault, err := openInstallation(ctx, cfg.dsn)
 	if err != nil {
@@ -172,6 +172,17 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, config.FromOS, logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
+}
+
+// reportConfiguration logs once the logger exists, so the trace and the
+// unknown-variable warning reach the stream an operator reads.
+func reportConfiguration(logger *slog.Logger, loaded *config.Config, unknownVars []string) {
+	if loaded.Trace() {
+		for _, line := range loaded.TraceLines() {
+			logger.Info(line)
+		}
+	}
+	config.WarnUndeclared(logger, unknownVars)
 }
 
 // openInstallation opens what this role reaches the installation THROUGH: the

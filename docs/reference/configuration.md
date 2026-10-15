@@ -3,7 +3,7 @@
 
 Three binaries, one per process role, live under `backend/cmd/`. Configuration is flags. Every boot
 flag of the api and the worker can also be set through `MARGINCE_<FLAG>` (`-` as `_`). This works
-for every boot flag but `--ai-fake`, which is only for dev. A flag you set wins over the
+for every boot flag but `--ai-fake` on the worker, which is only for dev. A flag you set wins over the
 `MARGINCE_` value. An empty required value is a
 boot error, and so is a `--log-level` / `--log-format` value it does not take.
 
@@ -108,7 +108,7 @@ failures to stderr, with no logger you can set up.
 | `--metrics-token` | `MARGINCE_METRICS_TOKEN` | — | shared secret `/metrics` needs as a Bearer credential. Not set (the default), `/metrics` refuses every scrape with the same 401 a wrong token gets, unless `--metrics-access=open`. See [Metrics access](#metrics-access) |
 | `--metrics-access` | `MARGINCE_METRICS_ACCESS` | `token` | who `/metrics` serves. `token` needs `--metrics-token`; `open` serves any client that reaches the port. The api warns at boot each time it is open, and refuses to boot with `open` and a token together. See [Metrics access](#metrics-access) |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Not used, and warns.** The binding is a stored setting. A new install declares it under `seeds.ai_routing` in `margince.yaml`; a running one changes it through Settings → AI / `PUT /v1/ai/routing`, with no restart. One case works another way: a role that started with nothing bound has no watcher, so restart it once after the first binding is stored. The flag stays registered, so an old command line still reads. A bound installation turns on the cold-start read-back, enrich per organization, the Morning-Brief `L2` order, and offers an AI drafts made again |
-| `--ai-fake` | (none) | `false` | offline fake model (dev/test only), used only when nothing else can serve: a stored binding that can serve comes before it. It serves when nothing is bound, or when the stored binding cannot be built, so a dev stack with no key still starts |
+| `--ai-fake` | `MARGINCE_AI_FAKE` | `false` | offline fake model (dev/test only), used only when nothing else can serve: a stored binding that can serve comes before it. It serves when nothing is bound, or when the stored binding cannot be built, so a dev stack with no key still starts |
 | `--public-base-url` | `MARGINCE_PUBLIC_BASE_URL` | — | the one true outside scheme+host for links a buyer sees (RFC 8058 unsubscribe and preference links) and for the Gmail/Graph OAuth callback. Also the API address in the Margince skill when `--api-base-url` is not set. Needed to send marketing mail: a send refuses, and does not derive the link that carries the token from the request Host. See [Public base URL](#public-base-url) |
 | (env-only) | `MARGINCE_PROVIDER_SURFE` | `live` | which licensed data provider adapter this process carries: `live` (default) the Surfe adapter, `offline` a fixed fake for a dev stack, `off` none. See [Licensed-data provider](#licensed-data-provider) |
 

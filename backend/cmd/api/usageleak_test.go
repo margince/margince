@@ -3,53 +3,40 @@
 
 package main
 
-// The api's usage output must never carry a value the environment supplied.
+// The api's usage output and boot errors must never carry a value the
+// environment supplied. That environment holds DSNs, OAuth client secrets and
+// signing keys, and `-h` or one mistyped argument writes to the pod's log.
 //
-// `flag` renders a non-empty default as `(default "…")`, and this role's
-// environment holds the owner DSN (the entrypoint sets MARGINCE_SCHEMA_DSN from
-// MARGINCE_OWNER_DSN), the app DSN, both OAuth client secrets, the connector-state
-// HMAC key, the webhook sealing key and the /metrics bearer token. A single
-// mistyped argument in a container command, or `-h` while debugging, sends the lot
-// to stderr — the pod's log stream, or a public CI build log.
-//
-// The obligation is DERIVED, not listed: the variable set comes from the
-// registrations in config.go itself, so a flag added later is covered the day it
-// is added rather than the day someone remembers to extend a fixture.
+// The variable set comes from APISettings itself, so a setting added later is
+// covered the day it is added.
 
 import (
 	"io"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 )
 
-// envBoundInSource returns every MARGINCE_* variable config.go binds to a flag.
-// Only a flag DEFAULT can reach the usage text, so the sweep is deliberately
-// narrowed to cliflags registrations rather than every env read in the file.
-var envBoundInSource = regexp.MustCompile(`env\.String\(fs, &[\w.]+, "[\w-]+", "(MARGINCE_\w+)"`)
+const leakSentinel = "SENTINEL_VALUE_MUST_NOT_APPEAR"
 
-func flagBoundEnvVars(t *testing.T, sourceFile string) []string {
+// sentinelEnviron sets every variable the api's own settings read to the
+// sentinel, except the bools, whose parse error would be the only fault seen.
+func sentinelEnviron(t *testing.T) []string {
 	t.Helper()
-	src, err := os.ReadFile(filepath.Clean(sourceFile))
-	if err != nil {
-		t.Fatalf("reading %s: %v", sourceFile, err)
+	var environ []string
+	for _, s := range APISettings() {
+		if s.TypeName() != "bool" {
+			environ = append(environ, s.Env()+"="+leakSentinel)
+		}
 	}
-	matches := envBoundInSource.FindAllStringSubmatch(string(src), -1)
-	if len(matches) == 0 {
-		t.Fatalf("no flag-bound MARGINCE_* variables found in %s — the registration shape changed and this gate is now checking nothing", sourceFile)
+	if len(environ) == 0 {
+		t.Fatal("APISettings declares no text setting, so this gate checks nothing")
 	}
-	vars := make([]string, 0, len(matches))
-	for _, m := range matches {
-		vars = append(vars, m[1])
-	}
-	return vars
+	return environ
 }
 
 // captureStderr runs fn with os.Stderr redirected, returning what was written.
-// The FlagSet inside parseAPIFlags writes its usage there, and that writer is the
-// one that matters — asserting on a locally-built FlagSet would assert a copy.
+// loadAPIConfig writes its usage there, and that writer is the one that matters.
 func captureStderr(t *testing.T, fn func()) string {
 	t.Helper()
 	r, w, err := os.Pipe()
@@ -79,47 +66,54 @@ func captureStderr(t *testing.T, fn func()) string {
 }
 
 func TestAPIUsageOutputCarriesNoEnvironmentValue(t *testing.T) {
-	const sentinel = "SENTINEL_VALUE_MUST_NOT_APPEAR"
-
-	vars := flagBoundEnvVars(t, "config.go")
-	for _, v := range vars {
-		t.Setenv(v, sentinel)
-	}
-
-	var parseErr error
+	environ := sentinelEnviron(t)
+	var helpErr, unknownErr error
 	usage := captureStderr(t, func() {
-		_, parseErr = parseAPIFlags([]string{"--nosuchflag"})
+		_, _, helpErr = loadAPIConfig([]string{"-h"}, environ)
+		_, _, unknownErr = loadAPIConfig([]string{"--nosuchflag"}, environ)
 	})
-	if parseErr == nil {
-		t.Fatal("an undefined flag was accepted")
+	if helpErr == nil || unknownErr == nil {
+		t.Fatalf("-h answered %v and an undefined flag %v, want both refused", helpErr, unknownErr)
 	}
-	if strings.Contains(usage, sentinel) {
-		for line := range strings.SplitSeq(usage, "\n") {
-			if strings.Contains(line, sentinel) {
-				t.Errorf("the usage text echoes an environment value: %s", strings.TrimSpace(line))
-			}
+	for line := range strings.SplitSeq(usage, "\n") {
+		if strings.Contains(line, leakSentinel) {
+			t.Errorf("the usage text echoes an environment value: %s", strings.TrimSpace(line))
 		}
 	}
-	if strings.Contains(parseErr.Error(), sentinel) {
-		t.Errorf("the parse error echoes an environment value: %v", parseErr)
+	for _, err := range []error{helpErr, unknownErr} {
+		if strings.Contains(err.Error(), leakSentinel) {
+			t.Errorf("the parse error echoes an environment value: %v", err)
+		}
 	}
-	// The capture has to be real: an empty usage block would satisfy every
-	// assertion above by containing nothing at all.
-	if !strings.Contains(usage, "-dsn") {
+	// An empty usage block would satisfy every assertion above by containing
+	// nothing at all.
+	if !strings.Contains(usage, "-dsn") || !strings.Contains(usage, "-config-file") {
 		t.Fatalf("no usage text was captured, so nothing above was checked:\n%s", usage)
 	}
-	t.Logf("checked %d flag-bound variables", len(vars))
 }
 
-// The environment still reaches the flags — the leak fix must not have quietly
-// disconnected them, which would leave a deployment booting on literal defaults.
-func TestAPIStillReadsTheEnvironment(t *testing.T) {
-	t.Setenv("MARGINCE_DSN", "postgres://u@127.0.0.1:1/from-env")
-	t.Setenv("MARGINCE_CONFIG", "/from/env.yaml")
+// Every value is invalid somewhere here, and the faults that say so still
+// name the variable and never the value.
+func TestAPIBootFaultsCarryNoEnvironmentValue(t *testing.T) {
+	t.Parallel()
+	_, _, err := loadAPIConfig(nil, sentinelEnviron(t))
+	if err == nil {
+		t.Fatal("a boot with every variable set to nonsense was accepted")
+	}
+	if strings.Contains(err.Error(), leakSentinel) {
+		t.Errorf("a boot fault echoes an environment value:\n%v", err)
+	}
+}
 
-	cfg, err := parseAPIFlags(nil)
+// The environment reaches the settings, the base file's path included.
+func TestAPIStillReadsTheEnvironment(t *testing.T) {
+	t.Parallel()
+	cfg, _, err := loadAPIConfig(nil, []string{
+		"MARGINCE_DSN=postgres://u@127.0.0.1:1/from-env",
+		"MARGINCE_CONFIG=/from/env.yaml",
+	})
 	if err != nil {
-		t.Fatalf("parsing with no arguments: %v", err)
+		t.Fatalf("loading with no arguments: %v", err)
 	}
 	if cfg.dsn != "postgres://u@127.0.0.1:1/from-env" {
 		t.Errorf("--dsn did not come from the environment: %q", cfg.dsn)
@@ -131,14 +125,16 @@ func TestAPIStillReadsTheEnvironment(t *testing.T) {
 
 // And an explicit flag still beats the environment.
 func TestAPIFlagBeatsTheEnvironment(t *testing.T) {
-	t.Setenv("MARGINCE_DSN", "postgres://u@127.0.0.1:1/db") // parseAPIFlags requires one
-	t.Setenv("MARGINCE_CONFIG", "/from/env.yaml")
-
-	cfg, err := parseAPIFlags([]string{"--config", "/from/flag.yaml"})
+	t.Parallel()
+	cfg, _, err := loadAPIConfig([]string{"--config", "/from/flag.yaml", "--addr", ":9"}, []string{
+		"MARGINCE_DSN=postgres://u@127.0.0.1:1/db",
+		"MARGINCE_CONFIG=/from/env.yaml",
+		"MARGINCE_ADDR=:7",
+	})
 	if err != nil {
-		t.Fatalf("parsing: %v", err)
+		t.Fatalf("loading: %v", err)
 	}
-	if cfg.configPath != "/from/flag.yaml" {
-		t.Errorf("the environment overrode an explicit flag: %q", cfg.configPath)
+	if cfg.configPath != "/from/flag.yaml" || cfg.addr != ":9" {
+		t.Errorf("the environment overrode an explicit flag: config %q, addr %q", cfg.configPath, cfg.addr)
 	}
 }
