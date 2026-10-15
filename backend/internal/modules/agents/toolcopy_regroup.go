@@ -8,9 +8,9 @@ var findRecordsCopy = toolCopy{
 		"contacts, companies, deals, leads, projects and partners. list pages one record type by " +
 		"its filters and sort, newest first, and reaches the timeline (activity), offers, " +
 		"products and deal rooms. query runs a typed plan of fields, operators and one join, for " +
-		"counts and sums. meaning finds passages whose meaning matches, in notes, emails and " +
-		"transcripts. identify says which existing contact or company a name, email or domain " +
-		"refers to.",
+		"counts, sums and the records near a place. meaning finds passages whose meaning matches, " +
+		"in notes, emails and transcripts. identify says which existing contact or company a " +
+		"name, email or domain refers to.",
 	Limits: "search never reads a timeline; meaning does, and answers passages, not records. " +
 		"list needs record_type, and read_workspace topic list_filters names the filters each " +
 		"type takes. query names only fields read_workspace topic query lists. identify " +
@@ -32,8 +32,8 @@ var readContextCopy = toolCopy{
 
 var readAttentionCopy = toolCopy{
 	Purpose: "See what needs attention. slipping lists deals at risk this week and why. at_risk " +
-		"lists relationships going cold. commitments lists promises made to customers that are " +
-		"still open.",
+		"lists the open deals that rest on a single contact or whose contacts have gone quiet. " +
+		"commitments lists promises made to customers that are still open.",
 	Limits:  "Each view covers only what you may see, and says why each item is on it.",
 	Instead: "Use read_context to dig into one item.",
 	Retain:  "Keep each item's record id to act on it.",
@@ -88,7 +88,8 @@ var changeStateCopy = toolCopy{
 		"implies, today the company name from its email domain, and names the fields still " +
 		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
-		"to a stage, with a note. move_project moves a project to a phase.",
+		"to a stage, with a note. move_project moves a project to a phase, closing it once it is " +
+		"handed over.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"move_deal to a won or lost stage waits for a human; to an open stage it runs at once. " +

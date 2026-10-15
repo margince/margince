@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 597,
-    "tokens": 21487,
+    "tokens": 21516,
     "median_tool_tokens": 474,
-    "mean_tool_tokens": 580
+    "mean_tool_tokens": 581
   },
   "agents": [
     {
@@ -89,7 +89,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1531
+      "tokens": 1537
     },
     {
       "name": "change_activities",
@@ -117,7 +117,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 810
+      "tokens": 819
     },
     {
       "name": "bulk_update_records",
@@ -197,7 +197,7 @@
     },
     {
       "name": "read_attention",
-      "tokens": 312
+      "tokens": 326
     },
     {
       "name": "read_record",

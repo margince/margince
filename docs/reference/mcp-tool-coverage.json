@@ -1991,7 +1991,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1531,
+      "tokens": 1537,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2210,7 +2210,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 810,
+      "tokens": 819,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",
@@ -2689,7 +2689,7 @@
     },
     {
       "name": "read_attention",
-      "tokens": 312,
+      "tokens": 326,
       "agents": [
         "overnight_at_risk_sweep"
       ],

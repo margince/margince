@@ -120,7 +120,7 @@ var agentActsVietnamese = agentActVocabulary{
 		"send_message":             "Gửi một tin nhắn",
 		"update_tag":               "Cập nhật thẻ",
 		"archive_tag":              "Ngừng dùng thẻ",
-		"change_record_parts":      "Thay đổi các phần của bản ghi",
+		"change_record_parts":      "Thay đổi các phần của hồ sơ",
 	},
 	recordFrames: map[string]string{
 		toolCreateRecord:  "Tạo %s",

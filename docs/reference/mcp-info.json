@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 123655,
+    "tool_catalog_bytes": 123770,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 31810,
+    "approx_wire_tokens_total": 31839,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 31836,
+      "description_bytes": 31951,
       "input_schema_bytes": 57718,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 89554
+      "description_plus_input_schema_bytes": 89669
     }
   },
   "tools": {
@@ -1474,7 +1474,7 @@
           "readOnlyHint": false,
           "title": "Move a lead, deal or project on"
         },
-        "description": "Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or lost stage waits for a human; to an open stage it runs at once. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per call from its arguments for move_deal; requires passport scope \"write\".)",
+        "description": "Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase, closing it once it is handed over. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or lost stage waits for a human; to an open stage it runs at once. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per call from its arguments for move_deal; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -2526,7 +2526,7 @@
           "readOnlyHint": true,
           "title": "Find records"
         },
-        "description": "Find records, choosing the engine by the question. search matches the text stored on contacts, companies, deals, leads, projects and partners. list pages one record type by its filters and sort, newest first, and reaches the timeline (activity), offers, products and deal rooms. query runs a typed plan of fields, operators and one join, for counts and sums. meaning finds passages whose meaning matches, in notes, emails and transcripts. identify says which existing contact or company a name, email or domain refers to. search never reads a timeline; meaning does, and answers passages, not records. list needs record_type, and read_workspace topic list_filters names the filters each type takes. query names only fields read_workspace topic query lists. identify answers unresolved for a record you may not see, as for one that does not exist. Use read_record for one record you already have the id of, and read_context to learn what has been happening on it. Keep each record's id and version, and next_cursor to read on.",
+        "description": "Find records, choosing the engine by the question. search matches the text stored on contacts, companies, deals, leads, projects and partners. list pages one record type by its filters and sort, newest first, and reaches the timeline (activity), offers, products and deal rooms. query runs a typed plan of fields, operators and one join, for counts, sums and the records near a place. meaning finds passages whose meaning matches, in notes, emails and transcripts. identify says which existing contact or company a name, email or domain refers to. search never reads a timeline; meaning does, and answers passages, not records. list needs record_type, and read_workspace topic list_filters names the filters each type takes. query names only fields read_workspace topic query lists. identify answers unresolved for a record you may not see, as for one that does not exist. Use read_record for one record you already have the id of, and read_context to learn what has been happening on it. Keep each record's id and version, and next_cursor to read on.",
         "inputSchema": {
           "properties": {
             "candidates": {
@@ -4315,7 +4315,7 @@
           "readOnlyHint": true,
           "title": "See what needs attention"
         },
-        "description": "See what needs attention. slipping lists deals at risk this week and why. at_risk lists relationships going cold. commitments lists promises made to customers that are still open. Each view covers only what you may see, and says why each item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.",
+        "description": "See what needs attention. slipping lists deals at risk this week and why. at_risk lists the open deals that rest on a single contact or whose contacts have gone quiet. commitments lists promises made to customers that are still open. Each view covers only what you may see, and says why each item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.",
         "inputSchema": {
           "properties": {
             "assignee_id": {

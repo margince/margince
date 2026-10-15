@@ -52,7 +52,9 @@ must_call:
 
 must_call_with:
   - read_tags.mode=list
-  - read_tags.mode=get
+  # How many accounts each word is on: one tag at a time (get), or every word's
+  # count in one list read (with_carried_by), which GET /tags also answers.
+  - read_tags.mode=get|read_tags.with_carried_by=true
   - change_tags.action=update
 
 may_call:
