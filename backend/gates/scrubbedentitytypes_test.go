@@ -141,7 +141,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	t.Helper()
 	found := map[string]bool{}
 	var opaque []string
-	dir := filepath.Join(moduleRoot(t), "internal", "modules", "privacy")
+	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
 	fset := gatekit.SourceFileSet()
 	entries, err := os.ReadDir(dir)
 	if err != nil {

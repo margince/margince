@@ -334,6 +334,7 @@ function CaptureFunnel({
     <StatStrip
       className="capture-activity__funnel"
       testId="capture-activity-funnel"
+      density="compact"
     >
       {OUTCOMES.map((outcome) => (
         <button

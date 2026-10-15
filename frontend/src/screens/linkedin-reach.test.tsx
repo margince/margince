@@ -11,7 +11,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
-import { LinkedInReachCard } from "./linkedin-reach";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those
@@ -46,10 +46,17 @@ const REACHED: LinkedInReach = {
   unresolved_connections: 1420,
 };
 
-function renderReach(body: LinkedInReach): void {
+// The reach opens from the outcomes card's row, in a drawer.
+async function renderReach(
+  body: LinkedInReach,
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<void> {
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture()),
     "GET /me/linkedin-reach": () => jsonResponse(body),
+    "GET /capture/senders": () => jsonResponse({ data: [] }),
+    "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
+    "GET /capture/held-threads": () => jsonResponse({ data: [] }),
   });
   render(
     <QueryClientProvider
@@ -58,14 +65,19 @@ function renderReach(body: LinkedInReach): void {
       }
     >
       <LocaleProvider initial="en">
-        <LinkedInReachCard />
+        <ConnectionOutcomesCard />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  if (body.accounts.length > 0) {
+    await user.click(
+      await screen.findByRole("button", { name: "View Network reach" }),
+    );
+  }
 }
 
 it("shows, per account reached, how many connections work there and how many are already on file", async () => {
-  renderReach(REACHED);
+  await renderReach(REACHED, userEvent.setup());
 
   const table = await screen.findByRole("table");
   const [, ...rows] = within(table).getAllByRole("row");
@@ -98,8 +110,8 @@ it("shows, per account reached, how many connections work there and how many are
 // Each account leads to its record, where the gap can be closed: from its
 // name, from the row and from the keyboard's chevron.
 it("opens the company an account row names", async () => {
-  renderReach(REACHED);
   const user = userEvent.setup();
+  await renderReach(REACHED, user);
 
   await user.click(
     await screen.findByRole("button", { name: "Nordwind Logistik GmbH" }),
@@ -113,4 +125,22 @@ it("opens the company an account row names", async () => {
   expect(globalThis.location.hash).toBe(
     "#/companies/018f3a1b-0000-7000-8000-0000000000a2",
   );
+});
+
+// With nothing reached, the row carries the one fact a reader can act on, and
+// offers no empty list to open.
+it("says why nothing is reached when every connection is off file", async () => {
+  await renderReach(
+    { accounts: [], accounts_total: 0, unresolved_connections: 40 },
+    userEvent.setup(),
+  );
+
+  expect(
+    await screen.findByText(
+      "All your connections work at companies not on file yet. Connections: 40.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "View Network reach" }),
+  ).toBeNull();
 });

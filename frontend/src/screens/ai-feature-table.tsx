@@ -94,6 +94,7 @@ export function AiFeatureTable({
         refusal={
           row.defaults === undefined ? t("aiTasks.embeddingsEdit") : undefined
         }
+        opensDialog
         onOpen={() => onEdit(row)}
       />
     ),

@@ -66,7 +66,7 @@ var dealMoveMirrorSites = []struct {
 // open constant, joined by AND.
 func TestTheDealMoveTierRuleReadsTheSameOnBothSides(t *testing.T) {
 	t.Parallel()
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 
 	for _, site := range dealMoveMirrorSites {
 		fn := functionNamed(t, tree, site.file, site.function)

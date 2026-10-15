@@ -2544,7 +2544,7 @@ export const de = {
   "linkedinImport.notConnectedNote":
     "Wenn du deine Profil-URL speicherst, werden importierte Verbindungen dir namentlich zugeordnet.",
   "linkedinImport.whichFile":
-    "LinkedIn stellt die Datei Connections.csv unter „Einstellungen“, dann „Datenschutz“ bereit, wo sich eine Kopie der eigenen Daten anfordern lässt. Lade diese Datei aus dem Archiv hoch. Hochgeladene Verbindungen werden nie zu Kontakten: Suche, Listen und Kontaktseiten zeigen sie nicht, und niemand kann ihnen schreiben oder E-Mails senden.",
+    "Connections.csv aus der LinkedIn-Datenkopie unter „Datenschutz“. Importierte Verbindungen werden nie zu Kontakten, und niemand kann ihnen E-Mails senden.",
   "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
   "linkedinImport.importLabel": "Export der Verbindungen",
   "linkedinImport.noMatchesYet":
@@ -2558,10 +2558,6 @@ export const de = {
   "linkedinReach.title": "Reichweite im Netzwerk",
   "linkedinReach.sub":
     "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
-  "linkedinReach.readFailed":
-    "Die Reichweite im Netzwerk konnte nicht geladen werden.",
-  "linkedinReach.empty":
-    "Noch keine deiner Verbindungen arbeitet bei einem erfassten Unternehmen.",
   "linkedinReach.allUnresolved":
     "Alle deine Verbindungen arbeiten bei Unternehmen, die noch nicht erfasst sind. Verbindungen: {unresolved}.",
   "linkedinReach.accountsLabel": "Unternehmen in deiner Reichweite",
@@ -6624,8 +6620,7 @@ export const de = {
   "privacy.corrections": "Korrekturanfragen",
   "privacy.correctionsSub":
     "Kontakte haben diese Korrekturen über den Link eingegeben, den sie per E-Mail erhalten haben. Noch keine Korrektur hat den Datensatz geändert. Eine Korrektur bleibt eine Anfrage, bis jemand sie annimmt.",
-  "privacy.correctionsEmpty":
-    "Keine Korrekturen offen. Ein Kontakt sendet eine Korrektur über den Link aus der erhaltenen E-Mail.",
+  "privacy.correctionsEmpty": "Keine Korrekturen offen.",
   "privacy.correctionContact": "Kontakt",
   "privacy.correctionChange": "Gewünschte Änderung",
   "privacy.correctionReceived": "Eingegangen",
@@ -6825,7 +6820,6 @@ export const de = {
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
   "privacy.purpose": "Zweck",
-  "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke registriert.",
@@ -6879,12 +6873,11 @@ export const de = {
     "Das Aufheben LÖSCHT den Datensatz und gibt ihn nicht zur Nutzung zurück. Die Löschanfrage, die diese Pflicht ausgesetzt hat, ist noch offen und wird damit abgeschlossen. Das lässt sich nicht rückgängig machen.",
   "restricted.release.confirm": "Aufheben und löschen",
   "restricted.pin.action": "Datensatz festsetzen",
-  "restricted.pin.submit": "Festsetzen",
   "restricted.pin.idHint":
     "Für Korrespondenz, die die automatische Regel nicht erkennen kann, zum Beispiel Lieferanten- und Einkaufspost nach § 257 HGB ohne Deal in diesem System. Die Datensatz-ID steht im Audit-Eintrag des Datensatzes.",
   "restricted.pin.idMalformed":
     "Keine gültige Datensatz-ID. Das Format ist 8-4-4-4-12 Hexadezimalzeichen. Die vollständige ID steht im Audit-Eintrag des Datensatzes.",
-  "restricted.pin.idPlaceholder": "Datensatz-ID",
+  "restricted.pin.idLabel": "Datensatz-ID",
   "restricted.pin.title": "Datensatz unter Legal Hold stellen?",
   "restricted.pin.body":
     "Der Datensatz wird für die gesetzliche Frist gesperrt: in keiner normalen Ansicht sichtbar, unveränderbar und nach Ablauf der Frist gelöscht. Die Kennungen des Datensatzes werden jetzt geschwärzt.",
@@ -6902,7 +6895,7 @@ export const de = {
   "retention.editScope": "{scope} bearbeiten",
   "retention.retainOnly": "Nur-Behalten-Modus",
   "retention.retainOnlyHelp":
-    "Solange dieser Modus aktiviert ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Das Archivieren läuft weiter. Ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
+    "Solange dieser Modus aktiviert ist, anonymisiert oder löscht keine Regel etwas. Das Archivieren läuft weiter.",
   "retention.adminOnly":
     "Nur Admins und Operations können die Aufbewahrung ändern.",
   "retention.withheld":
@@ -6919,7 +6912,6 @@ export const de = {
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
   "retention.enabled": "Aktiv",
-  "retention.edit": "Bearbeiten",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
   "retention.deleteTitle": "Aufbewahrungsregel löschen?",
@@ -7402,12 +7394,10 @@ export const de = {
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
-  "overnightGrant.sub":
-    "Margince arbeitet über Nacht deine Deals durch, und der Morgenbericht liegt bereit, wenn du anfängst. Margince handelt in deinem Namen, sieht nur, was du sehen kannst, und du kannst es jederzeit stoppen.",
   "overnightGrant.label":
     "Margince den Morgenbericht über Nacht vorbereiten lassen",
   "overnightGrant.help":
-    "Margince liest deine Deals und E-Mails, um die Prioritäten des Tages zu ordnen, und schreibt Notizen zurück. Senden kann Margince nicht: Die hier erteilte Berechtigung umfasst nur Lesen und Schreiben, niemals Senden.",
+    "Margince ordnet die Deals und E-Mails des Tages und schreibt Notizen für deinen Morgenbericht. Dabei handelt Margince in deinem Namen, sieht nur, was du sehen kannst, und sendet nie.",
   "overnightGrant.dangerTitle": "Vorbereitung über Nacht läuft nicht",
   "overnightGrant.danger":
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
@@ -7507,12 +7497,26 @@ export const de = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
+  "connectionOutcomes.view": "Ansehen",
+  "connectionOutcomes.viewNamed": "{name} ansehen",
+  "connectionOutcomes.retryNamed": "{name} erneut laden",
+  "connectionOutcomes.none": "Noch keine",
+  "connectionOutcomes.unread": "Laden fehlgeschlagen",
+  "connectionOutcomes.waitingEmpty":
+    "Keine Kontakte warten auf eine Entscheidung.",
+  "connectionOutcomes.senders_one": "{count} Adresse",
+  "connectionOutcomes.senders_other": "{count} Adressen",
+  "connectionOutcomes.threads_one": "{count} Thread",
+  "connectionOutcomes.threads_other": "{count} Threads",
+  "connectionOutcomes.contacts_one": "{count} Kontakt",
+  "connectionOutcomes.contacts_other": "{count} Kontakte",
+  "connectionOutcomes.companies_one": "{count} Unternehmen",
+  "connectionOutcomes.companies_other": "{count} Unternehmen",
   "mailSharing.title": "Teilen von E-Mails",
-  "mailSharing.sub":
-    "Erfasste E-Mails sind für alle Teammitglieder lesbar, die den Kontakt sehen können. Standardmäßig aktiviert, damit die Arbeit an Deals geteilt werden kann.",
   "mailSharing.label": "Erfasste E-Mails mit dem Team teilen",
   "mailSharing.help":
-    "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen oder Domains vorab ausschließen.",
+    "Alle Teammitglieder, die einen Kontakt sehen können, lesen seine erfassten E-Mails. Einzelne Nachrichten lassen sich nachträglich einschränken.",
   "mailSharing.danger":
     "Ohne das Teilen von E-Mails ist das CRM schwer zu nutzen. Neue E-Mails sind dann nur für die Beteiligten der jeweiligen Nachricht sichtbar.",
   "mailSharing.posture.shared":
@@ -7531,14 +7535,12 @@ export const de = {
     "Damit wird eine Rechtsgrundlage erklärt",
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
   "mailSharing.save": "Speichern",
+  "mailSharing.cardTitle": "Teilen und Abgleich von E-Mails",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originUnreachable": "Nicht erreichbar",
-  "connectors.sub":
-    "Postfächer und Kalender, aus denen das CRM Daten erfasst. Beim Trennen bleiben die bereits erfassten Datensätze erhalten.",
   "connectors.loading": "Connectors werden geladen…",
   "connectors.loadFailed":
     "Die Connectors konnten nicht geladen werden. Bitte lade die Seite neu.",
-  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -7715,7 +7717,6 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Nachrichtenkanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
-  "connectors.telegramEmpty": "Kein Bot verbunden.",
   "connectors.telegramReadOnly":
     "Nur Admins und Operations können den Bot verbinden oder ändern.",
   "connectors.telegramEditToken": "Token ersetzen",
@@ -7732,11 +7733,15 @@ export const de = {
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
   "connectors.openNamed": "{name} öffnen",
+  "connectors.emptyLabel": "Kein Postfach verbunden",
+  "connectors.emptyHint":
+    "Verbinde ein Postfach oder einen Kalender, um E-Mails und Termine zu erfassen.",
+  "connectors.telegramEmptyLabel": "Kein Bot verbunden",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails aus einem Freemail-Postfach erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste dieser Anbieter mit. Ergänze fehlende Domains oder übersteuere einen falschen Eintrag.",
+    "E-Mails von diesen Domains erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
@@ -7767,7 +7772,7 @@ export const de = {
 
   "blockedDomains.title": "Abgelehnte Domains",
   "blockedDomains.sub":
-    "Als Unternehmen abgelehnte Domains und was jeweils entschieden hat: ein Modellergebnis, eine Heuristik oder ein Mensch. Wird eine Domain zugelassen, ist die Frage wieder offen. Hier erscheinen nur offene Fragen ohne Zuständigkeit.",
+    "Als Unternehmen abgelehnte Domains und ob ein Modell, eine Heuristik oder ein Mensch entschieden hat. Wird eine Domain zugelassen, ist die Frage wieder offen.",
   "blockedDomains.listTitle": "Erfasste Entscheidungen",
   "blockedDomains.record": "Entscheidung erfassen",
   "blockedDomains.recordOpen": "Entscheidung erfassen",
@@ -9200,6 +9205,12 @@ export const de = {
   "privacy.dueRuleUnknown":
     "Manuell eingetragen, bevor Fristen berechnet wurden",
   "privacy.dueOverridden": "Früher gesetzt, als die Regel vorgibt",
+  "privacy.requestsPanel": "Anfragen",
+  "privacy.lanesLabel": "Anfragelisten",
+  "privacy.laneRequests": "Datenschutz",
+  "privacy.laneCorrections": "Korrekturen",
+  "privacy.laneRestricted": "Gesperrt",
+  "privacy.requestsEmpty": "Noch keine Datenschutzanfragen.",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Capture-Regeln",
   "settings.tab.knowledge": "Wissen",
@@ -9246,6 +9257,7 @@ export const de = {
     "Dokumentensammlungen, die dieses Unternehmen befragen kann. Antworten stützen sich nur auf abgelegte Dokumente, und Fragen, die diese nicht abdecken, werden abgelehnt.",
   "knowledge.withheld":
     "Du hast keinen Zugriff auf die Liste der Dokumentensammlungen.",
+  "knowledge.empty": "Noch keine Dokumentensammlungen.",
   "knowledge.documentCount_one": "{count} Dokument",
   "knowledge.documentCount_other": "{count} Dokumente",
   "knowledge.passages_one": "{embedded} von {count} Textstelle durchsuchbar",
@@ -9262,6 +9274,9 @@ export const de = {
   "knowledge.col.added": "Hinzugefügt",
   "knowledge.col.status": "Status",
   "knowledge.col.actions": "Aktionen",
+  "knowledge.col.documents": "Dokumente",
+  "knowledge.col.searchable": "Durchsuchbar",
+  "knowledge.col.detail": "Details",
   "knowledge.passageCount_one": "{count} Textstelle",
   "knowledge.passageCount_other": "{count} Textstellen",
   "knowledge.addedOn": "hinzugefügt am {date}",
@@ -9301,9 +9316,8 @@ export const de = {
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
-  "knowledge.new.submit": "Sammlung erstellen",
-  "knowledge.new.failed":
-    "Die Sammlung konnte nicht erstellt werden. Bitte versuche es erneut.",
+  "knowledge.searchable": "Durchsuchbar",
+  "knowledge.reindexingBadge": "Wird neu indexiert",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "settings.tab.capture-activity": "Capture-Aktivität",
   "verdictPass.subject.senders": "Absendeadressen",
@@ -9322,7 +9336,7 @@ export const de = {
   "captureActivity.scope.mine": "Meine",
   "captureActivity.scope.workspace": "Geteilte Kanäle",
   "captureActivity.scopeNote":
-    "Gezählt ab dem Zeitpunkt, an dem ein Connector eine Nachricht an dieses CRM übergibt. Was ein Connector auf seiner eigenen Seite gefiltert hat, etwa eine Chat-Reaktion oder eine E-Mail-Regel, ist nicht enthalten. Umfasst nur Nachrichten. Die Lead-Erfassung wird hier nicht angezeigt.",
+    "Nachrichten, die ein Connector an Margince übergeben hat. Lead-Erfassung und vom Connector selbst gefilterte Einträge zählen nicht mit.",
   "captureActivity.filtered":
     "Angezeigt: {shown} von {total} mit dem Ergebnis „{outcome}“ in diesem Zeitraum.",
   "captureActivity.openTraceFrom":
@@ -9927,15 +9941,13 @@ export const de = {
   "roles.refusal.nameTaken":
     "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
   "extAccess.title": "Erweiterungen und Zugriff",
-  "extAccess.sub":
-    "Was jede Erweiterungseinheit dieser Installation hinzufügt und welche Rollen sie nutzen dürfen. Nur für Admins.",
   "extAccess.adminOnly":
     "Diese Seite erfordert die Berechtigung, Erweiterungen und Rollen der Installation zu lesen. Deiner Rolle fehlt eine davon oder beide.",
   "extAccess.readOnly":
     "Deine Rolle kann diese Seite lesen. Um eine Berechtigung zu ändern, ist ein voller Platz nötig.",
   "extAccess.empty": "Es sind keine Erweiterungseinheiten installiert.",
   "extAccess.version": "Version {version}",
-  "extAccess.openUnit": "Seite {name} öffnen",
+  "extAccess.openUnit": "Zu {name} wechseln",
   "extAccess.noPage":
     "{name} ist in der API installiert, aber diese App-Version hat keine Seite dafür. Die App ist vermutlich älter als der Server.",
   "extAccess.brings.heading": "Was diese Einheit hinzufügt",
@@ -9960,6 +9972,7 @@ export const de = {
   "extAccess.grantFailed": "Berechtigung nicht geändert",
   "extAccess.nobodyReads":
     "Jedes Mitglied sieht für diese Erweiterung eine leere Ansicht, da keine Rolle Lesezugriff auf {object} hat. Vergib unten mindestens einer Rolle das Leserecht.",
+  "extAccess.matrixName": "Rollenzugriff auf {unit}",
   "users.empty": "Noch keine Mitglieder.",
   "users.adminOnly": "Deine Rolle darf keine Mitglieder verwalten.",
   "users.inviteTitle": "Mitglied einladen",
@@ -10351,6 +10364,7 @@ export const de = {
   "aicalls.outcome.failed": "Fehlgeschlagen",
   "aicalls.model.afterDecision": "Entscheidungsmodell, dann {tier}",
   "aicalls.filter.servedProvider": "Ausgeliefert von",
+  "aicalls.filter.servedModel": "Beantwortet von",
   "aicalls.sentinel.provider_quota": "Kontingent erschöpft",
   "aicalls.sentinel.provider_throttled": "Gedrosselt",
   "aicalls.sentinel.provider_refused": "Vom Anbieter abgelehnt",
@@ -10851,20 +10865,16 @@ export const de = {
   "autonomy.kind.lifecycle_change.help":
     "Margince verschiebt ein Unternehmen anhand der Aktivität in eine andere Lebenszyklusphase. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Phasenwechsel können beeinflussen, wer das Unternehmen sieht und welche Automatisierungen laufen.",
   "captureSettings.title": "Anreicherung",
-  "captureSettings.sub":
-    "Wie erfasste Unternehmen und Kontakte nach ihrer Erstellung angereichert werden.",
   "captureSettings.autoEnrich.label":
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Jedes neue Unternehmen aus erfassten E-Mails erhält automatisch ein Webprofil, das aus seiner Website erstellt wird. Läuft innerhalb eines Tageslimits.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails lesen",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiviert, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Jobtitel, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen. Eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens. Ein Postfach mit eigener Einstellung behält diese Einstellung.",
+    "Margince liest Jobtitel, Telefonnummer, Adresse oder Unternehmen, die eine Person in ihrer eigenen Signatur oder Visitenkarte angibt. Nichts wird erschlossen. Die eigene Einstellung eines Postfachs hat Vorrang.",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
   "captureReading.title": "Website-Analysen",
-  "captureReading.sub":
-    "Wie viel Margince von Unternehmenswebsites analysiert. Eine Änderung gilt ab der nächsten Analyse.",
   "captureReading.dailyCap.label": "Automatische Analysen pro Tag",
   "captureReading.dailyCap.help":
     "Analysen, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
@@ -11019,9 +11029,6 @@ export const de = {
     "Gib 0 zum Deaktivieren ein oder ganze Sekunden von {min} bis {max}.",
   "operations.refusal.hours": "Gib ganze Stunden von {min} bis {max} ein.",
   "operations.refusal.count": "Gib eine ganze Zahl von {min} bis {max} ein.",
-  "captureMailSync.title": "E-Mail-Abgleich",
-  "captureMailSync.sub":
-    "Wie oft jedes verbundene Postfach auf neue E-Mails geprüft wird.",
   "captureMailSync.interval.label": "Abgleichsintervall (Sekunden)",
   "captureMailSync.interval.help":
     "Zeit zwischen zwei Abgleichen eines Postfachs, 30 bis 3.600. Eine Änderung gilt ab dem nächsten Abgleich jedes Postfachs.",
@@ -11035,7 +11042,6 @@ export const de = {
     "Adressen und Domains, deren Nachrichten nie ins CRM gelangen. Deine Regeln gelten nur für Postfächer, die du verbunden hast. Unternehmensregeln gelten für alle.",
   "captureExclusions.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben erhalten.",
-  "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
   "ownerIdentities.title": "Deine weiteren Adressen",
   "ownerIdentities.sub":
@@ -11044,10 +11050,8 @@ export const de = {
   "ownerIdentities.addLabel": "Eigene Adresse hinzufügen",
   "ownerIdentities.addDescription":
     "Nur für dich sichtbar. Teammitglieder sehen diese Liste nie.",
-  "ownerIdentities.current": "Angegeben",
   "ownerIdentities.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste E-Mails bleiben, und ein bereits aus einem Alias erstellter Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
-  "ownerIdentities.empty": "Keine weiteren Adressen hinzugefügt.",
   "ownerIdentities.remove": "{value} entfernen",
   "ownerIdentities.added": "Adresse hinzugefügt",
   "ownerIdentities.confirm": "Hinzufügen",
@@ -11072,6 +11076,8 @@ export const de = {
     "Diese Adresse wurde seitdem erneut entfernt. Mache stattdessen das neuere Entfernen rückgängig.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -11154,7 +11160,6 @@ export const de = {
   "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine hinzugefügte Domain gilt ab der nächsten Nachricht. Wird die Domain entfernt, werden E-Mails ab dann wieder erfasst. E-Mails, die während der Eintragung übersprungen wurden, bietet kein Postfach erneut an. Erfasste E-Mails bleiben erhalten.",
-  "ownDomains.fromCompany": "Aus dem Unternehmensprofil. Dort ändern:",
   "ownDomains.openCompany": "Unternehmensprofil öffnen",
   "ownDomains.empty":
     "Keine weiteren Domains eingetragen. Füge eine hinzu, wenn dein Unternehmen auch von einer anderen Domain sendet.",
@@ -11175,7 +11180,7 @@ export const de = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Ausgehende Webhooks sind in dieser Installation nicht aktiviert. Konfiguriere zuerst einen Signaturschlüssel.",
+    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
@@ -11183,7 +11188,6 @@ export const de = {
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
   "webhooks.edit": "Bearbeiten",
-  "webhooks.saveDone": "Webhook gespeichert",
   "webhooks.archiveDone": "Webhook archiviert",
   "webhooks.archive": "Archivieren",
   "webhooks.archiveConfirm":
@@ -11226,6 +11230,534 @@ export const de = {
   "webhooks.deliveries.replayConfirm.title": "Zustellung wiederholen?",
   "webhooks.deliveries.replayConfirm.body":
     "Die Zustellung wird sofort mit dem aktuellen Signaturschlüssel und einem neuen Zeitstempel wiederholt, ohne auf den nächsten geplanten Versuch zu warten.",
+  "webhooks.drawer.editTitle": "Abonnement bearbeiten",
+  "webhooks.drawer.sub":
+    "Neue Ereignisse oder ein neuer Inhalt gelten für spätere Ereignisse. Ein neuer Header-Wert gilt auch für Wiederholungen, die schon warten.",
+  "webhooks.drawer.create": "Abonnement erstellen",
+  "webhooks.drawer.cancel": "Abbrechen",
+  "webhooks.field.targetUrlHint": "Nur HTTPS.",
+  "webhooks.field.targetUrlFixed":
+    "Das Ziel lässt sich nicht ändern. Erstelle ein neues Abonnement, um an ein anderes Ziel zuzustellen.",
+  "webhooks.field.stateHint":
+    "Ein pausiertes Abonnement behält seine Einstellungen und erhält nichts.",
+  "webhooks.events.add": "Ereignisse hinzufügen",
+  "webhooks.field.targetUrlPlaceholder": "https://example.test/hooks/margince",
+  "webhooks.headers.namePlaceholder": "X-Api-Key",
+  "webhooks.events.selected_one": "{count} von {total} ausgewählt",
+  "webhooks.events.selected_other": "{count} von {total} ausgewählt",
+  "webhooks.events.groupCount_one": "{count} von {total}",
+  "webhooks.events.groupCount_other": "{count} von {total}",
+  "webhooks.events.appliesAtOnce": "Jedes Häkchen gilt sofort.",
+  "webhooks.drawer.saveSubscription": "Abonnement speichern",
+  "webhooks.events.helpLabel": "Über Ereignistypen",
+  "webhooks.events.help":
+    "Margince sendet eine Zustellung, sobald ein gewähltes Ereignis eintritt. Ereignisse hinzufügen öffnet die ganze Liste, nach Datensatz gruppiert, mit den Daten jedes Ereignisses.",
+  "webhooks.events.count_one": "{count} ausgewählt",
+  "webhooks.events.count_other": "{count} ausgewählt",
+  "webhooks.events.none": "Noch keine Ereignisse ausgewählt.",
+  "webhooks.events.clear": "Leeren",
+  "webhooks.events.done": "Fertig",
+  "webhooks.events.search": "Ereignisse suchen, etwa stage oder merged",
+  "webhooks.events.noMatch": "Kein Ereignistyp passt.",
+  "webhooks.events.selectAll": "Alle auswählen",
+  "webhooks.events.remove": "{event} entfernen",
+  "webhooks.events.info": "Über {event}",
+  "webhooks.events.when": "Wann es ausgelöst wird",
+  "webhooks.events.fields": "Felder in data",
+  "webhooks.events.noFields": "Dieses Ereignis enthält keine Felder in data.",
+  "webhooks.events.fieldsFailed":
+    "Die Felder konnten nicht geladen werden. Schließe die Ansicht und öffne sie erneut.",
+  "webhooks.events.visibility":
+    "Zugestellt wird nur für Datensätze, die das für das Abonnement zuständige Teammitglied sehen kann.",
+  "webhooks.events.required": "Wähle mindestens ein Ereignis aus.",
+  "webhooks.headers.title": "Eigene Header",
+  "webhooks.headers.hint":
+    "Wird mit jeder Zustellung gesendet. Ein Wert wird beim Speichern versiegelt und nie wieder angezeigt.",
+  "webhooks.headers.helpLabel": "Über eigene Header",
+  "webhooks.headers.help":
+    "Nutze einen Header für einen empfangenden Dienst, der ein Token prüft oder nach Header weiterleitet. Margince setzt die Header für Signatur, Ereignis und Inhalt selbst, daher werden diese Namen abgelehnt. Ein geänderter Wert gilt ab dem nächsten Versuch, Wiederholungen eingeschlossen.",
+  "webhooks.headers.add": "Header hinzufügen",
+  "webhooks.headers.addAuthorization": "Authorization hinzufügen",
+  "webhooks.headers.name": "Header-Name",
+  "webhooks.headers.value": "Header-Wert",
+  "webhooks.headers.valueSet": "Wert gesetzt",
+  "webhooks.headers.replace": "Ersetzen",
+  "webhooks.headers.remove": "Header {name} entfernen",
+  "webhooks.headers.none":
+    "Keine eigenen Header. Zustellungen enthalten nur die Header, die Margince setzt.",
+  "webhooks.body.format": "Format des Inhalts",
+  "webhooks.body.standard": "Standardformat",
+  "webhooks.body.custom": "Eigene Vorlage",
+  "webhooks.body.standardHint":
+    "Das veröffentlichte Ereignis-JSON, das jede Standard Webhooks-Bibliothek prüft.",
+  "webhooks.body.customHint": "Dein eigener Inhalt, aus dem Ereignis befüllt.",
+  "webhooks.body.helpLabel": "Über das Format des Inhalts",
+  "webhooks.body.help":
+    "Eine Vorlage wird einmal ausgewertet, sobald eine Zustellung geplant wird, und die Signatur deckt genau diese Bytes ab. Wiederholungen und erneute Zustellungen senden den gespeicherten Inhalt, daher gilt eine Änderung nur für spätere Ereignisse.",
+  "webhooks.body.contentType": "Inhaltstyp",
+  "webhooks.body.contentTypeHint": "Wird als Content-Type-Header gesendet.",
+  "webhooks.body.startFrom": "Ausgangspunkt",
+  "webhooks.body.startFromPlaceholder": "Vorlage auswählen",
+  "webhooks.body.preset.slack": "Slack",
+  "webhooks.body.preset.teams": "Microsoft Teams",
+  "webhooks.body.preset.generic": "Allgemeines JSON",
+  "webhooks.body.sample": "Beispielereignis",
+  "webhooks.body.template": "Vorlage",
+  "webhooks.body.templateHint":
+    "In Anführungszeichen füllt ein Platzhalter Text ein. Für einen ganzen Wert ohne Anführungszeichen füge | json hinzu.",
+  "webhooks.body.tab.template": "Vorlage",
+  "webhooks.body.tab.preview": "Vorschau",
+  "webhooks.body.insert": "Variable einfügen",
+  "webhooks.body.size": "Größe: {size} Byte",
+  "webhooks.body.previewEmpty": "Wähle einen Ereignistyp für die Vorschau.",
+  "webhooks.row.customBody": "Eigener Inhalt",
+  "webhooks.row.headers_one": "Header: {count}",
+  "webhooks.row.headers_other": "Header: {count}",
+  "webhooks.eventGroup.deals": "Deals",
+  "webhooks.event.deal.created.label": "Deal erstellt",
+  "webhooks.event.deal.created.when": "Ein Deal wird eröffnet.",
+  "webhooks.event.deal.updated.label": "Deal-Daten geändert",
+  "webhooks.event.deal.updated.when":
+    "Felder eines Deals ändern sich, außer Phase und Zuständigkeit.",
+  "webhooks.event.deal.stage_changed.label": "Deal in andere Phase verschoben",
+  "webhooks.event.deal.stage_changed.when":
+    "Ein Deal wechselt in eine neue Phase, Gewonnen und Verloren eingeschlossen.",
+  "webhooks.event.deal.owner_changed.label": "Zuständigkeit für Deal geändert",
+  "webhooks.event.deal.owner_changed.when":
+    "Ein Deal wird einem anderen Teammitglied zugewiesen.",
+  "webhooks.event.deal.archived.label": "Deal archiviert",
+  "webhooks.event.deal.archived.when": "Ein Deal wird archiviert.",
+  "webhooks.event.deal.restored.label": "Deal wiederhergestellt",
+  "webhooks.event.deal.restored.when":
+    "Ein archivierter Deal wird wiederhergestellt.",
+  "webhooks.eventGroup.offers": "Angebote",
+  "webhooks.event.offer.created.label": "Angebotsrevision erstellt",
+  "webhooks.event.offer.created.when":
+    "Ein Angebot wird erstellt, oder ein gesendetes Angebot wird als neuer Entwurf neu erzeugt.",
+  "webhooks.event.offer.sent.label": "Angebot als gesendet markiert",
+  "webhooks.event.offer.sent.when":
+    "Ein Angebotsentwurf wird als gesendet markiert, und seine Konditionen werden festgeschrieben.",
+  "webhooks.event.offer.accepted.label": "Angebot angenommen",
+  "webhooks.event.offer.accepted.when":
+    "Ein gesendetes Angebot wird angenommen.",
+  "webhooks.event.offer.rejected.label": "Angebot abgelehnt",
+  "webhooks.event.offer.rejected.when":
+    "Ein gesendetes Angebot wird abgelehnt.",
+  "webhooks.event.offer.superseded.label": "Angebot ersetzt",
+  "webhooks.event.offer.superseded.when":
+    "Ein gesendetes Angebot wird als neue Entwurfsrevision neu erzeugt.",
+  "webhooks.eventGroup.pipelines_stages": "Pipelines und Phasen",
+  "webhooks.event.pipeline.created.label": "Pipeline erstellt",
+  "webhooks.event.pipeline.created.when":
+    "Eine Pipeline wird mit ihren ersten Phasen erstellt.",
+  "webhooks.event.pipeline.updated.label": "Pipeline geändert",
+  "webhooks.event.pipeline.updated.when":
+    "Eine Pipeline wird umbenannt, als Standard festgelegt oder neu sortiert, oder ihre Phasen werden neu sortiert.",
+  "webhooks.event.pipeline.archived.label": "Pipeline archiviert",
+  "webhooks.event.pipeline.archived.when":
+    "Eine Pipeline wird aus den Auswahllisten genommen.",
+  "webhooks.event.stage.created.label": "Phase hinzugefügt",
+  "webhooks.event.stage.created.when":
+    "Einer Pipeline wird eine Phase hinzugefügt.",
+  "webhooks.event.stage.updated.label": "Phase geändert",
+  "webhooks.event.stage.updated.when":
+    "Name, Phasentyp oder Gewinnwahrscheinlichkeit einer Phase ändern sich.",
+  "webhooks.event.stage.archived.label": "Phase entfernt",
+  "webhooks.event.stage.archived.when":
+    "Eine Phase wird aus einer Pipeline entfernt.",
+  "webhooks.eventGroup.contacts": "Kontakte",
+  "webhooks.event.contact.created.label": "Kontakt erstellt",
+  "webhooks.event.contact.created.when":
+    "Ein Kontakt wird manuell, aus erfassten E-Mails oder durch die Qualifizierung eines Leads erstellt.",
+  "webhooks.event.contact.updated.label": "Kontaktdaten geändert",
+  "webhooks.event.contact.updated.when":
+    "Felder oder Beziehungen eines Kontakts ändern sich.",
+  "webhooks.event.contact.merged.label": "Kontakte zusammengeführt",
+  "webhooks.event.contact.merged.when":
+    "Zwei Kontakte werden zu einem zusammengeführt.",
+  "webhooks.event.contact.archived.label": "Kontakt archiviert",
+  "webhooks.event.contact.archived.when": "Ein Kontakt wird archiviert.",
+  "webhooks.event.contact.restored.label": "Kontakt wiederhergestellt",
+  "webhooks.event.contact.restored.when":
+    "Ein archivierter Kontakt wird wiederhergestellt.",
+  "webhooks.event.conversation_claim.captured.label":
+    "Zusage oder Anfrage erfasst",
+  "webhooks.event.conversation_claim.captured.when":
+    "Was ein Kontakt in einem Gespräch zugesagt, angefragt oder entschieden hat, wird im Kontakt festgehalten.",
+  "webhooks.event.conversation_claim.changed.label":
+    "Erfasste Zusage korrigiert",
+  "webhooks.event.conversation_claim.changed.when":
+    "Jemand bearbeitet oder verwirft eine erfasste Zusage, Anfrage oder Entscheidung.",
+  "webhooks.event.relationship_nudge.decided.label":
+    "Verstummter Kontakt zurückgestellt",
+  "webhooks.event.relationship_nudge.decided.when":
+    "Ein Teammitglied stellt einen verstummten Kontakt in der eigenen Worklist zurück oder holt ihn wieder hervor.",
+  "webhooks.eventGroup.companies": "Unternehmen",
+  "webhooks.event.company.created.label": "Unternehmen erstellt",
+  "webhooks.event.company.created.when":
+    "Ein Unternehmen wird manuell, per Datenimport, aus erfassten E-Mails oder aus einer Website-Analyse erstellt.",
+  "webhooks.event.company.updated.label": "Unternehmensdaten geändert",
+  "webhooks.event.company.updated.when":
+    "Felder oder Beziehungen eines Unternehmens ändern sich, Anreicherung eingeschlossen.",
+  "webhooks.event.company.merged.label": "Unternehmen zusammengeführt",
+  "webhooks.event.company.merged.when":
+    "Zwei Unternehmen werden zu einem zusammengeführt.",
+  "webhooks.event.company.archived.label": "Unternehmen archiviert",
+  "webhooks.event.company.archived.when": "Ein Unternehmen wird archiviert.",
+  "webhooks.event.company.restored.label": "Unternehmen wiederhergestellt",
+  "webhooks.event.company.restored.when":
+    "Ein archiviertes Unternehmen wird wiederhergestellt.",
+  "webhooks.eventGroup.leads": "Leads",
+  "webhooks.event.lead.created.label": "Lead erstellt",
+  "webhooks.event.lead.created.when":
+    "Ein Lead wird manuell, aus der Erfassung oder per Datenimport erstellt.",
+  "webhooks.event.lead.updated.label": "Lead-Daten geändert",
+  "webhooks.event.lead.updated.when":
+    "Felder eines Leads ändern sich, eigene Felder eingeschlossen, oder seine Zuweisung wird neu berechnet.",
+  "webhooks.event.lead.disqualified.label": "Lead disqualifiziert",
+  "webhooks.event.lead.disqualified.when": "Ein Lead wird disqualifiziert.",
+  "webhooks.event.lead.promoted.label": "Lead als Kontakt qualifiziert",
+  "webhooks.event.lead.promoted.when":
+    "Ein Lead zeigt echtes Interesse und wird zum Kontakt.",
+  "webhooks.event.lead.demoted.label": "Lead-Qualifizierung zurückgenommen",
+  "webhooks.event.lead.demoted.when":
+    "Eine Qualifizierung wird zurückgenommen, und der Lead kehrt in den Lead-Bestand zurück.",
+  "webhooks.event.lead.merged.label": "Leads zusammengeführt",
+  "webhooks.event.lead.merged.when":
+    "Zwei Leads, die als Duplikate gelten, werden zusammengeführt.",
+  "webhooks.event.lead.sla_breached.label": "Erste Antwort überfällig",
+  "webhooks.event.lead.sla_breached.when":
+    "Eine Prüfung stellt fest, dass die Frist für die erste Antwort auf einen Lead ohne Antwort verstrichen ist.",
+  "webhooks.event.lead_source.changed.label": "Lead-Quellen geändert",
+  "webhooks.event.lead_source.changed.when":
+    "Eine Lead-Quelle wird in den Einstellungen hinzugefügt, bearbeitet oder entfernt.",
+  "webhooks.event.lead_disqualify_reason.changed.label":
+    "Disqualifizierungsgründe geändert",
+  "webhooks.event.lead_disqualify_reason.changed.when":
+    "Ein Disqualifizierungsgrund wird in den Einstellungen hinzugefügt, bearbeitet oder entfernt.",
+  "webhooks.eventGroup.activities_email": "Aktivitäten und E-Mails",
+  "webhooks.event.activity.captured.label": "Aktivität erfasst",
+  "webhooks.event.activity.captured.when":
+    "Eine Aktivität wird manuell eingetragen oder von einem Connector erfasst.",
+  "webhooks.event.activity.updated.label": "Aktivität geändert",
+  "webhooks.event.activity.updated.when":
+    "Eine Aktivität wird bearbeitet oder mit anderen Datensätzen verknüpft.",
+  "webhooks.event.activity.archived.label": "Aktivität archiviert",
+  "webhooks.event.activity.archived.when": "Eine Aktivität wird archiviert.",
+  "webhooks.event.activity.disposition_recorded.label":
+    "Wartende Nachricht zurückgestellt",
+  "webhooks.event.activity.disposition_recorded.when":
+    "Jemand entscheidet, wie mit einer wartenden Nachricht umgegangen wird, und die Worklist zeigt sie nicht mehr an.",
+  "webhooks.event.activity.marked_handled.label":
+    "Worklist-Eintrag als erledigt markiert",
+  "webhooks.event.activity.marked_handled.when":
+    "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.engagement.reply.label": "Antwort eingegangen",
+  "webhooks.event.engagement.reply.when":
+    "Eine eingehende Nachricht kommt in einem Thread an, in dem du zuerst geschrieben hast.",
+  "webhooks.event.comms.delivery_bounced.label": "E-Mail unzustellbar",
+  "webhooks.event.comms.delivery_bounced.when":
+    "Das empfangende Mailsystem weist eine gesendete Nachricht zurück.",
+  "webhooks.eventGroup.files": "Dateien",
+  "webhooks.event.attachment.created.label": "Datei hochgeladen",
+  "webhooks.event.attachment.created.when":
+    "Eine Datei wird zu einem Datensatz hochgeladen.",
+  "webhooks.event.attachment.updated.label": "Dateidetails geändert",
+  "webhooks.event.attachment.updated.when":
+    "Kategorie, Titel, Status oder Anheftung einer Datei ändern sich, oder die Datei, die sie ersetzt.",
+  "webhooks.event.attachment.archived.label": "Datei archiviert",
+  "webhooks.event.attachment.archived.when":
+    "Eine Datei an einem Datensatz wird archiviert.",
+  "webhooks.eventGroup.projects": "Projekte",
+  "webhooks.event.project.created.label": "Projekt erstellt",
+  "webhooks.event.project.created.when":
+    "Ein Projekt wird für ein Unternehmen eröffnet.",
+  "webhooks.event.project.updated.label": "Projektdaten geändert",
+  "webhooks.event.project.updated.when": "Felder eines Projekts ändern sich.",
+  "webhooks.event.project.phase_changed.label":
+    "Projekt in andere Phase verschoben",
+  "webhooks.event.project.phase_changed.when":
+    "Ein Projekt wechselt in eine neue Phase.",
+  "webhooks.event.project.archived.label": "Projekt archiviert",
+  "webhooks.event.project.archived.when": "Ein Projekt wird archiviert.",
+  "webhooks.eventGroup.contracts": "Verträge",
+  "webhooks.event.contract.created.label": "Vertrag erfasst",
+  "webhooks.event.contract.created.when":
+    "Eine Vereinbarung wird zu einem Unternehmen erfasst.",
+  "webhooks.event.contract.updated.label": "Vertragsdaten geändert",
+  "webhooks.event.contract.updated.when": "Felder eines Vertrags ändern sich.",
+  "webhooks.event.contract.status_changed.label": "Vertragsstatus geändert",
+  "webhooks.event.contract.status_changed.when":
+    "Jemand oder ein freigegebener Vorschlag setzt einen neuen Status.",
+  "webhooks.event.contract.archived.label": "Vertrag archiviert",
+  "webhooks.event.contract.archived.when": "Ein Vertrag wird archiviert.",
+  "webhooks.eventGroup.commissions": "Provisionen",
+  "webhooks.event.commission.accrued.label": "Provision angefallen",
+  "webhooks.event.commission.accrued.when":
+    "Ein gewonnener Deal bringt dem Partner eine Provision ein.",
+  "webhooks.event.commission.decided.label": "Über Provision entschieden",
+  "webhooks.event.commission.decided.when":
+    "Ein Provisionseintrag wird freigegeben, ausgezahlt oder storniert.",
+  "webhooks.eventGroup.lists": "Listen",
+  "webhooks.event.list.created.label": "Liste erstellt",
+  "webhooks.event.list.created.when":
+    "Jemand erstellt eine Live-Liste oder eine Shortlist.",
+  "webhooks.event.list.updated.label": "Listeneinstellungen geändert",
+  "webhooks.event.list.updated.when":
+    "Name, Zweck, Filter, Teilen, Team oder Verantwortung einer Liste ändern sich.",
+  "webhooks.event.list.archived.label": "Liste archiviert",
+  "webhooks.event.list.archived.when": "Eine Liste wird archiviert.",
+  "webhooks.event.list.restored.label": "Liste wiederhergestellt",
+  "webhooks.event.list.restored.when":
+    "Eine archivierte Liste wird wiederhergestellt.",
+  "webhooks.event.list.member_added.label":
+    "Datensatz zur Shortlist hinzugefügt",
+  "webhooks.event.list.member_added.when":
+    "Ein Datensatz wird manuell, in einer Massenänderung oder durch eine Automatisierung zu einer Shortlist hinzugefügt.",
+  "webhooks.event.list.member_removed.label":
+    "Datensatz von Shortlist entfernt",
+  "webhooks.event.list.member_removed.when":
+    "Ein Datensatz wird manuell oder in einer Massenänderung von einer Shortlist entfernt.",
+  "webhooks.event.list.evaluated.label": "Live-Liste geändert",
+  "webhooks.event.list.evaluated.when":
+    "Eine Prüfung der Live-Liste stellt fest, dass Datensätze hinzukommen oder wegfallen.",
+  "webhooks.eventGroup.deal_rooms": "Deal Rooms",
+  "webhooks.event.deal_room.opened.label": "Deal Room eröffnet",
+  "webhooks.event.deal_room.opened.when":
+    "Ein Deal Room wird zu einem Deal erstellt.",
+  "webhooks.event.deal_room.updated.label": "Inhalt des Deal Rooms geändert",
+  "webhooks.event.deal_room.updated.when":
+    "Was die Käuferseite liest, ändert sich: der Titel, der Begrüßungstext oder die Dokumente.",
+  "webhooks.event.deal_room.paused.label": "Deal Room pausiert",
+  "webhooks.event.deal_room.paused.when":
+    "Ein Deal Room wird pausiert, und Zugriffe der Käuferseite werden abgelehnt.",
+  "webhooks.event.deal_room.resumed.label": "Deal Room fortgesetzt",
+  "webhooks.event.deal_room.resumed.when":
+    "Ein pausierter Deal Room ist wieder für die Käuferseite erreichbar.",
+  "webhooks.event.deal_room.closed.label": "Deal Room geschlossen",
+  "webhooks.event.deal_room.closed.when":
+    "Der Inhalt eines Deal Rooms wird eingefroren.",
+  "webhooks.event.deal_room.archived.label": "Deal Room archiviert",
+  "webhooks.event.deal_room.archived.when":
+    "Ein Deal Room endet, und der Zugang der Käuferseite wird widerrufen.",
+  "webhooks.event.deal_room.participant_invited.label":
+    "Käuferseite eingeladen",
+  "webhooks.event.deal_room.participant_invited.when":
+    "Ein externer Kontakt erhält Zugang zu einem Deal Room.",
+  "webhooks.event.deal_room.participant_revoked.label":
+    "Zugang der Käuferseite entzogen",
+  "webhooks.event.deal_room.participant_revoked.when":
+    "Einem externen Kontakt wird der Zugang zu einem Deal Room entzogen.",
+  "webhooks.event.deal_room.participant_credential_reissued.label":
+    "Link der Käuferseite neu ausgestellt",
+  "webhooks.event.deal_room.participant_credential_reissued.when":
+    "Ein Zugangslink wird erneut gesendet, oder die Adresse, an die er ging, wird korrigiert.",
+  "webhooks.event.deal_room.comment_posted.label":
+    "Kommentar im Deal Room verfasst",
+  "webhooks.event.deal_room.comment_posted.when":
+    "Jemand von einer der beiden Seiten kommentiert in einem Thread des Deal Rooms.",
+  "webhooks.event.deal_room.thread_resolved.label":
+    "Thread im Deal Room abgeschlossen",
+  "webhooks.event.deal_room.thread_resolved.when":
+    "Die Anbieterseite schließt einen Thread.",
+  "webhooks.event.deal_room.decision_recorded.label":
+    "Entscheidung der Käuferseite zu einem Dokument",
+  "webhooks.event.deal_room.decision_recorded.when":
+    "Wird derzeit nicht gesendet. Bleibt für Empfangssysteme erhalten, die noch ältere Ereignisse lesen.",
+  "webhooks.eventGroup.introductions": "Vorstellungen",
+  "webhooks.event.intro_request.created.label": "Vorstellung angefragt",
+  "webhooks.event.intro_request.created.when":
+    "Ein Teammitglied bittet ein anderes, es einem Kontakt vorzustellen.",
+  "webhooks.event.intro_request.decided.label":
+    "Vorstellungsanfrage beantwortet",
+  "webhooks.event.intro_request.decided.when":
+    "Das angefragte Teammitglied beantwortet die Anfrage.",
+  "webhooks.event.intro_request.completed.label": "Kontakt vorgestellt",
+  "webhooks.event.intro_request.completed.when":
+    "Die Vorstellung findet statt, oder das anfragende Teammitglied nutzt den geliehenen Namen.",
+  "webhooks.event.intro_request.replied.label":
+    "Kontakt hat auf Vorstellung geantwortet",
+  "webhooks.event.intro_request.replied.when":
+    "Der Kontakt antwortet, wie in erfassten Aktivitäten zu sehen.",
+  "webhooks.event.intro_request.closed.label":
+    "Vorstellungsanfrage geschlossen",
+  "webhooks.event.intro_request.closed.when":
+    "Eine Anfrage endet ohne Vorstellung.",
+  "webhooks.eventGroup.consent_privacy": "Einwilligung und Datenschutz",
+  "webhooks.event.consent.changed.label": "Einwilligung erfasst",
+  "webhooks.event.consent.changed.when":
+    "Die Einwilligung eines Kontakts oder Leads für einen Zweck wird erfasst.",
+  "webhooks.event.consent.suppressed.label":
+    "Kontakt möchte keine Nachrichten mehr",
+  "webhooks.event.consent.suppressed.when":
+    "Jemand hält fest, dass der Kontakt nicht angeschrieben werden darf.",
+  "webhooks.event.consent.suppression_lifted.label": "Sperre aufgehoben",
+  "webhooks.event.consent.suppression_lifted.when":
+    "Jemand mit der nötigen Berechtigung hebt eine Sperre auf.",
+  "webhooks.event.consent.override_recorded.label": "Ausnahme erfasst",
+  "webhooks.event.consent.override_recorded.when":
+    "Ein Teammitglied bestätigt, dass eine maschinelle Ablehnung für eine Kategorie übergangen werden darf.",
+  "webhooks.event.consent.override_lifted.label": "Ausnahme aufgehoben",
+  "webhooks.event.consent.override_lifted.when":
+    "Jemand mit der nötigen Berechtigung hebt eine Ausnahme auf.",
+  "webhooks.event.retention.applied.label": "Aufbewahrungsregel ausgeführt",
+  "webhooks.event.retention.applied.when":
+    "Eine Aufbewahrungs- oder Löschregel wird auf einen Datensatz angewendet.",
+  "webhooks.event.retention.restricted.label":
+    "Datensatz gesetzlich eingeschränkt",
+  "webhooks.event.retention.restricted.when":
+    "Eine gesetzliche Aufbewahrungspflicht ändert, was mit einem Datensatz geschehen darf.",
+  "webhooks.eventGroup.signals": "Signale",
+  "webhooks.event.signal.detected.label": "Signal erkannt",
+  "webhooks.event.signal.detected.when": "Ein Signal wird erstellt.",
+  "webhooks.event.signal.resolved.label": "Signal zugeordnet",
+  "webhooks.event.signal.resolved.when":
+    "Ein Signal wird mit deinen Unternehmen und Kontakten abgeglichen.",
+  "webhooks.eventGroup.forecasts_weekly_plans": "Prognosen und Wochenpläne",
+  "webhooks.event.forecast.created.label": "Einschätzung abgegeben",
+  "webhooks.event.forecast.created.when":
+    "Jemand gibt an, was in einem Zeitraum voraussichtlich abgeschlossen wird.",
+  "webhooks.event.forecast.assurance_created.label":
+    "Prüfung der Prognosedaten abgeschlossen",
+  "webhooks.event.forecast.assurance_created.when":
+    "Die nächtliche Prüfung der Prognosedaten ist abgeschlossen.",
+  "webhooks.event.forecast.exception_resolved.label":
+    "Prognosebefund beantwortet",
+  "webhooks.event.forecast.exception_resolved.when":
+    "Jemand beantwortet einen Befund der nächtlichen Prüfung.",
+  "webhooks.event.forecast.snapshot_created.label":
+    "Prognose-Snapshot gespeichert",
+  "webhooks.event.forecast.snapshot_created.when":
+    "Ein Satz von Prognosewerten wird eingefroren.",
+  "webhooks.event.forecast.share_issued.label": "Prognose-Link geteilt",
+  "webhooks.event.forecast.share_issued.when":
+    "Jemand erstellt einen Link, über den andere eine Prognose sehen.",
+  "webhooks.event.forecast.share_revoked.label": "Prognose-Link geschlossen",
+  "webhooks.event.forecast.share_revoked.when":
+    "Ein geteilter Link wird vor seinem Ablauf geschlossen.",
+  "webhooks.event.weekly_plan.updated.label": "Wochenplan geändert",
+  "webhooks.event.weekly_plan.updated.when":
+    "Der Wochenplan eines Teammitglieds wird eröffnet, oder eine Zusage wird hinzugefügt, bearbeitet oder abgeschlossen.",
+  "webhooks.event.weekly_plan.help_requested.label":
+    "Hilfe zu einer Zusage angefragt",
+  "webhooks.event.weekly_plan.help_requested.when":
+    "Ein Teammitglied bittet die Teamleitung um Hilfe bei einer Zusage.",
+  "webhooks.eventGroup.notices_notifications":
+    "Hinweise und Benachrichtigungen",
+  "webhooks.event.notice.created.label": "Hinweis erfasst",
+  "webhooks.event.notice.created.when":
+    "Ein Hinweis wird für ein Nutzerkonto erfasst.",
+  "webhooks.event.notice.read.label": "Hinweis gelesen",
+  "webhooks.event.notice.read.when":
+    "Wer den Hinweis erhalten hat, markiert ihn als gelesen.",
+  "webhooks.event.notification.preference_changed.label":
+    "Benachrichtigungseinstellung geändert",
+  "webhooks.event.notification.preference_changed.when":
+    "Ein Mitglied ändert, wie eine Art von Benachrichtigung es erreicht.",
+  "webhooks.event.user_delivery.changed.label":
+    "Zustellungseinstellung geändert",
+  "webhooks.event.user_delivery.changed.when":
+    "Ein Mitglied ändert, was Margince ihm senden darf.",
+  "webhooks.eventGroup.members_access": "Mitglieder und Zugriff",
+  "webhooks.event.user.invited.label": "Mitglied eingeladen",
+  "webhooks.event.user.invited.when": "Ein Admin lädt ein neues Mitglied ein.",
+  "webhooks.event.user.activated.label": "Mitglied aktiviert",
+  "webhooks.event.user.activated.when":
+    "Ein eingeladenes Mitglied legt sein Passwort fest und wird aktiv.",
+  "webhooks.event.user.password_link_issued.label": "Passwort-Link ausgestellt",
+  "webhooks.event.user.password_link_issued.when":
+    "Ein Admin erstellt einen Link zum Festlegen des Passworts, der außerhalb von Margince weitergegeben wird, wenn kein E-Mail-Versand eingerichtet ist.",
+  "webhooks.event.user.deactivated.label": "Mitglied deaktiviert",
+  "webhooks.event.user.deactivated.when":
+    "Die Sitzungen und Agent-Passports eines Mitglieds werden widerrufen.",
+  "webhooks.event.user.reactivated.label": "Mitglied reaktiviert",
+  "webhooks.event.user.reactivated.when":
+    "Ein deaktiviertes Mitglied wird wieder aktiviert.",
+  "webhooks.event.role.changed.label": "Rolle eines Mitglieds geändert",
+  "webhooks.event.role.changed.when": "Die Rolle eines Mitglieds wird ersetzt.",
+  "webhooks.event.team.changed.label": "Team geändert",
+  "webhooks.event.team.changed.when":
+    "Ein Team wird erstellt, umbenannt, archiviert oder wiederhergestellt, oder ein Mitglied tritt bei oder aus.",
+  "webhooks.event.passport.revoked.label": "Agent-Passport widerrufen",
+  "webhooks.event.passport.revoked.when": "Ein Agent-Passport wird widerrufen.",
+  "webhooks.event.onboarding.state_changed.label":
+    "Einrichtungsschritt erreicht",
+  "webhooks.event.onboarding.state_changed.when":
+    "Der Einrichtungsassistent eines Mitglieds wird gestartet oder geht zum nächsten Schritt.",
+  "webhooks.eventGroup.member_settings_linkedin":
+    "Mitgliedereinstellungen und LinkedIn",
+  "webhooks.event.user_display_name.changed.label": "Anzeigename geändert",
+  "webhooks.event.user_display_name.changed.when":
+    "Ein Mitglied ändert den Namen, den das Team sieht.",
+  "webhooks.event.user_greeting_name.changed.label": "Rufname geändert",
+  "webhooks.event.user_greeting_name.changed.when":
+    "Der Rufname eines Mitglieds wird gespeichert oder bei der ersten Anmeldung über einen Anbieter ausgefüllt.",
+  "webhooks.event.user_locale.changed.label": "Sprache der Oberfläche geändert",
+  "webhooks.event.user_locale.changed.when":
+    "Ein Mitglied wählt die Sprache der eigenen Oberfläche.",
+  "webhooks.event.email_signature.changed.label": "E-Mail-Signatur geändert",
+  "webhooks.event.email_signature.changed.when":
+    "Ein Mitglied schreibt, bearbeitet oder leert die eigene E-Mail-Signatur.",
+  "webhooks.event.linkedin_account.changed.label": "LinkedIn-Konto geändert",
+  "webhooks.event.linkedin_account.changed.when":
+    "Ein Mitglied erfasst oder korrigiert die eigene LinkedIn-Verbindung.",
+  "webhooks.event.linkedin_network.imported.label":
+    "LinkedIn-Netzwerk importiert",
+  "webhooks.event.linkedin_network.imported.when":
+    "Ein Mitglied lädt den Export der eigenen LinkedIn-Verbindungen hoch.",
+  "webhooks.event.linkedin_match.decided.label":
+    "LinkedIn-Verbindung verknüpft",
+  "webhooks.event.linkedin_match.decided.when":
+    "Eine Verbindung wird mit einem erfassten Kontakt verknüpft.",
+  "webhooks.eventGroup.voice_dna": "Voice DNA",
+  "webhooks.event.voice.profile_created.label": "Stilprofil erstellt",
+  "webhooks.event.voice.profile_created.when":
+    "Ein Mitglied erstellt das eigene Stilprofil.",
+  "webhooks.event.voice.profile_updated.label": "Stilprofil geändert",
+  "webhooks.event.voice.profile_updated.when":
+    "Das Mitglied, dem das Profil gehört, ändert die Vorgaben oder das automatische Lernen.",
+  "webhooks.event.voice.profile_archived.label": "Stilprofil archiviert",
+  "webhooks.event.voice.profile_archived.when":
+    "Ein Stilprofil wird archiviert.",
+  "webhooks.event.voice.corpus_changed.label": "Schreibproben geändert",
+  "webhooks.event.voice.corpus_changed.when":
+    "Eine Schreibprobe wird hinzugefügt, geändert oder entfernt, oder alle Schreibproben werden gelöscht.",
+  "webhooks.event.voice.build_changed.label": "Aufbau des Stilprofils geplant",
+  "webhooks.event.voice.build_changed.when":
+    "Ein Aufbau des Stilprofils wird geplant, oder ein ausstehender Aufbau wird zurückgegeben.",
+  "webhooks.event.voice.version_changed.label":
+    "Version des Stilprofils geändert",
+  "webhooks.event.voice.version_changed.when":
+    "Eine Version des Stilprofils wird erstellt, aktiviert, abgelehnt oder zurückgesetzt.",
+  "webhooks.event.voice.draft_outcome_recorded.label":
+    "Ergebnis eines Entwurfs erfasst",
+  "webhooks.event.voice.draft_outcome_recorded.when":
+    "Das Ergebnis eines Entwurfs im Schreibstil des Mitglieds wird erfasst.",
+  "webhooks.eventGroup.approvals_audit": "Freigaben und Audit",
+  "webhooks.event.approval.requested.label": "Freigabe angefragt",
+  "webhooks.event.approval.requested.when":
+    "Eine Agent-Aktion wird zurückgehalten, bis jemand entscheidet.",
+  "webhooks.event.approval.decided.label": "Über Freigabe entschieden",
+  "webhooks.event.approval.decided.when":
+    "Eine zurückgehaltene Aktion wird freigegeben, abgelehnt oder läuft ab.",
+  "webhooks.event.approval.failure_acknowledged.label":
+    "Fehlgeschlagene Freigabe gesehen",
+  "webhooks.event.approval.failure_acknowledged.when":
+    "Wer freigegeben hat, hat gesehen, dass die freigegebene Arbeit nicht ausgeführt wurde.",
+  "webhooks.event.coldstart.read_back_proposed.label":
+    "Zusammenfassung der Einrichtung vorgeschlagen",
+  "webhooks.event.coldstart.read_back_proposed.when":
+    "Eine Zusammenfassung deines Unternehmensprofils wird zur Freigabe vorgemerkt.",
+  "webhooks.event.coldstart.accepted.label":
+    "Zusammenfassung der Einrichtung angenommen",
+  "webhooks.event.coldstart.accepted.when":
+    "Jemand nimmt die vorgemerkte Zusammenfassung an.",
+  "webhooks.event.coldstart.rejected.label":
+    "Zusammenfassung der Einrichtung abgelehnt",
+  "webhooks.event.coldstart.rejected.when":
+    "Jemand lehnt die vorgemerkte Zusammenfassung ab.",
+  "webhooks.event.audit.appended.label": "Audit-Eintrag hinzugefügt",
+  "webhooks.event.audit.appended.when": "Wird derzeit nicht gesendet.",
   "reindexbanner.needed": "Neuindexierung erforderlich",
   "reindexbanner.link": "In den Einstellungen prüfen",
 
@@ -11877,9 +12409,7 @@ export const de = {
     "Zum Bestätigen den Namen des Anbieters eingeben",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Jeder Kontakt wird einmal nach den Angaben nachgeschlagen, die diese Verbindung auswählt und für die der Anbieter nichts berechnet, in der Regel Link zum beruflichen Profil, aktuelle Rolle und Arbeitgeber sowie Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft. Diese Angaben kosten Credits und bleiben eine Entscheidung pro Kontakt.",
-  "provider.automaticLookupJurisdiction":
-    "Deaktiviere das automatische Nachschlagen, wenn die Kontakte in deinem CRM einem Recht unterliegen, das den Handel mit personenbezogenen Daten verbietet, etwa dem vietnamesischen. Die Schaltfläche an jedem Kontakt funktioniert weiterhin, damit die Entscheidung bei denen bleibt, die sie treffen.",
+    "Neue Kontakte erhalten die Angaben, die der Anbieter kostenlos liefert, etwa Rolle und Werdegang. E-Mail-Adressen und Mobilnummern werden nie automatisch gekauft, und die Schaltfläche am einzelnen Kontakt funktioniert weiterhin. Deaktiviere das automatische Nachschlagen, wo das Recht den Handel mit personenbezogenen Daten verbietet.",
   "provider.buyable": "Kaufen erlauben: {category}",
   "provider.buyableWriteFailed": "Kategorie nicht geändert",
   "provider.postureReadFailed": "Aktuelle Einstellung unbekannt",
@@ -11970,10 +12500,6 @@ export const de = {
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
   "provider.profile.buyRebuys":
     "Der Preis enthält erneut: {categories}. Der Anbieter verlangt das für diese Suche und berechnet alles, was er zurückliefert.",
-  "provider.freeTier.hint":
-    "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Lass diese Option aktiviert, damit jeder neue Kontakt diese Angaben automatisch erhält.",
-  "provider.pricedTier.hint":
-    "Wird nie automatisch gekauft, sondern einzeln pro Kontakt, mit dem Preis auf der Schaltfläche.",
   "provider.profile.receiptAt": "Abgefragt am {at}.",
   "provider.profile.receipt":
     "Abgefragt am {at} · {answered} von {asked} Angaben geliefert.",
@@ -13422,7 +13948,7 @@ export const de = {
   "aiRates.refresh.keptCount_one": "{count} manueller Preis beibehalten",
   "aiRates.refresh.keptCount_other": "{count} manuelle Preise beibehalten",
   "aiProviders.setByHand": "Manuell",
-  "aiRates.refresh.unlisted": "Nicht in der Liste des Brokers: {ids}",
+  "aiRates.refresh.unlisted": "Nicht in der Preisliste: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} Preis geschrieben",
   "aiRates.refresh.updatedCount_other": "{count} Preise geschrieben",
   "aiRates.refresh.unchangedCount_one": "{count} Preis bereits aktuell",
@@ -13866,6 +14392,11 @@ export const de = {
   "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
   "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
+  "aiFigures.switched_other":
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
+  "aiFigures.switchedBadge": "Modell gewechselt",
   "aiFigures.line.sort": "Sortierung: {sort}",
   "aiFigures.line.week": "7 T: {figures}",
   "aiFigures.line.prefix": "7 T: {sentence}",

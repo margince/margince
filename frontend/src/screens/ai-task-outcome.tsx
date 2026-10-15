@@ -6,7 +6,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { SegmentBar, type SegmentBarParts } from "../design-system/readings";
 import { formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { formatSeconds } from "./ai-call-figures";
+import { formatSeconds, switchedSentence } from "./ai-call-figures";
 import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
 
@@ -120,6 +120,17 @@ function StepCard({
               latency: formatSeconds(step.p50_ms, locale),
             })}
           </span>
+          {step.switched && step.switched_to ? (
+            <span className="t-caption" role="status">
+              {switchedSentence(
+                step.switched,
+                step.answered,
+                step.switched_to,
+                plural,
+                locale,
+              )}
+            </span>
+          ) : null}
           {reasons.map(([reason, count]) => (
             <span
               key={reason}

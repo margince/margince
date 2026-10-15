@@ -60,7 +60,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -122,7 +121,7 @@ const indexedFunctionFloor = 2000
 // judging happens.
 func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	t.Helper()
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 	holders, declared := txHoldingReceivers(t, roots)
 	idx := funcIndex{}
 	counted := 0
@@ -349,32 +348,6 @@ func locallyBound(params *ast.FieldList, body *ast.BlockStmt) map[string]bool {
 		return true
 	})
 	return bound
-}
-
-// moduleRoot answers the directory holding go.mod, walking up from wherever the
-// test binary was started.
-//
-// Not a relative constant. `..` is right when the package directory is the
-// working directory and wrong under a composed workspace, and the failure is a
-// walk over a directory that does not exist — which is at least loud. Resolving
-// it the way gatekit resolves its own sweep universe keeps the index and the
-// judgement reading one tree.
-func moduleRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("resolving the working directory to find the module root: %v", err)
-	}
-	for {
-		if info, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil && !info.IsDir() {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatalf("no go.mod above %s, so the reach index has no tree to read", dir)
-		}
-		dir = parent
-	}
 }
 
 // Guarding the widened walk. Each case below is a shape the gate had to start

@@ -33,6 +33,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -63,7 +65,7 @@ const (
 func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 	t.Parallel()
 
-	entry := functionNamed(t, moduleRoot(t), captureEntry, captureEntryFn)
+	entry := functionNamed(t, gatekit.ModuleRoot(t), captureEntry, captureEntryFn)
 	lockAt := offsetOfCall(entry, lockTakerName)
 	if lockAt < 0 {
 		t.Fatalf("%s does not call %s — a capture that locks an activity row before the merge "+
@@ -73,7 +75,7 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 	// reached through the wrapper now. Asserting the wrapper alone would let the
 	// sighting move out from under it without a word, so the chain is read as two
 	// links and each one fails on its own.
-	wrapper := functionNamed(t, moduleRoot(t), seatAddressFile, seatAddressFn)
+	wrapper := functionNamed(t, gatekit.ModuleRoot(t), seatAddressFile, seatAddressFn)
 	if offsetOfCall(wrapper, aliasSightingFn) < 0 {
 		t.Errorf("%s no longer calls %s, so the ordering below pins the wrapper and not the "+
 			"alias path it stands for", seatAddressFn, aliasSightingFn)
@@ -125,7 +127,7 @@ func offsetOfCall(fn *ast.FuncDecl, name string) int {
 func TestTheMergeLockHasOneSpelling(t *testing.T) {
 	t.Parallel()
 
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 	for _, site := range []struct{ file, function string }{
 		{captureLockFile, lockTakerName},
 		{captureJoin, "mergeLinkedThreads"},

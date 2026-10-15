@@ -126,12 +126,13 @@ export function ImapMailboxForm({
         }),
       );
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // Never claim a connection the server did not confirm: the row list
       // is the proof, so invalidate it and let the card's own re-read of
       // GET /connectors drive whatever it shows next.
-      queryClient.invalidateQueries({ queryKey: ["connectors"] });
       setSecret("");
+      // Closed only once the roster has redrawn, so focus lands on what it drew.
+      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
       onConnected?.();
     },
     onError: () => {
@@ -351,15 +352,23 @@ export function ImapConnectForm({
   open,
   onClose,
   onConnected,
+  returnFocusTo,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   onConnected?: () => void;
+  returnFocusTo?: () => HTMLElement | null;
 }>) {
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="form"
+      returnFocusTo={returnFocusTo}
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("connectors.imapModalTitle")}
       </Heading>

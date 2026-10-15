@@ -82,7 +82,12 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { extensionLayers, filesUnder, parseSource } from "./lib/source-tree";
+import {
+  extensionLayers,
+  extensionPackageLayers,
+  filesUnder,
+  parseSource,
+} from "./lib/source-tree";
 
 const frontendRoot = resolve(__dirname, "..");
 const repoRoot = resolve(frontendRoot, "..");
@@ -465,9 +470,17 @@ describe("a unit reaches the core only through the published surface", () => {
       layers.length,
       "no extension frontend layer was found — this gate is dark",
     ).toBeGreaterThan(0);
-    // And a FILE floor, PER LAYER — see layersThatReadNothing.
+    // And a file floor per layer (see layersThatReadNothing). Only a layer
+    // with a package.json holds source; one of copy alone has none to read.
+    const packageLayers = extensionPackageLayers(extensionsDir);
     expect(
-      layersThatReadNothing(layers, files).map((l) => relative(repoRoot, l)),
+      packageLayers.length,
+      "no extension frontend layer holds a package.json — the floor is dark",
+    ).toBeGreaterThan(0);
+    expect(
+      layersThatReadNothing(packageLayers, files).map((l) =>
+        relative(repoRoot, l),
+      ),
       "these layers were found but no file inside them was read",
     ).toEqual([]);
     expect(violations).toEqual([]);

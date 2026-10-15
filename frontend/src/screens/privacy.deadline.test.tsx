@@ -14,8 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
-import { PrivacyInboxCard } from "./privacy";
 import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
+import { RequestsPanel } from "./settings.privacy";
 
 // The deadline of a manual subject request. The server computes it and the form
 // shows it. The form sends a date only when the officer chose an earlier one.
@@ -90,7 +90,7 @@ async function openAccessForm(user: ReturnType<typeof userEvent.setup>) {
       }
     >
       <LocaleProvider initial="en">
-        <PrivacyInboxCard />
+        <RequestsPanel />
       </LocaleProvider>
     </QueryClientProvider>,
   );

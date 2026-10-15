@@ -10,6 +10,7 @@ import {
   Badge,
   Button,
   EmptyState,
+  Field,
   Modal,
   TextInput,
 } from "../design-system/atoms";
@@ -164,15 +165,15 @@ export function OwnDomainsCard() {
       </PanelBody>
       {anchors.length > 0 && (
         <>
-          <PanelGroupHead title={t("ownDomains.companyTitle")} level="h3" />
-          <PanelBody>
-            {/* Copy that sends the reader somewhere has to take them there:
-                these rows cannot be edited here, only on the company profile. */}
-            <PanelIntro>
-              {t("ownDomains.fromCompany")}{" "}
+          {/* These rows are edited on the company profile, so the group's verb
+              takes the reader there. */}
+          <PanelGroupHead
+            title={t("ownDomains.companyTitle")}
+            level="h3"
+            action={
               <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
-            </PanelIntro>
-          </PanelBody>
+            }
+          />
           <SettingList bleed="settings" testId="own-domains-from-company">
             {anchors.map((domain) => (
               <SettingRow key={domain} label={domain} control={null} />
@@ -181,9 +182,6 @@ export function OwnDomainsCard() {
         </>
       )}
       <PanelGroupHead title={t("ownDomains.curatedTitle")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("ownDomains.irreversible")}</PanelIntro>
-      </PanelBody>
       <QueryGate query={query} pendingLabel={t("ownDomains.curatedTitle")}>
         {(list) => (
           <CuratedDomains
@@ -219,9 +217,11 @@ function CuratedDomains({
     // `empty`, and only `empty`: no further domain is registered, which is a
     // fact about the installation rather than a read that failed.
     return (
-      <EmptyState>
-        <p data-testid="own-domains-empty">{t("ownDomains.empty")}</p>
-      </EmptyState>
+      <PanelBody>
+        <EmptyState>
+          <p data-testid="own-domains-empty">{t("ownDomains.empty")}</p>
+        </EmptyState>
+      </PanelBody>
     );
   }
   return (
@@ -307,12 +307,20 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           add.mutate(domain, { onSuccess: onClose });
         }}
       >
-        <TextInput
-          value={draft}
-          aria-label={t("ownDomains.addLabel")}
-          placeholder={t("ownDomains.placeholder")}
-          onChange={(event) => setDraft(event.target.value)}
-        />
+        <Field
+          label={t("ownDomains.addLabel")}
+          labelHidden
+          hint={t("ownDomains.irreversible")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft}
+              placeholder={t("ownDomains.placeholder")}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          )}
+        </Field>
         {add.isError && (
           <Callout
             kind="outcome"

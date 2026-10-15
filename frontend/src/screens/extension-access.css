@@ -2,7 +2,7 @@
    matrices. Structure only; every colour reads a design token (ds-purity gate)
    and every gap reads the --space-* scale (ds-spacing gate). */
 
-/* The lead card and one card per composed unit, in one column. */
+/* One card per composed unit, in one column. */
 .ext-stack {
   display: flex;
   flex-direction: column;
@@ -29,11 +29,6 @@
 .ext-unit > .panel-head > .ext-unit-actions {
   flex: 0 1 auto;
   min-width: 0;
-}
-
-/* The lead panel's own sentence, above the read's pending/error surface. */
-.ext-lead-sub {
-  margin: 0 0 var(--space-3);
 }
 
 .ext-unit-link {
@@ -75,45 +70,38 @@
   gap: var(--space-2);
 }
 
-.ext-brings {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* Term above definition rather than beside it: at 390px a two-column
-   definition list forces the chip row narrower than a single object name. */
-.ext-brings-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.ext-brings-term {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.ext-brings-def {
-  margin: 0;
-  min-width: 0;
-}
-
-.ext-chips {
+/* Routes and objects as plain lines: a path is read, not pressed. */
+.ext-brings-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+  overflow-wrap: anywhere;
 }
 
-/* The verb on a route chip. It is not decoration: one entry per operation
-   means a path can appear twice, and the method is the only thing that tells a
-   DELETE from the GET beside it. */
-.ext-method {
-  margin-right: var(--space-1);
+/* The unit's grid is measured against its own card, so it fits a phone without
+   scrolling: the verb columns close up and the role names wrap. */
+.ext-unit {
+  container: ext-unit / inline-size;
+}
+
+@container ext-unit (width < 30rem) {
+  .ext-unit .grant-matrix :is(th, td):not(:first-child) {
+    padding-inline: var(--space-1);
+  }
+  .ext-unit .grant-matrix tbody th {
+    padding-inline-end: var(--space-1);
+  }
+  .ext-unit .grant-matrix thead th {
+    font: var(--fontBodySmall);
+  }
+  .ext-unit .grant-row-head {
+    min-inline-size: 0;
+  }
+}
+
+/* With room, a role's badge stays on its name's line. */
+@container ext-unit (width >= 40rem) {
+  .ext-unit .grant-row-head {
+    max-inline-size: none;
+  }
 }

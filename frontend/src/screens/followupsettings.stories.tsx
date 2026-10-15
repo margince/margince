@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -45,4 +46,13 @@ export const Editable: Story = {
 // once.
 export const ReadOnly: Story = {
   render: story({ installation_settings: ["read"] }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText(
+        "Only an administrator or operations user can change these settings.",
+      ),
+    ).toBeVisible();
+    await expect(canvas.getByTestId("follow-up-after-days")).toBeDisabled();
+  },
 };

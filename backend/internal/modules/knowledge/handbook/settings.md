@@ -136,7 +136,7 @@ If an add-on's screen shows nothing, give a role access to it here with its swit
 
 The Capture rules page in Settings (group **Data**) decides what comes into the CRM, in the order the page shows:
 
-**Email sharing**, at the top: whether captured mail is shared with colleagues. It holds for everybody, so it lives here. Your own **Connections** page shows the current setting and links here.
+**Mail sharing and sync**, at the top: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting and links here.
 
 **Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
@@ -220,12 +220,15 @@ Between them they hold:
   rename or remove it.
 - **Retention**: how long each kind of record is kept, and what happens when its
   time runs out.
-- **Restricted records**: what the law makes Margince hold after an erasure.
-- **Privacy requests**: requests from a contact about their own data, with their
-  due dates.
+- **Requests**: one panel with three lists. **Privacy** holds requests from a
+  contact about their own data, with their due dates. **Corrections** holds the
+  changes contacts sent through the link they were emailed. **Held** holds what the law makes
+  Margince keep after an erasure.
+- **Disclosure duties**: contacts whose details came from someone else, and
+  whether they have been told yet.
 - **Audit log**: every action, and who did it.
 
-Admin and Ops can see Retention and Restricted records. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked.
+Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked.
 
 All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 

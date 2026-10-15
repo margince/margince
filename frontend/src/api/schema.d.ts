@@ -8368,6 +8368,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/webhook-subscriptions/body-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render a body template against a sample event, without sending anything.
+         * @description Renders `body_template` with the same engine a delivery uses, against a sample event of
+         *     `event_type` built from the public event contract. Nothing is sent and nothing is stored.
+         *     A template the engine refuses answers 422 on `body_template`, naming the line and column.
+         */
+        post: operations["previewWebhookBody"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhook-subscriptions/{id}": {
         parameters: {
             query?: never;
@@ -8387,8 +8409,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Pause/resume a subscription or re-target its event set.
-         * @description A partial update (pause/resume or re-target the event set). Re-targeting can widen
+         * Pause/resume a subscription, re-target its event set, or change its headers or body template.
+         * @description A partial update (pause/resume, the event set, custom headers, body template). Re-targeting can widen
          *     outbound egress, so an agent principal is refused.
          */
         patch: operations["updateWebhookSubscription"];
@@ -8447,7 +8469,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replay a parked (dead-lettered) delivery. */
+        /**
+         * Replay a parked (dead-lettered) delivery.
+         * @description Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+         *     delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+         *     retry sweep or another replay is sending at this moment is a 409; try again once it ends.
+         */
         post: operations["replayWebhookDelivery"];
         delete?: never;
         options?: never;
@@ -20313,6 +20340,11 @@ export interface components {
             event_types: string[];
             /** @enum {string} */
             state: "active" | "paused";
+            /** @description The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part. */
+            custom_headers: components["schemas"]["WebhookCustomHeader"][];
+            /** @description The body template every delivery is rendered from; null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
             /**
              * Format: int64
              * @description Optimistic-concurrency version; echo it in If-Match on update.
@@ -20324,6 +20356,33 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A custom header as a read shows it. The value stays sealed; `configured` says one is stored. */
+        WebhookCustomHeader: {
+            name: string;
+            configured: boolean;
+        };
+        /** @description A custom header to store. `value` is required for a new name. On update, a row that omits `value` keeps the value already stored under that name. */
+        WebhookCustomHeaderInput: {
+            name: string;
+            value?: string;
+        };
+        /**
+         * @description The Content-Type of a templated body; null means application/json.
+         * @enum {string|null}
+         */
+        WebhookBodyContentType: "application/json" | "text/plain" | "application/x-www-form-urlencoded" | null;
+        WebhookBodyPreviewRequest: {
+            /** @description The event type whose sample the template is rendered against. */
+            event_type: string;
+            body_template: string;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
+        };
+        WebhookBodyPreview: {
+            /** @description The exact bytes a delivery of the sample event would send. */
+            body: string;
+            content_type: string;
+            byte_length: number;
         };
         /** @description The create/rotate response — the subscription plus the `signing_secret`, which is shown EXACTLY ONCE and never retrievable again. Store it now: deliveries are signed with it on the Standard Webhooks scheme (standardwebhooks.com). */
         WebhookSubscriptionCreated: {
@@ -20339,12 +20398,22 @@ export interface components {
             target_url: string;
             /** @description At least one event type from the published catalog; a true set — duplicates are rejected. */
             event_types: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
-        /** @description A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set. */
+        /** @description A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope. */
         UpdateWebhookSubscriptionRequest: {
             /** @enum {string} */
             state?: "active" | "paused";
             event_types?: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
         WebhookSubscriptionListResponse: {
             data: components["schemas"]["WebhookSubscription"][];
@@ -23587,7 +23656,7 @@ export interface components {
             rows: components["schemas"]["AiCallStatsRow"][];
         };
         AiCallStatsRow: {
-            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            /** @description The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
             key: string;
             /** Format: int64 */
             calls: number;
@@ -23613,6 +23682,13 @@ export interface components {
              * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
              */
             unpriced: number;
+            /**
+             * Format: int64
+             * @description Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiTaskFlow: {
             task: string;
@@ -23648,6 +23724,13 @@ export interface components {
             gave_up: {
                 [key: string]: number;
             };
+            /**
+             * Format: int64
+             * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiDeferredWork: {
             carrier: string;
@@ -60656,6 +60739,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewWebhookBody: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookBodyPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The rendered body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookBodyPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getWebhookSubscription: {
         parameters: {
             query?: never;
@@ -60844,6 +60954,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTagSuggestion: {
@@ -65390,6 +65502,8 @@ export interface operations {
                 provider?: string;
                 /** @description Filter to calls that ended on one configured model id. */
                 model?: string;
+                /** @description Filter to calls one model answered: the model the provider named, else the configured one. */
+                served_model?: string;
                 /** @description Filter to calls a broker served from one upstream host. */
                 served_provider?: string;
                 /** @description Filter to calls that ended on one tier. */
@@ -65419,7 +65533,8 @@ export interface operations {
         parameters: {
             query?: {
                 window?: "24h" | "7d" | "30d";
-                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                /** @description served_model groups by the model that answered: the model the provider named, else the configured one. */
+                group?: "provider" | "model" | "served_model" | "served_provider" | "tier" | "task";
                 provider?: string;
                 model?: string;
                 tier?: string;

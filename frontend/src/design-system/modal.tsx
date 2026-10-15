@@ -5,7 +5,7 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 import { type ReactNode, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
-import { InsideDialog, useDialogFocus } from "./dialogfocus";
+import { useDialogFocus } from "./dialogfocus";
 import { IconAction } from "./iconaction";
 import { usePresence } from "./presence";
 import "./atoms.css";
@@ -171,7 +171,7 @@ export function Modal({
         // when it opens, rather than leaving it on the page behind.
         tabIndex={-1}
       >
-        <InsideDialog.Provider value>{children}</InsideDialog.Provider>
+        {children}
         {/* LAST in the DOM, and the position is the whole point: the first Tab
             into a dialog lands on its content, and the way out is the final
             stop rather than the one a reader has to pass to reach the form.

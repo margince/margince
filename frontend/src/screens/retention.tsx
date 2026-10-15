@@ -19,6 +19,7 @@ import { Heading } from "../design-system/heading";
 import { CellStrip } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate, QueryStates } from "../design-system/querystates";
+import { RowOpen } from "../design-system/rowopen";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
@@ -373,8 +374,7 @@ export function RetentionCard() {
     );
   }
 
-  // Sorted by the authorable enum's order, so the ladder reads the same on
-  // every visit and after every edit.
+  // In the authorable enum's order, so the ladder reads the same every visit.
   const rows = [...(policies.data?.data ?? [])].sort(
     (left, right) =>
       RETENTION_SCOPES.indexOf(left.scope) -
@@ -392,9 +392,6 @@ export function RetentionCard() {
         ) : undefined
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("retention.sub")}</PanelIntro>
-      </PanelBody>
       <CardBoundary>
         {/* The posture first: a reader auditing the ladder needs the override
             before the rows it overrides. */}
@@ -515,23 +512,19 @@ function PolicyTable({
   ];
   if (canEdit) {
     columns.push({
-      key: "verbs",
+      key: "open",
       header: t("table.actions"),
       headerHidden: true,
       fold: "end",
       align: "end",
       render: (policy) => (
-        <span className="cell-actions">
-          <Button
-            aria-label={t("retention.editScope", {
-              scope: t(scopeLabelKey(policy.scope)),
-            })}
-            aria-haspopup="dialog"
-            onClick={() => onEdit(policy)}
-          >
-            {t("retention.edit")}
-          </Button>
-        </span>
+        <RowOpen
+          label={t("retention.editScope", {
+            scope: t(scopeLabelKey(policy.scope)),
+          })}
+          opensDialog
+          onOpen={() => onEdit(policy)}
+        />
       ),
     });
   }
@@ -543,6 +536,7 @@ function PolicyTable({
       columns={columns}
       rows={[...rows]}
       rowKey={(policy) => policy.id}
+      onRowClick={canEdit ? onEdit : undefined}
     />
   );
 }

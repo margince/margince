@@ -172,7 +172,7 @@ function GrantRow({
           ) : (
             <KeyedName name={row.name} code={row.code} />
           )}
-          {row.badge ? <Badge>{row.badge}</Badge> : null}
+          {row.badge ? <Badge wrap>{row.badge}</Badge> : null}
         </span>
       </th>
       {CRUD.map((action) => {

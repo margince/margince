@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -191,19 +191,37 @@ async function chooseFromMenu(
   await page.findByRole("dialog");
 }
 
-const meta: Meta<typeof KnowledgeCard> = {
+const meta = {
   title: "Settings/Data/Knowledge/Document sets",
   component: KnowledgeCard,
-};
+} satisfies Meta<typeof KnowledgeCard>;
 export default meta;
-type Story = StoryObj<typeof KnowledgeCard>;
+type Story = StoryObj<typeof meta>;
 
-// The administrator's card: both sets with their coverage line, the archive verb
-// on each, and the form for a new one under the panel. The two coverage lines
-// differ on purpose — one fully embedded, one still short — because that figure
-// is the only place a reader learns a set is not yet answerable in full.
+// The administrator's card. One set answers in full and one does not yet, so
+// the two searchability badges differ.
 export const Administered: Story = {
   render: card(sets(administers, [handbook, priceBook])),
+};
+
+export const AdministeredAtPhoneWidth: Story = {
+  ...Administered,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A new set is a short form behind the head's verb: a name and the sentence a
+// refused question is answered with.
+export const NewSetDialog: Story = {
+  render: card(sets(administers, [handbook])),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "New document set",
+      }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+  },
 };
 
 // The seeded posture, and the one this file exists for: a reader who may ASK the
@@ -226,6 +244,7 @@ export const Withheld: Story = {
 // different sentence from "this set is not ready", and the notice says so.
 export const BeingReread: Story = {
   render: card(sets(administers, [{ ...handbook, reindexing: true }])),
+  play: showDocuments,
 };
 
 // The four ingest states in one list, A to Z. Only `failed` carries a reason.
@@ -274,10 +293,19 @@ export const ShippedSet: Story = {
   play: showDocuments,
 };
 
-// A set created and not yet filled. This is the one absence on the screen that
-// IS honest — the set list itself never draws an empty state, because every
-// installation is filed with the operator handbook at boot and "no document
-// sets" could then only mean a reconciliation that did not run.
+// No set at all: one line under the intro, not a table of headings.
+export const NoSetsYet: Story = {
+  render: card(sets(administers, [])),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("No document sets yet."),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+// A set created and not yet filled: the set is there, its documents are not.
 export const NothingFiledYet: Story = {
   render: card(
     sets(

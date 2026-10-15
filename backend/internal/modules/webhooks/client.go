@@ -4,7 +4,6 @@
 package webhooks
 
 import (
-	"errors"
 	"net"
 	"net/http"
 	"time"
@@ -29,15 +28,11 @@ const (
 	// read: the body is only inspected for diagnostics, so a hostile
 	// endpoint cannot exhaust memory by streaming forever.
 	maxResponseBytes = 8 << 10
-	// maxRedirects bounds a redirect chain; each hop re-enters the guarded
-	// dialer, so this only limits how long a chain may hold the request.
-	maxRedirects = 5
 )
 
-// NewGuardedClient builds the production delivery client: a tenant-
-// supplied target URL is dialed only if it resolves to a public address,
-// checked post-DNS on the concrete IP so a rebind cannot bypass the guard
-// (netguard.RefusePrivate). Every redirect hop re-enters the same dialer.
+// NewGuardedClient builds the production delivery client. A tenant's target
+// URL is dialed only if it resolves to a public address. The check runs after
+// DNS on the concrete IP, so a rebind cannot bypass it (netguard.RefusePrivate).
 func NewGuardedClient() *http.Client {
 	dialer := &net.Dialer{Timeout: deliveryTimeout, Control: netguard.RefusePrivate}
 	return &http.Client{
@@ -46,11 +41,9 @@ func NewGuardedClient() *http.Client {
 			DialContext:         dialer.DialContext,
 			TLSHandshakeTimeout: deliveryTimeout,
 		},
-		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-			if len(via) >= maxRedirects {
-				return errors.New("webhooks: too many redirects")
-			}
-			return nil
-		},
+		// A redirect is never followed. Go would turn the POST into a GET with
+		// no body, and carry custom headers to a host nobody named. The 3xx is
+		// recorded as the failed attempt it is.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 }

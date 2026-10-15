@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   emptyPage,
@@ -87,17 +87,10 @@ function renderCatalogue() {
   );
 }
 
-// Below the fold the header verbs sit in a "More actions" menu.
+// The create verb sits in the panel's head, on a phone as well.
 async function pressHeadVerb(canvasElement: HTMLElement, name: string) {
-  const canvas = within(canvasElement);
-  await canvas.findByRole("table");
-  if (!canvas.queryByRole("button", { name })) {
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "More actions" }),
-    );
-  }
   await userEvent.click(
-    await within(document.body).findByRole("button", { name }),
+    await within(canvasElement).findByRole("button", { name }),
   );
 }
 
@@ -113,6 +106,21 @@ export const List: Story = {
     await expect(
       canvas.queryByRole("combobox", { name: "Rows per page" }),
     ).toBeNull();
+  },
+};
+
+// A short list keeps only the archived switch, flush under the intro's interval.
+export const ShortWithArchivedSwitch: Story = {
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("row", { name: /Support Plan/ });
+    await waitFor(() => {
+      const tools = canvas
+        .getByRole("checkbox", { name: "Show archived" })
+        .closest<HTMLElement>(".lt-tools");
+      expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
+    });
   },
 };
 
@@ -147,12 +155,21 @@ export const ListPhone: Story = {
   tags: ["uat-phone"],
   render: renderCatalogue,
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("button", {
-      name: "Actions for Support Plan",
-    });
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Actions for Support Plan" });
+    await expect(
+      canvas.getByRole("button", { name: "New product" }),
+    ).toBeVisible();
   },
 };
+// No rows: one line under the intro, with no headings, dials or count.
 export const Empty: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("No products yet.")).toBeVisible();
+    await expect(canvas.queryByRole("columnheader")).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /^Sort/ })).toBeNull();
+  },
   render: () => {
     installFetchStub({
       "GET /me": AUTHORING_ME,
@@ -181,4 +198,10 @@ export const LoadError: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const EmptyPhone: Story = {
+  ...Empty,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

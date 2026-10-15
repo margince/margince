@@ -210,16 +210,13 @@ func TestGenerateSecretIsPrefixedAndFresh(t *testing.T) {
 	}
 }
 
-func TestGuardedClientCapsRedirects(t *testing.T) {
+func TestGuardedClientFollowsNoRedirect(t *testing.T) {
 	c := NewGuardedClient()
 	if c.CheckRedirect == nil {
 		t.Fatal("the guarded client must set CheckRedirect")
 	}
-	if err := c.CheckRedirect(nil, make([]*http.Request, maxRedirects-1)); err != nil {
-		t.Fatalf("a chain within the limit must be allowed: %v", err)
-	}
-	if err := c.CheckRedirect(nil, make([]*http.Request, maxRedirects)); err == nil {
-		t.Fatal("a chain at the redirect limit must be refused")
+	if err := c.CheckRedirect(nil, nil); !errors.Is(err, http.ErrUseLastResponse) {
+		t.Fatalf("CheckRedirect = %v, want http.ErrUseLastResponse so a 3xx is the attempt's answer", err)
 	}
 }
 

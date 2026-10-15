@@ -329,6 +329,12 @@ export const routes: readonly MockRoute[] = [
   { path: "/capture/settings", handle: capture.captureSettings },
   { path: "/capture/senders", handle: capture.senders },
   {
+    path: "/capture/contacts-awaiting-decision",
+    handle: capture.awaitingDecision,
+  },
+  { path: "/capture/held-threads", handle: capture.heldThreads },
+  { path: "/me/linkedin-reach", handle: capture.linkedInReach },
+  {
     path: (path) =>
       path.startsWith("/capture/senders/") && path.endsWith("/decision"),
     handle: capture.senderDecision,

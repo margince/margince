@@ -187,7 +187,9 @@ it("tells the rep their authority died rather than that they declined", async ()
   expect(screen.queryByText(en["overnightGrant.renewScope"])).toBeNull();
 });
 
-it("says the same thing about the same authority in both places", async () => {
+// A declined answer is the rep's own, so a later visit does not read it back
+// to them as a fault.
+it("says nothing alarming on a visit after the rep declined", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
@@ -200,7 +202,28 @@ it("says the same thing about the same authority in both places", async () => {
         ],
       }),
   });
+  render(<OvernightGrantCard />);
+
+  const toggle = await screen.findByTestId("overnight-grant-toggle");
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+});
+
+it("says the same thing about the same authority in both places", async () => {
+  const user = userEvent.setup();
+  let state = "granted";
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [{ spec: "morning_brief", state, credential_usable: true }],
+      }),
+    "PUT /me/agent-grants/morning_brief": () => {
+      state = "declined";
+      return jsonResponse({ spec: "morning_brief", state });
+    },
+  });
   const settings = render(<OvernightGrantCard />);
+  await user.click(await screen.findByTestId("overnight-grant-toggle"));
   const inSettings = await screen.findByText(en["overnightGrant.danger"]);
   const settingsWords = inSettings.textContent;
   settings.unmount();

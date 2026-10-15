@@ -1460,3 +1460,47 @@
   background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
 }
+
+/* ---- a list standing straight in a Panel ---- */
+
+/* One band of the pane, as a bleed `DataTable` is: text starts at the pane's
+   gutter and the rows run to its edges. No column rules: a list in a card is
+   read across its few columns, and the grid is for the full-page lists. */
+.panel > .lt :is(.lt-head, .lt-caption, .lt-tools, .lt-agg, .lt-foot),
+.panel > .lt > :is(p, .lt-emptyline) {
+  padding-inline: var(--padPanel);
+}
+/* Sized by its rows, so no vertical bar can come and the gutter kept for one
+   would leave the table short of the pane's end edge. */
+.panel > .lt .lt-scroll {
+  scrollbar-gutter: auto;
+}
+.panel > .lt .lt-table :is(th, td) {
+  border-right: 0;
+}
+@media (min-width: 721px) {
+  .panel > .lt .lt-table :is(th, td):first-child {
+    padding-inline-start: var(--padPanel);
+  }
+  .panel > .lt .lt-table :is(th, td):nth-last-child(2) {
+    padding-inline-end: var(--padPanel);
+  }
+}
+@media (max-width: 720px) {
+  .panel > .lt .lt-table tbody tr {
+    padding-inline: var(--padPanel);
+  }
+  .panel > .lt .lt-table tbody td.lt-rowmenu {
+    right: var(--padPanel);
+  }
+}
+
+/* An empty short list says so in one sentence, a band of the surface like its
+   caption, on the surface's own ground. */
+.lt-emptyline {
+  padding: var(--space-3) var(--space-4);
+}
+.lt-emptyline > .empty {
+  padding: 0;
+  background: none;
+}

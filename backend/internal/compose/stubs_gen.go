@@ -3271,6 +3271,10 @@ func (stubs) CreateWebhookSubscription(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "CreateWebhookSubscription")
 }
 
+func (stubs) PreviewWebhookBody(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewWebhookBody")
+}
+
 func (stubs) ArchiveWebhookSubscription(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ArchiveWebhookSubscription")
 }

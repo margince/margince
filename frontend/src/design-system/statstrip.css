@@ -118,7 +118,7 @@
 /* Readings that declared `narrow="row"` become rows when two cards no longer
    fit. Labels remain complete, and explanations and actions have separate
    lines so neither can squeeze the other out of a phone or side rail. */
-@container (max-width: 26rem) {
+@container (max-width: 40rem) {
   .stat-strip:has(.stat-card-narrow-row) {
     grid-template-columns: 1fr;
     /* The hairline IS the divider now, so the air between slots would be a
@@ -181,6 +181,7 @@
      for none. */
   .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row > * {
     margin-block-end: 0;
+    min-block-size: 0;
   }
   .stat-strip:has(.stat-card-narrow-row) > * + * {
     border-block-start: 1px solid var(--paneEdge);

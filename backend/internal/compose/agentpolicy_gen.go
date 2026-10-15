@@ -807,6 +807,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject":         {Op: "rejectVoiceProfileVersion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/voice-profiles/{id}/versions/{profileVersion}/rollback":       {Op: "rollbackVoiceProfileVersion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/webhook-subscriptions":                                        {Op: "createWebhookSubscription", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/webhook-subscriptions/body-preview":                           {Op: "previewWebhookBody", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/webhook-subscriptions/{id}/deliveries/{deliveryId}/replay":    {Op: "replayWebhookDelivery", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/webhook-subscriptions/{id}/rotate-secret":                     {Op: "rotateWebhookSecret", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/commitments":                                     {Op: "addWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

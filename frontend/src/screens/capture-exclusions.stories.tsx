@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -128,6 +128,9 @@ export const Excluding: Story = {
     await userEvent.click(
       await body.findByRole("button", { name: "New exclusion" }),
     );
-    await body.findByRole("dialog");
+    const dialog = within(await body.findByRole("dialog"));
+    await expect(
+      dialog.getByRole("textbox", { name: "Exclude address or domain" }),
+    ).toHaveAccessibleDescription(/Applies from the next message/);
   },
 };
