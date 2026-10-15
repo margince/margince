@@ -317,17 +317,14 @@ An `activities.csv` row is one note, call, meeting or email, put on the timeline
 | `type` | `note`, `call`, `meeting` or `email`. A message and a task are not imported. |
 | `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A time without a zone, or after now, is refused. |
 | `links` | Records as `type:key`, split by `;`, such as `deal:D-1001; contact:jo@acme.com`. The type is company, contact, lead or deal. |
-| `duration_minutes` | Whole minutes, for a call or a meeting. |
-| `meeting_status` | `booked`, `held`, `no_show` or `canceled`, for a meeting. |
-| `direction` | `inbound` or `outbound`. |
+| `duration_minutes`, `meeting_status`, `direction` | Whole minutes for a call or a meeting. `booked`, `held`, `no_show` or `canceled` for a meeting. `inbound` or `outbound`. |
 | `owner_email` | The Margince user the activity is attributed to. If none has this email, you are. |
 
-A contact's last activity becomes the newest imported date when it is newer than what the contact had. Imported activities start no automation, and an imported email to a lead does not count as a first response. They are not on your follow-up reminders either.
+A contact's last activity becomes the newest imported date when it is newer. Imported activities start no automation, count as no first response and sit on no follow-up reminder.
 
-A row is skipped, with its reason, in four cases. Its type is a message or a task. Its time has no zone. It links a call or a meeting to a company. None of its links finds a record.
-
+A row is skipped, with its reason, in four cases. Its type is a message or a task. Its time has no zone.
+It links a call or a meeting to a company. Or none of its links finds a record.
 Companies, contacts, prospects and deals land before activities, so an activity can link to any of them in the same ZIP.
-Also called: import notes, import calls, import emails, import history, import timeline.
 
 ### How do I import activities for one contact?
 On the contact, choose **More actions**, then **Import activities**, and upload one CSV. It opens as **Importing into** the contact's name, and every row goes on that contact's timeline, so no `links` column is needed. A ZIP is not taken here, and only an admin or ops user sees the item.
