@@ -10302,12 +10302,12 @@ export const en = {
     "This installation has no external provider configured. Password is the only sign-in method.",
   "signInMethods.requireMfa": "Require second factor",
   "signInMethods.requireMfaHint":
-    "Every member needs an authenticator app to use Margince.",
+    "Every member needs two-step sign-in turned on to use Margince.",
   "signInMethods.requireMfaConfirmTitle": "Require second factor?",
   "signInMethods.requireMfaConfirmBody":
-    "Members without an authenticator app are asked to set one up before they can continue.",
+    "Members without two-step sign-in are asked to set it up before they can continue.",
   "signInMethods.requireMfaConfirmSelf":
-    "You have not set up an authenticator app yet, so you are asked to set one up too.",
+    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",

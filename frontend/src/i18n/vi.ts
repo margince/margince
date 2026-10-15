@@ -9969,12 +9969,12 @@ export const vi = {
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
   "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
   "signInMethods.requireMfaHint":
-    "Mọi thành viên cần có ứng dụng xác thực để dùng Margince.",
+    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
   "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
   "signInMethods.requireMfaConfirmBody":
-    "Thành viên chưa có ứng dụng xác thực sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
   "signInMethods.requireMfaConfirmSelf":
-    "Bạn chưa thiết lập ứng dụng xác thực, nên bạn cũng sẽ được yêu cầu thiết lập.",
+    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",

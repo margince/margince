@@ -10190,12 +10190,12 @@ export const de = {
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
   "signInMethods.requireMfa": "Zweiten Faktor verlangen",
   "signInMethods.requireMfaHint":
-    "Jedes Mitglied braucht eine Authenticator-App, um Margince zu nutzen.",
+    "Jedes Mitglied braucht die zweistufige Anmeldung, um Margince zu nutzen.",
   "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
   "signInMethods.requireMfaConfirmBody":
-    "Mitglieder ohne Authenticator-App werden gebeten, eine einzurichten, bevor sie weitermachen können.",
+    "Mitglieder ohne zweistufige Anmeldung werden gebeten, sie einzurichten, bevor sie weitermachen können.",
   "signInMethods.requireMfaConfirmSelf":
-    "Du hast noch keine Authenticator-App eingerichtet, deshalb wirst auch du gebeten, eine einzurichten.",
+    "Du hast die zweistufige Anmeldung noch nicht eingerichtet, deshalb wirst auch du gebeten, sie einzurichten.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Unternehmensanmeldung eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Konto entsteht dabei nicht: eine nicht eingeladene E-Mail-Adresse wird weiterhin abgewiesen, mit oder ohne Gruppen.",

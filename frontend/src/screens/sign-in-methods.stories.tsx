@@ -172,7 +172,7 @@ export const SecondFactorConfirm: Story = {
     await userEvent.click(control);
     // The dialog portals to the body, outside the canvas.
     await within(canvasElement.ownerDocument.body).findByText(
-      /you have not set up an authenticator/i,
+      /you have not set up two-step sign-in/i,
     );
   },
 };
