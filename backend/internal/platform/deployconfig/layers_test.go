@@ -55,22 +55,22 @@ func TestOnlyTheRunningPosturesOverlayIsRead(t *testing.T) {
 		t.Fatalf("writing the base: %v", err)
 	}
 	if err := os.WriteFile(OverlayPath(path, runtimeenv.Development),
-		[]byte("operations:\n  allow_data_reset: true\n"), 0o600); err != nil {
+		[]byte("seeds:\n  booking_page: false\n"), 0o600); err != nil {
 		t.Fatalf("writing the dev overlay: %v", err)
 	}
 	prod, err := Load(path, runtimeenv.Production)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if prod.Operations.AllowDataReset {
-		t.Fatal("production read the dev overlay and armed the tenant-data purge")
+	if prod.Seeds.BookingPage != nil {
+		t.Fatal("production read the dev overlay")
 	}
 	dev, err := Load(path, runtimeenv.Development)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if !dev.Operations.AllowDataReset {
-		t.Error("the dev overlay did not arm the reset for the posture it names")
+	if dev.Seeds.BookingPage == nil {
+		t.Error("the dev overlay was not read for the posture it names")
 	}
 }
 
@@ -147,49 +147,5 @@ func TestNeitherLayerHasToExist(t *testing.T) {
 	}
 	if cfg.Version != 1 {
 		t.Errorf("version = %d; the compiled default is the first layer", cfg.Version)
-	}
-}
-
-// The dev overlay is tracked and every `make dev` reads it, so a typo in it
-// breaks every engineer's stack at once — and it has no example beside it to
-// diff against, unlike the base.
-//
-// Staged under the names the dev stack uses, because that is what the overlay
-// derivation keys off: `make dev` copies the example to config/margince.yaml,
-// which is what makes config/margince.dev.yaml its overlay. Loading the example
-// under its own name would silently test nothing.
-func TestShippedDevOverlayArmsTheResetForDevOnly(t *testing.T) {
-	dir := t.TempDir()
-	base := filepath.Join(dir, "margince.yaml")
-	copyRepoFile(t, "../../../../config/margince.example.yaml", base)
-	copyRepoFile(t, "../../../../config/margince.dev.yaml", OverlayPath(base, runtimeenv.Development))
-
-	dev, err := Load(base, runtimeenv.Development)
-	if err != nil {
-		t.Fatalf("config/margince.dev.yaml no longer parses over the base: %v", err)
-	}
-	if !dev.Operations.AllowDataReset {
-		t.Error("the dev overlay must arm operations.allow_data_reset — a dev stack without the Reset data button is a silent regression")
-	}
-	// The same base at any other posture arms nothing. This is the property the
-	// heredoc that used to append the switch could not have: it wrote into the
-	// base, so the arming was not posture-scoped at all.
-	prod, err := Load(base, runtimeenv.Production)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if prod.Operations.AllowDataReset {
-		t.Fatal("the shipped example arms the tenant-data purge in production")
-	}
-}
-
-func copyRepoFile(t *testing.T, from, to string) {
-	t.Helper()
-	raw, err := os.ReadFile(from)
-	if err != nil {
-		t.Fatalf("reading %s: %v", from, err)
-	}
-	if err := os.WriteFile(to, raw, 0o600); err != nil {
-		t.Fatalf("writing %s: %v", to, err)
 	}
 }

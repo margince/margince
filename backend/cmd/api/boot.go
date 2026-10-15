@@ -221,7 +221,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	if err := checkALoginMethodRemains(cfg, cfg.passwordLogin, logger); err != nil {
 		return nil, nil, err
 	}
-	allowDataReset := deployCfg.Operations.AllowDataReset
+	allowDataReset := config.Val(cfg.settings, ps.AllowDataReset)
 	// Said out loud at boot because each role reads its own --config: an api
 	// armed beside a worker that was not given the file purges the workspace and
 	// leaves that worker's caches resident until it restarts. A line in each log
@@ -230,7 +230,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// Same reasoning as the data-reset line above: each role reads its own
 	// --config, and a role that never saw this flag would silently register no
 	// test_mailbox connector while another role's log claims it is armed.
-	logger.Info("test mailbox connector", "armed", deployCfg.Operations.AllowTestMailbox)
+	logger.Info("test mailbox connector", "armed", config.Val(cfg.settings, ps.AllowTestMailbox))
 	opts := []compose.Option{
 		// The switch the check above just validated, carried to the probe the
 		// login screen renders from and the routes behind it — one read, so an

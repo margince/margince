@@ -106,6 +106,8 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_COMPANY_CONTEXT_ROLLOUT` | `onboarding` | `company_context.rollout` |
 | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | `false` | `analytics.performance_enabled` (ignored) |
 | `MARGINCE_LISTS_ENABLED` | `true` | `lists.enabled` |
+| `MARGINCE_OPERATIONS_ALLOW_DATA_RESET` | `false` | `operations.allow_data_reset` |
+| `MARGINCE_OPERATIONS_ALLOW_TEST_MAILBOX` | `false` | `operations.allow_test_mailbox` |
 
 ## Common log flags (api, worker)
 

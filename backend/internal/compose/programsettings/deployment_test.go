@@ -130,3 +130,17 @@ func TestListsAreOnUnlessAFileSwitchesThemOff(t *testing.T) {
 		t.Fatal("lists.enabled: false must switch lists off")
 	}
 }
+
+// A capability that erases tenant data or fakes a real send is stated, never
+// assumed.
+func TestTheOperationsSwitchesAreOffUnlessTheFileArmsThem(t *testing.T) {
+	t.Parallel()
+	off := configtest.MustLoad(t, "version: 1\nworkspace:\n  name: T\n", ps.FileSettings()...)
+	if config.Val(off, ps.AllowDataReset) || config.Val(off, ps.AllowTestMailbox) {
+		t.Fatal("an operations switch defaulted on")
+	}
+	on := configtest.MustLoad(t, "version: 1\noperations:\n  allow_data_reset: true\n  allow_test_mailbox: true\n", ps.FileSettings()...)
+	if !config.Val(on, ps.AllowDataReset) || !config.Val(on, ps.AllowTestMailbox) {
+		t.Fatal("operations switches set true read as off")
+	}
+}

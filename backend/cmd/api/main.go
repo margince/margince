@@ -104,7 +104,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
 	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
 	compose.WarnStaleRates(cfg.settings, logger)
-	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err

@@ -33,43 +33,8 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
 	Web            Web             `yaml:"web"`
-}
-
-// Operations carries the ops kill switches (OPS-CFG-9): capabilities an
-// installation turns on deliberately, in the file layer, where the deployment
-// reviews them.
-//
-// Deliberately NOT `setting` rows. A setting is product configuration an
-// installation admin changes through the API at runtime; what lives here is
-// whether a destructive capability EXISTS for this deployment at all. An admin
-// who could switch that on through the API could switch on the purge of their
-// own tenant's data, which is precisely the authority the file layer is for.
-type Operations struct {
-	// AllowDataReset arms POST /v1/admin/reset-data, the two reset lanes that
-	// serve it, and the /me flag that offers the action in the UI.
-	//
-	// The zero value is false, which is the whole design: this used to be
-	// inferred from MARGINCE_ENV, so a deployment labelled `staging` — full of
-	// real internal users — could have its data purged because a label said it
-	// was not production. A capability that erases tenant data is stated, never
-	// inferred from what the deployment happens to be called.
-	AllowDataReset bool `yaml:"allow_data_reset"`
-
-	// AllowTestMailbox arms the test_mailbox connector: the QC-only, no-network
-	// fake mailbox that can both capture and send. Same reasoning as
-	// AllowDataReset: a capability that can fake a real send outcome is
-	// stated here, never inferred from what MARGINCE_ENV happens to say a
-	// deployment is — a staging install is not "non-production" for this
-	// purpose either.
-	//
-	// The zero value is false. Even set, the connector is inert until a human
-	// calls POST /connectors/test_mailbox/connect on themselves, and a rep who
-	// also holds a real gmail/graph grant still sends through that one —
-	// SendableMailProvider picks the first alphabetically capable provider.
-	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
 }
 
 // Workspace names the installation's singleton workspace — the tenant every

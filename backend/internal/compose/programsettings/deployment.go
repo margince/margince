@@ -34,6 +34,20 @@ var (
 		Key: "lists.enabled", Env: "MARGINCE_LISTS_ENABLED", Type: config.Bool, Default: config.Some(true), Roles: both,
 		Doc: "Live Lists and Shortlists; false hides every list surface and deletes no list.",
 	})
+	// AllowDataReset is not inferred from MARGINCE_ENV: a deployment called
+	// staging may hold real users, and erasing tenant data is stated, never
+	// inferred. Nor is it a stored setting, which an admin could arm through
+	// the API against their own tenant.
+	AllowDataReset = config.Define(config.Spec[bool]{
+		Key: "operations.allow_data_reset", Env: "MARGINCE_OPERATIONS_ALLOW_DATA_RESET", Type: config.Bool, Default: config.Some(false), Roles: both,
+		Doc: "Arm POST /v1/admin/reset-data, which purges this installation's tenant data back to its first-boot state.",
+	})
+	// AllowTestMailbox stays inert until a human connects it, and a rep with a
+	// real mailbox grant still sends through that one.
+	AllowTestMailbox = config.Define(config.Spec[bool]{
+		Key: "operations.allow_test_mailbox", Env: "MARGINCE_OPERATIONS_ALLOW_TEST_MAILBOX", Type: config.Bool, Default: config.Some(false), Roles: both,
+		Doc: "Arm the test_mailbox connector, a no-network fake mailbox that captures and sends; never on a real deployment.",
+	})
 	RatesFxSource = config.Define(config.Spec[string]{
 		Key: "rates.fx_source", Env: "MARGINCE_RATES_FX_SOURCE", Type: config.String, Roles: workerOnly,
 		Doc: "Page the FX refresh reads rates from; unset reads api.frankfurter.dev.",
@@ -64,5 +78,5 @@ func distinctCurrencies(codes []string) error {
 
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, AnalyticsPerformance, ListsEnabled, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, AnalyticsPerformance, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
 }

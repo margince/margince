@@ -38,9 +38,9 @@ func TestTheWorkerReadsTheDataResetSwitchFromTheDeploymentFile(t *testing.T) {
 			if err := os.WriteFile(path, []byte(tc.yaml), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			cfg := workerConfig{configPath: path}
-			if _, err := loadDeployment(&cfg); err != nil {
-				t.Fatalf("loadDeployment: %v", err)
+			cfg, _, err := loadWorkerConfig([]string{"--config", path}, []string{workerTestDSN})
+			if err != nil {
+				t.Fatalf("loadWorkerConfig: %v", err)
 			}
 			if cfg.allowDataReset != tc.want {
 				t.Errorf("allowDataReset = %v, want %v", cfg.allowDataReset, tc.want)

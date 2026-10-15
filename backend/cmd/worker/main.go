@@ -32,6 +32,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -280,7 +281,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	compose.WarnStaleRates(cfg.settings, log)
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
-	cfg.captureConfig.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
+	cfg.captureConfig.AllowTestMailbox = config.Val(cfg.settings, ps.AllowTestMailbox)
 	return workerBoot{cfg: cfg, deploy: deployCfg, extensions: extensions, log: log}, nil
 }
 
