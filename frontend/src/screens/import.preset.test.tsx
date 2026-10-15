@@ -8,7 +8,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ContactActions } from "./contactactions";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
@@ -99,7 +99,7 @@ describe("importing activities from a contact's page", () => {
 
   it("shows Import activities only to a reader who may import", async () => {
     const user = userEvent.setup();
-    const mount = (allow: Record<string, string[]>) => {
+    const mount = (allow: GrantSpec) => {
       stubRoutes({
         "GET /me": () => jsonResponse(meFixture({ roles: ["rep"], allow })),
       });
