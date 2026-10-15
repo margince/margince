@@ -98,16 +98,17 @@
 
 /* A stop between the two ends can be user data too (the list whose filter the
    page edits), and an ancestor that never yields would push the page off the
-   row. Its label is capped and clips under the same tip; on a phone, where the
-   row holds two stops at most, it folds away and the trail keeps the way back
-   and the page. 700px is the phone width (PHONE_MAX_WIDTH, lib/viewport.ts). */
+   row. Its label is capped and clips under the same tip. */
 .crumbs > ol > li:not(:first-child):not(:last-child) .crumbs-label {
   max-width: 32ch;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-@media (max-width: 700px) {
-  .crumbs > ol > li:not(:first-child):not(:last-child) {
+/* Below 1024px the bar has no room for a long trail beside its controls, so the
+   current page takes the row alone; the sidebar is the way back. */
+@media (width < 1024px) {
+  .crumbs > ol > li:not(:last-child),
+  .crumbs > ol > li:last-child > .crumbs-sep {
     display: none;
   }
 }

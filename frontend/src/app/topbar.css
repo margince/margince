@@ -12,16 +12,14 @@
  * page passes UNDER it all the same — the scroller reaches up behind the strip
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
-/* Three tracks, the outer two equal: the search sits at the centre of the
-   CONTENT column and stays there whatever the two sides carry. In flow rather
-   than absolutely positioned — a centred field taken out of the row leaves the
-   trail beside it bounded by nothing, and a long record name then runs UNDER the
-   field and out the other side, unclipped and with no tooltip, which is what the
-   first version of this bar did above 1100px. `minmax(0, 1fr)` is what lets the
-   trail shrink and ellipsis instead. */
+/* Equal outer tracks centre the search on the content column; a trail longer
+   than its half grows into the room the end controls leave, up to its cap. */
 .topbar {
+  --topbarSearchW: min(420px, 34vw);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
+  /* The query container `.topbar-lead` measures its cap against. */
+  container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
   flex: none;
@@ -50,6 +48,15 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  /* The row less the search, its two gaps, and the bell and account control:
+     a trail longer than this ellipses rather than pushing them off the bar. */
+  max-width: calc(
+    100cqw -
+    var(--topbarSearchW) -
+    var(--space-2) -
+    2 *
+    (var(--space-3) + var(--controlHeight))
+  );
 }
 .topbar-trail {
   display: flex;
@@ -94,7 +101,7 @@
  * column when the sidebar collapses — `--railW` animates as a registered length
  * (shell.css), so the grid beside it moves rather than snapping. */
 .topbar-searchslot {
-  width: min(420px, 34vw);
+  width: var(--topbarSearchW);
 }
 /* This is a BUTTON that opens the palette, and it is drawn as the field the
    palette opens with — so it takes the field's box and the field's type, not a
@@ -195,6 +202,7 @@
   }
   .topbar-lead {
     flex: 1;
+    max-width: none;
   }
   .topbar-searchslot {
     width: auto;

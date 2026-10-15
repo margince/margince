@@ -19,6 +19,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
+import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../screens/settingscatalog";
@@ -576,10 +577,13 @@ function LevelExample({
   );
 }
 
-function LevelStory({ children }: Readonly<{ children: ReactNode }>) {
+function LevelStory({
+  children,
+  locale,
+}: Readonly<{ children: ReactNode; locale?: Locale }>) {
   stubSession();
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <SeedInstallation>{children}</SeedInstallation>
     </StoryProviders>
   );
@@ -595,6 +599,17 @@ export const SectionLevel: Story = {
   render: () => (
     <LevelStory>
       <LevelExample initiallyCollapsed={false} />
+    </LevelStory>
+  ),
+};
+
+// German, on an entry wider than its row: that row wraps and grows, the rows
+// around it keep their height, and the trail above carries the name whole.
+export const SectionLevelGerman: Story = {
+  name: "second level — a German entry that wraps",
+  render: () => (
+    <LevelStory locale="de">
+      <LevelExample initiallyCollapsed={false} tab="privacy" />
     </LevelStory>
   ),
 };
@@ -683,6 +698,19 @@ export const SectionPhone: Story = {
   tags: ["uat-phone"],
   render: () => (
     <LevelStory>
+      <PhoneSectionExample />
+    </LevelStory>
+  ),
+};
+
+/** The same head in German: the badge moves under the switcher, the name wraps
+ *  with the chevron on its first line, and the trail above shows only the page. */
+export const SectionPhoneGerman: Story = {
+  name: "a section — the head's switcher, a German name that wraps",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <LevelStory locale="de">
       <PhoneSectionExample />
     </LevelStory>
   ),

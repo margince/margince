@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Card } from "../design-system/atoms";
+import type { Locale } from "../i18n";
 import { LISTS_KEY, type List } from "../lib/lists.queries";
 import type { Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../testing/lists.fixtures";
@@ -27,10 +28,10 @@ import { TopBar } from "./topbar";
  *
  * Every frame renders the REAL frame — the `.app` grid, the sidebar beside it,
  * the bar as the first row of `<main>`. Nothing here is decoration. The bar is
- * three tracks, `minmax(0, 1fr) auto minmax(0, 1fr)`, and the search stands IN
- * that row rather than being taken out of it: the field therefore lands on the
- * centre of the CONTENT column — not of the window — and the trail beside it has
- * an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
+ * three tracks, the outer two equal while the trail fits its half, and the
+ * search stands IN that row rather than being taken out of it: the field
+ * therefore lands on the centre of the CONTENT column — not of the window — and
+ * the trail beside it has an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
  * picture of geometry the product does not use, and the one thing it would get
  * wrong is the thing worth looking at.
  *
@@ -228,16 +229,18 @@ function BarStory({
   counts,
   startCollapsed,
   record,
+  locale,
 }: Readonly<{
   route: Route;
   section?: NavSection;
   counts?: NavCounts;
   startCollapsed?: boolean;
   record?: { id: string; name: string };
+  locale?: Locale;
 }>) {
   stubSession();
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <SeedCache record={record}>
         <BarFrame
           route={route}
@@ -341,9 +344,8 @@ export const BelowFiltersAndViews: Story = {
 };
 
 /**
- * The same trail on a phone. The row has room for two stops, so the list folds
- * away and the trail keeps the way back to the library and the page; the page
- * names the list it edits.
+ * The same trail on a phone: only the page shows, with the whole row to itself.
+ * The way back is the bottom bar, and the page names the list it edits.
  */
 export const BelowFiltersAndViewsPhone: Story = {
   name: "below Filters and views — on a phone",
@@ -369,8 +371,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * once, which left nothing bounding `.topbar-lead` but the row itself — the last
  * crumb grew to the full width of the bar, ran UNDER the centred field and came
  * out the other side, unclipped and with no tooltip. The bar is a three-track
- * grid now (`minmax(0, 1fr) auto minmax(0, 1fr)`), so the trail has a bound to
- * shrink against and this frame shows the rule rather than the bug.
+ * grid now and `.topbar-lead` carries a cap, so the trail has a bound to shrink
+ * against and this frame shows the rule rather than the bug.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
@@ -430,6 +432,19 @@ export const SettingsEntry: Story = {
     <BarStory
       route={{ screen: "settings", id: "privacy" }}
       section={SETTINGS_SECTION}
+    />
+  ),
+};
+
+/** German: "Einstellungen / Datenschutz und Aufbewahrung" is longer than half
+ *  the bar above 1100px, so the trail takes the room the end controls leave. */
+export const SettingsEntryGerman: Story = {
+  name: "a settings entry — a German trail longer than its half",
+  render: () => (
+    <BarStory
+      route={{ screen: "settings", id: "privacy" }}
+      section={SETTINGS_SECTION}
+      locale="de"
     />
   ),
 };

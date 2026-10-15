@@ -8,9 +8,10 @@ import { Breadcrumb } from "./breadcrumb";
 /**
  * The trail that says where the reader is and how they got here.
  *
- * Its one caller in this product is the TOP BAR (app/topbar.tsx), not the page
- * head: the trail is chrome that says where the session is, and the page's own
- * name is a heading in the content column below it. The frames here render the
+ * Its main caller is the TOP BAR (app/topbar.tsx): the trail is chrome that says
+ * where the session is, and the page's own name is a heading in the content
+ * column below it. The booking page's head (screens/booking-invite.tsx) draws one
+ * too, over its own heading. The frames here render the
  * primitive on its own ground at `layout: "padded"`, because what they are about
  * is the rules rather than the strip — the strip itself is framed under
  * Shell/Top bar, where the trail can be seen shrinking against a real track edge.
@@ -21,8 +22,8 @@ import { Breadcrumb } from "./breadcrumb";
  * the row runs out of room while the ancestors keep their full width
  * (LongRecordName — read the ellipsis, then hover or tab to it for the whole
  * name), a middle stop that is user data is capped so the page keeps the row
- * (LongMiddleStop), and a glyph rides with the label rather than replacing it
- * (WithIcon).
+ * (LongMiddleStop), a glyph rides with the label rather than replacing it
+ * (WithIcon), and below 1024px only the current page shows (OnAPhone).
  *
  * Flip the Theme toolbar to check both renderings; every colour is a token.
  */
@@ -65,9 +66,9 @@ export const ListToRecord: Story = {
  * The 420px box is the one hand-set width in this file, and it is here because
  * the pressure IS the story: the trail has to be given less room than it wants
  * before there is anything to look at, and the canvas at any reviewer's window
- * width would not do that reliably. In the product the same bound arrives as a
- * grid track rather than as a wrapper (`minmax(0, 1fr)` on the bar's lead), which
- * is the version Shell/Top bar frames.
+ * width would not do that reliably. In the product the same bound arrives as the
+ * bar's grid track and the cap on its lead rather than as a wrapper, which is the
+ * version Shell/Top bar frames.
  */
 export const LongRecordName: Story = {
   args: {
@@ -92,8 +93,7 @@ export const LongRecordName: Story = {
 /**
  * A middle stop that is user data: the list whose filter the page edits. Its
  * label stops at a cap and clips under the same tip, so the page it leads to
- * keeps its place on the row. On a phone it folds away, which Shell/Top bar
- * frames at 390px.
+ * keeps its place on the row. Below 1024px only the page shows (OnAPhone).
  */
 export const LongMiddleStop: Story = {
   args: {
@@ -117,6 +117,20 @@ export const WithIcon: Story = {
     items: [
       { label: "Companies", href: "#/companies", icon: Building2 },
       { label: "Sontana Werke AG" },
+    ],
+  },
+};
+
+/** Below 1024px the row holds the current page alone, so a long German name
+ *  is whole; the ancestor and its separator are not drawn. */
+export const OnAPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: {
+    label: LANDMARK,
+    items: [
+      { label: "Einstellungen", href: "#/settings", lang: "de" },
+      { label: "Datenschutz und Aufbewahrung", lang: "de" },
     ],
   },
 };

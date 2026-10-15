@@ -85,14 +85,15 @@ function stubSession(user: Partial<SessionUser> = {}) {
  * breath.
  *
  * All THREE of the bar's tracks are rendered, and the middle one is why: the
- * strip is `minmax(0, 1fr) auto minmax(0, 1fr)`, so a frame that supplied only a
- * lead and a trail put the trail in the MIDDLE track and left the third one
- * empty — the block then sat near the centre of the bar, which is the one thing
- * about its position these frames are for. The slot is the search's own, left
- * empty: what the trail needs from it is its width, and a live field here would
- * be a second component in a frame about this one. Below 1100px, where `fe-uat`
- * captures, the real slot is a 36px glyph and this one is 0px — so the block in
- * the captured frames sits about a glyph's width right of where it really does.
+ * strip is three tracks, the search in the middle, so a frame that supplied
+ * only a lead and a trail put the trail in the MIDDLE track and left the third
+ * one empty — the block then sat near the centre of the bar, which is the one
+ * thing about its position these frames are for. The slot is the search's own,
+ * left empty: what the trail needs from it is its width, and a live field here
+ * would be a second component in a frame about this one. Below 1100px, where
+ * `fe-uat` captures, the real slot is a 36px glyph and this one is 0px — so the
+ * block in the captured frames sits about a glyph's width right of where it
+ * really does.
  */
 function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
   return (

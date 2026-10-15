@@ -375,6 +375,7 @@
      Nothing in the expanded state needs to paint outside the panel; the tooltips
      that do belong to the collapsed one, which opts out of clipping below. */
   overflow-x: hidden;
+  container: rail / inline-size;
 }
 /* The collapsed panel must NOT clip: its tooltips sit outside the 56px box, and
    each label clips itself.
@@ -728,7 +729,7 @@
 }
 
 /* Not clipped: the collapsed tooltip sits outside
-   the row's box on purpose, and the label does its own ellipsis, so a clip here
+   the row's box on purpose, and the label keeps to its own box, so a clip here
    only ever hides something that is meant to be seen. */
 .rail .navitem {
   position: relative;
@@ -741,9 +742,9 @@
      collapsed; the 44px targets of 2.5.5 (AAA) are the phone bar's, where a
      thumb is the pointer. */
   min-height: 32px;
-  /* The inset the label is positioned off: 8 + the 18px glyph + the 8px gap is
-     the 34px `.navlabel` stands at, so the two cannot drift apart. */
-  padding: 0 var(--space-2);
+  /* The block inset is the air around a wrapped label; a one-line row stays at
+     the 32px floor, so its glyph and label do not move. */
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
   /* A pointer-tracked highlight reads as lag past ~200ms; Carbon times this
      class of change at 70–110ms. */
@@ -800,26 +801,39 @@
   height: 18px;
   flex: none;
 }
-/* The label collapses its width and fades instead of unmounting, so expanding
-   and collapsing is one continuous movement. */
+/* The label fades instead of unmounting, so expanding and collapsing is one
+   continuous movement. A name longer than the row wraps and the row grows. */
 .rail .navlabel {
+  flex: 1;
+  min-width: 0;
+  opacity: 1;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  /* Not the default limit: it leaves a one-letter tail. */
+  hyphenate-limit-chars: 7 3 3;
+  pointer-events: none;
+  transition: opacity var(--dur-state) var(--ease-in-out);
+}
+/* Out of flow while collapsed, so the glyph stays centred in its 32px square.
+   The 34px is the inset the expanded label stands at: 8 + the 18px glyph + 8. */
+.rail.collapsed .navlabel {
   position: absolute;
   left: 34px;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  opacity: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: none;
-  transition: opacity var(--dur-state) var(--ease-in-out);
-}
-.rail .navitem:has(.count) .navlabel {
-  right: 38px;
-}
-.rail.collapsed .navlabel {
   opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+/* While the column widens the label keeps one line, so it never stacks a word
+   per line; 13.5rem is under the full width less a classic scrollbar. */
+@container rail (width < 13.5rem) {
+  .rail .navlabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 .rail .navitem .count {
   display: inline-flex;
@@ -1034,13 +1048,9 @@
 .pageswitchhead {
   display: flex;
   min-width: 0;
-  /* The switcher takes the row, which is what the comment above asks for. It
-     used to be the title's only child and got the width for free; inside
-     `.pagetitle-head` it is a flex ITEM beside the scope badge, and without this
-     it would size to its own text — a short page name would leave the switcher
-     stranded mid-row, and a long one would push the badge to a line of its
-     own while the label ellipsized. */
-  flex: 1;
+  /* Grows to the end of the row beside the scope badge; a name too long to
+     share the row puts the badge on the next line before the name wraps. */
+  flex: auto;
 }
 .pageswitchhead > .pageswitch {
   flex: 1;
@@ -1062,12 +1072,14 @@
    affordance that says the row opens. */
 .pageswitch {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
   min-height: 44px;
-  padding: 0 var(--space-3);
+  /* One line of the name centred in the 44px target inside the 1px border, and
+     the same air around a name that wraps. */
+  padding: calc((44px - 1lh) / 2 - 1px) var(--space-3); /* ds:ignore the block inset is derived from the 44px target, not a rhythm step */
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgElevated);
@@ -1084,15 +1096,19 @@
 .pageswitch:active {
   background: var(--bgInset);
 }
-/* A settings entry's name is copy, not user data, but the column is 390px wide
-   and the pill must never widen the page: it clips itself instead. */
+/* The column is 390px wide and the pill must never widen the page, so a long
+   name wraps and the heading grows. */
 .pageswitch > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  /* Not the default limit: it leaves a one-letter tail. */
+  hyphenate-limit-chars: 7 3 3;
 }
+/* One line of the name tall, so the chevron centres on the first line. */
 .pageswitch svg {
   flex: none;
+  block-size: 1lh;
 }
 
 /* The list inside the sheet: the section's groups and their entries, which are
@@ -1491,8 +1507,7 @@
      — without it a phone inherits whatever the desktop was left in. */
   .rail .navlabel,
   .rail.collapsed .navlabel,
-  .rail .railmore .navlabel,
-  .rail .navitem:has(.count) .navlabel {
+  .rail .railmore .navlabel {
     display: none;
   }
   /* Only the primary destinations ride the bar; the rest live in the sheet. */
@@ -1680,8 +1695,7 @@
     height: 20px;
   }
   .rail.sheetopen .navlabel,
-  .rail.sheetopen.collapsed .navlabel,
-  .rail.sheetopen .navitem:has(.count) .navlabel {
+  .rail.sheetopen.collapsed .navlabel {
     display: block;
     /* The collapse animation fades the label out (`.rail.collapsed .navlabel`)
        as well as taking its width, and `display: block` alone does not put the
@@ -1694,6 +1708,7 @@
     top: auto;
     transform: none;
     max-width: none;
+    white-space: normal;
     text-align: left;
   }
   /* The count is a trailing figure in a list row, not a badge pinned to a tab. */
