@@ -279,8 +279,8 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		}
 		acc.StepsUsed++
 
-		resp, meta, err := r.brain.Complete(ctx,
-			win.asRequest(min(budget.MaxOutputTokens-acc.OutputTokens, retry.ceiling), r.brain.PromptWindow()))
+		callCap := min(budget.MaxOutputTokens-acc.OutputTokens, retry.ceiling)
+		resp, meta, err := r.brain.Complete(ctx, win.asRequest(callCap, r.brain.PromptWindow()))
 		if err != nil {
 			return r.degradeFromCause(acc, job, modelCallReason(err), err), nil
 		}
@@ -291,7 +291,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			if meta.Reject != nil {
 				meta.Reject()
 			}
-			if reason, giveUp := retry.refuse(win, resp, parseErr); giveUp {
+			if reason, giveUp := retry.refuse(win, callCap, resp, parseErr); giveUp {
 				return r.degradeFromCause(acc, job, reason, parseErr), nil
 			}
 			continue

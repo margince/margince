@@ -73,6 +73,19 @@ func TestAStepCutOffAtTheRaisedCapDegradesOnItsOwnReason(t *testing.T) {
 	}
 }
 
+func TestACutOffForWantOfBudgetIsNotBlamedOnTheStepLength(t *testing.T) {
+	b := &cutOffBrain{cutOffCalls: 10}
+	res, err := New(&fakeSurface{}, b).Run(context.Background(),
+		Job{Goal: "g", Tools: []string{"read_record"}, Budget: Budget{MaxOutputTokens: 6000}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.DegradeReason != reasonOutputTokenBudgetExhausted {
+		t.Errorf("reason = %q, want %q: the retry was sized by the 1904 tokens left, not by the cap",
+			res.DegradeReason, reasonOutputTokenBudgetExhausted)
+	}
+}
+
 func TestTheRaisedCapIsForOneStepOnly(t *testing.T) {
 	retry := newOutputRetry()
 	retry.ceiling = raisedOutputCeiling

@@ -28,10 +28,13 @@ func (o *outputRetry) accepted() {
 	o.ceiling = perCallOutputCeiling
 }
 
-// refuse records one unusable reply, tells the model what was wrong with it,
-// and says whether the run must degrade, and why.
-func (o *outputRetry) refuse(win *window, resp model.Response, parseErr error) (reason string, giveUp bool) {
+// A length stop below the ceiling means the remaining run budget sized the
+// request. No larger cap can be had then.
+func (o *outputRetry) refuse(win *window, requested int, resp model.Response, parseErr error) (reason string, giveUp bool) {
 	if resp.FinishReason == model.FinishReasonLength {
+		if requested < o.ceiling {
+			return reasonOutputTokenBudgetExhausted, true
+		}
 		if o.ceiling >= raisedOutputCeiling {
 			return reasonStepTooLong, true
 		}
