@@ -56,6 +56,14 @@ func TagInterestUnreadClause(activity, vocabulary, content string) string {
 	    AND tir.content_digest = ` + content + `)`
 }
 
+// TagInterestContactsLiveClause says no contact the activity is linked to is
+// archived. An anonymize archives the contact and leaves the activity text, so
+// the content digest alone cannot see it.
+func TagInterestContactsLiveClause(activity string) string {
+	return `NOT EXISTS (SELECT 1 FROM activity_link til JOIN contact tic ON tic.id = til.contact_id
+	  WHERE til.activity_id = ` + activity + ` AND tic.archived_at IS NOT NULL)`
+}
+
 // TagInterestAnswerSQL selects the tag_id of each tag in the answer read under
 // both digests. Each argument is an SQL expression.
 func TagInterestAnswerSQL(activity, vocabulary, content string) string {
@@ -73,8 +81,9 @@ type TagInterestAnswer struct {
 }
 
 // RecordTagInterestAnswersTx stores each answer, replacing an older one, unless
-// the activity was archived, restricted, erased or edited while the model read
-// it. content renders the content digest for an activity alias. System-only.
+// the activity was archived, restricted, erased or edited, or a linked contact
+// archived or anonymized, while the model read it. content renders the content
+// digest for an activity alias. System-only.
 func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary string, content func(alias string) string, answers []TagInterestAnswer) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
@@ -84,11 +93,18 @@ func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary strin
 		if tags == nil {
 			tags = []ids.UUID{}
 		}
-		// FOR SHARE orders this write against an erasure of the row, so the later one sees the earlier.
+		// FOR SHARE orders this write against an erasure of the activity or an
+		// anonymize of a linked contact, so the later one sees the earlier.
+		if _, err := tx.Exec(ctx, `
+			SELECT c.id FROM contact c JOIN activity_link l ON l.contact_id = c.id
+			 WHERE l.activity_id = $1 ORDER BY c.id FOR SHARE OF c`, answer.ActivityID); err != nil {
+			return fmt.Errorf("collections: locking the contacts behind a tag suggestion answer: %w", err)
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO tag_interest_read (activity_id, vocabulary_digest, content_digest, tag_ids)
 			SELECT a.id, $2::text, $3::text, $4::uuid[] FROM activity a
 			 WHERE a.id = $1 AND a.archived_at IS NULL AND `+auth.ActivityAvailableClause("a")+`
+			   AND `+TagInterestContactsLiveClause("a.id")+`
 			   AND `+content("a")+` = $3::text
 			   FOR SHARE OF a
 			ON CONFLICT (activity_id) DO UPDATE

@@ -2904,9 +2904,9 @@ export const vi = {
   "tagSuggestion.unavailable": "Không thể tải gợi ý. Thử lại sau.",
   "tagAdmin.descriptionLabel": "Dấu hiệu quan tâm",
   "tagAdmin.descriptionHint":
-    "Ví dụ: hỏi về giá hoặc demo Product X (khi chưa có AI, các cụm từ cách nhau bằng dấu phẩy).",
+    "Ví dụ: hỏi về giá hoặc demo Product X. Khi không có AI, mỗi cụm từ cách nhau bằng dấu phẩy được tính là một kết quả khớp.",
   "tagAdmin.suggestibleLabel":
-    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp cho thấy mối quan tâm này",
+    "Gợi ý thẻ này khi email, cuộc họp, ghi chú hoặc cuộc gọi cho thấy mối quan tâm này",
   "tagAdmin.colorNone": "Không màu",
   "tagAdmin.color.teal": "Xanh mòng két",
   "tagAdmin.color.amber": "Hổ phách",

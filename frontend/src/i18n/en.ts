@@ -3020,9 +3020,9 @@ export const en = {
     "The suggestion could not be read. Try again later.",
   "tagAdmin.descriptionLabel": "What shows interest",
   "tagAdmin.descriptionHint":
-    "For example, asks about pricing or a Product X demo (without AI, comma-separated phrases).",
+    "For example, asks about pricing or a Product X demo. Without AI, each comma-separated phrase counts as a match.",
   "tagAdmin.suggestibleLabel":
-    "Suggest this tag when mail or meeting notes show this interest",
+    "Suggest this tag when mail, meetings, notes or calls show this interest",
   "tagAdmin.colorNone": "No color",
   "tagAdmin.color.teal": "Teal",
   "tagAdmin.color.amber": "Amber",

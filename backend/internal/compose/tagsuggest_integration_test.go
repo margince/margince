@@ -522,15 +522,21 @@ func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
 }
 
 func TestAnItemErasedOrEditedWhileTheModelReadsItStoresNothing(t *testing.T) {
-	for name, change := range map[string]func(e *tagScoutEnv, t *testing.T, id ids.UUID){
-		"erased": func(e *tagScoutEnv, t *testing.T, id ids.UUID) {
+	for name, change := range map[string]func(e *tagScoutEnv, t *testing.T, note, contact ids.UUID){
+		"erased": func(e *tagScoutEnv, t *testing.T, note, _ ids.UUID) {
 			retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default())
-			if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{id}, privacy.PurgeOwnerRule); err != nil {
+			if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{note}, privacy.PurgeOwnerRule); err != nil {
 				t.Fatalf("purging the note: %v", err)
 			}
 		},
-		"edited": func(e *tagScoutEnv, t *testing.T, id ids.UUID) {
-			e.WsExec(t, `UPDATE activity SET body = 'Excel is gone, all on the new ledger.' WHERE id = $1`, id)
+		"edited": func(e *tagScoutEnv, t *testing.T, note, _ ids.UUID) {
+			e.WsExec(t, `UPDATE activity SET body = 'Excel is gone, all on the new ledger.' WHERE id = $1`, note)
+		},
+		"contact anonymized": func(e *tagScoutEnv, t *testing.T, _, contact ids.UUID) {
+			retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default())
+			if _, err := retention.AnonymiseContacts(e.Admin(), []ids.UUID{contact}, privacy.PurgeOwnerRule, anonymiseAsChosen); err != nil {
+				t.Fatalf("anonymizing Dana: %v", err)
+			}
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -540,7 +546,7 @@ func TestAnItemErasedOrEditedWhileTheModelReadsItStoresNothing(t *testing.T) {
 			note := e.note(e.Admin(), t, "note", "We close the month in Excel.", dana, clocktest.Now(t).Add(-time.Hour))
 			brain := &tagBrainStub{
 				cues:   map[string]ids.TagID{"Excel": migration},
-				during: func() { change(e, t, note) },
+				during: func() { change(e, t, note, dana) },
 			}
 
 			if pass := e.mustSuggest(t, brain); pass.Raised != 0 {

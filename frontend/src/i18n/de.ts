@@ -2960,9 +2960,9 @@ export const de = {
     "Der Vorschlag konnte nicht gelesen werden. Versuch es später noch einmal.",
   "tagAdmin.descriptionLabel": "Anzeichen für Interesse",
   "tagAdmin.descriptionHint":
-    "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X (ohne KI: Wendungen mit Kommas).",
+    "Zum Beispiel: fragt nach Preisen oder einer Demo von Produkt X. Ohne KI zählt jede kommagetrennte Wendung als Treffer.",
   "tagAdmin.suggestibleLabel":
-    "Diesen Tag vorschlagen, wenn Mails oder Terminnotizen dieses Interesse zeigen",
+    "Diesen Tag vorschlagen, wenn Mails, Termine, Notizen oder Anrufe dieses Interesse zeigen",
   "tagAdmin.colorNone": "Keine Farbe",
   "tagAdmin.color.teal": "Petrol",
   "tagAdmin.color.amber": "Bernstein",
