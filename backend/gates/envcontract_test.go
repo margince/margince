@@ -52,19 +52,15 @@ package gates
 //     disappearing; they cannot stop a description going stale.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 // envVarName matches one MARGINCE_* name in prose — the reference doc and the
@@ -74,9 +70,8 @@ import (
 var envVarName = regexp.MustCompile(`MARGINCE_[A-Z0-9_]+`)
 
 // quotedEnvVarName matches one MARGINCE_* name as a Go string literal. Keying
-// on the literal rather than on os.Getenv is what makes the Go sweep complete:
-// most vars reach the process through cliflags bindings and config.Lookup, not
-// a direct os.Getenv. Keying on unquoted text
+// on the literal rather than on os.Getenv is what makes the Go sweep complete.
+// Most vars reach the process through config settings and config.Lookup. Keying on unquoted text
 // instead would harvest globs out of comments and invent vars that do not exist.
 var quotedEnvVarName = regexp.MustCompile(`"(MARGINCE_[A-Z0-9_]+)"`)
 
@@ -368,14 +363,12 @@ func assertNamesOnlyLiveVars(t *testing.T, path string) {
 // nothing — while what the binary actually does is decided somewhere the doc
 // never described.
 //
-// Both sides are already in the tree, which is what makes this derivable rather
-// than a list: config.Item carries Default, and configuration.md's tables carry
-// a Default column. This asserts they agree, in both directions — a declared
-// default the doc does not show, and a documented default nothing declares.
+// Both sides are in the tree: each program's registry carries a setting's
+// default, and configuration.md's tables carry a Default column. This asserts
+// they agree both ways.
 
-// configItemDefaults is one config.Item declaration's documented name and the
-// default it declares. An absent Default is the empty string, which is the same
-// thing the doc writes as an em dash.
+// configItemDefault is one setting's env name and the default it declares. An
+// absent default is the empty string, which the doc writes as an em dash.
 type configItemDefault struct {
 	name    string
 	value   string
@@ -424,7 +417,7 @@ func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
 	declared := declaredConfigDefaults(t)
 	documented := documentedDefaults(t)
 	if len(declared) == 0 {
-		t.Fatal("no config.Item declaration found — a sweep that scans nothing passes exactly like a clean one")
+		t.Fatal("no setting found in any program's registry — a sweep that scans nothing passes exactly like a clean one")
 	}
 
 	for _, item := range declared {
@@ -453,179 +446,23 @@ func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
 	}
 }
 
-// declaredConfigDefaults finds every config.Item composite literal in the
-// hand-written trees and reads the env name and default out of it.
-//
-// Name is usually a constant rather than a literal, so package-level MARGINCE_*
-// constants are resolved first. A gate that only understood literals would see
-// almost nothing here and pass for that reason.
+// declaredConfigDefaults reads every MARGINCE_* setting's default from the
+// registries the programs load, so a setting is compared the day it is declared.
 func declaredConfigDefaults(t *testing.T) []configItemDefault {
 	t.Helper()
-	consts := envNameConstants(t)
+	seen := map[string]bool{}
 	var out []configItemDefault
-	fset := gatekit.SourceFileSet()
-	for _, tree := range licensedTrees {
-		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
-			// Non-test only here: a config-item default declared in a suite is
-			// a fixture, not something an operator can set.
-			if strings.HasSuffix(path, "_test.go") {
-				return
+	for role, reg := range compose.ProgramRegistries() {
+		for _, s := range reg.All() {
+			if !strings.HasPrefix(s.Env(), "MARGINCE_") || seen[s.Env()] {
+				continue
 			}
-			file, err := parser.ParseFile(fset, path, text, 0)
-			if err != nil {
-				t.Fatalf("parsing %s: %v", path, err)
-			}
-			ast.Inspect(file, func(n ast.Node) bool {
-				lit, isLit := n.(*ast.CompositeLit)
-				if !isLit {
-					return true
-				}
-				// The declarations are elements of a []config.Item slice literal,
-				// so their own Type node is NIL — Go elides it. A walk keyed on
-				// each element's type finds nothing at all here, which passes for
-				// exactly the same reason a clean tree does.
-				for _, element := range elidedConfigItems(lit) {
-					if item, ok := readConfigItem(element, consts); ok {
-						item.pos = fset.Position(element.Pos()).String()
-						out = append(out, item)
-					}
-				}
-				return true
-			})
-		})
-	}
-	return out
-}
-
-// elidedConfigItems answers the config.Item literals a composite literal holds:
-// itself when it is written out as config.Item{…}, or its elements when it is
-// the []config.Item slice the declarations actually live in.
-func elidedConfigItems(lit *ast.CompositeLit) []*ast.CompositeLit {
-	if namesConfigItem(lit.Type) {
-		return []*ast.CompositeLit{lit}
-	}
-	array, isArray := lit.Type.(*ast.ArrayType)
-	if !isArray || !namesConfigItem(array.Elt) {
-		return nil
-	}
-	var out []*ast.CompositeLit
-	for _, element := range lit.Elts {
-		if inner, isLit := element.(*ast.CompositeLit); isLit {
-			out = append(out, inner)
+			seen[s.Env()] = true
+			value, present := s.DefaultText()
+			out = append(out, configItemDefault{name: s.Env(), value: value, present: present, pos: string(role) + " setting " + s.Key()})
 		}
 	}
 	return out
-}
-
-// namesConfigItem reports whether an expression names config.Item, by either
-// spelling — qualified from outside the package, bare from within it.
-func namesConfigItem(expr ast.Expr) bool {
-	switch typed := expr.(type) {
-	case *ast.SelectorExpr:
-		return typed.Sel.Name == "Item"
-	case *ast.Ident:
-		return typed.Name == "Item"
-	}
-	return false
-}
-
-// readConfigItem pulls Name and Default out of one literal. A literal whose Name
-// does not resolve to a MARGINCE_* value is not a declaration this gate governs.
-func readConfigItem(lit *ast.CompositeLit, consts map[string]string) (configItemDefault, bool) {
-	var item configItemDefault
-	for _, element := range lit.Elts {
-		field, isField := element.(*ast.KeyValueExpr)
-		if !isField {
-			continue
-		}
-		key, isIdent := field.Key.(*ast.Ident)
-		if !isIdent {
-			continue
-		}
-		switch key.Name {
-		case "Name":
-			item.name = resolveStringExpr(field.Value, consts)
-		case "Default":
-			item.value = resolveStringExpr(field.Value, consts)
-			item.present = true
-		}
-	}
-	return item, strings.HasPrefix(item.name, "MARGINCE_")
-}
-
-// resolveStringExpr answers a string literal's value, or a constant's, or "".
-func resolveStringExpr(expr ast.Expr, consts map[string]string) string {
-	switch typed := expr.(type) {
-	case *ast.BasicLit:
-		if typed.Kind != token.STRING {
-			return ""
-		}
-		value, err := strconv.Unquote(typed.Value)
-		if err != nil {
-			return ""
-		}
-		return value
-	case *ast.Ident:
-		return consts[typed.Name]
-	case *ast.SelectorExpr:
-		// A name borrowed from another package, e.g. runtimeenv.EnvVar. The
-		// constant sweep is tree-wide, so the terminal identifier resolves.
-		return consts[typed.Sel.Name]
-	}
-	return ""
-}
-
-// envNameConstants maps every package-level identifier bound to a MARGINCE_*
-// string to that string, tree-wide.
-//
-// Keyed on the bare identifier so a qualified reference resolves too. Two
-// constants sharing a name and disagreeing about the value would make that
-// unsound, so the sweep refuses rather than picking one.
-func envNameConstants(t *testing.T) map[string]string {
-	t.Helper()
-	consts := map[string]string{}
-	fset := gatekit.SourceFileSet()
-	for _, tree := range licensedTrees {
-		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
-			file, err := parser.ParseFile(fset, path, text, 0)
-			if err != nil {
-				t.Fatalf("parsing %s: %v", path, err)
-			}
-			for _, decl := range file.Decls {
-				gen, isGen := decl.(*ast.GenDecl)
-				if !isGen || gen.Tok != token.CONST {
-					continue
-				}
-				collectEnvConstants(t, gen, consts, fset)
-			}
-		})
-	}
-	return consts
-}
-
-// collectEnvConstants records one const block's MARGINCE_* bindings.
-func collectEnvConstants(t *testing.T, gen *ast.GenDecl, consts map[string]string, fset *token.FileSet) {
-	t.Helper()
-	for _, spec := range gen.Specs {
-		value, isValue := spec.(*ast.ValueSpec)
-		if !isValue {
-			continue
-		}
-		for i, name := range value.Names {
-			if i >= len(value.Values) {
-				continue
-			}
-			resolved := resolveStringExpr(value.Values[i], nil)
-			if !strings.HasPrefix(resolved, "MARGINCE_") {
-				continue
-			}
-			if seen, dup := consts[name.Name]; dup && seen != resolved {
-				t.Fatalf("%s: two constants named %s bind different env vars (%q and %q); this sweep resolves a name to one value and cannot with both",
-					fset.Position(name.Pos()), name.Name, seen, resolved)
-			}
-			consts[name.Name] = resolved
-		}
-	}
 }
 
 // documentedDefaults reads the Default column out of configuration.md's tables.

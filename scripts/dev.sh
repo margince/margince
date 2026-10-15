@@ -1403,7 +1403,7 @@ up)
   ( cd backend && GOWORK="$PWD/../build/composition/go.work" go build -o ../bin/worker ./cmd/worker ) > >(log_as boot) 2>&1
   MARGINCE_BLOBSTORE_BUCKET="$blob_bucket" \
     ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
-    --config "$deploy_cfg" \
+    --config "$deploy_cfg" --config-file "$dev_cfg" \
     "${public_base_url_flag[@]}" \
     "${ai_flag[@]+"${ai_flag[@]}"}" > >(log_as worker) 2>&1 &
   worker_pid=$!

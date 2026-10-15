@@ -2,9 +2,8 @@
 # Configuration reference
 
 Three binaries, one per process role, live under `backend/cmd/`. Configuration is flags. Every boot
-flag of the api and the worker can also be set through `MARGINCE_<FLAG>` (`-` as `_`). This works
-for every boot flag but `--ai-fake` on the worker, which is only for dev. A flag you set wins over the
-`MARGINCE_` value. An empty required value is a
+flag of the api and the worker can also be set through `MARGINCE_<FLAG>` (`-` as `_`). A flag you
+set wins over the `MARGINCE_` value. An empty required value is a
 boot error, and so is a `--log-level` / `--log-format` value it does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
@@ -564,7 +563,7 @@ the api says so. Webhook retries need `cmd/worker`. See
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–79). See below |
 | `--redis-password` | `MARGINCE_REDIS_PASSWORD` | — | Event bus credential, where the instance needs one. Empty is the normal case on a network the deployment controls. Set it where anything else can reach the bus; the desktop bundle makes one per installation, because its bus is open on loopback. Use the environment: every process on the machine can read argv |
 | `--ai-routing` | `MARGINCE_AI_ROUTING` | — | **Not used, and warns** (see the api row). An installation with a stored binding runs the Surface-B runner + embeddings from the database. This role reads the stored binding again on a timer, so it never serves one the api has replaced |
-| `--ai-fake` | (none) | `false` | run the Surface-B runner on the built-in test model |
+| `--ai-fake` | `MARGINCE_AI_FAKE` | `false` | run the Surface-B runner on the built-in test model. With `MARGINCE_ENV` production, only the flag turns it on, as on the api |
 | `--webhook-key` | `MARGINCE_WEBHOOK_KEY` | — | base64 32-byte key used to lock outbound webhook signing secrets; not set = the delivery worker stays off (no `cg:webhooks` consumer, no retry sweep) |
 | `--job-drain-window` | `MARGINCE_JOB_DRAIN_WINDOW` | `20s` | how long a job already running at shutdown gets to end before its context is cancelled. Must be more than zero. The grace time of the pod has to cover it plus `5s` and the shutdown steps; see [Stopping the worker](#stopping-the-worker) |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve the `/healthz`, `/readyz` and `/metrics` of this worker on, such as `127.0.0.1:9101`. Empty serves nothing; see below |
@@ -1110,7 +1109,7 @@ resolve their other flags from the `MARGINCE_*` values above. The steps that use
 | `MARGINCE_BENCH_TIER` | — | `make bench-perf` | the PERF-3/PERF-7 seed tier the perfbench suite builds: `smb` (default) or `mid_market`. A value it does not know fails the bench with a clear error. |
 | `MARGINCE_BENCH_RECORD` | — | `make bench-perf` | set to `1` to let the PERF-3/PERF-7 tier harness write its record into `docs/reference/perfbench/`, which `make perfdoc` turns into the published budgets page. Off by default, because a scheduled job runs the same suite weekly (`make bench-perf-check`), and a machine must never write its own numbers into the tree. The `bench-record`/`bench-capture`/`bench-mobile` targets, run by hand, need no switch, since only a human runs them. |
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
-| `MARGINCE_AITASK_DIR` | — | `worker aitask` | working folder for the files of the `ai-probe` debug loop (flag `--work-dir`, by default the gitignored `.tmp/aitask/`). A page it gets carries what the source carried, so this stays out of the tree. |
+| `MARGINCE_AITASK_DIR` | `.tmp/aitask` | `worker aitask` | working folder for the files of the `ai-probe` debug loop (flag `--work-dir`), gitignored by default. A page it gets carries what the source carried, so this stays out of the tree. |
 | `MARGINCE_HOME` | — | desktop launcher | sets the installation folder the launcher works from. Unset, it uses the folder of the running program, which is where the launcher sits inside a shipped folder. To set it lets a dev stack run from a staging tree that is not shipped. Everything else the launcher touches comes from it: `data/` with the database and the blobs, `margince.yaml`, `margince.env`, and the `runtime/` that can be replaced. |
 
 ### Broker upstream preferences
