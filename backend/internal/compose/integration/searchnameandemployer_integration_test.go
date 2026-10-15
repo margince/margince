@@ -69,6 +69,25 @@ func TestAWordNeitherSideCarriesFindsNoOne(t *testing.T) {
 	}
 }
 
+// More companies carry the first name than the seed cap admits, and each ranks
+// above the employer; the employer's own word still seeds it.
+func TestCompaniesCarryingTheFirstNameDoNotCrowdOutTheEmployer(t *testing.T) {
+	e := SetupSearch(t)
+	demo := seedSearchCompany(t, e, "Demo GmbH")
+	alice := seedSearchContact(t, e, "Alice Müller")
+	staffCompany(t, e, alice, demo, employmentShape{})
+	for range 25 {
+		seedSearchCompany(t, e, "Alice Alice Alice Holding")
+	}
+
+	for _, query := range []string{"alice demo", "alice dem"} {
+		page := searchWith(e.Admin(), t, e, search.Input{Query: query, Types: []string{"contact"}, WithEmployees: true})
+		if hit := hitFor(page, alice); hit == nil || hit.WorksAt == nil || hit.WorksAt.CompanyID != demo {
+			t.Errorf("%q found Alice as %+v, want her through Demo GmbH", query, hit)
+		}
+	}
+}
+
 func TestAnEndedEmploymentLendsNoName(t *testing.T) {
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")

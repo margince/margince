@@ -91,23 +91,21 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	               m.id AS employer_id, m.name AS employer_name
 	          FROM (
 	                SELECT o.id, %[3]s AS name, o.search_tsv, %[4]s AS whole,
-	                       (%[10]s + ts_rank_cd(o.search_tsv, %[11]s, 32))::float8 AS match_rank
+	                       (%[8]s + ts_rank_cd(o.search_tsv, %[9]s, 32))::float8 AS match_rank
 	                  FROM company o
-	                 WHERE %[12]s AND %[5]s
-	                 ORDER BY whole DESC, match_rank DESC, o.id -- a whole-query seed keeps its place under the cap
-	                 LIMIT $%[6]d
+	                 WHERE o.id IN (%[10]s)
 	               ) m
-	          JOIN relationship r ON r.company_id = m.id AND %[7]s
-	          JOIN contact t ON t.id = r.contact_id AND %[8]s
-	         WHERE NOT %[9]s AND (m.whole OR %[13]s)
+	          JOIN relationship r ON r.company_id = m.id AND %[5]s
+	          JOIN contact t ON t.id = r.contact_id AND %[6]s
+	         WHERE NOT %[7]s AND (m.whole OR %[11]s)
 	         ORDER BY t.id, m.match_rank DESC, r.is_current_primary DESC, m.id
 	       ) e`,
 		contactBranch.entity, contactBranch.title, companyBranch.title,
-		companyWhole, companyWhere,
-		arg(employerArmCompanies), edgeWhere, contactWhere,
+		companyWhole, edgeWhere, contactWhere,
 		contactBranch.ownMatch("t", matchExpression(entityContact, headPos, tailPos, hasFragment), identifierPos),
 		companyScore, words.any(),
-		companyBranch.ownMatch("o", words.any(), identifierPos), words.everyFoundIn("t", "m")), nil
+		words.seedsSQL(companyWhole, companyScore, companyWhere, arg(employerArmCompanies)),
+		words.everyFoundIn("t", "m")), nil
 }
 
 // typedWords holds one tsquery per word, for the employer arm to test one at a
@@ -127,6 +125,25 @@ func queryWords(query string, tailPos int, hasFragment bool, arg func(any) int) 
 		words = append(words, prefixArmSQL(tailPos))
 	}
 	return words
+}
+
+// employerArmSeededWords bounds the per-word seed scans, so a pasted paragraph
+// costs at most this many index scans. A later word still has to match.
+const employerArmSeededWords = 6
+
+// seedsSQL selects the seed company ids: the best whole-query matches, and
+// each seeded word's own best matches, every set capped at the bound limit.
+// A per-word cap keeps "alice demo" seeding Demo GmbH when twenty companies
+// carry "alice", as a one-word search for "demo" would.
+func (w typedWords) seedsSQL(whole, wholeScore, companyWhere string, limitPos int) string {
+	seeds := []string{fmt.Sprintf(`(SELECT o.id FROM company o WHERE %s AND %s ORDER BY %s DESC, o.id LIMIT $%d)`,
+		whole, companyWhere, wholeScore, limitPos)}
+	for _, word := range w[:min(len(w), employerArmSeededWords)] {
+		seeds = append(seeds, fmt.Sprintf(
+			`(SELECT o.id FROM company o WHERE o.search_tsv @@ %[1]s AND %[2]s ORDER BY ts_rank_cd(o.search_tsv, %[1]s, 32) DESC, o.id LIMIT $%[3]d)`,
+			word, companyWhere, limitPos))
+	}
+	return strings.Join(seeds, " UNION ")
 }
 
 // any is the tsquery a company matching at least one word satisfies.
