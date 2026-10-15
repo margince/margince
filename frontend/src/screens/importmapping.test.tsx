@@ -46,7 +46,7 @@ describe("the map step", () => {
       screen.getByRole("combobox", { name: "Field for company_ref" }),
     ).toHaveTextContent("company_ref");
     await user.click(
-      screen.getByRole("button", { name: "What goes in company_ref" }),
+      screen.getByRole("button", { name: "Guide for company_ref" }),
     );
     expect(
       await screen.findByText(/Which company this row belongs to/),

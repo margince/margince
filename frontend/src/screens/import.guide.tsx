@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { CircleHelp } from "lucide-react";
 import type { ReactNode } from "react";
-import { Badge } from "../design-system/atoms";
+import { Badge, type ButtonVariant } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
 import type { ImportFormatColumn } from "./importtypes";
@@ -21,10 +22,12 @@ export function ColumnGuide({
   column,
   file,
   label,
+  variant,
 }: Readonly<{
   column: ImportFormatColumn;
   file: string;
   label?: ReactNode;
+  variant?: ButtonVariant;
 }>) {
   const t = useT();
   const where = [column.name, file];
@@ -33,6 +36,7 @@ export function ColumnGuide({
     <Popover
       onHover
       label={label ?? column.label ?? column.name}
+      variant={variant}
       panelClassName="import-guide"
     >
       <p>{column.description}</p>
@@ -49,7 +53,7 @@ export function ColumnGuide({
   );
 }
 
-/** The same guide behind a `?`, beside a field already chosen for a column. */
+/** The same guide behind a labelled button, beside a field chosen for a column. */
 export function ColumnGuideButton({
   column,
   file,
@@ -59,11 +63,13 @@ export function ColumnGuideButton({
     <ColumnGuide
       column={column}
       file={file}
+      variant="ghost"
       label={
         <>
-          <span aria-hidden>?</span>
+          <CircleHelp aria-hidden />
+          <span aria-hidden>{t("import.guide.button")}</span>
           <span className="sr-only">
-            {t("import.guide.whatGoesIn", {
+            {t("import.guide.buttonFor", {
               column: column.label ?? column.name,
             })}
           </span>

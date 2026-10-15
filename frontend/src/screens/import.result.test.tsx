@@ -218,4 +218,82 @@ describe("the import and its result", () => {
       "/v1/imports/r1/problems.csv?lang=en",
     );
   });
+
+  it("shows how far an undo has got and offers Continue undo only once the worker is silent", async () => {
+    let silent = 0;
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          phase: "undoing",
+          phase_object: "contact",
+          heartbeat_age_seconds: silent,
+          rate_rows_per_second: 40,
+          progress: {
+            objects: [
+              { object: "contact", rows_done: 30, rows_total: 50 },
+              { object: "company", rows_done: 0, rows_total: 20 },
+            ],
+            counts: {
+              created: 0,
+              updated: 0,
+              unchanged: 0,
+              skipped: 0,
+              problems: 0,
+            },
+          },
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+    });
+    const view = renderAtImport("r1");
+    expect(
+      await screen.findByText(/30 of 70 rows reversed · 40 rows\/s/),
+    ).toBeVisible();
+    expect(screen.getAllByText("Undoing Contacts").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Continue undo" })).toBeNull();
+    view.unmount();
+    silent = 45;
+    renderAtImport("r1");
+    expect(
+      await screen.findByRole("button", { name: "Continue undo" }),
+    ).toBeVisible();
+  });
+
+  it("treats a press on a run another attempt holds as progress, not as a failure", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          heartbeat_age_seconds: 45,
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+      "POST /imports/r1/undo": () =>
+        jsonResponse(
+          {
+            type: "https://errors.gradion.com/conflict",
+            title: "Conflict",
+            status: 409,
+            code: "run_in_flight",
+            detail: "This import is already running.",
+          },
+          409,
+        ),
+    });
+    renderAtImport("r1");
+    await user.click(
+      await screen.findByRole("button", { name: "Continue undo" }),
+    );
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r1/undo"),
+    );
+    expect(screen.queryByText("Undo did not run")).toBeNull();
+    expect(screen.queryByText(/already running/)).toBeNull();
+  });
 });

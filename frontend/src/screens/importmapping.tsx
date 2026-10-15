@@ -20,17 +20,14 @@ import type {
 import { DONT_IMPORT } from "./importtypes";
 import type { ImportWizardState } from "./importwizard";
 
-// The mapping surface (IEM-AC-OPEN-2): one row per column of the uploaded file,
-// carrying what a human needs to decide where it goes — the name as the file
-// spells it, how often it is filled, and a few of its actual values.
+// The mapping surface: one row per column of the uploaded file. Each row shows
+// the name the file gives it, how often it is filled in, and a few values.
 //
-// The fill rate is the number that earns its place. A column at 4% is usually a
-// mapping mistake waiting to happen, and it looks exactly like a column at 98%
-// if all you are shown is its name.
+// The fill rate tells a mapping mistake from a real column. A column at 4% is
+// usually a mistake, and it looks like a column at 98% from its name alone.
 //
-// The destination defaults to the server's suggestion, which is deliberately
-// timid: it matches on normalized names only, so an unmatched column arrives
-// here as "don't import" rather than as a guess the human must first notice.
+// The destination defaults to the server's suggestion. It matches normalized
+// names only, so an unmatched column arrives as "don't import", not a guess.
 
 export function ImportMappingTable({
   columns,
@@ -72,10 +69,18 @@ export function ImportMappingTable({
       </p>
       <TableScroll label={t("import.mappingTable")}>
         <table className="import__table">
+          <colgroup>
+            <col className="import__colWidthName" />
+            <col className="import__colWidthFill" />
+            <col className="import__colWidthSamples" />
+            <col className="import__colWidthField" />
+          </colgroup>
           <thead>
             <tr>
               <th scope="col">{t("import.col.column")}</th>
-              <th scope="col">{t("import.col.filled")}</th>
+              <th scope="col" title={t("import.col.filledHint")}>
+                {t("import.col.filled")}
+              </th>
               <th scope="col">{t("import.col.samples")}</th>
               <th scope="col">{t("import.col.destination")}</th>
             </tr>
@@ -90,7 +95,10 @@ export function ImportMappingTable({
                     {column.header}
                   </th>
                   <td className="import__fill">{fillLabel(column)}</td>
-                  <td className="import__samples">
+                  <td
+                    className="import__samples"
+                    title={column.samples.join(", ") || undefined}
+                  >
                     {column.samples.length > 0 ? (
                       column.samples.join(", ")
                     ) : (
@@ -102,6 +110,7 @@ export function ImportMappingTable({
                   <td>
                     <div className="import__target">
                       <Select
+                        className="import__select"
                         options={options}
                         value={chosen}
                         onChange={(next) => onChange(column.header, next)}
@@ -122,6 +131,7 @@ export function ImportMappingTable({
           </tbody>
         </table>
       </TableScroll>
+      <p className="import__hint t-caption">{t("import.col.filledHint")}</p>
     </div>
   );
 }
@@ -134,7 +144,7 @@ function TargetMarks({
 }: Readonly<{ target: ImportFormatColumn; file: string }>) {
   const t = useT();
   return (
-    <>
+    <span className="import__marks">
       {isLink(target) ? (
         <Badge tone="info">{t("import.map.link")}</Badge>
       ) : null}
@@ -142,7 +152,7 @@ function TargetMarks({
         <Badge tone="accent">{t("import.guide.custom")}</Badge>
       ) : null}
       <ColumnGuideButton column={target} file={file} />
-    </>
+    </span>
   );
 }
 

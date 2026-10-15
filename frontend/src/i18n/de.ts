@@ -5832,7 +5832,9 @@ export const de = {
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
-  "import.col.filled": "Gefüllt",
+  "import.col.filled": "Ausgefüllt",
+  "import.col.filledHint":
+    "Anteil der Zeilen in dieser Datei, die in der Spalte einen Wert haben",
   "import.col.samples": "Werte",
   "import.col.destination": "Feld",
   "import.dontImport": "Nicht importieren",
@@ -5925,7 +5927,8 @@ export const de = {
   "import.guide.custom": "benutzerdefiniertes Feld",
   "import.guide.required": "Bei neuen Zeilen erforderlich",
   "import.guide.example": "Beispiel: {example}",
-  "import.guide.whatGoesIn": "Was in {column} gehört",
+  "import.guide.button": "Hilfe",
+  "import.guide.buttonFor": "Hilfe zu {column}",
   "import.template.title": "Vorlagenvorschau",
   "import.template.download": "Vorlage herunterladen",
   "import.template.lead":
@@ -5998,6 +6001,7 @@ export const de = {
   "import.progress.links": "Verknüpfungen",
   "import.progress.overall": "Alle Dateien",
   "import.progress.total": "{done} von {total} Zeilen",
+  "import.progress.reversed": "{done} von {total} Zeilen rückgängig gemacht",
   "import.progress.rate": "{rate} Zeilen/s",
   "import.progress.elapsed": "{span} vergangen",
   "import.progress.etaObject": "noch etwa {minutes} Min. für {type}",
@@ -6027,7 +6031,9 @@ export const de = {
   "import.result.skipped_other":
     "{count} Zeilen wurden übersprungen. problems.csv führt jede Zeile auf.",
   "import.result.undoing":
-    "Wird rückgängig gemacht… Hält der Vorgang an, macht „Weiter rückgängig machen“ dort weiter.",
+    "Das Rückgängigmachen läuft. Es macht von selbst weiter und diese Seite aktualisiert sich.",
+  "import.result.undoStopped":
+    "Das Rückgängigmachen ist stehen geblieben. „Weiter rückgängig machen“ setzt dort fort.",
   "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Diesen Import rückgängig machen",
   "import.result.done": "Fertig",
@@ -6054,6 +6060,7 @@ export const de = {
     "Jede Zeile ist schon im CRM oder oben als Problem aufgeführt. Es wurde nichts geschrieben.",
   "import.test.nothing.done": "Fertig",
   "import.test.reupload": "Korrigieren und neu hochladen",
+  "import.test.issuesUnit": "Probleme",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",
   "import.test.importAnyway": "Trotzdem importieren",
@@ -6082,6 +6089,8 @@ export const de = {
     "Dieser Datensatz ist für dich nicht mehr sichtbar.",
   "import.reason.undo_rule_protects":
     "Der Datensatz hat die Rücknahme abgelehnt, weil eine Geschäftsregel ihn schützt.",
+  "import.reason.run_in_flight":
+    "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
   "import.reason.author_too_long":

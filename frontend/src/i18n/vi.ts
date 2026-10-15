@@ -5694,7 +5694,8 @@ export const vi = {
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
-  "import.col.filled": "Có dữ liệu",
+  "import.col.filled": "Đã điền",
+  "import.col.filledHint": "Tỷ lệ dòng trong tệp này có giá trị ở cột",
   "import.col.samples": "Giá trị",
   "import.col.destination": "Trường",
   "import.dontImport": "Không nhập",
@@ -5783,7 +5784,8 @@ export const vi = {
   "import.guide.custom": "trường tùy chỉnh",
   "import.guide.required": "Cần cho dòng mới",
   "import.guide.example": "Ví dụ: {example}",
-  "import.guide.whatGoesIn": "Nội dung của cột {column}",
+  "import.guide.button": "Hướng dẫn",
+  "import.guide.buttonFor": "Hướng dẫn cho {column}",
   "import.template.title": "Bản xem trước mẫu",
   "import.template.download": "Tải mẫu xuống",
   "import.template.lead":
@@ -5853,6 +5855,7 @@ export const vi = {
   "import.progress.links": "Liên kết",
   "import.progress.overall": "Tất cả tệp",
   "import.progress.total": "{done} trên {total} dòng",
+  "import.progress.reversed": "Đã hoàn tác {done} trên {total} dòng",
   "import.progress.rate": "{rate} dòng/giây",
   "import.progress.elapsed": "đã qua {span}",
   "import.progress.etaObject": "còn khoảng {minutes} phút cho {type}",
@@ -5882,7 +5885,9 @@ export const vi = {
   "import.result.skipped_other":
     "Đã bỏ qua {count} dòng. problems.csv liệt kê từng dòng.",
   "import.result.undoing":
-    "Đang hoàn tác. Nếu bị dừng, Tiếp tục hoàn tác sẽ chạy tiếp từ đó.",
+    "Đang hoàn tác. Quá trình tự chạy tiếp và trang này tự cập nhật.",
+  "import.result.undoStopped":
+    "Việc hoàn tác đã dừng. Tiếp tục hoàn tác sẽ chạy tiếp từ chỗ dừng.",
   "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Hoàn tác lần nhập này",
   "import.result.done": "Xong",
@@ -5906,6 +5911,7 @@ export const vi = {
     "Mọi hàng đã có trong CRM hoặc được liệt kê ở trên như một vấn đề. Chưa ghi gì cả.",
   "import.test.nothing.done": "Xong",
   "import.test.reupload": "Sửa và tải lại",
+  "import.test.issuesUnit": "vấn đề",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway": "Vẫn nhập",
@@ -5933,6 +5939,8 @@ export const vi = {
   "import.reason.undo_not_visible": "Bạn không còn thấy bản ghi này.",
   "import.reason.undo_rule_protects":
     "Bản ghi từ chối hoàn tác vì có một quy tắc nghiệp vụ bảo vệ nó.",
+  "import.reason.run_in_flight":
+    "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":

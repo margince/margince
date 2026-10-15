@@ -5966,7 +5966,9 @@ export const en = {
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
   "import.col.column": "Column",
-  "import.col.filled": "Filled",
+  "import.col.filled": "Filled in",
+  "import.col.filledHint":
+    "Share of rows in this file that have a value in the column",
   "import.col.samples": "Values",
   "import.col.destination": "Field",
   "import.dontImport": "Do not import",
@@ -6056,7 +6058,8 @@ export const en = {
   "import.guide.custom": "custom field",
   "import.guide.required": "Needed on a new row",
   "import.guide.example": "Example: {example}",
-  "import.guide.whatGoesIn": "What goes in {column}",
+  "import.guide.button": "Guide",
+  "import.guide.buttonFor": "Guide for {column}",
   "import.template.title": "Template preview",
   "import.template.download": "Download template",
   "import.template.lead":
@@ -6126,6 +6129,7 @@ export const en = {
   "import.progress.links": "Links",
   "import.progress.overall": "All files",
   "import.progress.total": "{done} of {total} rows",
+  "import.progress.reversed": "{done} of {total} rows reversed",
   "import.progress.rate": "{rate} rows/s",
   "import.progress.elapsed": "{span} elapsed",
   "import.progress.etaObject": "about {minutes} min left in {type}",
@@ -6154,7 +6158,9 @@ export const en = {
   "import.result.skipped_other":
     "{count} rows were skipped. problems.csv lists each one.",
   "import.result.undoing":
-    "Undo is running. If it stops, Continue undo picks it up from there.",
+    "Undo is running. It continues on its own and this page updates.",
+  "import.result.undoStopped":
+    "The undo has stopped. Continue undo picks it up from where it was.",
   "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Undo this import",
   "import.result.done": "Done",
@@ -6178,6 +6184,7 @@ export const en = {
     "Every row is already in the CRM, or is listed above as a problem. Nothing was written.",
   "import.test.nothing.done": "Done",
   "import.test.reupload": "Fix and re-upload",
+  "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
   "import.test.importAnyway": "Import anyway",
@@ -6204,6 +6211,8 @@ export const en = {
   "import.reason.undo_not_visible": "This record is no longer visible to you.",
   "import.reason.undo_rule_protects":
     "The record refused the undo because a business rule protects it.",
+  "import.reason.run_in_flight":
+    "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":

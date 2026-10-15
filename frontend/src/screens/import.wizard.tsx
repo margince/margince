@@ -92,6 +92,7 @@ export function ImportWizard({
         label={t("import.back")}
       />
       <StageLadder
+        wrap
         label={t("import.step.label")}
         hint={
           <span id={hintId}>

@@ -22,6 +22,7 @@ import { defaultSourceName, filesOf, stepOfRun } from "./importflow";
 import { asProfile } from "./importprofile";
 import {
   IMPORTS_KEY,
+  orInFlight,
   useImportReport,
   useImportRun,
   useLandedRecords,
@@ -155,11 +156,13 @@ export function useImportWizard() {
   // changed since is refused rather than imported unread.
   const approve = useMutation({
     mutationFn: async ({ id, version }: Pick<ImportRun, "id" | "version">) =>
-      unwrap(
-        await api.POST("/imports/{id}/approve", {
-          params: { path: { id } },
-          body: { version },
-        }),
+      orInFlight(async () =>
+        unwrap(
+          await api.POST("/imports/{id}/approve", {
+            params: { path: { id } },
+            body: { version },
+          }),
+        ),
       ),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
@@ -278,7 +281,7 @@ export function useImportWizard() {
         // Cancelling a draft another tab is testing only stops that test and
         // leaves the draft, so the page stays on it until it is cancelled.
         onSuccess: (stopped) => {
-          if (stopped.status !== "cancelled") return;
+          if (stopped?.status !== "cancelled") return;
           reset();
           navigate(settingsHref("import"));
         },

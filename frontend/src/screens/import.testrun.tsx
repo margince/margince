@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Download } from "lucide-react";
+import { useState } from "react";
+import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { CountLine } from "../design-system/listsurface";
+import { Pager } from "../design-system/listtable";
+import { fitsOnePage, PAGE_SIZES } from "../design-system/listtable.paging";
 import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
@@ -32,6 +38,18 @@ import type { ImportWizardState } from "./importwizard";
  */
 export function problemsHref(id: string, lang: Locale): string {
   return `/v1/imports/${encodeURIComponent(id)}/problems.csv?lang=${lang}`;
+}
+
+/** The run's problems as a spreadsheet: the full list, whatever page is shown. */
+export function ProblemsDownload({ runId }: Readonly<{ runId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <a className="btn btn-ghost" href={problemsHref(runId, locale)} download>
+      <Download aria-hidden />
+      {t("import.result.problemsFile")}
+    </a>
+  );
 }
 
 const PROBLEM_TONE = {
@@ -219,46 +237,44 @@ function TestRunBody({
           {t("import.test.nothing.body")}
         </Callout>
       ) : null}
-      <div className="import__actions">
-        {report.issues.length > 0 ? (
-          <a
-            className="link-button"
-            href={problemsHref(runId, locale)}
-            download
-          >
-            {t("import.result.problemsFile")}
-          </a>
-        ) : null}
-        <Button variant="ghost" onClick={wizard.reset}>
-          {t("import.test.reupload")}
-        </Button>
-        {nothingToWrite ? (
-          <Button
-            variant="primary"
-            pending={wizard.cancelling.isPending}
-            onClick={wizard.cancel}
-          >
-            {t("import.test.nothing.done")}
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            disabled={restaging}
-            pending={wizard.approve.isPending}
-            busyLabel={t("import.importing")}
-            onClick={() => {
-              const run = wizard.run.data;
-              if (run) wizard.approve.mutate(run);
-            }}
-          >
-            {wizard.anyway
-              ? t("import.test.importAnyway")
-              : plural("import.test.import", landing, {
-                  count: formatNumber(landing, locale),
-                })}
-          </Button>
-        )}
-      </div>
+      <ActionRow
+        className="import__footer"
+        primary={
+          <>
+            <Button variant="ghost" onClick={wizard.reset}>
+              {t("import.test.reupload")}
+            </Button>
+            {nothingToWrite ? (
+              <Button
+                variant="primary"
+                pending={wizard.cancelling.isPending}
+                onClick={wizard.cancel}
+              >
+                {t("import.test.nothing.done")}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                disabled={restaging}
+                pending={wizard.approve.isPending}
+                busyLabel={t("import.importing")}
+                onClick={() => {
+                  const run = wizard.run.data;
+                  if (run) wizard.approve.mutate(run);
+                }}
+              >
+                {wizard.anyway
+                  ? t("import.test.importAnyway")
+                  : plural("import.test.import", landing, {
+                      count: formatNumber(landing, locale),
+                    })}
+              </Button>
+            )}
+          </>
+        }
+      >
+        {report.issues.length > 0 ? <ProblemsDownload runId={runId} /> : null}
+      </ActionRow>
       {wizard.approve.error ? (
         <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
           {problemMessageOf(wizard.approve.error, t)}
@@ -319,13 +335,61 @@ export function ProblemTable({
   issues,
 }: Readonly<{ issues: readonly ImportRowIssue[] }>) {
   const t = useT();
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState<number>(PAGE_SIZES[0]);
+  // A new report is another list: its page one, not the page the last one was on.
+  const [seen, setSeen] = useState(issues);
+  if (seen !== issues) {
+    setSeen(issues);
+    setPage(1);
+  }
+  if (issues.length === 0) return null;
+  const lastPage = Math.max(1, Math.ceil(issues.length / perPage));
+  const current = Math.min(page, lastPage);
+  const from = (current - 1) * perPage;
+  const shown = issues.slice(from, from + perPage);
+  const paged = !fitsOnePage(issues, undefined, false);
+  return (
+    <div className="import__problems">
+      <ProblemRows issues={shown} total={issues.length} />
+      {paged ? (
+        <>
+          <p className="t-caption">
+            <CountLine
+              unit={t("import.test.issuesUnit")}
+              first={from + 1}
+              last={from + shown.length}
+              total={issues.length}
+            />
+          </p>
+          <Pager
+            current={current}
+            lastPage={lastPage}
+            hasMore={false}
+            perPage={perPage}
+            onGoto={setPage}
+            onPerPage={(next) => {
+              setPerPage(next);
+              setPage(1);
+            }}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function ProblemRows({
+  issues,
+  total,
+}: Readonly<{ issues: readonly ImportRowIssue[]; total: number }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (issues.length === 0) return null;
   return (
     <DataTable<ImportRowIssue>
-      label={plural("import.test.problems", issues.length, {
-        count: formatNumber(issues.length, locale),
+      label={plural("import.test.problems", total, {
+        count: formatNumber(total, locale),
       })}
       rows={[...issues]}
       rowKey={(issue) =>

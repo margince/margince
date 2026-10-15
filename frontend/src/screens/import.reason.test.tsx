@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -95,5 +96,39 @@ describe("a problem's reason", () => {
     expect(problemsHref("r 1", "vi")).toBe(
       "/v1/imports/r%201/problems.csv?lang=vi",
     );
+  });
+});
+
+describe("a long problem list", () => {
+  const many = Array.from({ length: 60 }, (_, index) => ({
+    ...coded,
+    line: index + 2,
+  }));
+
+  it("pages in the design system's page size and counts what it shows", async () => {
+    const user = userEvent.setup();
+    show(<ProblemTable issues={many} />, "en");
+    expect(screen.getByText("1 to 25 of 60 issues")).toBeVisible();
+    expect(screen.getAllByText(/^Row \d+$/)).toHaveLength(25);
+    await user.click(screen.getByRole("button", { name: "Page 2" }));
+    expect(screen.getByText("26 to 50 of 60 issues")).toBeVisible();
+    expect(screen.getByText("Row 27")).toBeVisible();
+  });
+
+  it("goes back to page one when the report is another one", async () => {
+    const user = userEvent.setup();
+    const view = show(<ProblemTable issues={many} />, "en");
+    await user.click(screen.getByRole("button", { name: "Page 2" }));
+    view.rerender(
+      <LocaleProvider initial="en">
+        <ProblemTable issues={many.slice(0, 55)} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("1 to 25 of 55 issues")).toBeVisible();
+  });
+
+  it("draws no pager for a list that fits one page", () => {
+    show(<ProblemTable issues={many.slice(0, 5)} />, "en");
+    expect(screen.queryByRole("navigation", { name: "Pages" })).toBeNull();
   });
 });
