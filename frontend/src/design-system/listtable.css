@@ -571,6 +571,7 @@
  * makes the pinned identity column worth having. min-width keeps it filling the
  * surface when the columns do not need that much. */
 .lt-table {
+  --lt-grip-w: 10px;
   width: 100%;
   min-width: var(--lt-floor, 0);
   /* The colgroup decides the widths, and fixed layout is what makes it
@@ -656,10 +657,9 @@
   padding: var(--space-2) var(--space-3);
   background: var(--bgElevated);
   border-bottom: 1px solid var(--borderSubtle);
-  /* A label longer than its column takes a second line; the column keeps the
-   * width the layout gave it. `7 3 3` leaves no one-letter tail. */
+  /* A label longer than its column wraps, and the column keeps its width. */
   hyphens: auto;
-  hyphenate-limit-chars: 7 3 3;
+  overflow-wrap: anywhere;
 }
 
 /* A 44px row: enough that two rows cannot be mistaken for one, which is the
@@ -866,7 +866,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 10px;
+  width: var(--lt-grip-w);
   height: 100%;
   padding: 0;
   border: 0;
@@ -909,9 +909,9 @@
   background: transparent;
   /* A wrapped label keeps the column's edge, not a button's centre. */
   text-align: inherit;
-  /* The arrow's slot may reach into the cell's end padding, so a label that
-   * fits is never broken for an arrow that is hidden until the column sorts. */
-  margin-inline-end: calc(-1 * var(--space-1));
+  /* The arrow's slot may reach into the cell's end padding up to the grip, so a
+   * label that fits is never broken for an arrow hidden until the column sorts. */
+  margin-inline-end: calc(var(--lt-grip-w) - var(--space-3));
   cursor: pointer;
 }
 .lt-sort:hover {

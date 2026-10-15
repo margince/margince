@@ -31,6 +31,7 @@
  * than each row picking its own. */
 .settingrow {
   display: flex;
+  /* Only as a row: a wrapping column stretches every item to the widest one. */
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
@@ -42,6 +43,7 @@
  * beside it, so nothing is gained by squeezing it into the right column. */
 .settingrow-stack {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: var(--space-3);
 }
@@ -309,6 +311,7 @@
 @media (max-width: 640px) {
   .settingrow {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
   }
 

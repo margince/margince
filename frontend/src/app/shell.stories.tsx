@@ -16,7 +16,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Card } from "../design-system/atoms";
 import type { Locale } from "../i18n";
@@ -603,15 +603,34 @@ export const SectionLevel: Story = {
   ),
 };
 
-// German, on an entry wider than its row. That row wraps and grows; the rows
-// around it keep their height and the trail carries the name whole.
+// German: the privacy entry is wider than the rail, so its row wraps and grows
+// while the rows around it keep their height.
 export const SectionLevelGerman: Story = {
   name: "second level — a German entry that wraps",
   render: () => (
     <LevelStory locale="de">
-      <LevelExample initiallyCollapsed={false} tab="privacy" />
+      <LevelExample initiallyCollapsed={false} tab="account" />
     </LevelStory>
   ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const rows = [
+        ...canvasElement.querySelectorAll<HTMLElement>(".rail .navitem"),
+      ];
+      const long = rows.find((row) =>
+        row.textContent?.includes("Datenschutz und Aufbewahrung"),
+      );
+      const short = rows.find((row) =>
+        row.textContent?.includes("Nutzerkonto"),
+      );
+      const label = long?.querySelector(".navlabel");
+      if (!long || !short || !(label instanceof HTMLElement)) {
+        throw new Error("the settings level has no privacy or account row");
+      }
+      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+      expect(long.offsetHeight).toBeGreaterThan(short.offsetHeight);
+    });
+  },
 };
 
 // The same level at 56px: icons, the collapsed rail's tooltip on hover or
@@ -714,6 +733,27 @@ export const SectionPhoneGerman: Story = {
       <PhoneSectionExample />
     </LevelStory>
   ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const name = canvasElement.querySelector(".pageswitch > span");
+      const chevron = canvasElement.querySelector(".pageswitch svg");
+      if (!(name instanceof HTMLElement) || !(chevron instanceof SVGElement)) {
+        throw new Error("the head has no page switch");
+      }
+      expect(name.textContent).toBe("Datenschutz und Aufbewahrung");
+      expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+      const firstLine = parseFloat(getComputedStyle(name).lineHeight);
+      const glyph = chevron.getBoundingClientRect();
+      expect(glyph.top + glyph.height / 2).toBeCloseTo(
+        name.getBoundingClientRect().top + firstLine / 2,
+        0,
+      );
+      const stops = [...canvasElement.querySelectorAll(".topbar .crumbs li")];
+      expect(
+        stops.filter((stop) => getComputedStyle(stop).display !== "none"),
+      ).toHaveLength(1);
+    });
+  },
 };
 
 export const SectionSwitcherOpen: Story = {

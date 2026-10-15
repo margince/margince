@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { expect, waitFor } from "storybook/test";
 import { Card } from "../design-system/atoms";
 import type { Locale } from "../i18n";
 import { LISTS_KEY, type List } from "../lib/lists.queries";
@@ -30,10 +31,9 @@ import { TopBar } from "./topbar";
  * the bar as the first row of `<main>`. Nothing here is decoration. The bar is
  * three tracks, the outer two equal while the trail fits its half. The search
  * stands IN that row, so it lands on the centre of the CONTENT column, not of
- * the window. The trail beside it has
- * an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
- * picture of geometry the product does not use, and the one thing it would get
- * wrong is the thing worth looking at.
+ * the window. The trail beside it has an edge to shrink and ellipsis against.
+ * A bar rendered at a hand-set width pictures geometry the product does not
+ * use. What it would get wrong is the thing worth looking at.
  *
  * The strip's height is one token, `--topbarH`, and the sidebar's head is
  * measured against it so the first destination's row begins on the line this
@@ -94,6 +94,14 @@ const NOTHING_WAITING = { inbox: 0, tasks: 0 };
  * too, for an unrelated reason: `fe-uat` drives every non-phone story at 1024px,
  * which is already inside this same rule.
  */
+const WIDE_VIEWPORT = {
+  viewport: {
+    options: {
+      wide: { name: "Wide", styles: { width: "1440px", height: "900px" } },
+    },
+  },
+};
+
 const NARROW_VIEWPORT = {
   viewport: {
     options: {
@@ -367,8 +375,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * rest of the name is on the tooltip the clipped label carries, on hover and on
  * keyboard focus alike.
  *
- * True at every width: `.topbar-lead` carries a cap, the bound the trail shrinks
- * against.
+ * Above 1100px `.topbar-lead` carries a cap, the bound the trail shrinks
+ * against; below it the lead takes what the end controls leave.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
@@ -432,10 +440,12 @@ export const SettingsEntry: Story = {
   ),
 };
 
-/** German: "Einstellungen / Datenschutz und Aufbewahrung" is longer than half
- *  the bar above 1100px, so the trail takes the room the end controls leave. */
+/** German: a trail longer than half the bar grows into the room the end
+ *  controls leave. With the sidebar open it is whole from 1131px. */
 export const SettingsEntryGerman: Story = {
   name: "a settings entry — a German trail longer than its half",
+  parameters: WIDE_VIEWPORT,
+  globals: { viewport: { value: "wide" } },
   render: () => (
     <BarStory
       route={{ screen: "settings", id: "privacy" }}
@@ -443,6 +453,22 @@ export const SettingsEntryGerman: Story = {
       locale="de"
     />
   ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const label = canvasElement.querySelector(
+        ".crumbs-current .crumbs-label",
+      );
+      const search = canvasElement.querySelector(".topbar-searchslot");
+      if (!(label instanceof HTMLElement) || !(search instanceof HTMLElement)) {
+        throw new Error("the bar has no current crumb or no search slot");
+      }
+      expect(label.textContent).toContain("Datenschutz und Aufbewahrung");
+      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+      expect(label.getBoundingClientRect().right).toBeLessThan(
+        search.getBoundingClientRect().left,
+      );
+    });
+  },
 };
 
 /**

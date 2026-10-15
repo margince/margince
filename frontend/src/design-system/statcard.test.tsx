@@ -242,23 +242,33 @@ describe("a toned figure is read, so it takes the ink that clears contrast", () 
 
 // A long correct reading is fixed in the layout, never shortened. The name and
 // the figure wrap inside the tile in every sheet the app ships.
-const CUT =
-  /(?:-webkit-)?line-clamp\s*:|text-overflow\s*:\s*ellipsis|white-space\s*:\s*nowrap|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
+const WRAP_CUT = /(?:-webkit-)?line-clamp\s*:|white-space\s*:\s*nowrap/;
+const END_CUT =
+  /text-overflow\s*:\s*ellipsis|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
 const WHOLE = [
   "stat-card",
   "stat-card-label",
   "stat-card-label-text",
   "stat-card-value",
 ];
+// A figure breaks only at its spaces: a split number reads as two figures.
+const NUMBER_SPLIT =
+  /overflow-wrap\s*:\s*(?:anywhere|break-word)|word-break\s*:\s*break-all/;
+// A number cannot break, so this one rule may end an over-wide one in "…".
+const FIGURE_LAST_RESORT = "atoms.css .stat-card-value";
 
 function cutsOfWholeText(all: readonly Rule[]) {
   return all.flatMap((rule) =>
-    alternativesOf(rule.selector)
-      .filter((selector) => {
-        const classes = classesOf(subjectOf(selector));
-        return WHOLE.some((one) => classes.has(one)) && CUT.test(rule.body);
-      })
-      .map((selector) => `${basename(rule.file)} ${selector}`),
+    alternativesOf(rule.selector).flatMap((selector) => {
+      const where = `${basename(rule.file)} ${selector}`;
+      const subject = classesOf(subjectOf(selector));
+      if (!WHOLE.some((one) => subject.has(one))) return [];
+      const cut =
+        WRAP_CUT.test(rule.body) ||
+        (subject.has("stat-card-value") && NUMBER_SPLIT.test(rule.body)) ||
+        (END_CUT.test(rule.body) && where !== FIGURE_LAST_RESORT);
+      return cut ? [where] : [];
+    }),
   );
 }
 
@@ -268,7 +278,7 @@ describe("a reading's name and figure are never cut", () => {
     { file: join(here, file), selector, body },
   ];
 
-  it("finds no clamp, ellipsis, nowrap or hidden overflow on them anywhere", () => {
+  it("finds no clamp, nowrap, ellipsis or hidden overflow on them anywhere", () => {
     expect(all.length).toBeGreaterThan(0);
     expect(cutsOfWholeText(all)).toEqual([]);
   });
@@ -276,10 +286,28 @@ describe("a reading's name and figure are never cut", () => {
   it.each([
     ["atoms.css", ".stat-card-value", "white-space: nowrap;"],
     ["atoms.css", ".stat-card-label-text", "-webkit-line-clamp: 1;"],
+    ["atoms.css", ".stat-card-label-text", "text-overflow: ellipsis;"],
+    ["atoms.css", ".stat-card-value", "overflow-wrap: anywhere;"],
+    [
+      "atoms.css",
+      '[data-density="compact"] .stat-card-value',
+      "overflow: hidden;",
+    ],
     ["brief.css", ".brief .stat-card-value", "text-overflow: ellipsis;"],
     ["statstrip.css", ".stat-strip > * > .stat-card", "overflow: clip;"],
   ])("refuses %s %s { %s }", (file, selector, body) => {
     expect(cutsOfWholeText(at(file, selector, body))).toHaveLength(1);
+  });
+
+  it("keeps the whole figure on the card's tooltip", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Reading" value={"1.234.567,89\u00a0€"} />
+      </LocaleProvider>,
+    );
+    expect(document.querySelector(".stat-card")?.getAttribute("title")).toBe(
+      "1.234.567,89\u00a0€",
+    );
   });
 
   it("breaks a long compound at a syllable before anywhere", () => {
@@ -290,7 +318,6 @@ describe("a reading's name and figure are never cut", () => {
         /hyphens/.test(one.body),
     );
     expect(rule?.body).toMatch(/hyphens:\s*auto;/);
-    expect(rule?.body).toMatch(/hyphenate-limit-chars:\s*7 3 3;/);
   });
 });
 

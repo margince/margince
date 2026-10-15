@@ -12,8 +12,8 @@
  * page passes UNDER it all the same — the scroller reaches up behind the strip
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
-/* Equal outer tracks centre the search on the content column; a trail longer
-   than its half grows into the room the end controls leave, up to its cap. */
+/* The search is centred on the content column while the trail fits its half;
+   a longer trail grows into the room the end controls leave, up to its cap. */
 .topbar {
   --topbarSearchW: min(420px, 34vw);
   display: grid;
@@ -236,6 +236,15 @@
   }
   .topbar-trail {
     order: 2;
+  }
+}
+
+/* Below 1024px a long trail has no room beside the end controls, so the bar
+   draws the current page alone. */
+@media (width < 1024px) {
+  .topbar .crumbs > ol > li:not(:last-child),
+  .topbar .crumbs > ol > li:last-child > .crumbs-sep {
+    display: none;
   }
 }
 

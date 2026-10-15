@@ -15,8 +15,8 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * A floor, not a height, so a one-line head stands at exactly 56px; the padding
- * is the room that floor leaves around a --controlHeight control.
+ * A floor, not a height. Above 720px the padding leaves room for a control or a
+ * 44px touch target, so a one-line head holding either stands at 56px.
  *
  * Its rule divides the CARD from its content, so it runs edge to edge; where a
  * rule between two pieces of content stops is the seam rule's call, below. */
@@ -35,7 +35,8 @@
     padding-block: var(--space-1);
   }
 }
-/* A phone wraps most heads, and a wrapped band reads cramped on less air. */
+/* A phone wraps most heads, and a wrapped band reads cramped on less air. A
+ * one-line head with a control stands at 57px here. */
 @media (max-width: 720px) {
   .panel-head {
     padding-block: var(--space-3);
@@ -59,11 +60,11 @@
   margin-right: auto;
   overflow-wrap: break-word;
   hyphens: auto;
-  hyphenate-limit-chars: 7 3 3;
 }
 
 /* Only the title shrinks: a squeezed badge or button reads as another control.
- * Capped at the band, so a wrapping control wraps inside it, not off the pane. */
+ * Capped at the band, so a wrapping control wraps inside it, not off the pane.
+ * `:where()` adds no specificity: a caller's class wins without sheet order. */
 .panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
   max-width: 100%;

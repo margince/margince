@@ -37,7 +37,7 @@ export type Crumb = {
  * and it is the item that gives way under pressure, because it is user data of
  * unbounded length while the first stop is a nav label of the product's own
  * choosing. A stop between them may be user data too, so it is capped, and it
- * folds away below 1024px, like all but the last (breadcrumb.css).
+ * folds away at phone width (breadcrumb.css).
  *
  * Separators are `<span aria-hidden>` INSIDE the list item they lead — never
  * list items of their own, which would make a three-stop trail announce as five

@@ -224,6 +224,19 @@ export const GermanTitleBesideAction: Story = {
       </PanelBody>
     ),
   },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const verb = await canvas.findByRole("button", {
+      name: "Datensätze anzeigen",
+    });
+    const title = canvas.getByRole("heading", {
+      name: "Zeit in der aktuellen Phase",
+    });
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+    await expect(verb.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      title.getBoundingClientRect().bottom,
+    );
+  },
 };
 
 // At 390px the verb drops under a title it would cut. A title wider than the

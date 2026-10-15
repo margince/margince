@@ -21,7 +21,7 @@ import { Sparkles } from "lucide-react";
 import { useT } from "../../i18n";
 import "../company360.css";
 
-/** BriefTitle is the head's one line, over whichever record it reads. */
+/** BriefTitle is the head's title, over whichever record it reads. */
 export function BriefTitle({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (

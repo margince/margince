@@ -583,9 +583,9 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(tokenValue("--panel-head-h")).toBe("56px");
   });
 
-  // A one-line head holds 56px only if the padding leaves room for its tallest
-  // content: a control on a mouse, a 44px target on touch. The 1px rule counts.
-  it("pads the band so a one-line head stays exactly at the floor", () => {
+  // Wider than a phone, the padding must leave room for a control on a mouse
+  // and a 44px target on touch. The 1px rule is inside the floor.
+  it("pads the band so a one-line head with a control is at most the floor, wider than a phone", () => {
     const floor = tokenPx("--panel-head-h");
     const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
     expect(padding).toMatch(/^var\(--space-\d+\) var\(--padPanel\)$/);
@@ -604,8 +604,44 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(declarations).toHaveLength(1);
   });
 
-  it("keeps a phone's wider air around a head", () => {
-    expect(armPadding("max-width: 720px")).toBe("var(--space-3)");
+  // The phone arm comes after the touch arm, so a phone keeps its wider air.
+  // That air stands a one-line head with a control above the floor.
+  it("gives a phone wider air than the band's own, whatever the pointer", () => {
+    const css = stripComments(panelCss());
+    expect(css.indexOf("@media (pointer: coarse)")).toBeGreaterThan(-1);
+    expect(css.indexOf("@media (max-width: 720px)")).toBeGreaterThan(
+      css.indexOf("@media (pointer: coarse)"),
+    );
+    const phone = tokenPx(spaceToken(armPadding("max-width: 720px")));
+    const fine = tokenPx(
+      spaceToken(declaredValue(head()?.block ?? "", "padding")),
+    );
+    expect(phone).toBeGreaterThan(fine);
+  });
+
+  // `hyphens` and `hyphenate-limit-chars` inherit, so the limit is the
+  // document's, declared once, and every sheet that hyphenates inherits it.
+  it("sets the hyphenation limit once, on the document root", () => {
+    const root = cssRules(readFileSync(join(here, "base.css"), "utf8")).find(
+      (rule) =>
+        rule.selector === ":root" &&
+        rule.properties.includes("hyphenate-limit-chars"),
+    );
+    expect(declaredValue(root?.block ?? "", "hyphenate-limit-chars")).toBe(
+      "7 3 3",
+    );
+    const elsewhere = [
+      ...stylesheetsUnder(src),
+      ...stylesheetsUnder(extensions),
+    ]
+      .filter((path) => !path.endsWith(join("design-system", "base.css")))
+      .filter((path) =>
+        /hyphenate-limit-chars\s*:/.test(
+          stripComments(readFileSync(path, "utf8")),
+        ),
+      )
+      .map((path) => relative(src, path));
+    expect(elsewhere).toEqual([]);
   });
 
   // The band grows only by wrapping. A `:has()` rule would grow it for one kind

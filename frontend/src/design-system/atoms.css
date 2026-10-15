@@ -1966,15 +1966,12 @@ span.error-line {
   min-block-size: 138px;
 }
 
-/* A long name or figure wraps inside the tile, never cut: a compound breaks at
-   a syllable first, and `anywhere` only where a syllable still does not fit. */
+/* A compound breaks at a syllable first, and `anywhere` only where a syllable
+   still does not fit. Not on the figure: `anywhere` splits a number. */
 .stat-card-label-text,
-.stat-card-value,
 .stat-card-detail {
   overflow-wrap: anywhere;
   hyphens: auto;
-  /* Not the default limit: it leaves a one-letter tail. */
-  hyphenate-limit-chars: 7 3 3;
 }
 
 /* The compact card, inside a strip that asked for it (`StatStrip density`).
@@ -2019,9 +2016,7 @@ span.error-line {
    a copy of it here is one that stops moving when the utility does.
    What the rule owns is the SHAPE: two lines at most, because a basis may carry
    user text of any length (a meeting's subject) and must not set the row's
-   height. Two lines hold a basis the product writes whole. A clamp
-   rather than a scrollbar or an ellipsis on one line: two lines hold the basis
-   a reader needs, and the receipt chip is where the rest of it lives. */
+   height. The receipt chip is where the rest of it lives. */
 .stat-card-detail {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -2076,13 +2071,17 @@ span.error-line {
    this tier owns.
    `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
    so tabular figures declared above it would be thrown away and a column of
-   readings would stop lining up. A figure in words ("No meeting planned")
-   wraps balanced, so its last line is not one stray word at this size. */
+   readings would stop lining up. A figure in words wraps balanced at its
+   spaces. A number cannot break, so only a number wider than the tile ends in
+   an ellipsis, with the whole figure on the card's tooltip. */
 .stat-card-value {
   font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
   text-wrap: balance;
+  hyphens: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-block-end: var(--space-2);
 }
 

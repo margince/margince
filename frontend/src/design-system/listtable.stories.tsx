@@ -596,13 +596,18 @@ const longHeaderColumns: ListColumn<Company>[] = [
     sort: "amount_minor",
     cell: (row: Company) => formatNumber(row.valueMinor / 12_500, "en"),
   },
+  {
+    key: "renewal",
+    header: "Vertragsverlängerungskündigungsfrist",
+    cell: (row: Company) => row.size,
+  },
 ];
 
 // A header longer than its column wraps, and the column keeps its width.
-// Once the column is sorted, its arrow stays inside the cell.
+// Once the column is sorted, its arrow stays clear of the resize grip.
 export const LongHeadersWrap: Story = {
   render: () => (
-    <div style={{ maxWidth: "54rem" }}>
+    <div style={{ maxWidth: "62rem" }}>
       <Surface rows={companies(4)} columns={longHeaderColumns} />
     </div>
   ),
@@ -617,10 +622,11 @@ export const LongHeadersWrap: Story = {
       await expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
     }
     const arrow = canvasElement.querySelector(".lt-sort.on .lt-arrow");
-    const cell = arrow?.closest("th");
-    if (!arrow || !cell) throw new Error("the sorted header drew no arrow");
+    const grip = arrow?.closest("th")?.querySelector(".lt-grip");
+    if (!arrow || !grip)
+      throw new Error("the sorted header drew no arrow or grip");
     await expect(arrow.getBoundingClientRect().right).toBeLessThanOrEqual(
-      cell.getBoundingClientRect().right,
+      grip.getBoundingClientRect().left,
     );
   },
 };

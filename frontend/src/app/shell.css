@@ -737,6 +737,8 @@
   align-items: center;
   gap: var(--space-2);
   flex: 1;
+  /* A one-line label clips with an ellipsis instead of widening the row. */
+  min-width: 0;
   /* 32px rows: ten places read at a glance in a column a laptop still fits.
      Past the 24x24 floor of WCAG 2.2 2.5.8 (AA) at 34x32 expanded and 32x32
      collapsed; the 44px targets of 2.5.5 (AAA) are the phone bar's, where a
@@ -809,8 +811,6 @@
   opacity: 1;
   overflow-wrap: break-word;
   hyphens: auto;
-  /* Not the default limit: it leaves a one-letter tail. */
-  hyphenate-limit-chars: 7 3 3;
   pointer-events: none;
   transition: opacity var(--dur-state) var(--ease-in-out);
 }
@@ -827,8 +827,8 @@
   white-space: nowrap;
 }
 /* While the column widens the label keeps one line, so it never stacks a word
-   per line; 13.5rem is under the full width less a classic scrollbar. */
-@container rail (width < 13.5rem) {
+   per line; 216px is under the open rail's 239px less a classic scrollbar. */
+@container rail (width < 216px) {
   .rail .navlabel {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1102,8 +1102,6 @@
   min-width: 0;
   overflow-wrap: break-word;
   hyphens: auto;
-  /* Not the default limit: it leaves a one-letter tail. */
-  hyphenate-limit-chars: 7 3 3;
 }
 /* One line of the name tall, so the chevron centres on the first line. */
 .pageswitch svg {
@@ -1697,10 +1695,8 @@
   .rail.sheetopen .navlabel,
   .rail.sheetopen.collapsed .navlabel {
     display: block;
-    /* The collapse animation fades the label out (`.rail.collapsed .navlabel`)
-       as well as taking its width, and `display: block` alone does not put the
-       ink back: a reader whose desktop rail was left collapsed opened the sheet
-       to ten unlabelled glyphs. */
+    /* `.rail.collapsed .navlabel` hides the label out of flow, and a desktop
+       rail left collapsed must not open the sheet to unlabelled glyphs. */
     opacity: 1;
     position: static;
     left: auto;

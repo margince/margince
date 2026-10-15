@@ -4,9 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Info } from "lucide-react";
 import type { CSSProperties } from "react";
+import { expect, within } from "storybook/test";
+import { formatMoney } from "../format/format";
 import { Badge, StatCard } from "./atoms";
 import { FactList } from "./factlist";
 import { IconAction } from "./iconaction";
+import { StatStrip } from "./statstrip";
 
 // StatCard — one reading with the basis it was drawn from.
 //
@@ -147,24 +150,49 @@ export const ReadingsAtOneSize: Story = {
   ),
 };
 
-// German at a compact record strip's width: compounds break at a syllable with
-// a hyphen, and a figure in words wraps balanced. Nothing is cut.
+// German in a compact record strip. Compounds break at a syllable, a figure in
+// words wraps at its spaces, and an amount keeps to one line.
 export const LongGermanReadings: Story = {
   render: () => (
-    <div lang="de" style={{ ...row, gridTemplateColumns: "repeat(3, 8rem)" }}>
-      <StatCard
-        label="Wahrscheinlichkeitsbereinigter Wert"
-        value="8.500 €"
-        detail="E-Mail · 13. Okt. 2026"
-      />
-      <StatCard
-        label="Umsatz · 12 Monate"
-        value="Kein Wert"
-        detail="Wird synchronisiert"
-      />
-      <StatCard label="Nächster Termin" value="Kein Termin geplant" />
+    <div lang="de" style={{ maxWidth: "44rem" }}>
+      <StatStrip density="compact">
+        <StatCard
+          label="Wahrscheinlichkeitsbereinigter Wert"
+          value={formatMoney(850000, "EUR", "de")}
+          detail="E-Mail · 13. Okt. 2026"
+        />
+        <StatCard
+          label="Umsatz · 12 Monate"
+          value="Kein Wert"
+          detail="Wird synchronisiert"
+        />
+        <StatCard label="Nächster Termin" value="Kein Termin geplant" />
+        <StatCard label="Anstehende Termine" value="Nicht verbunden" />
+        <StatCard
+          label="Ohne Kategorie"
+          value={formatMoney(3700000, "EUR", "de")}
+        />
+      </StatStrip>
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("Kein Termin geplant");
+    const whole = canvasElement.querySelectorAll<HTMLElement>(
+      ".stat-card-label-text, .stat-card-value",
+    );
+    expect(whole).toHaveLength(10);
+    for (const text of whole) {
+      expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
+      expect(text.scrollHeight).toBeLessThanOrEqual(text.clientHeight);
+    }
+    for (const figure of canvasElement.querySelectorAll(".stat-card-value")) {
+      if (/\d/.test(figure.textContent ?? "")) {
+        const lines = document.createRange();
+        lines.selectNodeContents(figure);
+        expect(lines.getClientRects()).toHaveLength(1);
+      }
+    }
+  },
 };
 
 // A glyph verb in the source slot beside a tile without one: the square takes

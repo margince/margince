@@ -8,13 +8,11 @@ import { Breadcrumb } from "./breadcrumb";
 /**
  * The trail that says where the reader is and how they got here.
  *
- * Its main caller is the TOP BAR (app/topbar.tsx); the booking page's head
- * (screens/booking-invite.tsx) draws one too. It is chrome that says where the
- * session is, and the page's own
- * name is a heading in the content column below it. The frames here render the
- * primitive on its own ground at `layout: "padded"`, because what they are about
- * is the rules rather than the strip — the strip itself is framed under
- * Shell/Top bar, where the trail can be seen shrinking against a real track edge.
+ * Its main caller is the TOP BAR (app/topbar.tsx), where it says where the
+ * session is; the booking page's head (screens/booking-invite.tsx) draws one
+ * too. The frames here render the primitive on its own ground, because they are
+ * about the rules rather than the strip. Shell/Top bar frames the strip, where
+ * the trail shrinks against a real track edge.
  *
  * What they catch, in order: a single-stop trail is a real state and not a
  * degenerate one (TopLevelPage), the two-stop list→record shape is the one the
@@ -24,7 +22,6 @@ import { Breadcrumb } from "./breadcrumb";
  * name), a middle stop that is user data is capped so the page keeps the row
  * (LongMiddleStop), and a glyph rides with the label rather than replacing it
  * (WithIcon).
- * Below 1024px only the current page shows (OnAPhone).
  *
  * Flip the Theme toolbar to check both renderings; every colour is a token.
  */
@@ -94,7 +91,8 @@ export const LongRecordName: Story = {
 /**
  * A middle stop that is user data: the list whose filter the page edits. Its
  * label stops at a cap and clips under the same tip, so the page it leads to
- * keeps its place on the row. Below 1024px only the page shows (OnAPhone).
+ * keeps its place on the row. On a phone it folds away, which Shell/Top bar
+ * frames at 390px.
  */
 export const LongMiddleStop: Story = {
   args: {
@@ -118,20 +116,6 @@ export const WithIcon: Story = {
     items: [
       { label: "Companies", href: "#/companies", icon: Building2 },
       { label: "Sontana Werke AG" },
-    ],
-  },
-};
-
-/** Below 1024px the row holds the current page alone, so a long German name
- *  is whole; the ancestor and its separator are not drawn. */
-export const OnAPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  args: {
-    label: LANDMARK,
-    items: [
-      { label: "Einstellungen", href: "#/settings", lang: "de" },
-      { label: "Datenschutz und Aufbewahrung", lang: "de" },
     ],
   },
 };
