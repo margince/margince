@@ -42,15 +42,13 @@ export function provenanceOf(
   // namespace, and captured_by there names only the administrator who ran it.
   stamp?: string | null,
   // The record's `imported_from`: the server's own answer to "did an import
-  // write this", which holds for rows whose `source` carries no stamp (written
-  // through the import API) and for kinds that expose no stamp at all.
+  // write this". It holds for rows whose `source` carries no stamp, such as
+  // those written through the import API.
   importedFrom?: string | null,
 ): Provenance {
   // An author already says where the row came from, and better. Without one,
   // the administrator's seat would read "typed by you" over a migrated row.
-  const imported = author
-    ? undefined
-    : (importProvenance(stamp) ?? importedFromProvenance(importedFrom));
+  const imported = author ? undefined : importArm(stamp, importedFrom);
   if (imported) {
     return imported;
   }
@@ -178,6 +176,14 @@ export function importProvenance(
   }
   const [connector, ...tail] = stamp.slice(IMPORT_NAMESPACE.length).split(":");
   return { kind: "import", uploadName: uploadNameOf(connector, tail) };
+}
+
+// The stamp is read first, and the wire's answer fills in where it has none.
+function importArm(
+  stamp: string | null | undefined,
+  importedFrom: string | null | undefined,
+): Extract<Provenance, { kind: "import" }> | undefined {
+  return importProvenance(stamp) ?? importedFromProvenance(importedFrom);
 }
 
 /**

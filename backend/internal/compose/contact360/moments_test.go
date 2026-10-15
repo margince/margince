@@ -969,8 +969,8 @@ func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 // next step is worth saying whoever the seat belongs to. What was wrong was the
 // sentence.
 
-// Email an import brought in as history is not a reply: only mail written live
-// raises the re-engaged suggestion, while the engagement date still shows it.
+// Email an import brought in as history is not a reply. Only mail written live
+// raises the re-engaged suggestion; the engagement date still shows it.
 func TestImportedInboundDoesNotRaiseTheReEngagedSuggestion(t *testing.T) {
 	imported := &crmcontracts.Contact360{
 		LastOutboundAt: new(at(60)),

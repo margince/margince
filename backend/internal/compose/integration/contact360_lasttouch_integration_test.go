@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,7 +64,7 @@ func TestImportedInboundCountsAsEngagementButNotAsAReply(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 
 	seed := func(subject, direction, sourceSystem string, ago time.Duration) {
 		id := SeedIDRow(t, owner, `INSERT INTO activity

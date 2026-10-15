@@ -35,8 +35,8 @@ func TestTwoSourceNamesAreTwoNamespaces(t *testing.T) {
 	}
 }
 
-// The read wire names a CSV run by its source name; that holds only while the
-// provenance package and the importer spell the connector segment the same way.
+// The read wire names a CSV run by its source name. That holds only while the
+// provenance package and the importer spell the connector segment alike.
 func TestAnImportedRowReadsAsItsSourceName(t *testing.T) {
 	stored := importSourceSystem("bundle")
 	if got := provenance.ImportedFrom(&stored); got == nil || *got != "bundle" {

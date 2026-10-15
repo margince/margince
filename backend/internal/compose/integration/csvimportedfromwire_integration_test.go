@@ -27,10 +27,10 @@ func importedFromOf(t *testing.T, e *apptest.AppEnv, path string) *string {
 	return record.ImportedFrom
 }
 
-func idByQuery(t *testing.T, e *apptest.AppEnv, query string, args ...any) string {
+func idByQuery(t *testing.T, e *apptest.AppEnv, query string) string {
 	t.Helper()
 	var id string
-	if err := e.Owner.QueryRow(context.Background(), query, args...).Scan(&id); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), query).Scan(&id); err != nil {
 		t.Fatalf("%s: %v", query, err)
 	}
 	return id

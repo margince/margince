@@ -535,7 +535,7 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 	}
 }
 
-// Twenty contacts, ten given names each shared by two people at one employer's
+// Twenty contacts, ten given names each shared by two contacts at one employer's
 // domain with different surnames and addresses: none is a possible duplicate.
 func TestCreatingContactsThatOnlyShareAGivenNameFilesNoCandidate(t *testing.T) {
 	e := setupDedupe(t)
