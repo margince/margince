@@ -8,7 +8,7 @@ import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { CountLine } from "../design-system/listsurface";
-import { Pager } from "../design-system/listtable";
+import { Pager } from "../design-system/pager";
 import { fitsOnePage, PAGE_SIZES } from "../design-system/listtable.paging";
 import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
