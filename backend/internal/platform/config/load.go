@@ -113,3 +113,6 @@ func (c *Config) Warnings() []string { return c.warnings }
 func (c *Config) Files() Files { return c.files }
 
 func (c *Config) Registry() *Registry { return c.reg }
+
+// Trace is whether --config-trace or MARGINCE_CONFIG_TRACE asked for a trace.
+func (c *Config) Trace() bool { return c.tracing }

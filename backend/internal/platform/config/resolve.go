@@ -8,11 +8,15 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-var errLiteralSecret = errors.New("a secret in YAML must be a ${file:...} or ${env:...} reference")
+var (
+	errLiteralSecret = errors.New("a secret in YAML must be a ${file:...} or ${env:...} reference")
+	errInvalidSecret = errors.New("is not a valid value")
+)
 
 type refReaders struct {
 	readFile func(string) ([]byte, error)
@@ -57,7 +61,7 @@ func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error)
 	if err == nil {
 		err = s.check(v)
 	}
-	if err != nil {
+	if err = withoutSecret(s, text, err); err != nil {
 		return resolved{}, fault(err)
 	}
 	return resolved{value: v, origin: origin, set: true}, nil
@@ -94,10 +98,19 @@ func resolveNode(s Any, l layer, node *yaml.Node, refs refReaders) (resolved, er
 	if err == nil {
 		err = s.check(v)
 	}
-	if err != nil {
+	if err = withoutSecret(s, value, err); err != nil {
 		return resolved{}, fault(err)
 	}
 	return resolved{value: v, origin: origin, set: true}, nil
+}
+
+// withoutSecret keeps a refusal's reason unless it quotes the secret: a
+// Validate written by hand may format its input.
+func withoutSecret(s Any, text string, err error) error {
+	if err == nil || !s.Secret() || text == "" || !strings.Contains(err.Error(), text) {
+		return err
+	}
+	return errInvalidSecret
 }
 
 // undeclared names the variables no program reads, from the environment and

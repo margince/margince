@@ -4,7 +4,6 @@
 package config
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -30,12 +29,21 @@ type layer struct {
 }
 
 func locate(flags flagValues, env map[string]string) (Files, bool, error) {
-	files := Files{
-		Base:       cmp.Or(flags.config, env[envConfig], "margince.yaml"),
-		ConfigFile: cmp.Or(flags.configFile, env[envConfigFile]),
-		EnvFile:    cmp.Or(flags.envFile, env[envEnvFile]),
+	pick := func(flag, flagValue, envName string) string {
+		if flags.given[flag] {
+			return flagValue
+		}
+		return env[envName]
 	}
-	if flags.trace || env[envTrace] == "" {
+	files := Files{
+		Base:       pick("config", flags.config, envConfig),
+		ConfigFile: pick("config-file", flags.configFile, envConfigFile),
+		EnvFile:    pick("env-file", flags.envFile, envEnvFile),
+	}
+	if !flags.given["config"] && files.Base == "" {
+		files.Base = "margince.yaml"
+	}
+	if flags.given["config-trace"] || env[envTrace] == "" {
 		return files, flags.trace, nil
 	}
 	on, err := strconv.ParseBool(env[envTrace])
@@ -67,11 +75,27 @@ func readLayers(reg *Registry, src Sources, flags flagValues, env map[string]str
 	if files.ConfigFile != "" {
 		add(yamlFileLayer(SourceConfigFile, files.ConfigFile, src))
 	}
+	if files.Base == "" {
+		return layers, faults, trace
+	}
 	add(yamlFileLayer(SourceBaseFile, files.Base, src))
 	for _, path := range overlayBeside(files.Base) {
-		faults = append(faults, fmt.Errorf("%s: overlay files are no longer read; pass it with --config-file", path))
+		if !sameFile(path, files.ConfigFile) {
+			faults = append(faults, fmt.Errorf("%s: overlay files are no longer read; pass it with --config-file", path))
+		}
 	}
 	return layers, faults, trace
+}
+
+// sameFile lets an old overlay through once --config-file names it, the way
+// the overlay fault tells the operator to.
+func sameFile(a, b string) bool {
+	if b == "" {
+		return false
+	}
+	ai, errA := os.Stat(a)
+	bi, errB := os.Stat(b)
+	return errA == nil && errB == nil && os.SameFile(ai, bi)
 }
 
 // textLayer drops an empty variable: .env.example ships optional lines as bare

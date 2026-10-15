@@ -5,6 +5,7 @@ package config_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,5 +159,47 @@ func TestAVariableAnotherProgramReadsDoesNotWarn(t *testing.T) {
 	}
 	if w := cfg.Warnings(); len(w) != 0 {
 		t.Fatalf("warnings %v", w)
+	}
+}
+
+func TestTheOldOverlayLoadsWhenPassedWithConfigFile(t *testing.T) {
+	cfg, err := load(t, fixture{
+		args: []string{"--config-file", "{dir}/margince.dev.yaml"},
+		files: map[string]string{
+			"margince.yaml":     "log: {level: warn}\n",
+			"margince.dev.yaml": "log: {level: debug}\n",
+		},
+	}, level)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, origin := config.ValWithSource(cfg, level); v != "debug" || origin.Source != config.SourceConfigFile {
+		t.Fatalf("got %q from %s", v, origin.Source)
+	}
+}
+
+func TestAnExplicitLoaderFlagBeatsTheEnvironment(t *testing.T) {
+	cfg, err := load(t, fixture{
+		args:  []string{"--config-trace=false", "--config-file="},
+		env:   []string{"MARGINCE_CONFIG_TRACE=true", "MARGINCE_CONFIG_FILE={dir}/over.yaml"},
+		files: map[string]string{"over.yaml": "log: {level: debug}\n"},
+	}, level)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Files().ConfigFile != "" || config.Val(cfg, level) != "info" {
+		t.Fatalf("config file %q, level %q", cfg.Files().ConfigFile, config.Val(cfg, level))
+	}
+	if cfg.Trace() {
+		t.Fatal("--config-trace=false lost to the environment")
+	}
+}
+
+func TestASecretValidatorThatEchoesItsInputIsRedacted(t *testing.T) {
+	echo := config.Define(config.Spec[string]{Key: "key", Env: "X_KEY", Type: config.NonEmpty, Secret: true,
+		Validate: func(s string) error { return fmt.Errorf("bad %q", s) }, Doc: "d"})
+	_, err := load(t, fixture{env: []string{"X_KEY=hunter2-secret"}}, echo)
+	if err == nil || strings.Contains(err.Error(), "hunter2") || !strings.Contains(err.Error(), "X_KEY (env)") {
+		t.Fatalf("got %v", err)
 	}
 }
