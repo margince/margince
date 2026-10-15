@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -351,4 +352,10 @@ func (w writeShapes) acceptedBy(recordType string, shape reflect.Type) string {
 		return rendered
 	}
 	return strings.Join(contractFieldNames(shape), ", ")
+}
+
+// CreateParents names the parent ids create_record takes among a record
+// type's fields, which its REST route carries in its path.
+func CreateParents(recordType string) []string {
+	return slices.Clone(createParentFields[recordType])
 }

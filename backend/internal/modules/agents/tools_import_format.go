@@ -20,18 +20,22 @@ func (t describeImportFormat) Spec() mcp.ToolSpec {
 		Name: "describe_import_format", Title: "Describe the import format", Version: toolVersionV1,
 		Description:   describeImportFormatCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp:    "getImportFormat",
-		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		OpenAPIOp: "getImportFormat",
+		InputSchema: schema(`{"type":"object","properties":{
+			"lang":{"type":"string","enum":["en","de","vi"],"description":"The language of the guide text; the installation's when absent"}},
+			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ImportFormatResult](),
 	}
 }
 
 func (t describeImportFormat) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct{}
+	var args struct {
+		Lang string `json:"lang"`
+	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	format, err := t.imports.DescribeFormat(ctx)
+	format, err := t.imports.DescribeFormat(ctx, args.Lang)
 	if err != nil {
 		return nil, err
 	}

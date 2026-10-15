@@ -57,6 +57,9 @@ func readReportingResult(ctx context.Context, s *reporting.Service, in agents.Re
 	case "report":
 		out, err := s.GetReport(ctx, in.ID)
 		return agents.ReportingAnswer{Report: &out}, err
+	case "report_evaluation":
+		out, err := s.EvaluateReport(ctx, in.ID, in.Revision)
+		return agents.ReportingAnswer{Evaluation: &out}, err
 	case reportingEditions:
 		out, err := s.ListEditions(ctx, in.ID, cursor, limit)
 		return agents.ReportingAnswer{Editions: &out}, err

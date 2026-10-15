@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 184.3 KB |
+| Tool catalog | 184.9 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 48080 |
+| Approx. wire tokens | 48219 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 62.6 KB | 33% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.2 KB | 26% | Yes, every step |
-| Input schemas | 58.7 KB | 31% | Yes, every step |
+| Input schemas | 59.1 KB | 31% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
-| **Description + input schema** | **107.8 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **108.4 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -83,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 338 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 827 |
+| [`list_records`](#list_records) | List records | yes |  | 846 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
@@ -94,15 +94,15 @@ descriptions and input schemas are what each step pays for.
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 205 |
 | [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 461 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 677 |
-| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 185 |
+| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 566 |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 603 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 878 |
+| [`read_view`](#read_view) | Read a view | yes |  | 927 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
@@ -4881,6 +4881,9 @@ advising an approach as though the record were unowned.
         "captured_by_kind": {
           "type": "string"
         },
+        "cert_status": {
+          "type": "string"
+        },
         "channel_provider": {
           "type": "string"
         },
@@ -4960,6 +4963,9 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "partner_company_id": {
+          "type": "string"
+        },
+        "partner_role": {
           "type": "string"
         },
         "partner_sourced": {
@@ -5046,7 +5052,8 @@ advising an approach as though the record were unowned.
         "deal_room",
         "deal_room_thread",
         "deal_room_document",
-        "deal_room_participant"
+        "deal_room_participant",
+        "partner"
       ],
       "type": "string"
     }
@@ -8132,6 +8139,15 @@ failed.
 ```json
 {
   "properties": {
+    "lang": {
+      "description": "format only: The language of the guide text; the installation's when absent",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
+      "type": "string"
+    },
     "run_id": {
       "description": "report only",
       "format": "uuid",
@@ -8745,11 +8761,12 @@ no name is one this caller may not read, so report the gap and do not guess.
 ```text
 Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report
 definitions and frozen editions. Read only. commission_summary answers the open partner commission
-liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report
-and editions require a report id; edition requires an edition id. Evidence requires the evaluation
-receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs.
-Always retain coverage and capture times when quoting numbers. Use read_directory (list: pipelines)
-to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and
+liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report,
+report_evaluation (a saved report evaluated now, at its latest or a given revision) and editions
+require a report id; edition requires an edition id. Evidence requires the evaluation receipt and
+selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always
+retain coverage and capture times when quoting numbers. Use read_directory (list: pipelines) to
+discover pipeline and stage IDs. Use run_analytics_query for custom groupings and
 compose_analytics_report for a document. Configure targets, report sharing and schedules in
 Analytics.
 ```
@@ -8787,6 +8804,7 @@ Analytics.
         "evaluate",
         "reports",
         "report",
+        "report_evaluation",
         "editions",
         "edition",
         "evidence",
@@ -8815,6 +8833,10 @@ Analytics.
         "metric"
       ],
       "type": "object"
+    },
+    "revision": {
+      "minimum": 1,
+      "type": "integer"
     },
     "right_id": {
       "format": "uuid",
@@ -9121,6 +9143,9 @@ view refuses an argument it does not take and names the ones it does.
     "by": {
       "type": "string"
     },
+    "category": {
+      "type": "string"
+    },
     "close_window": {
       "type": "string"
     },
@@ -9130,10 +9155,16 @@ view refuses an argument it does not take and names the ones it does.
     "contact_id": {
       "type": "string"
     },
+    "contract_id": {
+      "type": "string"
+    },
     "cursor": {
       "type": "string"
     },
     "deal_id": {
+      "type": "string"
+    },
+    "doc_state": {
       "type": "string"
     },
     "end_at": {
@@ -9166,6 +9197,9 @@ view refuses an argument it does not take and names the ones it does.
     "include_archived": {
       "type": "string"
     },
+    "include_hidden": {
+      "type": "string"
+    },
     "kind": {
       "type": "string"
     },
@@ -9185,6 +9219,9 @@ view refuses an argument it does not take and names the ones it does.
       "type": "string"
     },
     "period_start": {
+      "type": "string"
+    },
+    "pinned_only": {
       "type": "string"
     },
     "pipeline_id": {
@@ -9260,6 +9297,7 @@ view refuses an argument it does not take and names the ones it does.
         "company_360",
         "company_contacts",
         "company_coverage",
+        "company_documents",
         "company_facts",
         "company_finance_summary",
         "company_graph",
@@ -9274,6 +9312,7 @@ view refuses an argument it does not take and names the ones it does.
         "custom_field_live_lists",
         "custom_fields",
         "deal_commitments",
+        "deal_documents",
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 188761,
+    "tool_catalog_bytes": 189319,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 48080,
+    "approx_wire_tokens_total": 48219,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 50338,
-      "input_schema_bytes": 60079,
+      "description_bytes": 50423,
+      "input_schema_bytes": 60552,
       "output_schema_bytes": 64136,
-      "description_plus_input_schema_bytes": 110417
+      "description_plus_input_schema_bytes": 110975
     }
   },
   "tools": {
@@ -4327,6 +4327,9 @@
                 "captured_by_kind": {
                   "type": "string"
                 },
+                "cert_status": {
+                  "type": "string"
+                },
                 "channel_provider": {
                   "type": "string"
                 },
@@ -4406,6 +4409,9 @@
                   "type": "string"
                 },
                 "partner_company_id": {
+                  "type": "string"
+                },
+                "partner_role": {
                   "type": "string"
                 },
                 "partner_sourced": {
@@ -4492,7 +4498,8 @@
                 "deal_room",
                 "deal_room_thread",
                 "deal_room_document",
-                "deal_room_participant"
+                "deal_room_participant",
+                "partner"
               ],
               "type": "string"
             }
@@ -7434,6 +7441,15 @@
         "description": "Read one import run, or the format an import takes. report, by run_id: the run's state and files, and once validated what it will do or did, in rows created, updated, failed, unusable and duplicates. format: each file's columns, their order and the key rules. The report's counts are what the user weighs before committing. After a commit, read report again until the state is complete or failed.",
         "inputSchema": {
           "properties": {
+            "lang": {
+              "description": "format only: The language of the guide text; the installation's when absent",
+              "enum": [
+                "en",
+                "de",
+                "vi"
+              ],
+              "type": "string"
+            },
             "run_id": {
               "description": "report only",
               "format": "uuid",
@@ -7999,7 +8015,7 @@
           "readOnlyHint": true,
           "title": "Read sales reporting"
         },
-        "description": "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions. Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers. Use read_directory (list: pipelines) to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
+        "description": "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions. Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report, report_evaluation (a saved report evaluated now, at its latest or a given revision) and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers. Use read_directory (list: pipelines) to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
         "inputSchema": {
           "description": "A `pipeline_id` or `stage_id` used in a plan comes from read_directory (list: pipelines).",
           "properties": {
@@ -8030,6 +8046,7 @@
                 "evaluate",
                 "reports",
                 "report",
+                "report_evaluation",
                 "editions",
                 "edition",
                 "evidence",
@@ -8058,6 +8075,10 @@
                 "metric"
               ],
               "type": "object"
+            },
+            "revision": {
+              "minimum": 1,
+              "type": "integer"
             },
             "right_id": {
               "format": "uuid",
@@ -8350,6 +8371,9 @@
             "by": {
               "type": "string"
             },
+            "category": {
+              "type": "string"
+            },
             "close_window": {
               "type": "string"
             },
@@ -8359,10 +8383,16 @@
             "contact_id": {
               "type": "string"
             },
+            "contract_id": {
+              "type": "string"
+            },
             "cursor": {
               "type": "string"
             },
             "deal_id": {
+              "type": "string"
+            },
+            "doc_state": {
               "type": "string"
             },
             "end_at": {
@@ -8395,6 +8425,9 @@
             "include_archived": {
               "type": "string"
             },
+            "include_hidden": {
+              "type": "string"
+            },
             "kind": {
               "type": "string"
             },
@@ -8414,6 +8447,9 @@
               "type": "string"
             },
             "period_start": {
+              "type": "string"
+            },
+            "pinned_only": {
               "type": "string"
             },
             "pipeline_id": {
@@ -8489,6 +8525,7 @@
                 "company_360",
                 "company_contacts",
                 "company_coverage",
+                "company_documents",
                 "company_facts",
                 "company_finance_summary",
                 "company_graph",
@@ -8503,6 +8540,7 @@
                 "custom_field_live_lists",
                 "custom_fields",
                 "deal_commitments",
+                "deal_documents",
                 "deal_outcome_reviews",
                 "deal_stakeholders",
                 "deal_status",

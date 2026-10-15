@@ -547,7 +547,7 @@ func (bothDoorsImports) ReadReport(context.Context, ids.UUID) (crmcontracts.Impo
 	return crmcontracts.ImportRun{Status: "awaiting_approval"}, &crmcontracts.ImportRunReport{}, nil
 }
 
-func (bothDoorsImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+func (bothDoorsImports) DescribeFormat(context.Context, string) (crmcontracts.ImportFormat, error) {
 	return crmcontracts.ImportFormat{}, nil
 }
 

@@ -192,4 +192,9 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "active_only", Type: "boolean"},
 		{Name: "deal_room_id", Type: "string"},
 	},
+	"partner": {
+		{Name: "cert_status", Type: "string", Enum: []string{"applied", "certified", "suspended"}},
+		{Name: "partner_role", Type: "string", Enum: []string{"hosting", "consulting", "strategic"}},
+		{Name: "sort", Type: "string"},
+	},
 }

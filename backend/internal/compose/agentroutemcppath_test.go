@@ -5,6 +5,7 @@ package compose
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"slices"
 	"sort"
@@ -13,6 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -35,6 +37,7 @@ func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 	stores := NewProvider(nil)
 	var gaps []string
 	checked := 0
+	respelled := map[string]bool{}
 	for route, policy := range agentPolicies {
 		args, registered := arguments[policy.Tool]
 		if policy.Access != accessTool || !registered {
@@ -43,13 +46,24 @@ func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 		if policy.Tool == "list_records" && policy.RecordType != "" {
 			args = listArguments(t, listSchema, stores.ListFilters(datasource.EntityType(policy.RecordType)))
 		}
+		if policy.Tool == "create_record" && policy.RecordType != "" {
+			args = maps.Clone(args)
+			for _, parent := range agents.CreateParents(string(policy.RecordType)) {
+				args[parent] = true
+			}
+		}
 		names, known := params[route]
 		if !known {
 			t.Fatalf("the contract walk did not reach %s, which the policy table carries; the census is short", route)
 		}
 		for _, p := range names {
 			checked++
-			if !slices.ContainsFunc(argumentsFor(p, args), func(arg string) bool { return args[arg] }) {
+			candidates := argumentsFor(p, args)
+			if spelled, ok := spelledOtherwiseByItsVerb[route+"#"+p.name]; ok {
+				candidates = append(candidates, spelled)
+				respelled[route+"#"+p.name] = args[spelled]
+			}
+			if !slices.ContainsFunc(candidates, func(arg string) bool { return args[arg] }) {
 				gaps = append(gaps, route+"#"+p.name)
 			}
 		}
@@ -68,6 +82,11 @@ func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 			"a verb that takes it.", route, name, agentPolicies[route].Tool)
 	}
 	answeredByAnotherVerb.AssertAllMatched(t)
+	for param, spelled := range spelledOtherwiseByItsVerb {
+		if !respelled[param] {
+			t.Errorf("%s is spelled %q by its verb, which takes no such argument; correct or remove the entry", param, spelled)
+		}
+	}
 	for _, waived := range parameterGapsPendingParity {
 		if !slices.Contains(gaps, waived) {
 			t.Errorf("%s is waived but no longer a gap; remove it from parameterGapsPendingParity", waived)
@@ -147,6 +166,8 @@ func argumentsFor(p routeParameter, args map[string]bool) []string {
 
 // recordPathParameters are the polymorphic record a path names, by the
 // argument every tool takes it as.
+//
+// gatekit:fixture the argument names the tools give a route's record path parameters
 var recordPathParameters = map[string]string{"entity_type": "record_type", "entity_id": "record_id"}
 
 func snakeCase(name string) string {
@@ -163,31 +184,35 @@ func snakeCase(name string) string {
 	return b.String()
 }
 
-// argumentNames reads the arguments a verb's input schema takes: its top-level
-// properties and the properties of each top-level object (filters, selection).
+// argumentNames reads the arguments a verb's input schema takes, at any depth.
+// A route's flat query parameter may be a member of an object argument.
 func argumentNames(t *testing.T, tool string, schema json.RawMessage) map[string]bool {
 	t.Helper()
-	type properties map[string]json.RawMessage
-	var parsed struct {
-		Properties properties `json:"properties"`
-	}
-	if err := json.Unmarshal(schema, &parsed); err != nil {
+	names := map[string]bool{}
+	if err := collectArgumentNames(schema, names); err != nil {
 		t.Fatalf("tool %q publishes an input schema that is not JSON: %v", tool, err)
 	}
-	names := map[string]bool{}
+	return names
+}
+
+func collectArgumentNames(schema json.RawMessage, names map[string]bool) error {
+	var parsed struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+		Items      json.RawMessage            `json:"items"`
+	}
+	if err := json.Unmarshal(schema, &parsed); err != nil {
+		return err
+	}
 	for name, raw := range parsed.Properties {
 		names[name] = true
-		var nested struct {
-			Properties properties `json:"properties"`
-		}
-		if err := json.Unmarshal(raw, &nested); err != nil {
-			t.Fatalf("tool %q publishes argument %q whose schema is not JSON: %v", tool, name, err)
-		}
-		for inner := range nested.Properties {
-			names[inner] = true
+		if err := collectArgumentNames(raw, names); err != nil {
+			return err
 		}
 	}
-	return names
+	if len(parsed.Items) > 0 {
+		return collectArgumentNames(parsed.Items, names)
+	}
+	return nil
 }
 
 // routeParameters reads the path and query parameter names of every operation
@@ -259,6 +284,18 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 	return byRoute
 }
 
+// spelledOtherwiseByItsVerb are route parameters the verb takes under its own
+// name, as a member of an object argument or as the record's id.
+//
+// gatekit:fixture the argument each listed route parameter is spelled as by its verb
+var spelledOtherwiseByItsVerb = map[string]string{
+	"GET /v1/analytics/evaluate#scope_kind":      "kind",
+	"GET /v1/analytics/evaluate#scope_id":        "id",
+	"GET /v1/analytics/evidence#scope_kind":      "kind",
+	"GET /v1/analytics/evidence#scope_id":        "id",
+	"GET /v1/analytics/editions/compare#left_id": "id",
+}
+
 // answeredByAnotherVerb are route parameters whose question an agent asks
 // through some other verb, so the route's own verb need not take them.
 var answeredByAnotherVerb = gatekit.Waive(map[string]string{
@@ -270,28 +307,7 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 // "METHOD /v1/route#parameter". The list only shrinks: an entry that stops
 // being a gap fails the test above.
 var parameterGapsPendingParity = []string{
-	"GET /v1/analytics/editions/compare#left_id",
-	"GET /v1/analytics/evaluate#end_at",
-	"GET /v1/analytics/evaluate#scope_id",
-	"GET /v1/analytics/evaluate#scope_kind",
-	"GET /v1/analytics/evaluate#start_at",
-	"GET /v1/analytics/evidence#end_at",
-	"GET /v1/analytics/evidence#scope_id",
-	"GET /v1/analytics/evidence#scope_kind",
-	"GET /v1/analytics/evidence#start_at",
-	"GET /v1/analytics/reports/{id}/evaluation#revision",
-	"GET /v1/companies/{id}/documents#category",
-	"GET /v1/companies/{id}/documents#contract_id",
-	"GET /v1/companies/{id}/documents#doc_state",
-	"GET /v1/companies/{id}/documents#pinned_only",
-	"GET /v1/deals/{id}/documents#category",
-	"GET /v1/deals/{id}/documents#include_hidden",
-	"GET /v1/imports/format#lang",
-	"GET /v1/partners#cert_status",
-	"GET /v1/partners#partner_role",
-	"GET /v1/partners#sort",
 	"GET /v1/search#per_type",
 	"GET /v1/search#types",
 	"GET /v1/search#with_employees",
-	"POST /v1/deal-rooms/{id}/threads/{threadId}/comments#threadId",
 }

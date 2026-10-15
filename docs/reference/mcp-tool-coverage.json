@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 16,
     "permitted_but_never_required": 11,
-    "tokens_served_but_never_driven": 6450,
+    "tokens_served_but_never_driven": 6518,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1787,7 +1787,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 878,
+      "tokens": 927,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1799,7 +1799,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 827,
+      "tokens": 846,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2376,6 +2376,33 @@
       }
     },
     {
+      "name": "read_reporting",
+      "tokens": 603,
+      "agents": [],
+      "required_by_cases": [
+        "case49_who_can_introduce_us"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "change_lists",
       "tokens": 592,
       "agents": [],
@@ -2425,33 +2452,6 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 4,
           "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_reporting",
-      "tokens": 566,
-      "agents": [],
-      "required_by_cases": [
-        "case49_who_can_introduce_us"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -3292,6 +3292,35 @@
       }
     },
     {
+      "name": "read_import",
+      "tokens": 220,
+      "agents": [],
+      "required_by_cases": [
+        "case10_finish_the_import"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case3_spreadsheet"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "at_risk_relationships",
       "tokens": 212,
       "agents": [
@@ -3331,35 +3360,6 @@
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "read_import",
-      "tokens": 185,
-      "agents": [],
-      "required_by_cases": [
-        "case10_finish_the_import"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case3_spreadsheet"
-      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,

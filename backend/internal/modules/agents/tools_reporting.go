@@ -19,7 +19,7 @@ import (
 // ReportingRead selects a read operation over the same reporting engine as HTTP.
 type ReportingRead struct {
 	Scheduled         bool                              `json:"scheduled,omitempty"`
-	Mode              string                            `json:"mode" enum:"catalog,evaluate,reports,report,editions,edition,evidence,compare,commission_summary"`
+	Mode              string                            `json:"mode" enum:"catalog,evaluate,reports,report,report_evaluation,editions,edition,evidence,compare,commission_summary"`
 	Selection         crmcontracts.ReportingSelection   `json:"selection,omitempty"`
 	ID                ids.UUID                          `json:"id,omitempty"`
 	RightID           ids.UUID                          `json:"right_id,omitempty"`
@@ -27,6 +27,7 @@ type ReportingRead struct {
 	EvaluationKey     string                            `json:"evaluation_key,omitempty"`
 	EvaluatedAt       time.Time                         `json:"evaluated_at,omitempty"`
 	FrameworkRevision int64                             `json:"framework_revision,omitempty"`
+	Revision          *int64                            `json:"revision,omitempty" minimum:"1"`
 	Cursor            *string                           `json:"cursor,omitempty"`
 	Limit             int                               `json:"limit,omitempty" minimum:"1" maximum:"100"`
 }
@@ -58,7 +59,7 @@ type readReporting struct{ read ReportingReader }
 
 var reportingReadCopy = toolCopy{
 	Purpose: "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions.",
-	Limits:  "Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
+	Limits:  "Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report, report_evaluation (a saved report evaluated now, at its latest or a given revision) and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
 	Instead: "Use " + pipelinesSource + " to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
 }
 

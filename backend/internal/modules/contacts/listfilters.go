@@ -114,6 +114,7 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
 	filterPartnerRole: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.PartnerRole = v }),
 	filterCertStatus:  storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.CertStatus = v }),
+	filterSort:        storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.Sort = v }),
 }
 
 var leadListFilters = storekit.FilterSet[ListLeadsInput]{

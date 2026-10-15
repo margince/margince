@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 58,
     "system_frame_tokens": 597,
-    "tokens": 26472,
+    "tokens": 26612,
     "median_tool_tokens": 397,
-    "mean_tool_tokens": 456
+    "mean_tool_tokens": 458
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 58,
-      "tokens": 3952,
-      "listing_tokens": 1963,
-      "step_schema_tokens": 1392,
+      "tokens": 3990,
+      "listing_tokens": 1982,
+      "step_schema_tokens": 1410,
       "percent_of_ceiling": 12,
-      "headroom_tokens": 19258,
+      "headroom_tokens": 19220,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 58,
-      "tokens": 5620,
-      "listing_tokens": 2961,
-      "step_schema_tokens": 2062,
+      "tokens": 5657,
+      "listing_tokens": 2979,
+      "step_schema_tokens": 2080,
       "percent_of_ceiling": 17,
-      "headroom_tokens": 17590,
+      "headroom_tokens": 17553,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -98,11 +98,11 @@
     },
     {
       "name": "read_view",
-      "tokens": 878
+      "tokens": 927
     },
     {
       "name": "list_records",
-      "tokens": 827
+      "tokens": 846
     },
     {
       "name": "bulk_update_records",
@@ -129,6 +129,10 @@
       "tokens": 649
     },
     {
+      "name": "read_reporting",
+      "tokens": 603
+    },
+    {
       "name": "change_lists",
       "tokens": 592
     },
@@ -139,10 +143,6 @@
     {
       "name": "change_record_parts",
       "tokens": 569
-    },
-    {
-      "name": "read_reporting",
-      "tokens": 566
     },
     {
       "name": "query_workspace",
@@ -289,6 +289,10 @@
       "tokens": 221
     },
     {
+      "name": "read_import",
+      "tokens": 220
+    },
+    {
       "name": "at_risk_relationships",
       "tokens": 212
     },
@@ -299,10 +303,6 @@
     {
       "name": "merge_tags",
       "tokens": 198
-    },
-    {
-      "name": "read_import",
-      "tokens": 185
     },
     {
       "name": "list_documents",

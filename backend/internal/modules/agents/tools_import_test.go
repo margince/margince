@@ -170,7 +170,7 @@ func (r recordingImports) ProfileFiles(context.Context, []ImportFile) (crmcontra
 	return r.profile, nil
 }
 
-func (r recordingImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+func (r recordingImports) DescribeFormat(context.Context, string) (crmcontracts.ImportFormat, error) {
 	return r.format, nil
 }
 

@@ -96,7 +96,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 16 |
 | … of those, permitted somewhere but never required | 11 |
-| Prompt tokens spent on tools no case requires | 6450 |
+| Prompt tokens spent on tools no case requires | 6518 |
 | Use cases | 35 |
 | Acceptance criteria the cases declare, each with a statement | 83 |
 
@@ -332,9 +332,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_forecast` | 1.00 | 4 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 8 | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `read_reporting` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
-| `read_reporting` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `query_workspace` | 1.00 | 2 | `case4_use_the_moment` |
 | `progress_deal` | 1.00 | 2 | `case45_move_the_deal_on` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -359,9 +359,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `relink_activities` | 1.00 | 4 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
+| `read_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `merge_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
-| `read_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `read_approval` | 1.00 | 2 | `case8_whats_waiting` |
 
 ### `gpt-5.6-sol@codex-cli`
@@ -375,9 +375,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `compose_analytics_report` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `create_record` | 1.00 | 8 | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `read_reporting` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
-| `read_reporting` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `query_workspace` | 1.00 | 2 | `case4_use_the_moment` |
 | `progress_deal` | 1.00 | 2 | `case45_move_the_deal_on` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -401,9 +401,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
+| `read_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `merge_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
-| `read_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `read_approval` | 1.00 | 2 | `case8_whats_waiting` |
 
 ## 2. What is failing now
@@ -473,8 +473,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 878 | - | - | - |
-| `list_records` | 827 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
+| `read_view` | 927 | - | - | - |
+| `list_records` | 846 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `change_record_parts` | 569 | - | - | - |
 | `resolve_entities` | 494 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one` | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |

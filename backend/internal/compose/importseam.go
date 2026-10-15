@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // importRunGrant is migration.ImportRunObject spelled as a literal. The
@@ -169,14 +170,18 @@ func (i importSeam) ReadReport(
 }
 
 // DescribeFormat answers the format the template and the column guide read,
-// in the installation's language.
-func (i importSeam) DescribeFormat(ctx context.Context) (crmcontracts.ImportFormat, error) {
+// in the language asked for, else the installation's.
+func (i importSeam) DescribeFormat(ctx context.Context, lang string) (crmcontracts.ImportFormat, error) {
 	door := i.door()
 	limitMB, err := door.uploadLimitMB()
 	if err != nil {
 		return crmcontracts.ImportFormat{}, err
 	}
-	return buildImportFormat(ctx, door.db, installationLanguage(door.db.Pool())(ctx), limitMB)
+	written := installationLanguage(door.db.Pool())(ctx)
+	if lang != "" {
+		written = textlang.Lang(lang)
+	}
+	return buildImportFormat(ctx, door.db, written, limitMB)
 }
 
 // ProfileFiles zips the files and profiles the ZIP as an upload is. Each

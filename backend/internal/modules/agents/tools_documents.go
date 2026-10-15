@@ -256,7 +256,7 @@ func (t listDocuments) Spec() mcp.ToolSpec {
 		Description:   listDocumentsCopy.render(),
 		Instead:       listDocumentsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listAttachments/listCompanyDocuments/listDealDocuments",
+		OpenAPIOp: "listAttachments",
 		InputSchema: schema(`{"type":"object","required":["entity_type","entity_id"],
 			"properties":{` + documentParentSchema() + `,
 			"cursor":{"type":"string","description":"next_cursor from a previous page"},
