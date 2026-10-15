@@ -66,7 +66,7 @@ func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *capt
 	return &captureAutoEnrichSweepWorker{
 		pool:       pool,
 		contacts:   contacts.NewStore(InstallationDB(pool)),
-		settings:   capture.NewSettings(NewSettingsStore(pool)),
+		settings:   capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
 		log:        log,
 	}

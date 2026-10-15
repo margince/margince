@@ -329,6 +329,42 @@
             "boolean",
             "null"
           ]
+        },
+        "auto_enrich": {
+          "description": "Read a new contact's company web page automatically.",
+          "type": "boolean"
+        },
+        "mail_sharing": {
+          "description": "Let every colleague who can see a contact read the email captured with them; off holds new mail to its participants.",
+          "type": "boolean"
+        },
+        "shared_posture_allowed": {
+          "description": "Allow a seat to share their mailbox with colleagues as mail lands; turn it on only under a works-council agreement.",
+          "type": "boolean"
+        },
+        "signature_enrich": {
+          "description": "Read contact details from the signatures and attached cards of captured mail, for every mailbox that has not chosen.",
+          "type": "boolean"
+        },
+        "auto_enrich_daily_cap": {
+          "description": "Automatic company web-page reads the installation may start in one UTC day.",
+          "type": "integer"
+        },
+        "site_read_max_pages": {
+          "description": "Pages one company web-page read may fetch.",
+          "type": "integer"
+        },
+        "site_read_max_mib": {
+          "description": "MiB one company web-page read may hold, summed over its pages.",
+          "type": "integer"
+        },
+        "site_read_wall_seconds": {
+          "description": "Seconds one company web-page read may run before it stops and extracts what it has.",
+          "type": "integer"
+        },
+        "mail_sync_interval_seconds": {
+          "description": "Seconds a healthy mailbox connection waits between polls.",
+          "type": "integer"
         }
       }
     },

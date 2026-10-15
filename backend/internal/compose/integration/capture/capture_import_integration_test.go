@@ -607,7 +607,7 @@ func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Update(ctx, capturemod.SettingsPatch{MailSharing: &on}); err != nil {
 		t.Fatalf("setting mail sharing to %v: %v", on, err)
 	}

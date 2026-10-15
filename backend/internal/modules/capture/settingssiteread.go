@@ -11,7 +11,7 @@ package capture
 // one transaction under the one `capture_settings` gate the auto-enrich switch
 // already takes.
 
-import "github.com/margince/margince/backend/internal/platform/settings"
+import "github.com/margince/margince/backend/internal/platform/config"
 
 // The defaults and ceilings, exported for the readers that size something
 // against them: the deep-read job timeout is computed from the HIGHEST wall an
@@ -40,43 +40,71 @@ const (
 // a first backfill, which mints hundreds of companies at once; below that
 // arrival rate the CRM visibly trickles. The ceiling exists to catch a typo,
 // not to bound cost — at 20,000 the worker pool, not this number, is the limit.
-var AutoEnrichDailyCap = settings.Define[int](
-	"capture.auto_enrich_daily_cap", captureSettingsObject, "update",
-	DefaultAutoEnrichDailyCap, settings.Between("reads a day", 1, MaxAutoEnrichDailyCap),
-)
+var AutoEnrichDailyCap = config.DefineStored(config.Spec[int]{
+	Key:     "capture.auto_enrich_daily_cap",
+	Env:     "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP",
+	Type:    config.Int,
+	Default: config.Some(DefaultAutoEnrichDailyCap),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxAutoEnrichDailyCap),
+	Doc:     "Automatic company web-page reads the installation may start in one UTC day.",
+}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadMaxPages bounds how many pages one deep read fetches. An automatic
 // read runs under its own lower ceiling; this is what a read somebody asked
 // for may reach.
-var SiteReadMaxPages = settings.Define[int](
-	"capture.site_read_max_pages", captureSettingsObject, "update",
-	DefaultSiteReadMaxPages, settings.Between("pages", 1, MaxSiteReadMaxPages),
-)
+var SiteReadMaxPages = config.DefineStored(config.Spec[int]{
+	Key:     "capture.site_read_max_pages",
+	Env:     "MARGINCE_CAPTURE_SITE_READ_MAX_PAGES",
+	Type:    config.Int,
+	Default: config.Some(DefaultSiteReadMaxPages),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxSiteReadMaxPages),
+	Doc:     "Pages one company web-page read may fetch.",
+}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadMaxMiB bounds the bytes one deep read holds, summed over its pages.
 // Six reads run at once, so the ceiling is also what bounds the worker's
 // memory for crawling.
-var SiteReadMaxMiB = settings.Define[int](
-	"capture.site_read_max_mib", captureSettingsObject, "update",
-	DefaultSiteReadMaxMiB, settings.Between("MiB", 1, MaxSiteReadMaxMiB),
-)
+var SiteReadMaxMiB = config.DefineStored(config.Spec[int]{
+	Key:     "capture.site_read_max_mib",
+	Env:     "MARGINCE_CAPTURE_SITE_READ_MAX_MIB",
+	Type:    config.Int,
+	Default: config.Some(DefaultSiteReadMaxMiB),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxSiteReadMaxMiB),
+	Doc:     "MiB one company web-page read may hold, summed over its pages.",
+}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadWallSeconds is how long one crawl may run before it stops and
 // extracts what it has.
-var SiteReadWallSeconds = settings.Define[int](
-	"capture.site_read_wall_seconds", captureSettingsObject, "update",
-	DefaultSiteReadWallSeconds, settings.Between("seconds", MinSiteReadWallSeconds, MaxSiteReadWallSeconds),
-)
+var SiteReadWallSeconds = config.DefineStored(config.Spec[int]{
+	Key:     "capture.site_read_wall_seconds",
+	Env:     "MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS",
+	Type:    config.Int,
+	Default: config.Some(DefaultSiteReadWallSeconds),
+	Min:     config.Some(MinSiteReadWallSeconds),
+	Max:     config.Some(MaxSiteReadWallSeconds),
+	Doc:     "Seconds one company web-page read may run before it stops and extracts what it has.",
+}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // MailSyncIntervalSeconds is how long a healthy mailbox connection waits
 // between polls. Push notifications, where a mailbox has them, make this the
 // safety net rather than the latency floor. Two minutes by default; at least
 // thirty seconds so a fleet of mailboxes cannot poll a provider into a rate
 // limit, at most an hour so a mailbox without push still feels live.
-var MailSyncIntervalSeconds = settings.Define[int](
-	"capture.mail_sync_interval_seconds", captureSettingsObject, "update",
-	DefaultMailSyncIntervalSeconds, settings.Between("seconds", 30, 3600),
-).MachineryApplied() // the sync applies it to the next_sync_at it writes
+var MailSyncIntervalSeconds = config.DefineStored(config.Spec[int]{
+	Key:     "capture.mail_sync_interval_seconds",
+	Env:     "MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS",
+	Type:    config.Int,
+	Default: config.Some(DefaultMailSyncIntervalSeconds),
+	Min:     config.Some(30),
+	Max:     config.Some(3600),
+	Doc:     "Seconds a healthy mailbox connection waits between polls.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, // the sync applies it to the next_sync_at it writes
+})
 
 // DefaultMailSyncIntervalSeconds is a healthy connection's poll interval when
 // nobody has chosen one.

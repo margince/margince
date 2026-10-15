@@ -19,9 +19,17 @@ import (
 // composed until the test ends.
 func SetupAppWithEnv(t *testing.T, environ []string, opts ...compose.Option) *AppEnv {
 	t.Helper()
+	BindEnv(t, environ)
+	return SetupAppWithOptions(t, opts...)
+}
+
+// BindEnv binds the api's configuration loaded from environ until the test
+// ends, for a suite that composes its stores itself. The binding is the
+// process's own, so a test that calls it must not run in parallel.
+func BindEnv(t *testing.T, environ []string) {
+	t.Helper()
 	compose.UseConfig(withEnv(t, environ))
 	t.Cleanup(func() { compose.UseConfig(nil) })
-	return SetupAppWithOptions(t, opts...)
 }
 
 // withEnv loads the api's registry from environ alone: no flag, and no file,

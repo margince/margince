@@ -155,6 +155,15 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | `20` (1 to 200) | `installation.agent_egress_per_window` |
 | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | `1000` (50 to 20000) | `installation.agent_calls_per_window` |
 | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | `24` (1 to 168) | `installation.agent_window_hours` |
+| `MARGINCE_CAPTURE_AUTO_ENRICH` | `true` | `capture.auto_enrich` |
+| `MARGINCE_CAPTURE_MAIL_SHARING` | `true` | `capture.mail_sharing` |
+| `MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED` | `false` | `capture.shared_posture_allowed` |
+| `MARGINCE_CAPTURE_SIGNATURE_ENRICH` | `true` | `capture.signature_enrich` |
+| `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | `500` (1 to 20000) | `capture.auto_enrich_daily_cap` |
+| `MARGINCE_CAPTURE_SITE_READ_MAX_PAGES` | `60` (1 to 200) | `capture.site_read_max_pages` |
+| `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | `32` (1 to 128) | `capture.site_read_max_mib` |
+| `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | `240` (30 to 600) | `capture.site_read_wall_seconds` |
+| `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | `120` (30 to 3600) | `capture.mail_sync_interval_seconds` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and deletes the rest.

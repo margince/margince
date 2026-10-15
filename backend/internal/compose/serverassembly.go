@@ -251,7 +251,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	// The workspace capture-settings surface (CAP-WIRE-7, ADR-0072):
 	// read the auto-enrich posture (all roles), toggle it (admin/ops).
-	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool))}
+	s.captureSettingsHandlers = captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool))}
 	// Whether contacts are looked up automatically for the details the provider
 	// charges nothing for. Always wired, including where no provider is
 	// connected: the posture is the installation's answer, not the

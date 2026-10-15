@@ -30,16 +30,7 @@ var settingsDefineExceptions = map[string]string{
 	"capture.google_app":             convertsIn13,
 	"capture.microsoft_app":          convertsIn13,
 
-	"capture.auto_enrich":                convertsIn12b,
-	"capture.auto_enrich_daily_cap":      convertsIn12b,
-	"capture.mail_sharing":               convertsIn12b,
-	"capture.mail_sync_interval_seconds": convertsIn12b,
-	"capture.shared_posture_allowed":     convertsIn12b,
-	"capture.signature_enrich":           convertsIn12b,
-	"capture.site_read_max_mib":          convertsIn12b,
-	"capture.site_read_max_pages":        convertsIn12b,
-	"capture.site_read_wall_seconds":     convertsIn12b,
-	"integrations.automatic_lookup":      convertsIn12b,
+	"integrations.automatic_lookup": convertsIn12b,
 
 	"ai.budget":              convertsIn12c,
 	"ai.price_sync":          convertsIn12c,
