@@ -23,7 +23,7 @@ type Type[T any] interface {
 	Less(a, b T) (less, comparable bool)
 }
 
-// textType is every scalar. YAML and JSON carry the same text a flag does, so
+// textType backs the scalar types. YAML and JSON carry the same text a flag does, so
 // "90s" or "0x10" means one thing in every source.
 type textType[T any] struct {
 	name    string

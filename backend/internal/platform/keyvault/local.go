@@ -252,7 +252,7 @@ func refLogSafe(ref Ref) string {
 func ConfigItems() []config.Item {
 	return []config.Item{{
 		Name: EnvRootKey, Kind: config.KindString, Secret: true,
-		Roles: []string{config.RoleAPI, config.RoleWorker},
+		Roles: []string{config.LegacyRoleAPI, config.LegacyRoleWorker},
 		Doc:   "base64 (standard, padded) 32-byte root key sealing connector credentials; unset disables the vault",
 	}}
 }

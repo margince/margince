@@ -64,7 +64,7 @@ var consumedByTheContainerNotTheProcess = map[string]bool{
 // environ is the "NAME=value" form os.Environ returns. Only the NAME half is
 // ever read or returned: a misspelled secret is still a secret, and a warning
 // that echoed it would leak the value while complaining about the name.
-func (r *Registry) Undeclared(environ []string) []string {
+func (r *ItemRegistry) Undeclared(environ []string) []string {
 	var unknown []string
 	for _, entry := range environ {
 		name, value, ok := strings.Cut(entry, "=")

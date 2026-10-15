@@ -45,8 +45,8 @@ const (
 // role that can be misspelled in one of them — and a template grouped by role
 // would then quietly grow a fourth.
 const (
-	RoleAPI    = "api"
-	RoleWorker = "worker"
+	LegacyRoleAPI    = "api"
+	LegacyRoleWorker = "worker"
 )
 
 // Item is one thing an installation can configure.
@@ -76,20 +76,20 @@ type Item struct {
 	Doc string
 }
 
-// Registry is the assembled surface of one process role.
-type Registry struct {
+// ItemRegistry is the assembled surface of one process role.
+type ItemRegistry struct {
 	items map[string]Item
 }
 
-// NewRegistry assembles items and refuses a set that cannot be honest.
+// NewItemRegistry assembles items and refuses a set that cannot be described correctly.
 //
 // The refusals happen here rather than at the point of use, because each
 // produces a configuration surface that describes something the product does
 // not do — or, in the secret case, publishes something it must not. A duplicate
 // name means two packages claim one variable, and their defaults and docs must
 // then disagree.
-func NewRegistry(groups ...[]Item) (*Registry, error) {
-	r := &Registry{items: make(map[string]Item)}
+func NewItemRegistry(groups ...[]Item) (*ItemRegistry, error) {
+	r := &ItemRegistry{items: make(map[string]Item)}
 	for _, group := range groups {
 		for _, item := range group {
 			if err := r.add(item); err != nil {
@@ -100,7 +100,7 @@ func NewRegistry(groups ...[]Item) (*Registry, error) {
 	return r, nil
 }
 
-func (r *Registry) add(item Item) error {
+func (r *ItemRegistry) add(item Item) error {
 	switch {
 	case item.Name == "":
 		return fmt.Errorf("config: an item with no name (doc %q)", item.Doc)
@@ -121,7 +121,7 @@ func (r *Registry) add(item Item) error {
 
 // Items returns every declared item, ordered by name so a generated artefact
 // does not churn between runs.
-func (r *Registry) Items() []Item {
+func (r *ItemRegistry) Items() []Item {
 	out := make([]Item, 0, len(r.items))
 	for _, item := range r.items {
 		out = append(out, item)

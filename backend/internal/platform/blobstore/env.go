@@ -87,7 +87,7 @@ func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bo
 // installation without object storage is a supported deployment, not a
 // misconfigured one.
 func ConfigItems() []config.Item {
-	worker := []string{config.RoleAPI, config.RoleWorker}
+	worker := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
 	return []config.Item{
 		{
 			Name: EnvEndpoint, Kind: config.KindString, Roles: worker,

@@ -17,9 +17,9 @@ import (
 // gate as a variable somebody must document, and these are fixtures.
 const ns = "MARGINCE_"
 
-func probeRegistry(t *testing.T) *config.Registry {
+func probeRegistry(t *testing.T) *config.ItemRegistry {
 	t.Helper()
-	r, err := config.NewRegistry([]config.Item{
+	r, err := config.NewItemRegistry([]config.Item{
 		{Name: ns + "REDIS", Kind: config.KindString, Doc: "the bus"},
 		{Name: ns + "TOKEN", Kind: config.KindString, Secret: true, Doc: "a credential"},
 	})

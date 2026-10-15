@@ -39,9 +39,9 @@ var workerPublic = map[string]bool{
 }
 
 // workerConfigItems is this role's whole configurable surface.
-func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, error) {
-	registry, err := config.NewRegistry(
-		env.Items(fs, config.RoleWorker, workerPublic),
+func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.ItemRegistry, error) {
+	registry, err := config.NewItemRegistry(
+		env.Items(fs, config.LegacyRoleWorker, workerPublic),
 		blobstore.ConfigItems(),
 		keyvault.ConfigItems(),
 		ai.ConfigItems(),
@@ -57,7 +57,7 @@ func workerConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, e
 // workerUnflaggedItems are the variables this role reads with no flag behind
 // them, owned by the composition root rather than by any one package.
 func workerUnflaggedItems() []config.Item {
-	both := []string{config.RoleAPI, config.RoleWorker}
+	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
 	return []config.Item{
 		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,

@@ -34,7 +34,7 @@ func TestTheRegistryRefusesWhatItCannotDescribeHonestly(t *testing.T) {
 		"no name": {{Kind: config.KindString, Doc: "w"}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := config.NewRegistry(group); err == nil {
+			if _, err := config.NewItemRegistry(group); err == nil {
 				t.Fatal("the registry accepted a set it cannot describe honestly")
 			} else if !strings.Contains(err.Error(), "config:") {
 				t.Errorf("error %q does not name the package an operator should look at", err)
@@ -47,7 +47,7 @@ func TestTheRefusalNeverEchoesTheSecretItRefused(t *testing.T) {
 	// The one place this package prints an item's value. A secret with a
 	// default is exactly the case where that value is a credential, so the
 	// error names the variable and never what it holds.
-	_, err := config.NewRegistry([]config.Item{{
+	_, err := config.NewItemRegistry([]config.Item{{
 		Name: "AN_ITEM", Kind: config.KindString, Secret: true, Default: "hunter2", Doc: "x",
 	}})
 	if err == nil {
@@ -62,7 +62,7 @@ func TestTheRefusalNeverEchoesTheSecretItRefused(t *testing.T) {
 }
 
 func TestItemsAreOrderedSoAGeneratedArtefactDoesNotChurn(t *testing.T) {
-	r, err := config.NewRegistry([]config.Item{
+	r, err := config.NewItemRegistry([]config.Item{
 		{Name: "C_ITEM", Kind: config.KindString, Doc: "c"},
 		{Name: "A_ITEM", Kind: config.KindString, Doc: "a"},
 		{Name: "B_ITEM", Kind: config.KindString, Doc: "b"},

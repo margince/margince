@@ -146,7 +146,7 @@ func (l License) TokenOrigin(lookup config.Lookup) string {
 // import platform/config, so the name travels up to the package that already
 // owns the licence half.
 func ConfigItems() []config.Item {
-	both := []string{config.RoleAPI, config.RoleWorker}
+	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
 	return []config.Item{
 		{
 			Name: runtimeenv.EnvVar, Kind: config.KindString, Default: "production", Roles: both,

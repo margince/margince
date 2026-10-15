@@ -306,7 +306,7 @@ var (
 // (byokKeyRequired) rather than being pre-empted here, because which keys an
 // installation needs is a property of its routing file, not of the product.
 func ConfigItems() []config.Item {
-	both := []string{config.RoleAPI, config.RoleWorker}
+	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
 	items := make([]config.Item, 0, len(cloudKeyEnv))
 	for _, provider := range knownProviders {
 		env, cloud := cloudKeyEnv[provider]

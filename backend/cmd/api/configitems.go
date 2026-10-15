@@ -61,9 +61,9 @@ var apiPublic = map[string]bool{
 
 // apiConfigItems is this role's whole configurable surface: its own flags, plus
 // the packages it wires that read the environment on their own account.
-func apiConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, error) {
-	registry, err := config.NewRegistry(
-		env.Items(fs, config.RoleAPI, apiPublic),
+func apiConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.ItemRegistry, error) {
+	registry, err := config.NewItemRegistry(
+		env.Items(fs, config.LegacyRoleAPI, apiPublic),
 		blobstore.ConfigItems(),
 		keyvault.ConfigItems(),
 		ai.ConfigItems(),
@@ -81,7 +81,7 @@ func apiConfigItems(fs *flag.FlagSet, env *cliflags.Env) (*config.Registry, erro
 // their owner is the composition root itself, and a package that has no opinion
 // about them should not carry their documentation.
 func apiUnflaggedItems() []config.Item {
-	both := []string{config.RoleAPI, config.RoleWorker}
+	both := []string{config.LegacyRoleAPI, config.LegacyRoleWorker}
 	return []config.Item{
 		{
 			Name: compose.ProviderModeEnv, Kind: config.KindString, Default: "live", Roles: both,
