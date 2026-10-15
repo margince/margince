@@ -186,17 +186,10 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var belongs bool
-		err := tx.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE id = $1 AND subscription_id = $2)",
-			deliveryID, subID).Scan(&belongs)
-		if err != nil {
+		if err := checkReplayable(ctx, tx, subID, deliveryID); err != nil {
 			return err
 		}
-		if !belongs {
-			return apperrors.ErrNotFound
-		}
-		_, err = storekit.AuditEvent(ctx, tx, "update", rbacObject, subID,
+		_, err := storekit.AuditEvent(ctx, tx, "update", rbacObject, subID,
 			map[string]any{"replayed_delivery": deliveryID.String()})
 		return err
 	})
@@ -205,13 +198,18 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 // attemptTarget is one deliverable unit: the sealed secret and body the
 // signer needs, plus the identity to record the outcome against.
 type attemptTarget struct {
-	deliveryID    ids.UUID
-	subID         ids.UUID
-	targetURL     string
-	sealedSecret  string
-	eventType     string
-	eventID       ids.UUID
-	payload       []byte
+	deliveryID   ids.UUID
+	subID        ids.UUID
+	targetURL    string
+	sealedSecret string
+	eventType    string
+	eventID      ids.UUID
+	payload      []byte
+	contentType  string
+	// claim is the lease this sender holds, nil for a first attempt; the
+	// outcome lands only while the row still carries it.
+	claim         *time.Time
+	headers       []storedHeader
 	priorAttempts int
 	// entityType, entityID and ownerID are what a RE-attempt needs and a first
 	// attempt does not: the enqueue path has already asked whether this owner
@@ -226,8 +224,10 @@ type attemptTarget struct {
 // subCandidate is one active subscription matching an event's type, with
 // the owning principal the fan-out is bounded to (B-E10.15/BYO-EVT-4).
 type subCandidate struct {
-	id      ids.UUID
-	ownerID ids.UUID
+	id              ids.UUID
+	ownerID         ids.UUID
+	bodyTemplate    *string
+	bodyContentType *string
 }
 
 // matchingSubscriptions returns the active subscriptions in the envelope's
@@ -238,7 +238,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 	var out []subCandidate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, owner_id FROM webhook_subscription
+			SELECT id, owner_id, body_template, body_content_type FROM webhook_subscription
 			WHERE state = 'active' AND archived_at IS NULL
 			  AND event_types @> ARRAY[$1]::text[]`, eventType)
 		if err != nil {
@@ -247,7 +247,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 		defer rows.Close()
 		for rows.Next() {
 			var c subCandidate
-			if err := rows.Scan(&c.id, &c.ownerID); err != nil {
+			if err := rows.Scan(&c.id, &c.ownerID, &c.bodyTemplate, &c.bodyContentType); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -257,78 +257,32 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 	return out, err
 }
 
-// enqueueForSubscriptions creates a pending delivery for each named
-// subscription, idempotently: the (workspace, subscription, event) unique
-// key means a redelivered bus event conflicts and yields no new row — so
-// it never double-POSTs. It returns only the freshly-created rows to
-// attempt now. subIDs is the visibility-filtered set (BYO-EVT-4). Runs in
-// the envelope's workspace.
-func (s *Store) enqueueForSubscriptions(ctx context.Context, subIDs []ids.UUID, eventType string, eventID ids.UUID, body []byte, entityType string, entityID ids.UUID) ([]attemptTarget, error) {
-	if len(subIDs) == 0 {
-		return nil, nil
+// claimDueRetry claims the next due retrying delivery in the ctx's workspace
+// whose subscription is live and active. The claim is a lease on claimed_until
+// that a second sweep or a replay respects. The returned instant is the token
+// the sender records its outcome under. Runs under the tenant GUC.
+func (s *Store) claimDueRetry(ctx context.Context, now time.Time) (ids.UUID, time.Time, bool, error) {
+	var id ids.UUID
+	var claim time.Time
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			UPDATE webhook_delivery SET claimed_until = now() + make_interval(secs => $2)
+			WHERE id = (
+				SELECT d.id
+				FROM webhook_delivery d
+				JOIN webhook_subscription s ON s.id = d.subscription_id
+				WHERE d.status = 'retrying' AND d.next_retry_at <= $1
+				  AND (d.claimed_until IS NULL OR d.claimed_until < now())
+				  AND s.state = 'active' AND s.archived_at IS NULL
+				ORDER BY d.next_retry_at
+				LIMIT 1
+				FOR UPDATE OF d SKIP LOCKED)
+			RETURNING id, claimed_until`, now, claimLease.Seconds()).Scan(&id, &claim)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, time.Time{}, false, nil
 	}
-	var targets []attemptTarget
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			WITH matched AS (
-				SELECT id, target_url, signing_secret_ref
-				FROM webhook_subscription
-				WHERE id = ANY($4::uuid[]) AND state = 'active' AND archived_at IS NULL
-			), created AS (
-				INSERT INTO webhook_delivery
-				  (subscription_id, event_id, event_type, payload, status, entity_type, entity_id)
-				SELECT m.id, $2, $1, $3::text, 'pending', $5, $6
-				FROM matched m
-				ON CONFLICT (subscription_id, event_id) DO NOTHING
-				RETURNING id, subscription_id
-			)
-			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref
-			FROM created c JOIN matched m ON m.id = c.subscription_id`,
-			eventType, eventID, body, subIDs, entityType, entityID)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			t := attemptTarget{eventType: eventType, eventID: eventID, payload: body}
-			if err := rows.Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret); err != nil {
-				return err
-			}
-			targets = append(targets, t)
-		}
-		return rows.Err()
-	})
-	return targets, err
-}
-
-// dueRetries finds retrying deliveries in the ctx's workspace whose backoff
-// has elapsed and whose subscription is still live and active (a paused
-// subscription's retries wait until it resumes). Runs under the tenant GUC.
-func (s *Store) dueRetries(ctx context.Context, now time.Time, limit int) ([]ids.UUID, error) {
-	var out []ids.UUID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT d.id
-			FROM webhook_delivery d
-			JOIN webhook_subscription s ON s.id = d.subscription_id
-			WHERE d.status = 'retrying' AND d.next_retry_at <= $1
-			  AND s.state = 'active' AND s.archived_at IS NULL
-			ORDER BY d.next_retry_at
-			LIMIT $2`, now, limit)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			if err := rows.Scan(&id); err != nil {
-				return err
-			}
-			out = append(out, id)
-		}
-		return rows.Err()
-	})
-	return out, err
+	return id, claim, err == nil, err
 }
 
 // loadTarget rehydrates a delivery into an attemptTarget for retry/replay:
@@ -337,20 +291,21 @@ func (s *Store) dueRetries(ctx context.Context, now time.Time, limit int) ([]ids
 func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTarget, error) {
 	var t attemptTarget
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var entityType *string
+		var entityType, contentType *string
 		var entityID *ids.UUID
 		if err := tx.QueryRow(ctx, `
 			SELECT d.id, d.subscription_id, s.target_url, s.signing_secret_ref,
-			       d.event_type, d.event_id, d.payload, d.attempts,
-			       d.entity_type, d.entity_id, s.owner_id
+			       d.event_type, d.event_id, d.payload, d.content_type, s.custom_headers,
+			       d.attempts, d.entity_type, d.entity_id, s.owner_id
 			FROM webhook_delivery d
 			JOIN webhook_subscription s ON s.id = d.subscription_id
 			WHERE d.id = $1`, deliveryID).
 			Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret,
-				&t.eventType, &t.eventID, &t.payload, &t.priorAttempts,
-				&entityType, &entityID, &t.ownerID); err != nil {
+				&t.eventType, &t.eventID, &t.payload, &contentType, &t.headers,
+				&t.priorAttempts, &entityType, &entityID, &t.ownerID); err != nil {
 			return err
 		}
+		t.contentType = deref(contentType)
 		// A NULL subject scans to a nil pointer and stays the zero value, which
 		// refuseUnverifiable reads as "cannot be checked". Widening it to an
 		// empty string here rather than at the call site keeps the one meaning
@@ -391,27 +346,27 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 			_, err := tx.Exec(ctx, `
 				UPDATE webhook_delivery
 				SET status = 'delivered', attempts = $2, last_status_code = $3,
-				    last_error = NULL, next_retry_at = NULL, delivered_at = $4
-				WHERE id = $1 AND status <> 'visibility_revoked'`,
-				t.deliveryID, attempts, statusCode, now)
+				    last_error = NULL, next_retry_at = NULL, delivered_at = $4, claimed_until = NULL
+				WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $5`,
+				t.deliveryID, attempts, statusCode, now, t.claim)
 			return err
 		}
 		if attempts >= maxAttempts {
 			_, err := tx.Exec(ctx, `
 				UPDATE webhook_delivery
 				SET status = 'dead_lettered', attempts = $2, last_status_code = $3,
-				    last_error = $4, next_retry_at = NULL, dead_lettered_at = $5
-				WHERE id = $1 AND status <> 'visibility_revoked'`,
-				t.deliveryID, attempts, statusCode, res.failure, now)
+				    last_error = $4, next_retry_at = NULL, dead_lettered_at = $5, claimed_until = NULL
+				WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $6`,
+				t.deliveryID, attempts, statusCode, res.failure, now, t.claim)
 			return err
 		}
 		next := now.Add(backoff(attempts))
 		_, err := tx.Exec(ctx, `
 			UPDATE webhook_delivery
 			SET status = 'retrying', attempts = $2, last_status_code = $3,
-			    last_error = $4, next_retry_at = $5
-			WHERE id = $1 AND status <> 'visibility_revoked'`,
-			t.deliveryID, attempts, statusCode, res.failure, next)
+			    last_error = $4, next_retry_at = $5, claimed_until = NULL
+			WHERE id = $1 AND status <> 'visibility_revoked' AND claimed_until IS NOT DISTINCT FROM $6`,
+			t.deliveryID, attempts, statusCode, res.failure, next, t.claim)
 		return err
 	})
 }
@@ -424,10 +379,10 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 //
 // Every writer of this table carries `status <> 'visibility_revoked'`, and that
 // clause is DEFENCE rather than a reachable race. Three things already stop a
-// revoked row being written over: the visibility check refuses it again (the
-// activity is still narrowed), this method clears next_retry_at, and dueRetries
-// claims only 'retrying'. Removing any of them — or the first two together —
-// leaves the behaviour unchanged, which is why no test drives this clause.
+// revoked row being written over. The visibility check refuses it again, this
+// method clears next_retry_at, and claimDueRetry claims only 'retrying'.
+// Removing any one of them leaves the behaviour unchanged, so no test drives
+// this clause.
 //
 // It earns its line on the one case none of those three covers: a sweep already
 // mid-POST when a revocation commits, whose recordOutcome would otherwise land
@@ -437,29 +392,38 @@ func (s *Store) markVisibilityRevoked(ctx context.Context, deliveryID ids.UUID, 
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE webhook_delivery
-			SET status = 'visibility_revoked', last_error = $2, next_retry_at = NULL
+			SET status = 'visibility_revoked', last_error = $2, next_retry_at = NULL, claimed_until = NULL
 			WHERE id = $1 AND status <> 'visibility_revoked'`, deliveryID, reason)
 		return err
 	})
 }
 
-// resetForReplay clears a parked delivery back to pending so it can be
-// re-attempted. Returns ErrNotFound if the delivery is absent in the caller's
-// workspace (existence-hiding), or if it was revoked: a revoked delivery is not
-// replayable, and the replay path checks visibility before reaching here anyway
-// — this guard is what stops a concurrent revocation being undone.
-func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
+// resetForReplay claims a parked delivery and clears it back to pending. A
+// revoked row is never reset (ErrNotFound), which stops a concurrent revocation
+// being undone. A row another sender holds is errDeliveryInFlight.
+func (s *Store) resetForReplay(ctx context.Context, deliveryID ids.UUID) (time.Time, error) {
+	var claim time.Time
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
 			UPDATE webhook_delivery
-			SET status = 'pending', next_retry_at = NULL, dead_lettered_at = NULL, last_error = NULL
-			WHERE id = $1 AND status <> 'visibility_revoked'`, deliveryID)
-		if err != nil {
+			SET status = 'pending', next_retry_at = NULL, dead_lettered_at = NULL, last_error = NULL,
+			    claimed_until = now() + make_interval(secs => $2)
+			WHERE id = $1 AND status IN ('dead_lettered', 'retrying')
+			  AND (claimed_until IS NULL OR claimed_until < now())
+			RETURNING claimed_until`, deliveryID, claimLease.Seconds()).Scan(&claim)
+		if err == nil || !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if tag.RowsAffected() != 1 {
+		// A revoked row is never reset; anything else lost the claim to a sender.
+		var revoked bool
+		if err := tx.QueryRow(ctx, "SELECT status = 'visibility_revoked' FROM webhook_delivery WHERE id = $1",
+			deliveryID).Scan(&revoked); err != nil {
+			return err
+		}
+		if revoked {
 			return apperrors.ErrNotFound
 		}
-		return nil
+		return errDeliveryInFlight
 	})
+	return claim, err
 }

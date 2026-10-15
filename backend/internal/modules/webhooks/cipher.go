@@ -56,19 +56,25 @@ func DecodeKey(encoded string) ([]byte, error) {
 }
 
 // seal returns the base64 ciphertext (nonce || GCM output) for storage.
-func (c *Cipher) seal(plaintext string) (string, error) {
+func (c *Cipher) seal(plaintext string) (string, error) { return c.sealBound(plaintext, nil) }
+
+// sealBound seals with additional data the ciphertext is bound to: opening
+// it under any other binding fails, so a stored value cannot be moved.
+func (c *Cipher) sealBound(plaintext string, binding []byte) (string, error) {
 	nonce := make([]byte, c.aead.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("webhooks: generating nonce: %w", err)
 	}
-	sealed := c.aead.Seal(nonce, nonce, []byte(plaintext), nil)
+	sealed := c.aead.Seal(nonce, nonce, []byte(plaintext), binding)
 	return base64.StdEncoding.EncodeToString(sealed), nil
 }
 
 // open reverses seal. A ciphertext that fails to open (wrong key, tamper)
 // is surfaced, never treated as an empty secret — signing with an empty
 // secret would ship an attacker-forgeable signature.
-func (c *Cipher) open(sealed string) (string, error) {
+func (c *Cipher) open(sealed string) (string, error) { return c.openBound(sealed, nil) }
+
+func (c *Cipher) openBound(sealed string, binding []byte) (string, error) {
 	raw, err := base64.StdEncoding.DecodeString(sealed)
 	if err != nil {
 		return "", fmt.Errorf("webhooks: sealed secret is not valid base64: %w", err)
@@ -78,7 +84,7 @@ func (c *Cipher) open(sealed string) (string, error) {
 		return "", errors.New("webhooks: sealed secret is truncated")
 	}
 	nonce, ct := raw[:ns], raw[ns:]
-	plaintext, err := c.aead.Open(nil, nonce, ct, nil)
+	plaintext, err := c.aead.Open(nil, nonce, ct, binding)
 	if err != nil {
 		return "", fmt.Errorf("webhooks: opening sealed secret: %w", err)
 	}

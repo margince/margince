@@ -105,6 +105,7 @@ type receivedHit struct {
 	webhookID string
 	timestamp string
 	signature string
+	header    http.Header
 	body      []byte
 }
 
@@ -126,6 +127,7 @@ func newReceiver(t *testing.T, status int) *receiver {
 			webhookID: req.Header.Get(webhooks.HeaderWebhookID),
 			timestamp: req.Header.Get(webhooks.HeaderWebhookTimestamp),
 			signature: req.Header.Get(webhooks.HeaderWebhookSignature),
+			header:    req.Header.Clone(),
 			body:      body,
 		})
 		code := r.status
