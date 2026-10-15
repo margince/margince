@@ -88,8 +88,8 @@ func float[T ~float32 | ~float64](name string, bits int) Type[T] {
 		format: func(v T) string { return strconv.FormatFloat(float64(v), 'g', -1, bits) }}
 }
 
-// numErr never includes the text it failed on: a setting can hold a secret,
-// and the name of the type is what an operator needs to act on.
+// numErr never includes the text it failed on, since a setting can hold a
+// secret. The type's name is what an operator needs to act on.
 func numErr(name string, err error) error {
 	if err == nil {
 		return nil
