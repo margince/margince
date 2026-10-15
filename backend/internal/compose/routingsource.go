@@ -374,3 +374,16 @@ func RoutingFromDeployConfig(path string) (ai.RoutingConfig, error) {
 	}
 	return routing, nil
 }
+
+// RoutingKeys is the lookup the routing path resolves credentials through: the
+// vault's root key from the loaded settings, so it opens the vault the role's
+// boot opened, and each provider key from the process environment.
+func RoutingKeys(c *config.Config) config.Lookup {
+	rootKey := keyvault.RootKey(c)
+	return func(name string) string {
+		if name == keyvault.EnvRootKey {
+			return rootKey
+		}
+		return config.FromOS(name)
+	}
+}

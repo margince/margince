@@ -79,8 +79,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
 		return err
 	}
-	resolveVault := workerVault(ctx, pool)
-	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, args, stdout); handled {
+	resolveVault := workerVault(ctx, pool, cfg.settings)
+	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
 	}
 
@@ -154,7 +154,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// this it would keep serving whatever binding it resolved at boot while the
 	// api served the new one, which is the two-roles-disagree failure moving
 	// routing into the database was meant to end (compose/routingwatcher).
-	go compose.NewRoutingWatcher(pool, &modelPath, config.FromOS, logger).Run(ctx)
+	go compose.NewRoutingWatcher(pool, &modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 
 	// The lanes' lifetime is created and DEFERRED HERE, before anything can
 	// start on it. That ordering used to live inside startEventLanes and be
@@ -369,9 +369,9 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 // workerVault is the process's one resolution of its key vault, made on first
 // use. Only the subcommands that need a vault ask for it, so the rest run
 // without one.
-func workerVault(ctx context.Context, pool *pgxpool.Pool) func() (keyvault.Vault, error) {
+func workerVault(ctx context.Context, pool *pgxpool.Pool, settings *config.Config) func() (keyvault.Vault, error) {
 	return sync.OnceValues(func() (keyvault.Vault, error) {
-		return keyvault.ForRole(ctx, "worker", pool, config.FromOS)
+		return keyvault.ForRole(ctx, "worker", pool, settings)
 	})
 }
 

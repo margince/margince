@@ -25,6 +25,8 @@ type modelPathSpec struct {
 	// deployconfig.Seeds and not the yaml.Node inside it.
 	seeds           deployconfig.Seeds
 	capturePayloads bool
+	// keys resolve the binding's credentials; compose.RoutingKeys builds them.
+	keys config.Lookup
 }
 
 // selectModelPath resolves the model path: a routing config for real
@@ -43,7 +45,7 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return compose.ModelPath{}, err
 	}
-	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
+	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
 		return compose.ModelPath{}, err
 	}

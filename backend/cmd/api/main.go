@@ -81,7 +81,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	loaded.Report(logger)
 
-	pool, vault, err := openInstallation(ctx, cfg.dsn)
+	pool, vault, err := openInstallation(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// An admin re-points a lane through this role, but the WORKER is a separate
 	// process that never sees that write. Both re-read on the same interval, so
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
-	go compose.NewRoutingWatcher(pool, modelPath, config.FromOS, logger).Run(ctx)
+	go compose.NewRoutingWatcher(pool, modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
 }
 
@@ -191,12 +191,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 // closes it here instead, because there is no pool to return alongside an error.
 //
 //nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
-func openInstallation(ctx context.Context, dsn string) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, dsn)
+func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
+	pool, err := boundPool(ctx, cfg.dsn)
 	if err != nil {
 		return nil, nil, err
 	}
-	vault, err := keyvault.ForRole(ctx, "api", pool, config.FromOS)
+	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
 	if err != nil {
 		pool.Close()
 		return nil, nil, err
@@ -329,13 +329,13 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// come from one value rather than two that can drift.
 	opts = append(opts, compose.WithCaptureTrace(capCfg.TracePayloads))
 
-	blobOpts, err := blobstoreOptions(ctx, stdout)
+	blobOpts, err := blobstoreOptions(ctx, cfg.settings, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	opts = append(opts, blobOpts...)
 
-	kvOpts, err := keyvaultOptions(pool, vault, stdout)
+	kvOpts, err := keyvaultOptions(pool, vault, cfg.settings, stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -412,8 +412,8 @@ func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pg
 // blobstoreOptions wires the attachment endpoints (and their /readyz probe +
 // erase-path object purge) only when an object store is configured; without
 // one the endpoints answer 501 rather than nil-deref at request time.
-func blobstoreOptions(ctx context.Context, stdout io.Writer) ([]compose.Option, error) {
-	blob, configured, err := blobstore.FromEnv(ctx, config.FromOS)
+func blobstoreOptions(ctx context.Context, settings *config.Config, stdout io.Writer) ([]compose.Option, error) {
+	blob, configured, err := blobstore.FromConfig(ctx, settings)
 	if err != nil {
 		return nil, fmt.Errorf("api: blobstore: %w", err)
 	}

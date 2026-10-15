@@ -58,6 +58,8 @@ type modelPathSpec struct {
 	// make it. The node travels as a value through this field instead.
 	seeds           deployconfig.Seeds
 	capturePayloads bool
+	// keys resolve the binding's credentials; compose.RoutingKeys builds them.
+	keys config.Lookup
 }
 
 // modelPathSpecFrom gathers the model-path knobs from where each is declared:
@@ -69,6 +71,7 @@ func modelPathSpecFrom(cfg apiConfig, bootstrap deployconfig.Bootstrap) modelPat
 		fakeBrain:       cfg.fakeBrain,
 		seeds:           bootstrap.Seeds,
 		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
+		keys:            compose.RoutingKeys(cfg.settings),
 	}
 }
 
@@ -85,7 +88,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}
-	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
+	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}

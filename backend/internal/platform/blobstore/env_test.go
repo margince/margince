@@ -8,22 +8,22 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-func TestFromEnvUnconfiguredIsNotAnError(t *testing.T) {
+func TestFromConfigUnconfiguredIsNotAnError(t *testing.T) {
 	// An empty lookup rather than t.Setenv: the point of taking the
 	// environment as a parameter is that a test need not mutate process state
 	// to steer a package, and a test that does leaks into every one after it.
-	store, configured, err := blobstore.FromEnv(t.Context(), config.Static(nil))
+	store, configured, err := fromVars(t, nil)
 	if err != nil {
-		t.Fatalf("FromEnv with no endpoint: %v", err)
+		t.Fatalf("FromConfig with no endpoint: %v", err)
 	}
 	if configured {
-		t.Error("FromEnv reported configured with no endpoint set")
+		t.Error("FromConfig reported configured with no endpoint set")
 	}
 	if store != nil {
-		t.Error("FromEnv returned a store with no endpoint set")
+		t.Error("FromConfig returned a store with no endpoint set")
 	}
 }
 
@@ -34,7 +34,7 @@ func TestFromEnvUnconfiguredIsNotAnError(t *testing.T) {
 // Asserted in both directions on the region alone, with every other field held
 // constant. A one-directional test passes just as happily against a New that
 // refuses everything.
-func TestFromEnvRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
+func TestFromConfigRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 	env := map[string]string{
 		// Endpoint is syntactically invalid on purpose, so the second arm below
 		// fails while minio.New parses it rather than on a dial. A reachable-looking
@@ -46,7 +46,7 @@ func TestFromEnvRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 		blobstore.EnvBucket:    "attachments",
 	}
 
-	store, configured, err := blobstore.FromEnv(t.Context(), config.Static(env))
+	store, configured, err := fromVars(t, env)
 	if err == nil {
 		t.Fatal("a configured blobstore with no region was accepted; the bucket holding attachments would be created wherever the client defaulted to")
 	}
@@ -61,7 +61,7 @@ func TestFromEnvRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 	// endpoint instead. That is what proves the region was the refusal's subject
 	// rather than the configuration being rejected wholesale.
 	env[blobstore.EnvRegion] = "eu-central-1"
-	_, _, err = blobstore.FromEnv(t.Context(), config.Static(env))
+	_, _, err = fromVars(t, env)
 	if err == nil {
 		t.Fatal("expected the invalid endpoint to fail once the region was supplied")
 	}
@@ -75,16 +75,16 @@ func TestFromEnvRefusesAConfiguredStoreWithNoRegion(t *testing.T) {
 // desktop bundle — has attachments at all. Without it those endpoints answer
 // 501 and no configuration a user can supply changes that without running a
 // separate service.
-func TestFromEnvWithAPathReturnsAConfiguredStore(t *testing.T) {
+func TestFromConfigWithAPathReturnsAConfiguredStore(t *testing.T) {
 	root := t.TempDir()
 	env := map[string]string{blobstore.EnvPath: root}
 
-	store, configured, err := blobstore.FromEnv(t.Context(), config.Static(env))
+	store, configured, err := fromVars(t, env)
 	if err != nil {
-		t.Fatalf("FromEnv with a path: %v", err)
+		t.Fatalf("FromConfig with a path: %v", err)
 	}
 	if !configured || store == nil {
-		t.Fatalf("FromEnv with a path reported configured=%v store!=nil=%v", configured, store != nil)
+		t.Fatalf("FromConfig with a path reported configured=%v store!=nil=%v", configured, store != nil)
 	}
 	if err := store.Health(t.Context()); err != nil {
 		t.Errorf("the store it built is not healthy: %v", err)
@@ -95,7 +95,7 @@ func TestFromEnvWithAPathReturnsAConfiguredStore(t *testing.T) {
 // endpoint wins because it is the one that can already hold objects an
 // installation has written; silently preferring the empty local directory would
 // present a working installation with no attachments.
-func TestFromEnvPrefersTheEndpointOverAPath(t *testing.T) {
+func TestFromConfigPrefersTheEndpointOverAPath(t *testing.T) {
 	env := map[string]string{
 		blobstore.EnvEndpoint: "not a valid host",
 		blobstore.EnvBucket:   "attachments",
@@ -103,7 +103,7 @@ func TestFromEnvPrefersTheEndpointOverAPath(t *testing.T) {
 		blobstore.EnvPath:     t.TempDir(),
 	}
 
-	_, _, err := blobstore.FromEnv(t.Context(), config.Static(env))
+	_, _, err := fromVars(t, env)
 	if err == nil {
 		t.Fatal("the invalid endpoint was not used, so the path took precedence over it")
 	}
@@ -112,16 +112,33 @@ func TestFromEnvPrefersTheEndpointOverAPath(t *testing.T) {
 // A TLS switch the store cannot read is refused rather than read as off: an
 // operator who wrote "yes" asked for encryption, and dropping it quietly is the
 // one outcome nobody would choose.
-func TestFromEnvRefusesAnUnreadableTLSSwitch(t *testing.T) {
-	_, configured, err := blobstore.FromEnv(t.Context(), config.Static(map[string]string{
+func TestFromConfigRefusesAnUnreadableTLSSwitch(t *testing.T) {
+	_, configured, err := fromVars(t, map[string]string{
 		blobstore.EnvEndpoint: "not a valid host",
 		blobstore.EnvRegion:   "eu-central-1",
 		blobstore.EnvUseSSL:   "yes",
-	}))
+	})
 	if err == nil || !strings.Contains(err.Error(), blobstore.EnvUseSSL) {
 		t.Fatalf("%s=yes gave %v, want a refusal naming the variable", blobstore.EnvUseSSL, err)
 	}
 	if configured {
 		t.Error("a refused configuration still reported configured")
 	}
+}
+
+// fromVars builds the store from the variables given and no others, loaded the
+// way a program loads them.
+//
+//nolint:ireturn // FromConfig returns the Store seam; this hands it on.
+func fromVars(t *testing.T, vars map[string]string) (blobstore.Store, bool, error) {
+	t.Helper()
+	environ := make([]string, 0, len(vars))
+	for name, value := range vars {
+		environ = append(environ, name+"="+value)
+	}
+	cfg, err := configtest.Load(t, "", environ, nil, blobstore.Settings()...)
+	if err != nil {
+		return nil, false, err
+	}
+	return blobstore.FromConfig(t.Context(), cfg)
 }

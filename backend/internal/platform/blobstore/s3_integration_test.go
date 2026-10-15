@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -67,7 +66,7 @@ func TestNewFailsWhenStoreUnreachable(t *testing.T) {
 	}
 }
 
-func TestFromEnvConfiguredConnects(t *testing.T) {
+func TestFromConfigConfiguredConnects(t *testing.T) {
 	endpoint := os.Getenv("MARGINCE_TEST_BLOBSTORE_ENDPOINT")
 	if endpoint == "" {
 		t.Fatal("MARGINCE_TEST_BLOBSTORE_ENDPOINT not set — run `make db-up` (integration tests fail loudly, they never skip)")
@@ -75,18 +74,18 @@ func TestFromEnvConfiguredConnects(t *testing.T) {
 	// The suite's own MARGINCE_TEST_BLOBSTORE_* values are handed straight to
 	// the package as the settings it would otherwise read, so the test no longer
 	// rewrites the process environment to steer the code under it.
-	store, configured, err := blobstore.FromEnv(t.Context(), config.Static(map[string]string{
+	store, configured, err := fromVars(t, map[string]string{
 		blobstore.EnvEndpoint:  endpoint,
 		blobstore.EnvAccessKey: os.Getenv("MARGINCE_TEST_BLOBSTORE_ACCESS_KEY"),
 		blobstore.EnvSecretKey: os.Getenv("MARGINCE_TEST_BLOBSTORE_SECRET_KEY"),
 		blobstore.EnvBucket:    os.Getenv("MARGINCE_TEST_BLOBSTORE_BUCKET"),
 		blobstore.EnvRegion:    testRegion,
-	}))
+	})
 	if err != nil {
-		t.Fatalf("FromEnv: %v", err)
+		t.Fatalf("FromConfig: %v", err)
 	}
 	if !configured {
-		t.Fatal("FromEnv reported not-configured with the endpoint set")
+		t.Fatal("FromConfig reported not-configured with the endpoint set")
 	}
 	if err := store.Health(t.Context()); err != nil {
 		t.Fatalf("Health of the env-built store: %v", err)

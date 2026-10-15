@@ -84,7 +84,14 @@ func New(cfg Config) (Vault, error) {
 //
 //nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
 func FromEnv(ctx context.Context, pool *pgxpool.Pool, env config.Lookup) (vault Vault, configured bool, err error) {
-	encoded := env(EnvRootKey)
+	return fromRootKey(ctx, pool, env(EnvRootKey))
+}
+
+// RootKey is the loaded root key, encoded, or "" with no vault configured.
+func RootKey(c *config.Config) string { return config.Val(c, rootKeySetting) }
+
+//nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
+func fromRootKey(ctx context.Context, pool *pgxpool.Pool, encoded string) (vault Vault, configured bool, err error) {
 	if encoded == "" {
 		return nil, false, refuseIfAnythingIsSealed(ctx, pool)
 	}
@@ -320,8 +327,8 @@ func refuseIfAnythingIsSealed(ctx context.Context, pool *pgxpool.Pool) error {
 // role names the binary in the boot error, which is the only place it appears.
 //
 //nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
-func ForRole(ctx context.Context, role string, pool *pgxpool.Pool, env config.Lookup) (Vault, error) {
-	vault, configured, err := FromEnv(ctx, pool, env)
+func ForRole(ctx context.Context, role string, pool *pgxpool.Pool, c *config.Config) (Vault, error) {
+	vault, configured, err := fromRootKey(ctx, pool, RootKey(c))
 	if err != nil {
 		return nil, fmt.Errorf("%s: keyvault: %w", role, err)
 	}

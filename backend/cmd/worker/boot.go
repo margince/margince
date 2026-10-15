@@ -72,6 +72,7 @@ func workerModelPathSpec(cfg workerConfig, bootstrap deployconfig.Bootstrap) mod
 		fake:            cfg.fakeBrain,
 		seeds:           bootstrap.Seeds,
 		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
+		keys:            compose.RoutingKeys(cfg.settings),
 	}
 }
 
@@ -133,7 +134,7 @@ func resetFlush(path compose.ModelPath) func(ids.UUID) {
 func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
 	lanes := workerLanes{background: background, ctx: laneCtx, logger: logger}
 
-	blob, blobConfigured, err := blobstore.FromEnv(laneCtx, config.FromOS)
+	blob, blobConfigured, err := blobstore.FromConfig(laneCtx, cfg.settings)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: blobstore: %w", err)
 	}
@@ -158,7 +159,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// The adapter registry the provider-run lanes execute through, read from
 	// the same variable cmd/api reads: the role that queues a run and the
 	// role that executes it must agree about who they are calling.
-	providers, providersConfigured, err := compose.ProviderRegistryFromEnv(time.Now, config.FromOS)
+	providers, providersConfigured, err := compose.ProviderRegistryFor(time.Now, cfg.settings)
 	if err != nil {
 		return lanes, fmt.Errorf("worker: %w", err)
 	}

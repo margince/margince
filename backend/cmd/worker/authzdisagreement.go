@@ -109,7 +109,7 @@ func writeDisagreements(stdout io.Writer, report []consent.Disagreement) error {
 // and release assertions — a report against a schema this binary does not agree
 // with is a report about something else, and a write against one corrupts it.
 func runDatabaseSubcommand(
-	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error), args []string, stdout io.Writer,
+	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error), settings *config.Config, args []string, stdout io.Writer,
 ) (bool, error) {
 	if len(args) == 0 {
 		return false, nil
@@ -120,7 +120,7 @@ func runDatabaseSubcommand(
 	case "deal-key-names":
 		return true, runDealKeyNames(ctx, pool, args[1:], stdout)
 	case "replay-erasures":
-		return true, runReplayErasures(ctx, pool, resolveVault, config.FromOS, args[1:], stdout)
+		return true, runReplayErasures(ctx, pool, resolveVault, settings, args[1:], stdout)
 	}
 	if args[0] == "reopen-parked" {
 		return true, runReopenParked(ctx, pool, args[1:], stdout)

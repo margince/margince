@@ -5,8 +5,6 @@ package blobstore
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 )
@@ -26,9 +24,8 @@ const (
 	EnvPath      = "MARGINCE_BLOBSTORE_PATH"
 )
 
-// FromEnv builds a Store from the MARGINCE_BLOBSTORE_* configuration. Secrets
-// come from the environment, never CLI flags (which leak into the process
-// table). It reports configured=false with a nil Store when neither an endpoint
+// FromConfig builds a Store from the blobstore settings. The secrets have no
+// flag, since a flag leaks into the process table. It reports configured=false with a nil Store when neither an endpoint
 // nor a path is set, so a deployment without object storage boots normally —
 // the attachment endpoints answer 501 rather than the process failing to start.
 //
@@ -38,16 +35,13 @@ const (
 // written; preferring an empty local directory would present a working
 // installation whose attachments had all vanished.
 //
-// The lookup is a parameter (OPS-CFG-2): the composition root supplies the
-// environment, and a test supplies a map without mutating process state.
-//
 //nolint:ireturn // the seam has three providers behind one Store; returning the interface is the design.
-func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bool, err error) {
-	endpoint := env(EnvEndpoint)
+func FromConfig(ctx context.Context, c *config.Config) (store Store, configured bool, err error) {
+	endpoint := config.Val(c, endpointSetting)
 	if endpoint == "" {
 		// The filesystem provider: local disk, for an installation with no
 		// object storage service to point at. See NewFilesystem.
-		if path := env(EnvPath); path != "" {
+		if path := config.Val(c, pathSetting); path != "" {
 			s, ferr := NewFilesystem(path)
 			if ferr != nil {
 				return nil, false, ferr
@@ -56,24 +50,13 @@ func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bo
 		}
 		return nil, false, nil
 	}
-	// Strict, like every boolean flag: "TRUE" or "1" is somebody asking for
-	// TLS, and reading it as false would quietly drop the encryption they asked
-	// for. Unset is false.
-	useSSL := false
-	if raw := env(EnvUseSSL); raw != "" {
-		on, perr := strconv.ParseBool(raw)
-		if perr != nil {
-			return nil, false, fmt.Errorf("blobstore: %s=%q is not true or false", EnvUseSSL, raw)
-		}
-		useSSL = on
-	}
 	s, err := New(ctx, Config{
 		Endpoint:  endpoint,
-		AccessKey: env(EnvAccessKey),
-		SecretKey: env(EnvSecretKey),
-		Bucket:    env(EnvBucket),
-		Region:    env(EnvRegion),
-		UseSSL:    useSSL,
+		AccessKey: config.Val(c, accessKeySetting),
+		SecretKey: config.Val(c, secretKeySetting),
+		Bucket:    config.Val(c, bucketSetting),
+		Region:    config.Val(c, regionSetting),
+		UseSSL:    config.Val(c, useSSLSetting),
 	})
 	if err != nil {
 		return nil, false, err

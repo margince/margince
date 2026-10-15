@@ -25,8 +25,7 @@ import (
 // business, and an admin's to change from the settings page.
 const providerModeEnv = "MARGINCE_PROVIDER_SURFE"
 
-// providerModeSetting declares the mode; ProviderRegistryFromEnv still reads it
-// through a Lookup, case-insensitively, so the type stays free text.
+// providerModeSetting is read case-insensitively, so the type stays free text.
 var providerModeSetting = config.Define(config.Spec[string]{
 	Key: "provider_surfe", Env: providerModeEnv, Type: config.String, Default: config.Some("live"),
 	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
@@ -38,7 +37,7 @@ var providerModeSetting = config.Define(config.Spec[string]{
 // human actually sees on the contact page rather than a frame nobody catches.
 const offlinePollsBeforeDone = 2
 
-// ProviderRegistryFromEnv builds the adapter registry this process runs with,
+// ProviderRegistryFor builds the adapter registry this process runs with,
 // and reports whether one is configured at all.
 //
 // The DEFAULT is live, because PI-AC-9 requires the surface to REMAIN FULLY
@@ -61,8 +60,8 @@ const offlinePollsBeforeDone = 2
 // "off" survives for a deployment that wants the code absent entirely, and an
 // unknown value is still a boot error — a typo must not silently disable a
 // feature an operator asked for, nor silently choose the wrong vendor.
-func ProviderRegistryFromEnv(now func() time.Time, env config.Lookup) (*integrations.Registry, bool, error) {
-	switch mode := strings.ToLower(strings.TrimSpace(env(providerModeEnv))); mode {
+func ProviderRegistryFor(now func() time.Time, c *config.Config) (*integrations.Registry, bool, error) {
+	switch mode := strings.ToLower(strings.TrimSpace(config.Val(c, providerModeSetting))); mode {
 	case "off":
 		return nil, false, nil
 	case "offline":
