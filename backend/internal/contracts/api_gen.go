@@ -10549,6 +10549,8 @@ const (
 	ImportReasonCodeLinkNotFound                 ImportReasonCode = "link_not_found"
 	ImportReasonCodeLinkNotFoundDropped          ImportReasonCode = "link_not_found_dropped"
 	ImportReasonCodeLinkRowNotImported           ImportReasonCode = "link_row_not_imported"
+	ImportReasonCodeLinkRowSkipped               ImportReasonCode = "link_row_skipped"
+	ImportReasonCodeLinkRowSkippedDropped        ImportReasonCode = "link_row_skipped_dropped"
 	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
 	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
 	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
@@ -10718,6 +10720,10 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkNotFoundDropped:
 		return true
 	case ImportReasonCodeLinkRowNotImported:
+		return true
+	case ImportReasonCodeLinkRowSkipped:
+		return true
+	case ImportReasonCodeLinkRowSkippedDropped:
 		return true
 	case ImportReasonCodeLinkTypeUnknown:
 		return true

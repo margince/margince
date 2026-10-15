@@ -150,7 +150,7 @@ Also called: import a contact's history, add past calls to a contact.
 ### What if a link is broken?
 A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.
 
-An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email. A link that finds no record is a **Broken link**. With **Import anyway** the activity keeps its other links, and one with none left is still skipped.
+An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email. A link that finds no record is a **Broken link**. With **Import anyway** the activity keeps its other links, and one with none left is still skipped. A link to a row that this import skipped, such as a deal with no exchange rate, is treated the same way and says the row was skipped.
 
 Also called: missing company, link not found.
 

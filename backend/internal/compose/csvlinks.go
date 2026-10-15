@@ -54,6 +54,9 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
+	// refused holds the rows of this run that were skipped, so a link to one
+	// says so instead of claiming the row never existed.
+	refused map[linkKey]bool
 	// pendingNatural holds the natural keys of those rows (a contact's email,
 	// a company's domain), so a link written with one resolves as the commit's does.
 	pendingNatural map[linkKey]bool
@@ -77,6 +80,7 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 		identities:     migration.NewRunStore(db),
 		pool:           db.Pool(),
 		pending:        map[linkKey]bool{},
+		refused:        map[linkKey]bool{},
 		pendingNatural: map[linkKey]bool{},
 		landed:         map[linkKey]ids.UUID{},
 		cache:          map[linkKey]linkAnswer{},
@@ -107,6 +111,17 @@ func linkNotFoundWhy(object, ref string) migration.Reason {
 func (r *linkResolver) markPending(object, ref string) {
 	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
 	r.pending[key] = true
+	delete(r.cache, key)
+}
+
+// markRefused records a row this run skipped. A link to it follows the run's
+// broken-link policy, in the dry run and in the commit alike.
+func (r *linkResolver) markRefused(object, ref string) {
+	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
+	if r.refused == nil {
+		r.refused = map[linkKey]bool{}
+	}
+	r.refused[key] = true
 	delete(r.cache, key)
 }
 
@@ -218,6 +233,9 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 		if answer, err = r.byID(ctx, key.Object, key.Key); err != nil || answer.Found {
 			return answer, err
 		}
+	}
+	if r.refused[key] {
+		return linkAnswer{Why: migration.Why(migration.ReasonLinkRowSkipped, "ref", key.Key)}, nil
 	}
 	return linkAnswer{Why: linkNotFoundWhy(key.Object, key.Key)}, nil
 }

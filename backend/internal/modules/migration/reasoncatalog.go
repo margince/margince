@@ -91,6 +91,7 @@ var droppedTwin = map[ReasonCode]ReasonCode{
 	ReasonEmployerNotFound:      ReasonEmployerNotFoundDropped,
 	ReasonLeadNotFound:          ReasonLeadNotFoundDropped,
 	ReasonDealNotFound:          ReasonDealNotFoundDropped,
+	ReasonLinkRowSkipped:        ReasonLinkRowSkippedDropped,
 	ReasonActivityLinkAmbiguous: ReasonActivityLinkAmbiguousDropped,
 }
 

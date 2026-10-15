@@ -45,6 +45,8 @@ const (
 	ReasonLeadNotFoundDropped          ReasonCode = "lead_not_found_dropped"
 	ReasonDealNotFound                 ReasonCode = "deal_not_found"
 	ReasonDealNotFoundDropped          ReasonCode = "deal_not_found_dropped"
+	ReasonLinkRowSkipped               ReasonCode = "link_row_skipped"
+	ReasonLinkRowSkippedDropped        ReasonCode = "link_row_skipped_dropped"
 	ReasonActivityLinkAmbiguous        ReasonCode = "activity_link_ambiguous"
 	ReasonActivityLinkAmbiguousDropped ReasonCode = "activity_link_ambiguous_dropped"
 )
@@ -171,6 +173,16 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
 		textlang.German:     "Kein Deal mit {ref:q} in diesem Upload, in einem früheren Import oder in Margince. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Không có deal nào với {ref:q} trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+	}},
+	ReasonLinkRowSkipped: {params: []string{paramRef}, text: map[textlang.Lang]string{
+		textlang.English:    "The row “{ref}” was skipped in this import, so there is nothing to link to.",
+		textlang.German:     "Die Zeile {ref:q} wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen.",
+		textlang.Vietnamese: "Hàng {ref:q} đã bị bỏ qua trong lần nhập này nên không có gì để liên kết.",
+	}},
+	ReasonLinkRowSkippedDropped: {params: []string{paramRef}, text: map[textlang.Lang]string{
+		textlang.English:    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+		textlang.German:     "Die Zeile {ref:q} wurde in diesem Import übersprungen, daher gibt es nichts zu verknüpfen. Die Zeile wurde ohne Verknüpfung importiert.",
+		textlang.Vietnamese: "Hàng {ref:q} đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
 	}},
 	ReasonActivityLinkAmbiguous: {params: []string{paramName}, text: map[textlang.Lang]string{
 		textlang.English:    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",

@@ -6381,6 +6381,10 @@ export const en = {
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.deal_not_found":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.link_row_skipped":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to.",
+  "import.reason.link_row_skipped_dropped":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
   "import.reason.activity_link_ambiguous":

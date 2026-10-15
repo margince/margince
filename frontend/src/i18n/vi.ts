@@ -6108,6 +6108,10 @@ export const vi = {
     "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.deal_not_found":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.link_row_skipped":
+    "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết.",
+  "import.reason.link_row_skipped_dropped":
+    "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
   "import.reason.deal_not_found_dropped":
     "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.activity_link_ambiguous":
