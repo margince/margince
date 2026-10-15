@@ -5,6 +5,7 @@ package config_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -84,5 +85,35 @@ func TestStructIsJSONInTextAndNativeInYAML(t *testing.T) {
 	got, err = typ.DecodeYAML(n.Content[0])
 	if err != nil || got.Model != "m2" {
 		t.Fatalf("yaml: %v %v", got, err)
+	}
+}
+
+type sized struct {
+	Count int `json:"count" yaml:"count"`
+}
+
+func TestStructErrorsNeverEchoTheInput(t *testing.T) {
+	typ := config.Struct[sized]()
+	if _, err := typ.Parse(`{"count":"hunter2-secret"}`); err == nil || strings.Contains(err.Error(), "hunter2") {
+		t.Fatalf("JSON error must not echo the value: %v", err)
+	}
+	if _, err := typ.Parse(`hunter2-secret`); err == nil || strings.Contains(err.Error(), "hunter2") {
+		t.Fatalf("JSON syntax error must not echo the value: %v", err)
+	}
+	var n yaml.Node
+	if err := yaml.Unmarshal([]byte("count: hunter2-secret"), &n); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := typ.DecodeYAML(n.Content[0]); err == nil || strings.Contains(err.Error(), "hunter2") {
+		t.Fatalf("YAML error must not echo the value: %v", err)
+	}
+}
+
+func TestStructRefusesTrailingData(t *testing.T) {
+	typ := config.Struct[routing]()
+	for _, text := range []string{`{"model":"m1"} junk`, `{"model":"m1"}{"x":1}`} {
+		if _, err := typ.Parse(text); err == nil {
+			t.Fatalf("trailing data must fail: %q", text)
+		}
 	}
 }

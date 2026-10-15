@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"slices"
 	"strings"
@@ -199,7 +200,7 @@ func (structType[T]) DecodeYAML(n *yaml.Node) (T, error) {
 	dec := yaml.NewDecoder(&buf)
 	dec.KnownFields(true)
 	if err := dec.Decode(&v); err != nil {
-		return v, err
+		return v, errStructFields
 	}
 	return v, nil
 }
@@ -209,10 +210,17 @@ func (structType[T]) DecodeJSON(raw json.RawMessage) (T, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&v); err != nil {
-		return v, fmt.Errorf("want a JSON object of this setting's fields: %w", err)
+		return v, errStructFields
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		return v, errStructFields
 	}
 	return v, nil
 }
+
+// errStructFields hides the decoders' messages, which quote the offending
+// input, and a struct field can hold a secret.
+var errStructFields = errors.New("want an object of this setting's fields")
 
 func (structType[T]) Format(v T) string {
 	raw, err := json.Marshal(v)
