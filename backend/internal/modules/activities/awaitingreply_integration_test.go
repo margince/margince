@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -235,5 +236,36 @@ func TestAnImportedMessageIsNotAFollowUp(t *testing.T) {
 	}
 	if awaited(t, s, e, imported) {
 		t.Error("a message an import brought in is a follow-up")
+	}
+}
+
+// An imported inbound message is history, so neither the badge nor the lane
+// asks for a reply to it.
+func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Buyer Contact', 'seed', 'system')`, contact)
+	activity := e.seedWait(t, "Can you send the quote?", "contact_id", contact)
+	move := func() crmcontracts.EmailSummaryMove {
+		tx, err := e.owner.Begin(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		states, err := EmailStatesFor(context.Background(), tx, []ids.UUID{activity})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		return states[activity].Move
+	}
+	if got := move(); got != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Fatalf("a live inbound's move = %q, want needs_reply", got)
+	}
+	e.exec(t, `UPDATE activity SET source_system = 'mirror:csv:old-crm' WHERE id = $1`, activity)
+	if got := move(); got != crmcontracts.EmailSummaryMoveNone {
+		t.Fatalf("an imported inbound's move = %q, want none", got)
 	}
 }

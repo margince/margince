@@ -125,7 +125,7 @@ func naturalKeyFor(object, raw string) (linkKey, bool) {
 }
 
 // markNaturalPending records the natural key of a row the dry run predicts will
-// land, so a link that names it by email or domain resolves before it exists.
+// land. A link naming it by email or domain then resolves before the row exists.
 func (r *linkResolver) markNaturalPending(object, raw string) {
 	if key, ok := naturalKeyFor(object, raw); ok {
 		r.pendingNatural[key] = true
@@ -328,8 +328,8 @@ func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (link
 	return answer, nil
 }
 
-// naturalKeyField is the column of a row that holds its natural key, or empty
-// when a record of that type has none a link can name.
+// naturalKeyField is the column holding a row's natural key. It is empty when
+// a record of that type has none a link can name.
 func naturalKeyField(object string) string {
 	switch object {
 	case migration.ObjectContact:
