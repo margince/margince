@@ -43,6 +43,7 @@ func TestABundleMatchesEachFileToItsTypeByName(t *testing.T) {
 		".DS_Store":                "junk",
 		"products.csv":             "Product\n",
 		"deals.csv":                "ref,name\n",
+		"activities.csv":           "ref,type\n",
 	}), 10<<20)
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +52,9 @@ func TestABundleMatchesEachFileToItsTypeByName(t *testing.T) {
 	for _, p := range b.Parts {
 		got[p.Entry] = p.Object
 	}
-	want := map[string]string{"export/Companies.CSV": ObjectCompany, "export/contacts.csv": ObjectContact, "lead.csv": ObjectLead}
+	want := map[string]string{
+		"export/Companies.CSV": ObjectCompany, "export/contacts.csv": ObjectContact, "lead.csv": ObjectLead, "deals.csv": ObjectDeal,
+	}
 	if len(got) != len(want) {
 		t.Fatalf("parts = %v, want %v", got, want)
 	}
@@ -64,8 +67,8 @@ func TestABundleMatchesEachFileToItsTypeByName(t *testing.T) {
 	for _, i := range b.Ignored {
 		ignored[i.Entry] = i.Reason
 	}
-	if ignored["products.csv"] != IgnoredUnknownName || ignored["deals.csv"] != IgnoredNotYetImportable || len(ignored) != 2 {
-		t.Fatalf("ignored = %v, want products.csv as unknown and deals.csv as not yet importable, and nothing else listed", ignored)
+	if ignored["products.csv"] != IgnoredUnknownName || ignored["activities.csv"] != IgnoredNotYetImportable || len(ignored) != 2 {
+		t.Fatalf("ignored = %v, want products.csv as unknown and activities.csv as not yet importable, and nothing else listed", ignored)
 	}
 }
 

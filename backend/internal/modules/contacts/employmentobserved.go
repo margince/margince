@@ -112,7 +112,7 @@ func auditFirstObservation(ctx context.Context, tx pgx.Tx, move firstObservation
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, move.contact.UUID,
-		relationshipUpdatedPayload(contactEntity, delta)); err != nil {
+		relationshipUpdatedPayload(ctx, contactEntity, delta)); err != nil {
 		return fmt.Errorf("contacts: publish the employment edge's first observation: %w", err)
 	}
 	return nil

@@ -8,6 +8,7 @@ import {
   importPathTo,
   productionModulesUnder,
 } from "../../scripts/lib/import-reach";
+import { SCREEN_ROOTS } from "../testing/screenfiles";
 
 // The settings catalog is split in two so the shell can ask where a settings
 // entry lives without paying to draw it. `settingsnav.tsx` answers the address
@@ -40,25 +41,14 @@ function pathTo(entry: string, target: string): string[] | null {
 }
 
 /**
- * Every production module that must not reach the settings screen, DERIVED
- * rather than listed. A hand-kept list is a second copy of "who asks a settings
- * question", and it goes stale the first time somebody adds a module — silently,
- * because a gate that reads a smaller tree still reports PASS.
- *
- * Four trees qualify. `src/app/**` is the always-loaded shell, and
- * `src/lib/**` is the infrastructure it loads. `src/components/**` holds the
- * parts many screens share. `src/screens/**`
- * is every other screen: a screen that only wants an ADDRESS must not drag the
- * settings cards into its own chunk, which is what `worklist.copy.ts` did —
- * putting the whole settings screen behind Brief, the default landing page.
+ * Every production module that must not reach the settings screen, derived
+ * rather than listed, since a gate that reads a smaller tree still passes.
+ * The shell (`app/`, `lib/`) and every screen qualify. A screen that wants
+ * only an address must not pull the settings cards into its chunk.
  */
 const settingsOwnModules = new Set([settingsScreen, settingsNav]);
-const shellEntryPoints = [
-  ...productionModulesUnder(join(srcRoot, "app")),
-  ...productionModulesUnder(join(srcRoot, "lib")),
-  ...productionModulesUnder(join(srcRoot, "components")),
-  ...productionModulesUnder(join(srcRoot, "screens")),
-]
+const shellEntryPoints = ["app", "lib", ...SCREEN_ROOTS]
+  .flatMap((root) => productionModulesUnder(join(srcRoot, root)))
   .filter((file) => !settingsOwnModules.has(file))
   .map((file) => relative(srcRoot, file))
   .sort();

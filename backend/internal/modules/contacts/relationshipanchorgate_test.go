@@ -56,8 +56,7 @@ const wantMinimumAnchorAskers = 5
 // object grant and cannot ask its row authority. Each entry says why the row
 // question is unanswerable there, not merely inconvenient.
 var anchorAskersWithoutTheRowGate = gatekit.Waive(map[string]string{
-	"RefuseEdgeWrite":            "the stage-time half of an edge reversal, which is handed a KIND and no edge — so there is no anchor row to probe, and it says so itself: it answers the object half early to keep a button honest, and the write it precedes takes the row half through UpdateRelationship or the archive. Gating here would need an id this signature does not carry",
-	"seatContactOnQualifiedDeal": "the stakeholder seat a lead qualification mints, whose contact AND deal were both created in the very transaction that writes it. No row-scope probe can see either yet, so EnsureWritableLive would refuse every qualification; the authority is the promote's own, taken on the lead before any of the three rows exist",
+	"RefuseEdgeWrite": "the stage-time half of an edge reversal, which is handed a KIND and no edge — so there is no anchor row to probe, and it says so itself: it answers the object half early to keep a button honest, and the write it precedes takes the row half through UpdateRelationship or the archive. Gating here would need an id this signature does not carry",
 })
 
 func TestEveryGenericRelationshipVerbTakesTheAnchorRowGate(t *testing.T) {

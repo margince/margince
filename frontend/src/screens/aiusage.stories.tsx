@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -56,12 +56,12 @@ const task = {
   tokens_in: 1200,
   tokens_out: 240,
 };
-const meta: Meta<typeof AiUsageCard> = {
+const meta = {
   title: "Settings/AI/AI usage/Usage",
   component: AiUsageCard,
-};
+} satisfies Meta<typeof AiUsageCard>;
 export default meta;
-type Story = StoryObj<typeof AiUsageCard>;
+type Story = StoryObj<typeof meta>;
 export const Normal: Story = { render: story("normal", [task]) };
 export const EconomyMode: Story = { render: story("degraded", [task]) };
 export const Queued: Story = { render: story("queued", [task]) };
@@ -70,22 +70,43 @@ export const WithCost: Story = {
 };
 export const Empty: Story = { render: story("normal", []) };
 
+// A reader who may read the model prices is pointed to them.
+export const WithPricesLink: Story = {
+  render: story("normal", [task], { ...OPERATOR, ai_model_rate: ["read"] }),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("link", {
+        name: "Prices are set on AI models",
+      }),
+    ).toHaveAttribute("href", "#/settings/models");
+  },
+};
+
 // A seat holding no ai_diagnostics grant. The card keeps its place and says the
 // figures are withheld — an absent spend card would read as "this
 // installation meters nothing", a claim about the data rather than about who
 // may read it.
 export const Withheld: Story = { render: story("normal", [task], {}) };
 
-// The per-day breakdown, opened: the card's diagnostic half, a small table of
-// days and their calls behind its own summary.
-export const DaysOpen: Story = {
-  render: story("normal", [task]),
+// The same table by day, switched from the keyboard: the switch is a pair of
+// pressed buttons, so Tab reaches it and Enter turns it.
+export const ByDay: Story = {
+  render: story("normal", [{ ...task, cost_est_minor: 124 }]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("columnheader", { name: "Task" });
-    await userEvent.click(canvas.getByText("Show days"));
+    canvas.getByRole("button", { name: "By day" }).focus();
+    await userEvent.keyboard("{Enter}");
     await canvas.findByRole("columnheader", { name: "Day" });
   },
+};
+
+// Calls with usage and no rate: the total is short and the line under the
+// strip says by how many calls.
+export const PartlyPriced: Story = {
+  render: story("normal", [
+    { ...task, cost_est_minor: 124, unpriced_calls: 3 },
+  ]),
 };
 
 const grouped = [
@@ -112,10 +133,6 @@ export const GroupedByTaskPhone: Story = {
   render: story("normal", grouped),
 };
 
-// Economy mode in dark. The band is carried twice and both times by colour: the
-// Badge tone and the Meter's fill at 85% of budget. Nothing else on the card
-// says spend has crossed into throttling, so if either tint flattens against
-// the dark panel the reader sees an ordinary month.
 export const EconomyModeDark: Story = {
   globals: { theme: "dark" },
   render: story("degraded", [task]),

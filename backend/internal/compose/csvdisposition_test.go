@@ -105,3 +105,28 @@ func TestANewTagReadsAsCreatedOnceTheCommitRan(t *testing.T) {
 		t.Errorf("issues = %+v, want the prediction kept when creating the tags is what failed", report.Issues)
 	}
 }
+
+// A deal bundle's stored report adds the test run's rows to the commit's: the
+// unchanged count and the stage skip each appear twice. The wire says each row
+// once, and the attempts count is the two walks, not a resume.
+func TestAReimportedDealBundleReportsEachRowOnce(t *testing.T) {
+	stageSkip := migration.SkippedRow{ExternalID: "D-4", Line: 5, Kind: migration.ProblemInvalidValue, Value: "Closing", Reason: "not a stage"}
+	stored := migration.Report{Attempts: 2, Objects: []migration.ObjectReport{
+		{Object: migration.ObjectCompany, MirrorCount: 2, Unchanged: 4},
+		{Object: migration.ObjectContact, MirrorCount: 1, Unchanged: 2},
+		{Object: migration.ObjectDeal, MirrorCount: 4, Unchanged: 6, Skipped: []migration.SkippedRow{stageSkip, stageSkip}},
+	}}
+
+	report := toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &stored})
+	want := map[string][3]int{migration.ObjectCompany: {2, 2, 0}, migration.ObjectContact: {1, 1, 0}, migration.ObjectDeal: {4, 3, 1}}
+	for _, part := range *report.Parts {
+		got := [3]int{part.RowsRead, part.Disposition.Unchanged, part.Disposition.Skipped}
+		if got != want[string(part.Object)] {
+			t.Errorf("%s: rows/unchanged/skipped = %v, want %v", part.Object, got, want[string(part.Object)])
+		}
+	}
+	if report.RowsRead != 7 || report.Disposition.Unchanged != 6 || report.Disposition.Skipped != 1 || len(report.Issues) != 1 {
+		t.Errorf("totals rows %d, unchanged %d, skipped %d, issues %d; want 7, 6, 1, 1",
+			report.RowsRead, report.Disposition.Unchanged, report.Disposition.Skipped, len(report.Issues))
+	}
+}

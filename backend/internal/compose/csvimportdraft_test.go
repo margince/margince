@@ -86,7 +86,7 @@ func TestADraftSaveRefusesAChoiceOutsideItsValues(t *testing.T) {
 		{"draft step", crmcontracts.UpdateImportRunRequest{DraftStep: new(crmcontracts.ImportDraftStep("review"))}, "draft_step"},
 		{"source name", crmcontracts.UpdateImportRunRequest{SourceName: new("crm/export")}, "source_name"},
 		{"part object", crmcontracts.UpdateImportRunRequest{Parts: &[]crmcontracts.ImportPartRequest{{
-			File: "deals.csv", Object: crmcontracts.ImportObject("deal"),
+			File: "invoices.csv", Object: crmcontracts.ImportObject("invoice"),
 		}}}, "object"},
 		{"zero tag", crmcontracts.UpdateImportRunRequest{ContextTagId: new(openapi_types.UUID{})}, "context_tag_id"},
 	}

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -25,16 +26,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func bundleRequest(actor principal.Principal) *http.Request {
+func bundleRequest(path string, actor principal.Principal) *http.Request {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, actor)
-	return httptest.NewRequest(http.MethodGet, "/v1/agent-bundle", nil).WithContext(ctx)
+	return httptest.NewRequest(http.MethodGet, path, nil).WithContext(ctx)
 }
 
 func TestTheSkillBundleIsRefusedToAnAgent(t *testing.T) {
 	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test"}, slog.New(slog.DiscardHandler))
 	w := httptest.NewRecorder()
-	h.DownloadAgentSkillBundle(w, bundleRequest(principal.Principal{
+	h.DownloadAgentSkillBundle(w, bundleRequest("/v1/agent-bundle", principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:probe", UserID: ids.NewV7(), SeatType: principal.SeatFull,
 	}))
 	if w.Code != http.StatusForbidden {
@@ -45,7 +46,7 @@ func TestTheSkillBundleIsRefusedToAnAgent(t *testing.T) {
 func TestTheSkillBundleIsAZipNamingTheAPIBase(t *testing.T) {
 	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, slog.New(slog.DiscardHandler))
 	w := httptest.NewRecorder()
-	h.DownloadAgentSkillBundle(w, bundleRequest(principal.Principal{
+	h.DownloadAgentSkillBundle(w, bundleRequest("/v1/agent-bundle", principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:ada", UserID: ids.NewV7(), SeatType: principal.SeatFull,
 	}))
 	if w.Code != http.StatusOK {
@@ -59,6 +60,34 @@ func TestTheSkillBundleIsAZipNamingTheAPIBase(t *testing.T) {
 	}
 	if spec := bundledSpec(t, w.Body.Bytes()); !strings.Contains(spec, "url: https://crm.example.test/v1\n") {
 		t.Error("openapi.yaml does not name https://crm.example.test/v1 as its server")
+	}
+}
+
+func TestTheOpenAPIDocumentIsJSONNamingTheAPIBase(t *testing.T) {
+	h := newAgentBundleHandlers(agentAPIOrigin{public: "https://crm.example.test/"}, slog.New(slog.DiscardHandler))
+	w := httptest.NewRecorder()
+	h.GetAgentOpenAPIDocument(w, bundleRequest("/v1/openapi.json", principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:probe", UserID: ids.NewV7(), SeatType: principal.SeatFull,
+	}))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", got)
+	}
+	if got := w.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store: the answer may carry this request's own origin", got)
+	}
+	var doc struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("the answer is not JSON: %v", err)
+	}
+	if len(doc.Servers) != 1 || doc.Servers[0].URL != "https://crm.example.test/v1" {
+		t.Errorf("servers = %+v, want the one base https://crm.example.test/v1", doc.Servers)
 	}
 }
 

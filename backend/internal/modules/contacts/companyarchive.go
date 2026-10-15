@@ -80,6 +80,11 @@ func (s *Store) ArchiveCompany(
 		if err := refuseIfHumanTouched(ctx, tx, "company", id.UUID, options); err != nil {
 			return err
 		}
+		if options.keepWhileReferenced {
+			if err := refuseIfReferenced(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		var err error
 		out, err = archiveCompanyTx(ctx, tx, id, ifVersion, active)
 		return err

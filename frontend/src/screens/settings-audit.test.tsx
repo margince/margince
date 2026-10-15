@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../components/listquery";
+import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
@@ -11,7 +12,7 @@ import { auditEntry, jsonResponse, render } from "./settings.testkit";
 import { AuditLogCard } from "./settings-audit";
 
 // The fixture entry's toggle, named by its action and entity.
-const EXPAND_UPDATE = "Show change detail: update on contact";
+const EXPAND_UPDATE = "Show change detail: Updated on Contact";
 const ANY_EXPAND = /^Show change detail: /;
 
 // No shared fetch stub: the backend a claim needs is installed beside the claim,
@@ -85,19 +86,20 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("AuditLogCard", () => {
-  it("puts the filters inside the log's own card, in a disclosure closed on arrival", async () => {
+  // The page names the log, so its card carries no heading. The dials stand
+  // open on one bar above it, each applying on its own.
+  it("puts the filters on a bar above the log, and repeats no page heading", async () => {
     vi.stubGlobal("fetch", auditLogBackend());
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
 
-    const card = screen.getByLabelText("Actor").closest("section");
-    expect(card).toContainElement(
-      screen.getByRole("heading", { level: 2, name: "Audit log" }),
-    );
-    expect(card).toContainElement(screen.getByText("update"));
-    const disclosure = screen.getByLabelText("Actor").closest("details");
-    expect(disclosure).not.toHaveAttribute("open");
-    expect(disclosure?.querySelector("summary")).toHaveTextContent("Filters");
+    const bar = screen.getByLabelText("Actor").closest("fieldset");
+    expect(bar).not.toBeNull();
+    expect(bar).not.toContainElement(screen.getByText("Updated"));
+    expect(screen.getByLabelText("From")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("To")).toHaveAttribute("type", "date");
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(document.querySelector("details")).toBeNull();
   });
 
   it("narrows the request to the filters, keeping the page size and dropping the cursor", async () => {
@@ -105,7 +107,7 @@ describe("AuditLogCard", () => {
     const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
     expect(auditLogUrls(backend)[0]).toContain("limit=20");
 
     await user.type(screen.getByLabelText("Actor"), "agent:sdr");
@@ -128,11 +130,22 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Action"), "erase");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Action" }),
+      "Erased",
+    );
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     expect(
       await screen.findByText("No recorded actions match these filters."),
     ).toBeInTheDocument();
+    // The dial shows the label and asks the server with the contract's token.
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      );
+    expect(asked.some((url) => url.includes("action=erase"))).toBe(true);
   });
 
   it("offers a retry when the log fails to load, and keeps the filters", async () => {
@@ -177,7 +190,7 @@ describe("AuditLogCard", () => {
     render(<AuditLogCard />);
     expect(
       await screen.findByRole("button", {
-        name: "Show change detail: create on onboarding wizard state",
+        name: "Show change detail: Created on onboarding wizard state",
       }),
     ).toBeInTheDocument();
   });
@@ -195,27 +208,30 @@ describe("AuditLogCard", () => {
     const [, row] = within(table).getAllByRole("row");
     const cells = within(row).getAllByRole("cell");
     expect(cells[1]).toHaveTextContent("Anna Weber");
-    expect(cells[2]).toHaveTextContent("create");
+    expect(cells[2]).toHaveTextContent("Created");
     expect(cells[3]).toHaveTextContent("onboarding wizard state");
   });
 
   it.each([
-    ["create", "badge-success"],
-    ["delete", "badge-danger"],
-  ])("tones a %s as %s and every other verb neutral", async (action, tone) => {
-    vi.stubGlobal(
-      "fetch",
-      auditLogBackend({ entries: [{ ...created, action }, auditEntry] }),
-    );
-    render(<AuditLogCard />);
-    expect((await screen.findByText(action)).closest(".badge")).toHaveClass(
-      tone,
-    );
-    expect(screen.getByText("update").closest(".badge")).toHaveAttribute(
-      "class",
-      "badge",
-    );
-  });
+    ["create", "Created", "badge-success"],
+    ["delete", "Deleted", "badge-danger"],
+  ])(
+    "tones a %s as %s, %s, and every other verb neutral",
+    async (action, label, tone) => {
+      vi.stubGlobal(
+        "fetch",
+        auditLogBackend({ entries: [{ ...created, action }, auditEntry] }),
+      );
+      render(<AuditLogCard />);
+      expect((await screen.findByText(label)).closest(".badge")).toHaveClass(
+        tone,
+      );
+      expect(screen.getByText("Updated").closest(".badge")).toHaveAttribute(
+        "class",
+        "badge",
+      );
+    },
+  );
 
   it("states when an entry happened against the clock, with the instant on hover", async () => {
     steppedClock();
@@ -260,7 +276,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend());
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
     const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("qualified")).toBeNull();
@@ -281,7 +297,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [rotated] }));
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
 
     await openDetail(user);
 
@@ -316,13 +332,14 @@ describe("AuditLogCard", () => {
     await screen.findByText("Anna Weber");
     await openDetail(user);
 
-    const fields = screen.getByText("Value").closest("table");
+    const fields = screen.getByText("step").closest("dl");
     if (!fields) {
-      throw new Error("the change detail drew no field table");
+      throw new Error("the change detail drew no field list");
     }
     expect(within(fields).getByText("complete")).toBeInTheDocument();
     expect(within(fields).getByText('{"voice":false}').tagName).toBe("CODE");
     expect(within(fields).queryByText("(created)")).toBeNull();
+    expect(screen.queryByRole("table", { name: /changed fields/i })).toBeNull();
   });
 
   it("strikes the value an update replaced and keeps the one it wrote", async () => {
@@ -340,10 +357,10 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
     await openDetail(user);
 
-    expect(screen.getByText("Before and after")).toBeInTheDocument();
+    expect(screen.getByText("address").tagName).toBe("DT");
     expect(screen.getByText('{"city":"Berlin"}')).toHaveClass(
       "field-diff-from",
     );
@@ -359,7 +376,7 @@ describe("AuditLogCard", () => {
           {
             ...created,
             action: "delete",
-            before: { name: "Old list" },
+            before: { name: "Old list", next_step: null },
             after: null,
           },
         ],
@@ -367,10 +384,13 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("delete");
+    await screen.findByText("Deleted");
     await openDetail(user);
-    expect(screen.getByText("Removed value")).toBeInTheDocument();
-    expect(screen.getByText("Old list")).toBeInTheDocument();
+    expect(screen.getByText("Old list")).toHaveClass("auditlog-value");
+    // A column the record held empty reads as no value, not as a creation.
+    expect(screen.getByText("No value")).toBeInTheDocument();
+    expect(screen.queryByText("(cleared)")).toBeNull();
+    expect(screen.queryByText("(created)")).toBeNull();
   });
 
   it.each([
@@ -396,7 +416,7 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
     await openDetail(user);
     const term = screen.getByText("Allowed by");
     expect(term.nextElementSibling).toHaveTextContent(words);
@@ -414,7 +434,7 @@ describe("AuditLogCard", () => {
         auditLogBackend({ entries: [{ ...auditEntry, ...fields }] }),
       );
       render(<AuditLogCard />);
-      await screen.findByText("update");
+      await screen.findByText("Updated");
       const name = await screen.findByText(expected);
       expect(name.closest(".auditlog-who")).toHaveTextContent("via an agent");
       expect(name.closest("td")).not.toHaveTextContent(VIEWER_ID);
@@ -444,12 +464,12 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", backend);
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Updated");
 
     await user.click(screen.getByRole("button", { name: "Load more" }));
 
     expect(await screen.findByText("Anna Weber")).toBeInTheDocument();
-    expect(screen.getByText("update")).toBeInTheDocument();
+    expect(screen.getByText("Updated")).toBeInTheDocument();
     expect(auditLogUrls(backend).at(-1)).toContain("cursor=c-2");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });

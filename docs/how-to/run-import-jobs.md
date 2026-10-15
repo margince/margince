@@ -132,7 +132,7 @@ Each issue of a run's report carries `reason`, the English sentence, and `reason
 A report written before the codes existed has the sentence alone. `GET /v1/imports/{id}/problems.csv`
 takes `lang` (`en`, `de` or `vi`; English when left out) and writes its header and every coded reason
 in that language. An issue with no code keeps its English sentence. The sentences come from one catalog
-in the migration module, `reasoncatalog.go`, and the contract's `ImportReasonCode` list holds the same
+in the migration module, `reasoncatalog.go` and `reasoncatalogdeals.go`, and the contract's `ImportReasonCode` list holds the same
 codes.
 
 ## Reading a stuck run

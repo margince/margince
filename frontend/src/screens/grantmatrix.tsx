@@ -3,6 +3,8 @@
 
 import type { components } from "../api/schema";
 import { Badge, TableScroll } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { KeyedName } from "../design-system/keyedname";
 import type { ScrollRegionName } from "../design-system/scrollregion";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
@@ -47,6 +49,8 @@ export function grantOf(role: Role, object: string): ObjectGrant {
 export type GrantMatrixRow = Readonly<{
   key: string;
   name: string;
+  /** The raw key, in the code face under the name, for an operator who asked. */
+  code?: string;
   /** A label beside the name, for the rows that differ from the rest. */
   badge?: string;
   grant: ObjectGrant;
@@ -55,6 +59,13 @@ export type GrantMatrixRow = Readonly<{
   /** Whether a write carrying this row's whole grant is in flight. */
   pending: boolean;
   onChange: (action: CrudAction, next: boolean) => void;
+}>;
+
+/** A run of rows under one name; a lone section may go unnamed. */
+export type GrantMatrixSection = Readonly<{
+  key: string;
+  title?: string;
+  rows: readonly GrantMatrixRow[];
 }>;
 
 /**
@@ -71,7 +82,7 @@ export type GrantMatrixRow = Readonly<{
  */
 export function GrantMatrix({
   rowHeader,
-  rows,
+  sections,
   canManage,
   readOnlyReason,
   turnOnReason,
@@ -81,7 +92,7 @@ export function GrantMatrix({
 }: Readonly<{
   /** The first column's header: what the rows are. */
   rowHeader: string;
-  rows: readonly GrantMatrixRow[];
+  sections: readonly GrantMatrixSection[];
   canManage: boolean;
   readOnlyReason: string;
   /** Why a switch that is off may not be turned on; absent when it may. */
@@ -111,44 +122,84 @@ export function GrantMatrix({
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key}>
-              <th scope="row">
-                <span className="grant-row-head">
-                  <span>{row.name}</span>
-                  {row.badge ? <Badge>{row.badge}</Badge> : null}
-                </span>
-              </th>
-              {CRUD.map((action) => {
-                const refusal = !canManage
-                  ? readOnlyReason
-                  : row.grant[action]
-                    ? undefined
-                    : turnOnReason;
-                return (
-                  <td key={action} className="grant-cell">
-                    <Switch
-                      labelHidden
-                      label={row.cellLabel(action)}
-                      checked={row.grant[action]}
-                      // The row being written keeps focus through `pending`;
-                      // every other switch waits for it.
-                      disabled={busy && !row.pending}
-                      pending={row.pending}
-                      // Only a permission denial gets a reason; a write in
-                      // flight is the other way a switch is held, and a
-                      // sentence flashing for 200ms on every flip is noise.
-                      reason={refusal}
-                      onChange={(next) => row.onChange(action, next)}
-                    />
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
+        {sections.map((section) => (
+          <tbody key={section.key}>
+            {section.title === undefined ? null : (
+              <tr className="grant-group">
+                <th scope="rowgroup" colSpan={CRUD.length + 1}>
+                  <Heading size="xsmall" as="h3">
+                    {section.title}
+                  </Heading>
+                </th>
+              </tr>
+            )}
+            {section.rows.map((row) => (
+              <GrantRow
+                key={row.key}
+                row={row}
+                canManage={canManage}
+                readOnlyReason={readOnlyReason}
+                turnOnReason={turnOnReason}
+                busy={busy}
+              />
+            ))}
+          </tbody>
+        ))}
       </table>
     </TableScroll>
+  );
+}
+
+function GrantRow({
+  row,
+  canManage,
+  readOnlyReason,
+  turnOnReason,
+  busy,
+}: Readonly<{
+  row: GrantMatrixRow;
+  canManage: boolean;
+  readOnlyReason: string;
+  turnOnReason: string | undefined;
+  busy: boolean;
+}>) {
+  return (
+    <tr>
+      <th scope="row">
+        <span className="grant-row-head">
+          {row.code === undefined ? (
+            <span>{row.name}</span>
+          ) : (
+            <KeyedName name={row.name} code={row.code} />
+          )}
+          {row.badge ? <Badge>{row.badge}</Badge> : null}
+        </span>
+      </th>
+      {CRUD.map((action) => {
+        const refusal = !canManage
+          ? readOnlyReason
+          : row.grant[action]
+            ? undefined
+            : turnOnReason;
+        return (
+          <td key={action} className="grant-cell">
+            <Switch
+              labelHidden
+              label={row.cellLabel(action)}
+              checked={row.grant[action]}
+              // The row being written keeps focus through `pending`;
+              // every other switch waits for it.
+              disabled={busy && !row.pending}
+              pending={row.pending}
+              // Only a permission denial gets a reason. A write in flight
+              // holds a switch too, and a sentence flashing for 200ms on
+              // every flip is noise.
+              reason={refusal}
+              onChange={(next) => row.onChange(action, next)}
+            />
+          </td>
+        );
+      })}
+    </tr>
   );
 }

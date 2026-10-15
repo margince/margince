@@ -75,6 +75,17 @@ function countOf(
     .length;
 }
 
+// How many deals the parts say land already closed, by the part field named.
+function sumOf(
+  report: ImportReport,
+  field: "closed_won" | "closed_lost",
+): number {
+  return (report.parts ?? []).reduce(
+    (sum, part) => sum + (part[field] ?? 0),
+    0,
+  );
+}
+
 /**
  * What the run will do, before anything is written. It shows the counts per
  * type and every problem with where it is, and offers to bring rows with
@@ -143,6 +154,9 @@ function TestRunBody({
   const invalid = countOf(report.issues, "invalid_value");
   const linkless = countOf(report.issues, "broken_link", "dropped_link");
   const restaging = wizard.test.isPending;
+  const closedWon = sumOf(report, "closed_won");
+  const closedLost = sumOf(report, "closed_lost");
+  const closed = closedWon + closedLost;
   const landing = report.disposition.created + report.disposition.updated;
   return (
     <div className="import">
@@ -159,6 +173,20 @@ function TestRunBody({
       <ImportContextTagSummary
         tagID={wizard.contextTagID || (wizard.run.data?.context_tag_id ?? "")}
       />
+      {closed > 0 ? (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={plural("import.test.closedDeals", closed, {
+            count: formatNumber(closed, locale),
+          })}
+        >
+          {t("import.test.closedDealsBody", {
+            won: formatNumber(closedWon, locale),
+            lost: formatNumber(closedLost, locale),
+          })}
+        </Callout>
+      ) : null}
       {invalid > 0 ? (
         <Callout
           tone="warning"

@@ -81,14 +81,23 @@ function story() {
   };
 }
 
-const meta: Meta<typeof AiTasksCard> = {
+const meta = {
   title: "Settings/AI/AI models/AI tasks",
   component: AiTasksCard,
-};
+} satisfies Meta<typeof AiTasksCard>;
 export default meta;
-type Story = StoryObj<typeof AiTasksCard>;
+type Story = StoryObj<typeof meta>;
 
-export const Default: Story = { render: story() };
+// One table per tier, in ladder order, each headed by the tier's name.
+export const Default: Story = {
+  render: story(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Everyday cloud" });
+    canvas.getByRole("table", { name: "Premium" });
+    canvas.getByRole("table", { name: "Embedding model" });
+  },
+};
 export const Dark: Story = { render: story(), globals: { theme: "dark" } };
 
 export const Phone: Story = {
@@ -96,6 +105,6 @@ export const Phone: Story = {
   tags: ["uat-phone"],
   render: story(),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("table");
+    await within(canvasElement).findByRole("table", { name: "Premium" });
   },
 };
