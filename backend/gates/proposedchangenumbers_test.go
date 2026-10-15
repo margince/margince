@@ -47,7 +47,7 @@ const lossyDecodeFloor = 3
 func TestNoProposedChangeIsDecodedThroughFloat64(t *testing.T) {
 	t.Parallel()
 
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 	seen := 0
 	for _, pkg := range changeHandlers {
 		for _, path := range goSourceFiles(t, tree+"/"+pkg) {
