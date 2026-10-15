@@ -603,7 +603,9 @@ function SubscriptionRow({
     <>
       <SettingRow
         label={
-          <span className="webhook-target">{subscription.target_url}</span>
+          <span className="webhook-target" title={subscription.target_url}>
+            {subscription.target_url}
+          </span>
         }
         // The verbs sit under the target, so a long URL keeps the row's width.
         description={
