@@ -15,8 +15,12 @@ To post to a chat channel in Margince, open **Settings → Integrations** and ch
 Also called: deal won notification, notify finance, chat alert, Teams message.
 
 ### What can a message say?
-A message can say what happened and link to the record. A template fills `{{ entity.name }}` with the name of a deal, company or project, and `{{ entity.url }}` with a link to its page. For a contact or lead the message carries the link only, so their name never sits in a stored message. Open the link to see who it is. **Insert variable** lists every field the chosen event has, and the ⓘ beside an event in **Add events** shows them too.
+A message can say what happened and link to the record. A template fills `{{ entity.name }}` with the name of a deal, company or project, and `{{ entity.url }}` with a link to its page. For a contact or lead, `{{ entity.name }}` is empty and the message carries the link. **Insert variable** lists every field the chosen event has, and the ⓘ beside an event in **Add events** shows them too.
 Also called: message text, payload, fields, deal name in the message.
+
+### Does a sent message keep a contact's name?
+Yes, if the message carries it. The event's own fields can name a contact: a new contact's event carries `{{ data.full_name }}`. Margince keeps each sent message, even after the contact is erased. Leave a name out of the template when the link is enough.
+Also called: privacy, erasure, personal data in webhooks.
 
 ### Why did my chat channel get a message for every stage, not only won deals?
 A subscription to **Deal moved to another stage** sends one message for each move, won and lost included. A template cannot skip a move. Put the new stage in the message (`{{ data.to_stage_name }}`, `{{ data.to_status }}`) so a reader sees which one it was.

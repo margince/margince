@@ -911,7 +911,7 @@ Payload for forecast.created, somebody accountable for a number said what they b
 
 Record: `user` · version 1
 
-Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the six alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one contact wrote for another, and a subscriber acting on it acts on text the author may edit.
+Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1228,7 +1228,7 @@ Payload for list.updated, a list's name, purpose, filter, sharing, team or stewa
 
 Record: `user` · version 1
 
-Payload for notice.created. A durable informational notice was recorded for one contact (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift.
+Payload for notice.created. A durable informational notice was recorded for one member (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1623,7 +1623,7 @@ Payload for user.reactivated. A deactivated member was lifted out of deactivatio
 
 Record: `user` · version 1
 
-Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a contact may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that contact and the job read.
+Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a member may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that member and the job read.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

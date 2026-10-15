@@ -1772,7 +1772,7 @@ type PublicEventForecastCreated struct {
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
 
-// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the six alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one contact wrote for another, and a subscriber acting on it acts on text the author may edit.
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 type PublicEventForecastExceptionResolved struct {
 	ActorUserId openapi_types.UUID `json:"actor_user_id"`
 	ExceptionId openapi_types.UUID `json:"exception_id"`
@@ -2027,7 +2027,7 @@ type PublicEventListUpdated struct {
 	Version int64    `json:"version"`
 }
 
-// PublicEventNoticeCreated Payload for notice.created. A durable informational notice was recorded for one contact (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift.
+// PublicEventNoticeCreated Payload for notice.created. A durable informational notice was recorded for one member (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift.
 type PublicEventNoticeCreated struct {
 	// Kind The producing flow's own label (automation, lead_sla).
 	Kind            string             `json:"kind"`
@@ -2422,7 +2422,7 @@ type PublicEventUserDeactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
-// PublicEventUserDeliveryChanged Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a contact may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that contact and the job read.
+// PublicEventUserDeliveryChanged Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a member may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that member and the job read.
 type PublicEventUserDeliveryChanged struct {
 	// ChangedFields Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing.
 	ChangedFields []string `json:"changed_fields"`
