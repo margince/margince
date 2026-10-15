@@ -6117,7 +6117,7 @@ export const vi = {
   "import.reason.link_row_skipped_dropped":
     "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
   "import.reason.undo_edited":
-    "Có người đã sửa hồ sơ này sau khi nhập nên hồ sơ được giữ nguyên.",
+    "Hồ sơ này đã được sửa sau khi nhập nên được giữ nguyên.",
   "import.reason.undo_still_referenced":
     "Vẫn còn deal hoặc liên hệ đang dùng công ty này (deal: {deals}, liên hệ: {contacts}) nên công ty được giữ nguyên.",
   "import.reason.deal_not_found_dropped":
