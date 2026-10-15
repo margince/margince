@@ -22,8 +22,8 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { NoticeDuty } from "../../screens/noticeduty";
 import { useContact360 } from "../contacts/contact360";
+import { NoticeDuty } from "../privacy/noticeduty";
 import type { WorklistItem } from "./worklist.queries";
 
 // The pane, for whichever record the selected row is about.

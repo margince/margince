@@ -103,7 +103,7 @@
 1 react-hooks/set-state-in-effect src/screens/onboarding-ignition.tsx
 2 react-hooks/refs src/screens/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/screens/preferences.tsx
-1 react-hooks/refs src/screens/privacy.caselink.ts
+1 react-hooks/refs src/features/privacy/privacy.caselink.ts
 1 react-hooks/refs src/screens/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/rate-manual.tsx

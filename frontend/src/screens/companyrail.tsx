@@ -9,6 +9,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { RecordCard } from "../design-system/recordcard";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { CounterpartyHoldRow } from "../features/privacy/counterparty-hold";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
@@ -28,7 +29,6 @@ import {
   sectionAnswered,
 } from "./companyrailshared";
 import { CompanyTriageSection } from "./companytriage";
-import { CounterpartyHoldRow } from "./counterparty-hold";
 import { signalKindLabel, signalTone } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { RecordTeam } from "./recordteam";

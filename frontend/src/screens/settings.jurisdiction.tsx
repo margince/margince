@@ -12,6 +12,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { DSR_KIND_LABEL } from "../features/privacy/privacy.logic";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import {
   jurisdictionName,
@@ -22,7 +23,6 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
-import { DSR_KIND_LABEL } from "./privacy.logic";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,

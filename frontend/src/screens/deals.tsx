@@ -88,6 +88,8 @@ import { usePendingApprovals } from "../features/automations/approvals.queries";
 import { searchCompanies } from "../features/lists/filterreference";
 import { SaveViewAction, useSavedViewTabs } from "../features/lists/savedviews";
 import { TagsPanel } from "../features/lists/tagspanel";
+import { LegalReviewQueueLink } from "../features/privacy/legalreviews";
+import { useLegalReviewAvailable } from "../features/privacy/legalreviews.queries";
 import { WorklistReturnLink } from "../features/worklist/worklist.return";
 import { middayInstant } from "../format/calendarday";
 import {
@@ -169,8 +171,6 @@ import {
 } from "./dealproject";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { useSuggestionGhosts } from "./dealsuggestion";
-import { LegalReviewQueueLink } from "./legalreviews";
-import { useLegalReviewAvailable } from "./legalreviews.queries";
 import { OpenEmailDrawer } from "./openemaildrawer";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";

@@ -214,14 +214,14 @@ const PreferenceCenterScreen = lazy(
 );
 const UnsubscribeScreen = lazy(
   routed(() =>
-    import("./screens/unsubscribe").then((m) => ({
+    import("./features/privacy/unsubscribe").then((m) => ({
       default: m.UnsubscribeScreen,
     })),
   ),
 );
 const ConfirmDetailsScreen = lazy(
   routed(() =>
-    import("./screens/confirm").then((m) => ({
+    import("./features/privacy/confirm").then((m) => ({
       default: m.ConfirmDetailsScreen,
     })),
   ),
@@ -233,7 +233,7 @@ const AnalyticsScreen = lazy(
 );
 const LegalReviewsRoute = lazy(
   routed(() =>
-    import("./screens/legalreviews").then((m) => ({
+    import("./features/privacy/legalreviews").then((m) => ({
       default: m.LegalReviewsRoute,
     })),
   ),

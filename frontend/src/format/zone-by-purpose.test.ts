@@ -454,19 +454,19 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the contact-files read.",
   },
   {
-    file: "screens/privacy.logic.test.ts",
+    file: "features/privacy/privacy.logic.test.ts",
     why: "endOfDayInZone is a zone-taking function and is proven by naming one.",
   },
   {
-    file: "screens/privacy.test.tsx",
+    file: "features/privacy/privacy.test.tsx",
     why: "Pretends to be in a zone behind UTC to prove a DSR deadline mints and reads back on the same calendar day; the claim is unwritable without naming that zone.",
   },
   {
-    file: "screens/privacy.deadline.test.tsx",
+    file: "features/privacy/privacy.deadline.test.tsx",
     why: "Pretends to be in a zone behind UTC to prove an earlier deadline mints at the end of the chosen day there and never passes an hour-exact deadline.",
   },
   {
-    file: "screens/privacy.assignee.test.tsx",
+    file: "features/privacy/privacy.assignee.test.tsx",
     why: "Its `User` fixtures carry the member's own stored `timezone`, which is a field on the wire rather than a zone this code renders in.",
   },
   {

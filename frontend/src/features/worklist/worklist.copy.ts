@@ -16,13 +16,13 @@ import type { Locale, useT } from "../../i18n";
 import { isMessageKey, translatePlural } from "../../i18n";
 import { ENTITY, recordRoute } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { caseHref } from "../../screens/privacy.caselink";
 import { settingsHref } from "../../screens/settingsrouting";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
 } from "../contacts/contactpage.address";
+import { caseHref } from "../privacy/privacy.caselink";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { countsUnder } from "./worklist.narrowing";
 import type {

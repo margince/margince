@@ -7,8 +7,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { type Translator, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../screens/channelproviders";
-import { ConfirmDetailsAction, ConsentSection } from "../../screens/consent";
 import { interactionIcon } from "../../screens/interactionchrome";
+import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentWord } from "./contactreadings";
 
 type Contact360 = components["schemas"]["Contact360"];

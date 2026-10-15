@@ -16,12 +16,6 @@ import {
   PanelRow,
 } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
-import { useCan, useCanWriteRecord } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import {
   LEGAL_REVIEWS_SCREEN,
   type LegalReviewSummary,
@@ -29,8 +23,14 @@ import {
   useLegalReviewAvailable,
   useRequestLegalReview,
   useWithdrawLegalReview,
-} from "../legalreviews.queries";
-import { LegalReviewStatusBadge } from "../legalreviewstatus";
+} from "../../features/privacy/legalreviews.queries";
+import { LegalReviewStatusBadge } from "../../features/privacy/legalreviewstatus";
+import { formatDateTime } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
+import { useLocale, useT } from "../../i18n";
+import { useCan, useCanWriteRecord } from "../../lib/capability";
+import { problemMessageOf } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 
 type Deal = components["schemas"]["Deal"];
 

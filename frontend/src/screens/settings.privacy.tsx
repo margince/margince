@@ -5,18 +5,21 @@ import { type ReactNode, useId, useMemo, useState } from "react";
 import { Button, Modal, SegmentedControl } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
-import { useCan, useCanWrite } from "../lib/capability";
-import { NoticeCasesCard } from "./noticecases";
-import { NewDsrForm, PrivacyInboxCard } from "./privacy";
-import { ConfirmSubmissionsPanel, useCorrections } from "./privacy.corrections";
-import { ConsentPurposesCard } from "./privacy.purposes";
+import { NoticeCasesCard } from "../features/privacy/noticecases";
+import { NewDsrForm, PrivacyInboxCard } from "../features/privacy/privacy";
+import {
+  ConfirmSubmissionsPanel,
+  useCorrections,
+} from "../features/privacy/privacy.corrections";
+import { ConsentPurposesCard } from "../features/privacy/privacy.purposes";
 import {
   PinRecordAction,
   RestrictedRecordsCard,
   useRestrictedRecords,
-} from "./restrictedrecords";
-import { RetentionCard } from "./retention";
+} from "../features/privacy/restrictedrecords";
+import { RetentionCard } from "../features/privacy/retention";
+import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 
 /** The governance page's panels in working order: defaults, the requests
  * that override them, then the duties nobody asked for. */

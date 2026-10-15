@@ -17,6 +17,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { IconAction } from "../design-system/iconaction";
 import { KeyCode } from "../design-system/keyedname";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useLegalReviewAvailable } from "../features/privacy/legalreviews.queries";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import {
@@ -25,7 +26,6 @@ import {
   type CriterionKind,
   criterionKindOf,
 } from "./criterionkinds";
-import { useLegalReviewAvailable } from "./legalreviews.queries";
 import "./settings.pipelines.css";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
