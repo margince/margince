@@ -205,8 +205,9 @@ export function sourceFileAt(path: string): ts.SourceFile {
 }
 
 // sourceTextAt is sourceFileAt for a gate that reads text rather than syntax:
-// one read per file per run, however many rules ask. Only for the committed
-// tree; a file a test writes must be read fresh.
+// one read per file per run, however many rules ask. Both answer with the file
+// as it was first read: the committed tree does not change during a run. A
+// test reading back a file it rewrites uses readFileSync.
 const sourceTexts = new Map<string, string>();
 
 export function sourceTextAt(path: string): string {
