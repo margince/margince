@@ -27,14 +27,15 @@ func newAIPriceCatalogues() aiPriceCatalogues {
 // newAIPriceSync is the one assembly of the price sync, for "Refresh now" and the
 // daily sweep alike. env answers for a key the vault has not sealed yet.
 func newAIPriceSync(pool *pgxpool.Pool, vault keyvault.Vault, env config.Lookup, log *slog.Logger, cats aiPriceCatalogues) *ai.PriceSync {
-	store := NewSettingsStore(pool)
+	store, stored := NewSettingsStore(pool), StoredConfig(pool)
 	return ai.NewPriceSync(ai.PriceSyncDeps{
 		Rates:     ai.NewRateStore(InstallationDB(pool)),
-		Routing:   ai.NewRoutingStore(store, env).WithCatalogue(cats.broker).WithVault(vault),
-		Keys:      ai.NewProviderKeyStore(store, vault, log),
+		Routing:   ai.NewRoutingStore(store, stored, env).WithCatalogue(cats.broker).WithVault(vault),
+		Keys:      ai.NewProviderKeyStore(store, stored, vault, log),
 		Broker:    cats.broker,
 		ModelsDev: cats.modelsDev,
 		Settings:  store,
+		Config:    stored,
 	})
 }
 
@@ -46,7 +47,7 @@ func WithPriceCatalogues(broker, modelsDev ai.CatalogueFetcher) Option {
 			broker:    ai.NewModelCatalogueOver(broker, systemClock{}),
 			modelsDev: ai.NewModelsDevCatalogueOver(modelsDev, systemClock{}),
 		}
-		routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
+		routing := ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
 		if s.vault != nil {
 			routing = routing.WithVault(s.vault)
 		}

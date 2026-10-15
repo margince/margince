@@ -33,6 +33,8 @@ import (
 // RoutingStore reads and replaces the stored binding.
 type RoutingStore struct {
 	settings *settings.Store
+	// cfg reads and saves the binding under the locks the boot sources set.
+	cfg *config.Config
 	// keys resolves a provider's BYOK secret. It travels with the store for
 	// the same reason it travels with a parsed config: a routing document names
 	// providers and never their credentials, so the two meet only where a
@@ -60,9 +62,10 @@ type RoutingStore struct {
 	served *servedAtLocation
 }
 
-// NewRoutingStore builds the store over the settings catalog.
-func NewRoutingStore(s *settings.Store, keys config.Lookup) *RoutingStore {
-	return &RoutingStore{settings: s, keys: keys, served: &servedAtLocation{}}
+// NewRoutingStore builds the store over the settings catalog, reading the
+// binding and the task overrides through cfg.
+func NewRoutingStore(s *settings.Store, cfg *config.Config, keys config.Lookup) *RoutingStore {
+	return &RoutingStore{settings: s, cfg: cfg, keys: keys, served: &servedAtLocation{}}
 }
 
 // WithVault returns a store that can resolve a sealed credential.
@@ -110,7 +113,7 @@ func (s *RoutingStore) Get(ctx context.Context) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return RoutingConfig{}, err
 	}
-	stored, err := settings.Get(ctx, s.settings, Routing)
+	stored, err := config.StoredVal(ctx, s.cfg, Routing)
 	if err != nil {
 		return RoutingConfig{}, err
 	}
@@ -133,7 +136,7 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 // that keeps moving is refused as stale.
 func (s *RoutingStore) probedWrite(ctx context.Context, probe func(stored RoutingConfig) error, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
 	for range probeAttempts {
-		stored, err := settings.Get(ctx, s.settings, Routing)
+		stored, err := config.StoredVal(ctx, s.cfg, Routing)
 		if err != nil {
 			return RoutingConfig{}, err
 		}
@@ -275,7 +278,7 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
 		}
-		current, err := settings.GetTx(ctx, tx, Routing)
+		current, err := config.StoredValTx(ctx, tx, s.cfg, Routing)
 		if err != nil {
 			return err
 		}
@@ -284,7 +287,13 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 			return err
 		}
 		written = stored
-		return settings.SetTx(ctx, s.settings, tx, Routing, stored)
+		// Compared by revision, as If-Match is: a resent boot binding settles to
+		// its canonical form, which need not be the decoded value field for field.
+		sameBinding := func(boot RoutingConfig) bool { return boot.Revision() == stored.Revision() }
+		if locked, err := config.LockedChange(s.cfg, Routing, sameBinding); locked || err != nil {
+			return err
+		}
+		return config.SaveTx(ctx, s.cfg, tx, Routing, stored)
 	})
 	if err != nil {
 		return RoutingConfig{}, err

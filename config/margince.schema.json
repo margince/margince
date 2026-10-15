@@ -241,6 +241,58 @@
       "properties": {
         "capture_payloads": {
           "type": "boolean"
+        },
+        "routing": {
+          "description": "The tier-to-model binding, in the shape seeds.ai_routing takes. A value here locks the binding against a change in the product, and wins over seeds.ai_routing.",
+          "$ref": "#/$defs/aiRouting"
+        },
+        "task_overrides": {
+          "description": "Each task's thinking level and timeouts, keyed by task. A value here locks the overrides against a change in the product.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "thinking": {
+                "type": "string"
+              },
+              "decision_timeout_ms": {
+                "type": "integer"
+              },
+              "attempt_timeout_ms": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "budget": {
+          "description": "The company's monthly AI token allowance. A value here locks the allowance against a change in the product.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tokens_per_full_user"
+          ],
+          "properties": {
+            "tokens_per_full_user": {
+              "type": "integer"
+            },
+            "company_monthly_tokens": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        },
+        "price_sync": {
+          "description": "Whether the daily job syncs model prices. A value here locks the switch against a change in the product.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "auto_sync": {
+              "type": "boolean"
+            }
+          }
         }
       }
     },

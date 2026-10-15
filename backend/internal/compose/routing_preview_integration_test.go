@@ -50,7 +50,7 @@ func newPreviewHarness(t *testing.T) previewHarness {
 		RowScope: principal.RowScopeAll,
 	})
 	settingsStore := NewSettingsStore(e.Pool)
-	store := ai.NewRoutingStore(settingsStore, config.Static(nil))
+	store := ai.NewRoutingStore(settingsStore, StoredConfig(e.Pool), config.Static(nil))
 	planted, err := ai.ParseRouting([]byte(brokerRouting))
 	if err != nil {
 		t.Fatalf("the planted binding does not parse: %v", err)
@@ -60,7 +60,7 @@ func newPreviewHarness(t *testing.T) previewHarness {
 	}
 	return previewHarness{
 		ctx: ctx, e: e, routing: aiRoutingHandlers{store: store},
-		admin: aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settingsStore, budgetFullUsers, aiDeferredWork(e.Pool))},
+		admin: aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settingsStore, StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))},
 	}
 }
 

@@ -24,7 +24,7 @@ import (
 )
 
 func taskOverrideHandlers(e *integration.Env) aiRoutingHandlers {
-	return aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))}
+	return aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))}
 }
 
 func overrideSeat(e *integration.Env) context.Context {
@@ -115,7 +115,7 @@ func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"cold_start":{"thinking":"high"}}`, ""); rec.Code != http.StatusOK {
 		t.Fatalf("PUT = %d %s", rec.Code, rec.Body)
 	}
-	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
+	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 
 	status, err := store.ReadStatus(ctx)
 	if err != nil {

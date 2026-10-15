@@ -23,9 +23,9 @@ import (
 func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.T) {
 	e := integration.Setup(t)
 	settings := NewSettingsStore(e.Pool)
-	store := ai.NewRoutingStore(settings, config.Static(nil))
+	store := ai.NewRoutingStore(settings, StoredConfig(e.Pool), config.Static(nil))
 	routing := aiRoutingHandlers{store: store}
-	admin := aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settings, budgetFullUsers, aiDeferredWork(e.Pool))}
+	admin := aiAdminHandlers{store: ai.NewAdminStore(e.DB(), settings, StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))}
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}, "ai_budget": {Read: true}},
 		RowScope: principal.RowScopeAll,
@@ -79,7 +79,7 @@ func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.
 
 func TestAVertexProviderEntryWithAHostIsRefusedNamingTheEntry(t *testing.T) {
 	e := integration.Setup(t)
-	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))}
+	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool), config.Static(nil))}
 
 	rec := putProviderSettings(t, h, e, "gemini_vertex", `{"base_url":"https://x.example","location":"eu"}`)
 

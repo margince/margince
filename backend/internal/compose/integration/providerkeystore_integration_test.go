@@ -47,7 +47,7 @@ func searchVault(t *testing.T, e *SearchEnv) keyvault.Vault {
 
 func providerKeyStore(t *testing.T, e *SearchEnv) *ai.ProviderKeyStore {
 	t.Helper()
-	return ai.NewProviderKeyStore(compose.NewSettingsStore(e.Pool), searchVault(t, e), discard())
+	return ai.NewProviderKeyStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), searchVault(t, e), discard())
 }
 
 // resolveKey asks the same resolver the routing lane uses, so the test observes
@@ -278,7 +278,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 
 	// A binding on a provider that TAKES a key, so the credential is part of
 	// what the clients are built with.
-	routing := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	routing := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	bound, err := routing.Replace(ctx, cloudRouting(t))
 	if err != nil {
 		t.Fatalf("storing the binding: %v", err)

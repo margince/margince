@@ -38,6 +38,7 @@ func allSettings() []config.Any {
 		identity.Settings(),
 		capture.ConfigSettings(),
 		integrations.ConfigSettings(),
+		ai.ConfigSettings(),
 	)
 }
 

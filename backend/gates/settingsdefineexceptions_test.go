@@ -6,7 +6,6 @@ package gates
 // The reasons a key may still be declared with settings.Define. A module that
 // converts deletes its lines, so the list ends holding only real exceptions.
 const (
-	convertsIn12c = "converts in Task 12c"
 	convertsIn12d = "converts in Task 12d"
 	convertsIn13  = "converts in Task 13, with the other secrets"
 	// readBySQL is why a boot value cannot be honoured. SQL reads the row,
@@ -14,6 +13,8 @@ const (
 	readBySQL = "SQL views, functions and raw statements read this row directly, so a boot value would split Go from SQL"
 	// pendingState is product bookkeeping an operator has no reason to set.
 	pendingState = "product-written pending state for a scheduled window change, not configuration"
+	// productState is a record the product writes of what it did.
+	productState = "product-written state, not configuration"
 )
 
 // gatekit:fixture the settings.Define keys a module may still declare, and why: expected exceptions, not a waived cost
@@ -29,11 +30,7 @@ var settingsDefineExceptions = map[string]string{
 	"capture.google_app":             convertsIn13,
 	"capture.microsoft_app":          convertsIn13,
 
-	"ai.budget":              convertsIn12c,
-	"ai.price_sync":          convertsIn12c,
-	"ai.price_sync_last_run": convertsIn12c,
-	"ai.routing":             convertsIn12c,
-	"ai.task_overrides":      convertsIn12c,
+	"ai.price_sync_last_run": productState,
 
 	"activities.follow_up_after_days":        convertsIn12d,
 	"consent.authorization_modes":            convertsIn12d,

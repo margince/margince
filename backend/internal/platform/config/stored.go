@@ -188,11 +188,19 @@ func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T
 // lockedAgainst accepts the boot value itself as a no-op, so a form that sends
 // every field still saves the fields that are not locked.
 func lockedAgainst[T any](c *Config, s *Setting[T], v T) (bool, error) {
+	return LockedChange(c, s, func(boot T) bool { return reflect.DeepEqual(boot, v) })
+}
+
+// LockedChange is the lock a save takes, for a writer with its own statement
+// or its own rule of sameness. It takes no gate; the caller holds the update
+// gate. locked is whether a boot source sets s. err is a LockedError unless
+// same(boot) holds.
+func LockedChange[T any](c *Config, s *Setting[T], same func(boot T) bool) (locked bool, err error) {
 	boot, origin, ok := bootValue(c, s)
 	if !ok {
 		return false, nil
 	}
-	if reflect.DeepEqual(boot, v) {
+	if same(boot) {
 		return true, nil
 	}
 	return true, LockedError{Key: s.Key(), Origin: origin}

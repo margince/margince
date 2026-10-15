@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -24,14 +25,16 @@ import (
 type AdminStore struct {
 	db        *database.DB
 	settings  *settings.Store
+	cfg       *config.Config
 	fullUsers func(context.Context, pgx.Tx) (int64, error)
 	deferred  func(context.Context) ([]crmcontracts.AiDeferredWork, error)
 	now       func() time.Time
 }
 
-// NewAdminStore receives cross-module observations through composition seams.
-func NewAdminStore(db *database.DB, s *settings.Store, users func(context.Context, pgx.Tx) (int64, error), deferred func(context.Context) ([]crmcontracts.AiDeferredWork, error)) *AdminStore {
-	return &AdminStore{db: db, settings: s, fullUsers: users, deferred: deferred, now: time.Now}
+// NewAdminStore receives cross-module observations through composition seams,
+// and reads the budget, the binding and the task overrides through cfg.
+func NewAdminStore(db *database.DB, s *settings.Store, cfg *config.Config, users func(context.Context, pgx.Tx) (int64, error), deferred func(context.Context) ([]crmcontracts.AiDeferredWork, error)) *AdminStore {
+	return &AdminStore{db: db, settings: s, cfg: cfg, fullUsers: users, deferred: deferred, now: time.Now}
 }
 
 // BudgetChange ties a complete draft to the configuration its editor read.
@@ -78,7 +81,7 @@ func observedSnapshot(config BudgetConfig, users, spent int64, now time.Time) (c
 
 // loadBudgetInputs reads the pieces observedTx needs.
 func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetConfig, int64, int64, time.Time, error) {
-	config, err := settings.GetTx(ctx, tx, BudgetSettings)
+	budget, err := config.StoredValTx(ctx, tx, s.cfg, BudgetSettings)
 	if err != nil {
 		return BudgetConfig{}, 0, 0, time.Time{}, err
 	}
@@ -91,7 +94,7 @@ func (s *AdminStore) loadBudgetInputs(ctx context.Context, tx pgx.Tx) (BudgetCon
 	if err != nil {
 		return BudgetConfig{}, 0, 0, time.Time{}, err
 	}
-	return config, users, spent, now, nil
+	return budget, users, spent, now, nil
 }
 
 // observedTx backs this store's read surfaces (ReadStatus, PreviewRouting,
@@ -153,6 +156,10 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		}
 		if current.Revision == change.Config.Revision() {
 			return nil
+		}
+		sameBudget := func(boot BudgetConfig) bool { return boot.Revision() == change.Config.Revision() }
+		if locked, err := config.LockedChange(s.cfg, BudgetSettings, sameBudget); locked || err != nil {
+			return err
 		}
 		raw, err := json.Marshal(change.Config)
 		if err != nil {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -105,7 +106,7 @@ func TestTheDailySweepLeavesAnInstallationWithAutoSyncOffAlone(t *testing.T) {
 	e := integration.Setup(t)
 	keyGemini(t, e)
 	seedPrice(t, e, "1.5", ai.RateSourceSeed)
-	if err := settings.Set(e.Admin(), NewSettingsStore(e.Pool), ai.PriceSyncSettings, ai.PriceSyncConfig{AutoSync: false}); err != nil {
+	if err := config.Save(e.Admin(), StoredConfig(e.Pool), ai.PriceSyncSettings, ai.PriceSyncConfig{AutoSync: false}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -111,7 +111,7 @@ func TestAStoredBindingWinsOverAnyRoutingPath(t *testing.T) {
 	ctx := context.Background()
 
 	// Stored through the real writer — the one PUT /v1/ai/routing drives.
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	first, err := store.Replace(ctx, parsedRouting(t, "first"))
 	if err != nil {
 		t.Fatalf("storing the first binding: %v", err)
@@ -218,7 +218,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 func TestTheStoreRefusesABindingTheFileLoaderWouldHaveRefused(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 
 	if _, err := store.Replace(ctx, ai.RoutingConfig{
 		Profile: "nowhere",
@@ -330,7 +330,7 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 	// Bound: the flag is merely redundant, and the warning must not claim the
 	// lanes are absent — an operator who reads that goes looking for a fault
 	// that is not there.
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -434,7 +434,7 @@ func TestPlantingNeverOverwritesABindingTheInstallationAlreadyHas(t *testing.T) 
 	e := SetupSearch(t)
 	ctx := context.Background()
 
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "chosen-by-a-human")); err != nil {
 		t.Fatalf("storing the admin's binding: %v", err)
 	}

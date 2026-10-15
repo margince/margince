@@ -32,7 +32,7 @@ import (
 // binding, adapter, decode — is exercisable with no vendor and no network.
 func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 // installation never opens a connection to a cloud vendor to find out.
 func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 // so BEFORE any network call, the same way the bound case above does.
 func TestSovereignRefusesOpenRouterToo(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestSovereignRefusesOpenRouterToo(t *testing.T) {
 // network.
 func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 // installation can reach.
 func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -155,7 +155,7 @@ func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 // checked.
 func TestSavingAVertexBindingIsRefusedWhenItsModelCannotBeChecked(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	cfg, err := ai.ParseRouting([]byte(`profile: eu_hosted
 tiers:
   local_small: {provider: fake, model: fake-local}
@@ -197,7 +197,7 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 // the offline fake answers it with no vendor and no network.
 func TestAKeyTestAsksTheStoredBinding(t *testing.T) {
 	e := SetupSearch(t)
-	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), config.Static(nil))
+	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool), config.Static(nil))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
 		t.Fatalf("storing the sovereign binding: %v", err)
 	}

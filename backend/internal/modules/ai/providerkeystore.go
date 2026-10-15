@@ -106,13 +106,13 @@ type ProviderKeyStore struct {
 // NewProviderKeyStore builds the store over the settings catalog and the vault.
 // A nil vault is a role that seals nothing: every write refuses rather than
 // recording a ref to a blob that was never written.
-func NewProviderKeyStore(s *settings.Store, vault keyvault.Vault, log *slog.Logger) *ProviderKeyStore {
+func NewProviderKeyStore(s *settings.Store, cfg *config.Config, vault keyvault.Vault, log *slog.Logger) *ProviderKeyStore {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
 	return &ProviderKeyStore{settings: s, vault: vault, log: log, profile: func(ctx context.Context) (Profile, error) {
-		cfg, err := settings.Get(ctx, s, Routing)
-		return cfg.Profile, err
+		binding, err := config.StoredVal(ctx, cfg, Routing)
+		return binding.Profile, err
 	}}
 }
 

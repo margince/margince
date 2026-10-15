@@ -207,3 +207,24 @@ func TestValidateJSONHoldsTheSpecBounds(t *testing.T) {
 		t.Fatal("a boot-only setting has no row to validate against")
 	}
 }
+
+// A writer that judges sameness itself gets the lock Save takes. There is no
+// lock without a boot source. A value it calls the same is a no-op, and any
+// other is a conflict that names the source.
+func TestLockedChangeJudgesTheBootValueByTheCallersRule(t *testing.T) {
+	unlocked, err := load(t, fixture{}, storedCap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if locked, err := config.LockedChange(unlocked, storedCap, func(int) bool { return false }); locked || err != nil {
+		t.Fatalf("no boot source: locked %v, %v", locked, err)
+	}
+	cfg := lockedCap(t)
+	if locked, err := config.LockedChange(cfg, storedCap, func(boot int) bool { return boot%100 == 0 }); !locked || err != nil {
+		t.Fatalf("the same value by the caller's rule: locked %v, %v", locked, err)
+	}
+	locked, err := config.LockedChange(cfg, storedCap, func(int) bool { return false })
+	if !locked || !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "X_TEST_CAP") {
+		t.Fatalf("another value: locked %v, %v", locked, err)
+	}
+}

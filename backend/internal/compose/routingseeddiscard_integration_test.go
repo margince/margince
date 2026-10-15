@@ -27,8 +27,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 const seedDoc = `version: 1
@@ -66,7 +66,7 @@ func TestADeclaredBindingSeedsAnInstallationThatHoldsNone(t *testing.T) {
 		t.Errorf("reported %v discarded on an installation that held nothing", discarded)
 	}
 
-	stored, err := settings.Get(ctx, NewSettingsStore(e.Pool), ai.Routing)
+	stored, err := config.StoredVal(ctx, StoredConfig(e.Pool), ai.Routing)
 	if err != nil {
 		t.Fatalf("reading the seeded binding: %v", err)
 	}
@@ -96,7 +96,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 		t.Fatalf("building the surviving binding: %v", err)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(ctx, tx, ai.Routing, surviving, nil)
+		_, err := config.SeedTx(ctx, tx, nil, ai.Routing, surviving)
 		return err
 	}); err != nil {
 		t.Fatalf("storing the surviving binding: %v", err)
@@ -112,7 +112,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 	if !strings.Contains(strings.Join(discarded, ","), ai.RoutingKey) {
 		t.Errorf("discarded = %v; a declaration the database refused must be reported, or the file and the served vendor disagree in silence", discarded)
 	}
-	stored, err := settings.Get(ctx, NewSettingsStore(e.Pool), ai.Routing)
+	stored, err := config.StoredVal(ctx, StoredConfig(e.Pool), ai.Routing)
 	if err != nil {
 		t.Fatalf("reading the binding back: %v", err)
 	}

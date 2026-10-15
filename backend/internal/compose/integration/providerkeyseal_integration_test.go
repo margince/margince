@@ -251,7 +251,7 @@ func TestRoutingResolutionSealsTheKeysItResolvesWith(t *testing.T) {
 	// A stored binding, because sealedKeys is reached on the LAST line of
 	// ResolveRouting — an installation with nothing bound returns before it,
 	// and a test without this would pass while proving nothing.
-	if err := settings.Set(ctx, compose.NewSettingsStore(e.Pool), ai.Routing, parsedRouting(t, "resolver-model")); err != nil {
+	if err := config.Save(ctx, compose.StoredConfig(e.Pool), ai.Routing, parsedRouting(t, "resolver-model")); err != nil {
 		t.Fatalf("storing the binding to resolve: %v", err)
 	}
 

@@ -411,7 +411,8 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	if err != nil || !declaredAny {
 		return err
 	}
-	stored, err := settings.SeedValue(ctx, tx, ai.Routing, cfg, nil)
+	boot := loadedConfig()
+	stored, err := config.SeedTx(ctx, tx, boot, ai.Routing, cfg)
 	if err != nil {
 		return err
 	}
@@ -423,7 +424,7 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	// zero egress, while the installation serves a cloud vendor the previous
 	// one chose. That is text leaving for somewhere nobody chose, and nothing
 	// else in the boot would mention it.
-	if !stored {
+	if _, locked := boot.Locked(ai.RoutingKey); !stored && !locked {
 		*discarded = append(*discarded, ai.RoutingKey)
 	}
 	return nil

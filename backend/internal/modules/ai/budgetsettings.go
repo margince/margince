@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // BudgetKey names the installation setting shared by runtime and administration.
@@ -24,8 +24,8 @@ const MaxMonthlyTokens int64 = 1_000_000_000_000
 
 // BudgetConfig is a company pool, not a quota imposed on each member.
 type BudgetConfig struct {
-	TokensPerFullUser    int64  `json:"tokens_per_full_user"`
-	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens"`
+	TokensPerFullUser    int64  `json:"tokens_per_full_user" yaml:"tokens_per_full_user"`
+	CompanyMonthlyTokens *int64 `json:"company_monthly_tokens" yaml:"company_monthly_tokens"`
 }
 
 // UnmarshalJSON distinguishes an explicit automatic allowance from an omitted field.
@@ -52,9 +52,14 @@ func (c *BudgetConfig) UnmarshalJSON(raw []byte) error {
 }
 
 // BudgetSettings preserves the existing default and survives data resets.
-var BudgetSettings = settings.Define(BudgetKey, budgetObject, "update",
-	BudgetConfig{TokensPerFullUser: int64(DefaultMonthlyTokens)}, validateBudget).
-	MachineryApplied().AsInstallationIdentity()
+var BudgetSettings = config.DefineStored(config.Spec[BudgetConfig]{
+	Key:      "ai.budget",
+	Env:      "MARGINCE_AI_BUDGET",
+	Type:     config.Struct[BudgetConfig](),
+	Default:  config.Some(BudgetConfig{TokensPerFullUser: int64(DefaultMonthlyTokens)}),
+	Validate: validateBudget,
+	Doc:      "The company's monthly AI token allowance, as tokens_per_full_user and company_monthly_tokens (null for the per-user sum).",
+}, config.Store{RBACObject: budgetObject, AuditVerb: settingsAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 func validateBudget(c BudgetConfig) error {
 	if c.TokensPerFullUser < 1 || c.TokensPerFullUser > MaxMonthlyTokens {

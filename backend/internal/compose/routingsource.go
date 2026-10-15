@@ -45,7 +45,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -180,7 +179,7 @@ func plantRouting(ctx context.Context, store settingsWriter, cfg ai.RoutingConfi
 	var planted bool
 	if err := store.WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		planted, err = settings.SeedValue(ctx, tx, ai.Routing, cfg, nil)
+		planted, err = config.SeedTx(ctx, tx, loadedConfig(), ai.Routing, cfg)
 		return err
 	}); err != nil {
 		// Not fatal. The installation still boots and still resolves whatever it
@@ -309,7 +308,7 @@ func bootCtx(ctx context.Context, ws ids.UUID, actor string) context.Context {
 }
 
 func readStoredRouting(ctx context.Context, pool *pgxpool.Pool) (ai.RoutingConfig, error) {
-	return settings.Get(ctx, NewSettingsStore(pool), ai.Routing)
+	return config.StoredVal(ctx, StoredConfig(pool), ai.Routing)
 }
 
 // singletonWorkspace resolves the one live workspace this installation is, or

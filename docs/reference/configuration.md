@@ -165,9 +165,18 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | `240` (30 to 600) | `capture.site_read_wall_seconds` |
 | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | `120` (30 to 3600) | `capture.mail_sync_interval_seconds` |
 | `MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP` | `true` | `integrations.automatic_lookup` |
+| `MARGINCE_AI_ROUTING_BINDING` | `{"tiers":null,"embeddings":{"provider":"","model":"","base_url":"","dimensions":0},"profile":""}` (no models bound) | `ai.routing`, in the shape `seeds.ai_routing` takes |
+| `MARGINCE_AI_TASK_OVERRIDES` | `{}` | `ai.task_overrides`, the JSON object `PUT /ai/task-overrides` takes |
+| `MARGINCE_AI_BUDGET` | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` (each 1 to 1000000000000) | `ai.budget` |
+| `MARGINCE_AI_PRICE_SYNC` | `{"auto_sync":true}` | `ai.price_sync` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
-`identity.oidc_group_role_map`, and deletes the rest.
+`identity.oidc_group_role_map`, and of `ai.routing`, `ai.task_overrides` and `ai.budget`. It
+deletes the rest.
+
+A value in each `ai.*` setting replaces the whole document; no source merges into another. A
+boot-set `ai.routing` also refuses a change to the settings of one provider, and it wins over
+`seeds.ai_routing`.
 
 A boot-set `installation.name`, `installation.country` or `installation.base_language` wins over
 the `workspace.*` value bootstrap would seed. A boot-set `installation.name` also refuses a different

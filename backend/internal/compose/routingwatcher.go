@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -186,7 +185,7 @@ func (w *RoutingWatcher) refreshTaskOverrides(ctx context.Context) {
 	if ws == (ids.UUID{}) {
 		return
 	}
-	stored, err := settings.Get(routingCtx(ctx, ws), NewSettingsStore(w.pool), ai.TaskOverridesSetting)
+	stored, err := config.StoredVal(routingCtx(ctx, ws), StoredConfig(w.pool), ai.TaskOverridesSetting)
 	if err != nil {
 		w.log.WarnContext(ctx, "re-reading the AI task overrides failed; keeping the ones this process is serving", "error", err)
 		return

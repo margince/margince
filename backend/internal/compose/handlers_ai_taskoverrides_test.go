@@ -44,7 +44,7 @@ func overrideActor(kind principal.PrincipalType, grant principal.ObjectGrant) co
 }
 
 func TestOnlyAHumanRoutingEditorMaySaveTaskOverrides(t *testing.T) {
-	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(nil), config.Static(nil))}
+	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(nil), StoredConfig(nil), config.Static(nil))}
 	reader := overrideActor(principal.PrincipalHuman, principal.ObjectGrant{Read: true})
 	if rec := putTaskOverrides(reader, h, `{}`, ""); rec.Code != http.StatusForbidden {
 		t.Fatalf("a read-only seat saved: %d %s", rec.Code, rec.Body)

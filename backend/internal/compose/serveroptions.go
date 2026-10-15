@@ -205,7 +205,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// seal a key. Wired here rather than in the AI block so a role that
 		// composes no vault serves 501 on those routes instead of recording a
 		// reference to a blob nothing wrote.
-		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), vault, s.log)
+		keys := ai.NewProviderKeyStore(NewSettingsStore(pool), StoredConfig(pool), vault, s.log)
 		s.voiceHandlers = s.WithProviderKeys(keys)
 		// The routing store gets the same vault, for the ONE read that calls a
 		// vendor rather than describing it: asking a vendor what it serves needs
@@ -246,7 +246,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// vault does — a setup answer composed from two of the three stores
 		// would report a step unconfigured for the wrong reason.
 		s.installationSetupHandlers = installationSetupHandlers{
-			routing:       ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS),
+			routing:       ai.NewRoutingStore(NewSettingsStore(pool), StoredConfig(pool), config.FromOS),
 			providerKeys:  keys,
 			connectorApps: connectorApps,
 		}
