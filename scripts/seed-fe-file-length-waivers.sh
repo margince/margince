@@ -25,11 +25,15 @@ set +e
 report="$(FE_FILE_LENGTH_WAIVERS=/dev/null bash "$GATE" 2>&1)"
 status=$?
 set -e
-# A clean tree exits 0 and the ledger comes out empty. Any other non-zero
-# without the gate's own summary line is the gate broken rather than a tree
-# over the cap, and freezing a ledger from that report would write nothing and
-# call it a baseline.
-if [[ "$status" -ne 0 ]] && ! grep -q "^FAIL: fe-file-length" <<<"$report"; then
+# A clean tree exits 0 and the ledger comes out empty. Any other non-zero needs
+# at least one line this script can read a count off, because that is what a
+# baseline is made of.
+#
+# The gate's summary line is not enough to look for. The refusal it prints for a
+# root that is not there carries the same prefix, so matching that alone would
+# read a broken census as a tree with nothing over the cap, and write the empty
+# ledger this guard exists to refuse.
+if [[ "$status" -ne 0 ]] && ! grep -Eq "^FAIL: .* is [0-9]+ lines \(> " <<<"$report"; then
   echo "$report" >&2
   echo "seed-fe-file-length-waivers: the gate did not run, so there is no baseline to freeze" >&2
   exit 1

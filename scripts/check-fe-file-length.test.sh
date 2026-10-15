@@ -200,6 +200,25 @@ if ! grep -q "is not a directory, so this census would read short" <<<"$said"; t
   fail "a missing root is refused without being named, leaving the reader to infer that a tree went uncounted"
 fi
 
+# 16. The seeder refuses a report it cannot read a count off. It calls the gate
+# to learn the population, and the gate's refusal for a missing root carries the
+# same prefix as its over-cap summary, so a guard that looked only for that
+# prefix would freeze an empty ledger and call it the baseline.
+reset
+lines "screens/big.tsx" 30
+rm -rf "$TMP/scripts"
+ledger="$TMP/seeded.txt"
+: >"$ledger"
+if FE_FILE_LINE_CAP=10 FE_TEST_FILE_LINE_CAP=20 \
+  FE_FILE_LENGTH_ROOT="$TMP/src" FE_FILE_LENGTH_SCRIPTS_ROOT="$TMP/scripts" \
+  FE_FILE_LENGTH_WAIVERS="$ledger" \
+  bash "$SCRIPT_DIR/seed-fe-file-length-waivers.sh" >/dev/null 2>&1; then
+  fail "the seeder froze a baseline from a census that never ran"
+fi
+if grep -qE "^[0-9]+ " "$ledger"; then
+  fail "the seeder wrote entries from a report it could not read a count off"
+fi
+
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2
   echo "check-fe-file-length.test.sh: $FAILURES case(s) failed" >&2
