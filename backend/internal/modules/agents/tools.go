@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
@@ -129,6 +130,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
+			"record_types":{"type":"array","items":{"type":"string","enum":["contact","company","deal","lead","project"]},"description":"Restrict the sweep to these types, in place of record_type."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -138,17 +140,24 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 
 func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Q          string `json:"q"`
-		RecordType string `json:"record_type"`
-		Limit      int    `json:"limit"`
-		Cursor     string `json:"cursor"`
+		Q           string   `json:"q"`
+		RecordType  string   `json:"record_type"`
+		RecordTypes []string `json:"record_types"`
+		Limit       int      `json:"limit"`
+		Cursor      string   `json:"cursor"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
+	if args.RecordType != "" && len(args.RecordTypes) > 0 {
+		return nil, &BadArgsError{Field: "record_types", Cause: errors.New("name one record_type or a list of record_types, not both")}
+	}
 	q := datasource.SearchQuery{Text: args.Q, Limit: args.Limit, Cursor: args.Cursor}
 	if args.RecordType != "" {
 		q.EntityTypes = []datasource.EntityType{datasource.EntityType(args.RecordType)}
+	}
+	for _, recordType := range args.RecordTypes {
+		q.EntityTypes = append(q.EntityTypes, datasource.EntityType(recordType))
 	}
 	res, err := t.p.Search(ctx, q)
 	if err != nil {

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 123480,
+    "tool_catalog_bytes": 123655,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 31767,
+    "approx_wire_tokens_total": 31810,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 31693,
-      "input_schema_bytes": 57710,
+      "description_bytes": 31836,
+      "input_schema_bytes": 57718,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 89403
+      "description_plus_input_schema_bytes": 89554
     }
   },
   "tools": {
@@ -792,7 +792,7 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities. log records an email, call, meeting, note or message on its records. task creates a task for a seat. attach attaches a file to a record. relink moves one activity to another record; relink_many moves a named set. relink and relink_many wait for a human when they file under a project, and run at once anywhere else. attach checks the record first; read list_documents before attaching the same file again. Use change_state with move_deal when the same event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its arguments for relink, relink_many; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink moves one activity to another record; relink_many moves a named set. relink and relink_many wait for a human when they file under a project, and run at once anywhere else. attach checks the record first; read list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to come, and change_state with move_deal when the same event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its arguments for relink, relink_many; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -2813,7 +2813,7 @@
               "type": "string"
             },
             "record_types": {
-              "description": "meaning only: Restrict the sweep to these types; omit to sweep all of them.",
+              "description": "meaning, search only: Restrict the sweep to these types; omit to sweep all of them.",
               "items": {
                 "enum": [
                   "contact",
@@ -3847,9 +3847,9 @@
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
-          "title": "Analyse the data"
+          "title": "Write a report or query data"
         },
-        "description": "Ask a question of the data, or build a report document from it. query groups and measures a population; with save it keeps the result to cite. compose builds a document from saved queries' results. read_workspace topic analytics names the populations, dimensions and measures you may use. A figure in a composed document is cited from a saved query, never typed in. Use read_reports for the standard metrics and named reports. Keep a saved query's id; compose cites it.",
+        "description": "Write a report document a reader keeps, such as a board-pack section, or ask the data a question. For a document: query with save, then compose the saved results into it. query alone groups and measures a population. read_workspace topic analytics names the populations, dimensions and measures you may use. A figure in a composed document is cited from a saved query, never typed in. Use read_reports for the standard metrics and named reports. Keep a saved query's id; compose cites it.",
         "inputSchema": {
           "properties": {
             "blocks": {
@@ -4105,7 +4105,7 @@
           "type": "object"
         },
         "name": "read_analytics",
-        "title": "Analyse the data"
+        "title": "Write a report or query data"
       },
       {
         "_meta": {
@@ -5067,7 +5067,7 @@
           "readOnlyHint": true,
           "title": "Read sales reports"
         },
-        "description": "Read sales reports. standard reads the standard metrics, saved reports and their frozen editions, and the open partner commission liability. run runs one of the named reports, grouped and filtered. evidence searches the passages behind a saved run. Read only. Every figure names its coverage and when it was captured; quote both. read_workspace topic report_vocabulary names what each run report takes. Use read_forecast for what a period is expected to close, and read_analytics for a question the named reports do not ask. Keep a run's id to search its evidence, and quote coverage with each number.",
+        "description": "Read sales reports. standard reads the standard metrics, saved reports and their frozen editions, and the open partner commission liability. run runs one of the named reports, grouped and filtered. evidence searches the passages behind a saved run. Read only. Every figure names its coverage and when it was captured; quote both. read_workspace topic report_vocabulary names what each run report takes. For a written section a reader keeps, such as a board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period is expected to close. Keep a run's id to search its evidence, and quote coverage with each number.",
         "inputSchema": {
           "properties": {
             "aggregates": {

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 120.6 KB |
+| Tool catalog | 120.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 31767 |
+| Approx. wire tokens | 31810 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.0 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 31.1 KB | 25% | Yes, every step |
 | Input schemas | 56.4 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **87.3 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **87.5 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1209 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1228 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 810 |
@@ -73,11 +73,11 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1529 |
+| [`find_records`](#find_records) | Find records | yes |  | 1531 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 336 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Analyse the data | yes |  | 829 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 834 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 312 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 394 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1629 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1641 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
@@ -1058,15 +1058,15 @@ passport scope "write".)
 **Log, plan and file activities**
 
 ```text
-Log, plan and file activities. log records an email, call, meeting, note or message on its records.
-task creates a task for a seat. attach attaches a file to a record. relink moves one activity to
-another record; relink_many moves a named set. relink and relink_many wait for a human when they
-file under a project, and run at once anywhere else. attach checks the record first; read
-list_documents before attaching the same file again. Use change_state with move_deal when the same
-event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A
-staged answer's approval id is what the retry carries. (Governance: runs immediately for attach,
-log, task; decided per call from its arguments for relink, relink_many; requires passport scope
-"write".)
+Log, plan and file activities. log records an email, call, meeting, note or message that already
+happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
+moves one activity to another record; relink_many moves a named set. relink and relink_many wait for
+a human when they file under a project, and run at once anywhere else. attach checks the record
+first; read list_documents before attaching the same file again. Use schedule_meeting to book a
+meeting still to come, and change_state with move_deal when the same event moves a deal, so move and
+note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what
+the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its
+arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3230,7 +3230,7 @@ id and version, and next_cursor to read on.
       "type": "string"
     },
     "record_types": {
-      "description": "meaning only: Restrict the sweep to these types; omit to sweep all of them.",
+      "description": "meaning, search only: Restrict the sweep to these types; omit to sweep all of them.",
       "items": {
         "enum": [
           "contact",
@@ -4299,14 +4299,14 @@ make. (Runs immediately; requires passport scope "write".)
 
 ### read_analytics
 
-**Analyse the data**
+**Write a report or query data**
 
 ```text
-Ask a question of the data, or build a report document from it. query groups and measures a
-population; with save it keeps the result to cite. compose builds a document from saved queries'
-results. read_workspace topic analytics names the populations, dimensions and measures you may use.
-A figure in a composed document is cited from a saved query, never typed in. Use read_reports for
-the standard metrics and named reports. Keep a saved query's id; compose cites it.
+Write a report document a reader keeps, such as a board-pack section, or ask the data a question.
+For a document: query with save, then compose the saved results into it. query alone groups and
+measures a population. read_workspace topic analytics names the populations, dimensions and measures
+you may use. A figure in a composed document is cited from a saved query, never typed in. Use
+read_reports for the standard metrics and named reports. Keep a saved query's id; compose cites it.
 ```
 
 <details><summary>Input schema</summary>
@@ -5603,9 +5603,9 @@ Read sales reports. standard reads the standard metrics, saved reports and their
 and the open partner commission liability. run runs one of the named reports, grouped and filtered.
 evidence searches the passages behind a saved run. Read only. Every figure names its coverage and
 when it was captured; quote both. read_workspace topic report_vocabulary names what each run report
-takes. Use read_forecast for what a period is expected to close, and read_analytics for a question
-the named reports do not ask. Keep a run's id to search its evidence, and quote coverage with each
-number.
+takes. For a written section a reader keeps, such as a board pack, use read_analytics: query with
+save, then compose. Use read_forecast for what a period is expected to close. Keep a run's id to
+search its evidence, and quote coverage with each number.
 ```
 
 <details><summary>Input schema</summary>

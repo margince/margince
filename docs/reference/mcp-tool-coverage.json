@@ -1958,7 +1958,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1629,
+      "tokens": 1641,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -1991,7 +1991,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1529,
+      "tokens": 1531,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2056,7 +2056,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1209,
+      "tokens": 1228,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2146,7 +2146,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 829,
+      "tokens": 834,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"

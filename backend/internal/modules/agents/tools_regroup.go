@@ -93,7 +93,7 @@ type readAnalytics struct{ routed }
 
 func (readAnalytics) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_analytics", Title: "Analyse the data", Version: toolVersionV1,
+		Name: "read_analytics", Title: "Write a report or query data", Version: toolVersionV1,
 		Description: readAnalyticsCopy.render(), Instead: readAnalyticsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"step":{"description":"query: ask a question of the data; compose: build a report document from saved queries"}}}`),

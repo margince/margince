@@ -45,15 +45,15 @@ var readReportsCopy = toolCopy{
 		"reports, grouped and filtered. evidence searches the passages behind a saved run.",
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
-	Instead: "Use read_forecast for what a period is expected to close, and read_analytics for " +
-		"a question the named reports do not ask.",
+	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
+		"query with save, then compose. Use read_forecast for what a period is expected to close.",
 	Retain: "Keep a run's id to search its evidence, and quote coverage with each number.",
 }
 
 var readAnalyticsCopy = toolCopy{
-	Purpose: "Ask a question of the data, or build a report document from it. query groups and " +
-		"measures a population; with save it keeps the result to cite. compose builds a document " +
-		"from saved queries' results.",
+	Purpose: "Write a report document a reader keeps, such as a board-pack section, or ask the " +
+		"data a question. For a document: query with save, then compose the saved results into " +
+		"it. query alone groups and measures a population.",
 	Limits: "read_workspace topic analytics names the populations, dimensions and measures you " +
 		"may use. A figure in a composed document is cited from a saved query, never typed in.",
 	Instead: "Use read_reports for the standard metrics and named reports.",
@@ -62,13 +62,14 @@ var readAnalyticsCopy = toolCopy{
 
 var changeActivitiesCopy = toolCopy{
 	Purpose: "Log, plan and file activities. log records an email, call, meeting, note or " +
-		"message on its records. task creates a task for a seat. attach attaches a file to a " +
-		"record. relink moves one activity to another record; relink_many moves a named set.",
+		"message that already happened, on its records. task creates a task for a seat. attach " +
+		"attaches a file to a record. relink moves one activity to another record; relink_many " +
+		"moves a named set.",
 	Limits: "relink and relink_many wait for a human when they file under a project, and run at " +
-		"once anywhere else. attach " +
-		"checks the record first; read list_documents before attaching the same file again.",
-	Instead: "Use change_state with move_deal when the same event moves a deal, so move and " +
-		"note are one change.",
+		"once anywhere else. attach checks the record first; read list_documents before " +
+		"attaching the same file again.",
+	Instead: "Use schedule_meeting to book a meeting still to come, and change_state with " +
+		"move_deal when the same event moves a deal, so move and note are one change.",
 	Retain: "Keep the activity id; a relink needs it. A staged answer's approval id is what " +
 		"the retry carries.",
 }
