@@ -114,7 +114,7 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 	}
 
 	status, out := rpc(token, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`)
-	if status != http.StatusOK || !strings.Contains(out, `"search_records"`) {
+	if status != http.StatusOK || !strings.Contains(out, `"find_records"`) {
 		t.Fatalf("hosted tools/list → %d %s", status, out)
 	}
 	status, out = rpc(token, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record","arguments":{"record_type":"contact","fields":{"full_name":"Hosted Agent Contact"}}}}`)
