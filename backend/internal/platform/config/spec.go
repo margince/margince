@@ -92,12 +92,12 @@ func (s *Setting[T]) TypeName() string {
 
 func (s *Setting[T]) entry() settings.Definition { return s.row }
 
-func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string, error) {
-	v, err := settings.Get(ctx, db, s.row)
+func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string, bool, error) {
+	v, stored, err := settings.GetStored(ctx, db, s.row)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
-	return s.spec.Type.Format(v), nil
+	return s.spec.Type.Format(v), stored, nil
 }
 
 func (s *Setting[T]) DefaultText() (string, bool) {

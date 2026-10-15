@@ -131,18 +131,27 @@ func TestConfigStored_WithoutABootSourceTheRowThenTheDefaultDecide(t *testing.T)
 	}
 }
 
-func TestConfigStored_TheOverviewCarriesTheCallersGrant(t *testing.T) {
-	_, e, cfg := storedFixture(t)
-	none := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll})
-	if _, err := cfg.StoredEntries(none); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("StoredEntries without the object grant = %v, want ErrPermissionDenied", err)
+func TestConfigStored_TheGrantDecidesBeforeTheLock(t *testing.T) {
+	for _, environ := range [][]string{nil, {lockCapEnv + "=900"}} {
+		_, e, cfg := storedFixture(t, environ...)
+		none := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll})
+		if _, err := cfg.StoredEntries(none); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("StoredEntries without the object grant (%v) = %v, want ErrPermissionDenied", environ, err)
+		}
+		if _, err := config.StoredVal(none, cfg, lockCap); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("StoredVal without the object grant (%v) = %v, want ErrPermissionDenied", environ, err)
+		}
+		if err := config.Save(none, cfg, lockCap, 901); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("Save without the object grant (%v) = %v, want ErrPermissionDenied", environ, err)
+		}
 	}
 }
 
-func TestConfigStored_SeedAndResetLeaveABootLockedKeyAlone(t *testing.T) {
+// Seed skips a boot-locked key, and a data reset still removes its row: first
+// boot never seeds one, so the reset matches first boot.
+func TestConfigStored_SeedSkipsABootLockedKeyAndResetClearsIt(t *testing.T) {
 	ctx, e, cfg := storedFixture(t, lockCapEnv+"=900")
 	def := cfg.StoredDefinitions()[0]
-	reg := settings.NewRegistry(def)
 	inTx := func(fn func(tx pgx.Tx) error) {
 		t.Helper()
 		if err := database.WithWorkspaceTx(ctx, e.Pool, fn); err != nil {
@@ -163,12 +172,8 @@ func TestConfigStored_SeedAndResetLeaveABootLockedKeyAlone(t *testing.T) {
 	if err := config.Save(ctx, unlocked(t, cfg, e), lockCap, 500); err != nil {
 		t.Fatal(err)
 	}
-	inTx(func(tx pgx.Tx) error { return settings.ResetConfig(ctx, tx, reg, cfg.BootLocked()) })
-	if n := e.WsCount(t, `SELECT count(*) FROM setting WHERE key = $1`, lockCapKey); n != 1 {
-		t.Fatalf("a reset that skips the key removed its row")
-	}
-	inTx(func(tx pgx.Tx) error { return settings.ResetConfig(ctx, tx, reg, nil) })
+	inTx(func(tx pgx.Tx) error { return settings.ResetConfig(ctx, tx, settings.NewRegistry(def)) })
 	if n := e.WsCount(t, `SELECT count(*) FROM setting WHERE key = $1`, lockCapKey); n != 0 {
-		t.Fatalf("a reset with nothing to skip kept the row")
+		t.Fatalf("a reset kept the boot-locked key's row")
 	}
 }

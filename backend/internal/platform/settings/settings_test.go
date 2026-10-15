@@ -404,15 +404,15 @@ func TestSeedLeavesASkippedKeyAlone(t *testing.T) {
 	}
 }
 
-// The pool is nil, so a Has that read before judging the grant would panic.
-func TestHasTakesTheReadGateBeforeReading(t *testing.T) {
+// The pool is nil, so a RawStored that read before judging the grant would panic.
+func TestRawStoredTakesTheReadGateBeforeReading(t *testing.T) {
 	s := New(nil, NewRegistry(Define[bool]("privacy.probe", "retention_policy", "update", false, nil)))
 
-	if _, err := s.Has(readerCtx("capture_settings"), "privacy.probe"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("Has without the object grant = %v, want ErrPermissionDenied", err)
+	if _, _, err := s.RawStored(readerCtx("capture_settings"), "privacy.probe"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("RawStored without the object grant = %v, want ErrPermissionDenied", err)
 	}
-	if _, err := s.Has(readerCtx("retention_policy"), "privacy.never_declared"); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("Has of an unregistered key = %v, want ErrNotFound", err)
+	if _, _, err := s.RawStored(readerCtx("retention_policy"), "privacy.never_declared"); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("RawStored of an unregistered key = %v, want ErrNotFound", err)
 	}
 }
 

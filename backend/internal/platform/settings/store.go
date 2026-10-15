@@ -65,12 +65,20 @@ func New(pool *pgxpool.Pool, reg *Registry) *Store { return &Store{pool: pool, r
 // row exists. An unregistered key is an error — a typo must not read as
 // "unset and therefore default".
 func (s *Store) Raw(ctx context.Context, key string) (json.RawMessage, error) {
+	raw, _, err := s.RawStored(ctx, key)
+	return raw, err
+}
+
+// RawStored is Raw that also reports whether a row stands behind the value.
+// Both come from one statement, so a concurrent write cannot pair one
+// transaction's value with another's answer to "was it saved".
+func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, bool, error) {
 	def, err := s.lookup(key)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionRead); err != nil {
-		return nil, err
+	if err := RequireRead(ctx, def); err != nil {
+		return nil, false, err
 	}
 	// `setting` is non-tenant and carries no RLS, so the workspace GUC buys
 	// this read nothing directly. It still rides WithWorkspaceTx because the
@@ -87,30 +95,12 @@ func (s *Store) Raw(ctx context.Context, key string) (json.RawMessage, error) {
 		// Unset is not missing: the registered default IS the value until a
 		// human changes it, which is what lets a new setting ship without a
 		// backfill of every installation.
-		return def.DefaultJSON()
+		fallback, err := def.DefaultJSON()
+		return fallback, false, err
 	case err != nil:
-		return nil, fmt.Errorf("settings: reading %s: %w", key, err)
+		return nil, false, fmt.Errorf("settings: reading %s: %w", key, err)
 	}
-	return raw, nil
-}
-
-// Has reports whether key has a stored row, under the read gate Raw takes. It
-// tells a saved value from the default nobody changed.
-func (s *Store) Has(ctx context.Context, key string) (bool, error) {
-	def, err := s.lookup(key)
-	if err != nil {
-		return false, err
-	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionRead); err != nil {
-		return false, err
-	}
-	var has bool
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		var err error
-		has, err = hasRow(ctx, tx, key)
-		return err
-	})
-	return has, err
+	return raw, true, nil
 }
 
 // SetRaw writes a setting, committing the row + audit in ONE transaction like
@@ -151,7 +141,7 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 	if err != nil {
 		return WriteReceipt{}, err
 	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionUpdate); err != nil {
+	if err := RequireWrite(ctx, def); err != nil {
 		return WriteReceipt{}, err
 	}
 	if err := def.ValidateJSON(next); err != nil {
@@ -301,7 +291,7 @@ func ReadForDecision[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, err
 // lock is a constant at both call sites and never a caller's string.
 func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T, error) {
 	var zero T
-	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
+	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
 	var raw json.RawMessage
@@ -319,6 +309,17 @@ func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T,
 	return out, nil
 }
 
+// RequireRead is the gate on reading a setting's value: read on the object the
+// entry declares. `setting` carries no RLS, so this gate is its only control.
+func RequireRead(ctx context.Context, def Definition) error {
+	return auth.Require(ctx, def.Object(), principal.ActionRead)
+}
+
+// RequireWrite is the gate on changing a setting: update on its object.
+func RequireWrite(ctx context.Context, def Definition) error {
+	return auth.Require(ctx, def.Object(), principal.ActionUpdate)
+}
+
 // lookup resolves a key to its declaration, refusing an unregistered one.
 func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // returns the type-erased Definition by design — the registry holds entries of many value types, and the concrete Entry[T] cannot be named without the type parameter the caller is looking up
 	def, ok := s.reg.byKey[key]
@@ -331,16 +332,23 @@ func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // ret
 // Get resolves a typed setting. A thin wrapper over Raw: the gate, the
 // registry lookup and the default all live there.
 func Get[T any](ctx context.Context, s *Store, e *Entry[T]) (T, error) {
+	v, _, err := GetStored(ctx, s, e)
+	return v, err
+}
+
+// GetStored is Get that also reports whether a row stands behind the value,
+// from the same read.
+func GetStored[T any](ctx context.Context, s *Store, e *Entry[T]) (T, bool, error) {
 	var zero T
-	raw, err := s.Raw(ctx, e.Key())
+	raw, stored, err := s.RawStored(ctx, e.Key())
 	if err != nil {
-		return zero, err
+		return zero, false, err
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
-	return out, nil
+	return out, stored, nil
 }
 
 // Set writes a typed setting. A thin wrapper over SetRaw, which owns the
@@ -394,7 +402,7 @@ func currentJSON(ctx context.Context, tx pgx.Tx, def Definition) (json.RawMessag
 // `setting` table carries no RLS, so this gate is the only control on it.
 func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	var zero T
-	if err := auth.Require(ctx, e.Object(), principal.ActionRead); err != nil {
+	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
 	raw, err := currentJSON(ctx, tx, e)

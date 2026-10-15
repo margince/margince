@@ -50,14 +50,12 @@ func SeedValue[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], v T, skip map
 // ResetConfig restores the configuration settings to first-boot state. It
 // deletes their rows, since an absent row reads as the registered default.
 // Identity settings are spared. Deleting keeps "has anyone changed this?"
-// answerable, which a row holding the default would not.
-//
-// A key in skip keeps its row: a boot source decides that key, and a reset
-// changes only what the product decides.
-func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry, skip map[string]bool) error {
+// answerable, which a row holding the default would not. A boot-locked key's
+// row goes too: first boot never seeds one.
+func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry) error {
 	keys := make([]string, 0, len(reg.byKey))
 	for key, def := range reg.byKey {
-		if def.SurvivesDataReset() || skip[key] {
+		if def.SurvivesDataReset() {
 			continue
 		}
 		keys = append(keys, key)

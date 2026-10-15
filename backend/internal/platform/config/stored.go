@@ -39,9 +39,16 @@ func StoredVal[T any](ctx context.Context, c *Config, s *Setting[T]) (T, error) 
 }
 
 // StoredValWithSource answers a boot value without touching the database, so a
-// locked setting never depends on a row an operator cannot see or change.
+// locked setting never depends on a row an operator cannot see or change. The
+// read gate comes first either way: whether a value is locked is no grant.
 func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (T, Origin, error) {
 	var zero T
+	if err := requireStored(s); err != nil {
+		return zero, Origin{}, err
+	}
+	if err := settings.RequireRead(ctx, s.row); err != nil {
+		return zero, Origin{}, err
+	}
 	if v, origin, ok := bootValue(c, s); ok {
 		return v, origin, nil
 	}
@@ -49,22 +56,31 @@ func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (
 	if err != nil {
 		return zero, Origin{}, err
 	}
-	has, err := db.Has(ctx, s.Key())
+	v, stored, err := settings.GetStored(ctx, db, s.row)
 	if err != nil {
 		return zero, Origin{}, err
 	}
-	v, err := settings.Get(ctx, db, s.row)
-	if err != nil {
-		return zero, Origin{}, err
-	}
-	if has {
-		return v, Origin{Source: SourceDatabase, Name: s.Key()}, nil
-	}
-	return v, Origin{Source: SourceDefault}, nil
+	return v, storedOrigin(s.Key(), stored), nil
 }
 
-// StoredApplyTx is the machinery read inside the caller's transaction.
+func storedOrigin(key string, stored bool) Origin {
+	if stored {
+		return Origin{Source: SourceDatabase, Name: key}
+	}
+	return Origin{Source: SourceDefault}
+}
+
+// StoredApplyTx is the machinery read inside the caller's transaction. Like
+// settings.ApplyTx it takes no read gate, locked or not; the entry's
+// MachineryApplied declaration is its licence.
 func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	var zero T
+	if err := requireStored(s); err != nil {
+		return zero, err
+	}
+	if !s.store.MachineryApplied {
+		return zero, fmt.Errorf("config: %s is not declared MachineryApplied; read it through StoredVal and its gate", s.Key())
+	}
 	if v, _, ok := bootValue(c, s); ok {
 		return v, nil
 	}
@@ -72,6 +88,12 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 }
 
 func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
+	if err := requireStored(s); err != nil {
+		return err
+	}
+	if err := settings.RequireWrite(ctx, s.row); err != nil {
+		return err
+	}
 	if locked, err := lockedAgainst(c, s, v); locked || err != nil {
 		return err
 	}
@@ -83,6 +105,12 @@ func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 }
 
 func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T) error {
+	if err := requireStored(s); err != nil {
+		return err
+	}
+	if err := settings.RequireWrite(ctx, s.row); err != nil {
+		return err
+	}
 	if locked, err := lockedAgainst(c, s, v); locked || err != nil {
 		return err
 	}
@@ -92,6 +120,9 @@ func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T
 	}
 	return settings.SetTx(ctx, db, tx, s.row, v)
 }
+
+// Save and SaveTx take the update gate before the lock, so a caller without
+// the grant learns nothing about where the value comes from.
 
 // lockedAgainst accepts the boot value itself as a no-op, so a form that sends
 // every field still saves the fields that are not locked.
@@ -104,6 +135,14 @@ func lockedAgainst[T any](c *Config, s *Setting[T], v T) (bool, error) {
 		return true, nil
 	}
 	return true, LockedError{Key: s.Key(), Origin: origin}
+}
+
+// requireStored refuses a boot-only setting, which has no row and no gate.
+func requireStored[T any](s *Setting[T]) error {
+	if !s.Stored() {
+		return fmt.Errorf("config: %s is not stored; read it with Val", s.Key())
+	}
+	return nil
 }
 
 func bootValue[T any](c *Config, s *Setting[T]) (T, Origin, bool) {
@@ -145,7 +184,7 @@ func (c *Config) BootLocked() map[string]bool {
 // cannot name.
 type storedSetting interface {
 	entry() settings.Definition
-	storedText(ctx context.Context, db *settings.Store) (string, error)
+	storedText(ctx context.Context, db *settings.Store) (text string, stored bool, err error)
 }
 
 // StoredDefinitions are the rows platform/settings must register.
@@ -160,35 +199,34 @@ func (c *Config) StoredDefinitions() []settings.Definition {
 }
 
 // StoredEntries is Entries with each unlocked stored setting read from the
-// database under the caller's grants. A secret's value stays nil.
+// database. Every stored entry, locked or not, takes the caller's read gate. A
+// secret's value stays nil.
 func (c *Config) StoredEntries(ctx context.Context) ([]Entry, error) {
 	out := c.Entries()
 	for i, e := range out {
 		s, found := c.reg.Lookup(e.Key)
 		stored, ok := s.(storedSetting)
-		if !found || !ok || !e.Stored || e.Origin.FromBoot() {
+		if !found || !ok || !e.Stored {
+			continue
+		}
+		if err := settings.RequireRead(ctx, stored.entry()); err != nil {
+			return nil, err
+		}
+		if e.Origin.FromBoot() {
 			continue
 		}
 		db, err := c.database(e.Key)
 		if err != nil {
 			return nil, err
 		}
-		has, err := db.Has(ctx, e.Key)
+		text, has, err := stored.storedText(ctx, db)
 		if err != nil {
 			return nil, err
 		}
-		out[i].Origin = Origin{Source: SourceDefault}
-		if has {
-			out[i].Origin = Origin{Source: SourceDatabase, Name: e.Key}
+		out[i].Origin = storedOrigin(e.Key, has)
+		if !e.Secret {
+			out[i].Value = &text
 		}
-		if e.Secret {
-			continue
-		}
-		text, err := stored.storedText(ctx, db)
-		if err != nil {
-			return nil, err
-		}
-		out[i].Value = &text
 	}
 	return out, nil
 }
