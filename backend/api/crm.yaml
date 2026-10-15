@@ -13163,6 +13163,10 @@ paths:
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: Replay a parked (dead-lettered) delivery.
+      description: |
+        Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+        delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+        retry sweep or another replay is sending at this moment is a 409; try again once it ends.
       responses:
         '200':
           description: The delivery after the replay attempt.
@@ -13172,6 +13176,8 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /tags -------------------------------------
   /tag-suggestions/{id}:

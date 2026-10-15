@@ -122,47 +122,65 @@ func parsePlaceholder(inner string) (templatePart, error) {
 	return part, nil
 }
 
+// jsonLexer tracks where a scan of JSON text stands: inside a string, after a
+// backslash, or inside a \u escape that still needs hexLeft digits.
+type jsonLexer struct {
+	inString, escaped bool
+	hexLeft           int
+}
+
+func (l *jsonLexer) scan(text string) {
+	for i := 0; i < len(text); i++ {
+		switch c := text[i]; {
+		case l.hexLeft > 0:
+			l.hexLeft--
+		case l.escaped:
+			l.escaped = false
+			if c == 'u' {
+				l.hexLeft = 4
+			}
+		case l.inString && c == '\\':
+			l.escaped = true
+		case c == '"':
+			l.inString = !l.inString
+		}
+	}
+}
+
+// refusal says why a placeholder may not stand where the lexer is, or "".
+func (l *jsonLexer) refusal(asJSON bool) string {
+	switch {
+	case l.escaped:
+		return "a backslash escapes the start of the placeholder; remove it"
+	case l.hexLeft > 0:
+		return "the placeholder sits inside a \\u escape; finish the four hex digits first"
+	case l.inString && asJSON:
+		return "| json writes a whole JSON value, so it cannot sit inside a JSON string; drop | json or the quotes"
+	case !l.inString && !asJSON:
+		return "a placeholder outside a JSON string needs | json, or put it inside quotes"
+	}
+	return ""
+}
+
 // checkJSONPositions walks the literal text as a JSON lexer would, so it
 // knows whether each placeholder sits inside a string. It then proves the
 // skeleton is JSON, with every placeholder standing in for a value.
 func (t *bodyTemplate) checkJSONPositions(src string) error {
 	var skeleton strings.Builder
-	inString, escaped, offset := false, false, 0
-	// hexLeft counts the digits a \u escape still needs; a placeholder there
-	// would put its value inside the escape.
-	hexLeft := 0
+	var lex jsonLexer
+	offset := 0
 	for _, p := range t.parts {
 		if p.path == nil {
-			for i := 0; i < len(p.literal); i++ {
-				switch c := p.literal[i]; {
-				case hexLeft > 0:
-					hexLeft--
-				case escaped:
-					escaped = false
-					if c == 'u' {
-						hexLeft = 4
-					}
-				case inString && c == '\\':
-					escaped = true
-				case c == '"':
-					inString = !inString
-				}
-			}
+			lex.scan(p.literal)
 			skeleton.WriteString(p.literal)
 			offset += len(p.literal)
 			continue
 		}
 		at := strings.Index(src[offset:], "{{") + offset
-		switch {
-		case escaped:
-			return templateErrorAt(src, at, "a backslash escapes the start of the placeholder; remove it")
-		case hexLeft > 0:
-			return templateErrorAt(src, at, "the placeholder sits inside a \\u escape; finish the four hex digits first")
-		case inString && p.asJSON:
-			return templateErrorAt(src, at, "| json writes a whole JSON value, so it cannot sit inside a JSON string; drop | json or the quotes")
-		case !inString && !p.asJSON:
-			return templateErrorAt(src, at, "a placeholder outside a JSON string needs | json, or put it inside quotes")
-		case !inString:
+		if why := lex.refusal(p.asJSON); why != "" {
+			return templateErrorAt(src, at, why)
+		}
+		if !lex.inString {
 			skeleton.WriteString("null")
 		}
 		offset = strings.Index(src[at:], "}}") + at + 2

@@ -18,7 +18,11 @@ COMMENT ON COLUMN webhook_subscription.body_content_type IS
 	'The Content-Type of a templated body; NULL means application/json.';
 
 ALTER TABLE webhook_delivery
-	ADD COLUMN content_type text;
+	ADD COLUMN content_type text,
+	ADD COLUMN claimed_until timestamptz;
 
 COMMENT ON COLUMN webhook_delivery.content_type IS
 	'The Content-Type of the stored payload, fixed at enqueue with it; NULL means application/json.';
+COMMENT ON COLUMN webhook_delivery.claimed_until IS
+	'While in the future, one sweep or replay is sending this delivery and no other may. '
+	'Recording the outcome clears it; a claim left by a crashed worker runs out.';

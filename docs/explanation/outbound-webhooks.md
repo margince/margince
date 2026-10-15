@@ -7,15 +7,10 @@ each matching domain event to it as an HTTP POST signed by [Standard
 Webhooks](https://www.standardwebhooks.com/). A failed POST is tried again, with a wait that doubles
 each time. In the end it is parked in a dead-letter store, and a human can replay it at any time.
 
-Subscriptions live in the workspace, and there is no store of apps from third parties. The surface
-is **outbound only** and takes in nothing inbound.
-
-Every payload on the wire is generated from its own public OpenAPI contract
-(`api/public-events.yaml`, §3 below), instead of being shaped by hand at each emit site. Every entry
-point in `store.go`, and replay in `delivery.go`, can be reached from the HTTP surface in
-`internal/compose` **and** from Settings → Integrations (§9). A subscription
-can be created, moved to a new target, paused, archived and rotated, and its deliveries looked at and
-replayed, without leaving the UI. The bus consumer and the retry sweep run only in the worker.
+The surface is **outbound only** and takes in nothing inbound. Every payload on the wire is
+generated from its own public OpenAPI contract (`api/public-events.yaml`, §3 below). Every entry
+point in `store.go`, and replay in `delivery.go`, can be reached over HTTP **and** from Settings →
+Integrations (§9). The bus consumer and the retry sweep run only in the worker.
 
 For the short version see [reference/modules.md](../reference/modules.md). To *register* one, see
 [how-to/register-a-webhook.md](../how-to/register-a-webhook.md). For the write shape every write
@@ -262,42 +257,49 @@ event as it is read. The stored body of a delivery is never mapped again on repl
 
 ### 3.4 Custom headers and a body template
 
-A receiver such as Slack, Microsoft Teams or a partner API wants a token in a header, or a body of
-its own shape. A subscription can carry both. The code is in `customheaders.go`,
-`bodytemplate.go`, `subscriptionbody.go` and `deliveryenqueue.go`.
+A receiver such as a chat tool or a partner API wants a token in a header, or a body of its own
+shape. A subscription can carry both. The code is in `customheaders.go`, `bodytemplate.go`,
+`subscriptionbody.go` and `deliveryenqueue.go`.
 
 **Custom headers.** Names and values are checked with `httpguts`, so a line break or control
-character in either is a 422. The signature, event, content and transport headers are reserved, and so is any name that
-starts with `webhook-` or `proxy-`. Each value is sealed under the webhook key, with the
-subscription id and the header name as additional data, so a value moved to another subscription or
-another name does not open. A header write never goes through `storekit.Patch`, which copies values
-into the audit image. It has its own `UPDATE`, under the same row lock and version check. The
-audit row holds the names, and `custom_headers_replaced` names each header given a new value, never
-the value. A save that changes other fields and the headers bumps `version` twice, once per
-`UPDATE`; the response carries the final one. The UI sends `custom_headers` only when a row changed. A `PATCH` replaces the whole set; a row that names a stored header
-and sends no value keeps the stored value. An attempt reads the headers of the *current*
-subscription, like the URL and secret (§4), so a new token reaches the retries already waiting.
+character in either is a 422. The signature, event, content and transport headers are reserved, and
+so is any name that starts with `webhook-` or `proxy-`.
 
-**The body template.** A template is text with placeholders over the public envelope (§3.3):
-`{{ path }}` or `{{ path | json }}`, where the path starts at `event_id`, `type`, `version`,
-`occurred_at`, `actor`, `entity`, `correlation_id` or `data`. Nothing outside the envelope can be
-named. The content type is `application/json`, `text/plain` or
-`application/x-www-form-urlencoded`.
+Each value is sealed under the webhook key. The subscription id and the header name are bound into
+the seal. So a value moved to another subscription or another name does not open.
 
-For JSON, the check at save follows the JSON strings: `{{ path }}` must sit inside quotes, where it
-fills in escaped text, and `{{ path | json }}` must sit outside them, where it writes the whole
-value. The text around the placeholders must be valid JSON. So any event renders valid JSON, and a
-value that is missing renders as empty text or `null`. Values are read from the raw envelope bytes,
-so a large integer keeps every digit. Form bodies escape each value for a URL.
+A header write never goes through `storekit.Patch`, which copies values into the audit image. It
+has its own `UPDATE`, under the same row lock and version check. The audit row holds the names.
+`custom_headers_replaced` names each header given a new value, never the value.
 
-The body is rendered once, when the delivery joins the queue, and stored in `payload` with its
-`content_type`. The signature covers those bytes, and retry and replay send them again. A body over
-256 KiB is not sent: the row is dead-lettered with the reason and an empty payload, and a replay of
-it is a 422, because there is nothing to send again.
+A `PATCH` replaces the whole set. A row that names a stored header and sends no value keeps the
+stored value. A save that changes other fields and the headers raises `version` twice, once per
+`UPDATE`; the response carries the final one. The UI sends `custom_headers` only when a row changed.
+
+An attempt reads the headers of the *current* subscription, like the URL and secret (§4). So a new
+token reaches the retries already waiting.
+
+**The body template.** A template is text with fields to fill from the public envelope (§3.3). A
+field is `{{ path }}` or `{{ path | json }}`. The path starts at `event_id`, `type`, `version`,
+`occurred_at`, `actor`, `entity`, `correlation_id` or `data`. The content type is
+`application/json`, `text/plain` or `application/x-www-form-urlencoded`, where each value is made safe for a URL.
+
+For JSON, the check at save follows the JSON strings. `{{ path }}` must sit inside quotes, where it
+fills in text made safe for a string. `{{ path | json }}` must sit outside them, where it writes
+the whole value. A field may not sit inside a `\u` code, and the text around the `{{ }}` marks must
+be valid JSON. So any event renders valid JSON, and a missing value renders as empty text or `null`.
+Values are read from the raw envelope bytes, so a large number keeps every digit.
+
+The body is rendered once, when the delivery joins the queue. It is stored in `payload` with its
+`content_type`. The signature covers those bytes, and retry and replay send them again.
+
+A body over 256 KiB is not sent. The row is dead-lettered with the reason and an empty payload. A
+replay of it is a 422, because there is nothing to send again.
 
 `POST /webhook-subscriptions/body-preview` renders a template against a sample event with the same
 engine. The sample comes from the event's schema in `public-events.yaml` (`PublicEventSamples`,
-generated by `gen-payloads`), so every subscribable type has one. A preview sends and stores nothing.
+built by `gen-payloads`). So every type a subscription may choose has one. A preview sends and
+stores nothing.
 
 ## 4. The delivery state machine
 
@@ -334,8 +336,9 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   All workspaces are covered by fanning the pass out, one job row per live workspace (§6). If a
   tenant fails its scan for rows whose time has come, **it fails its own row**, and the other
   workspaces do not notice. That job records the fail as its result. A fail for one delivery stays
-  on the delivery row, and never fails the pass of the tenant. `SweepOnce` takes an injected clock,
-  so a test can step the schedule with no sleeps.
+  on the delivery row, and never fails the pass of the tenant. A sweep claims each row before it
+  sends it (`claimed_until`, a lease of twice the attempt time limit). A second sweep skips a
+  claimed row, so one retry is sent once; storing the result clears the claim.
 - **`deliverOnce` never returns an error**: the result is the record. If it fails to *store* the
   result, it logs that, with one limit we know of. A first attempt whose result write fails leaves
   the row `pending`, and the sweep scans only `retrying` rows. That delivery is **not** scanned
@@ -344,12 +347,13 @@ a parked delivery can be replayed after the bus stream has cut the source event.
 - **Replay** (`POST …/replay`): a human action, gated by RBAC. It does not show whether the row
   exists, and it is audited to the acting human *before* the new attempt. It sets the attempts back
   to a new budget: the operator is stating that the endpoint is fixed, so the doubling clock starts
-  again. It **refuses with a 503 at the start** when no signing key is set up. So it never sets back
-  a row it cannot then send.
+  again. It takes only a dead-lettered or retrying row (else 422). It claims the row as it resets
+  it, so a replay of a row being sent now is a 409. It **refuses with a 503 at the start** when no
+  signing key is set up.
 
 `loadTarget` loads the target URL, sealed secret and custom headers of a delivery from the *current*
 subscription. So a rotate, a new target or a new header value between attempts takes effect on the
-next try. The body and its content type stay the ones stored at enqueue.
+next try. The body and its content type stay the ones stored when the delivery joined the queue.
 
 ## 5. The fan-out and the owner-scope gate
 
@@ -479,9 +483,10 @@ settings.
 A `target_url` comes from the tenant, so delivery is an SSRF risk. The production client
 (`NewGuardedClient`, `client.go`) connects to a target **only if it resolves to a public address**.
 The check runs after DNS, on the real IP. So a DNS answer that changes later cannot get past the
-guard (`netguard.RefusePrivate`). A redirect is never followed: Go would turn the `POST` into a `GET`
-with no body, and would carry custom headers to a host the subscription never named. A `3xx` is a
-failed attempt, retried and then dead-lettered like any other.
+guard (`netguard.RefusePrivate`).
+
+A redirect is never followed. Go would turn the `POST` into a `GET` with no body. It would also carry custom headers to a host the subscription never named. A
+`3xx` is a failed attempt, retried and then dead-lettered like any other.
 
 One attempt has a time limit from end to end (`10s`). The response body from the receiver is read
 only up to a cap (8 KiB, then dropped). An endpoint run by an attacker cannot use up RAM by
@@ -516,15 +521,15 @@ offer:
 
 - **List**: the subscription table, showing `state`, the `event_types` set, whether the body is
   custom, how many custom headers it sends, and when it last changed.
-- **Create and edit**: one wide drawer (`webhookdrawer.tsx`). The chosen events show as tags, and
+- **Create and edit**: one wide drawer (`webhookdrawer.tsx`). The chosen events show as tags.
   **Add events** opens a picker grouped by record (`webhookevents.ts`). Each event has a label and a
-  "fires when" line in each language, and an info popover that lists the fields of its `data`, read
-  from the preview endpoint's sample. `webhookevents.test.ts` fails when a subscribable type has no
-  group or no copy. Custom headers show a stored value as **Value set** with **Replace**. The body
-  format is a select; a custom template has presets (Slack, Microsoft Teams, Generic JSON), an
-  **Insert variable** menu, and a **Preview** tab that the server renders (§3.4). Create shows the
-  `signing_secret` from the `201` response in a window that **shows it one time only**, the same
-  "shown once" contract as the API (§2). Edit sends an `If-Match` `PATCH`.
+  "fires when" line in each language. Its ⓘ panel lists the fields of its `data`, read from the
+  preview endpoint's sample. `webhookevents.test.ts` fails when a type has no group or no copy.
+- **Headers and body**: a stored header value shows as **Value set** with **Replace**. The body format is a select. A
+  custom template has three starting points, an **Insert variable** menu, and a **Preview** tab
+  that the server renders (§3.4).
+- **Save**: create shows the `signing_secret` from the `201` response one
+  time only, the same contract as the API (§2). Edit sends an `If-Match` `PATCH`.
 - **Archive, rotate**: actions behind a confirm step (`ConfirmModal`) that call `DELETE` and
   `POST …/rotate-secret`. Rotate shows the new secret in the same one-time window as create.
 - **Deliveries and the dead-letter section**: a list of deliveries per subscription, grouped so

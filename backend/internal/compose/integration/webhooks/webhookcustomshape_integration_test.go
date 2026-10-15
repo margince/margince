@@ -275,7 +275,7 @@ func TestPreviewRendersASampleOfTheEventWithTheDeliveryEngine(t *testing.T) {
 
 func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
 	we := setupWebhooks(t)
-	rcv := newReceiver(t, http.StatusOK)
+	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := clocktest.Now(t)
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 	sub, _ := we.createShaped(t, integration.AnyMap{
@@ -286,10 +286,10 @@ func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
 	if err := deliverer.HandleEvent(context.Background(), activityEnvelope(we.wsID, we.seedOpenActivity(t))); err != nil {
 		t.Fatal(err)
 	}
-	assertDeliveryStatus(t, we, sub.ID, "delivered", 1)
+	assertDeliveryStatus(t, we, sub.ID, "retrying", 1)
 	path := fmt.Sprintf("/v1/webhook-subscriptions/%s/deliveries/%s/replay", sub.ID, we.deliveryID(t, sub.ID))
 	if status := we.Call(t, "POST", path, nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("replaying a delivered empty body → %d, want 200", status)
+		t.Fatalf("replaying an empty body that was sent → %d, want 200", status)
 	}
 	// The API's replay dials through the production client, which refuses this
 	// loopback receiver, so the replay shows as a fresh attempt that failed.

@@ -8469,7 +8469,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replay a parked (dead-lettered) delivery. */
+        /**
+         * Replay a parked (dead-lettered) delivery.
+         * @description Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+         *     delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+         *     retry sweep or another replay is sending at this moment is a 409; try again once it ends.
+         */
         post: operations["replayWebhookDelivery"];
         delete?: never;
         options?: never;
@@ -60935,6 +60940,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTagSuggestion: {

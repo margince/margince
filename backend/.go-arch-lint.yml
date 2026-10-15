@@ -247,7 +247,8 @@ deps:
     canUse: [pgx]
   webhooks:
     mayDependOn: [contracts, platform]
-    canUse: [pgx, oapi]
+    # xnet: httpguts checks a custom header's name and value before it is sealed.
+    canUse: [pgx, oapi, xnet]
   comms:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]

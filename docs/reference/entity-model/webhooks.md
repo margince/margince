@@ -6,12 +6,13 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 ## webhook_delivery
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `claimed_until` | `timestamp with time zone` |  |  |
 | `content_type` | `text` |  |  |
 | `dead_lettered_at` | `timestamp with time zone` |  |  |
 | `delivered_at` | `timestamp with time zone` |  |  |

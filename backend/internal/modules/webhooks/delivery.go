@@ -242,7 +242,7 @@ func (d *Deliverer) SweepOnce(ctx context.Context) error {
 		return fmt.Errorf("webhooks: resolving the workspace to sweep: %w", err)
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	due, err := d.store.dueRetries(ctx, d.clock(), sweepBatch)
+	due, err := d.store.claimDueRetries(ctx, d.clock(), sweepBatch)
 	if err != nil {
 		return fmt.Errorf("webhooks: scanning due retries: %w", err)
 	}
