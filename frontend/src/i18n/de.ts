@@ -2675,8 +2675,7 @@ export const de = {
   "email.detail.when": "Gesendet",
   "activity.detail.loading": "Aktivität wird geladen…",
   "activity.detail.none": "Diese Aktivität",
-  "activity.detail.withheldReason":
-    "Inhalt der Aktivität ist zurückgehalten",
+  "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
   "activity.detail.colleagues": "Teammitglieder",
