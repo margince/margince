@@ -287,7 +287,7 @@ describe("AuditEntryLine", () => {
       />,
     );
     expect(screen.getByText("You")).toBeTruthy();
-    expect(screen.getByText("create")).toBeTruthy();
+    expect(screen.getByText("Created")).toBeTruthy();
     expect(screen.getByText("custom field")).toBeTruthy();
     // the opaque uuids never reach the reader
     expect(screen.queryByText(/cf-1/)).toBeNull();

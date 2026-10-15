@@ -3,8 +3,9 @@
 
 package compose
 
-// GET /agent-bundle, the Margince skill. agentAPIOrigin.baseFor is the one answer to where
-// a passport calls, so the ZIP and the Settings card's snippet name one host.
+// GET /agent-bundle, the Margince skill, and GET /openapi.json, its contract as JSON.
+// agentAPIOrigin.baseFor is the one answer to where a passport calls, so the ZIP, the
+// JSON and the Settings card's snippet name one host.
 
 import (
 	"log/slog"
@@ -78,5 +79,20 @@ func (h agentBundleHandlers) DownloadAgentSkillBundle(w http.ResponseWriter, r *
 	httperr.Download{ContentType: zipContentType, Filename: "margince-skill.zip", Size: int64(len(archive))}.WriteHeaders(w)
 	if _, err := w.Write(archive); err != nil { // #nosec G705 -- a ZIP attachment, never rendered as a page
 		h.log.WarnContext(r.Context(), "agent bundle: the client's download is truncated", "err", err)
+	}
+}
+
+// GetAgentOpenAPIDocument answers the skill's openapi.yaml as JSON. A passport
+// may read it too: it lists what a passport can call and holds no record data.
+func (h agentBundleHandlers) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
+	spec, err := h.builder.SpecJSON(h.origin.baseFor(r))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if _, err := w.Write(spec); err != nil { // #nosec G705 -- application/json, never rendered as a page
+		h.log.WarnContext(r.Context(), "agent contract: the client's read is truncated", "err", err)
 	}
 }

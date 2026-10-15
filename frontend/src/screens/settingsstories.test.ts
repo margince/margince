@@ -51,14 +51,8 @@ const SURFACE_STORIES = new Set([
   "Settings/Settings home",
 ]);
 
-// The one group that is not a catalog group, and there are two ways into it.
-//
-// A story can put cards from DIFFERENT pages side by side on purpose — the two
-// price sheets an operator reconciles, and the two AI readings — so that no
-// single page name is true of it. Or its SUBJECT can be one control that two
-// pages mount: the refresh verb rides the currency sheet and the model lanes
-// both, and filing it under either would tell a reader the other page does not
-// offer it.
+// The one group that is not a catalog group. It holds cards from DIFFERENT
+// pages side by side, or one control that two pages mount.
 //
 // A declared exception with its members listed, not an open door: a fourth
 // story cannot join by accident, and the day one of these stops crossing pages,
@@ -66,7 +60,6 @@ const SURFACE_STORIES = new Set([
 const ACROSS_PAGES = "Across pages";
 const ACROSS_PAGE_STORIES = new Set([
   "Settings/Across pages/Rates and model costs",
-  "Settings/Across pages/AI readings",
   "Settings/Across pages/Refresh from sources",
   // The units an installation composed: the manifest's declared secret scope
   // decides whether a unit is offered on a member's own Connections page or
@@ -88,7 +81,7 @@ describe("the settings stories are filed where the product files them", () => {
   // Pinned by hand rather than floored: a story retitled away from `Settings/`
   // drops out of the corpus above, and only an exact count notices it go.
   it("reads every settings story, and says how many that is", () => {
-    expect(settingsStories.length).toBe(173);
+    expect(settingsStories.length).toBe(175);
   });
 
   // A file whose title does not resolve drops out of the filter above;

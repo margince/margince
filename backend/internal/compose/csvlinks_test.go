@@ -78,7 +78,7 @@ func TestOnlyAnIDIsLookedUpByIDAndAMissNamesTheValue(t *testing.T) {
 		if err != nil || got.Found || got.Pending {
 			t.Fatalf("resolve(%q) = %+v err %v, want not found", raw, got, err)
 		}
-		if !reflect.DeepEqual(got.Why, linkNotFoundWhy(raw)) {
+		if !reflect.DeepEqual(got.Why, linkNotFoundWhy(migration.ObjectCompany, raw)) {
 			t.Fatalf("reason = %q, want the one not-found sentence naming %q", got.Why.English(), raw)
 		}
 	}

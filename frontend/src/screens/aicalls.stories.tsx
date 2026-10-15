@@ -199,14 +199,29 @@ export const OutcomesPhone: Story = {
 };
 export const Empty: Story = { render: list([]) };
 
+// Reached from a figure that narrows the trace by vendor: the bar says what the
+// cut covers and offers the way back.
+export const FilteredByProvider: Story = {
+  beforeEach: () => {
+    const prior = globalThis.location.hash;
+    globalThis.location.hash = "#/settings/model-calls?provider=openai";
+    return () => {
+      globalThis.location.hash = prior;
+    };
+  },
+  render: list([summary]),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Show all calls",
+    });
+  },
+};
+
 // No ai_diagnostics grant: the trace keeps its place and says it is withheld. An
 // absent card would read as "this installation made no model calls".
 export const Withheld: Story = { render: list([summary], true, {}) };
 
-// A page that has a next one, which is the only state that draws the pager. The
-// trace row stacks its control as a COLUMN — `.settingrow-control` is a flex row
-// — so this is the story that says whether Load more sits under the table or
-// beside it.
+// A page that has a next one, which is the only state that draws the pager.
 export const ListPaged: Story = {
   render: () => {
     installFetchStub({

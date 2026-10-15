@@ -33,46 +33,68 @@ var (
 
 var guideTemplates = template.Must(template.ParseFS(guides, "*.md.tmpl"))
 
-// recentBases is how many ZIPs a Builder keeps. A few covers an install reached
+// recentBases is how many bases a Builder keeps. A few covers an install reached
 // by more than one host, and the bound stops a caller growing it by varying Host.
 const recentBases = 4
 
-// Builder builds the ZIP for an API base URL and keeps the most recent few.
+// Builder builds the ZIP and the JSON contract for an API base URL and keeps
+// the most recent few.
 type Builder struct {
 	mu     sync.Mutex
-	recent []builtArchive // newest last
+	recent []built // newest last
 }
 
-type builtArchive struct {
+type built struct {
 	base    string
 	archive []byte
+	spec    []byte
 }
 
 // Build returns the ZIP whose files name apiBase, the URL `/v1` included.
 func (b *Builder) Build(apiBase string) ([]byte, error) {
+	entry, err := b.forBase(apiBase)
+	return entry.archive, err
+}
+
+// SpecJSON returns the ZIP's openapi.yaml as JSON, with servers naming apiBase.
+func (b *Builder) SpecJSON(apiBase string) ([]byte, error) {
+	entry, err := b.forBase(apiBase)
+	return entry.spec, err
+}
+
+func (b *Builder) forBase(apiBase string) (built, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	for _, built := range b.recent {
-		if built.base == apiBase {
-			return built.archive, nil
+	for _, entry := range b.recent {
+		if entry.base == apiBase {
+			return entry, nil
 		}
 	}
-	archive, err := build(apiBase)
+	doc, err := withServer(apiBase)
 	if err != nil {
-		return nil, err
+		return built{}, err
 	}
+	specYAML, err := marshalYAML(doc)
+	if err != nil {
+		return built{}, err
+	}
+	archive, err := build(apiBase, specYAML)
+	if err != nil {
+		return built{}, err
+	}
+	var specJSON bytes.Buffer
+	if err := writeJSON(&specJSON, doc); err != nil {
+		return built{}, err
+	}
+	entry := built{base: apiBase, archive: archive, spec: specJSON.Bytes()}
 	if len(b.recent) == recentBases {
 		b.recent = b.recent[1:]
 	}
-	b.recent = append(b.recent, builtArchive{base: apiBase, archive: archive})
-	return archive, nil
+	b.recent = append(b.recent, entry)
+	return entry, nil
 }
 
-func build(apiBase string) ([]byte, error) {
-	spec, err := withServer(apiBase)
-	if err != nil {
-		return nil, err
-	}
+func build(apiBase string, spec []byte) ([]byte, error) {
 	files := []struct {
 		name string
 		body []byte
@@ -106,7 +128,7 @@ func build(apiBase string) ([]byte, error) {
 
 // withServer returns the agent contract with servers naming apiBase, placed
 // after info where an OpenAPI reader looks for it.
-func withServer(apiBase string) ([]byte, error) {
+func withServer(apiBase string) (*yaml.Node, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(contract, &doc); err != nil {
 		return nil, fmt.Errorf("agentbundle: parsing the embedded contract: %w", err)
@@ -126,11 +148,14 @@ func withServer(apiBase string) ([]byte, error) {
 		}
 	}
 	root.Content = append(root.Content[:at], append(servers, root.Content[at:]...)...)
+	return &doc, nil
+}
 
+func marshalYAML(doc *yaml.Node) ([]byte, error) {
 	var out bytes.Buffer
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
-	if err := enc.Encode(&doc); err != nil {
+	if err := enc.Encode(doc); err != nil {
 		return nil, fmt.Errorf("agentbundle: marshaling the contract: %w", err)
 	}
 	if err := enc.Close(); err != nil {

@@ -7743,6 +7743,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {
@@ -9125,6 +9131,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {

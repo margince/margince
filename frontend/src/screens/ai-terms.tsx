@@ -92,20 +92,3 @@ export function PanelTitle({
     </span>
   );
 }
-
-/** The chain in one line, above the list that spells it out row by row. */
-export function TermLegend() {
-  const t = useT();
-  return (
-    <p className="t-sub ai-term-legend">
-      <TermChip term="provider">{t("aiTerms.provider")}</TermChip>
-      <span>{t("aiTerms.providerGloss")}</span>
-      <span aria-hidden>→</span>
-      <TermChip term="tier">{t("aiTerms.tier")}</TermChip>
-      <span>{t("aiTerms.tierGloss")}</span>
-      <span aria-hidden>→</span>
-      <TermChip term="task">{t("aiTerms.task")}</TermChip>
-      <span>{t("aiTerms.taskGloss")}</span>
-    </p>
-  );
-}

@@ -4,13 +4,14 @@
 import type { Translator } from "../i18n";
 import type { ImportObject, ImportReasonCode } from "./importtypes";
 
-const OBJECTS: readonly ImportObject[] = ["company", "lead", "contact"];
+const OBJECTS: readonly ImportObject[] = ["company", "lead", "contact", "deal"];
 
 // The plural the server names a type by: the stem of that type's template file.
 const OBJECT_OF_PLURAL: Readonly<Record<string, ImportObject>> = {
   companies: "company",
   leads: "lead",
   contacts: "contact",
+  deals: "deal",
 };
 
 const FIELD_TYPES = [

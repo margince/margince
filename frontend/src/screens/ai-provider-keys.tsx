@@ -37,6 +37,7 @@ import {
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
 import { providerUsage, useRouting } from "./ai-routing-query";
+import { ProvidersStatus } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
 import "./ai-settings.css";
 
@@ -114,6 +115,10 @@ export function AiProviderKeysCard() {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
+              <ProvidersStatus
+                providers={list.providers}
+                routing={routing.data?.routing}
+              />
               <ProviderTable
                 providers={list.providers}
                 canManage={canManage}

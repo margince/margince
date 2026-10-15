@@ -6,7 +6,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { Panel } from "../design-system/panel";
 import { LocaleProvider } from "../i18n";
-import { SpendByTask, spendRows } from "./aiusage-spend";
+import { monthTotals, SpendByTask, spendRows } from "./aiusage-spend";
 
 afterEach(cleanup);
 
@@ -57,4 +57,34 @@ it("reads a task whose every call was priced as its plain total", () => {
   expect(total.partlyPriced).toBe(false);
   show([line("cheap_cloud", 120), line("premium", 80)]);
   expect(screen.queryByText("Partly priced")).toBeNull();
+});
+
+it("sums the month over every task and tier, and counts the calls with no rate", () => {
+  expect(
+    monthTotals([
+      { ...line("cheap_cloud", 120, 1), cached_hits: 2 },
+      { ...line("premium"), task: "enrich", calls: 3, unpriced_calls: 3 },
+      line("premium", 80),
+    ]),
+  ).toEqual({
+    calls: 7,
+    cached: 2,
+    tokensIn: 30,
+    tokensOut: 3,
+    cost: 200,
+    partlyPriced: true,
+    unpricedCalls: 4,
+  });
+});
+
+it("leaves the month without a cost when nothing was priced", () => {
+  expect(monthTotals([line("premium")])).toEqual({
+    calls: 2,
+    cached: 0,
+    tokensIn: 10,
+    tokensOut: 1,
+    cost: undefined,
+    partlyPriced: false,
+    unpricedCalls: 0,
+  });
 });

@@ -364,6 +364,13 @@ export function usePlural() {
 
 export type PluralTranslator = ReturnType<typeof usePlural>;
 
+/** The reader's translators and locale, for a helper outside a component. */
+export type Words = Readonly<{
+  t: Translator;
+  plural: PluralTranslator;
+  locale: Locale;
+}>;
+
 /** `pluralKey` bound to the reader's locale, for a caller that carries keys. */
 export function usePluralKey() {
   const { locale } = useLocale();

@@ -1429,11 +1429,23 @@ type PublicEventConversationClaimChanged struct {
 	Status string `json:"status"`
 }
 
-// PublicEventDealArchived Payload for deal.archived — a deal was archived. Carries no data.
-type PublicEventDealArchived struct{}
+// PublicEventDealArchived Payload for deal.archived: a deal was archived. Carries only the import mark, when an import's undo wrote the event.
+type PublicEventDealArchived struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealCreated Payload for deal.created — a deal was opened.
 type PublicEventDealCreated struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// Name The deal's name at creation.
 	Name string `json:"name"`
 }
@@ -1443,12 +1455,24 @@ type PublicEventDealOwnerChanged struct {
 	// FromOwnerId The previous owner (absent when the deal had none).
 	FromOwnerId *openapi_types.UUID `json:"from_owner_id,omitempty"`
 
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// ToOwnerId The new owner.
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
-type PublicEventDealRestored struct{}
+// PublicEventDealRestored Payload for deal.restored: an archived deal was brought back. Its archive took down relationships, list memberships and tags, and those that can still come back return. Carries only the import mark.
+type PublicEventDealRestored struct {
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+}
 
 // PublicEventDealRoomArchived Payload for deal_room.archived — the room ended and buyer access is revoked.
 // Its releases survive, so what a buyer was shown stays answerable.
@@ -1612,6 +1636,12 @@ type PublicEventDealStageChanged struct {
 	// FxRateToBase The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
 
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
+
 	// PartnerAttribution What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only.
 	PartnerAttribution *string `json:"partner_attribution,omitempty"`
 
@@ -1635,6 +1665,12 @@ type PublicEventDealStageChanged struct {
 type PublicEventDealUpdated struct {
 	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
 	ChangedFields map[string]interface{} `json:"changed_fields"`
+
+	// ImportRunId The import run that wrote the event. Present when `imported` is true.
+	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
+
+	// Imported True when a data import wrote the event. Absent otherwise.
+	Imported *bool `json:"imported,omitempty"`
 }
 
 // PublicEventEmailSignatureChanged Payload for email_signature.changed — a member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later, so the change is audited and published rather than written quietly. The signature TEXT is NOT in the payload: it is the member's own words about themselves, often carrying a direct line or an address, and a subscriber needs to know the sign-off moved rather than what it says.

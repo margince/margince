@@ -271,6 +271,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the transport, not only in the gate. |
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
+| `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |

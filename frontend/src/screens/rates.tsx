@@ -1,22 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, Fragment, useId, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
+  Disclosure,
   EmptyState,
   Field,
   Modal,
+  OptionCount,
   TextInput,
 } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   QueryGate,
   QueryStates,
@@ -31,12 +28,7 @@ import { useCan, useCanUpsert } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { providerName } from "./ai-provider-names";
-import {
-  RefreshModelPricesButton,
-  RefreshSummary,
-  useRefreshModelPrices,
-} from "./rate-catalogue-refresh";
-import { isPricedProvider, ModelPriceDialog } from "./rate-manual";
+import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 
@@ -291,20 +283,14 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
 
 // ---- AI model costs ----
 
-export function ModelCostsCard() {
+/**
+ * The prices in force, one fold per provider, inside the model prices panel
+ * on AI models. The caller holds the read grant and the verbs that write.
+ */
+export function ModelPriceSheet() {
   const t = useT();
-  // Read and write asked separately, for the same reasons as FxRatesCard above —
-  // including the read seat, which withholds the WRITE from an admin who plainly
-  // still reads the sheet.
-  const canRead = useCan("ai_model_rate", "read");
-  // Either write grant, for the same reason as FxRatesCard above: one endpoint,
-  // insert or replace, the specific verb resolved inside the transaction.
-  const canManage = useCanUpsert("ai_model_rate");
-  const [open, setOpen] = useState(false);
-  const refresh = useRefreshModelPrices();
   const query = useQuery({
     queryKey: ["ai-model-rates"],
-    enabled: canRead,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/ai-model-rates", {
@@ -314,59 +300,22 @@ export function ModelCostsCard() {
       return data.data;
     },
   });
-
   const priced = query.data?.filter((row) => isPricedProvider(row.provider));
-
-  // After every hook, as in FxRatesCard.
-  if (!canRead) {
-    return (
-      <WithheldRateCard
-        title={t("settings.rates.modelTitle")}
-        reason={t("settings.rates.modelWithheld")}
-      />
-    );
-  }
-
   return (
-    // The verbs in the action band, for the reason on FxRatesCard: beside the
-    // title they were an unwrappable row wider than a 390px viewport.
-    <Panel
-      title={t("settings.rates.modelTitle")}
-      actions={
-        canManage ? (
-          <>
-            <RefreshModelPricesButton refresh={refresh} />
-            <Button variant="primary" onClick={() => setOpen(true)}>
-              {t("settings.rates.modelAdd")}
-            </Button>
-          </>
-        ) : null
-      }
-    >
-      <PanelBody className="form-stack">
-        <PanelIntro>{t("settings.rates.modelIntro")}</PanelIntro>
-        {/* Said once for the sheet, for the reason on FxRatesCard. */}
-        {!canManage && <p>{t("settings.rates.readOnly")}</p>}
-        {query.data === undefined && (
-          <QueryStates
-            query={query}
-            pendingLabel={t("settings.rates.modelTableLabel")}
-          >
-            {null}
-          </QueryStates>
-        )}
-        {priced?.length === 0 && (
-          <EmptyState>
-            <b>{t("settings.rates.modelEmpty")}</b>
-          </EmptyState>
-        )}
-      </PanelBody>
-      {priced && <ModelPriceGroups rows={priced} />}
-      {open ? <ModelPriceDialog onClose={() => setOpen(false)} /> : null}
-      {/* Under the sheet and above the band that holds the button: what the
-          last refresh did, or why it was refused. */}
-      <RefreshSummary refresh={refresh} />
-    </Panel>
+    <PanelBody>
+      {query.data === undefined && (
+        <QueryStates
+          query={query}
+          pendingLabel={t("settings.rates.modelTableLabel")}
+        >
+          {null}
+        </QueryStates>
+      )}
+      {priced?.length === 0 && (
+        <EmptyState>{t("settings.rates.modelEmpty")}</EmptyState>
+      )}
+      {priced && priced.length > 0 && <ModelPriceGroups rows={priced} />}
+    </PanelBody>
   );
 }
 
@@ -421,11 +370,18 @@ function ModelPriceGroups({
       render: (row) => formatDate(row.effective_date, locale, viewerZone()),
     },
   ];
+  // Multi-open: a reader compares one provider's prices with another's.
   return named.map((group) => (
-    <Fragment key={group.provider}>
-      <PanelGroupHead title={group.name} level="h3" />
+    <Disclosure
+      key={group.provider}
+      summary={
+        <span className="rates-price-group">
+          {group.name}
+          <OptionCount count={group.prices.length} />
+        </span>
+      }
+    >
       <DataTable<AiModelRate>
-        bleed
         stickyFirst
         label={t("settings.rates.modelGroupLabel", { provider: group.name })}
         rows={group.prices}
@@ -435,6 +391,6 @@ function ModelPriceGroups({
         }
         columns={columns}
       />
-    </Fragment>
+    </Disclosure>
   ));
 }

@@ -124,7 +124,7 @@ const documentStats: IngestStats = {
 // one sentence that separates "open a setting" from "try again", and the
 // reason a reader retried a build that could never succeed.
 const UNCONFIGURED_DETAIL =
-  "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under Model provider keys, then build again.";
+  "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under AI models → Providers, then build again.";
 
 type BuildRow = {
   id: string;

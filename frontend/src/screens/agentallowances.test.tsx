@@ -119,12 +119,27 @@ describe("AgentAllowancesCard", () => {
   });
 
   it.each([
-    ["agent_writes_per_window", "10", "5001"],
-    ["agent_egress_per_window", "5", "0"],
-    ["agent_calls_per_window", "50", "49"],
+    [
+      "agent_writes_per_window",
+      "10",
+      "5001",
+      "Enter a whole number from 10 to 5,000.",
+    ],
+    [
+      "agent_egress_per_window",
+      "5",
+      "0",
+      "Enter a whole number from 1 to 200.",
+    ],
+    [
+      "agent_calls_per_window",
+      "50",
+      "49",
+      "Enter a whole number from 50 to 20,000.",
+    ],
   ] as const)(
     "saves %s alone and refuses past its bounds",
-    async (property, ok, bad) => {
+    async (property, ok, bad, refusal) => {
       const backend = backendFor(EDITOR);
       vi.stubGlobal("fetch", backend.fetchMock);
       const user = userEvent.setup();
@@ -137,12 +152,8 @@ describe("AgentAllowancesCard", () => {
       expect(box.value).toBe(String(defaultAgentAllowances[property]));
       await user.clear(box);
       await user.type(box, bad);
-      expect(
-        await screen.findByText(translate("en", "operations.refusal")),
-      ).toBeTruthy();
-      expect(box).toHaveAccessibleDescription(
-        expect.stringContaining(translate("en", "operations.refusal")),
-      );
+      expect(await screen.findByText(refusal)).toBeTruthy();
+      expect(box).toHaveAccessibleDescription(expect.stringContaining(refusal));
       const save = screen.getByRole("button", {
         name: translate("en", "agentAllowances.save"),
       });

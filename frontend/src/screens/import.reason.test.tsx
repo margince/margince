@@ -67,6 +67,18 @@ describe("a problem's reason", () => {
     expect(screen.getByText(/vom Typ Kontakte anlegen/)).toBeVisible();
   });
 
+  it("names the deals file by its type in the reader's language", () => {
+    const refused: ImportRowIssue = {
+      ...coded,
+      kind: "permission",
+      reason: "You cannot create deals, so the deals file is skipped",
+      reason_code: "cannot_create",
+      params: { plural: "deals" },
+    };
+    show(<ProblemTable issues={[refused]} />, "de");
+    expect(screen.getByText(/vom Typ Deals anlegen/)).toBeVisible();
+  });
+
   it("says an undo refusal from its code", () => {
     const row = {
       object: "contact" as const,

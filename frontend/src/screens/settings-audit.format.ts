@@ -28,19 +28,6 @@ export const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
   to: "",
 };
 
-export const AUDIT_LOG_FILTER_FIELDS: readonly Readonly<{
-  key: keyof AuditLogFilters;
-  labelKey: MessageKey;
-  date?: boolean;
-}>[] = [
-  { key: "actor", labelKey: "settings.auditActor" },
-  { key: "entityType", labelKey: "settings.auditEntity" },
-  { key: "entityId", labelKey: "settings.auditEntityId" },
-  { key: "action", labelKey: "settings.auditAction" },
-  { key: "from", labelKey: "settings.auditFrom", date: true },
-  { key: "to", labelKey: "settings.auditTo", date: true },
-];
-
 export const AUDIT_LOG_PAGE_SIZE = 20;
 
 export function isNarrowed(filters: AuditLogFilters): boolean {

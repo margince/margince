@@ -126,8 +126,9 @@ call undoes that. An ID fails in none of these ways.
 ## Importing a ZIP over REST
 
 A ZIP holds one CSV for each record type. The file name gives the type: `companies.csv`,
-`contacts.csv` or `leads.csv`. A run lands companies first, then contacts, then leads, so a contact can
-link to a company in the same ZIP.
+`contacts.csv`, `leads.csv` or `deals.csv`. A run lands companies first, then contacts, then leads, then
+deals. So a contact can link to a company in the same ZIP, and a deal to either. Undo goes the other way
+and archives deals first.
 
 1. Read `GET /v1/imports/format`. It lists each file, its columns and what goes in each one, and the
    order the files land in. `GET /v1/imports/template` returns the same as a ZIP to fill in.
@@ -136,6 +137,8 @@ link to a company in the same ZIP.
    files no type takes.
 4. Call `POST /v1/imports` with `parts`. Each part names its `file`, its `object` and its `mapping`.
 5. Read the report once the run is `awaiting_approval`, then approve the run as for one CSV.
+
+`GET /v1/imports/template` lists every pipeline with its stages in its `README.txt`.
 
 A ZIP holds at most 20 files, and the upload limit applies to the ZIP. Two files of one type are
 refused.
@@ -150,6 +153,37 @@ The upload's answer holds one in `suggested_source_name`.
 `GET /v1/imports/{id}/problems.csv` returns the report's issues as a spreadsheet, one row per issue.
 The template and this spreadsheet need a session where a human has signed in, as the upload does. A
 passport may read the format.
+
+### Importing deals
+
+A `deals.csv` row can map `name`, `pipeline`, `stage`, `amount`, `currency`, `close_date`,
+`company_ref`, `contact_ref`, `owner_email`, `tags`, `description` and `lost_reason`. A deal row needs a `ref`
+mapped, or the part is refused at staging, because two deals can share a name.
+
+- `pipeline` and `stage` are names, matched whatever their case. An empty `pipeline` is the default
+  pipeline. A caller without the `pipeline` read grant cannot have a stage checked, so every row is a
+  problem.
+- `amount` is a plain number with a dot, such as `12000.50`, and needs `currency`.
+- A stage that is won or lost lands the deal closed, on `close_date`, which may be in the past. A lost
+  stage needs `lost_reason`. An open deal's `close_date` cannot be in the past.
+- `contact_ref` names a contact by `ref`, email or ID, and seats it as a stakeholder.
+- The report's parts carry `closed_won` and `closed_lost` for the deals that land closed.
+
+A row the deals store would refuse is skipped with a coded reason, and never fails the run. The
+causes are:
+
+- a new row with no stage;
+- a move to another pipeline;
+- a deal that is already closed;
+- a currency with no rate;
+- a legal gate.
+
+Events of an imported deal carry `imported: true` and the `import_run_id`. Automations and commissions
+skip them. Webhooks get them with that mark, so a receiver decides for itself.
+
+Undo archives the deals an import created, before contacts, and keeps a deal someone edited since. Only
+an edit to the deal itself keeps it. A note, an email or a task logged against the deal does not keep
+it, and undo archives the deal.
 
 ## Importing several files over MCP
 

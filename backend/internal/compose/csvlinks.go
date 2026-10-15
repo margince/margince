@@ -85,7 +85,10 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 
 // linkNotFoundWhy is the one sentence for a ref no step answers to, whether
 // nothing carries it or only records the caller cannot see do.
-func linkNotFoundWhy(ref string) migration.Reason {
+func linkNotFoundWhy(object, ref string) migration.Reason {
+	if object == migration.ObjectContact {
+		return migration.Why(migration.ReasonContactNotFound, "ref", strings.TrimSpace(ref))
+	}
 	return migration.Why(migration.ReasonLinkNotFound, "ref", strings.TrimSpace(ref))
 }
 
@@ -143,7 +146,12 @@ func (r *linkResolver) markLanded(object, ref string, id ids.UUID) {
 // resolveCompany answers which company a link cell names. A ref is trimmed and
 // keeps its case, because it is an identifier.
 func (r *linkResolver) resolveCompany(ctx context.Context, raw string) (linkAnswer, error) {
-	key := linkKey{Object: migration.ObjectCompany, Key: strings.TrimSpace(raw)}
+	return r.resolveLink(ctx, migration.ObjectCompany, raw)
+}
+
+// resolveLink is resolveCompany for any object a link may name.
+func (r *linkResolver) resolveLink(ctx context.Context, object, raw string) (linkAnswer, error) {
+	key := linkKey{Object: object, Key: strings.TrimSpace(raw)}
 	if answer, ok := r.cache[key]; ok {
 		return answer, nil
 	}
@@ -175,7 +183,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 			return answer, err
 		}
 	}
-	return linkAnswer{Why: linkNotFoundWhy(key.Key)}, nil
+	return linkAnswer{Why: linkNotFoundWhy(key.Object, key.Key)}, nil
 }
 
 // bindingOf finds a row this source landed before, through the identity map,
@@ -213,8 +221,11 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 }
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
-// the one name it carries.
-func (r *linkResolver) naturalKeyOf(ctx context.Context, _, key string) (linkAnswer, error) {
+// the one name it carries. A contact's is its email address.
+func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
+	if object == migration.ObjectContact {
+		return r.visibleContactByEmail(ctx, key)
+	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
 		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))
