@@ -267,7 +267,8 @@ func (s *Store) RecordProgressionDecided(
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
 		return recordProgressionDecidedTx(
-			ctx, tx, approvalID, outcome, reason, edited, s.clock())
+			ctx, tx, approvalID, outcome, reason, edited, s.clock(),
+		)
 	})
 }
 

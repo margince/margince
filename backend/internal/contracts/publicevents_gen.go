@@ -2079,6 +2079,9 @@ type PublicEventNotificationPreferenceChanged struct {
 
 // PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
 type PublicEventOfferAccepted struct {
+	// Currency The currency of gross_minor (ISO 4217), so the amount can be printed.
+	Currency *string `json:"currency,omitempty"`
+
 	// DealId The deal this offer belongs to.
 	DealId openapi_types.UUID `json:"deal_id"`
 
@@ -2130,6 +2133,9 @@ type PublicEventOfferRejected struct {
 
 // PublicEventOfferSent Payload for offer.sent — a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion.
 type PublicEventOfferSent struct {
+	// Currency The currency of gross_minor (ISO 4217), so the amount can be printed.
+	Currency *string `json:"currency,omitempty"`
+
 	// DealId The deal this offer belongs to.
 	DealId openapi_types.UUID `json:"deal_id"`
 
@@ -3468,10 +3474,10 @@ var PublicEventSamples = map[string]string{
 	"notice.created":                            "{\"kind\":\"Sample kind\",\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"recipient_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notice.read":                               "{\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notification.preference_changed":           "{\"class\":\"Sample class\"}",
-	"offer.accepted":                            "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
+	"offer.accepted":                            "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
 	"offer.created":                             "{\"captured_by\":\"Sample captured by\",\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"source\":\"Sample source\"}",
 	"offer.rejected":                            "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"revision\":1}",
-	"offer.sent":                                "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
+	"offer.sent":                                "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
 	"offer.superseded":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_revision\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_revision\":1}",
 	"onboarding.state_changed":                  "{\"completed\":true,\"connect_skipped\":true,\"path\":\"Sample path\",\"step\":\"Sample step\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"version\":1,\"voice_skipped\":true}",
 	"passport.revoked":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"passport_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

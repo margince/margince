@@ -82,7 +82,8 @@ func baseCurrencyFrozen(ctx context.Context, tx pgx.Tx, settingKey string) (bool
 		return true, fmt.Sprintf(
 			"%d record(s) — closed deals and sent offers — have already frozen a conversion rate "+
 				"against it, so changing the base would re-mean every roll-up built on them",
-			converted), nil
+			converted,
+		), nil
 	}
 	priced, base, err := ratesPricedAgainstBase(ctx, tx, settingKey)
 	if err != nil {
@@ -91,7 +92,8 @@ func baseCurrencyFrozen(ctx context.Context, tx pgx.Tx, settingKey string) (bool
 	if priced > 0 {
 		return true, fmt.Sprintf(
 			"%d rate(s) in the sheet convert into %s and cannot be restated against another base; "+
-				"clear the rate sheet first", priced, base), nil
+				"clear the rate sheet first", priced, base,
+		), nil
 	}
 	return false, "", nil
 }
@@ -131,7 +133,8 @@ func frozenRateCount(ctx context.Context, tx pgx.Tx) (int, error) {
 // or not the base itself can still be named.
 func ratesPricedAgainstBase(ctx context.Context, tx pgx.Tx, settingKey string) (int, string, error) {
 	var base *string
-	if err := tx.QueryRow(ctx,
+	if err := tx.QueryRow(
+		ctx,
 		`SELECT value #>> '{}' FROM setting WHERE key = $1`, settingKey,
 	).Scan(&base); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return 0, "", fmt.Errorf("reading the installation's current base currency: %w", err)

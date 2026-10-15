@@ -353,7 +353,8 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(auditEvidence, extra)
 		auditID, err := storekit.AuditWithEvidence(
-			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence)
+			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence,
+		)
 		if err != nil {
 			return fmt.Errorf("audit %s: %w", correction, err)
 		}

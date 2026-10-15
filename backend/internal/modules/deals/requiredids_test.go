@@ -150,7 +150,8 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
 				_, err := transitionRefFromBody(
-					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId,
+				)
 				return err
 			},
 		},
@@ -164,7 +165,8 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 					t.Fatalf("probe body does not decode: %v", err)
 				}
 				_, err := transitionRefFromBody(
-					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId)
+					ids.From[ids.PipelineKind](ids.NewV7()), req.FromStageId, req.ToStageId,
+				)
 				return err
 			},
 		},

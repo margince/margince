@@ -82,7 +82,8 @@ func (s *Store) SetTransitionPolicy(
 	}
 	if in.Mode != ModePropose && in.Mode != ModeAuto {
 		return TransitionPolicy{}, fmt.Errorf(
-			"deals: %q is not a stage automation mode", in.Mode)
+			"deals: %q is not a stage automation mode", in.Mode,
+		)
 	}
 	var out TransitionPolicy
 	err := s.Tx(ctx, func(tx pgx.Tx) error {

@@ -82,7 +82,8 @@ func aGoodRecord(t *testing.T, e *configEnv, dealID ids.DealID, ref TransitionRe
 		id := ids.NewV7()
 		proposeOutcome(t, e, dealID, ref.FromStageID, ref.ToStageID, id)
 		if err := e.store.RecordProgressionDecided(
-			e.asDealWriter(), id, ProgressionApprovedClean, nil, false); err != nil {
+			e.asDealWriter(), id, ProgressionApprovedClean, nil, false,
+		); err != nil {
 			t.Fatalf("settling proposal %d: %v", i, err)
 		}
 		if i == 0 {
@@ -164,7 +165,8 @@ func TestAutoApplyNeedsTwoHundredReviewsAndTwentyEightObservationDays(t *testing
 		id := ids.NewV7()
 		proposeOutcome(t, e, dealID, fromID, toID, id)
 		if err := e.store.RecordProgressionDecided(
-			e.asDealWriter(), id, ProgressionApprovedClean, nil, false); err != nil {
+			e.asDealWriter(), id, ProgressionApprovedClean, nil, false,
+		); err != nil {
 			t.Fatalf("settling: %v", err)
 		}
 	}
@@ -211,7 +213,8 @@ func TestAutoApplyNeedsNinetyFivePercentCleanAcceptanceAndUnderOnePercentCorrect
 		id := ids.NewV7()
 		proposeOutcome(t, e, dealID, fromID, toID, id)
 		if err := e.store.RecordProgressionDecided(
-			e.asDealWriter(), id, ProgressionRejected, nil, false); err != nil {
+			e.asDealWriter(), id, ProgressionRejected, nil, false,
+		); err != nil {
 			t.Fatalf("settling a rejection: %v", err)
 		}
 	}

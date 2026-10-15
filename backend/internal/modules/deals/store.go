@@ -253,7 +253,8 @@ type CustomColumns struct {
 // it, before it opens the write. A create that dropped the values instead would
 // come back created and missing what the caller sent, with nothing saying why.
 var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
-	"deals: a caller-opened create carrying custom fields needs the active columns its caller read before opening the transaction")
+	"deals: a caller-opened create carrying custom fields needs the active columns its caller read before opening the transaction",
+)
 
 // ActiveDealColumns is the caller-side half of UpdateDealTx and CreateDealTx.
 // A caller that opens the transaction itself does this read before opening it,

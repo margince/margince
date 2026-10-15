@@ -546,6 +546,8 @@ export interface components {
              * @description The offer's gross total at send time.
              */
             gross_minor?: number;
+            /** @description The currency of gross_minor (ISO 4217), so the amount can be printed. */
+            currency?: string;
             /** @description Native→base rate frozen at send (RT-PR-C2). Decimal-as-string to avoid float rounding. */
             fx_rate_to_base: string;
             /**
@@ -573,6 +575,8 @@ export interface components {
              * @description The offer's gross total, now also the deal's amount.
              */
             gross_minor?: number;
+            /** @description The currency of gross_minor (ISO 4217), so the amount can be printed. */
+            currency?: string;
         };
         /** @description Payload for offer.rejected — a sent offer was rejected. */
         PublicEventOfferRejected: {

@@ -75,7 +75,8 @@ func (e *OfferCurrencyRepricingError) Error() string {
 		"changing this draft's currency from %s to %s would re-mean %d priced line(s) without "+
 			"restating them, because a line's price carries no unit of its own — remove the "+
 			"lines and re-enter them in %s, or start a new offer in %s",
-		e.From, e.To, e.PricedLines, e.To, e.To)
+		e.From, e.To, e.PricedLines, e.To, e.To,
+	)
 }
 
 // FieldFault points at the currency, which is the field the caller sent: unlike

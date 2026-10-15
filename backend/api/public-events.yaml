@@ -1165,6 +1165,9 @@ components:
           type: integer
           format: int64
           description: The offer's gross total at send time.
+        currency:
+          type: string
+          description: The currency of gross_minor (ISO 4217), so the amount can be printed.
         fx_rate_to_base:
           type: string
           description: >-
@@ -1204,6 +1207,9 @@ components:
           type: integer
           format: int64
           description: The offer's gross total, now also the deal's amount.
+        currency:
+          type: string
+          description: The currency of gross_minor (ISO 4217), so the amount can be printed.
       additionalProperties: false
 
     PublicEventOfferRejected:

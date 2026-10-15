@@ -12,10 +12,8 @@ generated from its own public OpenAPI contract (`api/public-events.yaml`, §3 be
 point in `store.go`, and replay in `delivery.go`, can be reached over HTTP **and** from Settings →
 Integrations (§9). The bus consumer and the retry sweep run only in the worker.
 
-For the short version see [reference/modules.md](../reference/modules.md). To *register* one, see
-[how-to/register-a-webhook.md](../how-to/register-a-webhook.md). For the write shape every write
-commits through, and the bus the delivery worker reads from, see
-[write-backbone.md](write-backbone.md).
+Short version: [modules.md](../reference/modules.md). To register one:
+[register-a-webhook.md](../how-to/register-a-webhook.md). Write shape and bus: [write-backbone.md](write-backbone.md).
 
 ## The whole shape
 
@@ -292,8 +290,12 @@ Values are read from the raw envelope bytes, so a large number keeps every digit
 The body is rendered once, when the delivery joins the queue. It is stored in `payload` with its
 `content_type`. The signature covers those bytes, and retry and replay send them again.
 
-A body over 256 KiB is not sent. The row is dead-lettered with the reason and an empty payload. A
-replay of it is a 422, because there is nothing to send again.
+A body over 256 KiB is not sent: the row is dead-lettered with its reason, and a replay is a 422.
+
+Every event and its fields: [reference/webhook-events.md](../reference/webhook-events.md). Before a
+body is rendered, `entity` gets `url`, a link from the public base URL, and `name` for a deal,
+company or project (`recordref.go`). A contact or lead gets no name: erasure does not reach a stored
+delivery.
 
 `POST /webhook-subscriptions/body-preview` renders a template against a sample event with the same
 engine. The sample comes from the event's schema in `public-events.yaml` (`PublicEventSamples`,

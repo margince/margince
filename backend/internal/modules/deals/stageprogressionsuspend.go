@@ -150,7 +150,8 @@ func suspendIfRecordWentBadTx(
 	return suspendTransitionPolicyTx(ctx, tx, in, fmt.Sprintf(
 		"%.1f%% of %d reviewed moves on this transition were undone or corrected, "+
 			"above the %.1f%% ceiling",
-		rates.UnsafeRate()*100, rates.Reviewed, rule.CorrectionReversalThreshold*100))
+		rates.UnsafeRate()*100, rates.Reviewed, rule.CorrectionReversalThreshold*100,
+	))
 }
 
 // recordWentBad answers whether this rule's own numbers say to stop.

@@ -142,6 +142,7 @@ func offerSentPayload(current crmcontracts.Offer, rate string) crmcontracts.Publ
 		DealId:       current.DealId,
 		Revision:     current.Revision,
 		GrossMinor:   current.GrossMinor,
+		Currency:     &current.Currency,
 		FxRateToBase: rate,
 		ValidUntil:   current.ValidUntil,
 	}
@@ -227,7 +228,7 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOfferAccepted{
 			OfferId: current.Id, DealId: current.DealId, Revision: current.Revision,
-			GrossMinor: current.GrossMinor,
+			GrossMinor: current.GrossMinor, Currency: &current.Currency,
 		}); err != nil {
 			return fmt.Errorf("emit offer.accepted: %w", err)
 		}

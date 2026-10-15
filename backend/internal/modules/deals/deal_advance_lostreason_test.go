@@ -32,7 +32,8 @@ func TestALostReasonIsClearedOnEveryLandingThatIsNotLost(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
 			patch, status, err := store.stageTransitionPatch(
-				context.Background(), nil, lost, AdvanceDealInput{}, semantic)
+				context.Background(), nil, lost, AdvanceDealInput{}, semantic,
+			)
 			if err != nil {
 				t.Fatalf("stageTransitionPatch: %v", err)
 			}
@@ -60,7 +61,8 @@ func TestAnAdvanceWithNoLostReasonLeavesTheColumnOutOfThePatch(t *testing.T) {
 
 	store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
 	patch, _, err := store.stageTransitionPatch(
-		context.Background(), nil, open, AdvanceDealInput{}, "open")
+		context.Background(), nil, open, AdvanceDealInput{}, "open",
+	)
 	if err != nil {
 		t.Fatalf("stageTransitionPatch: %v", err)
 	}
@@ -77,7 +79,8 @@ func TestALostReasonIsWrittenWhenTheDealLandsOnLost(t *testing.T) {
 
 	store := &Store{clock: func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) }}
 	patch, status, err := store.stageTransitionPatch(
-		context.Background(), nil, open, AdvanceDealInput{LostReason: &reason}, "lost")
+		context.Background(), nil, open, AdvanceDealInput{LostReason: &reason}, "lost",
+	)
 	if err != nil {
 		t.Fatalf("stageTransitionPatch: %v", err)
 	}

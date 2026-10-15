@@ -25,7 +25,8 @@ func (h Handlers) ListTransitionPolicies(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
 ) {
 	rules, err := h.store.ReadTransitionPolicies(
-		r.Context(), pathID[ids.PipelineKind](id))
+		r.Context(), pathID[ids.PipelineKind](id),
+	)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -58,7 +59,8 @@ func (h Handlers) SetTransitionPolicy(
 		return
 	}
 	ref, err := transitionRefFromBody(
-		pathID[ids.PipelineKind](id), body.FromStageId, body.ToStageId)
+		pathID[ids.PipelineKind](id), body.FromStageId, body.ToStageId,
+	)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -104,7 +106,8 @@ func (h Handlers) ResumeTransitionPolicy(
 		return
 	}
 	ref, err := transitionRefFromBody(
-		pathID[ids.PipelineKind](id), body.FromStageId, body.ToStageId)
+		pathID[ids.PipelineKind](id), body.FromStageId, body.ToStageId,
+	)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

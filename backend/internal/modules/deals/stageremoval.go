@@ -237,7 +237,8 @@ func refuseIfOccupied(ctx context.Context, tx pgx.Tx, id ids.StageID) error {
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT id, name FROM deal WHERE stage_id = $1 AND archived_at IS NULL%s
-		 ORDER BY created_at LIMIT $2`, scope), args...)
+		 ORDER BY created_at LIMIT $2`, scope,
+	), args...)
 	if err != nil {
 		return fmt.Errorf("name deals on stage: %w", err)
 	}

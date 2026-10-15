@@ -237,7 +237,8 @@ func (s *Store) advanceOnTx(
 		if !in.IsExplicitUndo {
 			if err := countAManualMoveBackAsAReversal(
 				ctx, tx, id, ids.StageID{UUID: ids.UUID(*current.StageId)}, in,
-				s.clock()); err != nil {
+				s.clock(),
+			); err != nil {
 				return err
 			}
 		}

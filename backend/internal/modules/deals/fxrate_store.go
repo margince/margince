@@ -219,7 +219,8 @@ func (s *Store) writeFxRate(ctx context.Context, tx pgx.Tx, from string, in SetF
 		out  FxRateRow
 		fxID ids.UUID
 	)
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(
+		ctx, `
 		INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 		VALUES ($1, $2, $3::numeric, $4)
 		ON CONFLICT (from_currency, to_currency, rate_date)
