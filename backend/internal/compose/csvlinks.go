@@ -54,6 +54,9 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
+	// pendingNatural holds the natural keys of those rows (a contact's email,
+	// a company's domain), so a link written with one resolves as the commit's does.
+	pendingNatural map[linkKey]bool
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
@@ -70,14 +73,15 @@ type linkResolver struct {
 
 func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 	r := &linkResolver{
-		sourceSystem: sourceSystem,
-		identities:   migration.NewRunStore(db),
-		pool:         db.Pool(),
-		pending:      map[linkKey]bool{},
-		landed:       map[linkKey]ids.UUID{},
-		cache:        map[linkKey]linkAnswer{},
-		employers:    map[string]employerCandidate{},
-		names:        map[string]pendingName{},
+		sourceSystem:   sourceSystem,
+		identities:     migration.NewRunStore(db),
+		pool:           db.Pool(),
+		pending:        map[linkKey]bool{},
+		pendingNatural: map[linkKey]bool{},
+		landed:         map[linkKey]ids.UUID{},
+		cache:          map[linkKey]linkAnswer{},
+		employers:      map[string]employerCandidate{},
+		names:          map[string]pendingName{},
 	}
 	r.byBinding, r.byNaturalKey, r.byID = r.bindingOf, r.naturalKeyOf, r.visibleByID
 	return r
@@ -104,6 +108,29 @@ func (r *linkResolver) markPending(object, ref string) {
 	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
 	r.pending[key] = true
 	delete(r.cache, key)
+}
+
+// naturalKeyFor is the key the commit's natural-key step reads a link by: a
+// contact's folded email, a company's canonical domain. Marking a pending row
+// and looking a link up both spell the key here.
+func naturalKeyFor(object, raw string) (linkKey, bool) {
+	raw = strings.TrimSpace(raw)
+	switch {
+	case object == migration.ObjectContact && strings.Contains(raw, "@"):
+		return linkKey{Object: object, Key: canonicalFor(fieldEmail, raw)}, true
+	case object == migration.ObjectCompany && strings.Contains(raw, ".") && !strings.ContainsRune(raw, ' '):
+		return linkKey{Object: object, Key: canonicalFor(fieldDomain, raw)}, true
+	}
+	return linkKey{}, false
+}
+
+// markNaturalPending records the natural key of a row the dry run predicts will
+// land, so a link that names it by email or domain resolves before it exists.
+func (r *linkResolver) markNaturalPending(object, raw string) {
+	if key, ok := naturalKeyFor(object, raw); ok {
+		r.pendingNatural[key] = true
+		clear(r.cache)
+	}
 }
 
 // pendingName counts the rows of this upload that will land under one company
@@ -173,6 +200,9 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 	if r.pending[key] {
 		return linkAnswer{Pending: true}, nil
 	}
+	if natural, ok := naturalKeyFor(key.Object, key.Key); ok && r.pendingNatural[natural] {
+		return linkAnswer{Pending: true}, nil
+	}
 	if id, ok := r.landed[key]; ok {
 		return linkAnswer{ID: id, Found: true}, nil
 	}
@@ -181,7 +211,7 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 		return answer, err
 	}
 	// An ambiguous name stops here with its own reason: an id cannot carry it.
-	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Why.Code != "" {
+	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.resolves() || answer.Why.Code != "" {
 		return answer, err
 	}
 	if _, parseErr := ids.Parse(key.Key); parseErr == nil {
@@ -296,4 +326,16 @@ func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (link
 		return linkAnswer{}, fmt.Errorf("import: finding the linked company: %w", err)
 	}
 	return answer, nil
+}
+
+// naturalKeyField is the column of a row that holds its natural key, or empty
+// when a record of that type has none a link can name.
+func naturalKeyField(object string) string {
+	switch object {
+	case migration.ObjectContact:
+		return fieldEmail
+	case migration.ObjectCompany:
+		return fieldDomain
+	}
+	return ""
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -311,5 +312,31 @@ func TestACorrectedFileWithNoTypeColumnHoldsADurationToTheStoredKind(t *testing.
 	}
 	if note := activityNamed(t, e, "Fix note"); note.DurationSeconds != nil {
 		t.Fatalf("note duration = %d seconds, want none: the row was refused whole", *note.DurationSeconds)
+	}
+}
+
+func TestATestRunResolvesAnActivityLinkByTheNaturalKeyOfARowInTheSameUpload(t *testing.T) {
+	e := setupImportApp(t)
+	parts := append([]AnyMap{
+		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name", "domain": "domain"}},
+		{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{"ref": "ref", "email": "email", "name": "full_name"}},
+	}, activityImportParts()...)
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
+		"companies.csv": "ref,name,domain\nC-1,Natural Key Works,natural-key.example\n",
+		"contacts.csv":  "ref,email,name\nP-1,Jo@Natural-Key.example,Jo Tran\n",
+		"activities.csv": activityHeader + "\n" +
+			"A-1,note,By ref,,2025-03-02,contact:P-1,,,\n" +
+			"A-2,note,By email,,2025-03-03,contact:jo@natural-key.example,,,\n" +
+			"A-3,note,By name,,2025-03-04,company:Natural Key Works,,,\n" +
+			"A-4,note,By domain,,2025-03-05,company:natural-key.example,,,\n",
+	})).SourceRef, "crm", parts)
+	preview := readImportReport(t, e, run.ID)
+	approveAndRead(t, e, run.ID)
+	landed := readImportReport(t, e, run.ID)
+	if len(preview.Issues) != 0 || preview.Disposition.Skipped != 0 {
+		t.Fatalf("test run = %+v, issues %+v, want no broken link", preview.Disposition, preview.Issues)
+	}
+	if !reflect.DeepEqual(preview.Disposition, landed.Disposition) {
+		t.Fatalf("test run %+v and commit %+v disagree", preview.Disposition, landed.Disposition)
 	}
 }
