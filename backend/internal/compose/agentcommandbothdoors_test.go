@@ -87,6 +87,8 @@ func doorRequest(method, path string, routed ids.UUID, body string) (*http.Reque
 // one tool verb, the record type as an argument — so a per-operation literal
 // would be the same four lines twenty times, and a divergence would hide in the
 // repetition rather than stand out.
+const offerTemplateBody = `{"name":"Standard","locale":"en","is_default":false,"layout":{"sections":[]}}`
+
 func archiveDoors(collection, recordType string) bothDoorsFixture {
 	return bothDoorsFixture{
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
@@ -172,12 +174,14 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 	},
 
-	"archiveContact":      archiveDoors("contacts", "contact"),
-	"archiveCompany":      archiveDoors("companies", "company"),
-	"archiveDeal":         archiveDoors("deals", "deal"),
-	"archiveProject":      archiveDoors("projects", "project"),
-	"archiveRelationship": archiveDoors("relationships", "relationship"),
-	"archiveActivity":     archiveDoors("activities", "activity"),
+	"archiveContact":       archiveDoors("contacts", "contact"),
+	"archiveCompany":       archiveDoors("companies", "company"),
+	"archiveDeal":          archiveDoors("deals", "deal"),
+	"archiveProject":       archiveDoors("projects", "project"),
+	"archiveRelationship":  archiveDoors("relationships", "relationship"),
+	"archiveActivity":      archiveDoors("activities", "activity"),
+	"archiveProduct":       archiveDoors("products", "product"),
+	"archiveOfferTemplate": archiveDoors("offer-templates", "offer_template"),
 
 	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
@@ -188,6 +192,9 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		`{"name":"Acme rollout","company_id":"019ff000-0000-7000-8000-000000000013"}`),
 	"createRelationship": createDoors("relationships", "relationship",
 		`{"kind":"employment","contact_id":"019ff000-0000-7000-8000-000000000014"}`),
+	"createProduct": createDoors("products", "product", `{"name":"Onboarding","unit_price_minor":120000,"currency":"EUR"}`),
+	"createOfferTemplate": createDoors("offer-templates", "offer_template",
+		`{"name":"Standard","layout":{"sections":[]}}`),
 
 	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
 	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
@@ -196,6 +203,16 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
 	"updateRelationship": updateDoors("relationships", "relationship", `{"role":"champion"}`),
+	"updateProduct":      updateDoors("products", "product", `{"unit_price_minor":99000}`),
+	// A template is replaced whole, so its route is a PUT.
+	"updateOfferTemplate": {
+		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
+			return doorRequest(http.MethodPut, "/v1/offer-templates/"+primary.String(), primary, offerTemplateBody)
+		},
+		args: func(primary, _ ids.UUID) string {
+			return `{"record_type":"offer_template","id":"` + primary.String() + `","fields":` + offerTemplateBody + `}`
+		},
+	},
 
 	"mergeContact": mergeDoors("contacts", "contact"),
 	"mergeCompany": mergeDoors("companies", "company"),

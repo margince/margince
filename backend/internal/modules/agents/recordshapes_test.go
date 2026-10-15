@@ -161,15 +161,13 @@ func TestRenderedShapesMarkRequiredKeys(t *testing.T) {
 
 // A key the TOOL supplies is never rendered as one the caller must send.
 //
-// `source` is required by every create body in crm.yaml and stamped by this
-// surface, which overwrites whatever arrived. Rendering it required would make
-// an agent invent a mandatory value that is discarded — and the description says
-// two sentences later that it is overwritten, so the pair would contradict
-// itself. Derived from the same list the generator uses, so a second stamped key
-// inherits the check.
+// `source` is required by every create body in crm.yaml that has one, and
+// stamped by this surface, which overwrites whatever arrived. Rendering it
+// required would make an agent invent a mandatory value that is discarded. An
+// offer template records no source, so its body has none to render.
 func TestRenderedShapesNeverRequireAKeyThisSurfaceStamps(t *testing.T) {
 	for recordType, rendered := range createRecordShapes {
-		if !strings.Contains(rendered, "source?: string") {
+		if strings.Contains(rendered, " source: string") || strings.Contains(rendered, "{source: string") {
 			t.Errorf("%s renders `source` as a key the caller must send:\n%s", recordType, rendered)
 		}
 	}

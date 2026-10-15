@@ -63,6 +63,11 @@ const (
 	// set from this package's constants, so a half-widening fails the gate.
 	// Migration 1787444866 is that reconciliation.
 	EntityPartner EntityType = "partner"
+	// EntityProduct and EntityOfferTemplate are the workspace's catalog: one
+	// price list and one set of offer layouts every rep shares. Neither has an
+	// owner or a row scope. A passport keeps the catalog on MCP as on REST.
+	EntityProduct       EntityType = "product"
+	EntityOfferTemplate EntityType = "offer_template"
 )
 
 // EntityTypes returns the vocabulary in a stable order, for the callers
@@ -80,6 +85,7 @@ func EntityTypes() []EntityType {
 	return []EntityType{
 		EntityContact, EntityCompany, EntityDeal, EntityLead,
 		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
+		EntityProduct, EntityOfferTemplate,
 	}
 }
 

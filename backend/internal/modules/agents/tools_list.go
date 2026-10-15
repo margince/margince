@@ -66,6 +66,7 @@ type FilterVocabulary interface {
 var listRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
+	string(datasource.EntityProduct), string(datasource.EntityOfferTemplate),
 }
 
 // RegisterListTool joins list_records to the surface.
@@ -107,9 +108,9 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		Description:   listRecordsCopy.render(),
 		Instead:       listRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects",
+		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project"]},` +
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template"]},` +
 			t.filtersProperty() + `
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},

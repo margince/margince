@@ -666,7 +666,7 @@ The 27 tables owned by `activities`, as the migrations build them. [Back to the 
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 2 more. |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 4 more. |
 | `external_part_id` | `text` |  |  |
 | `external_source_id` | `text` |  |  |
 | `filename` | `text` | yes |  |
@@ -693,7 +693,7 @@ The 27 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_byte_size_js_safe`: `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `attachment_category_check`: `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other'])))`
 - `attachment_doc_state_check`: `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
-- `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'])))`
+- `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template'])))`
 - `attachment_external_identity_complete`: `CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))`
 - `attachment_supersedes_not_self`: `CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))`
 

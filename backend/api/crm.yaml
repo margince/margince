@@ -22858,7 +22858,7 @@ paths:
       tags: [Offers]
       operationId: listProducts
       summary: List rate-card products (live by default; cursor-paginated).
-      x-mcp-tool: { verb: search_records, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: product, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -22886,7 +22886,7 @@ paths:
       description: |
         Price is integer minor-units + ISO-4217 currency (P11, no float money). `sku` is
         optional; when present it is unique per workspace (409 on a live duplicate).
-      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -22914,7 +22914,7 @@ paths:
       tags: [Offers]
       operationId: getProduct
       summary: Get a product by id.
-      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The product.
@@ -22926,7 +22926,7 @@ paths:
       tags: [Offers]
       operationId: updateProduct
       summary: Update a product (partial). Existing offer lines keep their price snapshot.
-      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -22947,7 +22947,7 @@ paths:
       tags: [Offers]
       operationId: archiveProduct
       summary: Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
-      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived product.
@@ -23663,7 +23663,7 @@ paths:
       operationId: listOfferTemplates
       summary: List offer templates (branded DE/EN PDF layouts), newest first.
       description: Default view excludes archived rows; pass include_archived=true to include them.
-      x-mcp-tool: { verb: search_records, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: list_records, record_type: offer_template, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23690,7 +23690,7 @@ paths:
         `offer_template_name_duplicate`). At most one default template per locale (409
         `offer_template_default_conflict` — setting `is_default=true` while another
         default already holds that locale).
-      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23739,7 +23739,7 @@ paths:
       tags: [Offers]
       operationId: getOfferTemplate
       summary: Get an offer template by id.
-      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
+      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read }
       responses:
         '200':
           description: The offer template.
@@ -23754,7 +23754,7 @@ paths:
       operationId: updateOfferTemplate
       summary: Update an offer template (full replace — every writable field is replaced).
       description: Uses PUT (not PATCH) — omitting a writable field resets it, it is not a partial no-op.
-      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -23779,7 +23779,7 @@ paths:
       operationId: archiveOfferTemplate
       summary: Archive (soft-delete) an offer template.
       description: Sets archived_at (soft-archive); hidden from the default list but still fetchable by id. Offers already carrying this template_id are unaffected — a template is never deleted out from under an existing offer.
-      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
+      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write }
       responses:
         '200':
           description: Archived offer template.

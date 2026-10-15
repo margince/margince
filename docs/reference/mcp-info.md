@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.5 KB |
+| Tool catalog | 175.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45819 |
+| Approx. wire tokens | 45839 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 61.2 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.3 KB | 27% | Yes, every step |
-| Input schemas | 52.6 KB | 29% | Yes, every step |
+| Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
+| Input schemas | 52.8 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **100.9 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **101.1 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -61,7 +61,7 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 416 |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 292 |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 299 |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 212 |
 | [`attach_document`](#attach_document) | Attach a file to a record |  |  | 399 |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 344 |
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 627 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 634 |
 | [`create_task`](#create_task) | Create a task |  |  | 221 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 346 |
@@ -82,11 +82,11 @@ descriptions and input schemas are what each step pays for.
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 821 |
+| [`list_records`](#list_records) | List records | yes |  | 854 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 993 |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -97,7 +97,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
-| [`read_record`](#read_record) | Read a record | yes |  | 292 |
+| [`read_record`](#read_record) | Read a record | yes |  | 298 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 544 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
@@ -112,7 +112,7 @@ descriptions and input schemas are what each step pays for.
 | [`search_records`](#search_records) | Search records | yes |  | 456 |
 | [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 335 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 581 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 588 |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 273 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -661,7 +661,9 @@ has answered. (Runs immediately; requires passport scope "write".)
         "deal",
         "project",
         "relationship",
-        "activity"
+        "activity",
+        "product",
+        "offer_template"
       ],
       "type": "string"
     }
@@ -3193,7 +3195,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "lead",
         "activity",
         "project",
-        "relationship"
+        "relationship",
+        "product",
+        "offer_template"
       ],
       "type": "string"
     }
@@ -4603,9 +4607,12 @@ advising an approach as though the record were unowned.
     },
     "filters": {
       "additionalProperties": false,
-      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
+      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) product — active (b) offer_template — locale (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
       "properties": {
         "acquisition_source": {
+          "type": "string"
+        },
+        "active": {
           "type": "string"
         },
         "commercial_motion": {
@@ -4627,6 +4634,9 @@ advising an approach as though the record were unowned.
           "type": "string"
         },
         "lifecycle": {
+          "type": "string"
+        },
+        "locale": {
           "type": "string"
         },
         "min_score": {
@@ -4688,7 +4698,9 @@ advising an approach as though the record were unowned.
         "company",
         "deal",
         "lead",
-        "project"
+        "project",
+        "product",
+        "offer_template"
       ],
       "type": "string"
     }
@@ -6111,23 +6123,23 @@ when an item happened, in UTC — prefer it over a date the prose recalls.
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
 checks every row against the workspace and reports what importing it would do. Writes nothing.
-`object` is company, contact, lead, deal or activity. Use `contact` for a file the business already
-knows — a migration off another CRM, a corrected export coming back. Use `lead` for a
-machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row
-naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip —
-except a contact whose email is already held, which is always refused, because an email is a real
-key. A company's Website or Domain column maps to `domain`, which is what identifies a company —
-import it and dedupe stops guessing from names. To link contacts to their employers, map the company
-column to `company_name` — import the companies FIRST, because a name that matches nothing links
-nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a
-row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new
-company, so one file may both correct and add. Files that link to each other go together in `files`,
-at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link
-such as a contact's `company_ref` names a company's ref. read_import with view format lists each
-file's columns. create_record for one record you already know. Keep the run_id. The counts its
-report answers — created, duplicates, skipped — and the mapping it settled on are what the user
-weighs, so report both: a column this placed by a name they did not write is a decision they did not
-make. (Runs immediately; requires passport scope "write".)
+`object` is company, contact, lead or deal. Use `contact` for a file the business already knows —
+a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
+nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
+here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
+email is already held, which is always refused, because an email is a real key. A company's Website
+or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops
+guessing from names. To link contacts to their employers, map the company column to `company_name`
+— import the companies FIRST, because a name that matches nothing links nothing and says so. To
+CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company
+it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may
+both correct and add. Files that link to each other go together in `files`, at most one per type,
+instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's
+`company_ref` names a company's ref. read_import with view format lists each file's columns.
+create_record for one record you already know. Keep the run_id. The counts its report answers —
+created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report
+both: a column this placed by a name they did not write is a decision they did not make. (Runs
+immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6164,8 +6176,7 @@ make. (Runs immediately; requires passport scope "write".)
               "company",
               "lead",
               "contact",
-              "deal",
-              "activity"
+              "deal"
             ],
             "type": "string"
           }
@@ -6177,7 +6188,7 @@ make. (Runs immediately; requires passport scope "write".)
         ],
         "type": "object"
       },
-      "maxItems": 5,
+      "maxItems": 4,
       "minItems": 1,
       "type": "array"
     },
@@ -6198,8 +6209,7 @@ make. (Runs immediately; requires passport scope "write".)
         "company",
         "lead",
         "contact",
-        "deal",
-        "activity"
+        "deal"
       ],
       "type": "string"
     },
@@ -6519,18 +6529,6 @@ make. (Runs immediately; requires passport scope "write".)
                         "type": "string"
                       },
                       "object": {
-                        "type": "string"
-                      },
-                      "params": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "reason": {
-                        "type": "string"
-                      },
-                      "reason_code": {
                         "type": "string"
                       }
                     },
@@ -8186,7 +8184,9 @@ were unowned.
         "lead",
         "activity",
         "project",
-        "partner"
+        "partner",
+        "product",
+        "offer_template"
       ],
       "type": "string"
     }
@@ -11068,7 +11068,9 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
         "lead",
         "activity",
         "project",
-        "relationship"
+        "relationship",
+        "product",
+        "offer_template"
       ],
       "type": "string"
     }

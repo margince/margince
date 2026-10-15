@@ -43,6 +43,7 @@ func (seamRecord) ArchivableTypes(context.Context) ([]datasource.EntityType, err
 	return []datasource.EntityType{
 		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
+		datasource.EntityProduct, datasource.EntityOfferTemplate,
 	}, nil
 }
 

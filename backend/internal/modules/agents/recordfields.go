@@ -42,13 +42,15 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -56,13 +58,15 @@ var (
 	// domain one — an edge's ends are what it IS, so moving one is an archive
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.UpdateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.UpdateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.UpdateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.UpdateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.UpdateOfferTemplateRequest](),
 	}
 )
 

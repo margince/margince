@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 14,
     "permitted_but_never_required": 11,
-    "tokens_served_but_never_driven": 4979,
+    "tokens_served_but_never_driven": 5018,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1787,7 +1787,7 @@
   "tools": [
     {
       "name": "list_records",
-      "tokens": 821,
+      "tokens": 854,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1979,7 +1979,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 292,
+      "tokens": 298,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2323,7 +2323,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 627,
+      "tokens": 634,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2380,7 +2380,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 581,
+      "tokens": 588,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",
@@ -3063,7 +3063,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 292,
+      "tokens": 299,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"

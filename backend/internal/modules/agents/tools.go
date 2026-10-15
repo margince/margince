@@ -214,9 +214,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Description:   readRecordCopy.render(),
 		Instead:       readRecordCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
+		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner/getProduct/getOfferTemplate",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[recordWithOwner](),
@@ -260,9 +260,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

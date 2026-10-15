@@ -101,14 +101,14 @@ var searchable = []datasource.EntityType{datasource.EntityContact, datasource.En
 // name?". Conflating them is how naming a type became impossible by the act
 // of keeping it out of the sweep — a type left out of the default set stopped
 // being reachable at all, which is the opposite of what excluding it meant.
-var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner)
+var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner, datasource.EntityProduct, datasource.EntityOfferTemplate)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.contacts.Read(ctx, ref)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.deals.Read(ctx, ref)
 	case datasource.EntityProject:
 		return p.projects.Read(ctx, ref)
@@ -132,7 +132,7 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		return p.contacts.ListFilters(t)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.deals.ListFilters(t)
 	case datasource.EntityProject:
 		return p.projects.ListFilters(t)
@@ -224,7 +224,7 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, filters)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
 		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
@@ -341,7 +341,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Create(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.deals.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)
@@ -357,7 +357,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Update(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.deals.Update(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Update(ctx, in)
@@ -385,7 +385,7 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 	switch t {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityRelationship:
 		return p.contacts
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate:
 		return p.deals
 	case datasource.EntityProject:
 		return p.projects

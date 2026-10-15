@@ -54,7 +54,7 @@ func TestCreateStagesARecordTypeTheResolverHasNoOpinionOn(t *testing.T) {
 func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 	tool := createRecord{}
 
-	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"record_type":"product","fields":{}}`))
+	_, err := tool.StageInfo(context.Background(), json.RawMessage(`{"record_type":"saved_view","fields":{}}`))
 	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("staging a create_record call naming a type this verb cannot create answered %v, want a "+
 			"BadArgsError — an approval for it could never be carried out", err)
@@ -178,16 +178,16 @@ func TestPatchStagesAServedRecordAndID(t *testing.T) {
 func TestPatchStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 	id := ids.NewV7()
 	call := NewPatchCall(unreadableProvider{}, nil, PatchCommand{
-		RecordType: "product", ID: id, Fields: json.RawMessage(`{"name":"Renamed package"}`),
+		RecordType: "saved_view", ID: id, Fields: json.RawMessage(`{"name":"Renamed view"}`),
 	})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
-		t.Fatalf("staging a product patch answered %v, want it staged — PATCH /v1/products/{id} "+
-			"is a governed operation whose target the seam does not serve", err)
+		t.Fatalf("staging a saved_view patch answered %v, want it staged — a governed patch "+
+			"whose target the seam does not serve still names its row", err)
 	}
-	if info.TargetType != "product" || info.TargetID != id {
-		t.Errorf("staged target = (%s,%s), want (product,%s)",
+	if info.TargetType != "saved_view" || info.TargetID != id {
+		t.Errorf("staged target = (%s,%s), want (saved_view,%s)",
 			info.TargetType, info.TargetID, id)
 	}
 }

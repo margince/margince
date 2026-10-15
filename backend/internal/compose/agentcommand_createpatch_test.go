@@ -124,19 +124,19 @@ func TestAMalformedPatchIDAnswersNotFound(t *testing.T) {
 func TestAPatchOutsideTheToolSchemaStagesTheRowItNames(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{
-		Op: "updateProduct", Access: accessTool, Tool: "update_record",
-		RecordType: recordTypeProduct,
+		Op: "updateOffer", Access: accessTool, Tool: "update_record",
+		RecordType: recordTypeOffer,
 	}
-	productID := ids.NewV7()
-	body := []byte(`{"name":"Renamed package"}`)
+	offerID := ids.NewV7()
+	body := []byte(`{"title":"Renewal offer"}`)
 
-	stageRefusal(httptest.NewRecorder(), patchRequest("/v1/products", productID, body), staging,
+	stageRefusal(httptest.NewRecorder(), patchRequest("/v1/offers", offerID, body), staging,
 		restCommandDeps{records: hiddenRecord{}}, pol, body)
 
-	if staging.last.TargetType != "product" || staging.last.TargetID != productID {
-		t.Fatalf("staged target = (%s,%s), want (product,%s) — a product is patched over REST whether "+
-			"or not the record seam has ever heard of one",
-			staging.last.TargetType, staging.last.TargetID, productID)
+	if staging.last.TargetType != "offer" || staging.last.TargetID != offerID {
+		t.Fatalf("staged target = (%s,%s), want (offer,%s) — a row is patched over REST whether "+
+			"or not the record seam has ever heard of its type",
+			staging.last.TargetType, staging.last.TargetID, offerID)
 	}
 }
 

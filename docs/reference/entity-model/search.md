@@ -37,13 +37,13 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `chunk_ix` | `integer`, default `0` | yes |  |
 | `embedding` | `vector` | yes |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 2 more. |
+| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 4 more. |
 | `model` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
-- `embedding_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner'])))`
+- `embedding_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template'])))`
 
 **Indexes**
 

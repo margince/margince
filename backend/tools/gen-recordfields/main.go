@@ -45,6 +45,8 @@ var recordBodies = []struct{ recordType, create, update string }{
 	{"activity", "CreateActivityRequest", "UpdateActivityRequest"},
 	{"project", "CreateProjectRequest", "UpdateProjectRequest"},
 	{"relationship", "CreateRelationshipRequest", "UpdateRelationshipRequest"},
+	{"product", "CreateProductRequest", "UpdateProductRequest"},
+	{"offer_template", "CreateOfferTemplateRequest", "UpdateOfferTemplateRequest"},
 }
 
 // schemas is the components/schemas map, kept whole so a $ref resolves against
