@@ -11227,7 +11227,7 @@ export const de = {
     "Die Zustellung wird sofort mit dem aktuellen Signaturschlüssel und einem neuen Zeitstempel wiederholt, ohne auf den nächsten geplanten Versuch zu warten.",
   "webhooks.drawer.editTitle": "Abonnement bearbeiten",
   "webhooks.drawer.sub":
-    "Änderungen gelten für Ereignisse, die nach dem Speichern eintreten.",
+    "Neue Ereignisse oder ein neuer Inhalt gelten für spätere Ereignisse. Ein neuer Header-Wert gilt auch für Wiederholungen, die schon warten.",
   "webhooks.drawer.create": "Abonnement erstellen",
   "webhooks.drawer.cancel": "Abbrechen",
   "webhooks.field.targetUrlHint": "Nur HTTPS.",

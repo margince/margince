@@ -380,7 +380,7 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 // Every writer of this table carries `status <> 'visibility_revoked'`, and that
 // clause is DEFENCE rather than a reachable race. Three things already stop a
 // revoked row being written over. The visibility check refuses it again, this
-// method clears next_retry_at, and claimDueRetries claims only 'retrying'.
+// method clears next_retry_at, and claimDueRetry claims only 'retrying'.
 // Removing any one of them leaves the behaviour unchanged, so no test drives
 // this clause.
 //

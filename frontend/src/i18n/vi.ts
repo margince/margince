@@ -10960,7 +10960,8 @@ export const vi = {
   "webhooks.deliveries.replayConfirm.body":
     "Thử gửi lại ngay bằng khóa ký hiện tại và dấu thời gian mới, không chờ lần thử lại theo lịch kế tiếp.",
   "webhooks.drawer.editTitle": "Sửa đăng ký",
-  "webhooks.drawer.sub": "Thay đổi áp dụng cho sự kiện xảy ra sau khi lưu.",
+  "webhooks.drawer.sub":
+    "Sự kiện hoặc nội dung mới áp dụng cho các sự kiện sau. Giá trị header mới cũng áp dụng cho các lần thử lại đang chờ.",
   "webhooks.drawer.create": "Tạo đăng ký",
   "webhooks.drawer.cancel": "Hủy",
   "webhooks.field.targetUrlHint": "Chỉ HTTPS.",

@@ -484,8 +484,9 @@ A `target_url` comes from the tenant, so delivery is an SSRF risk. The productio
 The check runs after DNS, on the real IP. So a DNS answer that changes later cannot get past the
 guard (`netguard.RefusePrivate`).
 
-A redirect is never followed. Go would turn the `POST` into a `GET` with no body. It would also carry custom headers to a host the subscription never named. A
-`3xx` is a failed attempt, retried and then dead-lettered like any other.
+A redirect is never followed. On a 301, 302 or 303 Go turns the `POST` into a `GET` with no body.
+On a 307 or 308 it sends the body again, with custom headers, to a host the subscription never
+named. A `3xx` is a failed attempt, retried and then dead-lettered like any other.
 
 One attempt has a time limit from end to end (`10s`). The response body from the receiver is read
 only up to a cap (8 KiB, then dropped). An endpoint run by an attacker cannot use up RAM by

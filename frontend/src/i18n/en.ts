@@ -11290,7 +11290,8 @@ export const en = {
   "webhooks.deliveries.replayConfirm.body":
     "Retries delivery now with the current secret and a new timestamp, without waiting for the next scheduled retry.",
   "webhooks.drawer.editTitle": "Edit subscription",
-  "webhooks.drawer.sub": "Changes apply to events that happen after you save.",
+  "webhooks.drawer.sub":
+    "A new event set or body applies to later events. A new header value also reaches retries already waiting.",
   "webhooks.drawer.create": "Create subscription",
   "webhooks.drawer.cancel": "Cancel",
   "webhooks.field.targetUrlHint": "HTTPS only.",
