@@ -68,21 +68,7 @@ func (r *ItemRegistry) Undeclared(environ []string) []string {
 	var unknown []string
 	for _, entry := range environ {
 		name, value, ok := strings.Cut(entry, "=")
-		switch {
-		case !ok, !strings.HasPrefix(name, namespace):
-			continue
-		// Set to nothing IS unset: .env.example ships its optional lines as
-		// bare NAME= placeholders, both entrypoints export them with `set -a`,
-		// and cliflags.Apply already treats an empty value as absent. There is
-		// no value being ignored, so there is nothing to report.
-		case value == "":
-			continue
-		// The suite's own plumbing — where its database is, whether to record a
-		// benchmark. Not installation configuration, and present in every
-		// developer's shell.
-		case strings.HasPrefix(name, namespace+"TEST_"), strings.HasPrefix(name, namespace+"BENCH_"):
-			continue
-		case consumedByTheContainerNotTheProcess[name]:
+		if !ok || !reportable(name, value) {
 			continue
 		}
 		if _, declared := r.items[name]; !declared {
@@ -91,6 +77,23 @@ func (r *ItemRegistry) Undeclared(environ []string) []string {
 	}
 	sort.Strings(unknown)
 	return unknown
+}
+
+// reportable is whether a variable is one the typo report may name at all,
+// before asking whether any setting declares it.
+func reportable(name, value string) bool {
+	switch {
+	case !strings.HasPrefix(name, namespace):
+		return false
+	// An empty value is unset: .env.example ships bare NAME= placeholders,
+	// and the entrypoints export them.
+	case value == "":
+		return false
+	// The test suite's own plumbing, present in every developer's shell.
+	case strings.HasPrefix(name, namespace+"TEST_"), strings.HasPrefix(name, namespace+"BENCH_"):
+		return false
+	}
+	return !consumedByTheContainerNotTheProcess[name]
 }
 
 // Environ is the process environment in "NAME=value" form — the only os.Environ

@@ -13,10 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-type level string
+type levelName string
 
 func TestEnumRefusesAValueItDoesNotList(t *testing.T) {
-	typ := config.Enum[level]("debug", "info")
+	typ := config.Enum[levelName]("debug", "info")
 	if _, err := typ.Parse("trace"); err == nil {
 		t.Fatal("trace is not listed")
 	}

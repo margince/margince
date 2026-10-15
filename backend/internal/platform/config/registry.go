@@ -29,6 +29,7 @@ type Any interface {
 	decodeYAML(n *yaml.Node) (any, error)
 	check(any) error
 	format(any) string
+	defaultValue() (any, bool)
 }
 
 var (
@@ -37,10 +38,19 @@ var (
 	flagForm = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
 )
 
+const (
+	envPosture    = "MARGINCE_ENV"
+	envConfig     = "MARGINCE_CONFIG"
+	envConfigFile = "MARGINCE_CONFIG_FILE"
+	envEnvFile    = "MARGINCE_ENV_FILE"
+	envTrace      = "MARGINCE_CONFIG_TRACE"
+)
+
 // reserved are read by Load itself: where the files are, how to trace, and the
 // posture. A setting with one of these names would be read before it exists.
 var reserved = map[string]bool{
-	"MARGINCE_ENV": true, "MARGINCE_CONFIG": true, "config": true,
+	envPosture: true, envConfig: true, envConfigFile: true, envEnvFile: true, envTrace: true,
+	"config": true, "config-file": true, "env-file": true, "config-trace": true,
 }
 
 type Registry struct {

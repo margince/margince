@@ -100,6 +100,12 @@ func (s *Setting[T]) DefaultText() (string, bool) {
 	return s.spec.Type.Format(v), true
 }
 
+// defaultValue hands the loader the typed default, because formatting it to
+// text and parsing it back does not round-trip every struct.
+//
+//craft:ignore naked-any the registry holds settings of many types behind one erased view
+func (s *Setting[T]) defaultValue() (any, bool) { return s.spec.Default.Get() }
+
 //craft:ignore naked-any the registry holds settings of many types behind one erased view
 func (s *Setting[T]) parseText(text string) (any, error) { return s.spec.Type.Parse(text) }
 

@@ -92,6 +92,9 @@ failures to stderr, with no logger you can set up.
 |---|---|---|---|
 | `--dsn` | `MARGINCE_DSN` | — (required) | Postgres DSN, runtime app role |
 | `--config` | `MARGINCE_CONFIG` | `margince.yaml` | the deployment configuration file (`bootstrap` + `auth`: `workspace`, `bootstrap_admin`, `seeds`, `email`; a field it does not know is an error, and secrets are `*_file` references). With a missing file, an installation that already exists still starts; to bootstrap an empty database needs `workspace` + `bootstrap_admin` |
+| `--config-file` | `MARGINCE_CONFIG_FILE` | — | a second YAML file, layered over the base file |
+| `--env-file` | `MARGINCE_ENV_FILE` | — | a `.env` file to read |
+| `--config-trace` | `MARGINCE_CONFIG_TRACE` | `false` | log each configuration source read and the origin of each setting; a secret shows by name only |
 | `--schema-dsn` | `MARGINCE_SCHEMA_DSN` | — | Postgres DSN, **owner** role, for the customfields runtime DDL pool; not set = `createCustomField`/`updateCustomFieldOptions` answer 501 |
 | `--addr` | `MARGINCE_ADDR` | `:8080` | listen address |
 | `--redis` | `MARGINCE_REDIS` | `localhost:16379` | Redis address (event bus). May name a logical database as `host:port/N` (0–79). See below |
