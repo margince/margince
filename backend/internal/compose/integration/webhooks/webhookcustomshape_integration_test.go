@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 const fakeToken = "Bearer test-token-not-real"
@@ -66,7 +67,7 @@ func (we *webhookEnv) auditMentions(t *testing.T, needle string) bool {
 func TestAShapedSubscriptionDeliversItsHeadersAndRenderedBodySigned(t *testing.T) {
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 
 	sub, secret := we.createShaped(t, integration.AnyMap{
@@ -117,7 +118,7 @@ func TestAShapedSubscriptionDeliversItsHeadersAndRenderedBodySigned(t *testing.T
 func TestAReplacedHeaderReachesTheRetryAndAKeptOneStays(t *testing.T) {
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusUnauthorized)
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	now := clocktest.Now(t).Truncate(time.Microsecond)
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 
 	sub, _ := we.createShaped(t, integration.AnyMap{
@@ -192,7 +193,7 @@ func TestInputThatCouldMisdirectADeliveryIsRefused(t *testing.T) {
 func TestARedirectIsAFailedAttemptAndIsNotFollowed(t *testing.T) {
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusMovedPermanently)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 	subID, _ := we.createSubscription(t, rcv.server.URL+"/hook", []string{"deal.created"})
 
@@ -211,7 +212,7 @@ func TestARedirectIsAFailedAttemptAndIsNotFollowed(t *testing.T) {
 func TestABodyOverTheCapIsParkedUnsentAndCannotBeReplayed(t *testing.T) {
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
 	sub, _ := we.createShaped(t, integration.AnyMap{
 		"target_url": rcv.server.URL + "/hook", "event_types": []string{"deal.created"},

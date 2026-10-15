@@ -55,8 +55,10 @@ func normalizeContentType(contentType string) (string, error) {
 	case contentTypeJSON, contentTypeText, contentTypeForm:
 		return contentType, nil
 	}
-	return "", &BadInputError{Field: fieldBodyContentType,
-		Reason: fmt.Sprintf("must be one of %s, %s or %s", contentTypeJSON, contentTypeText, contentTypeForm)}
+	return "", &BadInputError{
+		Field:  fieldBodyContentType,
+		Reason: fmt.Sprintf("must be one of %s, %s or %s", contentTypeJSON, contentTypeText, contentTypeForm),
+	}
 }
 
 func parseBodyTemplate(src, contentType string) (*bodyTemplate, error) {

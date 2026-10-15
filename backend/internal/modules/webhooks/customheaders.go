@@ -23,24 +23,26 @@ const (
 // reservedHeaders are set by Margince or by the HTTP transport on every
 // delivery; a custom value would forge the signature, misstate the body,
 // or reshape the connection. The value says what governs the header instead.
-var reservedHeaders = map[string]string{
-	"webhook-id":        "Margince sets webhook-id",
-	"webhook-timestamp": "Margince sets webhook-timestamp",
-	"webhook-signature": "Margince sets webhook-signature",
-	"x-margince-event":  "Margince sets X-Margince-Event",
-	"user-agent":        "Margince sets User-Agent",
-	"content-type":      "the body format sets Content-Type",
-	"content-length":    "the body sets Content-Length",
-	"content-encoding":  "the body sets Content-Encoding",
-	"host":              "the target URL sets Host",
-	"cookie":            "a delivery carries no cookies",
-	"connection":        "the HTTP transport sets Connection",
-	"keep-alive":        "the HTTP transport sets Keep-Alive",
-	"transfer-encoding": "the HTTP transport sets Transfer-Encoding",
-	"te":                "the HTTP transport sets TE",
-	"trailer":           "the HTTP transport sets Trailer",
-	"upgrade":           "the HTTP transport sets Upgrade",
-	"expect":            "the HTTP transport sets Expect",
+type reservedHeader struct{ name, why string }
+
+var reservedHeaders = []reservedHeader{
+	{"webhook-id", "Margince sets webhook-id"},
+	{"webhook-timestamp", "Margince sets webhook-timestamp"},
+	{"webhook-signature", "Margince sets webhook-signature"},
+	{"x-margince-event", "Margince sets X-Margince-Event"},
+	{"user-agent", "Margince sets User-Agent"},
+	{"content-type", "the body format sets Content-Type"},
+	{"content-length", "the body sets Content-Length"},
+	{"content-encoding", "the body sets Content-Encoding"},
+	{"host", "the target URL sets Host"},
+	{"cookie", "a delivery carries no cookies"},
+	{"connection", "the HTTP transport sets Connection"},
+	{"keep-alive", "the HTTP transport sets Keep-Alive"},
+	{"transfer-encoding", "the HTTP transport sets Transfer-Encoding"},
+	{"te", "the HTTP transport sets TE"},
+	{"trailer", "the HTTP transport sets Trailer"},
+	{"upgrade", "the HTTP transport sets Upgrade"},
+	{"expect", "the HTTP transport sets Expect"},
 }
 
 // CustomHeaderInput is one header as a create or update names it. A nil
@@ -128,8 +130,10 @@ func checkHeaderName(raw string) (string, error) {
 		return "", headerError(fmt.Sprintf("%q is not a header name; use letters, digits and dashes, up to %d characters", raw, maxHeaderNameBytes))
 	}
 	lower := strings.ToLower(name)
-	if why, ok := reservedHeaders[lower]; ok {
-		return "", headerError(fmt.Sprintf("%s is reserved: %s", name, why))
+	for _, r := range reservedHeaders {
+		if r.name == lower {
+			return "", headerError(fmt.Sprintf("%s is reserved: %s", name, r.why))
+		}
 	}
 	if strings.HasPrefix(lower, "webhook-") || strings.HasPrefix(lower, "proxy-") {
 		return "", headerError(fmt.Sprintf("%s is reserved for the signature and transport headers", name))

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -74,7 +75,10 @@ func equalOptional(a, b *string) bool {
 // audits the returned names instead.
 func (s *Store) replaceHeaders(ctx context.Context, tx pgx.Tx, id ids.UUID, in []CustomHeaderInput) ([]string, error) {
 	var raw []byte
-	if err := tx.QueryRow(ctx, "SELECT custom_headers FROM webhook_subscription WHERE id = $1", id).Scan(&raw); err != nil {
+	var version int64
+	if err := tx.QueryRow(ctx,
+		"SELECT custom_headers, version FROM webhook_subscription WHERE id = $1 AND archived_at IS NULL", id).
+		Scan(&raw, &version); err != nil {
 		return nil, err
 	}
 	var existing []storedHeader
@@ -85,8 +89,14 @@ func (s *Store) replaceHeaders(ctx context.Context, tx pgx.Tx, id ids.UUID, in [
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, "UPDATE webhook_subscription SET custom_headers = $2 WHERE id = $1", id, sealed); err != nil {
+	tag, err := tx.Exec(ctx,
+		"UPDATE webhook_subscription SET custom_headers = $2 WHERE id = $1 AND archived_at IS NULL AND version = $3",
+		id, sealed, version)
+	if err != nil {
 		return nil, err
+	}
+	if tag.RowsAffected() != 1 {
+		return nil, apperrors.ErrVersionSkew
 	}
 	return headerNames(sealed), nil
 }

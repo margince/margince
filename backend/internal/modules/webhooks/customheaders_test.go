@@ -20,13 +20,11 @@ func testCipher(t *testing.T) *Cipher {
 	return c
 }
 
-func value(s string) *string { return &s }
-
 func TestHeadersAreSealedPerSubscriptionAndOpenToTheirValues(t *testing.T) {
 	c, sub := testCipher(t), ids.NewV7()
 	stored, err := c.sealHeaders(sub, []CustomHeaderInput{
-		{Name: "authorization", Value: value("Bearer test-token-not-real")},
-		{Name: "X-Tenant", Value: value("acme")},
+		{Name: "authorization", Value: new("Bearer test-token-not-real")},
+		{Name: "X-Tenant", Value: new("acme")},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +48,7 @@ func TestHeadersAreSealedPerSubscriptionAndOpenToTheirValues(t *testing.T) {
 
 func TestASealedValueDoesNotOpenUnderAnotherSubscriptionOrName(t *testing.T) {
 	c, sub := testCipher(t), ids.NewV7()
-	stored, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "X-Key", Value: value("k")}}, nil)
+	stored, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "X-Key", Value: new("k")}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,11 +63,11 @@ func TestASealedValueDoesNotOpenUnderAnotherSubscriptionOrName(t *testing.T) {
 
 func TestARowWithoutAValueKeepsTheStoredOne(t *testing.T) {
 	c, sub := testCipher(t), ids.NewV7()
-	first, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "X-Key", Value: value("old")}, {Name: "X-Gone", Value: value("x")}}, nil)
+	first, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "X-Key", Value: new("old")}, {Name: "X-Gone", Value: new("x")}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	next, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "x-key"}, {Name: "X-New", Value: value("new")}}, first)
+	next, err := c.sealHeaders(sub, []CustomHeaderInput{{Name: "x-key"}, {Name: "X-New", Value: new("new")}}, first)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,24 +87,24 @@ func TestHeaderInputThatCouldMisdirectADeliveryIsRefused(t *testing.T) {
 	c, sub := testCipher(t), ids.NewV7()
 	many := make([]CustomHeaderInput, maxCustomHeaders+1)
 	for i := range many {
-		many[i] = CustomHeaderInput{Name: "X-H" + strings.Repeat("a", i+1), Value: value("v")}
+		many[i] = CustomHeaderInput{Name: "X-H" + strings.Repeat("a", i+1), Value: new("v")}
 	}
 	for _, tc := range []struct {
 		name   string
 		in     []CustomHeaderInput
 		reason string
 	}{
-		{"signature header", []CustomHeaderInput{{Name: "webhook-signature", Value: value("v")}}, "Margince sets webhook-signature"},
-		{"any webhook- prefix", []CustomHeaderInput{{Name: "Webhook-Extra", Value: value("v")}}, "reserved"},
-		{"content type", []CustomHeaderInput{{Name: "content-type", Value: value("v")}}, "body format"},
-		{"proxy header", []CustomHeaderInput{{Name: "Proxy-Authorization", Value: value("v")}}, "reserved"},
-		{"host", []CustomHeaderInput{{Name: "Host", Value: value("v")}}, "reserved"},
-		{"newline in a value", []CustomHeaderInput{{Name: "X-A", Value: value("a\r\nX-Injected: 1")}}, "line break or control"},
-		{"space in a name", []CustomHeaderInput{{Name: "X A", Value: value("v")}}, "letters, digits"},
-		{"duplicate ignoring case", []CustomHeaderInput{{Name: "X-A", Value: value("1")}, {Name: "x-a", Value: value("2")}}, "more than once"},
+		{"signature header", []CustomHeaderInput{{Name: "webhook-signature", Value: new("v")}}, "Margince sets webhook-signature"},
+		{"any webhook- prefix", []CustomHeaderInput{{Name: "Webhook-Extra", Value: new("v")}}, "reserved"},
+		{"content type", []CustomHeaderInput{{Name: "content-type", Value: new("v")}}, "body format"},
+		{"proxy header", []CustomHeaderInput{{Name: "Proxy-Authorization", Value: new("v")}}, "reserved"},
+		{"host", []CustomHeaderInput{{Name: "Host", Value: new("v")}}, "reserved"},
+		{"newline in a value", []CustomHeaderInput{{Name: "X-A", Value: new("a\r\nX-Injected: 1")}}, "line break or control"},
+		{"space in a name", []CustomHeaderInput{{Name: "X A", Value: new("v")}}, "letters, digits"},
+		{"duplicate ignoring case", []CustomHeaderInput{{Name: "X-A", Value: new("1")}, {Name: "x-a", Value: new("2")}}, "more than once"},
 		{"new name without a value", []CustomHeaderInput{{Name: "X-A"}}, "needs a value"},
-		{"empty value", []CustomHeaderInput{{Name: "X-A", Value: value("")}}, "needs a value"},
-		{"too long a value", []CustomHeaderInput{{Name: "X-A", Value: value(strings.Repeat("v", maxHeaderValueBytes+1))}}, "4 KiB"},
+		{"empty value", []CustomHeaderInput{{Name: "X-A", Value: new("")}}, "needs a value"},
+		{"too long a value", []CustomHeaderInput{{Name: "X-A", Value: new(strings.Repeat("v", maxHeaderValueBytes+1))}}, "4 KiB"},
 		{"too many", many, "at most 10"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

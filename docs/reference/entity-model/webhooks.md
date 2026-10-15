@@ -6,12 +6,13 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 ## webhook_delivery
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `content_type` | `text` |  |  |
 | `dead_lettered_at` | `timestamp with time zone` |  |  |
 | `delivered_at` | `timestamp with time zone` |  |  |
 | `entity_id` | `uuid` |  |  |
@@ -51,11 +52,14 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 ## webhook_subscription
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `body_content_type` | `text` |  |  |
+| `body_template` | `text` |  | The body template every delivery is rendered from; null sends the standard envelope. |
+| `custom_headers` | `jsonb`, default `'[]'::jsonb` | yes | The headers sent with every delivery, by name. |
 | `event_types` | `text[]` | yes | The subscribed event types, each from the published event catalog. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `signing_secret_ref` | `text` | yes |  |
