@@ -7,9 +7,8 @@ package compose
 // no OAuth ceremony, no credential probe — there is nothing real to probe —
 // just a fresh connection a QC suite can create and tear down at will.
 // Reached only when test_mailbox is registered on the capture registry
-// (NewCaptureRegistry, compose/capture.go), which is itself gated on
-// operations.allow_test_mailbox; see ConnectConnector's dispatch
-// in connectors.go for the 422 otherwise.
+// (NewCaptureRegistry, compose/capture.go), which operations.allow_test_mailbox
+// gates. ConnectConnector's dispatch in connectors.go answers 422 otherwise.
 
 import (
 	"errors"

@@ -33,10 +33,9 @@ const codeBodyTooLarge = "body_too_large"
 // amplification on the cheapest endpoints.
 const MaxBodyBytes = 1 << 20
 
-// A body that carries FILES rides a SECOND, wider ceiling, which cannot live
-// under the JSON bound and is not a constant here: it is per route and the
-// operator sets it (OPS-CFG-12, `uploads` in margince.yaml), resolved by
-// compose and injected where routes are known.
+// A body that carries FILES rides a SECOND, wider ceiling, outside the JSON
+// bound. The operator sets it per route (OPS-CFG-12, `uploads` in
+// margince.yaml), and compose injects it where routes are known.
 //
 // A second ceiling, never an exemption. An exempt route is an unbounded one the
 // day somebody forgets its own cap, and a handler cannot supply that cap itself
