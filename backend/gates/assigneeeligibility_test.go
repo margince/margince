@@ -61,7 +61,7 @@ var assigneeEligibilityWriters = map[string]string{
 func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
 	found := map[string][]string{}
-	root := filepath.Join(moduleRoot(t), "internal")
+	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
@@ -134,7 +134,7 @@ func keysOf(m map[string]string) []string {
 // stranger and happily file work on a suspended colleague.
 func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join(moduleRoot(t), "internal", "platform", "auth", "assignscope.go")
+	path := filepath.Join(gatekit.ModuleRoot(t), "internal", "platform", "auth", "assignscope.go")
 	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)

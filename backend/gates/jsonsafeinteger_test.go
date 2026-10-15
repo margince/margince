@@ -74,7 +74,7 @@ var sentAsString = gatekit.Waive(map[string]string{})
 
 func TestABigintReachingAJSONClientIsBoundedToWhatItCanHold(t *testing.T) {
 	t.Parallel()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	published := publishedIntegerFields(t, root)
 	columns, bounded := bigintColumnsAndTheirBounds(t, root)
 
@@ -116,7 +116,7 @@ func TestABigintReachingAJSONClientIsBoundedToWhatItCanHold(t *testing.T) {
 // and the ones it sends as strings.
 func publishedIntegerFields(t *testing.T, root string) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(filepath.Dir(root), "backend", "api", "crm.yaml"))
+	body, err := os.ReadFile(filepath.Join(root, "api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

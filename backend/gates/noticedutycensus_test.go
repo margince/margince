@@ -70,7 +70,7 @@ func TestEveryAcquisitionKindReachesADecidedDuty(t *testing.T) {
 // acquisitionKinds reads the string value of every Acquired* constant.
 func acquisitionKinds(t *testing.T) []string {
 	t.Helper()
-	file := parseModuleFile(t, filepath.Join(moduleRoot(t), "internal", "modules", "contacts", "acquisition.go"))
+	file := parseModuleFile(t, filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "contacts", "acquisition.go"))
 	var out []string
 	for _, decl := range file.Decls {
 		gen, isGen := decl.(*ast.GenDecl)
@@ -98,7 +98,7 @@ func acquisitionKinds(t *testing.T) []string {
 // noticerule.go — the arms of the switch that decides a duty.
 func decidedKinds(t *testing.T) map[string]bool {
 	t.Helper()
-	file := parseModuleFile(t, filepath.Join(moduleRoot(t), "internal", "modules", "consent", "noticerule.go"))
+	file := parseModuleFile(t, filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "consent", "noticerule.go"))
 	out := map[string]bool{}
 	// DutyFor's own body, not the whole file: a second switch added here for an
 	// unrelated reason must not be able to satisfy this census with a literal

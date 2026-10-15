@@ -48,7 +48,7 @@ type requestKeyedTable struct {
 // tablesKeyedByRequest reads the migrations for every request-key index there is.
 func tablesKeyedByRequest(t *testing.T) map[string]requestKeyedTable {
 	t.Helper()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	keyed := map[string]requestKeyedTable{}
 	migrations, err := filepath.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
 	if err != nil {
@@ -86,7 +86,7 @@ func normaliseList(columns string) string {
 func TestARequestKeyedInsertIsWrittenConflictFirst(t *testing.T) {
 	t.Parallel()
 	keyed := tablesKeyedByRequest(t)
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	written := map[string]int{}
 	for _, path := range goSourceFiles(t, filepath.Join(root, "internal")) {
 		// Production writers only. A test may write without the clause on purpose —

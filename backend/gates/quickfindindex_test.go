@@ -26,6 +26,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -47,7 +49,7 @@ type quickFindSite struct {
 
 func TestEveryQuickFindHasAPlanTestNamingItsExpression(t *testing.T) {
 	t.Parallel()
-	root := filepath.Join(moduleRoot(t), "internal")
+	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
 	sites, textual := quickFindSites(t, root)
 	count := 0
 	for _, packageSites := range sites {
