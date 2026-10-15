@@ -81,11 +81,13 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	for _, item := range legacy.Items() {
 		legacyNames[item.Name] = true
 	}
+	posture := runtimeenv.Parse(environValue(environ, runtimeenv.EnvVar))
 	loaded, err := config.Load(reg, config.Sources{
 		Args:           args,
 		Environ:        environ,
 		KnownEnv:       func(name string) bool { return legacyNames[name] },
 		BootstrapRoots: deployconfig.Sections(),
+		Faults:         func(c *config.Config) []error { return apiFaults(c, posture) },
 	})
 	if errors.Is(err, flag.ErrHelp) {
 		config.PrintUsage(os.Stderr, reg)
@@ -93,7 +95,7 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	if err != nil {
 		return apiConfig{}, nil, bootError(err)
 	}
-	cfg, err := fromRegistry(loaded, environ)
+	cfg, err := fromRegistry(loaded, posture)
 	if err != nil {
 		return apiConfig{}, nil, bootError(err)
 	}
@@ -101,8 +103,8 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 }
 
 // fromRegistry copies the resolved settings into the struct the rest of
-// cmd/api reads, then runs the checks that need two settings.
-func fromRegistry(loaded *config.Config, environ []string) (apiConfig, error) {
+// cmd/api reads.
+func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiConfig, error) {
 	cfg := apiConfig{
 		dsn: config.Val(loaded, apiDSN), configPath: loaded.Files().Base, schemaDSN: config.Val(loaded, apiSchemaDSN),
 		addr: config.Val(loaded, apiAddr), redisAddr: config.Val(loaded, apiRedis), redisPassword: config.Val(loaded, apiRedisPassword),
@@ -117,7 +119,7 @@ func fromRegistry(loaded *config.Config, environ []string) (apiConfig, error) {
 		microsoftSignInTenant: config.Val(loaded, apiMicrosoftSignInTenant), connectorStateKey: config.Val(loaded, apiConnectorStateKey),
 		webhookKey: config.Val(loaded, apiWebhookKey), metricsToken: config.Val(loaded, apiMetricsToken), metricsAccess: config.Val(loaded, apiMetricsAccess),
 		vatCheckBaseURL: config.Val(loaded, apiVATCheckBaseURL), geocodeBaseURL: config.Val(loaded, apiGeocodeBaseURL),
-		posture:     runtimeenv.Parse(environValue(environ, runtimeenv.EnvVar)),
+		posture:     posture,
 		unknownVars: loaded.Warnings(),
 	}
 	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, apiTrustedProxies))
@@ -125,7 +127,7 @@ func fromRegistry(loaded *config.Config, environ []string) (apiConfig, error) {
 		return apiConfig{}, fmt.Errorf("--trusted-proxies: %w", err)
 	}
 	cfg.trustedProxies = trusted
-	return cfg, errors.Join(apiFaults(cfg)...)
+	return cfg, nil
 }
 
 // environValue is the last NAME=value for name, as os.Getenv reads a repeat.
@@ -161,14 +163,24 @@ const (
 	metricsAccessOpen  = "open"
 )
 
-// apiFaults refuses an open /metrics that was also given a token. That token
-// would authenticate nothing, while its operator believes the endpoint closed.
-func apiFaults(cfg apiConfig) []error {
-	if cfg.metricsAccess == metricsAccessOpen && cfg.metricsToken != "" {
-		return []error{errors.New("--metrics-access=open serves /metrics to anyone, so the --metrics-token also set would " +
-			"authenticate nothing: unset the token to open the endpoint, or drop --metrics-access=open to require it")}
+// apiFaults holds the checks that read two settings, or a setting and the
+// posture. Load runs them beside every other fault, so one boot names all.
+func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
+	var faults []error
+	// An open endpoint given a token: the token would authenticate nothing,
+	// while its operator believes the endpoint closed.
+	if config.Val(c, apiMetricsAccess) == metricsAccessOpen && config.Val(c, apiMetricsToken) != "" {
+		faults = append(faults, errors.New("--metrics-access=open serves /metrics to anyone, so the --metrics-token also set would "+
+			"authenticate nothing: unset the token to open the endpoint, or drop --metrics-access=open to require it"))
 	}
-	return nil
+	// A fake model left on in a deployment's environment or files would serve
+	// canned answers in production. A flag is typed per command, as the desktop
+	// launcher does, and a stored binding outranks the fake anyway.
+	if fake, origin := config.ValWithSource(c, apiAIFake); fake && origin.Source != config.SourceFlag && posture == runtimeenv.Production {
+		faults = append(faults, fmt.Errorf("%s (%s) turns on the offline fake model, and %s is production: "+
+			"unset it, or pass --ai-fake on the command line", origin.Name, origin.Source, runtimeenv.EnvVar))
+	}
+	return faults
 }
 
 // senderConfigured reports whether this deployment can put a message in

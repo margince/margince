@@ -43,7 +43,10 @@ func TestTheCredentialsThisRoleReadsAreMarkedSecret(t *testing.T) {
 	}
 	// A value that authenticates nobody stays visible, because an operator
 	// debugging a boot wants to read it.
-	for _, name := range []string{"MARGINCE_LOG_LEVEL", "MARGINCE_PUBLIC_BASE_URL", "MARGINCE_ENV", "MARGINCE_METRICS_ACCESS"} {
+	for _, name := range []string{
+		"MARGINCE_LOG_LEVEL", "MARGINCE_PUBLIC_BASE_URL", "MARGINCE_ENV", "MARGINCE_METRICS_ACCESS",
+		"MARGINCE_TRUSTED_PROXIES", "MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL", "MARGINCE_GRAPH_TENANT",
+	} {
 		if secret[name] {
 			t.Errorf("%s is marked Secret but authenticates nothing; hiding it only makes a boot harder to debug", name)
 		}

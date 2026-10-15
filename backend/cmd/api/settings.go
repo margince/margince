@@ -17,9 +17,9 @@ import (
 )
 
 // The api's boot settings. A key is the flag with `_` for `-`, the name an
-// operator already types. Secret is any value that could authenticate
-// somebody. The VAT and geocode base URLs and the proxy list stay secret too:
-// the earlier public allowlist never named them.
+// operator already types. Secret marks a credential only: a DSN, password,
+// client secret, token or key. A URL, id, address or list stays visible, so a
+// fault can quote it.
 var (
 	api = []config.Role{config.RoleAPI}
 
@@ -95,16 +95,16 @@ var (
 		Doc: "Who /metrics serves: token requires --metrics-token, open serves anyone who reaches the port.",
 	})
 	apiTrustedProxies = config.Define(config.Spec[string]{
-		Key: "trusted_proxies", Env: "MARGINCE_TRUSTED_PROXIES", Flag: "trusted-proxies", Type: config.String, Secret: true, Roles: api,
+		Key: "trusted_proxies", Env: "MARGINCE_TRUSTED_PROXIES", Flag: "trusted-proxies", Type: config.String, Roles: api,
 		Validate: validTrustedProxies,
 		Doc:      "Comma-separated CIDR prefixes of the reverse proxies whose X-Forwarded-For per-IP rate limits believe.",
 	})
 	apiVATCheckBaseURL = config.Define(config.Spec[string]{
-		Key: "vat_check_base_url", Env: "MARGINCE_VAT_CHECK_BASE_URL", Flag: "vat-check-base-url", Type: config.String, Secret: true, Roles: api,
+		Key: "vat_check_base_url", Env: "MARGINCE_VAT_CHECK_BASE_URL", Flag: "vat-check-base-url", Type: config.String, Roles: api,
 		Doc: "VIES base URL; set it on the api and the worker together, or a VAT check is never queued.",
 	})
 	apiGeocodeBaseURL = config.Define(config.Spec[string]{
-		Key: "geocode_base_url", Env: "MARGINCE_GEOCODE_BASE_URL", Flag: "geocode-base-url", Type: config.String, Secret: true, Roles: api,
+		Key: "geocode_base_url", Env: "MARGINCE_GEOCODE_BASE_URL", Flag: "geocode-base-url", Type: config.String, Roles: api,
 		Doc: "Nominatim base URL; set it on the api and the worker together, or a lookup is never queued.",
 	})
 )

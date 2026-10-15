@@ -68,6 +68,8 @@ var recordSourceGoRoots = []string{"internal", "gates"}
 // inside the roots (`SourceSystem`, `Mode`), met again here in a directory
 // the roots do not cover. Each entry says what the other vocabulary is.
 var recordSourceExempt = gatekit.Waive(map[string]string{
+	"cmd/api/config.go": "Source is a configuration value's origin (flag, env, file), " +
+		"compared to config.SourceFlag — a boot setting, not a record",
 	"tools/gen-composition/contracts.go": "Source here is the path to one extension's own " +
 		"api/crm.yaml, read to assemble the composed contract — a schema file, not a record",
 	"tools/gen-composition/contracts_test.go": "the same schema-file field, planted and asserted",

@@ -19,18 +19,18 @@ import (
 
 const leakSentinel = "SENTINEL_VALUE_MUST_NOT_APPEAR"
 
-// sentinelEnviron sets every variable the api's own settings read to the
-// sentinel, except the bools, whose parse error would be the only fault seen.
+// sentinelEnviron sets every credential the api's own settings read to the
+// sentinel. A setting that is not Secret may quote its value in a fault.
 func sentinelEnviron(t *testing.T) []string {
 	t.Helper()
 	var environ []string
 	for _, s := range APISettings() {
-		if s.TypeName() != "bool" {
+		if s.Secret() {
 			environ = append(environ, s.Env()+"="+leakSentinel)
 		}
 	}
 	if len(environ) == 0 {
-		t.Fatal("APISettings declares no text setting, so this gate checks nothing")
+		t.Fatal("APISettings declares no secret, so this gate checks nothing")
 	}
 	return environ
 }
@@ -92,13 +92,13 @@ func TestAPIUsageOutputCarriesNoEnvironmentValue(t *testing.T) {
 	}
 }
 
-// Every value is invalid somewhere here, and the faults that say so still
-// name the variable and never the value.
+// The faults of a boot with every credential set name no credential.
 func TestAPIBootFaultsCarryNoEnvironmentValue(t *testing.T) {
 	t.Parallel()
-	_, _, err := loadAPIConfig(nil, sentinelEnviron(t))
+	environ := append(sentinelEnviron(t), "MARGINCE_METRICS_ACCESS=open", "MARGINCE_GRAPH_TENANT=a,b")
+	_, _, err := loadAPIConfig(nil, environ)
 	if err == nil {
-		t.Fatal("a boot with every variable set to nonsense was accepted")
+		t.Fatal("a boot with two contradicting settings was accepted")
 	}
 	if strings.Contains(err.Error(), leakSentinel) {
 		t.Errorf("a boot fault echoes an environment value:\n%v", err)

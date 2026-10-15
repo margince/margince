@@ -248,8 +248,9 @@ func TestLoadAPIConfig_TrustedProxies(t *testing.T) {
 	for _, bad := range []string{"0.0.0.0/0", "ingress-nginx"} {
 		t.Run("refuses "+bad, func(t *testing.T) {
 			_, _, err := loadAPIConfig([]string{"--dsn", testDSN, "--trusted-proxies", bad}, nil)
-			if err == nil || !strings.Contains(err.Error(), "--trusted-proxies") {
-				t.Fatalf("want a --trusted-proxies boot fault, got %v", err)
+			// The parser's reason quotes the entry, so an operator can fix it.
+			if err == nil || !strings.Contains(err.Error(), "--trusted-proxies") || !strings.Contains(err.Error(), bad) {
+				t.Fatalf("want a --trusted-proxies boot fault quoting %q, got %v", bad, err)
 			}
 		})
 	}
@@ -259,10 +260,31 @@ func TestLoadAPIConfig_TrustedProxies(t *testing.T) {
 // in one error, so a boot names all of them.
 func TestTheAPIReportsEveryConfigurationFaultTogether(t *testing.T) {
 	t.Parallel()
-	_, _, err := loadAPIConfig([]string{"--metrics-access=open", "--graph-tenant=a,b"}, nil)
-	for _, want := range []string{"MARGINCE_DSN: required", "--graph-tenant takes ONE authority"} {
+	_, _, err := loadAPIConfig([]string{"--metrics-access=open", "--metrics-token=x", "--graph-tenant=a,b"}, nil)
+	for _, want := range []string{"MARGINCE_DSN: required", "--graph-tenant takes ONE authority", "--metrics-access=open serves /metrics"} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("missing %q in %v", want, err)
+		}
+	}
+}
+
+// A fake model left set in a production environment would serve canned
+// answers. A command line names it for that one process, as the desktop
+// launcher's does.
+func TestTheFakeModelStaysOutOfAProductionEnvironment(t *testing.T) {
+	t.Parallel()
+	dsnEnv := "MARGINCE_DSN=" + testDSN
+	_, _, err := loadAPIConfig(nil, []string{dsnEnv, "MARGINCE_AI_FAKE=true", "MARGINCE_ENV=production"})
+	if err == nil || !strings.Contains(err.Error(), "MARGINCE_AI_FAKE") {
+		t.Fatalf("err = %v, want a boot fault naming MARGINCE_AI_FAKE", err)
+	}
+	for name, tc := range map[string]struct{ args, environ []string }{
+		"set in a dev environment":       {nil, []string{dsnEnv, "MARGINCE_AI_FAKE=true", "MARGINCE_ENV=dev"}},
+		"passed on a production command": {[]string{"--ai-fake"}, []string{dsnEnv, "MARGINCE_ENV=production"}},
+	} {
+		cfg, _, err := loadAPIConfig(tc.args, tc.environ)
+		if err != nil || !cfg.fakeBrain {
+			t.Errorf("%s: fake %v, err %v; want the fake model allowed", name, cfg.fakeBrain, err)
 		}
 	}
 }

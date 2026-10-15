@@ -227,3 +227,27 @@ func TestUnsetIsAFaultOnlyForATypeWithNoEmptyForm(t *testing.T) {
 		t.Errorf("an unset NonEmpty setting was not a fault: %v", err)
 	}
 }
+
+// A check that reads two settings runs beside the faults of each one, and sees
+// a faulted setting as unset rather than panicking on it.
+func TestCrossSettingFaultsJoinTheLoadFaults(t *testing.T) {
+	reg, src := sources(t, fixture{args: []string{"--log-level=debug"}}, level, dsn)
+	var dsnOrigin config.Source
+	src.Faults = func(c *config.Config) []error {
+		_, origin := config.ValWithSource(c, dsn)
+		dsnOrigin = origin.Source
+		if config.Val(c, level) == "debug" {
+			return []error{errors.New("debug needs a second setting")}
+		}
+		return nil
+	}
+	_, err := config.Load(reg, src)
+	for _, want := range []string{"MARGINCE_DSN: required", "debug needs a second setting"} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("missing %q in %v", want, err)
+		}
+	}
+	if dsnOrigin != config.SourceUnset {
+		t.Errorf("a faulted setting read from %q, want unset", dsnOrigin)
+	}
+}

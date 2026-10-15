@@ -24,6 +24,9 @@ type Sources struct {
 	KnownEnv       func(name string) bool
 	BootstrapRoots map[string]bool
 	ReadFile       func(path string) ([]byte, error)
+	// Faults checks what reads two settings. It runs even when a setting
+	// faulted; that setting then reads as its zero value from SourceUnset.
+	Faults func(*Config) []error
 }
 
 // Files are the paths Load used, after flags and the environment chose them.
@@ -71,11 +74,14 @@ func Load(reg *Registry, src Sources) (*Config, error) {
 		r, err := resolve(s, layers, src.ReadFile, getenv)
 		if err != nil {
 			faults = append(faults, err)
-			continue
+			r = resolved{origin: Origin{Source: SourceUnset}}
 		}
 		cfg.values[s.Key()] = r
 	}
 	cfg.warnings = undeclared(src.KnownEnv, layers)
+	if src.Faults != nil {
+		faults = append(faults, src.Faults(cfg)...)
+	}
 	if err := errors.Join(faults...); err != nil {
 		return nil, err
 	}
