@@ -99,3 +99,10 @@ export const UpdateDark: Story = {
   globals: { theme: "dark" },
   args: { entry: UPDATE },
 };
+
+// On a phone each fact stacks its term over its value, a diff included.
+export const UpdatePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { entry: UPDATE },
+};

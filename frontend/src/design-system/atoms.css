@@ -1585,6 +1585,76 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
+/* The end edge shades while columns lie past it and clears at the end. Drawn
+   above the cells, so a hovered or opaque cell cannot hide it. */
+@property --table-scroll-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes table-scroll-end {
+  from {
+    --table-scroll-end: var(--space-8);
+  }
+  to {
+    --table-scroll-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  /* The shade shares the table's grid cell, and sticks to the visible end. */
+  .table-scroll {
+    display: grid;
+  }
+  .table-scroll > :first-child {
+    grid-area: 1 / 1;
+  }
+  /* A table with no width of its own keeps it, as it would in a block. */
+  .table-scroll > table:first-child {
+    justify-self: start;
+  }
+  /* Clear of the inset focus ring, which the shade would otherwise cover. */
+  .table-scroll:focus-visible::after {
+    inset-inline-end: 2px;
+  }
+  .table-scroll::after {
+    --table-scroll-toward: to left;
+    content: "";
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--table-scroll-end);
+    pointer-events: none;
+    background-image: linear-gradient(
+      var(--table-scroll-toward),
+      var(--borderStrong) 1px,
+      color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
+      transparent
+    );
+    /* A box that fits has no scroll timeline, so the shade stays at zero. */
+    animation: table-scroll-end linear both;
+    animation-timeline: scroll(nearest inline);
+    animation-range: calc(100% - var(--space-8)) 100%;
+  }
+  .table-scroll:dir(rtl)::after {
+    --table-scroll-toward: to right;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .table-scroll::after {
+      animation-timing-function: step-end;
+    }
+  }
+  @media (forced-colors: active) {
+    .table-scroll::after {
+      background-image: linear-gradient(
+        var(--table-scroll-toward),
+        CanvasText 1px,
+        transparent 1px
+      );
+    }
+  }
+}
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open

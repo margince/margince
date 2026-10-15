@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { translate } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { tableRowCells } from "../testing/tablerow.testkit";
 import { CaptureHealthCard, sweepWarning } from "./capturehealth";
@@ -166,14 +167,31 @@ it("reads a calm installation as calm, and still shows how each pass stands", as
 
   render(<CaptureHealthCard />);
 
+  // The count says no mailbox waits, so no empty mailbox table is drawn.
+  const mailboxes = translate("en", "captureHealth.fact.mailboxes");
+  await screen.findByText(mailboxes);
+  expect(within(factRow(mailboxes)).getByText("0")).toBeInTheDocument();
   expect(
-    await screen.findByText("No mailbox has anything waiting."),
-  ).toBeInTheDocument();
+    screen.queryByRole("table", { name: "Mailboxes" }),
+  ).not.toBeInTheDocument();
   expect(
     within(factRow("Held meetings")).getByText("0").closest(".badge"),
   ).toBeNull();
   const failed = await tableRowCells("Repair passes", "Unasked contacts");
   expect(within(failed.State).getByText("Last run failed")).toBeInTheDocument();
+});
+
+it("leaves out the state column while every pass keeps up", async () => {
+  stubRoutes({
+    "GET /admin/capture-health": () =>
+      jsonResponse({ ...HEALTH, sweeps: [HEALTH.sweeps[0]] }),
+  });
+
+  render(<CaptureHealthCard />);
+
+  const settled = await tableRowCells("Repair passes", "Settled threads");
+  expect(settled["Runs every"]).toHaveTextContent("10 minutes");
+  expect(settled.State).toBeUndefined();
 });
 
 it("says a pass that never ran has never run, rather than drawing it clean", async () => {

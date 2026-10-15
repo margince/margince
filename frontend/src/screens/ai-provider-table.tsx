@@ -5,7 +5,6 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
-import { KeyedName } from "../design-system/keyedname";
 import { RowOpen } from "../design-system/rowopen";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
@@ -86,7 +85,7 @@ export function ProviderTable({
           header: t("aiTerms.provider"),
           render: (row) => (
             <CellStack>
-              <KeyedName name={row.name} code={row.status.provider} />
+              <span>{row.name}</span>
               <ProviderCallsLine provider={row.status.provider} />
             </CellStack>
           ),

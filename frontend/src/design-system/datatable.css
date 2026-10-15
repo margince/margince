@@ -77,6 +77,8 @@
 }
 .datatable-detail-body {
   padding-block-end: var(--tableCellPadBlock);
+  /* Zero intrinsic width: an opened detail spans every column, so its content must not re-divide them. */
+  contain: inline-size;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {

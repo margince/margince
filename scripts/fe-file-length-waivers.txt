@@ -52,7 +52,7 @@
 2078 frontend/src/screens/companies.tsx
 2409 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
-856 frontend/src/screens/settings.tsx
+835 frontend/src/screens/settings.tsx
 2727 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
 3165 frontend/src/screens/deals.tsx
@@ -86,7 +86,7 @@
 844 frontend/src/screens/onboarding-gate.tsx
 818 frontend/src/screens/worklist.copy.ts
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
-849 frontend/src/screens/settingscatalog.ts
+845 frontend/src/screens/settingscatalog.ts
 592 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
 888 frontend/src/screens/share.tsx

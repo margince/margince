@@ -25,7 +25,6 @@ export function ProviderHealthCard() {
       withheld={t("providerHealth.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={() => null}
     >
       {({ providers, configured }) => {
         // The worker can report a provider this process has no binding for.

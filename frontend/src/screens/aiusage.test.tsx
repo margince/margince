@@ -104,7 +104,13 @@ it("renders historical usage without inventing cost or duplicating the live allo
   });
   expect(await screen.findByText("enrich")).toBeTruthy();
   expect(screen.queryByText("850 of 1,000 tokens · 85%")).toBeNull();
-  expect(screen.queryByText("Estimated cost")).toBeNull();
+  // A month nothing priced says so in words: a zero would claim a figure.
+  const totals = screen.getByTestId("aiusage-totals");
+  expect(within(totals).getByText("Not priced")).toBeTruthy();
+  expect(
+    screen.queryByRole("columnheader", { name: "Estimated cost" }),
+  ).toBeNull();
+  expect(screen.queryByText(/Costs are estimates/)).toBeNull();
 });
 
 it("shows estimated cost when present independently of the current allowance band", async () => {
@@ -127,15 +133,15 @@ it("shows estimated cost when present independently of the current allowance ban
     ],
   });
   expect(await screen.findByText("enrich")).toBeTruthy();
-  expect(screen.getByText("Estimated cost")).toBeTruthy();
-  expect(screen.getAllByText(/€1\.23/).length).toBeGreaterThan(0);
-  // The caveat and the total read under the table they sum.
-  const note = screen.getByText(/Costs are estimates/);
-  const table = screen.getByTestId("spend-enrich-premium").closest("table");
-  expect(table?.compareDocumentPosition(note)).toBe(
+  const totals = screen.getByTestId("aiusage-totals");
+  expect(within(totals).getByText("Estimated cost")).toBeTruthy();
+  expect(within(totals).getByText("€1.23")).toBeTruthy();
+  // The caveat is its own line under the totals, never glued to the figure.
+  const note = screen.getByTestId("aiusage-cost-note");
+  expect(note.textContent).toBe("Costs are estimates at configured rates.");
+  expect(totals.compareDocumentPosition(note)).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );
-  expect(note.textContent).toContain("€1.23");
 });
 
 it("sets every figure against the end of its column", async () => {
@@ -243,11 +249,12 @@ it("says when the cost total covers only the priced calls", async () => {
       },
     ],
   });
-  const note = await screen.findByText(/Costs are estimates/);
-  expect(note.textContent).toContain("€1.23");
+  const note = await screen.findByTestId("aiusage-cost-note");
   // The count, not merely a caveat: "some calls are unpriced" leaves a reader
   // unable to tell one stray call from most of the window.
-  expect(note.textContent).toContain("3 more had no configured rate");
+  expect(note.textContent).toContain(
+    "3 calls had no rate and are not in this total.",
+  );
 });
 
 // The mirror. Without it the case above passes against a card that stamps every
@@ -272,8 +279,8 @@ it("says nothing about unpriced calls when every call was priced", async () => {
       },
     ],
   });
-  const note = await screen.findByText(/Costs are estimates/);
-  expect(note.textContent).not.toContain("no configured rate");
+  const note = await screen.findByTestId("aiusage-cost-note");
+  expect(note.textContent).not.toContain("had no rate");
 });
 
 // An empty window and a refused read are different answers, and the card owes
@@ -302,9 +309,10 @@ it("distinguishes an empty window from a refused read", async () => {
   expect(screen.queryByText(/automation.update/)).toBeNull();
 });
 
-it("names every row, and puts the per-day breakdown behind one disclosure", async () => {
+it("names each arrow and switches the one table between tasks and days", async () => {
+  const user = userEvent.setup();
   mount({
-    budget,
+    budget: { ...budget, currency: "EUR" },
     days: [
       {
         date: "2026-07-20",
@@ -315,28 +323,86 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
             calls: 2,
             tokens_in: 100,
             tokens_out: 20,
+            cost_est_minor: 50,
+          },
+          {
+            task: "triage",
+            tier: "premium",
+            calls: 1,
+            tokens_in: 7,
+            tokens_out: 3,
+            cost_est_minor: 25,
           },
         ],
       },
     ],
   });
-  // The month is one decision, so the row names it once and each arrow keeps
-  // its own name: an icon announces as nothing.
-  expect(await screen.findByText("Month")).toBeTruthy();
+  expect(
+    await screen.findByRole("table", { name: "Spend by task" }),
+  ).toBeTruthy();
+  // Each arrow keeps its own name: an icon announces as nothing.
   expect(screen.getByRole("button", { name: "Previous month" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
-  expect(screen.getByText("Spend by task")).toBeTruthy();
-  // Diagnostic, so it is a section the reader opens — and a disclosure carries
-  // its own state, which is why there is no second "hide" label to keep in
-  // step with it.
-  const summary = screen.getByText("Show days");
-  const disclosure = summary.closest("details");
-  expect(disclosure).toBeTruthy();
-  // The day reads in the reader's words, never as the wire's ISO date.
-  const day = disclosure?.querySelector("time[datetime='2026-07-20']");
-  expect(day?.textContent).toBe("20 Jul");
-  expect(disclosure?.textContent).not.toContain("2026-07-20");
-  expect(screen.queryByText("Hide days")).toBeNull();
+  expect(screen.queryByRole("table", { name: "Spend by day" })).toBeNull();
+
+  const byDay = screen.getByRole("button", { name: "By day" });
+  byDay.focus();
+  await user.keyboard("{Enter}");
+  expect(byDay.getAttribute("aria-pressed")).toBe("true");
+  const days = screen.getByRole("table", { name: "Spend by day" });
+  expect(screen.queryByRole("table", { name: "Spend by task" })).toBeNull();
+  // One line per day, summed over its tasks, in the reader's words.
+  const day = screen.getByTestId("spend-day-2026-07-20");
+  expect(day.querySelector("time[datetime='2026-07-20']")?.textContent).toBe(
+    "20 Jul",
+  );
+  expect(days.textContent).not.toContain("2026-07-20");
+  expect(within(day).getByText("3")).toBeTruthy();
+  expect(within(day).getByText("107 / 23")).toBeTruthy();
+  expect(within(day).getByText("€0.75")).toBeTruthy();
+});
+
+it("keeps the reader's view when they step to another month", async () => {
+  const user = userEvent.setup();
+  mount({
+    budget,
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [
+          {
+            task: "enrich",
+            tier: "premium",
+            calls: 1,
+            tokens_in: 1,
+            tokens_out: 1,
+          },
+        ],
+      },
+    ],
+  });
+  await user.click(await screen.findByRole("button", { name: "By day" }));
+  await user.click(screen.getByRole("button", { name: "Previous month" }));
+  expect(
+    await screen.findByRole("table", { name: "Spend by day" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "By day" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+});
+
+it("points to the model prices only for a reader who may read them", async () => {
+  const body = { budget, days: [] };
+  mount(body, 200, { ...OPERATOR, ai_model_rate: ["read"] });
+  expect(
+    await screen.findByRole("link", { name: "Prices are set on AI models" }),
+  ).toHaveProperty("hash", "#/settings/models");
+  cleanup();
+  mount(body);
+  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "Prices are set on AI models" }),
+  ).toBeNull();
 });
 
 it("keeps historical usage usable when the live allowance band is unknown", async () => {
@@ -357,7 +423,7 @@ it("withholds the spend from a principal without the diagnostics read, and asks 
       /only an administrator or operations user can see AI spend/i,
     ),
   ).toBeTruthy();
-  expect(screen.getByText("Estimated AI spend and usage")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "AI spend" })).toBeTruthy();
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);
 });
 
@@ -403,12 +469,6 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
     );
 
     // Having stepped off the reader's month, Next is a real destination again.
-    //
-    // Waited for, not read straight after the assertion above: that one settles
-    // as soon as the August URL has been REQUESTED, and the card is pending
-    // until it comes back — a pending card draws a skeleton where the stepper
-    // goes, so the control genuinely is not there yet. The state under test is
-    // the settled month, so that is what this waits on.
     await waitFor(() =>
       expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
         false,

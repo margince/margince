@@ -314,39 +314,17 @@ function JobHealthBody({
   );
 }
 
-export function JobHealthCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  // The reader's own resolved zone: a stalled-queue timestamp is only useful
-  // against the clock on their wall, and no other zone here is ours to assume.
-  // Resolved once for the card and handed down, so the stamp in the footer and
-  // the failure timestamps in the body cannot read two different clocks.
-  const zone = viewerZone();
-  // `job_health:read`, which is what the endpoint asks for (compose/jobhealth.go).
-  //
-  // It was the literal admin role while no RBAC object described background
-  // work. One does now, and ops holds it — so an operator watching a stalled
-  // queue reads it rather than being told the surface is an admin's. `enabled`
-  // is what keeps a reader without the grant from issuing a call that could
-  // only 403: a refusal they cannot act on has no business becoming this
-  // card's error state.
+// `job_health:read`, what the endpoint asks for (compose/jobhealth.go); without
+// it the call could only answer 403, so it is not made.
+export function useJobHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({
     queryKey: ["job-health"],
     enabled: canSee,
     queryFn: async () => {
       const data = unwrap(await api.GET("/admin/job-health"));
-      // The contract makes all three required (JobHealth), so a body missing
-      // one is not a thin report — it is a report this card cannot read, and
-      // the check belongs at the boundary where the wire stops being trusted
-      // rather than at each of the six places the body dereferences it.
-      //
-      // Rejecting it is the point. `?? []` would draw the card's idle state,
-      // which says the background system has nothing queued and nothing failed
-      // — a claim about the installation that this response never made, and
-      // exactly the reading an operator opens this card to trust. A malformed
-      // payload is a condition to report, so it becomes the card's error state:
-      // it says the report could not be loaded and offers a retry.
+      // Rejected, not defaulted: `?? []` would draw the idle state, a claim about
+      // the installation this response never made.
       if (
         !data ||
         typeof data.generated_at !== "string" ||
@@ -358,6 +336,15 @@ export function JobHealthCard() {
       return data;
     },
   });
+  return { canSee, query };
+}
+
+export function JobHealthCard() {
+  const t = useT();
+  // The reader's own zone: a stalled-queue time is only useful against the
+  // clock on their wall.
+  const zone = viewerZone();
+  const { canSee, query } = useJobHealth();
 
   return (
     <HealthCard
@@ -366,11 +353,6 @@ export function JobHealthCard() {
       withheld={t("jobs.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={(report) =>
-        t("jobs.generatedAt", {
-          time: formatDateTime(report.generated_at, locale, zone),
-        })
-      }
     >
       {(health) => <JobHealthBody health={health} zone={zone} />}
     </HealthCard>
