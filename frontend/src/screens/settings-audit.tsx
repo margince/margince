@@ -10,33 +10,42 @@ import { EntityRef } from "../components/entityref";
 import {
   Avatar,
   Badge,
-  Disclosure,
   EmptyState,
+  Field,
   TextInput,
 } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { DateInput, isISODate } from "../design-system/dateinput";
 import { useSettledValue } from "../design-system/debouncedsearch";
+import { FilterBar } from "../design-system/filterbar";
 import { IconAction } from "../design-system/iconaction";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Select } from "../design-system/select";
+import { forReader } from "../format/collate";
 import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { ENTITY, isEntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
-import { ACTOR_ICON, actorAttribution, humanizeToken } from "./audit";
+import {
+  ACTOR_ICON,
+  AUDIT_ACTION_VALUES,
+  actionLabel,
+  actorAttribution,
+  entityLabel,
+} from "./audit";
 import { AuditDetail } from "./settings-audit.detail";
 import {
   ACTION_TONE,
-  AUDIT_LOG_FILTER_FIELDS,
   type AuditLogEntry,
   type AuditLogFilters,
   auditLogQueryParams,
@@ -50,33 +59,26 @@ type Viewer = Readonly<{ id?: string; name?: string }>;
 
 const RELATIVE_TICK_MS = 60_000;
 
-// The filters stay in a closed disclosure: a reader arrives to read what
-// happened. Each dial applies on its own, so there is nothing to submit.
+// Each dial applies on its own, so there is nothing to submit.
 export function AuditLogCard() {
-  const t = useT();
   const user = useMe().data?.user;
   const canSee = useCan("audit_log", "read");
   const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
   const asked = useSettledValue(filters);
   return (
-    <Panel title={t("settings.auditEntries")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
-        {canSee && (
-          <Disclosure summary={t("settings.auditFilters")}>
-            <AuditLogFilterFields filters={filters} onChange={setFilters} />
-          </Disclosure>
-        )}
-      </PanelBody>
-      <AuditLogEntries
-        filters={asked}
-        viewer={{ id: user?.id, name: user?.display_name }}
-      />
-    </Panel>
+    <>
+      {canSee && <AuditLogFilterBar filters={filters} onChange={setFilters} />}
+      <Panel>
+        <AuditLogEntries
+          filters={asked}
+          viewer={{ id: user?.id, name: user?.display_name }}
+        />
+      </Panel>
+    </>
   );
 }
 
-function AuditLogFilterFields({
+function AuditLogFilterBar({
   filters,
   onChange,
 }: Readonly<{
@@ -84,27 +86,71 @@ function AuditLogFilterFields({
   onChange: (next: AuditLogFilters) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const set = (key: keyof AuditLogFilters) => (value: string) =>
+    onChange({ ...filters, [key]: value });
+  const textDial = (
+    key: "actor" | "entityType" | "entityId",
+    label: MessageKey,
+    placeholder?: MessageKey,
+  ) => (
+    <Field label={t(label)}>
+      {(field) => (
+        <TextInput
+          {...field}
+          value={filters[key]}
+          placeholder={placeholder && t(placeholder)}
+          onChange={(event) => set(key)(event.target.value)}
+        />
+      )}
+    </Field>
+  );
+  const dateDial = (key: "from" | "to", label: MessageKey) => (
+    <Field label={t(label)}>
+      {(field) => (
+        <DateInput
+          {...field}
+          value={isISODate(filters[key]) ? filters[key] : ""}
+          onChange={(event) => set(key)(event.target.value)}
+        />
+      )}
+    </Field>
+  );
   return (
-    <SettingList>
-      {AUDIT_LOG_FILTER_FIELDS.map((field) => (
-        <SettingRow
-          key={field.key}
-          label={t(field.labelKey)}
-          control={(control) => (
-            <TextInput
-              {...control}
-              className="settingrow-measure"
-              type={field.date ? "date" : undefined}
-              value={filters[field.key]}
-              onChange={(event) =>
-                onChange({ ...filters, [field.key]: event.target.value })
-              }
+    <FilterBar label={t("settings.auditFilters")}>
+      <div className="auditlog-dials">
+        {textDial("actor", "settings.auditActor", "settings.auditActorExample")}
+        {textDial(
+          "entityType",
+          "settings.auditEntity",
+          "settings.auditEntityExample",
+        )}
+        <Field label={t("settings.auditAction")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={filters.action}
+              onChange={set("action")}
+              options={[
+                { value: "", label: t("settings.auditAnyAction") },
+                ...actionOptions(t, locale),
+              ]}
             />
           )}
-        />
-      ))}
-    </SettingList>
+        </Field>
+        {textDial("entityId", "settings.auditEntityId")}
+        {dateDial("from", "settings.auditFrom")}
+        {dateDial("to", "settings.auditTo")}
+      </div>
+    </FilterBar>
   );
+}
+
+function actionOptions(t: Translator, locale: Locale) {
+  return AUDIT_ACTION_VALUES.map((action) => ({
+    value: action,
+    label: actionLabel(action, t),
+  })).sort((a, b) => forReader(a.label, b.label, locale));
 }
 
 function AuditLogEntries({
@@ -193,7 +239,7 @@ function AuditLogTable({
       header: t("settings.auditAction"),
       render: (entry) => (
         <Badge tone={ACTION_TONE[entry.action] ?? "default"}>
-          {humanizeToken(entry.action)}
+          {actionLabel(entry.action, t)}
         </Badge>
       ),
     },
@@ -216,8 +262,8 @@ function AuditLogTable({
         header: t("settings.auditColDetail"),
         toggleLabel: (entry) =>
           t("settings.auditExpandEntry", {
-            action: humanizeToken(entry.action),
-            entity: humanizeToken(entry.entity_type),
+            action: actionLabel(entry.action, t),
+            entity: entityLabel(entry.entity_type, t),
           }),
         render: (entry) => <AuditDetail entry={entry} />,
       }}
@@ -320,11 +366,12 @@ function entityIcon(entityType: string) {
 }
 
 function AuditTarget({ entry }: Readonly<{ entry: AuditLogEntry }>) {
+  const t = useT();
   const label = entry.entity_label?.trim();
   return (
     <div className="auditlog-target-cell">
       <Chip dense icon={entityIcon(entry.entity_type)}>
-        {humanizeToken(entry.entity_type)}
+        {entityLabel(entry.entity_type, t)}
       </Chip>
       {label && isEntityKind(entry.entity_type) && (
         <EntityRef kind={entry.entity_type} id={entry.entity_id} name={label} />

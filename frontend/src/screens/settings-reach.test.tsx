@@ -109,7 +109,9 @@ describe("the settings access boundary", () => {
       expect(screen.queryByText(/no access to this settings page/i)).toBeNull(),
     );
     expect(
-      screen.getByText(translate("en", "settings.tab.audit")),
+      await screen.findByRole("group", {
+        name: translate("en", "settings.auditFilters"),
+      }),
     ).toBeTruthy();
   });
 });

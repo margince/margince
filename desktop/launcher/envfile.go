@@ -169,7 +169,7 @@ const envTemplate = `# Margince settings.
 # Until models are bound the AI surfaces run on the offline fake: they respond,
 # but the answers are canned. Binding them is done IN THE APP, under
 # Settings -> AI, and it takes TWO things: pick a provider and model for each
-# tier, and put that provider's key in under Model provider keys. Neither is
+# tier, and put that provider's key in under AI models -> Providers. Neither is
 # enough on its own — a key with no tier bound to its vendor changes nothing.
 #
 # Both take effect without a restart, within the routing refresh interval rather

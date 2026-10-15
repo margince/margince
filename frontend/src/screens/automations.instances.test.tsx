@@ -62,6 +62,9 @@ function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
 
 const row = (id: string) => screen.findByTestId(`automation-${id}`);
 
+const templateText = (key: string) =>
+  AUTOMATION_CATALOG.find((entry) => entry.key === key)?.description ?? "";
+
 describe("the configured automations table", () => {
   it("reads each rule's last run as an outcome word, and Never when it has none", async () => {
     mount();
@@ -106,6 +109,22 @@ describe("the configured automations table", () => {
       }),
     ).toBeInTheDocument();
     expect(await row("au-5")).not.toHaveTextContent(/Paused ·/);
+  });
+
+  it("marks a rule that waits for approval, and tells a screen reader one runs by itself", async () => {
+    mount();
+    const approval = within(await row("au-4")).getByText(
+      en["auto.tier.approval"],
+    );
+    expect(approval.closest(".badge")?.className).toContain("badge-warning");
+    expect(
+      within(await row("au-4")).queryByText(en["auto.modeAuto"]),
+    ).toBeNull();
+    const auto = within(await row("au-1")).getByText(en["auto.modeAuto"]);
+    expect(auto).toHaveClass("sr-only");
+    expect(
+      within(await row("au-1")).queryByText(en["auto.tier.approval"]),
+    ).toBeNull();
   });
 
   it("says what a rule does in words, never in its key or raw parameters", async () => {
@@ -206,11 +225,13 @@ describe("a rule's run history", () => {
       throw new Error("the toggle names no detail");
     }
     expect(detail.closest("tr")?.previousElementSibling).toBe(renewal);
+    // A plain body under the row, not a card: no heading and no dial while
+    // the history is empty.
     expect(
-      await within(detail).findByRole("heading", {
-        name: en["auto.runs.title"],
-      }),
+      await within(detail).findByText(en["auto.runs.empty"]),
     ).toBeInTheDocument();
+    expect(within(detail).queryByRole("heading")).toBeNull();
+    expect(within(detail).queryByRole("combobox")).toBeNull();
     await user.keyboard("{Enter}");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
@@ -224,7 +245,7 @@ describe("the starter library", () => {
     expect(template).not.toHaveTextContent(/clock:|create_task|->/);
     expect(template).toHaveTextContent(en["auto.trigger.renewal"]);
     await user.click(
-      within(template).getByText(AUTOMATION_CATALOG[1].description ?? ""),
+      within(template).getByText(templateText("renewal_reminder")),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -243,6 +264,23 @@ describe("the starter library", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // The row says what the template does; the dialog it opens reads the rest,
+  // so no description is ever cut off mid-sentence.
+  it("reads a template's whole description in the dialog its row opens", async () => {
+    const user = userEvent.setup();
+    mount();
+    const template = await screen.findByTestId("template-stage_change_notify");
+    expect(template).not.toHaveTextContent(/deal history|…/);
+    await user.click(
+      within(template).getByRole("button", { name: /^Use template/ }),
+    );
+    expect(
+      within(await screen.findByRole("dialog")).getByText(
+        templateText("stage_change_notify"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("stays readable without the create grant, but no row opens", async () => {

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -10,12 +11,12 @@ import {
 } from "../testing/story-utils";
 import { RecoveryHealthCard } from "./recoveryhealth";
 
-const meta: Meta<typeof RecoveryHealthCard> = {
+const meta = {
   title: "Settings/Governance/System health/Restore drills",
   component: RecoveryHealthCard,
-};
+} satisfies Meta<typeof RecoveryHealthCard>;
 export default meta;
-type Story = StoryObj<typeof RecoveryHealthCard>;
+type Story = StoryObj<typeof meta>;
 
 function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
   return () => {
@@ -81,8 +82,14 @@ export const Running: Story = {
   }),
 };
 
+// No drill is one line in the intro, and no empty drill row under it.
 export const NeverDrilled: Story = {
   render: story({ ...TARGETS, last_drill: null }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/No restore drill has been recorded/);
+    await expect(canvas.queryByText("Last restore drill")).toBeNull();
+  },
 };
 
 export const Withheld: Story = { render: story(PASSED, ["rep"]) };
