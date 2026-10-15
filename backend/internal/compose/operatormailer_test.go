@@ -13,11 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-var mailSettingsUnderTest = []config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile}
-
 func loadMail(t *testing.T, body string, environ ...string) (*config.Config, error) {
 	t.Helper()
-	return configtest.Load(t, body, environ, MailFaults, mailSettingsUnderTest...)
+	return configtest.Load(t, body, environ, MailFaults, MailSettings()...)
 }
 
 func mustLoadMail(t *testing.T, body string, environ ...string) *config.Config {

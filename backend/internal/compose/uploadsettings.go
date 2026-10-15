@@ -73,7 +73,8 @@ func DefaultUploadLimits() UploadLimits {
 	}
 }
 
-func uploadSettings() []config.Any {
+// UploadSettings are the upload ceilings above.
+func UploadSettings() []config.Any {
 	return []config.Any{UploadAttachmentMB, UploadCSVImportMB, UploadLinkedInImportMB, UploadKnowledgeDocumentMB}
 }
 

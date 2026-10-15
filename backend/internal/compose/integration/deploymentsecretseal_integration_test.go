@@ -52,8 +52,7 @@ func mailConfig(t *testing.T, passwordVar string, environ ...string) *config.Con
 // mailSettings loads the relay settings from a margince.yaml body.
 func mailSettings(t *testing.T, body string, environ ...string) *config.Config {
 	t.Helper()
-	cfg, err := configtest.Load(t, body, environ, compose.MailFaults, compose.EmailEnabled, compose.EmailFromAddress,
-		compose.SMTPHost, compose.SMTPPort, compose.SMTPUsername, compose.SMTPPassword, compose.SMTPPasswordFile)
+	cfg, err := configtest.Load(t, body, environ, compose.MailFaults, compose.MailSettings()...)
 	if err != nil {
 		t.Fatalf("loading the deployment file: %v", err)
 	}

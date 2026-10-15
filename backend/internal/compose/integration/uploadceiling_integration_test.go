@@ -57,7 +57,7 @@ uploads:
   attachment_mb: 3
   csv_import_mb: 2
   linkedin_import_mb: 1
-`, nil, nil, compose.UploadAttachmentMB, compose.UploadCSVImportMB, compose.UploadLinkedInImportMB, compose.UploadKnowledgeDocumentMB)
+`, nil, nil, compose.UploadSettings()...)
 	if err != nil {
 		t.Fatalf("the uploads section was refused: %v", err)
 	}

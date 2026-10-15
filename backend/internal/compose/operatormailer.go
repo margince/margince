@@ -51,6 +51,11 @@ var (
 	})
 )
 
+// MailSettings are the relay settings above.
+func MailSettings() []config.Any {
+	return []config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile}
+}
+
 // MailFaults are the checks on an enabled relay that read two settings. It
 // needs somewhere to send and someone to send as, and its password cannot be
 // both declared absent and named by a file.

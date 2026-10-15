@@ -19,7 +19,7 @@ var compiledCeilings = UploadLimits{
 
 func loadUploads(t *testing.T, body string) (UploadLimits, error) {
 	t.Helper()
-	cfg, err := configtest.Load(t, "version: 1\n"+body, nil, nil, uploadSettings()...)
+	cfg, err := configtest.Load(t, "version: 1\n"+body, nil, nil, UploadSettings()...)
 	if err != nil {
 		return UploadLimits{}, err
 	}
