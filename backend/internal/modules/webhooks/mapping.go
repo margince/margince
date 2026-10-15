@@ -15,16 +15,51 @@ import (
 
 func wireSubscription(s Subscription) crmcontracts.WebhookSubscription {
 	return crmcontracts.WebhookSubscription{
-		Id:         openapi_types.UUID(s.ID),
-		OwnerId:    openapi_types.UUID(s.OwnerID),
-		TargetUrl:  s.TargetURL,
-		EventTypes: s.EventTypes,
-		State:      crmcontracts.WebhookSubscriptionState(s.State),
-		Version:    s.Version,
-		CreatedAt:  &s.CreatedAt,
-		UpdatedAt:  &s.UpdatedAt,
-		ArchivedAt: s.ArchivedAt,
+		Id:              openapi_types.UUID(s.ID),
+		OwnerId:         openapi_types.UUID(s.OwnerID),
+		TargetUrl:       s.TargetURL,
+		EventTypes:      s.EventTypes,
+		State:           crmcontracts.WebhookSubscriptionState(s.State),
+		CustomHeaders:   wireHeaders(s.HeaderNames),
+		BodyTemplate:    s.BodyTemplate,
+		BodyContentType: wireContentType(s.BodyContentType),
+		Version:         s.Version,
+		CreatedAt:       &s.CreatedAt,
+		UpdatedAt:       &s.UpdatedAt,
+		ArchivedAt:      s.ArchivedAt,
 	}
+}
+
+func wireHeaders(names []string) []crmcontracts.WebhookCustomHeader {
+	out := make([]crmcontracts.WebhookCustomHeader, len(names))
+	for i, n := range names {
+		out[i] = crmcontracts.WebhookCustomHeader{Name: n, Configured: true}
+	}
+	return out
+}
+
+func wireContentType(ct *string) *crmcontracts.WebhookBodyContentType {
+	if ct == nil {
+		return nil
+	}
+	v := crmcontracts.WebhookBodyContentType(*ct)
+	return &v
+}
+
+func contentTypeOf(ct *crmcontracts.WebhookBodyContentType) *string {
+	if ct == nil {
+		return nil
+	}
+	v := string(*ct)
+	return &v
+}
+
+func headerInputs(in []crmcontracts.WebhookCustomHeaderInput) []CustomHeaderInput {
+	out := make([]CustomHeaderInput, len(in))
+	for i, h := range in {
+		out[i] = CustomHeaderInput{Name: h.Name, Value: h.Value}
+	}
+	return out
 }
 
 func wireCreated(s Subscription, secret string) crmcontracts.WebhookSubscriptionCreated {

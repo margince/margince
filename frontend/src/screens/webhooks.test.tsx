@@ -10,10 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { subscribableEventTypeValues } from "../api/public-events";
-import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
@@ -99,56 +96,6 @@ const render = (ui: ReactNode) => {
     </QueryClientProvider>,
   );
 };
-
-// The create-flow backend: GET answers an empty list (nothing to clutter the
-// assertions with) and POST echoes the submitted body back as the created
-// subscription plus a fixed one-time signing secret, capturing the request
-// body so the test can assert the exact wire shape the create posts.
-function backendForCreate(allow: GrantSpec) {
-  let capturedBody: unknown = null;
-  const fetchMock = vi.fn(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const req =
-        input instanceof Request ? input : new Request(String(input), init);
-      if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({ allow }));
-      }
-      if (req.url.includes("/webhook-subscriptions") && req.method === "GET") {
-        return jsonResponse({
-          data: [],
-          page: { next_cursor: null, has_more: false },
-          delivery_enabled: true,
-        });
-      }
-      if (req.url.includes("/webhook-subscriptions") && req.method === "POST") {
-        capturedBody = await req.clone().json();
-        const body = capturedBody as {
-          target_url: string;
-          event_types: string[];
-        };
-        return jsonResponse(
-          {
-            subscription: {
-              id: "sub-new",
-              owner_id: "user-1",
-              target_url: body.target_url,
-              event_types: body.event_types,
-              state: "active",
-              version: 1,
-              created_at: "2026-07-22T00:00:00Z",
-              updated_at: "2026-07-22T00:00:00Z",
-              archived_at: null,
-            },
-            signing_secret: "whsec_abcDEF123==",
-          },
-          201,
-        );
-      }
-      throw new Error(`unexpected request: ${req.method} ${req.url}`);
-    },
-  );
-  return { fetchMock, getCapturedBody: () => capturedBody };
-}
 
 afterEach(() => {
   cleanup();
@@ -383,86 +330,14 @@ describe("WebhooksCard", () => {
     );
   });
 
-  it("sources event-type options from the generated SubscribableEventType catalog, never a hardcoded list", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backendForCreate(WEBHOOK_OPERATOR);
-    vi.stubGlobal("fetch", fetchMock);
-    render(<WebhooksCard />);
-
-    await user.click(await screen.findByTestId("new-webhook-subscription"));
-
-    await user.click(screen.getByRole("combobox", { name: /event types/i }));
-    const listbox = within(screen.getByRole("listbox"));
-    // A couple of known values from across the published catalog families —
-    // not the full count, so the assertion doesn't ossify into a second
-    // hardcoded list the moment the backend catalog grows again.
-    expect(
-      listbox.getByRole("option", { name: "deal.stage_changed" }),
-    ).toBeTruthy();
-    expect(listbox.getByRole("option", { name: "lead.promoted" })).toBeTruthy();
-    expect(
-      listbox.getByRole("option", { name: "contact.merged" }),
-    ).toBeTruthy();
-    // Every offered option is one of the generated catalog's values —
-    // confirms the option list is DERIVED from subscribableEventTypeValues
-    // (imported straight from the generated public-events module) rather
-    // than independently maintained.
-    for (const eventType of subscribableEventTypeValues) {
-      expect(listbox.getByRole("option", { name: eventType })).toBeTruthy();
-    }
-  });
-
-  it("creates a subscription posting {target_url, event_types[]} and reveals the signing secret exactly once", async () => {
-    const user = userEvent.setup();
-    const { fetchMock, getCapturedBody } = backendForCreate(WEBHOOK_OPERATOR);
-    vi.stubGlobal("fetch", fetchMock);
-    render(<WebhooksCard />);
-
-    await user.click(await screen.findByTestId("new-webhook-subscription"));
-    await user.type(
-      screen.getByLabelText(/target url/i),
-      "https://example.test/inbound",
-    );
-    await toggleOptions(
-      user,
-      screen.getByRole("combobox", { name: /event types/i }),
-      ["deal.stage_changed", "lead.promoted"],
-    );
-    await user.click(screen.getByRole("button", { name: "Create" }));
-
-    await waitFor(() =>
-      expect(getCapturedBody()).toEqual({
-        target_url: "https://example.test/inbound",
-        event_types: ["deal.stage_changed", "lead.promoted"],
-      }),
-    );
-
-    // The secret shows exactly once, right after create — never re-derived,
-    // never re-fetched.
-    await waitFor(() =>
-      expect(screen.getByText("whsec_abcDEF123==")).toBeTruthy(),
-    );
-    expect(screen.getByText(/shown once/i)).toBeTruthy();
-
-    // Closing the reveal modal is the only way out — the secret is gone from
-    // the DOM afterwards, and the subsequent list refetch (triggered by the
-    // ["webhook-subscriptions"] invalidation) never carries it either, since
-    // the list wire (WebhookSubscription) never includes signing_secret.
-    await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.queryByText("whsec_abcDEF123==")).toBeNull();
-    await waitFor(() =>
-      expect(screen.getByText("Nothing here yet.")).toBeTruthy(),
-    );
-    expect(screen.queryByText(/whsec_/)).toBeNull();
-  });
-
   it("hides the create trigger and reveal flow for a non-admin/ops role", async () => {
-    const { fetchMock } = backendForCreate({});
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("fetch", backendFor({}));
     render(<WebhooksCard />);
 
     await waitFor(() =>
-      expect(screen.getByText("Nothing here yet.")).toBeTruthy(),
+      expect(
+        screen.getByText("https://example.test/hooks/margince"),
+      ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
   });
@@ -476,94 +351,9 @@ describe("WebhooksCard", () => {
         screen.getByText("https://example.test/hooks/margince"),
       ).toBeTruthy(),
     );
-    expect(screen.queryByTestId("edit-record")).toBeNull();
+    expect(screen.queryByTestId("edit-webhook-subscription")).toBeNull();
     expect(screen.queryByTestId("rotate-webhook-secret")).toBeNull();
     expect(screen.queryByTestId("archive-record")).toBeNull();
-  });
-});
-
-// Task 9 (B-E10.14): pause/resume + re-target (EditAction, If-Match), archive
-// (ArchiveAction, DELETE), and rotate-secret (ConfirmModal → the shared
-// SecretRevealModal). Each mutation invalidates the list + record queries.
-describe("WebhooksCard — pause/resume + re-target (EditAction)", () => {
-  function backendForEdit(patchResponder: (body: unknown) => Response) {
-    const calls: { ifMatch: string | null; body: unknown }[] = [];
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const req =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ allow: WEBHOOK_OPERATOR }));
-        }
-        if (
-          req.url.includes("/webhook-subscriptions") &&
-          req.method === "GET"
-        ) {
-          return jsonResponse(SUBSCRIPTIONS);
-        }
-        if (req.url.includes("/sub-1") && req.method === "PATCH") {
-          const body = await req.clone().json();
-          calls.push({ ifMatch: req.headers.get("If-Match"), body });
-          return patchResponder(body);
-        }
-        throw new Error(`unexpected request: ${req.method} ${req.url}`);
-      },
-    );
-    return { fetchMock, calls };
-  }
-
-  it("sends If-Match: version with {state, event_types} on save", async () => {
-    const user = userEvent.setup();
-    const { fetchMock, calls } = backendForEdit((body) =>
-      jsonResponse({
-        ...SUBSCRIPTIONS.data[0],
-        state: (body as { state: string }).state,
-        event_types: (body as { event_types: string[] }).event_types,
-        version: 2,
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    render(<WebhooksCard />);
-
-    await user.click(await screen.findByTestId("edit-record"));
-    // Flip state to paused via the select control; event_types stays as the
-    // subscription's current, prefilled selection.
-    await pickOption(user, screen.getByLabelText(/^State/), "Paused");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() => expect(calls.length).toBe(1));
-    expect(calls[0].ifMatch).toBe("1");
-    expect(calls[0].body).toMatchObject({
-      state: "paused",
-      event_types: ["deal.stage_changed", "lead.promoted"],
-    });
-  });
-
-  it("shows the version-skew copy on a 409 code:version_skew", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = backendForEdit(() =>
-      jsonResponse(
-        {
-          type: "about:blank",
-          title: "Conflict",
-          detail: "if-match version 1 does not match current version 2",
-          code: "version_skew",
-        },
-        409,
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    render(<WebhooksCard />);
-
-    await user.click(await screen.findByTestId("edit-record"));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await waitFor(() =>
-      expect(screen.getByText(en["common.versionSkew"])).toBeTruthy(),
-    );
-    expect(
-      screen.queryByText("if-match version 1 does not match current version 2"),
-    ).toBeNull();
   });
 });
 

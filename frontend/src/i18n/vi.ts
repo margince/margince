@@ -10980,7 +10980,6 @@ export const vi = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.edit": "Sửa",
-  "webhooks.saveDone": "Đã lưu webhook",
   "webhooks.archiveDone": "Đã chuyển webhook vào kho lưu trữ",
   "webhooks.archive": "Chuyển vào kho lưu trữ",
   "webhooks.archiveConfirm":
@@ -11022,6 +11021,522 @@ export const vi = {
   "webhooks.deliveries.replayConfirm.title": "Gửi lại lượt này?",
   "webhooks.deliveries.replayConfirm.body":
     "Thử gửi lại ngay bằng khóa ký hiện tại và dấu thời gian mới, không chờ lần thử lại theo lịch kế tiếp.",
+  "webhooks.drawer.editTitle": "Sửa đăng ký",
+  "webhooks.drawer.sub":
+    "Sự kiện hoặc nội dung mới áp dụng cho các sự kiện sau. Giá trị header mới cũng áp dụng cho các lần thử lại đang chờ.",
+  "webhooks.drawer.create": "Tạo đăng ký",
+  "webhooks.drawer.cancel": "Hủy",
+  "webhooks.field.targetUrlHint": "Chỉ HTTPS.",
+  "webhooks.field.targetUrlFixed":
+    "Không thể đổi đích. Tạo đăng ký mới để gửi đến nơi khác.",
+  "webhooks.field.stateHint":
+    "Đăng ký đã tạm dừng vẫn giữ cài đặt và không nhận gì.",
+  "webhooks.events.add": "Thêm sự kiện",
+  "webhooks.field.targetUrlPlaceholder": "https://example.test/hooks/margince",
+  "webhooks.headers.namePlaceholder": "X-Api-Key",
+  "webhooks.events.selected_one": "Đã chọn: {count} trên {total}",
+  "webhooks.events.selected_other": "Đã chọn: {count} trên {total}",
+  "webhooks.events.groupCount_one": "{count}/{total}",
+  "webhooks.events.groupCount_other": "{count}/{total}",
+  "webhooks.events.appliesAtOnce": "Mỗi lựa chọn có hiệu lực ngay.",
+  "webhooks.drawer.saveSubscription": "Lưu đăng ký",
+  "webhooks.events.helpLabel": "Về loại sự kiện",
+  "webhooks.events.help":
+    "Margince gửi một lần mỗi khi một sự kiện đã chọn xảy ra. Thêm sự kiện mở toàn bộ danh sách, nhóm theo bản ghi, kèm dữ liệu của từng sự kiện.",
+  "webhooks.events.count_one": "Đã chọn {count}",
+  "webhooks.events.count_other": "Đã chọn {count}",
+  "webhooks.events.none": "Chưa chọn sự kiện nào.",
+  "webhooks.events.clear": "Xóa hết",
+  "webhooks.events.done": "Xong",
+  "webhooks.events.search": "Tìm sự kiện, ví dụ stage hoặc merged",
+  "webhooks.events.noMatch": "Không có loại sự kiện nào khớp.",
+  "webhooks.events.selectAll": "Chọn tất cả",
+  "webhooks.events.remove": "Gỡ {event}",
+  "webhooks.events.info": "Về {event}",
+  "webhooks.events.when": "Khi nào sự kiện phát sinh",
+  "webhooks.events.fields": "Trường trong data",
+  "webhooks.events.noFields": "Sự kiện này không có trường nào trong data.",
+  "webhooks.events.fieldsFailed":
+    "Không thể tải các trường. Đóng khung này rồi mở lại.",
+  "webhooks.events.visibility":
+    "Chỉ gửi cho hồ sơ mà thành viên phụ trách đăng ký có thể xem.",
+  "webhooks.events.required": "Chọn ít nhất một sự kiện.",
+  "webhooks.headers.title": "Header tùy chỉnh",
+  "webhooks.headers.hint":
+    "Gửi kèm mọi lượt gửi. Giá trị được niêm phong khi lưu và không bao giờ hiển thị lại.",
+  "webhooks.headers.helpLabel": "Về header tùy chỉnh",
+  "webhooks.headers.help":
+    "Dùng header cho bên nhận kiểm tra token hoặc định tuyến theo header. Margince tự đặt các header chữ ký, sự kiện và nội dung, nên các tên đó bị từ chối. Giá trị đã đổi áp dụng từ lần thử tiếp theo, kể cả lần thử lại.",
+  "webhooks.headers.add": "Thêm header",
+  "webhooks.headers.addAuthorization": "Thêm Authorization",
+  "webhooks.headers.name": "Tên header",
+  "webhooks.headers.value": "Giá trị header",
+  "webhooks.headers.valueSet": "Đã đặt giá trị",
+  "webhooks.headers.replace": "Thay thế",
+  "webhooks.headers.remove": "Gỡ header {name}",
+  "webhooks.headers.none":
+    "Chưa có header tùy chỉnh. Các lượt gửi chỉ mang header do Margince đặt.",
+  "webhooks.body.format": "Định dạng nội dung",
+  "webhooks.body.standard": "Định dạng chuẩn",
+  "webhooks.body.custom": "Mẫu tùy chỉnh",
+  "webhooks.body.standardHint":
+    "JSON sự kiện đã công bố, mọi thư viện Standard Webhooks đều xác minh được.",
+  "webhooks.body.customHint": "Nội dung riêng, điền từ sự kiện.",
+  "webhooks.body.helpLabel": "Về định dạng nội dung",
+  "webhooks.body.help":
+    "Mẫu được dựng một lần khi lượt gửi vào hàng chờ, và chữ ký bao trùm đúng các byte đó. Lần thử lại và lần gửi lại dùng nội dung đã lưu, nên thay đổi chỉ áp dụng cho các sự kiện sau.",
+  "webhooks.body.contentType": "Loại nội dung",
+  "webhooks.body.contentTypeHint": "Gửi dưới dạng header Content-Type.",
+  "webhooks.body.startFrom": "Bắt đầu từ",
+  "webhooks.body.startFromPlaceholder": "Chọn mẫu có sẵn",
+  "webhooks.body.preset.slack": "Slack",
+  "webhooks.body.preset.teams": "Microsoft Teams",
+  "webhooks.body.preset.generic": "JSON chung",
+  "webhooks.body.sample": "Sự kiện mẫu",
+  "webhooks.body.template": "Mẫu",
+  "webhooks.body.templateHint":
+    "Trong dấu ngoặc kép, biến điền vào văn bản. Với cả một giá trị ngoài dấu ngoặc kép, thêm | json.",
+  "webhooks.body.tab.template": "Mẫu",
+  "webhooks.body.tab.preview": "Xem trước",
+  "webhooks.body.insert": "Chèn biến",
+  "webhooks.body.size": "Kích thước: {size} byte",
+  "webhooks.body.previewEmpty": "Chọn loại sự kiện để xem trước.",
+  "webhooks.row.customBody": "Nội dung tùy chỉnh",
+  "webhooks.row.headers_one": "Số header: {count}",
+  "webhooks.row.headers_other": "Số header: {count}",
+  "webhooks.eventGroup.deals": "Deal",
+  "webhooks.event.deal.created.label": "Đã tạo deal",
+  "webhooks.event.deal.created.when": "Một deal được mở.",
+  "webhooks.event.deal.updated.label": "Đã đổi thông tin deal",
+  "webhooks.event.deal.updated.when":
+    "Các trường của deal thay đổi, trừ giai đoạn và phụ trách.",
+  "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
+  "webhooks.event.deal.stage_changed.when":
+    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+  "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
+  "webhooks.event.deal.owner_changed.when":
+    "Deal được giao cho thành viên khác phụ trách.",
+  "webhooks.event.deal.archived.label": "Đã chuyển deal vào kho lưu trữ",
+  "webhooks.event.deal.archived.when": "Một deal được chuyển vào kho lưu trữ.",
+  "webhooks.event.deal.restored.label": "Đã khôi phục deal",
+  "webhooks.event.deal.restored.when":
+    "Một deal được khôi phục từ kho lưu trữ.",
+  "webhooks.eventGroup.offers": "Báo giá",
+  "webhooks.event.offer.created.label": "Đã tạo phiên bản báo giá",
+  "webhooks.event.offer.created.when":
+    "Báo giá được tạo, hoặc báo giá đã gửi được tạo lại thành bản nháp mới.",
+  "webhooks.event.offer.sent.label": "Báo giá đã đánh dấu là đã gửi",
+  "webhooks.event.offer.sent.when":
+    "Bản nháp báo giá được đánh dấu đã gửi và các điều khoản được cố định.",
+  "webhooks.event.offer.accepted.label": "Báo giá được chấp nhận",
+  "webhooks.event.offer.accepted.when": "Một báo giá đã gửi được chấp nhận.",
+  "webhooks.event.offer.rejected.label": "Báo giá bị từ chối",
+  "webhooks.event.offer.rejected.when": "Một báo giá đã gửi bị từ chối.",
+  "webhooks.event.offer.superseded.label": "Báo giá bị thay thế",
+  "webhooks.event.offer.superseded.when":
+    "Một báo giá đã gửi được tạo lại thành phiên bản nháp mới.",
+  "webhooks.eventGroup.pipelines_stages": "Pipeline và giai đoạn",
+  "webhooks.event.pipeline.created.label": "Đã tạo pipeline",
+  "webhooks.event.pipeline.created.when":
+    "Pipeline được tạo cùng các giai đoạn đầu tiên.",
+  "webhooks.event.pipeline.updated.label": "Đã đổi pipeline",
+  "webhooks.event.pipeline.updated.when":
+    "Pipeline được đổi tên, đặt làm mặc định hoặc sắp xếp lại, hoặc các giai đoạn của pipeline được sắp xếp lại.",
+  "webhooks.event.pipeline.archived.label":
+    "Đã chuyển pipeline vào kho lưu trữ",
+  "webhooks.event.pipeline.archived.when":
+    "Pipeline không còn xuất hiện trong bộ chọn.",
+  "webhooks.event.stage.created.label": "Đã thêm giai đoạn",
+  "webhooks.event.stage.created.when": "Một giai đoạn được thêm vào pipeline.",
+  "webhooks.event.stage.updated.label": "Đã đổi giai đoạn",
+  "webhooks.event.stage.updated.when":
+    "Tên, loại giai đoạn hoặc xác suất thắng của giai đoạn thay đổi.",
+  "webhooks.event.stage.archived.label": "Đã gỡ giai đoạn",
+  "webhooks.event.stage.archived.when": "Một giai đoạn được gỡ khỏi pipeline.",
+  "webhooks.eventGroup.contacts": "Liên hệ",
+  "webhooks.event.contact.created.label": "Đã tạo liên hệ",
+  "webhooks.event.contact.created.when":
+    "Liên hệ được tạo thủ công, từ email đã thu thập hoặc khi xác nhận lead đủ điều kiện.",
+  "webhooks.event.contact.updated.label": "Đã đổi thông tin liên hệ",
+  "webhooks.event.contact.updated.when":
+    "Các trường hoặc quan hệ của liên hệ thay đổi.",
+  "webhooks.event.contact.merged.label": "Đã gộp liên hệ",
+  "webhooks.event.contact.merged.when": "Hai liên hệ được gộp thành một.",
+  "webhooks.event.contact.archived.label": "Đã chuyển liên hệ vào kho lưu trữ",
+  "webhooks.event.contact.archived.when":
+    "Một liên hệ được chuyển vào kho lưu trữ.",
+  "webhooks.event.contact.restored.label": "Đã khôi phục liên hệ",
+  "webhooks.event.contact.restored.when":
+    "Một liên hệ được khôi phục từ kho lưu trữ.",
+  "webhooks.event.conversation_claim.captured.label":
+    "Đã ghi nhận cam kết hoặc yêu cầu",
+  "webhooks.event.conversation_claim.captured.when":
+    "Điều liên hệ đã hứa, yêu cầu hoặc quyết định trong cuộc trao đổi được ghi vào hồ sơ liên hệ.",
+  "webhooks.event.conversation_claim.changed.label":
+    "Đã sửa cam kết đã ghi nhận",
+  "webhooks.event.conversation_claim.changed.when":
+    "Có ai đó sửa hoặc bỏ qua một cam kết, yêu cầu hoặc quyết định đã ghi nhận.",
+  "webhooks.event.relationship_nudge.decided.label":
+    "Đã gác lại liên hệ im lặng",
+  "webhooks.event.relationship_nudge.decided.when":
+    "Nhân viên kinh doanh gác lại một liên hệ im lặng trong Danh sách công việc, hoặc đưa liên hệ đó trở lại.",
+  "webhooks.eventGroup.companies": "Công ty",
+  "webhooks.event.company.created.label": "Đã tạo công ty",
+  "webhooks.event.company.created.when":
+    "Công ty được tạo thủ công, qua nhập dữ liệu, từ email đã thu thập hoặc từ lượt đọc trang web.",
+  "webhooks.event.company.updated.label": "Đã đổi thông tin công ty",
+  "webhooks.event.company.updated.when":
+    "Các trường hoặc quan hệ của công ty thay đổi, kể cả khi bổ sung dữ liệu.",
+  "webhooks.event.company.merged.label": "Đã gộp công ty",
+  "webhooks.event.company.merged.when": "Hai công ty được gộp thành một.",
+  "webhooks.event.company.archived.label": "Đã chuyển công ty vào kho lưu trữ",
+  "webhooks.event.company.archived.when":
+    "Một công ty được chuyển vào kho lưu trữ.",
+  "webhooks.event.company.restored.label": "Đã khôi phục công ty",
+  "webhooks.event.company.restored.when":
+    "Một công ty được khôi phục từ kho lưu trữ.",
+  "webhooks.eventGroup.leads": "Lead",
+  "webhooks.event.lead.created.label": "Đã tạo lead",
+  "webhooks.event.lead.created.when":
+    "Lead được tạo thủ công, từ thu thập hoặc qua nhập dữ liệu.",
+  "webhooks.event.lead.updated.label": "Đã đổi thông tin lead",
+  "webhooks.event.lead.updated.when":
+    "Các trường của lead thay đổi, kể cả trường tùy chỉnh, hoặc lead được phân bổ lại.",
+  "webhooks.event.lead.disqualified.label": "Đã loại lead",
+  "webhooks.event.lead.disqualified.when": "Một lead bị loại.",
+  "webhooks.event.lead.promoted.label": "Lead đã chuyển thành liên hệ",
+  "webhooks.event.lead.promoted.when":
+    "Lead có tương tác thực sự và trở thành liên hệ.",
+  "webhooks.event.lead.demoted.label": "Đã hủy xác nhận lead",
+  "webhooks.event.lead.demoted.when":
+    "Lần xác nhận bị hủy và lead quay lại kho lead.",
+  "webhooks.event.lead.merged.label": "Đã gộp lead",
+  "webhooks.event.lead.merged.when":
+    "Hai lead được xác định là trùng nhau được gộp lại.",
+  "webhooks.event.lead.sla_breached.label": "Quá hạn phản hồi đầu tiên",
+  "webhooks.event.lead.sla_breached.when":
+    "Lần kiểm tra phát hiện lead đã quá hạn phản hồi đầu tiên mà chưa có câu trả lời.",
+  "webhooks.event.lead_source.changed.label": "Đã đổi danh sách nguồn lead",
+  "webhooks.event.lead_source.changed.when":
+    "Nguồn lead được thêm, sửa hoặc gỡ trong Cài đặt.",
+  "webhooks.event.lead_disqualify_reason.changed.label":
+    "Đã đổi lý do loại lead",
+  "webhooks.event.lead_disqualify_reason.changed.when":
+    "Lý do loại lead được thêm, sửa hoặc gỡ trong Cài đặt.",
+  "webhooks.eventGroup.activities_email": "Hoạt động và email",
+  "webhooks.event.activity.captured.label": "Đã ghi nhận hoạt động",
+  "webhooks.event.activity.captured.when":
+    "Hoạt động được ghi thủ công hoặc do trình kết nối thu thập.",
+  "webhooks.event.activity.updated.label": "Đã đổi hoạt động",
+  "webhooks.event.activity.updated.when":
+    "Hoạt động được sửa hoặc liên kết với hồ sơ khác.",
+  "webhooks.event.activity.archived.label":
+    "Đã chuyển hoạt động vào kho lưu trữ",
+  "webhooks.event.activity.archived.when":
+    "Một hoạt động được chuyển vào kho lưu trữ.",
+  "webhooks.event.activity.disposition_recorded.label":
+    "Đã gác lại tin nhắn đang chờ",
+  "webhooks.event.activity.disposition_recorded.when":
+    "Có ai đó quyết định cách xử lý một tin nhắn đang chờ và Danh sách công việc không hiển thị tin nhắn đó nữa.",
+  "webhooks.event.activity.marked_handled.label":
+    "Đã đánh dấu xong việc trong Danh sách công việc",
+  "webhooks.event.activity.marked_handled.when":
+    "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
+  "webhooks.event.engagement.reply.when":
+    "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",
+  "webhooks.event.comms.delivery_bounced.label": "Email bị trả lại",
+  "webhooks.event.comms.delivery_bounced.when":
+    "Hệ thống thư bên nhận trả lại một tin nhắn đã gửi.",
+  "webhooks.eventGroup.files": "Tệp",
+  "webhooks.event.attachment.created.label": "Đã tải tệp lên",
+  "webhooks.event.attachment.created.when": "Một tệp được tải lên hồ sơ.",
+  "webhooks.event.attachment.updated.label": "Đã đổi thông tin tệp",
+  "webhooks.event.attachment.updated.when":
+    "Danh mục, tiêu đề, trạng thái, ghim của tệp hoặc tệp mà tệp này thay thế thay đổi.",
+  "webhooks.event.attachment.archived.label": "Đã chuyển tệp vào kho lưu trữ",
+  "webhooks.event.attachment.archived.when":
+    "Tệp của một hồ sơ được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.projects": "Dự án",
+  "webhooks.event.project.created.label": "Đã tạo dự án",
+  "webhooks.event.project.created.when": "Một dự án được mở cho một công ty.",
+  "webhooks.event.project.updated.label": "Đã đổi thông tin dự án",
+  "webhooks.event.project.updated.when": "Các trường của dự án thay đổi.",
+  "webhooks.event.project.phase_changed.label": "Dự án đã chuyển giai đoạn",
+  "webhooks.event.project.phase_changed.when":
+    "Dự án chuyển sang giai đoạn mới.",
+  "webhooks.event.project.archived.label": "Đã chuyển dự án vào kho lưu trữ",
+  "webhooks.event.project.archived.when":
+    "Một dự án được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.contracts": "Hợp đồng",
+  "webhooks.event.contract.created.label": "Đã ghi nhận hợp đồng",
+  "webhooks.event.contract.created.when":
+    "Một thỏa thuận được ghi nhận cho một công ty.",
+  "webhooks.event.contract.updated.label": "Đã đổi thông tin hợp đồng",
+  "webhooks.event.contract.updated.when": "Các trường của hợp đồng thay đổi.",
+  "webhooks.event.contract.status_changed.label": "Đã đổi trạng thái hợp đồng",
+  "webhooks.event.contract.status_changed.when":
+    "Một thành viên hoặc một đề xuất đã duyệt đặt trạng thái mới.",
+  "webhooks.event.contract.archived.label":
+    "Đã chuyển hợp đồng vào kho lưu trữ",
+  "webhooks.event.contract.archived.when":
+    "Một hợp đồng được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.commissions": "Hoa hồng",
+  "webhooks.event.commission.accrued.label": "Đã ghi nhận hoa hồng",
+  "webhooks.event.commission.accrued.when":
+    "Một deal đã chốt mang lại hoa hồng cho đối tác.",
+  "webhooks.event.commission.decided.label": "Đã quyết định hoa hồng",
+  "webhooks.event.commission.decided.when":
+    "Một khoản hoa hồng được duyệt, thanh toán hoặc đảo ngược.",
+  "webhooks.eventGroup.lists": "Danh sách",
+  "webhooks.event.list.created.label": "Đã tạo danh sách",
+  "webhooks.event.list.created.when":
+    "Có ai đó tạo danh sách động hoặc danh sách rút gọn.",
+  "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
+  "webhooks.event.list.updated.when":
+    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc phụ trách của danh sách thay đổi.",
+  "webhooks.event.list.archived.label": "Đã chuyển danh sách vào kho lưu trữ",
+  "webhooks.event.list.archived.when":
+    "Một danh sách được chuyển vào kho lưu trữ.",
+  "webhooks.event.list.restored.label": "Đã khôi phục danh sách",
+  "webhooks.event.list.restored.when":
+    "Một danh sách được khôi phục từ kho lưu trữ.",
+  "webhooks.event.list.member_added.label":
+    "Đã thêm hồ sơ vào danh sách rút gọn",
+  "webhooks.event.list.member_added.when":
+    "Hồ sơ được thêm vào danh sách rút gọn thủ công, qua thay đổi hàng loạt hoặc do tự động hóa.",
+  "webhooks.event.list.member_removed.label":
+    "Đã gỡ hồ sơ khỏi danh sách rút gọn",
+  "webhooks.event.list.member_removed.when":
+    "Hồ sơ được gỡ khỏi danh sách rút gọn thủ công hoặc qua thay đổi hàng loạt.",
+  "webhooks.event.list.evaluated.label": "Danh sách động đã thay đổi",
+  "webhooks.event.list.evaluated.when":
+    "Lần kiểm tra danh sách động thấy có hồ sơ vào hoặc rời danh sách.",
+  "webhooks.eventGroup.deal_rooms": "Deal Room",
+  "webhooks.event.deal_room.opened.label": "Đã mở Deal Room",
+  "webhooks.event.deal_room.opened.when": "Deal Room được tạo cho một deal.",
+  "webhooks.event.deal_room.updated.label": "Đã đổi nội dung Deal Room",
+  "webhooks.event.deal_room.updated.when":
+    "Nội dung bên mua đọc thay đổi: tiêu đề, lời chào hoặc tài liệu.",
+  "webhooks.event.deal_room.paused.label": "Đã tạm dừng Deal Room",
+  "webhooks.event.deal_room.paused.when":
+    "Deal Room bị tạm dừng và bên mua không thể truy cập.",
+  "webhooks.event.deal_room.resumed.label": "Đã mở lại Deal Room",
+  "webhooks.event.deal_room.resumed.when":
+    "Bên mua lại truy cập được Deal Room đã tạm dừng.",
+  "webhooks.event.deal_room.closed.label": "Đã đóng Deal Room",
+  "webhooks.event.deal_room.closed.when": "Nội dung Deal Room được cố định.",
+  "webhooks.event.deal_room.archived.label":
+    "Đã chuyển Deal Room vào kho lưu trữ",
+  "webhooks.event.deal_room.archived.when":
+    "Deal Room kết thúc và quyền truy cập của bên mua bị thu hồi.",
+  "webhooks.event.deal_room.participant_invited.label": "Đã mời bên mua",
+  "webhooks.event.deal_room.participant_invited.when":
+    "Một liên hệ bên ngoài được cho vào Deal Room.",
+  "webhooks.event.deal_room.participant_revoked.label":
+    "Đã thu hồi quyền truy cập của bên mua",
+  "webhooks.event.deal_room.participant_revoked.when":
+    "Quyền truy cập Deal Room của một liên hệ bên ngoài bị thu hồi.",
+  "webhooks.event.deal_room.participant_credential_reissued.label":
+    "Đã cấp lại liên kết cho bên mua",
+  "webhooks.event.deal_room.participant_credential_reissued.when":
+    "Liên kết truy cập được gửi lại, hoặc địa chỉ nhận liên kết được sửa.",
+  "webhooks.event.deal_room.comment_posted.label":
+    "Đã đăng bình luận trong Deal Room",
+  "webhooks.event.deal_room.comment_posted.when":
+    "Có ai đó ở một trong hai bên bình luận trong chủ đề của Deal Room.",
+  "webhooks.event.deal_room.thread_resolved.label":
+    "Đã giải quyết chủ đề trong Deal Room",
+  "webhooks.event.deal_room.thread_resolved.when": "Bên bán đóng một chủ đề.",
+  "webhooks.event.deal_room.decision_recorded.label":
+    "Quyết định của bên mua về tài liệu",
+  "webhooks.event.deal_room.decision_recorded.when":
+    "Hiện không còn gửi. Giữ lại cho hệ thống nhận vẫn đọc sự kiện cũ.",
+  "webhooks.eventGroup.introductions": "Giới thiệu",
+  "webhooks.event.intro_request.created.label": "Đã yêu cầu giới thiệu",
+  "webhooks.event.intro_request.created.when":
+    "Nhân viên kinh doanh nhờ đồng nghiệp giới thiệu với một liên hệ.",
+  "webhooks.event.intro_request.decided.label": "Đã trả lời yêu cầu giới thiệu",
+  "webhooks.event.intro_request.decided.when": "Đồng nghiệp trả lời yêu cầu.",
+  "webhooks.event.intro_request.completed.label": "Đã giới thiệu",
+  "webhooks.event.intro_request.completed.when":
+    "Lời giới thiệu diễn ra, hoặc nhân viên kinh doanh dùng tên được đồng nghiệp cho mượn.",
+  "webhooks.event.intro_request.replied.label":
+    "Liên hệ đã trả lời lời giới thiệu",
+  "webhooks.event.intro_request.replied.when":
+    "Liên hệ trả lời, theo hoạt động đã thu thập.",
+  "webhooks.event.intro_request.closed.label": "Đã đóng yêu cầu giới thiệu",
+  "webhooks.event.intro_request.closed.when":
+    "Yêu cầu kết thúc mà không có lời giới thiệu.",
+  "webhooks.eventGroup.consent_privacy": "Sự đồng ý và quyền riêng tư",
+  "webhooks.event.consent.changed.label": "Đã ghi nhận sự đồng ý",
+  "webhooks.event.consent.changed.when":
+    "Sự đồng ý của liên hệ hoặc lead cho một mục đích được ghi nhận.",
+  "webhooks.event.consent.suppressed.label": "Liên hệ yêu cầu ngừng liên lạc",
+  "webhooks.event.consent.suppressed.when":
+    "Có ai đó ghi nhận rằng không được gửi thư cho liên hệ này.",
+  "webhooks.event.consent.suppression_lifted.label": "Đã gỡ lệnh chặn",
+  "webhooks.event.consent.suppression_lifted.when":
+    "Ai đó có thẩm quyền gỡ một lệnh chặn.",
+  "webhooks.event.consent.override_recorded.label": "Đã ghi nhận ghi đè",
+  "webhooks.event.consent.override_recorded.when":
+    "Nhân viên kinh doanh xác nhận có thể bỏ qua lệnh từ chối tự động cho một loại liên lạc.",
+  "webhooks.event.consent.override_lifted.label": "Đã gỡ ghi đè",
+  "webhooks.event.consent.override_lifted.when":
+    "Ai đó có thẩm quyền gỡ một ghi đè.",
+  "webhooks.event.retention.applied.label": "Đã chạy quy tắc lưu trữ",
+  "webhooks.event.retention.applied.when":
+    "Quy tắc lưu trữ hoặc xóa dữ liệu được áp dụng cho một hồ sơ.",
+  "webhooks.event.retention.restricted.label": "Hồ sơ bị hạn chế theo luật",
+  "webhooks.event.retention.restricted.when":
+    "Nghĩa vụ lưu trữ theo luật thay đổi những gì được phép làm với hồ sơ.",
+  "webhooks.eventGroup.signals": "Tín hiệu",
+  "webhooks.event.signal.detected.label": "Đã phát hiện tín hiệu",
+  "webhooks.event.signal.detected.when": "Một tín hiệu được tạo.",
+  "webhooks.event.signal.resolved.label": "Đã đối chiếu tín hiệu",
+  "webhooks.event.signal.resolved.when":
+    "Tín hiệu được đối chiếu với công ty và liên hệ của bạn.",
+  "webhooks.eventGroup.forecasts_weekly_plans": "Dự báo và kế hoạch tuần",
+  "webhooks.event.forecast.created.label": "Đã đưa ra nhận định",
+  "webhooks.event.forecast.created.when":
+    "Có ai đó nêu nhận định về những gì sẽ chốt trong một kỳ.",
+  "webhooks.event.forecast.assurance_created.label":
+    "Đã xong kiểm tra đầu vào dự báo",
+  "webhooks.event.forecast.assurance_created.when":
+    "Lần kiểm tra đầu vào dự báo hằng đêm hoàn tất.",
+  "webhooks.event.forecast.exception_resolved.label":
+    "Đã trả lời phát hiện về dự báo",
+  "webhooks.event.forecast.exception_resolved.when":
+    "Có ai đó trả lời một phát hiện từ lần kiểm tra hằng đêm.",
+  "webhooks.event.forecast.snapshot_created.label": "Đã lưu ảnh chụp dự báo",
+  "webhooks.event.forecast.snapshot_created.when":
+    "Một bộ số liệu dự báo được cố định.",
+  "webhooks.event.forecast.share_issued.label": "Đã chia sẻ liên kết dự báo",
+  "webhooks.event.forecast.share_issued.when":
+    "Có ai đó tạo liên kết để chia sẻ dự báo với ai khác.",
+  "webhooks.event.forecast.share_revoked.label": "Đã đóng liên kết dự báo",
+  "webhooks.event.forecast.share_revoked.when":
+    "Liên kết chia sẻ bị đóng trước khi hết hạn.",
+  "webhooks.event.weekly_plan.updated.label": "Đã đổi kế hoạch tuần",
+  "webhooks.event.weekly_plan.updated.when":
+    "Kế hoạch tuần của nhân viên kinh doanh được mở, hoặc một cam kết được thêm, sửa hoặc chốt kết quả.",
+  "webhooks.event.weekly_plan.help_requested.label":
+    "Đã nhờ hỗ trợ một cam kết",
+  "webhooks.event.weekly_plan.help_requested.when":
+    "Nhân viên kinh doanh nhờ trưởng nhóm hỗ trợ một cam kết.",
+  "webhooks.eventGroup.notices_notifications": "Thông điệp và thông báo",
+  "webhooks.event.notice.created.label": "Đã ghi nhận thông điệp",
+  "webhooks.event.notice.created.when":
+    "Một thông điệp được ghi nhận cho một thành viên.",
+  "webhooks.event.notice.read.label": "Đã đọc thông điệp",
+  "webhooks.event.notice.read.when":
+    "Thành viên nhận thông điệp đánh dấu là đã đọc.",
+  "webhooks.event.notification.preference_changed.label":
+    "Đã đổi cài đặt thông báo",
+  "webhooks.event.notification.preference_changed.when":
+    "Thành viên thay đổi cách nhận một loại thông báo.",
+  "webhooks.event.user_delivery.changed.label": "Đã đổi cài đặt nhận tin",
+  "webhooks.event.user_delivery.changed.when":
+    "Thành viên thay đổi những gì Margince được phép gửi cho họ.",
+  "webhooks.eventGroup.members_access": "Thành viên và quyền truy cập",
+  "webhooks.event.user.invited.label": "Đã mời thành viên",
+  "webhooks.event.user.invited.when": "Quản trị viên mời một thành viên mới.",
+  "webhooks.event.user.activated.label": "Thành viên đã kích hoạt",
+  "webhooks.event.user.activated.when":
+    "Thành viên được mời đặt mật khẩu và bắt đầu hoạt động.",
+  "webhooks.event.user.password_link_issued.label":
+    "Đã cấp liên kết đặt mật khẩu",
+  "webhooks.event.user.password_link_issued.when":
+    "Quản trị viên tạo liên kết đặt mật khẩu để chuyển cho thành viên ngoài Margince, khi chưa thiết lập gửi email.",
+  "webhooks.event.user.deactivated.label": "Đã vô hiệu hóa thành viên",
+  "webhooks.event.user.deactivated.when":
+    "Phiên đăng nhập và passport của agent thuộc thành viên bị thu hồi.",
+  "webhooks.event.user.reactivated.label": "Đã kích hoạt lại thành viên",
+  "webhooks.event.user.reactivated.when":
+    "Một thành viên đã vô hiệu hóa được kích hoạt lại.",
+  "webhooks.event.role.changed.label": "Đã đổi vai trò thành viên",
+  "webhooks.event.role.changed.when":
+    "Vai trò của thành viên được thay bằng vai trò khác.",
+  "webhooks.event.team.changed.label": "Đã đổi nhóm",
+  "webhooks.event.team.changed.when":
+    "Nhóm được tạo, đổi tên, chuyển vào kho lưu trữ hoặc khôi phục, hoặc có thành viên vào hay rời nhóm.",
+  "webhooks.event.passport.revoked.label": "Đã thu hồi passport của agent",
+  "webhooks.event.passport.revoked.when": "Một passport của agent bị thu hồi.",
+  "webhooks.event.onboarding.state_changed.label": "Đã đến bước thiết lập mới",
+  "webhooks.event.onboarding.state_changed.when":
+    "Trình hướng dẫn thiết lập của thành viên bắt đầu hoặc chuyển sang bước tiếp theo.",
+  "webhooks.eventGroup.member_settings_linkedin":
+    "Cài đặt thành viên và LinkedIn",
+  "webhooks.event.user_display_name.changed.label": "Đã đổi tên hiển thị",
+  "webhooks.event.user_display_name.changed.when":
+    "Thành viên đổi tên mà đồng nghiệp nhìn thấy.",
+  "webhooks.event.user_greeting_name.changed.label": "Đã đổi tên gọi",
+  "webhooks.event.user_greeting_name.changed.when":
+    "Tên gọi của thành viên được lưu, hoặc được điền ở lần đầu đăng nhập qua nhà cung cấp.",
+  "webhooks.event.user_locale.changed.label": "Đã đổi ngôn ngữ giao diện",
+  "webhooks.event.user_locale.changed.when":
+    "Thành viên chọn ngôn ngữ cho giao diện của chính mình.",
+  "webhooks.event.email_signature.changed.label": "Đã đổi chữ ký email",
+  "webhooks.event.email_signature.changed.when":
+    "Thành viên viết, sửa hoặc xóa chữ ký email.",
+  "webhooks.event.linkedin_account.changed.label": "Đã đổi tài khoản LinkedIn",
+  "webhooks.event.linkedin_account.changed.when":
+    "Thành viên ghi nhận hoặc sửa kết nối LinkedIn của chính mình.",
+  "webhooks.event.linkedin_network.imported.label":
+    "Đã nhập mạng lưới LinkedIn",
+  "webhooks.event.linkedin_network.imported.when":
+    "Thành viên tải lên tệp xuất danh sách kết nối LinkedIn.",
+  "webhooks.event.linkedin_match.decided.label": "Đã liên kết kết nối LinkedIn",
+  "webhooks.event.linkedin_match.decided.when":
+    "Một kết nối được liên kết với liên hệ đã có trong CRM.",
+  "webhooks.eventGroup.voice_dna": "Voice DNA",
+  "webhooks.event.voice.profile_created.label": "Đã tạo hồ sơ giọng văn",
+  "webhooks.event.voice.profile_created.when":
+    "Thành viên mở hồ sơ giọng văn cá nhân.",
+  "webhooks.event.voice.profile_updated.label": "Đã đổi hồ sơ giọng văn",
+  "webhooks.event.voice.profile_updated.when":
+    "Chủ hồ sơ thay đổi tùy chọn hoặc chế độ tự học.",
+  "webhooks.event.voice.profile_archived.label":
+    "Đã chuyển hồ sơ giọng văn vào kho lưu trữ",
+  "webhooks.event.voice.profile_archived.when":
+    "Một hồ sơ giọng văn được chuyển vào kho lưu trữ.",
+  "webhooks.event.voice.corpus_changed.label": "Đã đổi văn mẫu",
+  "webhooks.event.voice.corpus_changed.when":
+    "Văn mẫu được thêm, sửa hoặc gỡ, hoặc toàn bộ văn mẫu bị xóa.",
+  "webhooks.event.voice.build_changed.label": "Đã xếp lịch dựng giọng văn",
+  "webhooks.event.voice.build_changed.when":
+    "Lần dựng giọng văn được xếp lịch, hoặc lần dựng đang chờ được trả lại.",
+  "webhooks.event.voice.version_changed.label": "Đã đổi phiên bản giọng văn",
+  "webhooks.event.voice.version_changed.when":
+    "Phiên bản giọng văn được tạo, kích hoạt, từ chối hoặc khôi phục về bản trước.",
+  "webhooks.event.voice.draft_outcome_recorded.label":
+    "Đã ghi nhận kết quả bản nháp",
+  "webhooks.event.voice.draft_outcome_recorded.when":
+    "Kết quả của bản nháp viết theo giọng văn của thành viên được ghi nhận.",
+  "webhooks.eventGroup.approvals_audit": "Phê duyệt và nhật ký hoạt động",
+  "webhooks.event.approval.requested.label": "Đã yêu cầu phê duyệt",
+  "webhooks.event.approval.requested.when":
+    "Hành động của trợ lý AI được giữ lại để chờ quyết định.",
+  "webhooks.event.approval.decided.label": "Đã quyết định phê duyệt",
+  "webhooks.event.approval.decided.when":
+    "Hành động đang giữ được duyệt, bị từ chối hoặc hết hạn.",
+  "webhooks.event.approval.failure_acknowledged.label":
+    "Đã xem phê duyệt bị lỗi",
+  "webhooks.event.approval.failure_acknowledged.when":
+    "Thành viên đã duyệt biết rằng việc đã duyệt không chạy được.",
+  "webhooks.event.coldstart.read_back_proposed.label":
+    "Đã đề xuất bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.read_back_proposed.when":
+    "Bản tóm tắt hồ sơ công ty đang chờ duyệt.",
+  "webhooks.event.coldstart.accepted.label":
+    "Đã chấp nhận bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.accepted.when":
+    "Có ai đó chấp nhận bản tóm tắt đang chờ duyệt.",
+  "webhooks.event.coldstart.rejected.label": "Đã từ chối bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.rejected.when":
+    "Có ai đó từ chối bản tóm tắt đang chờ duyệt.",
+  "webhooks.event.audit.appended.label": "Đã thêm mục nhật ký hoạt động",
+  "webhooks.event.audit.appended.when": "Hiện không còn gửi.",
   "reindexbanner.needed": "Cần lập chỉ mục lại",
   "reindexbanner.link": "Xem lại trong Cài đặt",
 
