@@ -73,7 +73,8 @@ type workerConfig struct {
 }
 
 // loadWorkerConfig resolves the boot settings from args and environ, and
-// reports every fault of the configuration in one error.
+// reports every fault of the configuration in one error. Like the api's, it
+// hands compose the result before anything composes.
 func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, error) {
 	reg, err := compose.ProgramRegistry(config.RoleWorker)
 	if err != nil {
@@ -94,6 +95,7 @@ func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, err
 	if err != nil {
 		return workerConfig{}, nil, fmt.Errorf("worker: %w", err)
 	}
+	compose.UseConfig(loaded)
 	return fromRegistry(loaded, posture), loaded, nil
 }
 

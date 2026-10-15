@@ -28,7 +28,7 @@ The api and the worker follow the same rules, and each reads only the values it 
 |---|---|---|
 | Flag or `MARGINCE_*` variable | flag → environment variable → default | The default. |
 | Key in `margince.yaml` | flag → environment variable → `--env-file` → `--config-file` → `margince.yaml` → default | The default. |
-| Setting an admin changes | value saved in the database → default | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
+| Setting an admin changes | value saved in the database → default; a boot source comes first for the [settings a boot source can set](#settings-a-boot-source-can-set) | The default, except for the company name and the reporting timezone, which bootstrap writes and which refuse to run unset. |
 | Seed in `margince.yaml` | `--config-file` → `margince.yaml` → default, root by root | Used when the company is created, and again by a data reset. |
 | AI provider key, Google or Microsoft app | value saved in Settings → environment variable | That provider, or that mailbox connection, is off. |
 | SMTP password | `email.smtp.password` reference → the copy sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
@@ -113,6 +113,41 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | `8` | `uploads.linkedin_import_mb` |
 | `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | `5` | `uploads.knowledge_document_mb` |
 | `MARGINCE_WEB_SECURITY_TXT` | `null` (= not served) | `web.security_txt`, as a JSON object in the variable |
+
+### Settings a boot source can set
+
+An admin changes each setting below under Settings. An operator can also set one at boot, by its
+variable or by its key in `margince.yaml` or `--config-file`. A value set at boot wins over the value
+saved in the database, and the row is left as it is. The setting is then locked. A save of any other
+value gets a 409 that names the source, and a save of the same value changes nothing.
+
+| Env | Default | Key |
+|---|---|---|
+| `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | `43200` (5 to 129600) | `installation.oauth_access_token_ttl_minutes` |
+| `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.agent_runner_interval_seconds` |
+| `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | `30` (10 to 3600) | `installation.webhook_retry_interval_seconds` |
+| `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | `3600` (60 to 86400) | `installation.time_scan_interval_seconds` |
+| `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.close_date_sweep_interval_seconds` |
+| `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.follow_up_reconcile_interval_seconds` |
+| `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | `86400` (3600 to 604800) | `installation.retention_sweep_interval_seconds` |
+| `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | `3600` (300 to 604800, or `0` for off) | `installation.geocode_backfill_interval_seconds` |
+| `MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS` | `21600` (300 to 604800, or `0` for off) | `installation.technical_backfill_interval_seconds` |
+| `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | `21600` (600 to 43200) | `installation.gmail_watch_scan_interval_seconds` |
+| `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | `21600` (600 to 43200) | `installation.graph_watch_scan_interval_seconds` |
+| `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | `48` (24 to 144) | `installation.gmail_watch_renew_within_hours` |
+| `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | `24` (24 to 60) | `installation.graph_watch_renew_within_hours` |
+| `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | `30` (1 to 1000) | `installation.send_rate_limit` |
+| `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | `60` (10 to 3600) | `installation.send_rate_window_seconds` |
+| `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | `24` (1 to 168) | `installation.send_max_age_hours` |
+| `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | `200` (10 to 5000) | `installation.agent_writes_per_window` |
+| `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | `20` (1 to 200) | `installation.agent_egress_per_window` |
+| `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | `1000` (50 to 20000) | `installation.agent_calls_per_window` |
+| `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | `24` (1 to 168) | `installation.agent_window_hours` |
+| `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_HOURS` | `0` | `installation.agent_window_next_hours` |
+| `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_FROM` | `0` | `installation.agent_window_next_from` |
+
+A boot-set `installation.agent_window_hours` also keeps a window length an admin saved for the next
+reset from taking over. The product writes the two `agent_window_next_*` settings itself; do not set them.
 
 ## Common log flags (api, worker)
 

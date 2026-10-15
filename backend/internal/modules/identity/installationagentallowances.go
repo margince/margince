@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,14 +30,14 @@ type AgentAllowancePatch struct {
 func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 	out := make([]pendingWrite, 0, 3)
 	for _, v := range []struct {
-		entry *settings.Entry[int]
-		value *int
+		setting *config.Setting[int]
+		value   *int
 	}{
 		{AgentWritesPerWindow, p.WritesPerWindow},
 		{AgentEgressPerWindow, p.EgressPerWindow},
 		{AgentCallsPerWindow, p.CallsPerWindow},
 	} {
-		write, err := encodePatchField(v.entry, v.value)
+		write, err := encodeStoredField(v.setting, v.value)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +47,7 @@ func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 }
 
 // agentAllowanceEntries is the order both readers fill allowanceValues in.
-var agentAllowanceEntries = []*settings.Entry[int]{
+var agentAllowanceEntries = []*config.Setting[int]{
 	AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
 	AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
 }
@@ -54,10 +55,12 @@ var agentAllowanceEntries = []*settings.Entry[int]{
 // allowanceValues holds the settings in agentAllowanceEntries order.
 type allowanceValues [6]int
 
-// policy is the one reading of the six values, for the meter and the page alike.
-func (v allowanceValues) policy() agentvolume.Policy {
+// policy is the one reading of the six values, for the meter and the page
+// alike. A length a boot source sets has no change waiting: a saved one would
+// otherwise take over from it at the next reset.
+func (v allowanceValues) policy(c *config.Config) agentvolume.Policy {
 	plan := agentvolume.WindowPlan{Length: time.Duration(v[3]) * time.Hour}
-	if v[4] > 0 {
+	if _, locked := c.Locked(AgentWindowHours.Key()); v[4] > 0 && !locked {
 		plan.Next = time.Duration(v[4]) * time.Hour
 		plan.NextFrom = time.Unix(int64(v[5]), 0).UTC()
 	}
@@ -67,23 +70,32 @@ func (v allowanceValues) policy() agentvolume.Policy {
 	}
 }
 
-// AgentPolicyTx is the machinery read of the allowances, ungated, in one
-// statement: the meter applies its answer to every agent call. A surface that
-// shows the values to a user reads them through readAgentPolicy instead.
-func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
-	raw, err := settings.ApplyManyTx(ctx, tx,
-		AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
-		AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom)
-	if err != nil {
+// AgentPolicyTx is the machinery read of the allowances, ungated: the meter
+// applies its answer to every agent call, from a cache it refreshes each
+// minute. A surface that shows the values to a user reads them through
+// readAgentPolicy instead.
+func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolume.Policy, error) {
+	var values allowanceValues
+	var err error
+	if values[0], err = config.StoredApplyTx(ctx, tx, c, AgentWritesPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	var values allowanceValues
-	for i, entry := range agentAllowanceEntries {
-		if err := json.Unmarshal(raw[entry.Key()], &values[i]); err != nil {
-			return agentvolume.Policy{}, fmt.Errorf("identity: %s does not hold a whole number: %w", entry.Key(), err)
-		}
+	if values[1], err = config.StoredApplyTx(ctx, tx, c, AgentEgressPerWindow); err != nil {
+		return agentvolume.Policy{}, err
 	}
-	return values.policy(), nil
+	if values[2], err = config.StoredApplyTx(ctx, tx, c, AgentCallsPerWindow); err != nil {
+		return agentvolume.Policy{}, err
+	}
+	if values[3], err = config.StoredApplyTx(ctx, tx, c, AgentWindowHours); err != nil {
+		return agentvolume.Policy{}, err
+	}
+	if values[4], err = config.StoredApplyTx(ctx, tx, c, AgentWindowNextHours); err != nil {
+		return agentvolume.Policy{}, err
+	}
+	if values[5], err = config.StoredApplyTx(ctx, tx, c, AgentWindowNextFrom); err != nil {
+		return agentvolume.Policy{}, err
+	}
+	return values.policy(c), nil
 }
 
 // readAgentPolicy reads the allowances for the settings page, each through
@@ -91,8 +103,8 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, error) {
 	var values allowanceValues
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-		for i, entry := range agentAllowanceEntries {
-			value, err := settings.GetTx(ctx, tx, entry)
+		for i, setting := range agentAllowanceEntries {
+			value, err := config.StoredValTx(ctx, tx, s.config, setting)
 			if err != nil {
 				return err
 			}
@@ -103,7 +115,7 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 	if err != nil {
 		return agentvolume.Policy{}, fmt.Errorf("identity: reading the agent allowances: %w", err)
 	}
-	return values.policy(), nil
+	return values.policy(s.config), nil
 }
 
 // scheduleAgentWindowTx turns a requested window length into a plan that takes
@@ -112,6 +124,11 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, tx pgx.Tx, requested *int) error {
 	if requested == nil {
 		return nil
+	}
+	if _, locked := s.config.Locked(AgentWindowHours.Key()); locked {
+		// Nothing waits for a reset under a boot-set length: SaveTx refuses
+		// any other length and takes the same one as a no-op.
+		return config.SaveTx(ctx, s.config, tx, AgentWindowHours, *requested)
 	}
 	raw, err := json.Marshal(*requested)
 	if err != nil {
@@ -123,7 +140,7 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 	if err := settings.LockForWrite(ctx, tx, AgentWindowHours.Key()); err != nil {
 		return err
 	}
-	current, err := AgentPolicyTx(ctx, tx)
+	current, err := AgentPolicyTx(ctx, tx, s.config)
 	if err != nil {
 		return err
 	}
@@ -133,14 +150,14 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 		nextHours, nextFrom = int(plan.Next.Hours()), int(plan.NextFrom.Unix())
 	}
 	for _, w := range []struct {
-		entry *settings.Entry[int]
-		value int
+		setting *config.Setting[int]
+		value   int
 	}{
 		{AgentWindowHours, int(plan.Length.Hours())},
 		{AgentWindowNextHours, nextHours},
 		{AgentWindowNextFrom, nextFrom},
 	} {
-		if err := settings.SetTx(ctx, s.settings, tx, w.entry, w.value); err != nil {
+		if err := config.SaveTx(ctx, s.config, tx, w.setting, w.value); err != nil {
 			return err
 		}
 	}

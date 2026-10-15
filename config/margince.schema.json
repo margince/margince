@@ -456,6 +456,101 @@
           }
         }
       }
+    },
+    "installation": {
+      "description": "The installation's stored settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "oauth_access_token_ttl_minutes": {
+          "description": "Minutes an access token from a connector's OAuth handshake lives, for the code exchange and every refresh.",
+          "type": "integer"
+        },
+        "agent_runner_interval_seconds": {
+          "description": "Seconds between the agent scheduler's passes.",
+          "type": "integer"
+        },
+        "webhook_retry_interval_seconds": {
+          "description": "Seconds between the passes that retry failed webhook deliveries.",
+          "type": "integer"
+        },
+        "time_scan_interval_seconds": {
+          "description": "Seconds between the time-scan passes.",
+          "type": "integer"
+        },
+        "close_date_sweep_interval_seconds": {
+          "description": "Seconds between the close-date sweeps.",
+          "type": "integer"
+        },
+        "follow_up_reconcile_interval_seconds": {
+          "description": "Seconds between the follow-up reconcile passes.",
+          "type": "integer"
+        },
+        "retention_sweep_interval_seconds": {
+          "description": "Seconds between the retention sweeps.",
+          "type": "integer"
+        },
+        "geocode_backfill_interval_seconds": {
+          "description": "Seconds between the geocoding backfill sweeps, or 0 for off.",
+          "type": "integer"
+        },
+        "technical_backfill_interval_seconds": {
+          "description": "Seconds between the technical backfill sweeps, or 0 for off.",
+          "type": "integer"
+        },
+        "gmail_watch_scan_interval_seconds": {
+          "description": "Seconds between the scans for Gmail push subscriptions due for renewal.",
+          "type": "integer"
+        },
+        "graph_watch_scan_interval_seconds": {
+          "description": "Seconds between the scans for Microsoft Graph mail subscriptions due for renewal.",
+          "type": "integer"
+        },
+        "gmail_watch_renew_within_hours": {
+          "description": "Hours before a Gmail push subscription expires that it is renewed.",
+          "type": "integer"
+        },
+        "graph_watch_renew_within_hours": {
+          "description": "Hours before a Microsoft Graph mail subscription expires that it is renewed.",
+          "type": "integer"
+        },
+        "send_rate_limit": {
+          "description": "Messages one mailbox may send per send-rate window.",
+          "type": "integer"
+        },
+        "send_rate_window_seconds": {
+          "description": "Seconds in the window the send rate is counted over.",
+          "type": "integer"
+        },
+        "send_max_age_hours": {
+          "description": "Hours a delivery held back by the send rate may wait before it stops with a reason.",
+          "type": "integer"
+        },
+        "agent_writes_per_window": {
+          "description": "Changing calls one agent passport may make per window.",
+          "type": "integer"
+        },
+        "agent_egress_per_window": {
+          "description": "Calls that send something out of the workspace one agent passport may make per window.",
+          "type": "integer"
+        },
+        "agent_calls_per_window": {
+          "description": "Calls of any kind, tool or API, one agent passport may make per window.",
+          "type": "integer"
+        },
+        "agent_window_hours": {
+          "description": "Hours in the window the agent allowances count over. Set at boot, it also keeps a length an administrator saved for the next reset from taking over.",
+          "type": "integer"
+        },
+        "agent_window_next_hours": {
+          "description": "The window length an administrator saved for the next reset, 0 when none waits. The product writes it.",
+          "type": "integer"
+        },
+        "agent_window_next_from": {
+          "description": "When the saved window length takes over, in Unix seconds, 0 when none waits. The product writes it.",
+          "type": "integer"
+        }
+      }
     }
   },
   "$defs": {

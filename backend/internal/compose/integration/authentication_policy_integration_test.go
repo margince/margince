@@ -56,7 +56,7 @@ func (e *SearchEnv) authPolicyCtx(grants map[string]principal.ObjectGrant) conte
 
 func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	// Admitted on the new grant alone: the projection does not also require the
 	// aggregate's object, or a reader who may administer sign-in but not rename
@@ -85,7 +85,7 @@ func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
 // permission error instead.
 func TestTheInstallationReadSurvivesWithoutTheSignInGrant(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	rep := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"installation_settings": {Read: true},
@@ -108,7 +108,7 @@ func TestTheInstallationReadSurvivesWithoutTheSignInGrant(t *testing.T) {
 // pass.
 func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	rep := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"installation_settings": {Read: true, Update: true},
@@ -124,7 +124,7 @@ func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
 // the three surfaces resolving one stored answer.
 func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	writer := e.authPolicyCtx(map[string]principal.ObjectGrant{
 		"installation_settings": {Read: true, Update: true},
@@ -178,7 +178,7 @@ func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 // nobody believes the split is finished, and no wider.
 func TestTheAggregateStillCarriesTheSignInProvidersUntilItIsDeprecated(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	// A provider must actually be STORED first. With none stored the field is nil
 	// whatever the aggregate does, and this test would pass against a surface
@@ -221,7 +221,7 @@ func TestTheAggregateStillCarriesTheSignInProvidersUntilItIsDeprecated(t *testin
 // change that finally gates the write is told to come back and delete it.
 func TestTheSettingsPatchStillChangesSignInProvidersUntilItIsSplit(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	// Deliberately WITHOUT authentication_policy: this is the caller the split is
 	// supposed to be keeping out of the sign-in policy.

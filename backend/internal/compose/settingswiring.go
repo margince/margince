@@ -60,6 +60,8 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	defs = append(defs, integrations.Definitions()...)
 	defs = append(defs, contacts.Definitions()...)
 	defs = append(defs, privacy.Definitions()...)
+	// The settings each module has moved to the configuration registry.
+	defs = append(defs, storedDefinitions()...)
 	return defs
 })
 

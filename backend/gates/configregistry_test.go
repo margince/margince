@@ -32,7 +32,7 @@ const (
 // settingsDefineFiles is how many files still declare a stored setting with
 // settings.Define. It only goes down: each module that moves to
 // config.DefineStored lowers it, and 0 retires the rule's pin.
-const settingsDefineFiles = 28
+const settingsDefineFiles = 24
 
 // declaredSetting is one package-level var a config.Define or DefineStored
 // call initialises.

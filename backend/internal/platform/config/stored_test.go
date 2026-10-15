@@ -183,3 +183,27 @@ func TestAStoredSecretsRefusalDoesNotQuoteIt(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+// A nil transaction proves the boot value answers without the database, and
+// the read gate still comes first.
+func TestTheTransactionReadTakesTheBootValueBehindItsGate(t *testing.T) {
+	cfg := lockedCap(t)
+	if v, err := config.StoredValTx(reader, nil, cfg, storedCap); err != nil || v != 900 {
+		t.Fatalf("a locked read in a transaction = %d %v", v, err)
+	}
+	if _, err := config.StoredValTx(nobody, nil, cfg, storedCap); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a locked read without the grant = %v, want ErrPermissionDenied", err)
+	}
+}
+
+func TestValidateJSONHoldsTheSpecBounds(t *testing.T) {
+	if err := storedCap.ValidateJSON([]byte(`0`)); err == nil || !strings.Contains(err.Error(), "at least 1") {
+		t.Fatalf("0 is below the minimum: %v", err)
+	}
+	if err := storedCap.ValidateJSON([]byte(`1`)); err != nil {
+		t.Fatalf("1 is the minimum itself: %v", err)
+	}
+	if err := level.ValidateJSON([]byte(`"debug"`)); err == nil {
+		t.Fatal("a boot-only setting has no row to validate against")
+	}
+}

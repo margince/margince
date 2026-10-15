@@ -50,7 +50,7 @@ const defaultAgentAllowances = `{"agent_writes_per_window":200,` +
 // installation-wide and the database is shared.
 func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) installationSettingsHandlers {
 	t.Helper()
-	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool)).WithClock(now)
+	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).WithClock(now)
 	h := installationSettingsHandlers{store: store, now: now}
 	t.Cleanup(func() {
 		if code, _ := patchAllowances(installationAdminCtx(e), t, h, defaultAgentAllowances); code != http.StatusOK {
@@ -161,7 +161,7 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 	var policy agentvolume.Policy
 	err := NewSettingsStore(e.Pool).WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		policy, err = identity.AgentPolicyTx(ctx, tx)
+		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig())
 		return err
 	})
 	return policy, err

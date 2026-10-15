@@ -71,7 +71,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 
 	// Bound to the workspace this fixture just created: the suite seeds one per
 	// test, so there is no installation singleton to resolve.
-	svc := NewServiceFor(database.BindTo(pool, wsID))
+	svc := NewServiceFor(database.BindTo(pool, wsID)).WithConfig(unlockedConfig(t, pool))
 	e := &cimdEnv{
 		svc: svc,
 		ctx: principal.WithWorkspaceID(context.Background(), wsID.UUID),

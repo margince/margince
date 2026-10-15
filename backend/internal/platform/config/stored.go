@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -63,6 +64,31 @@ func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (
 		return zero, Origin{}, err
 	}
 	return v, storedOrigin(s.Key(), stored), nil
+}
+
+// StoredValTx is StoredVal inside the caller's transaction, so several reads
+// answer from one snapshot.
+func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	var zero T
+	if err := requireStored(s); err != nil {
+		return zero, err
+	}
+	if err := settings.RequireRead(ctx, s.row); err != nil {
+		return zero, err
+	}
+	if v, _, ok := bootValue(c, s); ok {
+		return v, nil
+	}
+	return settings.GetTx(ctx, tx, s.row)
+}
+
+// ValidateJSON refuses a wire value the way a save would. A caller uses it to
+// refuse a value before it writes anything else in the same transaction.
+func (s *Setting[T]) ValidateJSON(raw json.RawMessage) error {
+	if err := requireStored(s); err != nil {
+		return err
+	}
+	return s.row.ValidateJSON(raw)
 }
 
 func storedOrigin(key string, stored bool) Origin {

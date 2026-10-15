@@ -74,6 +74,8 @@ type apiConfig struct {
 // loadAPIConfig resolves the boot settings from args and environ and checks the
 // ones that read two settings. Every fault this layer sees is reported in one
 // error: one fault per boot made starting the binary by hand a guessing game.
+// It hands compose the result before anything composes, so every stored
+// setting a boot source sets is locked.
 func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	reg, err := compose.ProgramRegistry(config.RoleAPI)
 	if err != nil {
@@ -98,6 +100,7 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	if err != nil {
 		return apiConfig{}, nil, bootError(err)
 	}
+	compose.UseConfig(loaded)
 	return cfg, loaded, nil
 }
 

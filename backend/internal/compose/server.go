@@ -67,8 +67,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// dedicated settings-store handle rather than the one the settings HANDLERS
 	// hold: both are stateless readers over the same rows, and the login service
 	// is composed here while that store is assembled elsewhere.
-	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool))
+	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool))
 	identitySvc := identity.NewService(pool).
+		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
 		WithGroupRoleMap(authPolicy.GroupRoleMap)

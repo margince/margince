@@ -23,7 +23,7 @@ func TestEveryAgentAllowanceCountWritesItsOwnSetting(t *testing.T) {
 	}
 	written := map[string]string{}
 	for _, write := range writes {
-		written[write.entry.Key()] = string(write.raw)
+		written[write.key] = string(write.raw)
 	}
 	for key, want := range map[string]int{
 		AgentWritesPerWindow.Key(): 2,
@@ -45,7 +45,7 @@ func TestAnEmptyAgentAllowancePatchWritesNothing(t *testing.T) {
 	}
 	for _, write := range writes {
 		if write.raw != nil {
-			t.Errorf("%s encoded %s from an absent field", write.entry.Key(), write.raw)
+			t.Errorf("%s encoded %s from an absent field", write.key, write.raw)
 		}
 	}
 }

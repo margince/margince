@@ -162,7 +162,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	}
 	// Bound to the workspace just created: this suite seeds one per env, so
 	// there is no installation singleton to resolve.
-	svc := NewServiceFor(database.BindTo(pool, wsID))
+	svc := NewServiceFor(database.BindTo(pool, wsID)).WithConfig(unlockedConfig(t, pool))
 	// Described, as onboarding leaves it. Contacts owns the anchor and identity
 	// may not import it; the compose suite asks the real owner.
 	svc.installationDescribed = func(context.Context) (bool, error) { return true, nil }

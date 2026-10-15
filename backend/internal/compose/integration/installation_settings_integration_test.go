@@ -70,7 +70,7 @@ func installationAuditCount(t *testing.T, e *SearchEnv) int {
 
 func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 	rep := e.installationSettingsCtx(principal.ObjectGrant{Read: true})
@@ -139,7 +139,7 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 
 func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	blank := "   "
@@ -204,7 +204,7 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 // rather than accidentally string-shaped.
 func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	before, err := store.GetInstallation(admin)
@@ -259,7 +259,7 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 // from patch to entry is part of what passes.
 func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	// Writing the map is granting roles, so it takes authentication_policy/update
 	// (admin), NOT the installation_settings/update that renames the company.
 	// This writer holds both: the patch's own top gate is installation_settings,
@@ -343,7 +343,7 @@ func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
 // working guard from an absent one.
 func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	// Changeable first — this is the case ADR-0085 §7 exists to serve: an
@@ -434,7 +434,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 // one of them — the freeze looked correct and was half-blind.
 func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	// An OPEN deal — it carries no frozen rate itself, so anything the probe
@@ -485,7 +485,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 // Unlike a frozen rate this is repairable, and the reason has to say so.
 func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 
 	base, err := store.GetInstallation(admin)

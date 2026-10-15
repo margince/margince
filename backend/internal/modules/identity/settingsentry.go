@@ -16,10 +16,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
@@ -31,6 +33,9 @@ import (
 // settings surface. Read is broad — a rep seeing amounts in the base currency
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
+
+// installationAuditVerb is the verb an installation setting's change is audited under.
+const installationAuditVerb = "update"
 
 // authenticationPolicyObject gates the sign-in half of the installation's
 // settings, read apart from the rest.
@@ -200,9 +205,10 @@ var Country = settings.Define[string](
 	// is inferable from the rules its own outbound mail obeys.
 ).AsInstallationIdentity().MachineryApplied()
 
-// Definitions is identity's contribution to the settings registry.
+// Definitions is identity's installation identity, which the settings registry
+// holds and the configuration registry does not: a boot source sets none of it.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{
+	return []settings.Definition{
 		Name,
 		Timezone,
 		BaseCurrency,
@@ -212,7 +218,6 @@ func Definitions() []settings.Definition {
 		Country,
 		FiscalYearStartMonth,
 		DeadWorkBannerHours,
-		OAuthAccessTokenTTLMinutes,
 		ForecastForwardMeasure,
 		EnabledOidcProviders,
 		RequireSSO,
@@ -220,7 +225,16 @@ func Definitions() []settings.Definition {
 		OidcGroupRoleMap,
 		SMTPPasswordRef,
 		LicenseTokenRef,
-	}, append(append(scheduleDefinitions(), sendPacingDefinitions()...), agentAllowanceDefinitions()...)...)
+	}
+}
+
+// Settings is identity's contribution to the configuration registry.
+func Settings() []config.Any {
+	out := []config.Any{OAuthAccessTokenTTLMinutes}
+	for _, s := range ScheduleSettings() {
+		out = append(out, s)
+	}
+	return slices.Concat(out, sendPacingSettings(), agentAllowanceSettings())
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
