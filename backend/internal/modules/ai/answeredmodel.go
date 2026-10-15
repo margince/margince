@@ -15,6 +15,13 @@ func gradedServedModel(servedModel, servedIdentitySource string) string {
 	return servedModel
 }
 
+// switchedModelSQL is whether the provider named another model than the binding
+// as the one that answered the ai_call row aliased alias.
+func switchedModelSQL(alias string) string {
+	return fmt.Sprintf(`(%[1]s.served_identity_source = '%[2]s' AND %[1]s.served_model <> '' AND %[1]s.served_model <> %[1]s.model_id)`,
+		alias, servedIdentitySourceResponse)
+}
+
 // answeredModelSQL is the model that answered the ai_call row aliased alias:
 // its graded served model, else the binding's model_id.
 func answeredModelSQL(alias string) string {

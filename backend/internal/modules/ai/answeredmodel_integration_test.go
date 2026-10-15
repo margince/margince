@@ -11,6 +11,7 @@ package ai
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -129,5 +130,65 @@ func TestARunSummaryPricesACallAtTheModelThatAnswered(t *testing.T) {
 		if summary.EstimatedCostMicroUSD != c.wantCost() || summary.UnpricedCalls != 0 {
 			t.Errorf("%s: run summary = %+v, want %d µUSD with nothing unpriced", c.name, summary, c.wantCost())
 		}
+	}
+}
+
+func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	reader := NewCallReadStore(f.db)
+	rows, err := reader.CallStats(diagnosticsReader(f.ws), CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByServedModel, Filter: CallStatsFilter{Tier: string(TierPremium)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][2]int64{}
+	for _, row := range rows {
+		got[row.Key] = [2]int64{row.Calls, row.Switched}
+	}
+	want := map[string][2]int64{answeredGemini: {1, 1}, answeredGemini + "-001": {1, 1}, boundGemini: {2, 0}}
+	if len(got) != len(want) {
+		t.Fatalf("groups = %v, want %v", got, want)
+	}
+	for key, figures := range want {
+		if got[key] != figures {
+			t.Errorf("%s: (calls, switched) = %v, want %v", key, got[key], figures)
+		}
+	}
+
+	tiers, err := reader.CallStats(diagnosticsReader(f.ws), CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByTier})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tiers) != 1 || tiers[0].Switched != 2 || !strings.HasPrefix(tiers[0].SwitchedTo, answeredGemini) {
+		t.Errorf("tier figures = %+v, want 2 of 4 calls switched to %s", tiers, answeredGemini)
+	}
+}
+
+func TestATaskStepNamesTheModelTheProviderSwitchedTo(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	reader := NewCallReadStore(f.db)
+	for i, c := range answeredCases {
+		flow, err := reader.TaskFlow(diagnosticsReader(f.ws), f.tasks[i], 24*time.Hour)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantSwitched, wantTo := int64(0), ""
+		if c.servedSource == servedIdentitySourceResponse {
+			wantSwitched, wantTo = 1, c.servedModel
+		}
+		if len(flow.Steps) != 1 || flow.Steps[0].Switched != wantSwitched || flow.Steps[0].SwitchedTo != wantTo {
+			t.Errorf("%s: steps = %+v, want one step switched %d to %q", c.name, flow.Steps, wantSwitched, wantTo)
+		}
+	}
+}
+
+func TestTheCallListNarrowsToTheModelThatAnswered(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	page, err := NewCallReadStore(f.db).ListCalls(diagnosticsReader(f.ws), nil, nil, CallListFilter{ServedModel: answeredGemini})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The echoed call reflected the same id but did not answer as it.
+	if len(page.Items) != 1 || page.Items[0].Task != string(f.tasks[0]) {
+		t.Fatalf("listed %+v, want only the call the provider answered as %s", page.Items, answeredGemini)
 	}
 }

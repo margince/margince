@@ -18304,6 +18304,7 @@ paths:
         - { name: task, in: query, schema: { type: string }, description: 'Filter to one task (capture_classify, enrich, …).' }
         - { name: provider, in: query, schema: { type: string }, description: 'Filter to calls that ended on one provider (openai_compatible, gemini, …).' }
         - { name: model, in: query, schema: { type: string }, description: 'Filter to calls that ended on one configured model id.' }
+        - { name: served_model, in: query, schema: { type: string }, description: 'Filter to calls one model answered: the model the provider named, else the configured one.' }
         - { name: served_provider, in: query, schema: { type: string }, description: 'Filter to calls a broker served from one upstream host.' }
         - { name: tier, in: query, schema: { type: string }, description: 'Filter to calls that ended on one tier.' }
       responses:
@@ -18330,7 +18331,7 @@ paths:
         way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
       parameters:
         - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
-        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_provider, tier, task], default: provider } }
+        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_model, served_provider, tier, task], default: provider }, description: 'served_model groups by the model that answered: the model the provider named, else the configured one.' }
         - { name: provider, in: query, schema: { type: string } }
         - { name: model, in: query, schema: { type: string } }
         - { name: tier, in: query, schema: { type: string } }
@@ -33640,9 +33641,9 @@ components:
         rows: { type: array, items: { $ref: '#/components/schemas/AiCallStatsRow' } }
     AiCallStatsRow:
       type: object
-      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced]
+      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced, switched]
       properties:
-        key: { type: string, description: 'The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
+        key: { type: string, description: 'The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
         calls: { type: integer, format: int64 }
         failed: { type: integer, format: int64 }
         timeouts: { type: integer, format: int64 }
@@ -33652,6 +33653,8 @@ components:
         tokens_out: { type: integer, format: int64 }
         cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
         unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
+        switched: { type: integer, format: int64, description: 'Calls the provider answered with another model than the one bound, by its own report.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
     AiTaskFlow:
       type: object
       required: [task, window, total, unanswered, steps]
@@ -33663,7 +33666,7 @@ components:
         steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
     AiFlowStep:
       type: object
-      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up]
+      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up, switched]
       properties:
         decision: { type: boolean }
         tier: { type: string }
@@ -33673,6 +33676,8 @@ components:
         answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
+        switched: { type: integer, format: int64, description: 'Attempts at this step the provider answered with another model than the one bound, by its own report.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those attempts; absent when switched is 0.' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]

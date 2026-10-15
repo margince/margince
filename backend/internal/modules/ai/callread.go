@@ -156,18 +156,20 @@ func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 }
 
 // CallListFilter narrows the call list to the calls that ended on one task,
-// provider, model, upstream host or tier; an empty field filters nothing.
+// provider, model, model that answered, upstream host or tier; an empty field
+// filters nothing.
 type CallListFilter struct {
-	Task, Provider, Model, ServedProvider, Tier string
+	Task, Provider, Model, ServedModel, ServedProvider, Tier string
 }
 
-// columns is each set filter beside its column, a compile-time literal.
+// columns is each set filter beside its column, a compile-time expression.
 func (f CallListFilter) columns() []struct{ column, value string } {
 	var out []struct{ column, value string }
 	for _, c := range []struct{ column, value string }{
 		{"c.task", f.Task},
 		{"c.provider", f.Provider},
 		{"c.model_id", f.Model},
+		{answeredModelSQL("c"), f.ServedModel},
 		{"c.served_provider", f.ServedProvider},
 		{"c.tier", f.Tier},
 	} {

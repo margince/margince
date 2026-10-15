@@ -20180,6 +20180,7 @@ func (e GetAiCallStatsParamsWindow) Valid() bool {
 const (
 	GetAiCallStatsParamsGroupModel          GetAiCallStatsParamsGroup = "model"
 	GetAiCallStatsParamsGroupProvider       GetAiCallStatsParamsGroup = "provider"
+	GetAiCallStatsParamsGroupServedModel    GetAiCallStatsParamsGroup = "served_model"
 	GetAiCallStatsParamsGroupServedProvider GetAiCallStatsParamsGroup = "served_provider"
 	GetAiCallStatsParamsGroupTask           GetAiCallStatsParamsGroup = "task"
 	GetAiCallStatsParamsGroupTier           GetAiCallStatsParamsGroup = "tier"
@@ -20191,6 +20192,8 @@ func (e GetAiCallStatsParamsGroup) Valid() bool {
 	case GetAiCallStatsParamsGroupModel:
 		return true
 	case GetAiCallStatsParamsGroupProvider:
+		return true
+	case GetAiCallStatsParamsGroupServedModel:
 		return true
 	case GetAiCallStatsParamsGroupServedProvider:
 		return true
@@ -23787,13 +23790,19 @@ type AiCallStatsRow struct {
 	CostMicrousd int64 `json:"cost_microusd"`
 	Failed       int64 `json:"failed"`
 
-	// Key The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).
-	Key       string `json:"key"`
-	P50Ms     int64  `json:"p50_ms"`
-	P95Ms     int64  `json:"p95_ms"`
-	Timeouts  int64  `json:"timeouts"`
-	TokensIn  int64  `json:"tokens_in"`
-	TokensOut int64  `json:"tokens_out"`
+	// Key The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).
+	Key   string `json:"key"`
+	P50Ms int64  `json:"p50_ms"`
+	P95Ms int64  `json:"p95_ms"`
+
+	// Switched Calls the provider answered with another model than the one bound, by its own report.
+	Switched int64 `json:"switched"`
+
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
+	SwitchedTo *string `json:"switched_to,omitempty"`
+	Timeouts   int64   `json:"timeouts"`
+	TokensIn   int64   `json:"tokens_in"`
+	TokensOut  int64   `json:"tokens_out"`
 
 	// Unpriced Calls that spent tokens no rate prices; their cost is not in cost_microusd.
 	Unpriced int64 `json:"unpriced"`
@@ -24015,7 +24024,13 @@ type AiFlowStep struct {
 	Model    string           `json:"model"`
 	P50Ms    int64            `json:"p50_ms"`
 	Provider string           `json:"provider"`
-	Tier     string           `json:"tier"`
+
+	// Switched Attempts at this step the provider answered with another model than the one bound, by its own report.
+	Switched int64 `json:"switched"`
+
+	// SwitchedTo The model the provider named most often on those attempts; absent when switched is 0.
+	SwitchedTo *string `json:"switched_to,omitempty"`
+	Tier       string  `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -52020,12 +52035,14 @@ type ListAvailableModelsParams struct {
 
 // GetAiCallStatsParams defines parameters for GetAiCallStats.
 type GetAiCallStatsParams struct {
-	Window   *GetAiCallStatsParamsWindow `form:"window,omitempty" json:"window,omitempty"`
-	Group    *GetAiCallStatsParamsGroup  `form:"group,omitempty" json:"group,omitempty"`
-	Provider *string                     `form:"provider,omitempty" json:"provider,omitempty"`
-	Model    *string                     `form:"model,omitempty" json:"model,omitempty"`
-	Tier     *string                     `form:"tier,omitempty" json:"tier,omitempty"`
-	Task     *string                     `form:"task,omitempty" json:"task,omitempty"`
+	Window *GetAiCallStatsParamsWindow `form:"window,omitempty" json:"window,omitempty"`
+
+	// Group served_model groups by the model that answered: the model the provider named, else the configured one.
+	Group    *GetAiCallStatsParamsGroup `form:"group,omitempty" json:"group,omitempty"`
+	Provider *string                    `form:"provider,omitempty" json:"provider,omitempty"`
+	Model    *string                    `form:"model,omitempty" json:"model,omitempty"`
+	Tier     *string                    `form:"tier,omitempty" json:"tier,omitempty"`
+	Task     *string                    `form:"task,omitempty" json:"task,omitempty"`
 }
 
 // GetAiCallStatsParamsWindow defines parameters for GetAiCallStats.
@@ -52066,6 +52083,9 @@ type ListAiCallsParams struct {
 
 	// Model Filter to calls that ended on one configured model id.
 	Model *string `form:"model,omitempty" json:"model,omitempty"`
+
+	// ServedModel Filter to calls one model answered: the model the provider named, else the configured one.
+	ServedModel *string `form:"served_model,omitempty" json:"served_model,omitempty"`
 
 	// ServedProvider Filter to calls a broker served from one upstream host.
 	ServedProvider *string `form:"served_provider,omitempty" json:"served_provider,omitempty"`
@@ -79220,6 +79240,19 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "served_model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "served_model", r.URL.Query(), &params.ServedModel, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "served_model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "served_model", Err: err})
 		}
 		return
 	}
