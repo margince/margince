@@ -18459,6 +18459,14 @@ export interface paths {
          *     The network is yours. The owner is the authenticated caller, never a field in
          *     the file, so nobody can attribute a stranger's connections to a colleague.
          *
+         *     **A COUNT of your reach at one company is a derived fact, not access to your
+         *     account.** `GET /companies/{id}/linkedin-reach` tells everyone who may read that
+         *     company how many of your connections work there, so a rep knows whom to ask for
+         *     an introduction. It names no connection and exposes no row of your import: your
+         *     account, your connection list and their details stay yours alone, as above. A
+         *     member who would rather not be listed switches `reach_visible_to_team` off on
+         *     their own account and is then left out of everyone else's view.
+         *
          *     Re-importing a refreshed export updates rather than duplicates. Rows with no
          *     usable name are counted as skipped rather than silently dropped — an import that
          *     quietly ignored half a file while reporting success is worse than one that fails.
@@ -18468,6 +18476,42 @@ export interface paths {
          *     name suggests nothing. Nothing here ever creates a contact.
          */
         post: operations["importLinkedInConnections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/linkedin-reach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Which colleagues can get you in at this company.
+         * @description For one account, how many of each colleague's LinkedIn connections work there,
+         *     highest first. The product's answer to "who can open this door", which is the
+         *     same shape as naming the colleague who holds a contact you cannot see.
+         *
+         *     **A count is a derived fact, not access to a colleague's account.** No
+         *     connection is named and no row of anybody's import is exposed; a member's
+         *     account, list and its details stay theirs alone. A member who switched
+         *     `reach_visible_to_team` off is absent from this answer entirely, and absent
+         *     rather than reported as zero: zero would say they have no reach, which is a
+         *     different statement and not theirs to have made.
+         *
+         *     Gated on READ of the company, row scope included, and a company the caller
+         *     cannot open answers 404 as its own read does. A colleague who no longer works
+         *     here is never offered: a reach count exists to be acted on by asking them.
+         */
+        get: operations["getCompanyLinkedInReach"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -29559,9 +29603,37 @@ export interface components {
              */
             locale: "en" | "de" | "vi";
         };
+        CompanyLinkedInReachResponse: {
+            /**
+             * @description Highest count first, then by name, so two reads of an unchanged network
+             *     return the same order. Empty when nobody on the team reaches this account,
+             *     or when everybody who does has switched their reach off: the two read the
+             *     same on purpose, because telling them apart would disclose the choice.
+             */
+            colleagues: components["schemas"]["CompanyLinkedInReachColleague"][];
+        };
+        CompanyLinkedInReachColleague: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description The colleague to ask. */
+            display_name: string;
+            /**
+             * @description How many of their connections work at this account. At least one, because a
+             *     colleague with none is not listed. Never a list of who those connections
+             *     are: they are third parties who never consented to appearing in this CRM.
+             */
+            connections: number;
+        };
         LinkedInAccount: {
             /** @description Whether this member has authorized LinkedIn. */
             connected: boolean;
+            /**
+             * @description Whether colleagues who may read a company see how many of this member's
+             *     connections work there. True unless they switched it off. It governs the
+             *     per-company reach list only — never this member's own reach page, which
+             *     answers about themselves.
+             */
+            reach_visible_to_team?: boolean;
             /** Format: date-time */
             connected_at?: string | null;
             /**
@@ -29573,13 +29645,18 @@ export interface components {
             connections: number;
         };
         SaveLinkedInAccountRequest: {
+            /**
+             * @description Switch off to be left out of the per-company reach list colleagues read.
+             *     Omitted leaves the current answer; a member who has never set it is listed.
+             */
+            reach_visible_to_team?: boolean;
             /** @description Absolute http(s) URL. Empty clears the stored value. */
             profile_url?: string;
             /**
-             * @description Record the authorization. Never revokes an existing one.
-             * @default false
+             * @description Record the authorization. Never revokes an existing one, and omitted
+             *     leaves it as it stands: disconnecting is its own deliberate act.
              */
-            connected: boolean;
+            connected?: boolean;
         };
         /**
          * @description What one import did, in the terms someone asked to trust it would check.
@@ -74050,6 +74127,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getCompanyLinkedInReach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues with reach into this account, highest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyLinkedInReachResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMyLinkedInReach: {

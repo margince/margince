@@ -334,8 +334,9 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 	}
 
 	// The onboarding act's answer.
+	firstURL := "https://www.linkedin.com/in/lars"
 	saved, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{
-		ProfileURL: "https://www.linkedin.com/in/lars", Connected: true,
+		ProfileURL: &firstURL, Connected: true,
 	})
 	if err != nil {
 		t.Fatalf("saving the profile: %v", err)
@@ -350,8 +351,9 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 
 	// A correction from the settings tab. It edits the URL and must NOT
 	// revoke the authorization — disconnecting is its own deliberate act.
+	correctedURL := "https://www.linkedin.com/in/lars-jankowfsky"
 	fixed, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{
-		ProfileURL: "https://www.linkedin.com/in/lars-jankowfsky", Connected: false,
+		ProfileURL: &correctedURL, Connected: false,
 	})
 	if err != nil {
 		t.Fatalf("correcting the profile: %v", err)
@@ -364,8 +366,22 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 			fixed.ConnectedAt, connectedAt)
 	}
 
+	// A save that says nothing about the URL leaves it. That is not the same
+	// as emptying it. The two were one case while the field was a plain
+	// string, so a save of the reach setting alone cleared the URL.
+	untouched, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{})
+	if err != nil {
+		t.Fatalf("saving nothing about the profile: %v", err)
+	}
+	if untouched.ProfileURL == nil || *untouched.ProfileURL != "https://www.linkedin.com/in/lars-jankowfsky" {
+		t.Errorf("a save carrying no URL left %v, want the stored one untouched", untouched.ProfileURL)
+	}
+
 	// Emptying the field CLEARS it rather than leaving the old value behind.
-	cleared, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{})
+	emptyURL := ""
+	cleared, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{
+		ProfileURL: &emptyURL,
+	})
 	if err != nil {
 		t.Fatalf("clearing the profile: %v", err)
 	}
@@ -374,8 +390,9 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 	}
 
 	// A headline is not a URL, and saying so beats storing a broken link.
+	headline := "Lars Jankowfsky | Founder"
 	if _, err := e.store.SaveMyLinkedInAccount(e.as(), SaveMyLinkedInAccountInput{
-		ProfileURL: "Lars Jankowfsky | Founder",
+		ProfileURL: &headline,
 	}); err == nil {
 		t.Error("a non-URL profile was accepted")
 	}

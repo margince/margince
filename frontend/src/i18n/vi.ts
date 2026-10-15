@@ -2493,6 +2493,14 @@ export const vi = {
   "linkedinImport.whichFile":
     "Tệp Connections.csv từ mục “Get a copy of your data” của LinkedIn. Kết nối đã nhập không bao giờ trở thành liên hệ, và không ai gửi email cho họ được.",
   "linkedinImport.choose": "Chọn tệp Connections.csv",
+  "linkedinImport.reachVisibleUnread":
+    "Không đọc được thiết lập phạm vi của bạn, nên chưa thể thay đổi ở đây.",
+  "linkedinImport.reachVisibleSaveFailed":
+    "Thiết lập phạm vi của bạn chưa được lưu",
+  "linkedinImport.reachVisibleLabel":
+    "Cho \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y ph\u1ea1m vi c\u1ee7a b\u1ea1n",
+  "linkedinImport.reachVisibleHelp":
+    "Bật: ai đọc được một công ty sẽ thấy bao nhiêu kết nối của bạn làm việc ở đó. Chỉ là số lượng, không bao giờ là tên. Tắt: bạn không nằm trong danh sách đó. Trang phạm vi của riêng bạn không đổi.",
   "linkedinImport.importLabel": "Tệp xuất danh sách kết nối",
   "linkedinImport.noMatchesYet":
     "Chưa có kết quả khớp, điều này bình thường với một công ty mới. Kết nối được đối chiếu với liên hệ khi thư được đọc, và việc đối chiếu chạy lại mỗi giờ.",
@@ -2502,6 +2510,17 @@ export const vi = {
   "linkedinImport.suggested": "Đang chờ xác nhận",
 
   // The review queue and the reach table (ADR-0078 §2.1b).
+  "companyReach.title": "Ai c\u00f3 th\u1ec3 gi\u1edbi thi\u1ec7u b\u1ea1n",
+  "companyReach.sub":
+    "Đồng nghiệp có kết nối LinkedIn làm việc ở đây. Chỉ là số lượng, không bao giờ là tên. Hãy nhờ họ giới thiệu.",
+  "companyReach.colleaguesLabel":
+    "\u0110\u1ed3ng nghi\u1ec7p c\u00f3 k\u1ebft n\u1ed1i \u1edf \u0111\u00e2y",
+  "companyReach.colleague": "\u0110\u1ed3ng nghi\u1ec7p",
+  "companyReach.connections": "K\u1ebft n\u1ed1i \u1edf \u0111\u00e2y",
+  "companyReach.none":
+    "Không có phạm vi nào của đồng nghiệp được hiển thị cho công ty này.",
+  "companyReach.readFailed":
+    "Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c danh s\u00e1ch n\u00e0y",
   "linkedinReach.title": "Phạm vi mạng lưới",
   "linkedinReach.sub":
     "Các công ty đã có trong CRM mà bạn có người quen, công ty nhiều kết nối nhất xếp trước.",

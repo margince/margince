@@ -43,6 +43,10 @@ type LinkedInAccount struct {
 	// import's delta.
 	Confirmed int
 	Suggested int
+	// ReachVisibleToTeam is whether colleagues who may read a company see how
+	// many of this member's connections work there. True for a member who has
+	// never answered, including one with no row here at all.
+	ReachVisibleToTeam bool
 }
 
 // MyLinkedInMatchTotals counts where this member's whole network stands.
@@ -80,16 +84,21 @@ func (s *Store) GetMyLinkedInAccount(ctx context.Context) (LinkedInAccount, erro
 	var out LinkedInAccount
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT a.profile_url, a.connected_at,
+			SELECT a.profile_url, a.connected_at, a.reach_visible_to_team,
 			       (SELECT count(*) FROM linkedin_connection c
 			         WHERE c.owner_user_id = $1 AND c.tombstoned_at IS NULL)
 			  FROM linkedin_account a
 			 WHERE a.user_id = $1`, actor.UserID).
-			Scan(&out.ProfileURL, &out.ConnectedAt, &out.Connections)
+			Scan(&out.ProfileURL, &out.ConnectedAt, &out.ReachVisibleToTeam, &out.Connections)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No row yet. The connection count is still worth reading: a
 			// member may have uploaded an export from the settings tab without
 			// ever going through the onboarding act.
+			//
+			// Visible, because no row is nobody's answer and the default is to
+			// be listed. Left at Go's zero this reads as withheld, hiding a
+			// member who never opened the setting.
+			out.ReachVisibleToTeam = true
 			return tx.QueryRow(ctx, `
 				SELECT count(*) FROM linkedin_connection
 				 WHERE owner_user_id = $1 AND tombstoned_at IS NULL`, actor.UserID).
@@ -107,11 +116,19 @@ func (s *Store) GetMyLinkedInAccount(ctx context.Context) (LinkedInAccount, erro
 type SaveMyLinkedInAccountInput struct {
 	// ProfileURL empty CLEARS the stored URL — a member correcting a typo by
 	// emptying the field means "I do not want this recorded", not "leave it".
-	ProfileURL string
+	//
+	// Nil is different: absent leaves the URL as it stands. That matters now
+	// that a save can carry only the reach setting. Taken as a plain string,
+	// a save of one field cleared the other.
+	ProfileURL *string
 	// Connected records the authorization. False leaves an existing
 	// connected_at alone rather than revoking it: this endpoint edits a
 	// profile, and disconnecting is its own deliberate act.
 	Connected bool
+	// ReachVisibleToTeam is the member's answer, or nil to leave it as it
+	// stands. A pointer because false is an answer and omission is not. A save
+	// that only corrected a profile URL must not switch the listing off.
+	ReachVisibleToTeam *bool
 }
 
 // SaveMyLinkedInAccount upserts the caller's own row.
@@ -120,9 +137,14 @@ func (s *Store) SaveMyLinkedInAccount(ctx context.Context, in SaveMyLinkedInAcco
 	if !ok || actor.UserID == ids.Nil {
 		return LinkedInAccount{}, apperrors.ErrPermissionDenied
 	}
-	trimmed := strings.TrimSpace(in.ProfileURL)
-	if err := validateLinkedInProfileURL(trimmed); err != nil {
-		return LinkedInAccount{}, err
+	// Validated only when the save carries one. A save that says nothing about
+	// the URL is not a claim about its shape.
+	var trimmed string
+	if in.ProfileURL != nil {
+		trimmed = strings.TrimSpace(*in.ProfileURL)
+		if err := validateLinkedInProfileURL(trimmed); err != nil {
+			return LinkedInAccount{}, err
+		}
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readLinkedInAccountTx(ctx, tx, actor.UserID)
@@ -130,14 +152,17 @@ func (s *Store) SaveMyLinkedInAccount(ctx context.Context, in SaveMyLinkedInAcco
 			return err
 		}
 		_, err = tx.Exec(ctx, `
-			INSERT INTO linkedin_account (user_id, profile_url, connected_at)
-			VALUES ($1, NULLIF($2, ''), CASE WHEN $3 THEN now() END)
+			INSERT INTO linkedin_account (user_id, profile_url, connected_at, reach_visible_to_team)
+			VALUES ($1, NULLIF($2, ''), CASE WHEN $3 THEN now() END, coalesce($4, true))
 			ON CONFLICT (user_id) DO UPDATE SET
-			    profile_url = NULLIF($2, ''),
+			    profile_url = CASE
+			      WHEN $5 THEN NULLIF($2, '')
+			      ELSE linkedin_account.profile_url END,
 			    connected_at = CASE
 			      WHEN $3 THEN coalesce(linkedin_account.connected_at, now())
 			      ELSE linkedin_account.connected_at END,
-			    updated_at = now()`, actor.UserID, trimmed, in.Connected)
+			    reach_visible_to_team = coalesce($4, linkedin_account.reach_visible_to_team),
+			    updated_at = now()`, actor.UserID, trimmed, in.Connected, in.ReachVisibleToTeam, in.ProfileURL != nil)
 		if err != nil {
 			return err
 		}
@@ -208,5 +233,9 @@ func auditLinkedInAccount(a LinkedInAccount) map[string]any {
 	return map[string]any{
 		"profile_url":  a.ProfileURL,
 		"connected_at": a.ConnectedAt,
+		// Withholding a reach is a privacy choice, so the images have to show
+		// it. Left out, a save that only switched it writes an audit row whose
+		// before and after read alike, and the record says nothing happened.
+		"reach_visible_to_team": a.ReachVisibleToTeam,
 	}
 }

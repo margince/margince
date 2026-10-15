@@ -5110,6 +5110,7 @@ public.linkedin_account.created_at timestamp with time zone NOT NULL gen=- def=n
 public.linkedin_account.linkedin_account_pkey PRIMARY KEY (user_id)
 public.linkedin_account.linkedin_account_workspace_id_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.linkedin_account.profile_url text gen=- def=-
+public.linkedin_account.reach_visible_to_team boolean NOT NULL gen=- def=true
 public.linkedin_account.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.linkedin_account.user_id uuid NOT NULL gen=- def=-
 public.linkedin_account_pkey CREATE UNIQUE INDEX linkedin_account_pkey ON public.linkedin_account USING btree (user_id)

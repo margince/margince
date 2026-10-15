@@ -2597,6 +2597,12 @@ export const en = {
   "linkedinImport.whichFile":
     "Connections.csv from LinkedIn’s “Get a copy of your data”. Imported connections never become contacts, and no one can email them.",
   "linkedinImport.choose": "Choose Connections.csv",
+  "linkedinImport.reachVisibleUnread":
+    "Your reach setting could not be read, so it cannot be changed here yet.",
+  "linkedinImport.reachVisibleSaveFailed": "Your reach setting was not saved",
+  "linkedinImport.reachVisibleLabel": "Let colleagues see your reach",
+  "linkedinImport.reachVisibleHelp":
+    "On: colleagues who can read a company see how many of your connections work there. A count, never the names. Off: you are left out of that list. Your own reach page is unchanged either way.",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
     "No matches yet, which is normal for a new company. Connections are matched against contacts as mail is read, and matching reruns every hour.",
@@ -2606,6 +2612,14 @@ export const en = {
   "linkedinImport.suggested": "Awaiting confirmation",
 
   // The review queue and the reach table (ADR-0078 §2.1b).
+  "companyReach.title": "Who can get you in",
+  "companyReach.sub":
+    "Colleagues whose LinkedIn connections work here. A count, never the names. Ask them for an introduction.",
+  "companyReach.colleaguesLabel": "Colleagues with connections here",
+  "companyReach.colleague": "Colleague",
+  "companyReach.connections": "Connections here",
+  "companyReach.none": "No colleague reach is shown for this company.",
+  "companyReach.readFailed": "This reach list could not be read",
   "linkedinReach.title": "Network reach",
   "linkedinReach.sub":
     "Companies on file where you know someone, most connections first.",

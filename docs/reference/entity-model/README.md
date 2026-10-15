@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 311 |
-| Columns | 3681 |
+| Columns | 3682 |
 | Foreign keys | 515 |
 | Owning areas | 36 |
 
@@ -312,7 +312,7 @@ erDiagram
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |
-| [`linkedin_account`](contacts.md#linkedin_account) | contacts | 5 | 0 |
+| [`linkedin_account`](contacts.md#linkedin_account) | contacts | 6 | 0 |
 | [`linkedin_connection`](contacts.md#linkedin_connection) | contacts | 19 | 0 |
 | [`list`](collections.md#list) | collections | 14 | 6 |
 | [`list_evaluation`](collections.md#list_evaluation) | collections | 6 | 0 |

@@ -1047,6 +1047,10 @@ func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "DraftIntroRequest")
 }
 
+func (stubs) GetCompanyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetCompanyLinkedInReach")
+}
+
 func (stubs) GetCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetCompanyLogo")
 }

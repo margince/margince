@@ -300,6 +300,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/companies/{id}/growth-fit":                                     {Op: "getCompanyGrowthFit", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/hierarchy-rollup":                               {Op: "getCompanyHierarchyRollup", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/companies/{id}/intro-paths":                                    {Op: "listIntroPaths", Access: "tool", Tool: "intro_path_to", RecordType: "company", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
+	"GET /v1/companies/{id}/linkedin-reach":                                 {Op: "getCompanyLinkedInReach", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/logo":                                           {Op: "getCompanyLogo", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/logo/icon":                                      {Op: "getCompanyLogoIcon", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/companies/{id}/partner":                                        {Op: "getPartner", Access: "tool", Tool: "read_record", RecordType: "partner", Tier: "auto_execute", Scope: "read"},

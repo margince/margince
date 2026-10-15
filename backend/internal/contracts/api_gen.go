@@ -30850,6 +30850,27 @@ type CompanyHierarchyRollup struct {
 // CompanyHierarchyRollupScope defines model for CompanyHierarchyRollup.Scope.
 type CompanyHierarchyRollupScope string
 
+// CompanyLinkedInReachColleague defines model for CompanyLinkedInReachColleague.
+type CompanyLinkedInReachColleague struct {
+	// Connections How many of their connections work at this account. At least one, because a
+	// colleague with none is not listed. Never a list of who those connections
+	// are: they are third parties who never consented to appearing in this CRM.
+	Connections int `json:"connections"`
+
+	// DisplayName The colleague to ask.
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// CompanyLinkedInReachResponse defines model for CompanyLinkedInReachResponse.
+type CompanyLinkedInReachResponse struct {
+	// Colleagues Highest count first, then by name, so two reads of an unchanged network
+	// return the same order. Empty when nobody on the team reaches this account,
+	// or when everybody who does has switched their reach off: the two read the
+	// same on purpose, because telling them apart would disclose the choice.
+	Colleagues []CompanyLinkedInReachColleague `json:"colleagues"`
+}
+
 // CompanyListResponse defines model for CompanyListResponse.
 type CompanyListResponse struct {
 	Data []Company `json:"data"`
@@ -39736,6 +39757,12 @@ type LinkedInAccount struct {
 
 	// ProfileUrl The member's own public profile — what their imported network is attributed to.
 	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// ReachVisibleToTeam Whether colleagues who may read a company see how many of this member's
+	// connections work there. True unless they switched it off. It governs the
+	// per-company reach list only — never this member's own reach page, which
+	// answers about themselves.
+	ReachVisibleToTeam *bool `json:"reach_visible_to_team,omitempty"`
 }
 
 // LinkedInImportSummary What one import did, in the terms someone asked to trust it would check.
@@ -45504,11 +45531,16 @@ type SaveEmailSignatureRequest struct {
 
 // SaveLinkedInAccountRequest defines model for SaveLinkedInAccountRequest.
 type SaveLinkedInAccountRequest struct {
-	// Connected Record the authorization. Never revokes an existing one.
+	// Connected Record the authorization. Never revokes an existing one, and omitted
+	// leaves it as it stands: disconnecting is its own deliberate act.
 	Connected *bool `json:"connected,omitempty"`
 
 	// ProfileUrl Absolute http(s) URL. Empty clears the stored value.
 	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// ReachVisibleToTeam Switch off to be left out of the per-company reach list colleagues read.
+	// Omitted leaves the current answer; a member who has never set it is listed.
+	ReachVisibleToTeam *bool `json:"reach_visible_to_team,omitempty"`
 }
 
 // SaveMyDisplayNameRequest defines model for SaveMyDisplayNameRequest.
@@ -70628,6 +70660,9 @@ type ServerInterface interface {
 	// Draft the message asking a colleague to introduce you.
 	// (POST /companies/{id}/intro-request-draft)
 	DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Which colleagues can get you in at this company.
+	// (GET /companies/{id}/linkedin-reach)
+	GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream a company's logo image.
 	// (GET /companies/{id}/logo)
 	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id)
@@ -73934,6 +73969,12 @@ func (_ Unimplemented) ListIntroPaths(w http.ResponseWriter, r *http.Request, id
 // Draft the message asking a colleague to introduce you.
 // (POST /companies/{id}/intro-request-draft)
 func (_ Unimplemented) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which colleagues can get you in at this company.
+// (GET /companies/{id}/linkedin-reach)
+func (_ Unimplemented) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -88223,6 +88264,38 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DraftIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCompanyLinkedInReach operation middleware
+func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCompanyLinkedInReach(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -114105,6 +114178,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/intro-request-draft", wrapper.DraftIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/linkedin-reach", wrapper.GetCompanyLinkedInReach)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/logo", wrapper.GetCompanyLogo)
