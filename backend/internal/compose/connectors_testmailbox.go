@@ -8,7 +8,7 @@ package compose
 // just a fresh connection a QC suite can create and tear down at will.
 // Reached only when test_mailbox is registered on the capture registry
 // (NewCaptureRegistry, compose/capture.go), which is itself gated on
-// deployconfig.Operations.AllowTestMailbox; see ConnectConnector's dispatch
+// operations.allow_test_mailbox; see ConnectConnector's dispatch
 // in connectors.go for the 422 otherwise.
 
 import (
