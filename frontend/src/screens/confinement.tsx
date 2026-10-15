@@ -26,9 +26,9 @@ function confinementOf(error: unknown): ConfinedKind | null {
 
 /**
  * The confinement the boundary shows in place of login, which would loop on
- * the same correct credentials. Held until the account resolves it: confirming
- * a factor lifts the refusal at once, so a focus refetch would otherwise swap
- * in the app while the recovery codes are still on screen.
+ * the same correct credentials. It is held until the account resolves it.
+ * Confirming a factor lifts the refusal at once. A focus refetch would
+ * otherwise swap in the app while the recovery codes are still on screen.
  */
 export function useConfinement(
   error: unknown,
