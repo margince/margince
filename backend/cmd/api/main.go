@@ -154,7 +154,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)))
 	opts = append(opts, compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)))
-	opts = append(opts, compose.SecurityTxtOption(deployCfg.Web, time.Now(), logger))
+	opts = append(opts, compose.SecurityTxtOption(cfg.settings, time.Now(), logger))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
 	if err != nil {

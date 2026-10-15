@@ -112,6 +112,7 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_UPLOADS_CSV_IMPORT_MB` | `10` | `uploads.csv_import_mb` |
 | `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | `8` | `uploads.linkedin_import_mb` |
 | `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | `5` | `uploads.knowledge_document_mb` |
+| `MARGINCE_WEB_SECURITY_TXT` | `null` (= not served) | `web.security_txt`, as a JSON object in the variable |
 
 ## Common log flags (api, worker)
 

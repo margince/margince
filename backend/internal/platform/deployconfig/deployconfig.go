@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Web            Web             `yaml:"web"`
 }
 
 // Workspace names the installation's singleton workspace — the tenant every
@@ -250,7 +249,7 @@ func (c Config) validate() error {
 	if err := c.Seeds.validate(); err != nil {
 		return err
 	}
-	return c.Web.validate()
+	return nil
 }
 
 func (b BootstrapAdmin) validate() error {

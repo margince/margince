@@ -19,6 +19,8 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
@@ -223,7 +225,7 @@ func TestTheSchemaAndTheLoaderAgreeOnTheSecurityTxtBlock(t *testing.T) {
 		"no expires":    {`{ contact: ["mailto:a@example.org"] }`, false},
 	} {
 		src := "version: 1\nweb:\n  security_txt: " + tc.block + "\n"
-		if _, err := deployconfig.Parse([]byte(src)); (err == nil) != tc.ok {
+		if _, err := configtest.Load(t, src, nil, nil, compose.WebSecurityTxt); (err == nil) != tc.ok {
 			t.Fatalf("%s: the loader's answer is not %v (%v) — this test's premise is gone", name, tc.ok, err)
 		}
 		var doc any

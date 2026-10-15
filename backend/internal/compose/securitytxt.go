@@ -4,7 +4,7 @@
 package compose
 
 // The RFC 9116 contact file. The api serves it because the api holds the
-// deployment file it is rendered from; the web tier answers the same path with
+// deployment setting it is rendered from; the web tier answers the same path with
 // a plain 404, so an ingress that leaves it on the web service publishes no
 // file rather than the app shell.
 
@@ -16,7 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // securityTxtPath is where RFC 9116 §3 places the file.
@@ -33,15 +33,16 @@ func WithSecurityTxt(body string) Option {
 // SecurityTxtOption is the api's whole security.txt wiring: it reports a
 // configuration problem (an Expires already past, say) at boot and hands the
 // rendered document to the server, empty when nothing is configured.
-func SecurityTxtOption(w deployconfig.Web, now time.Time, log *slog.Logger) Option {
-	WarnSecurityTxt(w, now, log)
-	return WithSecurityTxt(w.SecurityTxtBody())
+func SecurityTxtOption(c *config.Config, now time.Time, log *slog.Logger) Option {
+	s := config.Val(c, WebSecurityTxt)
+	WarnSecurityTxt(s, now, log)
+	return WithSecurityTxt(securityTxtBody(s))
 }
 
 // WarnSecurityTxt logs, once at boot, a web.security_txt whose expiry has
 // passed or sits further out than RFC 9116 recommends.
-func WarnSecurityTxt(w deployconfig.Web, now time.Time, log *slog.Logger) {
-	for _, warning := range w.Warnings(now) {
+func WarnSecurityTxt(s *SecurityTxt, now time.Time, log *slog.Logger) {
+	for _, warning := range securityTxtWarnings(s, now) {
 		log.Warn("web configuration: " + warning)
 	}
 }

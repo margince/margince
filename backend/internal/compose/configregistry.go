@@ -30,7 +30,7 @@ func allSettings() []config.Any {
 		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile, RatesModelPricing},
 		captureSettings(),
 		uploadSettings(),
-		[]config.Any{CompanyContextRollout},
+		[]config.Any{CompanyContextRollout, WebSecurityTxt},
 		[]config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile},
 	)
 }
