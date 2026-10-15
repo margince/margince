@@ -15,8 +15,6 @@ info:
 security:
   - bearerAuth: []
 tags:
-  - name: Webhooks
-    description: Outbound webhook subscriptions — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
   - name: Contacts
     description: Contact (contact) records, their emails and phones.
   - name: Companies
@@ -628,6 +626,15 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |-
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -642,15 +649,10 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Company'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a company (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Companies]
       operationId: archiveCompany
@@ -5068,170 +5070,6 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
       description: Get reporting execution
-  /views:
-    get:
-      tags: [Views]
-      operationId: listSavedViews
-      summary: List the caller's saved views (per-user; optionally scoped to one resource).
-      parameters:
-        - name: resource
-          in: query
-          schema: {$ref: '#/components/schemas/SavedViewResource'}
-        - $ref: '#/components/parameters/IncludeArchived'
-      responses:
-        '200':
-          description: Saved views.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedViewListResponse'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-      description: List the caller's saved views (per-user; optionally scoped to one resource).
-    post:
-      tags: [Views]
-      operationId: createSavedView
-      summary: Save a per-user view (columns, sort, filter state) for a resource.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateSavedViewRequest'}
-      responses:
-        '201':
-          description: Created saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Save a per-user view (columns, sort, filter state) for a resource.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /views/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Views]
-      operationId: getSavedView
-      summary: Get one of the caller's saved views by id.
-      responses:
-        '200':
-          description: The saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-      description: Get one of the caller's saved views by id.
-    patch:
-      tags: [Views]
-      operationId: updateSavedView
-      summary: Update a saved view's name or query state.
-      parameters:
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateSavedViewRequest'}
-      responses:
-        '200':
-          description: Updated saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a saved view's name or query state.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-    delete:
-      tags: [Views]
-      operationId: archiveSavedView
-      summary: Archive a saved view.
-      responses:
-        '200':
-          description: Archived saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-      description: |-
-        Archive a saved view.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /webhook-subscriptions:
-    post:
-      tags: [Webhooks]
-      operationId: createWebhookSubscription
-      summary: Register an outbound webhook subscription (returns the signing secret once).
-      description: |-
-        Registers a target URL + event-type subset. Registering outbound egress, so an agent
-        principal's call is — staged for human approval, then redeemed with the
-        `X-Approval-Token`; a human on a session registers directly. Every register/change/delete
-        is audited. The `signing_secret` in the response is shown EXACTLY ONCE — deliveries are
-        signed with it on the Standard Webhooks scheme (verify the `webhook-signature` header).
-        `target_url` must be https://.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateWebhookSubscriptionRequest'}
-      responses:
-        '201':
-          description: Created subscription plus the one-time signing secret.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/WebhookSubscriptionCreated'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /webhook-subscriptions/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Webhooks]
-      operationId: updateWebhookSubscription
-      summary: Pause/resume a subscription or re-target its event set.
-      description: |-
-        A partial update (pause/resume or re-target the event set). Re-targeting can widen
-        outbound egress, so an agent principal's call is — staged for approval and redeemed
-        with the `X-Approval-Token`; a human updates directly.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateWebhookSubscriptionRequest'}
-      responses:
-        '200':
-          description: Updated subscription.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/WebhookSubscription'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /tags:
     get:
       tags: [Tags]
@@ -6165,181 +6003,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
-    post:
-      tags: [CustomFields]
-      operationId: createCustomField
-      summary: Define a new custom field on an existing core object (a schema change).
-      description: |-
-        Runs the governed engine's single-transaction add: schema
-        change + catalog row + one audit entry land or roll back together. Always —
-        a schema change is never — so an agent caller must supply `X-Approval-Token`,
-        exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-        itself the approval. `column_name` is server-derived and never client-supplied —
-        immutable once live. When the requested `label`/`type`/`object` combination is
-        judged structural — a new object, a relationship, or logic, never one of the six
-        closed types on one of the five closed objects — the request is refused with a
-        `structural_change_refused` 422 (see the example below) and nothing is written:
-        a structural change ships as a reviewed source change, not a runtime column.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateCustomFieldRequest'}
-            examples:
-              text:
-                value:
-                  object: deal
-                  label: Renewal date
-                  type: date
-                  source: manual
-              currency:
-                value:
-                  object: deal
-                  label: Budget ceiling
-                  type: currency
-                  currency: USD
-                  source: manual
-              picklist:
-                value:
-                  object: deal
-                  label: Procurement route
-                  type: picklist
-                  options: [direct, reseller, marketplace]
-                  source: manual
-      responses:
-        '201':
-          description: The newly created custom field.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent create attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Adding a custom field is a schema change and is confirm-first; supply an approval token.
-        '409':
-          description: >-
-            The slug already exists in this workspace, the derived column name is taken platform-wide (the physical column namespace on a shared core table is global), or the target table is busy with concurrent activity — the last is retryable.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                duplicateSlug:
-                  summary: The same (object, slug) already exists in this workspace
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'a custom field named "renewal_date" already exists on deal in this workspace: conflict'
-                columnTaken:
-                  summary: Another workspace holds the derived column name
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: custom-field column "cf_renewal_date" is taken platform-wide; choose another label
-                tableBusy:
-                  summary: The bounded lock wait fired — retry the schema change
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'the target table is busy with concurrent activity; retry the schema change: conflict'
-        '422':
-          description: Field definition failed validation, or is judged structural (`structural_change_refused`).
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                validation:
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: One or more fields are invalid.
-                    details:
-                      errors:
-                        - {field: currency, code: required_for_type_currency}
-                structuralChangeRefused:
-                  summary: The requested field is structural, not a bounded scalar attribute
-                  value:
-                    type: 'https://errors.gradion.com/structural_change_refused'
-                    title: Structural change refused
-                    status: 422
-                    code: structural_change_refused
-                    detail: This looks like a new object, relationship, or logic — not a scalar attribute on an existing object. Runtime custom fields only add bounded scalar columns; a structural change ships as a reviewed source change instead.
-                    details:
-                      route: source_development_path
-        '501':
-          description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                schemaPoolUnmounted:
-                  value:
-                    type: 'https://errors.gradion.com/not_implemented'
-                    title: Not Implemented
-                    status: 501
-                    code: not_implemented
-                    detail: operation custom-field schema changes is specified but not yet implemented
-  /custom-fields/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [CustomFields]
-      operationId: renameCustomField
-      summary: Rename a custom field's display label (not a schema change).
-      description: |-
-        Audited catalog `label` update only; `column_name` never
-        moves — the physical column identity is stable across rename. Merge-PATCH:
-        `column_name`, `object`, and `type` are absent from the request schema entirely.
-        A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-        so its label is frozen.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/RenameCustomFieldRequest'}
-      responses:
-        '200':
-          description: The renamed custom field.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /custom-fields/{id}/lists:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6361,165 +6024,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-  /custom-fields/{id}/retire:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    post:
-      tags: [CustomFields]
-      operationId: retireCustomField
-      summary: Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
-      description: |-
-        Sets `status=retired`; hides the field from the API and
-        filtering while the column and every value in it are preserved — the engine never
-        drops a column as a side effect. (mirrors `archiveContact`'s
-        posture: an irreversible-feeling state change users must confirm) — an agent caller
-        must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-        on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
-        refused because a Live List filters on the field: the list keeps evaluating on the kept
-        values and reports health `retired_field`. Which lists those are is read, for the
-        caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
-        replayed answer would otherwise repeat list names the caller may no longer find.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      responses:
-        '200':
-          description: >-
-            The retired custom field (`status: "retired"`, `archived_at` still null).
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent retire attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Retiring a custom field is confirm-first; supply an approval token.
-        '404': {$ref: '#/components/responses/NotFound'}
-  /custom-fields/{id}/options:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [CustomFields]
-      operationId: updateCustomFieldOptions
-      summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
-      description: |-
-        Only valid for `type=picklist` fields (422 `not_picklist`
-        otherwise). Replaces the catalog's `options` array and regenerates the physical
-        column's CHECK constraint from the new set via the governed engine (the same
-        one-transaction owner-ALTER shape as `createCustomField` — this is the
-        one DDL path rename/retire never touch). Removing every option is refused (422,
-        detail "A picklist needs at least one option") — a picklist always keeps at least
-        one allowed value. like `retireCustomField`: this mutates a schema-adjacent CHECK
-        constraint, so an agent caller must supply `X-Approval-Token`. A retired field
-        refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-        are frozen; removing an option that stored values still use is also a 409
-        (`ADD CONSTRAINT` validates existing rows — migrate the values first).
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateCustomFieldOptionsRequest'}
-      responses:
-        '200':
-          description: The custom field with its regenerated option set.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent options edit attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Editing a picklist's options changes a schema-adjacent CHECK constraint and is confirm-first; supply an approval token.
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: >-
-            Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                removedOptionInUse:
-                  summary: Records still carry an option the edit removes
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'existing deal values still use a removed option; migrate them first: conflict'
-                fieldRetired:
-                  summary: The field is retired — its options are frozen
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'the field is retired; a retired field cannot be renamed or have its options edited: conflict'
-        '422':
-          description: The field is not a picklist, or the edit would remove every option.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                notPicklist:
-                  value:
-                    type: 'https://errors.gradion.com/not_picklist'
-                    title: Validation failed
-                    status: 422
-                    code: not_picklist
-                    detail: Only a picklist field's options can be edited.
-                lastOption:
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: A picklist needs at least one option
-                    details:
-                      errors:
-                        - {field: options, code: min_one_required}
-        '501':
-          description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                schemaPoolUnmounted:
-                  value:
-                    type: 'https://errors.gradion.com/not_implemented'
-                    title: Not Implemented
-                    status: 501
-                    code: not_implemented
-                    detail: operation custom-field schema changes is specified but not yet implemented
   /consent-purposes:
     get:
       tags: [Compliance]
@@ -6561,34 +6065,6 @@ paths:
                   state: {type: array, items: {$ref: '#/components/schemas/ContactConsentState'}}
                   events: {type: array, items: {$ref: '#/components/schemas/ConsentEvent'}}
         '404': {$ref: '#/components/responses/NotFound'}
-  /record-grants:
-    get:
-      tags: [Access]
-      operationId: listRecordGrants
-      summary: List manual per-record grants, filtered by record or by subject.
-      description: |-
-        Filter by a record (`record_type`+`record_id`) to answer
-        "who has been granted access to this record?", or by a subject (`subject_type`+`subject_id`) to
-        answer "what has this user/team been granted?". Read-only; tiered base scope (own/team/all) is
-        not returned here — this surfaces only the *manual* grants on top of it.
-      parameters:
-        - {name: record_type, in: query, schema: {type: string, enum: [deal, contact, company, lead, project]}}
-        - {name: record_id, in: query, schema: {type: string, format: uuid}}
-        - {name: subject_type, in: query, schema: {type: string, enum: [user, team]}}
-        - {name: subject_id, in: query, schema: {type: string, format: uuid}}
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: A page of record grants.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, page]
-                properties:
-                  data: {type: array, items: {$ref: '#/components/schemas/RecordGrant'}}
-                  page: {$ref: '#/components/schemas/PageInfo'}
   /users:
     get:
       tags: [Identity]
@@ -8660,57 +8136,6 @@ components:
           type: string
           description: A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back.
         value: {type: string, minLength: 1}
-    WebhookSubscription:
-      type: object
-      description: >-
-        An outbound webhook subscription: a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`.
-      required: [id, owner_id, target_url, event_types, state, version]
-      properties:
-        id: {type: string, format: uuid}
-        owner_id: {type: string, format: uuid}
-        target_url: {type: string, format: uri, description: HTTPS-only delivery endpoint.}
-        event_types:
-          type: array
-          items: {type: string}
-          description: The subscribed event types, each from the published event catalog.
-        state: {type: string, enum: [active, paused]}
-        version: {type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
-    WebhookSubscriptionCreated:
-      type: object
-      description: >-
-        The create/rotate response — the subscription plus the `signing_secret`, which is shown EXACTLY ONCE and never retrievable again. Store it now: deliveries are signed with it on the Standard Webhooks scheme (standardwebhooks.com).
-      required: [subscription, signing_secret]
-      properties:
-        subscription: {$ref: '#/components/schemas/WebhookSubscription'}
-        signing_secret:
-          type: string
-          description: >-
-            The per-subscription signing secret (`whsec_` + standard base64). Shown once; decode the base64 to raw bytes and use them as the HMAC-SHA256 key to verify the `webhook-signature` header against `{webhook-id}.{webhook-timestamp}.{raw body}` (Standard Webhooks — standardwebhooks.com).
-    CreateWebhookSubscriptionRequest:
-      type: object
-      required: [target_url, event_types]
-      properties:
-        target_url: {type: string, format: uri, pattern: '^https://', description: 'HTTPS-only; http:// is rejected (the contract enforces the scheme, matching the store''s check).'}
-        event_types:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items: {type: string}
-          description: At least one event type from the published catalog; a true set — duplicates are rejected.
-    UpdateWebhookSubscriptionRequest:
-      type: object
-      description: A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set.
-      minProperties: 1
-      properties:
-        state: {type: string, enum: [active, paused]}
-        event_types:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items: {type: string}
     InstallationSettings:
       type: object
       description: |-
@@ -8720,7 +8145,10 @@ components:
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |-
+            The company's display name. An administrator saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |-
@@ -8849,6 +8277,16 @@ components:
         send_rate_limit: {type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.'}
         send_rate_window_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.'}
         send_max_age_hours: {type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.'}
+    AgentAllowanceDefaults:
+      type: object
+      additionalProperties: false
+      description: What each agent allowance is before an admin changes it, so a screen never restates them.
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours]
+      properties:
+        agent_writes_per_window: {type: integer}
+        agent_egress_per_window: {type: integer}
+        agent_calls_per_window: {type: integer}
+        agent_window_hours: {type: integer}
     AgentAllowanceSettings:
       type: object
       additionalProperties: false
@@ -8856,16 +8294,16 @@ components:
         How much one agent may do in one window. A passport a user minted has its own allowance;
         a connected MCP client has one allowance for all its passports, so a renewed credential
         keeps counting where the last one stopped. An agent that reaches a count is refused on
-        its next call until the window resets or the user who lent it releases more. A change to
+        its next call until the window resets or, for changing calls, the user who lent it releases
+        more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
         a count applies within a minute, in the window that is running: a raised count gives
         headroom within that minute, and a lowered one refuses an agent already past it on its
         next call. The per-minute limits are fixed by the build and shown here read-only.
-      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, defaults, mcp_calls_per_minute, mcp_stream_opens_per_minute]
       properties:
-        agent_reads_per_window: {type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.'}
         agent_writes_per_window: {type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.'}
         agent_egress_per_window: {type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.'}
-        agent_calls_per_window: {type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.'}
+        agent_calls_per_window: {type: integer, minimum: 50, maximum: 20000, description: 'How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.'}
         agent_window_hours:
           type: integer
           minimum: 1
@@ -8889,6 +8327,7 @@ components:
             When the saved window length takes over: the next reset of the window in force that
             is at least a minute away. Null when no change is waiting. The first window under the
             new length may be shorter than that length, never longer.
+        defaults: {$ref: '#/components/schemas/AgentAllowanceDefaults'}
         mcp_calls_per_minute: {type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.'}
         mcp_stream_opens_per_minute: {type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.'}
     SourceAuthor:
@@ -15236,6 +14675,12 @@ components:
           readOnly: true
           description: >-
             Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+        colleague_ids:
+          type: array
+          readOnly: true
+          items: {type: string, format: uuid}
+          description: >-
+            The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.'}
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
@@ -17223,10 +16668,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Tag'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    SavedViewResource:
-      type: string
-      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-      enum: [contacts, companies, deals, activities, leads, partners, projects]
     ReportingMetricID:
       type: string
       enum:
@@ -18124,44 +17565,6 @@ components:
             $ref: '#/components/schemas/ReportingExecution'
         next_cursor:
           type: string
-    SavedView:
-      type: object
-      description: >-
-        A per-user saved view (columns, sort, filter state) over one resource. V1 is private (owner-only); shared/team views are a fast-follow.
-      required: [id, owner_id, resource, name, query, version]
-      properties:
-        id: {type: string, format: uuid}
-        owner_id: {type: string, format: uuid}
-        shared_scope: {type: string, enum: [private, team, workspace], default: private, description: V1 enforces private.}
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
-        name: {type: string}
-        query:
-          type: object
-          additionalProperties: true
-          description: The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim.
-        version: {type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
-    CreateSavedViewRequest:
-      type: object
-      required: [resource, name, query]
-      properties:
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
-        name: {type: string}
-        query: {type: object, additionalProperties: true}
-    UpdateSavedViewRequest:
-      type: object
-      description: A partial update; omitted fields keep their stored value.
-      properties:
-        name: {type: string}
-        query: {type: object, additionalProperties: true}
-    SavedViewListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: {type: array, items: {$ref: '#/components/schemas/SavedView'}}
-        page: {$ref: '#/components/schemas/PageInfo'}
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -18902,43 +18305,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/CustomField'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    CreateCustomFieldRequest:
-      type: object
-      description: |-
-        always (a schema change is never) — see `createCustomField`. `currency` is
-        required when `type=currency` (pattern `^[A-Z]{3}$`); `options` is required
-        non-empty when `type=picklist`. Neither conditional
-        requirement is expressed as an OpenAPI 3.1 `oneOf`/`if`-`then` here — a prose note
-        plus a 422 on mismatch is sufficient, matching how Offer/Product money fields are
-        documented elsewhere in this contract.
-      required: [object, label, type, source]
-      properties:
-        object:
-          type: string
-          enum: [contact, company, deal, lead, project, contract]
-        label: {type: string}
-        type:
-          type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
-        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
-        options: {type: [array, 'null'], items: {type: string}}
-        source: {type: string}
-    RenameCustomFieldRequest:
-      type: object
-      description: >-
-        Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
-      properties:
-        label: {type: string}
-    UpdateCustomFieldOptionsRequest:
-      type: object
-      description: >-
-        Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422).
-      required: [options]
-      properties:
-        options:
-          type: array
-          items: {type: string}
-          minItems: 1
     ReportScope:
       type: object
       additionalProperties: false
@@ -19645,25 +19011,6 @@ components:
         actor_type: {type: string, enum: [human, agent, system, connector]}
         actor_id: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
-    RecordGrant:
-      type: object
-      description: A manual per-record share — widens own/team/all base scope for one record.
-      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at, version]
-      properties:
-        id: {type: string, format: uuid}
-        record_type: {type: string, enum: [deal, contact, company, lead, project]}
-        record_id: {type: string, format: uuid}
-        subject_type: {type: string, enum: [user, team]}
-        subject_id: {type: string, format: uuid}
-        access:
-          type: string
-          enum: [read, write]
-          description: "'write' also satisfies 'read'."
-        granted_by: {type: string, format: uuid}
-        reason: {type: [string, 'null'], description: 'Accountability/lawful-basis note surfaced in the audit row.'}
-        expires_at: {type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.'}
-        created_at: {type: string, format: date-time}
-        version: {type: integer, format: int64}
     RecordAccess:
       type: object
       description: |-

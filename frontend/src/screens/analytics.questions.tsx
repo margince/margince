@@ -4,6 +4,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
+import { EntityRef } from "../components/entityref";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
@@ -43,7 +44,6 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
-import { EntityRef } from "./entityref";
 
 // The population a query names, as one comparable string: the page's picker
 // and a question already asked agree only when these do.

@@ -1,0 +1,364 @@
+// Catalog-driven custom fields on the record create/edit forms. A workspace's
+// active custom fields are real `cf_*` columns the record API already round-
+// trips (CF-T05); this turns each one into a form control and coerces its value
+// to/from the stored type, so a field defined on the admin screen (CF-T06) is
+// editable on the record like any core field.
+//
+// The pure derivations live here (unit-tested); the hook wires them to the
+// live catalog and this workspace's i18n Yes/No labels.
+
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { formatMoneyOrAbsent } from "../format/format";
+import { toMajorUnits, toMinorUnits } from "../format/minorunits";
+import { webUrl } from "../format/weburl";
+import { type Locale, useLocale, useT } from "../i18n";
+import type { CfObject } from "../lib/customfields.logic";
+import {
+  type CreateField,
+  joinMultiselectValue,
+  splitMultiselectValue,
+} from "./create";
+
+export type CustomField = components["schemas"]["CustomField"];
+
+export type BooleanLabels = { yes: string; no: string };
+
+// One active custom field → a form control keyed on its immutable column_name.
+// Custom fields are always nullable (backfilled NULL), so never required.
+export function customFieldToFormField(
+  field: CustomField,
+  boolLabels: BooleanLabels,
+  tooPrecise: (currency: string) => string,
+): CreateField {
+  const base = { key: field.column_name, labelText: field.label };
+  switch (field.type) {
+    case "number":
+      return { ...base, type: "number" };
+    case "date":
+      return { ...base, type: "date" };
+    case "currency":
+      return {
+        ...base,
+        type: "number",
+        toInput: (raw) => customFieldFormValue(field, raw),
+        validate: (value) => {
+          const code = field.currency ?? "";
+          return value.trim() !== "" &&
+            Number.isNaN(toMinorUnits(Number(value), code))
+            ? tooPrecise(code)
+            : undefined;
+        },
+      };
+    case "multiselect":
+      return {
+        ...base,
+        type: "multiselect",
+        multiselectEncoding: "json",
+        toInput: (raw) => customFieldFormValue(field, raw),
+        options: (field.options ?? []).map((option) => ({
+          value: option,
+          label: option,
+        })),
+      };
+    case "picklist":
+      return {
+        ...base,
+        type: "select",
+        options: (field.options ?? []).map((option) => ({
+          value: option,
+          label: option,
+        })),
+      };
+    case "boolean":
+      return {
+        ...base,
+        type: "select",
+        options: [
+          { value: "true", label: boolLabels.yes },
+          { value: "false", label: boolLabels.no },
+        ],
+      };
+    case "text":
+      return { ...base, type: "text" };
+    default:
+      // Exhaustive at COMPILE time over the contract's closed set of six scalar
+      // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this
+      // call fail to typecheck, which is the point where somebody is looking at
+      // the question the form cannot answer on its own. A REPEATABLE type is
+      // the one that matters — `prefillFromRecord` and `seedMissingFields` both
+      // skip repeatable fields because their values live in the separate rows
+      // channel, and that channel has no seeding pass for a field that became
+      // known after the form opened. Such a field would draw no rows and submit
+      // none, silently.
+      //
+      // And a text control at RUNTIME all the same, because a NEWER server can
+      // send a type this build has never heard of. Version skew renders the
+      // stored value as text; it does not throw in the reader's open form.
+      return unhandledCustomFieldType(field.type, { ...base, type: "text" });
+  }
+}
+
+/**
+ * The seventh custom-field type, refused by the compiler and survived at
+ * runtime.
+ *
+ * `never` is what makes the switch above exhaustive: every type the contract
+ * defines is handled by a case, so nothing reaches here, so `type` is `never`.
+ * Add one to the enum and the argument stops being assignable.
+ *
+ * The admin screen already refused one this way — `customfields.tsx` keys its
+ * label and its icon off total Records. The FORM was the half that accepted it
+ * quietly, which is the half where a repeatable type does its damage.
+ */
+function unhandledCustomFieldType<T>(_type: never, fallback: T): T {
+  return fallback;
+}
+
+// Coerce one field's form string to its stored value. Empty → null so a cleared
+// field actually clears the column.
+/**
+ * One stored value in the FORM's spelling — the string the control is prefilled
+ * with, and therefore the string an unchanged control still holds.
+ *
+ * The currency case is the reason this is a function rather than a
+ * `String(...)`: the column is bigint MINOR units and the form edits MAJOR
+ * units, at the scale this field's own currency carries. The catalog holds that
+ * code (CF-T06) — the same one the renderer formats with — so a hard-coded
+ * hundred here made the form and the display disagree for every currency that
+ * is not two-decimal.
+ *
+ * The prefill (`toInput`) and the diff (`customFieldsToPatch`) both read it, so
+ * they cannot disagree about what a value looks like on screen. They did: the
+ * diff compared a submitted "12.5" against a stored 1250 and reported every
+ * currency field as edited on every save.
+ */
+export function customFieldFormValue(
+  field: CustomField,
+  stored: unknown,
+): string {
+  if (stored == null || stored === "") {
+    return "";
+  }
+  if (field.type === "multiselect") {
+    return joinMultiselectValue(Array.isArray(stored) ? stored : [], "json");
+  }
+  if (field.type === "currency") {
+    return String(toMajorUnits(Number(stored), field.currency ?? ""));
+  }
+  return String(stored).trim();
+}
+
+function coerceWrite(field: CustomField, raw: string): unknown {
+  const value = raw.trim();
+  if (value === "") {
+    return null;
+  }
+  switch (field.type) {
+    case "currency": {
+      // NaN is never sent: it serialises to null, and a null PATCH clears the
+      // column. The control's validate refuses such a figure before it gets
+      // here; past it, the typed text goes and the store drops the key.
+      const minor = toMinorUnits(Number(value), field.currency ?? "");
+      if (Number.isNaN(minor)) {
+        return value;
+      }
+      return minor;
+    }
+    case "multiselect":
+      return splitMultiselectValue(value, "json");
+    case "boolean":
+      return value === "true" ? true : value === "false" ? false : null;
+    default:
+      // text / picklist / date / number (numeric round-trips as a string).
+      return value;
+  }
+}
+
+// The write-body slice: every active field's coerced value, keyed by
+// column_name. Merged into the create/update request (which allow extra keys).
+// Values arrive as form strings; the edit boundary types them as `unknown`, so
+// each is stringified before coercion.
+export function customFieldsToBody(
+  values: Record<string, unknown>,
+  fields: CustomField[],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const field of fields) {
+    const raw = values[field.column_name];
+    body[field.column_name] = coerceWrite(
+      field,
+      raw == null ? "" : String(raw),
+    );
+  }
+  return body;
+}
+
+/**
+ * The write-body slice as a DIFF against the record the form opened on.
+ *
+ * Only submitted columns are compared with the opened record. Unchanged and
+ * absent fields are omitted; clearing an existing value sends an explicit null.
+ * The active catalog determines which columns the record store may clear.
+ */
+export function customFieldsToPatch(
+  values: Record<string, unknown>,
+  seeded: Record<string, unknown>,
+  fields: CustomField[],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const field of fields) {
+    const column = field.column_name;
+    if (!Object.hasOwn(values, column)) continue;
+    // The submitted value is already a form string; the stored one is put into
+    // the same spelling first, which is what the control was prefilled with.
+    const submitted =
+      values[column] == null ? "" : String(values[column]).trim();
+    if (submitted === customFieldFormValue(field, seeded[column])) {
+      continue;
+    }
+    body[column] = coerceWrite(field, submitted);
+  }
+  return body;
+}
+
+// One field's reading on either record surface, or null when the record carries
+// no value to read.
+export function customFieldDisplay(
+  field: CustomField,
+  raw: unknown,
+  opts: { locale: Locale; boolLabels: BooleanLabels },
+): string | null {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  switch (field.type) {
+    case "currency":
+      // The catalog carries the code for a currency field (CF-T06), so one that
+      // arrives without it is a broken definition rather than a shape to guess
+      // at: the reader is told the figure cannot be read, instead of being
+      // handed a euro sign over a unit nobody stated.
+      return formatMoneyOrAbsent(Number(raw), field.currency, opts.locale);
+    case "boolean":
+      return raw === true || raw === "true"
+        ? opts.boolLabels.yes
+        : opts.boolLabels.no;
+    case "multiselect":
+      return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
+    default:
+      // text / picklist / number / date (a plain YYYY-MM-DD, shown verbatim to
+      // avoid a timezone shift a datetime formatter would introduce).
+      return String(raw);
+  }
+}
+
+// customFieldDisplay in this reader's locale and Yes/No words, for either record
+// surface that reads a custom field.
+export function useCustomFieldDisplay() {
+  const t = useT();
+  const { locale } = useLocale();
+  const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  return (field: CustomField, raw: unknown) =>
+    customFieldDisplay(field, raw, { locale, boolLabels });
+}
+
+// Where a displayed value may be followed to, or null when it is only text.
+//
+// The type set is closed and carries no `url` type, so a link is recognised
+// from the VALUE, which makes the scheme check the load-bearing half rather
+// than a formality. Which schemes those are is not this file's to decide —
+// `format/weburl` is the one place that answers it for every surface.
+export function customFieldHref(value: string): string | null {
+  return webUrl(value)?.href ?? null;
+}
+
+// The read slice: the raw cf column values off a fetched record, so the edit
+// modal can prefill them (currency major/minor conversion happens in the
+// field's toInput at prefill time).
+export function customFieldsRecordSlice(
+  record: Record<string, unknown>,
+  fields: CustomField[],
+): Record<string, unknown> {
+  const slice: Record<string, unknown> = {};
+  for (const field of fields) {
+    slice[field.column_name] = record[field.column_name];
+  }
+  return slice;
+}
+
+// What a screen needs to render + persist custom fields for one object:
+// the raw active field list, the form controls (with a leading divider when
+// non-empty), a record→prefill slice, and a values→request-body slice.
+export type ObjectCustomFields = {
+  fields: CustomField[];
+  loading: boolean;
+  failed: boolean;
+  retry: () => void;
+  formFields: CreateField[];
+  recordSlice: (record: Record<string, unknown>) => Record<string, unknown>;
+  toBody: (values: Record<string, unknown>) => Record<string, unknown>;
+  // The same slice as a diff, for an EDIT. `seeded` is the record the form
+  // opened on — `recordSlice`'s own output, which is what the form prefilled
+  // from, so the two cannot disagree about what "unchanged" means.
+  toPatch: (
+    values: Record<string, unknown>,
+    seeded: Record<string, unknown>,
+  ) => Record<string, unknown>;
+};
+
+const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
+
+// Live active custom fields for one object, shaped for the record forms. A read
+// failure (or the schema-pool-less deployment) degrades to no custom fields —
+// the core form still works — rather than blocking the record's own edit.
+export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
+  const t = useT();
+  const query = useQuery({
+    queryKey: ["custom-fields", object],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/custom-fields", {
+        params: { query: { object } },
+      });
+      if (error) {
+        throw error;
+      }
+      return data;
+    },
+  });
+
+  const fields = (query.data?.data ?? EMPTY_CUSTOM_FIELDS).filter(
+    (field) => field.status === "active",
+  );
+  const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+
+  const controls = fields.map((field) =>
+    customFieldToFormField(field, boolLabels, (currency) =>
+      t("record.amountTooPrecise", { currency }),
+    ),
+  );
+  const formFields: CreateField[] =
+    controls.length === 0
+      ? controls
+      : [
+          {
+            key: "__cf_divider__",
+            labelText: t("cf.formSection"),
+            divider: true,
+          },
+          ...controls,
+        ];
+
+  return {
+    fields,
+    loading: query.isPending,
+    failed: query.isError,
+    retry: () => {
+      void query.refetch();
+    },
+    formFields,
+    recordSlice: (record) => customFieldsRecordSlice(record, fields),
+    toBody: (values) => customFieldsToBody(values, fields),
+    toPatch: (values, seeded) => customFieldsToPatch(values, seeded, fields),
+  };
+}

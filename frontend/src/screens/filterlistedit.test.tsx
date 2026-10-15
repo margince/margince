@@ -9,12 +9,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translatePlural } from "../i18n";
 import { en } from "../i18n/en";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { LIVE_ID, listsMe, liveList } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import type { FilterVocabulary } from "./filterdata";
 import { FiltersScreen } from "./filters";
 import {
   type FiltersServer,
@@ -24,7 +25,6 @@ import {
   type Sent,
 } from "./filters.testkit";
 import { ListScreen } from "./listpage";
-import { LIVE_ID, listsMe, liveList } from "./lists.fixtures";
 
 // `#/filters/list/<id>`: a Live List's filter, opened straight into its rows
 // and saved back to the list; and the list page's way there.

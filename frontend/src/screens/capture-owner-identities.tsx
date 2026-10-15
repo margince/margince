@@ -27,12 +27,12 @@ import {
   throwProblem,
   unwrap,
 } from "../lib/problem";
-import { captureValueMessage } from "./capturevalue";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { captureValueMessage } from "./capturevalue";
 import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same

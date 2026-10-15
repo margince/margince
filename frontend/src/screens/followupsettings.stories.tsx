@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,12 +11,15 @@ import {
 } from "../testing/story-utils";
 import { FollowUpSettingsCard } from "./followupsettings";
 
-function story(allow: GrantSpec) {
+// How long a sent message may go unanswered before its sender's Home asks for a
+// follow-up: one number, written as it is committed.
+
+function story(allow: Parameters<typeof meRoute>[0]) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /activities/follow-up-settings": () =>
-        jsonResponse({ follow_up_after_days: 2 }),
+        jsonResponse({ follow_up_after_days: 3 }),
     });
     return (
       <StoryProviders>
@@ -30,22 +32,25 @@ function story(allow: GrantSpec) {
 const meta = {
   title: "Settings/Company/Company profile/Follow-ups",
   component: FollowUpSettingsCard,
+  parameters: { layout: "padded" },
 } satisfies Meta<typeof FollowUpSettingsCard>;
 export default meta;
+
 type Story = StoryObj<typeof meta>;
 
-export const Admin: Story = {
+export const Editable: Story = {
   render: story({ installation_settings: ["read", "update"] }),
 };
 
-// A seat that may not change it reads why under the box.
-export const Reader: Story = {
+// The number stays readable; the box refuses the change and the panel says why
+// once.
+export const ReadOnly: Story = {
   render: story({ installation_settings: ["read"] }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
       await canvas.findByText(
-        "Only an administrator or operations user can change this.",
+        "Only an administrator or operations user can change these settings.",
       ),
     ).toBeVisible();
     await expect(canvas.getByTestId("follow-up-after-days")).toBeDisabled();

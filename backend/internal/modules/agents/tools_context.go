@@ -13,13 +13,10 @@ package agents
 // always done for catch_me_up_on's grounding, and what no caller could ask for
 // directly.
 //
-// WHAT THIS TOOL OWNS is the half the retriever cannot: turning its refs into
-// records through the same seam every other read on this surface uses. That is
-// where the trust tier is stamped, where the envelope's freshness and evidence
-// are collected, where this caller's object RBAC and row scope are applied to
-// the record itself, and where the read is COUNTED against MCP-SESS-READS. A
-// ranked sweep is a bulk read (A139) and is charged like one — per record, not
-// per call.
+// This tool owns the half the retriever cannot: turning its refs into records
+// through the seam every read on this surface uses. The seam stamps the trust
+// tier, collects freshness and evidence, applies the caller's object RBAC and
+// row scope, and takes the answer's served count.
 //
 // AND IT SAYS WHICH LANE RANKED IT. Hybrid retrieval has two lanes and can lose
 // the vector one — no bound embed model, or an embed call that failed. The hits
@@ -190,10 +187,9 @@ func (t searchContext) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	return json.Marshal(result)
 }
 
-// contextSearchLimit resolves the page size. The seam clamps too, but it clamps
-// silently and to its own ceiling; this tool publishes a maximum of 25 in its
-// schema and has to mean that number, because it is what the caller's read bound
-// is spent in units of.
+// contextSearchLimit resolves the page size. The seam clamps too, but silently
+// and to its own ceiling. This tool publishes a maximum of 25 in its schema, so
+// it has to mean that number.
 func contextSearchLimit(asked int) int {
 	if asked <= 0 {
 		return contextSearchDefaultLimit

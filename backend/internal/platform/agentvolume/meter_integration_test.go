@@ -46,29 +46,28 @@ func aWorkspace() ids.UUID { return ids.New[ids.WorkspaceKind]().UUID }
 // aPassport is one Passport id.
 func aPassport() ids.UUID { return ids.New[ids.PassportKind]().UUID }
 
-// The bound's arithmetic, end to end: records accumulate ACROSS calls, and the
-// threshold is crossed by their sum rather than by any single call. This is
-// what "per record, not per call" means operationally — four reads of 30 trip a
-// limit of 100 that no one of them approaches.
-func TestRecordsAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
+// The bound's arithmetic, end to end: charges accumulate across calls, and the
+// threshold is crossed by their sum rather than by any single call. Four charges
+// of 30 trip a limit of 100 that no one of them approaches.
+func TestChargesAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	for range 3 {
-		if err := meter.Consume(ctx, Reads, 30); err != nil {
+		if err := meter.Consume(ctx, Writes, 30); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if reading := meter.Read(ctx, Reads); reading.Exceeded || reading.Observed != 90 {
+	if reading := meter.Read(ctx, Writes); reading.Exceeded || reading.Observed != 90 {
 		t.Fatalf("after 90 of 100 records the meter read %+v; it should be under the threshold", reading)
 	}
 
-	if err := meter.Consume(ctx, Reads, 30); err != nil {
+	if err := meter.Consume(ctx, Writes, 30); err != nil {
 		t.Fatal(err)
 	}
 
-	reading := meter.Read(ctx, Reads)
+	reading := meter.Read(ctx, Writes)
 	if !reading.Exceeded {
 		t.Errorf("120 records did not cross a threshold of 100: %+v", reading)
 	}
@@ -81,14 +80,14 @@ func TestRecordsAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 // §2.2 names by hand: "a single search_records returning 5,000 rows trips it".
 func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
-	if err := meter.Consume(ctx, Reads, 5000); err != nil {
+	if err := meter.Consume(ctx, Writes, 5000); err != nil {
 		t.Fatal(err)
 	}
 
-	if reading := meter.Read(ctx, Reads); !reading.Exceeded {
+	if reading := meter.Read(ctx, Writes); !reading.Exceeded {
 		t.Errorf("a 5,000-record answer did not trip a 100-record threshold: %+v", reading)
 	}
 }
@@ -97,20 +96,20 @@ func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 // otherwise one busy agent would step-up every other agent the workspace runs.
 func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	// ONE workspace, two Passports — the whole point of the test.
 	ws := aWorkspace()
 	busy := meteredCall(t, ws, aPassport())
 	quiet := meteredCall(t, ws, aPassport())
 
-	if err := meter.Consume(busy, Reads, 500); err != nil {
+	if err := meter.Consume(busy, Writes, 500); err != nil {
 		t.Fatal(err)
 	}
 
-	if !meter.Read(busy, Reads).Exceeded {
+	if !meter.Read(busy, Writes).Exceeded {
 		t.Error("the busy Passport was not stepped up")
 	}
-	if meter.Read(quiet, Reads).Exceeded {
+	if meter.Read(quiet, Writes).Exceeded {
 		t.Error("a Passport that has read nothing was stepped up by another agent's reading")
 	}
 }
@@ -120,18 +119,18 @@ func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 // rather than by waiting for one.
 func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
-	if err := meter.Consume(ctx, Reads, 200); err != nil {
+	if err := meter.Consume(ctx, Writes, 200); err != nil {
 		t.Fatal(err)
 	}
-	if !meter.Read(ctx, Reads).Exceeded {
+	if !meter.Read(ctx, Writes).Exceeded {
 		t.Fatal("200 records did not cross a threshold of 100 inside the window")
 	}
 
 	at = at.Add(time.Hour)
 
-	reading := meter.Read(ctx, Reads)
+	reading := meter.Read(ctx, Writes)
 	if reading.Exceeded {
 		t.Errorf("the next window inherited the previous one's count: %+v", reading)
 	}
@@ -140,29 +139,28 @@ func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 	}
 }
 
-// Confirm-and-continue, against a real counter: an agent that crossed its read
-// threshold is refused, its human releases the window it was refused in, and it
-// reads again — the whole of BYO-STEP-1, proven end to end rather than by
-// arithmetic on a limit.
-func TestAReleaseLetsARefusedAgentReadAgainInTheSameWindow(t *testing.T) {
+// Confirm-and-continue, against a real counter. An agent that crossed its write
+// threshold is refused. Its human releases the window it was refused in, and it
+// writes again. This proves BYO-STEP-2 end to end, not by arithmetic.
+func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
-	if err := meter.Consume(ctx, Reads, 120); err != nil {
+	if err := meter.Consume(ctx, Writes, 120); err != nil {
 		t.Fatal(err)
 	}
-	refused := meter.Read(ctx, Reads)
+	refused := meter.Read(ctx, Writes)
 	if !refused.Exceeded {
 		t.Fatal("120 records did not cross a threshold of 100")
 	}
 
-	applied, err := releaseIn(t, meter, ws, passport, Reads, refused.Bucket)
+	applied, err := releaseIn(t, meter, ws, passport, Writes, refused.Bucket)
 	if err != nil || !applied {
 		t.Fatalf("releasing the window the agent was refused in: applied=%v err=%v", applied, err)
 	}
 
-	after := meter.Read(ctx, Reads)
+	after := meter.Read(ctx, Writes)
 	if after.Exceeded {
 		t.Errorf("the agent is still refused after its human released the window: %+v", after)
 	}
@@ -179,48 +177,48 @@ func TestAReleaseLetsARefusedAgentReadAgainInTheSameWindow(t *testing.T) {
 // the ladder has, so it must actually hold.
 func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
-	if err := meter.Consume(ctx, Reads, 120); err != nil {
+	if err := meter.Consume(ctx, Writes, 120); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := releaseIn(t, meter, ws, passport, Reads, meter.Bucket(t.Context())); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := meter.Consume(ctx, Reads, 100); err != nil {
+	if _, err := releaseIn(t, meter, ws, passport, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
-	if reading := meter.Read(ctx, Reads); !reading.Exceeded {
+	if err := meter.Consume(ctx, Writes, 100); err != nil {
+		t.Fatal(err)
+	}
+
+	if reading := meter.Read(ctx, Writes); !reading.Exceeded {
 		t.Errorf("220 records against a once-released 100-record window was admitted: %+v", reading)
 	}
 }
 
-// A release of one counter does not widen another. Sharing them would mean a
-// human confirming "keep reading" also lifted the send ceiling, which is the
-// tightest volume budget on the surface and the one nothing may release at all.
+// A release of one counter does not widen another. Sharing them would let a human
+// confirming more writes also lift the send ceiling. That is the tightest on the
+// surface, and nothing may release it.
 func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 10, Writes: 10}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10, Egress: 10}, time.Hour, frozen(&at))
 	ws, passport := aWorkspace(), aPassport()
 	ctx := meteredCall(t, ws, passport)
-	for _, c := range []Counter{Reads, Writes} {
+	for _, c := range []Counter{Writes, Egress} {
 		if err := meter.Consume(ctx, c, 12); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if _, err := releaseIn(t, meter, ws, passport, Reads, meter.Bucket(t.Context())); err != nil {
+	if _, err := releaseIn(t, meter, ws, passport, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
-	if meter.Read(ctx, Reads).Exceeded {
-		t.Error("the released read counter is still refusing")
+	if meter.Read(ctx, Writes).Exceeded {
+		t.Error("the released write counter is still refusing")
 	}
-	if !meter.Read(ctx, Writes).Exceeded {
-		t.Error("releasing reads also released writes; one confirmation answered two questions")
+	if !meter.Read(ctx, Egress).Exceeded {
+		t.Error("releasing writes also released sends; one confirmation answered two questions")
 	}
 }
 
@@ -230,7 +228,7 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t),
-		Limits{Reads: 100, Writes: 10, Egress: 2, Calls: 500}, time.Hour, frozen(&at))
+		Limits{Writes: 10, Egress: 2, Calls: 500}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	if err := meter.Consume(ctx, Egress, 3); err != nil {
@@ -240,7 +238,7 @@ func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	if !meter.Read(ctx, Egress).Exceeded {
 		t.Error("three sends did not cross an egress threshold of two")
 	}
-	for _, c := range []Counter{Reads, Writes, Calls} {
+	for _, c := range []Counter{Writes, Calls} {
 		if reading := meter.Read(ctx, c); reading.Exceeded || reading.Observed != 0 {
 			t.Errorf("spending egress moved %s to %+v", c, reading)
 		}
@@ -256,12 +254,12 @@ func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 // nothing is exactly what the unit lane refuses.
 func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
 	ctx := meteredCall(t, aWorkspace(), aPassport())
 
 	// A read against the live store, which is what sets the signal: before any
 	// attempt the meter reports what its composition says, not what it knows.
-	if reading := meter.Read(ctx, Reads); reading.Exceeded {
+	if reading := meter.Read(ctx, Writes); reading.Exceeded {
 		t.Fatalf("a fresh Passport read %+v against a live store; nothing has been charged", reading)
 	}
 	if reach := meter.Answerable(); !reach.Bound || !reach.Reachable {
@@ -271,7 +269,7 @@ func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	// The store goes away. The meter must refuse — it does that already — and
 	// say that it is refusing, which is the part an operator could not see.
 	meter.rdb = redis.NewClient(&redis.Options{Addr: "127.0.0.1:1"})
-	if reading := meter.Read(ctx, Reads); !reading.Exceeded {
+	if reading := meter.Read(ctx, Writes); !reading.Exceeded {
 		t.Fatal("a meter that cannot reach its store reported headroom; the bound must fail closed")
 	}
 	if reach := meter.Answerable(); !reach.Bound || reach.Reachable {
@@ -281,7 +279,7 @@ func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	// And back. Nothing is cleared by hand: the next successful read is what
 	// stops the alert.
 	meter.rdb = redistest.Client(t)
-	if reading := meter.Read(ctx, Reads); reading.Exceeded {
+	if reading := meter.Read(ctx, Writes); reading.Exceeded {
 		t.Fatalf("after the store came back the meter read %+v, want headroom again", reading)
 	}
 	if reach := meter.Answerable(); !reach.Reachable {
@@ -357,12 +355,12 @@ func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 // One usage read answers every subject's counts and releases at once.
 func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 30, 0, 0, time.UTC)
-	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100, Writes: 10}, time.Hour, frozen(&at))
+	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100, Egress: 10}, time.Hour, frozen(&at))
 	ws, busy, idle := aWorkspace(), aPassport(), aPassport()
-	if err := meter.Consume(meteredCall(t, ws, busy), Reads, 120); err != nil {
+	if err := meter.Consume(meteredCall(t, ws, busy), Writes, 120); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := releaseIn(t, meter, ws, busy, Reads, meter.Bucket(t.Context())); err != nil {
+	if _, err := releaseIn(t, meter, ws, busy, Writes, meter.Bucket(t.Context())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -372,13 +370,13 @@ func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
 	}
 
 	got := usage[busy.String()]
-	if got.Reads != (CounterUsage{Used: 120, Limit: 200, Released: 1}) || got.Writes != (CounterUsage{Limit: 10}) {
+	if got.Writes != (CounterUsage{Used: 120, Limit: 200, Released: 1}) || got.Egress != (CounterUsage{Limit: 10}) {
 		t.Errorf("the busy passport reads %+v", got)
 	}
 	if want := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC); !got.ResetsAt.Equal(want) {
 		t.Errorf("resets at %v, want %v", got.ResetsAt, want)
 	}
-	if usage[idle.String()].Reads.Used != 0 {
+	if usage[idle.String()].Writes.Used != 0 {
 		t.Errorf("the idle passport reads %+v", usage[idle.String()])
 	}
 }

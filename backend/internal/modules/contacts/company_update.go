@@ -164,6 +164,11 @@ func (s *Store) updateCompanyInTx(
 	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if _, renamed := p.Moved()[fieldDisplayName]; renamed {
+		if err := s.followAnchorNameTx(ctx, tx, id); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
 	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)

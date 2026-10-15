@@ -52,10 +52,8 @@ var createRecordCopy = toolCopy{
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
-		"rather than dropped. A CONTACT created here is visible to the human you are acting for " +
-		"and to nobody else, until they publish it or correspondence with that address earns a " +
-		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
-		"a contact you just created is on their colleagues' screens.",
+		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
+		"the same as one a human types in.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +

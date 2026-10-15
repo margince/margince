@@ -22,14 +22,14 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
-import { useFolderOptions } from "./capture-exclusions.queries";
-import { PurgeDialog } from "./capture-purge-dialog";
-import { captureValueMessage } from "./capturevalue";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { useFolderOptions } from "./capture-exclusions.queries";
+import { PurgeDialog } from "./capture-purge-dialog";
+import { captureValueMessage } from "./capturevalue";
 import "./capture-exclusions.css";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not

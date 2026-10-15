@@ -18,7 +18,7 @@ import {
   type List,
   type ListHistoryEntry,
   useListHistory,
-} from "./lists.queries";
+} from "../lib/lists.queries";
 
 const KIND_LABEL: Record<ListHistoryEntry["kind"], MessageKey> = {
   member_added: "lists.history.added",

@@ -3,6 +3,7 @@ import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { rosterOwnerName, useRoster } from "../components/entityref";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
@@ -22,7 +23,6 @@ import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterOwnerName, useRoster } from "./entityref";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 

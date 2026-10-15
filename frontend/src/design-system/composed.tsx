@@ -21,6 +21,7 @@ import {
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { writtenAsMarkdown } from "./activitytimeline";
 import { Avatar, Badge, Button, OptionCount } from "./atoms";
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
@@ -612,7 +613,7 @@ export type TimelineEntry = {
 // The kind in a word beside the row, not an icon alone. A glyph is a thing to
 // recognise and a word is a thing to read. A timeline that mixes mail,
 // meetings and field edits is scanned by reading.
-const TIMELINE_KIND_LABEL = {
+export const TIMELINE_KIND_LABEL = {
   email: "timeline.kind.email",
   meeting: "timeline.kind.meeting",
   note: "timeline.kind.note",
@@ -685,8 +686,6 @@ function linkify(text: string): ReactNode[] {
   return out;
 }
 
-const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
-
 /**
  * TimelineText is the message itself, three lines by default and the whole of
  * it on request. A timeline of full emails would be a mailbox.
@@ -712,8 +711,7 @@ function TimelineText({
   const [clipped, setClipped] = useState(false);
   const [el, setEl] = useState<HTMLElement | null>(null);
   // Markdown is block content, which a <span> may not hold.
-  const Block =
-    WRITTEN_KINDS.has(entry.kind) && !entry.transcript ? "div" : "span";
+  const Block = writtenAsMarkdown(entry) ? "div" : "span";
   // The tail is what the reader is spared; `trimmed` is what the row shows and
   // what the clamp measures, so the split has to happen before that effect.
   const parts = useMemo(

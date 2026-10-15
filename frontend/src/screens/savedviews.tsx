@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bookmark } from "lucide-react";
+import type { ListQuery, SavedViewTab } from "../components/listquery";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import type { ViewResource } from "./filtersaddress";
-import type { ListQuery, SavedViewTab } from "./listquery";
 import { ManageViewsButton } from "./savedviews.manage";
 import {
   type SavedView,

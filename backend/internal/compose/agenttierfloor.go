@@ -50,10 +50,14 @@ type toolRecordType struct{ tool, recordType string }
 // record type at all — is answered by the tool, inside Registry.tightened, where
 // the tool is in hand. A floor entry for a type the verb cannot serve is inert
 // there rather than wrong here, and it is the tool that knows.
-var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
+var contractTierFloors = floorsFrom(agentPolicies)
+
+// floorsFrom derives the floor table from a policy table. It takes the table as
+// an argument so a test can hold arbitration to a shape the contract lacks today.
+func floorsFrom(policies map[string]agentPolicy) map[toolRecordType]mcp.RiskTier {
 	floors := map[toolRecordType]mcp.RiskTier{}
-	ambiguous := ambiguousPairs()
-	for route, pol := range agentPolicies {
+	ambiguous := ambiguousPairs(policies)
+	for route, pol := range policies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
 			continue
 		}
@@ -64,7 +68,7 @@ var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 		floors[pair] = mcp.TierConfirmationRequired
 	}
 	return floors
-}()
+}
 
 // ambiguousPairs are the (verb, record type) pairs that more than one operation
 // declares — the only pairs canonical-route arbitration has a question to answer
@@ -95,9 +99,9 @@ var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 //
 // TestNoDedicatedVerbLosesItsFloorToArbitration is the gate that keeps this
 // honest as routes are added.
-func ambiguousPairs() map[toolRecordType]bool {
+func ambiguousPairs(policies map[string]agentPolicy) map[toolRecordType]bool {
 	counts := map[toolRecordType]int{}
-	for _, pol := range agentPolicies {
+	for _, pol := range policies {
 		if pol.Access != accessTool || pol.RecordType == "" {
 			continue
 		}
@@ -115,11 +119,10 @@ func ambiguousPairs() map[toolRecordType]bool {
 // is the only shape a generic record verb performs.
 //
 // Read off the route pattern rather than listed, so a sidecar route added later is
-// excluded by being what it is. The deeper shapes this rejects are real and
-// current: `/v1/companies/{id}/facts/{factKey}` writes a fact row,
-// `/v1/projects/{id}/stakeholders/{contact_id}` a membership, and
-// `/v1/custom-fields/{id}/retire` performs an action — none of them a field patch
-// of the routed record, and none of them reachable through `update_record`.
+// excluded by being what it is. The deeper shapes it rejects write something else:
+// a fact row (`/v1/companies/{id}/facts/{factKey}`), a membership
+// (`/v1/projects/{id}/stakeholders/{contact_id}`) or a child row
+// (`/v1/offers/{id}/line-items/{lineItemId}`). None is reachable through `update_record`.
 func isCanonicalRecordRoute(route string) bool {
 	_, path, found := strings.Cut(route, " ")
 	if !found {

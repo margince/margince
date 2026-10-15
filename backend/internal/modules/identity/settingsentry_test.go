@@ -6,6 +6,8 @@ package identity
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The provider list is validated for the one thing a blank key would cause: a
@@ -42,20 +44,20 @@ func TestInstallationNameIsBoundedInCharacters(t *testing.T) {
 		t.Error("a blank name was accepted; an installation with no name renders as nothing everywhere")
 	}
 
-	atCeiling := `"` + strings.Repeat("a", maxInstallationNameLen) + `"`
+	atCeiling := `"` + strings.Repeat("a", values.MaxCompanyNameRunes) + `"`
 	if err := Name.ValidateJSON([]byte(atCeiling)); err != nil {
 		t.Errorf("a name AT the ceiling was refused, so the bound is off by one: %v", err)
 	}
-	overCeiling := `"` + strings.Repeat("a", maxInstallationNameLen+1) + `"`
+	overCeiling := `"` + strings.Repeat("a", values.MaxCompanyNameRunes+1) + `"`
 	if err := Name.ValidateJSON([]byte(overCeiling)); err == nil {
-		t.Errorf("a name of %d characters was accepted", maxInstallationNameLen+1)
+		t.Errorf("a name of %d characters was accepted", values.MaxCompanyNameRunes+1)
 	}
 
 	// The rune half: this is under the ceiling in characters and over it in
 	// bytes, so a byte-counted bound would refuse a name a customer may have.
-	cjk := `"` + strings.Repeat("組", maxInstallationNameLen-1) + `"`
+	cjk := `"` + strings.Repeat("組", values.MaxCompanyNameRunes-1) + `"`
 	if err := Name.ValidateJSON([]byte(cjk)); err != nil {
 		t.Errorf("a %d-character CJK name was refused, so the bound is counting bytes: %v",
-			maxInstallationNameLen-1, err)
+			values.MaxCompanyNameRunes-1, err)
 	}
 }

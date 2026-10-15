@@ -3,12 +3,13 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ErrorLine } from "../design-system/errorline";
 import { NumberSettingRow } from "../design-system/numbersetting";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { worklistKey } from "./worklist.queries";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];
@@ -57,12 +58,14 @@ function useUpdateFollowUpSettings() {
 export function FollowUpSettingsCard() {
   const t = useT();
   const canEdit = useCanWrite("installation_settings", "update");
+  // The read-only line waits for /me, so a reader who may edit never sees it.
+  const readOnly = useMe().isSuccess && !canEdit;
   const query = useFollowUpSettings();
   const update = useUpdateFollowUpSettings();
   return (
     <Panel title={t("followUpSettings.title")}>
       <PanelBody>
-        <PanelIntro>{t("followUpSettings.sub")}</PanelIntro>
+        {readOnly && <p>{t("installationSettings.readOnly")}</p>}
         <QueryGate query={query} pendingLabel={t("followUpSettings.title")}>
           {(settings) => (
             <SettingList>
@@ -74,7 +77,6 @@ export function FollowUpSettingsCard() {
                 {...FOLLOW_UP_BOUNDS.follow_up_after_days}
                 refusal={t("followUpSettings.outOfRange")}
                 disabled={!canEdit || update.isPending}
-                reason={canEdit ? undefined : t("operations.adminOnly")}
                 onCommit={(days) =>
                   update.mutate({ follow_up_after_days: days })
                 }

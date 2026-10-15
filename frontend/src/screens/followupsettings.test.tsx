@@ -108,7 +108,7 @@ describe("FollowUpSettingsCard", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Only an administrator or operations user can change this.",
+          "Only an administrator or operations user can change these settings.",
         ),
       ).toBeTruthy(),
     );

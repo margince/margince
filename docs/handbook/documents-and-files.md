@@ -13,7 +13,7 @@ Margince holds files in three different places, for three different reasons:
 ### How do I upload a document?
 To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
 1. On a company, set **About** to **This company** or **A deal** and pick the deal.
-2. Choose a **Category** (a signed contract takes **Contract**); **Title** is optional.
+2. Choose a **Category** (a signed contract takes **SOW/Contract**); **Title** is optional.
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
@@ -22,7 +22,7 @@ Also called: attach a file, add an attachment, add a PDF, upload a contract docu
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
 1. Open **Contacts** in the sidebar and open the contact.
 2. Choose the **Documents** tab, then **Add document**.
-3. Pick a **Category** (**Contract**, **Offer**, **Legal** or **Other**); **Title** is optional.
+3. Pick a **Category** (**SOW/Contract**, **Proposal/Offer**, **NDA/Legal** or **Other**); **Title** is optional.
 4. Drop the file on **File**, or click to choose one, and click **Upload**.
 The file then shows under **Documents**; click its title to download it. On an archived contact, or one you may not edit, **Add document** is turned off.
 Also called: upload a file to a contact, add an attachment to a contact, store a CV.
@@ -31,7 +31,7 @@ Also called: upload a file to a contact, add an attachment to a contact, store a
 To upload a PDF to a deal in Margince, open the deal, choose its **Documents** tab and click **Add document** in the **Files** panel.
 1. Open **Deals** in the sidebar and open the deal.
 2. Choose the **Documents** tab, then **Add document**.
-3. Choose a **Category** such as **Offer** or **Contract**, and a **Title** if you like.
+3. Choose a **Category** such as **Proposal/Offer** or **SOW/Contract**, and a **Title** if you like.
    Drop the PDF on **File**, and click **Upload**.
 A file on a deal can be read for deal fields, and can be added to the deal's [Deal Room](deal-rooms.md).
 Also called: attach a proposal to a deal, add a file to an opportunity.
@@ -72,9 +72,9 @@ file it against the deal.
 
 Every document carries a category:
 
-- **Contract**
-- **Offer**
-- **Legal**
+- **SOW/Contract**
+- **Proposal/Offer**
+- **NDA/Legal**
 - **Email attachment**
 - **Message attachment**
 - **Other**

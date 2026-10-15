@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { EntityRef } from "../components/entityref";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
@@ -14,7 +15,6 @@ import {
   nextMeetingDay,
   sourceComplete,
 } from "./brief.facts";
-import { EntityRef } from "./entityref";
 import { settingsHref } from "./settingsrouting";
 import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";

@@ -10,10 +10,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { objectLabel } from "../format/rbacobjects";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ExtensionAccessCard, objectLabel } from "./extension-access";
+import { ExtensionAccessCard } from "./extension-access";
 import { rolesKey } from "./roles.queries";
 
 // The extension-access card renders the composed unit inventory and one
@@ -910,15 +911,6 @@ describe("ExtensionAccessCard unit identity", () => {
 });
 
 describe("ExtensionAccessCard object matrices", () => {
-  it("names an object by its key less the unit's prefix, in sentence case", () => {
-    expect(objectLabel("openchannel", "ext_openchannel_endpoint")).toBe(
-      "Endpoint",
-    );
-    expect(objectLabel("notes", "ext_notes_signing_key")).toBe("Signing key");
-    expect(objectLabel("notes", "ext_other_thing")).toBe("Other thing");
-    expect(objectLabel("notes", "ext_notes_")).toBe("Notes");
-  });
-
   it("warns once per unit, naming every object no role can read", async () => {
     vi.stubGlobal(
       "fetch",

@@ -322,9 +322,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		webhooksHandlers: newWebhookHandlers(pool, nil, log),
 		log:              log,
 		dealsStore:       deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		// Fail-closed until WithAgentVolume Rebinds it: a role serving the agent
-		// surface with no Redis cannot tell whether an agent has passed its
-		// read bound, and answers that it has.
+		// Fail-closed until WithAgentVolume rebinds it. A role serving the agent surface
+		// with no Redis cannot tell whether an agent passed its ceilings, so it says yes.
 		volumeMeter: agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow),
 	}
 	// After the literal, because the decision path takes the SAME meter pointer

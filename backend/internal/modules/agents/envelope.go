@@ -157,11 +157,9 @@ type envelopeFacts struct {
 	authoritative bool
 	warnings      []Warning
 	warned        map[string]struct{}
-	// served counts records HANDED OVER, which is not the same number as the
-	// evidence list's length: evidence dedupes by value, because one record
-	// read twice is one thing to cite. The read bound asks a different
-	// question — how much has this agent been given — and deduping it would
-	// let a handler that reads the same page twice pay for it once.
+	// served counts records handed over. It differs from the evidence list's
+	// length, which dedupes by value. A replay asks whether the answer handed
+	// anything over, and deduping would make a page read twice look like one.
 	served int
 }
 
@@ -216,7 +214,7 @@ func noteRecord(ctx context.Context, rec datasource.Record) {
 	}
 }
 
-// servedCount is what the call handed over, for the read bound to charge.
+// servedCount is what the call handed over, recorded with a replayable answer.
 func (f *envelopeFacts) servedCount() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -268,12 +266,9 @@ func provenanceOf(rec datasource.Record) (source, capturedBy string) {
 // can follow says nothing about how far the row behind it can be trusted. A
 // handler whose answer carries record CONTENT calls noteRecord (it holds the
 // row) or noteDerivedContent (it does not).
-// It CHARGES the read bound, for the same reason noteRecord does: naming a
-// record to an agent is handing that record over. The intent tools answer with
-// ids and derived prose rather than rows, so if only noteRecord charged, the
-// tools that surface the most records per call — the slipping sweep, the
-// coverage reads, the catch-up — would be the cheapest reads on the surface.
-// That is precisely the failure A139 named, one tool family over.
+// It counts the record as served, as noteRecord does: naming a record is handing
+// it over. The intent tools answer with ids and prose rather than rows, so
+// without this they would read as handing over nothing.
 func noteEvidence(ctx context.Context, recordType datasource.EntityType, id ids.UUID) {
 	facts := factsOn(ctx)
 	if facts == nil || id.IsZero() {
@@ -285,20 +280,15 @@ func noteEvidence(ctx context.Context, recordType datasource.EntityType, id ids.
 	facts.addRef(EvidenceRef{RecordType: recordType, RecordID: id})
 }
 
-// noteProbe charges the read bound for a question that was ASKED but answered
-// with no record.
+// noteProbe counts a question that was ASKED but answered with no record.
 //
-// It exists because the bound otherwise leaves the one call shape that is pure
-// probing entirely free. A tool that looks a caller-supplied key up and finds
-// nothing — or finds something the caller may not read — serves no record, so
-// noteRecord never runs and chargeReads returns early on served == 0. The
-// caller can then repeat that call without limit, which is exactly the shape
-// MCP-SESS-READS exists to bound.
+// A tool that looks up a caller-supplied key and finds nothing, or finds
+// something the caller may not read, serves no record. Without this the answer
+// would read as one that touched nothing, and a recorded replay would then skip
+// its visibility re-check.
 //
-// It adds NO evidence ref, because there is no record to source: this is the
-// count without the citation. And it discloses nothing by existing — the caller
-// already knows how many questions they asked, which is the only thing it
-// counts.
+// It adds no evidence ref, because there is no record to cite. It discloses
+// nothing either, since the caller knows how many questions they asked.
 func noteProbe(ctx context.Context, n int) {
 	facts := factsOn(ctx)
 	if facts == nil || n <= 0 {

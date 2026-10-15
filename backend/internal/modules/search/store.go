@@ -212,7 +212,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
-			arm, armErr := employerArmSQL(ctx, headPos, tailPos, hasFragment, identifierPos, arg)
+			arm, armErr := employerArmSQL(ctx, query, headPos, tailPos, hasFragment, identifierPos, arg)
 			if armErr != nil {
 				return armErr
 			}

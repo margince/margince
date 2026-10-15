@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { PageAsideToggle } from "../app/pageaside";
+import { PageAsideToggle } from "../components/pageaside";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";

@@ -1,6 +1,15 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
 import { Badge, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { KeyedName } from "../design-system/keyedname";
@@ -16,15 +25,6 @@ import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
 import "./listsection.css";
 
 type Product = components["schemas"]["Product"];

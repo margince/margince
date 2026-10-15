@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
+import { listsMe, MEMBER_ID, shortlist } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
 import { AddToShortlistAction } from "./addtoshortlist";
-import { listsMe, MEMBER_ID, shortlist } from "./lists.fixtures";
 
 // The record page's "Add to Shortlist": the verb, and behind it the choice of
 // Shortlist and the note on why. Absent while lists are switched off.

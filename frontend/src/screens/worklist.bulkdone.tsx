@@ -2,12 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import {
+  BulkChangeDialog,
+  type BulkChangeRequest,
+} from "../components/bulkchange";
 import { Button, Checkbox } from "../design-system/atoms";
 import { SelectionBar } from "../design-system/selectionbar";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { BulkChangeDialog, type BulkChangeRequest } from "./bulkchange";
 import { useMarkRowsDone, type WorklistRowRef } from "./worklist.donequeries";
 import type { WorklistItem } from "./worklist.queries";
 import { rowIdentity } from "./worklist.rowidentity";

@@ -23,6 +23,7 @@ import {
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
+import { historyFieldLabel } from "../lib/historyfieldlabels";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
@@ -34,7 +35,6 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
-import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
 import { ResolvedPassportChip } from "./passportchip";
 import "./history.css";

@@ -35,7 +35,11 @@ import {
   resourceOf,
 } from "./library";
 import "./library.css";
-import { type List, type ListRecordType, useCreateList } from "./lists.queries";
+import {
+  type List,
+  type ListRecordType,
+  useCreateList,
+} from "../lib/lists.queries";
 import {
   type ListAudience,
   ListAudienceFields,

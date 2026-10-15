@@ -5,18 +5,11 @@
 
 package gates
 
-// The contract's list envelope has one shape, and something depends on that.
-//
-// httperr.recordsIn counts what a REST response hands over by reading the
-// envelope rather than a list of response type names: a struct carrying a `Data`
-// slice is a page, and its length is the record count charged against the agent
-// read bound (MCP-SESS-READS). A list response that spelled its page some other
-// way would be counted as ONE record however many it served — silently, because
-// a wrong number is still a number.
-//
-// So the rule the counter assumes is asserted here over the generated contract,
-// which is the only place it can be: a list shape added tomorrow either carries
-// `Data []T` or fails this test.
+// The contract's list envelope has one shape, and httperr.withEmptyLists relies on it.
+// It writes a nil page as `"data": []` by finding a struct with a `Data` slice.
+// A list that spelled its page another way would go out as `null` when empty.
+// This test asserts the shape over the generated contract: a new list shape
+// either carries `Data []T` or fails here.
 
 import (
 	"go/ast"
@@ -53,14 +46,14 @@ func TestEveryListResponseCarriesADataSlice(t *testing.T) {
 					continue
 				}
 				if _, isSlice := field.Type.(*ast.ArrayType); !isSlice {
-					t.Errorf("%s.Data is not a slice; httperr.recordsIn counts a page by its length "+
-						"and would charge this response as one record however many it serves", spec.Name.Name)
+					t.Errorf("%s.Data is not a slice; httperr.withEmptyLists would not turn a nil page "+
+						"into an empty array", spec.Name.Name)
 				}
 				return true
 			}
 		}
-		t.Errorf("%s declares no Data field; httperr.recordsIn reads the page off `Data` and would "+
-			"charge this response as one record however many it serves", spec.Name.Name)
+		t.Errorf("%s declares no Data field; httperr.withEmptyLists reads the page off `Data` and "+
+			"would send a nil page as null", spec.Name.Name)
 		return true
 	})
 

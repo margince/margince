@@ -10,8 +10,13 @@ import { Select } from "../design-system/select";
 import { TokenInput } from "../design-system/tokeninput";
 import { useT } from "../i18n";
 import "./filterbuilder.css";
-import { RosterPartialNote } from "./entityref";
-import type { VocabularyField } from "./filterdata";
+import { RosterPartialNote } from "../components/entityref";
+import type { VocabularyField } from "../lib/filterdata";
+import {
+  type FilterOp,
+  isRelativeDate,
+  type LeafValue,
+} from "../lib/segmentpredicate";
 import {
   boundedReference,
   type Reference,
@@ -23,11 +28,6 @@ import {
   chosenIDs,
   SearchedRecordValue,
 } from "./filtervalue.records";
-import {
-  type FilterOp,
-  isRelativeDate,
-  type LeafValue,
-} from "./segmentpredicate";
 
 /**
  * The value half of a clause, chosen by operator first and field type second.

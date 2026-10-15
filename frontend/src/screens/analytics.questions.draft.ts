@@ -7,6 +7,7 @@
 
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import type { MessageKey } from "../i18n/en";
+import type { LeafValue } from "../lib/segmentpredicate";
 import {
   type AnalyticsEntity,
   type AnalyticsQuery,
@@ -19,7 +20,6 @@ import {
   type QuestionOp,
   takesValue,
 } from "./analytics.questions.vocab";
-import type { LeafValue } from "./segmentpredicate";
 
 export type MeasureDraft = Readonly<{
   id: number;

@@ -9,12 +9,12 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_DEBOUNCE_MS } from "../components/listquery";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
-import { SEARCH_DEBOUNCE_MS } from "./listquery";
 
 // The workspace's own consumer-mail list. The server's write split: adding a
 // NEW `extra` entry admits on capture_settings create OR update (the upsert

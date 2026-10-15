@@ -14,6 +14,7 @@
 // composed its own view of a contact would be a second answer to "what do we
 // know about them", and the two would drift.
 
+import { EntityRef } from "../components/entityref";
 import { Avatar } from "../design-system/atoms";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -22,7 +23,6 @@ import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useContact360 } from "./contact360";
-import { EntityRef } from "./entityref";
 import { NoticeDuty } from "./noticeduty";
 import type { WorklistItem } from "./worklist.queries";
 

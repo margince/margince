@@ -16,6 +16,7 @@ import {
   QueryStates,
 } from "../design-system/querystates";
 import { INTL_LOCALE } from "../format/format";
+import { objectLabel } from "../format/rbacobjects";
 import { useLocale, useT } from "../i18n";
 import { useCan, useCanMutate } from "../lib/capability";
 import {
@@ -23,7 +24,6 @@ import {
   EXTENSION_SCREEN,
   extensionTitle,
   findExtension,
-  readableKey,
 } from "../lib/extensions";
 import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
 import { routeHash } from "../lib/router";
@@ -36,8 +36,8 @@ import {
 } from "./extensions.queries";
 import {
   GrantMatrix,
-  type GrantMatrixGroup,
   type GrantMatrixRow,
+  type GrantMatrixSection,
   grantOf,
 } from "./grantmatrix";
 import {
@@ -339,16 +339,6 @@ function UnitCard({
   );
 }
 
-// Not translated: the contract carries no label for an extension's object, so
-// its key, less the unit's own prefix, is the only name there is.
-export function objectLabel(unit: string, object: string): string {
-  const prefix = `ext_${unit}_`;
-  const bare = object.startsWith(prefix)
-    ? object.slice(prefix.length)
-    : object.replace(/^ext_/, "");
-  return readableKey(bare || unit);
-}
-
 // Built-in and custom roles are told apart only where both kinds stand in the
 // grid. The mark goes on the fewer of the two, so it says what differs.
 function roleBadges(
@@ -429,11 +419,11 @@ function UnitMatrix({
   const skew =
     setGrant.error instanceof ProblemError &&
     isVersionSkew(setGrant.error.problem);
-  const groups = unit.rbac_objects.map((object): GrantMatrixGroup => {
+  const sections = unit.rbac_objects.map((object): GrantMatrixSection => {
     const label = objectLabel(unit.name, object);
     return {
       key: object,
-      label,
+      title: label,
       rows: roles.map((role): GrantMatrixRow => {
         const grant = grantOf(role, object);
         return {
@@ -471,7 +461,7 @@ function UnitMatrix({
       {/* One write at a time: two on one role race its version. */}
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
-        groups={groups}
+        sections={sections}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
         busy={setGrant.isPending}

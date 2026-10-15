@@ -8,7 +8,9 @@
 
 import { forReader, stable } from "../format/collate";
 import type { Locale } from "../i18n";
-import type { FilterResource } from "./filterdata";
+import type { FilterResource } from "../lib/filterdata";
+import type { List } from "../lib/lists.queries";
+import { decode, type Node, rootGroup } from "../lib/segmentpredicate";
 import {
   type LibraryType,
   libraryTypeOfList,
@@ -16,9 +18,7 @@ import {
   RESOURCE_OF,
   tabOfViewResource,
 } from "./filtersaddress";
-import type { List } from "./lists.queries";
 import { filterTreeOf, type SavedView } from "./savedviews.queries";
-import { decode, type Node, rootGroup } from "./segmentpredicate";
 
 export type LibraryItem =
   | Readonly<{ kind: "view"; view: SavedView; tree: Node; tab: ObjectTab }>

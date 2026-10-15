@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { CreateAction } from "../components/create";
 import {
   Badge,
   Button,
@@ -18,7 +19,6 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan, useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
-import { CreateAction } from "./create";
 import {
   DocumentList,
   INGEST_POLL_MS,

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";

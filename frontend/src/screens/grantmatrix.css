@@ -26,6 +26,22 @@
   gap: var(--space-1) var(--space-2);
   max-inline-size: 12rem;
   overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* A run's name stands over its rows, spaced from the run above, with no rule
+   of its own: the rows under it are what the hairlines divide. */
+.grant-matrix > tbody > .grant-group > th {
+  padding-block: var(--space-5) var(--space-1);
+  border-bottom: 0;
+}
+
+.grant-matrix > tbody:first-of-type > .grant-group > th {
+  padding-block-start: var(--space-3);
+}
+
+.table-scroll-sticky > .grant-matrix > tbody > .grant-group:hover > th {
+  background: none;
 }
 
 .grant-cell .switchrow {
@@ -43,11 +59,4 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-/* The label over one group of rows: a small heading, not one more row. */
-.grant-matrix .grant-group > th {
-  padding-block: var(--space-4) var(--space-2);
-  font: var(--fontHeadingXSmall);
-  border-bottom-color: var(--borderSubtle);
 }

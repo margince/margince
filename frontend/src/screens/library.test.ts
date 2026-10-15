@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import type { List } from "../lib/lists.queries";
+import { isGroup } from "../lib/segmentpredicate";
+import { liveList, shortlist } from "../testing/lists.fixtures";
 import { filterView } from "./filters.testkit";
 import {
   cutLibrary,
@@ -16,9 +19,6 @@ import {
   visibleGroups,
   withFound,
 } from "./library";
-import { liveList, shortlist } from "./lists.fixtures";
-import type { List } from "./lists.queries";
-import { isGroup } from "./segmentpredicate";
 
 // The library as data: which rows it holds, where each sits, the order a
 // reader reads them in, and what a cut leaves.

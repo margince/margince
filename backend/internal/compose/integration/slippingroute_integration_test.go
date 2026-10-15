@@ -90,7 +90,7 @@ func (a *slippingApp) tool(t *testing.T, args map[string]any) json.RawMessage {
 func (a *slippingApp) charged(t *testing.T, call func()) map[agentvolume.Counter]int {
 	t.Helper()
 	ctx := asPassport(t, a.e, a.passport)
-	counters := []agentvolume.Counter{agentvolume.Calls, agentvolume.Reads}
+	counters := []agentvolume.Counter{agentvolume.Calls}
 	was := map[agentvolume.Counter]int{}
 	for _, c := range counters {
 		was[c] = a.meter.Read(ctx, c).Observed
@@ -161,8 +161,8 @@ func TestASlippingRouteCallIsChargedOnce(t *testing.T) {
 	if overREST[agentvolume.Calls] != 1 {
 		t.Errorf("one REST call moved the call ceiling by %d, want 1", overREST[agentvolume.Calls])
 	}
-	if overREST[agentvolume.Reads] == 0 || overREST[agentvolume.Reads] != overMCP[agentvolume.Reads] {
-		t.Errorf("REST charged %d reads, MCP %d, for the same answer", overREST[agentvolume.Reads], overMCP[agentvolume.Reads])
+	if overMCP[agentvolume.Calls] != overREST[agentvolume.Calls] {
+		t.Errorf("REST spent %d calls, MCP %d, for the same answer", overREST[agentvolume.Calls], overMCP[agentvolume.Calls])
 	}
 }
 

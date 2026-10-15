@@ -5,6 +5,7 @@ import {
 } from "@composition/extensions";
 import { extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
+import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
 
@@ -144,12 +145,6 @@ export function findExtension(
     return null;
   }
   return registry.find((unit) => unit.name === name) ?? null;
-}
-
-/** A key read as words: separators as spaces, the first letter capital. */
-export function readableKey(key: string): string {
-  const words = key.replaceAll(/[_-]/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** What `unit` is called in `locale`: its own title, else its name read as words. */

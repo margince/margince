@@ -4,12 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { type Group, newGroup, newLeaf } from "../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import type { FilterVocabulary } from "./filterdata";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
 import {
@@ -17,7 +18,6 @@ import {
   type UnusedPhrase,
   usePlainWords,
 } from "./filterpropose";
-import { type Group, newGroup, newLeaf } from "./segmentpredicate";
 
 // Describing a filter in plain words. The answer lands as rows marked as
 // proposed, with the bar above them that keeps, replaces or undoes them; the

@@ -20,11 +20,11 @@ var proposalPassport = ids.New[ids.PassportKind]().UUID
 // are answering ABOUT. Stored rather than re-read at decision time: re-reading
 // the counter would let the number move between the asking and the answering.
 func TestAProposalCarriesTheQuestionItWasAskedFrom(t *testing.T) {
-	reading := Reading{Counter: Reads, Observed: 2431, Limit: 2000, Exceeded: true, Bucket: 42}
+	reading := Reading{Counter: Writes, Observed: 2431, Limit: 2000, Exceeded: true, Bucket: 42}
 
 	p := NewReleaseProposal(reading, proposalPassport, ids.UUID{}, "search_records")
 
-	if p.Counter != Reads || p.Observed != 2431 || p.Limit != 2000 || p.Tool != "search_records" {
+	if p.Counter != Writes || p.Observed != 2431 || p.Limit != 2000 || p.Tool != "search_records" {
 		t.Errorf("the proposal reads %+v; it must carry the reading it was built from", p)
 	}
 	window, err := p.Window()
@@ -76,7 +76,7 @@ func TestDecodingRefusesAPayloadThatNamesAnUnreleasableQuota(t *testing.T) {
 // failure the stored bucket exists to prevent.
 func TestAnUnreadableWindowNamesNothing(t *testing.T) {
 	for _, bucket := range []string{"", "not-a-window", "9e9", "12.5"} {
-		if _, err := (ReleaseProposal{Counter: Reads, Bucket: bucket}).Window(); err == nil {
+		if _, err := (ReleaseProposal{Counter: Writes, Bucket: bucket}).Window(); err == nil {
 			t.Errorf("window %q was read as a window", bucket)
 		}
 	}
@@ -89,7 +89,7 @@ func TestAnUnreadableWindowNamesNothing(t *testing.T) {
 // The tool is deliberately absent from it: the question is about the counter,
 // and answering it for one tool answers it for all of them.
 func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
-	reading := Reading{Counter: Reads, Observed: 2431, Limit: 2000, Bucket: 42}
+	reading := Reading{Counter: Writes, Observed: 2431, Limit: 2000, Bucket: 42}
 	first, err := NewReleaseProposal(reading, proposalPassport, ids.UUID{}, "search_records").Identity()
 	if err != nil {
 		t.Fatal(err)
@@ -104,19 +104,19 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 	}
 
 	// A different window, or a different counter, IS a different question.
-	later, err := NewReleaseProposal(Reading{Counter: Reads, Bucket: 43}, proposalPassport, ids.UUID{}, "search_records").Identity()
+	later, err := NewReleaseProposal(Reading{Counter: Writes, Bucket: 43}, proposalPassport, ids.UUID{}, "search_records").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(later) == string(first) {
 		t.Error("a crossing in the next window joined the previous window's question")
 	}
-	writes, err := NewReleaseProposal(Reading{Counter: Writes, Bucket: 42}, proposalPassport, ids.UUID{}, "update_record").Identity()
+	sends, err := NewReleaseProposal(Reading{Counter: Egress, Bucket: 42}, proposalPassport, ids.UUID{}, "send_email").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(writes) == string(first) {
-		t.Error("a write crossing joined the read crossing's question")
+	if string(sends) == string(first) {
+		t.Error("a send crossing joined the write crossing's question")
 	}
 
 	// And the collision that matters most: two agents lent by two different
@@ -137,7 +137,7 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 // matches them by jsonb containment, so a member spelled differently on either
 // side silently stops deduplicating and the inbox fills up again.
 func TestTheIdentityIsContainedInTheStoredPayload(t *testing.T) {
-	p := NewReleaseProposal(Reading{Counter: Reads, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, ids.UUID{}, "search_records")
+	p := NewReleaseProposal(Reading{Counter: Writes, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, ids.UUID{}, "search_records")
 	identity, err := p.Identity()
 	if err != nil {
 		t.Fatal(err)
@@ -211,10 +211,10 @@ func TestAProposalCarriesTheLengthItsBucketWasCountedUnder(t *testing.T) {
 }
 
 func TestAProposalWithoutALengthWasCountedUnderTheDefaultWindow(t *testing.T) {
-	if length, err := (ReleaseProposal{Counter: Reads, Bucket: "7"}).Length(); err != nil || length != DefaultWindow {
+	if length, err := (ReleaseProposal{Counter: Writes, Bucket: "7"}).Length(); err != nil || length != DefaultWindow {
 		t.Errorf("a proposal staged without a length names %v (err %v), want %v", length, err, DefaultWindow)
 	}
-	if _, err := (ReleaseProposal{Counter: Reads, Bucket: "7", WindowSeconds: "soon"}).Length(); err == nil {
+	if _, err := (ReleaseProposal{Counter: Writes, Bucket: "7", WindowSeconds: "soon"}).Length(); err == nil {
 		t.Error("a length that is not a number was accepted")
 	}
 }

@@ -10,14 +10,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentAllowancesCard } from "./agentallowances";
 import { defaultAgentAllowances } from "./agentallowances.fixtures";
 
-// Settings → AI usage: what one passport may do per window. An admin changes
-// each value, and a value past its bounds is refused in the box. A saved
-// window length is reported as waiting for its reset.
+// Settings → AI usage: what one passport may do per window. The values read at
+// rest; an admin opens a form, changes what moved, and saves them in one
+// request. A value past its bounds is refused in the box, and a saved window
+// length is reported as waiting for its reset.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -73,74 +75,209 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+async function openForm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", {
+      name: translate("en", "agentAllowances.edit"),
+    }),
+  );
+}
+
 describe("AgentAllowancesCard", () => {
+  it("shows the three allowances at rest, with no inputs", async () => {
+    vi.stubGlobal("fetch", backendFor(EDITOR).fetchMock);
+    render(<AgentAllowancesCard />);
+
+    const readout = await screen.findByTestId("allowance-readout");
+    expect(readout).toHaveTextContent("Changes");
+    expect(readout).toHaveTextContent("200");
+    expect(readout).toHaveTextContent("Sends");
+    expect(readout).toHaveTextContent("20");
+    expect(readout).toHaveTextContent("Calls in total");
+    expect(readout).toHaveTextContent("1,000");
+    expect(readout).not.toHaveTextContent("Records read");
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(
+      screen.getByText(translate("en", "agentAllowances.state.defaults")),
+    ).toBeTruthy();
+    expect(screen.getByText(/Window: 1 day/)).toBeTruthy();
+  });
+
+  it("says so when a value is off its default", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, {
+        ...defaultAgentAllowances,
+        agent_calls_per_window: 60,
+      }).fetchMock,
+    );
+    render(<AgentAllowancesCard />);
+
+    expect(
+      await screen.findByText(translate("en", "agentAllowances.state.changed")),
+    ).toBeTruthy();
+  });
+
   it.each([
-    ["agent_reads_per_window", "5000", "99"],
     ["agent_writes_per_window", "10", "5001"],
     ["agent_egress_per_window", "5", "0"],
-    ["agent_calls_per_window", "50", "20001"],
-    ["agent_window_hours", "12", "169"],
+    ["agent_calls_per_window", "50", "49"],
   ] as const)(
-    "saves %s and refuses past its bounds",
+    "saves %s alone and refuses past its bounds",
     async (property, ok, bad) => {
       const backend = backendFor(EDITOR);
       vi.stubGlobal("fetch", backend.fetchMock);
       const user = userEvent.setup();
       render(<AgentAllowancesCard />);
+      await openForm(user);
 
       const box = await screen.findByTestId<HTMLInputElement>(
         `allowance-${property}`,
       );
       expect(box.value).toBe(String(defaultAgentAllowances[property]));
       await user.clear(box);
-      await user.type(box, `${bad}{Enter}`);
+      await user.type(box, bad);
       expect(
         await screen.findByText(translate("en", "operations.refusal")),
       ).toBeTruthy();
+      expect(box).toHaveAccessibleDescription(
+        expect.stringContaining(translate("en", "operations.refusal")),
+      );
+      const save = screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      });
+      expect(save).toBeDisabled();
       expect(backend.patches).toEqual([]);
 
       await user.clear(box);
-      await user.type(box, `${ok}{Enter}`);
+      await user.type(box, ok);
+      await user.click(save);
       await waitFor(() =>
         expect(backend.patches).toEqual([{ [property]: Number(ok) }]),
       );
+      await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
     },
   );
 
-  it("reads the window length in words", async () => {
-    vi.stubGlobal("fetch", backendFor(EDITOR).fetchMock);
-    render(<AgentAllowancesCard />);
-
-    const window = await screen.findByTestId("allowance-agent_window_hours");
-    expect(window).toHaveAccessibleDescription(
-      expect.stringContaining("= 1 day"),
-    );
-  });
-
-  it("says when a saved window length takes over, and cancels it on the length in force", async () => {
-    const backend = backendFor(EDITOR, {
-      ...defaultAgentAllowances,
-      agent_window_next_hours: 12,
-      agent_window_next_starts_at: "2026-10-15T00:00:00Z",
-    });
+  it("sends one request for every value that moved, and nothing for the rest", async () => {
+    const backend = backendFor(EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<AgentAllowancesCard />);
+    await openForm(user);
 
-    const window = await screen.findByTestId<HTMLInputElement>(
-      "allowance-agent_window_hours",
+    const writes = await screen.findByTestId<HTMLInputElement>(
+      "allowance-agent_writes_per_window",
     );
-    expect(window.value).toBe("12");
+    const calls = screen.getByTestId<HTMLInputElement>(
+      "allowance-agent_calls_per_window",
+    );
+    await user.clear(writes);
+    await user.type(writes, "100");
+    await user.clear(calls);
+    await user.type(calls, "500");
+
+    expect(screen.getByText(/Changes 200 → 100/)).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+    await waitFor(() =>
+      expect(backend.patches).toEqual([
+        { agent_writes_per_window: 100, agent_calls_per_window: 500 },
+      ]),
+    );
+  });
+
+  it("lets the window length be picked, and says it starts at the next reset", async () => {
+    const backend = backendFor(EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+    await openForm(user);
+
+    await pickOption(
+      user,
+      await screen.findByTestId("allowance-agent_window_hours"),
+      "12 hours",
+    );
+
+    expect(screen.getByText(/Window 1 day → 12 hours/)).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+    await waitFor(() =>
+      expect(backend.patches).toEqual([{ agent_window_hours: 12 }]),
+    );
+  });
+
+  it("keeps a window length that is not one of the choices", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, { ...defaultAgentAllowances, agent_window_hours: 5 })
+        .fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+    await openForm(user);
+
+    expect(
+      await screen.findByTestId("allowance-agent_window_hours"),
+    ).toHaveTextContent("5 hours");
+  });
+
+  it("says when a saved window length takes over, and shows it in the form", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, {
+        ...defaultAgentAllowances,
+        agent_window_next_hours: 12,
+        agent_window_next_starts_at: "2026-10-15T00:00:00Z",
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
 
     expect(
       await screen.findByText(translate("en", "agentAllowances.pending.title")),
     ).toBeTruthy();
     expect(screen.getByText(/Each window lasts 12 hours/)).toBeTruthy();
-    await user.clear(window);
-    await user.type(window, "24{Enter}");
-    await waitFor(() =>
-      expect(backend.patches).toEqual([{ agent_window_hours: 24 }]),
+    await openForm(user);
+    expect(
+      screen.getByTestId("allowance-agent_window_hours"),
+    ).toHaveTextContent("12 hours");
+  });
+
+  it("fills the defaults from the server and cancels without saving", async () => {
+    const backend = backendFor(EDITOR, {
+      ...defaultAgentAllowances,
+      agent_calls_per_window: 60,
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+    await openForm(user);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: translate("en", "agentAllowances.useDefaults"),
+      }),
     );
+    expect(
+      screen.getByTestId<HTMLInputElement>("allowance-agent_calls_per_window")
+        .value,
+    ).toBe("1000");
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.cancel"),
+      }),
+    );
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(backend.patches).toEqual([]);
   });
 
   it("shows the fixed MCP limits and when the window resets", async () => {
@@ -155,13 +292,16 @@ describe("AgentAllowancesCard", () => {
     ).toBeTruthy();
   });
 
-  it("is read-only to a seat without the update grant", async () => {
+  it("offers no Edit button to a seat without the update grant", async () => {
     vi.stubGlobal("fetch", backendFor(READER).fetchMock);
     render(<AgentAllowancesCard />);
 
+    expect(await screen.findByTestId("allowance-readout")).toBeTruthy();
     expect(
-      await screen.findByTestId("allowance-agent_writes_per_window"),
-    ).toBeDisabled();
+      screen.queryByRole("button", {
+        name: translate("en", "agentAllowances.edit"),
+      }),
+    ).toBeNull();
     expect(
       screen.getByText(translate("en", "operations.adminOnly")),
     ).toBeTruthy();
@@ -191,11 +331,17 @@ it("redraws the usage bars against a saved allowance", async () => {
     </QueryClientProvider>,
   );
 
+  await openForm(user);
   const box = await screen.findByTestId<HTMLInputElement>(
     "allowance-agent_writes_per_window",
   );
   await user.clear(box);
-  await user.type(box, "50{Enter}");
+  await user.type(box, "50");
+  await user.click(
+    screen.getByRole("button", {
+      name: translate("en", "agentAllowances.save"),
+    }),
+  );
 
   await waitFor(() =>
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["agent-usage"] }),

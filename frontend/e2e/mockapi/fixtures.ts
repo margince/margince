@@ -592,7 +592,6 @@ export const agentUsageByUser = {
       user_id: "u1",
       display_name: "Lena Fischer",
       passport_count: 1,
-      reads: usageCounter(420, 2_000),
       writes: usageCounter(37, 200),
       egress: usageCounter(2, 20),
       calls: usageCounter(160, 1_000),

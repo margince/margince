@@ -3,6 +3,8 @@
 
 import type { components } from "../api/schema";
 import { Badge, TableScroll } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { KeyedName } from "../design-system/keyedname";
 import type { ScrollRegionName } from "../design-system/scrollregion";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
@@ -10,8 +12,9 @@ import type { ObjectGrant, Role } from "./roles.queries";
 import "./grantmatrix.css";
 
 // The grid a role grant is written through: one row per subject, one column per
-// verb, one switch per cell. The Extensions page draws a row per role, grouped
-// by object. The role editor draws a row per object over one role.
+// verb, one switch per cell. The Extensions page draws it with a row per ROLE
+// over one object, and the role editor with a row per OBJECT over one role; the
+// grid is the same, and so is what a flipped switch writes.
 
 /** The verbs a grant carries, as the contract spells them. */
 export type CrudAction = components["schemas"]["RbacAction"];
@@ -46,6 +49,8 @@ export function grantOf(role: Role, object: string): ObjectGrant {
 export type GrantMatrixRow = Readonly<{
   key: string;
   name: string;
+  /** The raw key, in the code face under the name, for an operator who asked. */
+  code?: string;
   /** A label beside the name, for the rows that differ from the rest. */
   badge?: string;
   grant: ObjectGrant;
@@ -56,10 +61,10 @@ export type GrantMatrixRow = Readonly<{
   onChange: (action: CrudAction, next: boolean) => void;
 }>;
 
-/** A run of rows under its own label: one object's grants among a unit's. */
-export type GrantMatrixGroup = Readonly<{
+/** A run of rows under one name; a lone section may go unnamed. */
+export type GrantMatrixSection = Readonly<{
   key: string;
-  label: string;
+  title?: string;
   rows: readonly GrantMatrixRow[];
 }>;
 
@@ -77,8 +82,7 @@ export type GrantMatrixGroup = Readonly<{
  */
 export function GrantMatrix({
   rowHeader,
-  rows,
-  groups,
+  sections,
   canManage,
   readOnlyReason,
   turnOnReason,
@@ -88,9 +92,7 @@ export function GrantMatrix({
 }: Readonly<{
   /** The first column's header: what the rows are. */
   rowHeader: string;
-  rows?: readonly GrantMatrixRow[];
-  /** In place of `rows`: several runs under one header row, each named by its group row. */
-  groups?: readonly GrantMatrixGroup[];
+  sections: readonly GrantMatrixSection[];
   canManage: boolean;
   readOnlyReason: string;
   /** Why a switch that is off may not be turned on; absent when it may. */
@@ -120,29 +122,18 @@ export function GrantMatrix({
             ))}
           </tr>
         </thead>
-        {groups ? (
-          groups.map((group) => (
-            <tbody key={group.key}>
+        {sections.map((section) => (
+          <tbody key={section.key}>
+            {section.title === undefined ? null : (
               <tr className="grant-group">
                 <th scope="rowgroup" colSpan={CRUD.length + 1}>
-                  {group.label}
+                  <Heading size="xsmall" as="h3">
+                    {section.title}
+                  </Heading>
                 </th>
               </tr>
-              {group.rows.map((row) => (
-                <GrantRow
-                  key={row.key}
-                  row={row}
-                  canManage={canManage}
-                  readOnlyReason={readOnlyReason}
-                  turnOnReason={turnOnReason}
-                  busy={busy}
-                />
-              ))}
-            </tbody>
-          ))
-        ) : (
-          <tbody>
-            {rows?.map((row) => (
+            )}
+            {section.rows.map((row) => (
               <GrantRow
                 key={row.key}
                 row={row}
@@ -153,7 +144,7 @@ export function GrantMatrix({
               />
             ))}
           </tbody>
-        )}
+        ))}
       </table>
     </TableScroll>
   );
@@ -169,15 +160,19 @@ function GrantRow({
   row: GrantMatrixRow;
   canManage: boolean;
   readOnlyReason: string;
-  turnOnReason?: string;
+  turnOnReason: string | undefined;
   busy: boolean;
 }>) {
   return (
     <tr>
       <th scope="row">
         <span className="grant-row-head">
-          <span>{row.name}</span>
-          {row.badge ? <Badge wrap>{row.badge}</Badge> : null}
+          {row.code === undefined ? (
+            <span>{row.name}</span>
+          ) : (
+            <KeyedName name={row.name} code={row.code} />
+          )}
+          {row.badge ? <Badge>{row.badge}</Badge> : null}
         </span>
       </th>
       {CRUD.map((action) => {
@@ -196,8 +191,9 @@ function GrantRow({
               // every other switch waits for it.
               disabled={busy && !row.pending}
               pending={row.pending}
-              // Only a permission denial gets a reason. A sentence
-              // flashing for 200ms on every write in flight is noise.
+              // Only a permission denial gets a reason. A write in flight
+              // holds a switch too, and a sentence flashing for 200ms on
+              // every flip is noise.
               reason={refusal}
               onChange={(next) => row.onChange(action, next)}
             />

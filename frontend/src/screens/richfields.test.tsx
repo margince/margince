@@ -4,9 +4,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  type CreateField,
+  type FormRows,
+  RecordFormBody,
+} from "../components/create";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { type CreateField, type FormRows, RecordFormBody } from "./create";
 
 // Repeatable-row fields (P-15 foundation): emails/phones/domains as
 // {value,type,is_primary} rows, threaded through the shared create/edit form

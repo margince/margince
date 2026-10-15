@@ -29,12 +29,12 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
-import { captureValueMessage } from "./capturevalue";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { captureValueMessage } from "./capturevalue";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.
