@@ -119,6 +119,18 @@ describe("the syntax the shipped handbook uses", () => {
     expect(screen.getByText(/Setext/)).toBeInTheDocument();
     expect(screen.getByText(/a task nobody models/)).toBeInTheDocument();
   });
+
+  // Every plain handbook page opens with a `<!-- prose:plain -->` marker; no
+  // reader of Markdown shows a comment line, so a cited page must not either.
+  it("shows nothing for a line that is only a comment", () => {
+    const { container } = render(
+      <Markdown
+        source={"<!-- prose:plain -->\n# Title\n\ntext <!-- kept -->"}
+      />,
+    );
+    expect(container.textContent).not.toContain("prose:plain");
+    expect(screen.getByText(/text <!-- kept -->/)).toBeInTheDocument();
+  });
 });
 
 describe("an ordered list's numbering", () => {

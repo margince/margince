@@ -62,6 +62,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
+| Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
 | subscription | A webhook's setup: the address it sends to and the events it sends. |
 | Telegram | A chat app Margince can send messages through. |
@@ -73,6 +74,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
 
 ## Names without a meaning yet
