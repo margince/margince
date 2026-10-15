@@ -10,16 +10,16 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { en } from "../i18n/en";
-import { FiltersScreen } from "./filters";
-import { filterView, mountFilters, type Sent } from "./filters.testkit";
+import type { List } from "../lib/lists.queries";
 import {
   LIVE_ID,
   liveList,
   OTHER_OWNER_ID,
   shortlist,
   TEAM_ID,
-} from "./lists.fixtures";
-import type { List } from "./lists.queries";
+} from "../testing/lists.fixtures";
+import { FiltersScreen } from "./filters";
+import { filterView, mountFilters, type Sent } from "./filters.testkit";
 
 // One row of the library: what it names, what it counts, where it opens and
 // what its ⋯ offers. A press on ⋯ or inside a dialog it opened never opens

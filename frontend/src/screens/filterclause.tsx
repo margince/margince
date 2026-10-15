@@ -12,10 +12,11 @@ import { Select, type SelectOption } from "../design-system/select";
 import { forReader } from "../format/collate";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { fieldLabel, groupFields, type VocabularyField } from "./filterdata";
-import { ownLeaf } from "./filterproposal";
-import { operatorKey } from "./filtersentence";
-import { ValueControl } from "./filtervalue";
+import {
+  fieldLabel,
+  groupFields,
+  type VocabularyField,
+} from "../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
@@ -25,7 +26,10 @@ import {
   newLeaf,
   removeNode,
   replaceNode,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
+import { ownLeaf } from "./filterproposal";
+import { operatorKey } from "./filtersentence";
+import { ValueControl } from "./filtervalue";
 
 /**
  * The value a clause starts with when its field or operator changes.

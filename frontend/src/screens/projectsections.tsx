@@ -3,6 +3,7 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -22,7 +23,6 @@ import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
 import { ProjectContractRow } from "./contractterms";
-import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import {
   AddProjectStakeholder,

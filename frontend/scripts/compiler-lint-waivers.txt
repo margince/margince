@@ -13,9 +13,13 @@
 1 react-hooks/set-state-in-effect src/app/ai-activity.ts
 1 react-hooks/set-state-in-effect src/app/askfromaddress.tsx
 1 react-hooks/set-state-in-effect src/app/palette.tsx
+1 react-hooks/set-state-in-effect src/components/create.dialog.ts
+1 react-hooks/refs src/components/create.tsx
+1 react-hooks/refs src/components/listquery.tsx
+2 react-hooks/refs src/components/recordfields.tsx
+1 react-hooks/set-state-in-effect src/components/unsaved.tsx
 2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
 1 react-hooks/set-state-in-effect src/app/shell.tsx
-1 react-hooks/set-state-in-effect src/app/unsaved.tsx
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
@@ -73,8 +77,6 @@
 1 react-hooks/set-state-in-effect src/screens/contractform.tsx
 3 react-hooks/set-state-in-effect src/screens/contractlifecycle.tsx
 1 react-hooks/set-state-in-effect src/screens/corpusask.tsx
-1 react-hooks/set-state-in-effect src/screens/create.dialog.ts
-1 react-hooks/refs src/screens/create.tsx
 3 react-hooks/refs src/screens/deal360/outcomereviewmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/embedreindex.tsx
 3 react-hooks/refs src/screens/filtereditor.tsx
@@ -90,7 +92,6 @@
 1 react-hooks/refs src/screens/leadvocab.sources.tsx
 3 react-hooks/refs src/screens/listlibrary.tsx
 5 react-hooks/refs src/screens/listpage.tsx
-1 react-hooks/refs src/screens/listquery.tsx
 2 react-hooks/refs src/screens/onboarding-conversation/company-act-state.ts
 3 react-hooks/refs src/screens/onboarding-conversation/company-act.tsx
 1 react-hooks/refs src/screens/onboarding-conversation/narration.ts
@@ -108,7 +109,6 @@
 1 react-hooks/set-state-in-effect src/screens/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/rate-manual.tsx
 1 react-hooks/set-state-in-effect src/screens/recordaccess.tsx
-2 react-hooks/refs src/screens/recordfields.tsx
 1 react-hooks/refs src/screens/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/screens/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/screens/relationships.tsx

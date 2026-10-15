@@ -77,7 +77,7 @@ func (e *stagingEnv) stageStepUp(t *testing.T, counter agentvolume.Counter) ids.
 // nor recorded as decided.
 func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 	e := setupStaging(t)
-	id := e.stageStepUp(t, agentvolume.Reads)
+	id := e.stageStepUp(t, agentvolume.Writes)
 	// The possible edit, not an impossible one: writes is releasable too, so
 	// the meter would have accepted it. What makes it wrong is that nobody was
 	// shown it.
@@ -108,7 +108,7 @@ func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the stored payload no longer decodes: %v", err)
 	}
-	if kept.Counter != agentvolume.Reads {
+	if kept.Counter != agentvolume.Writes {
 		t.Errorf("the refused edit rewrote the payload to %s", kept.Counter)
 	}
 }
@@ -117,7 +117,7 @@ func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 // kind — a step-up nobody can approve is a control with no release.
 func TestAStepUpIsStillApprovableWithoutAnEdit(t *testing.T) {
 	e := setupStaging(t)
-	id := e.stageStepUp(t, agentvolume.Reads)
+	id := e.stageStepUp(t, agentvolume.Writes)
 
 	// No meter composed, so the release itself reports the absence loudly —
 	// which is the point: the DECISION was reached, and only the effect could

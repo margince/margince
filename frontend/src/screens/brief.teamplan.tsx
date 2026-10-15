@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import { EntityRef } from "../components/entityref";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
@@ -13,7 +14,6 @@ import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useRecordZone } from "../lib/recordzone";
-import { EntityRef } from "./entityref";
 import {
   useAnswerCommitment,
   useTeammateWeeklyPlan,

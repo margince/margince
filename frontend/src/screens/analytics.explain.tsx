@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef, useEntityName } from "../components/entityref";
 import { Button, SectionHeader, Skeleton } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
@@ -18,7 +19,6 @@ import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
-import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
 // body, two hosts: the panel under a report card explains the whole result, and

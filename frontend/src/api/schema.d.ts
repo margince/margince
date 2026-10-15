@@ -8332,9 +8332,8 @@ export interface paths {
         put?: never;
         /**
          * Register an outbound webhook subscription (returns the signing secret once).
-         * @description Registers a target URL + event-type subset. Registering outbound egress, so an agent
-         *     principal's call is 🟡 — staged for human approval (ADR-0036), then redeemed with the
-         *     `X-Approval-Token`; a human on a session registers directly. Every register/change/delete
+         * @description Registers a target URL + event-type subset. Registering outbound egress is a human's to
+         *     do, so an agent principal is refused. Every register/change/delete
          *     is audited. The `signing_secret` in the response is shown EXACTLY ONCE — deliveries are
          *     signed with it on the Standard Webhooks scheme (verify the `webhook-signature` header).
          *     `target_url` must be https://.
@@ -8367,8 +8366,7 @@ export interface paths {
         /**
          * Pause/resume a subscription or re-target its event set.
          * @description A partial update (pause/resume or re-target the event set). Re-targeting can widen
-         *     outbound egress, so an agent principal's call is 🟡 — staged for approval and redeemed
-         *     with the `X-Approval-Token`; a human updates directly.
+         *     outbound egress, so an agent principal is refused.
          */
         patch: operations["updateWebhookSubscription"];
         trace?: never;
@@ -13645,12 +13643,10 @@ export interface paths {
         get: operations["listCustomFields"];
         put?: never;
         /**
-         * Define a new custom field on an existing core object (🟡 — a schema change).
+         * Define a new custom field on an existing core object (a schema change).
          * @description CUSTOM-FIELDS-WIRE-2. Runs the governed engine's single-transaction add: schema
-         *     change + catalog row + one audit entry land or roll back together. Always 🟡 —
-         *     a schema change is never 🟢 — so an agent caller must supply `X-Approval-Token`,
-         *     exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-         *     itself the approval. `column_name` is server-derived and never client-supplied —
+         *     change + catalog row + one audit entry land or roll back together. A schema change
+         *     is a human's to make, so an agent principal is refused. `column_name` is server-derived and never client-supplied —
          *     immutable once live. When the requested `label`/`type`/`object` combination is
          *     judged structural — a new object, a relationship, or logic, never one of the six
          *     closed types on one of the five closed objects — the request is refused with a
@@ -13681,7 +13677,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename a custom field's display label (🟢 — not a schema change).
+         * Rename a custom field's display label (not a schema change).
          * @description CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
          *     moves — the physical column identity is stable across rename. Merge-PATCH:
          *     `column_name`, `object`, and `type` are absent from the request schema entirely.
@@ -13730,12 +13726,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+         * Retire (soft-retire) a custom field. It cannot be undone.
          * @description CUSTOM-FIELDS-WIRE-4. Sets `status=retired`; hides the field from the API and
          *     filtering while the column and every value in it are preserved — the engine never
-         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
-         *     posture: an irreversible-feeling state change users must confirm) — an agent caller
-         *     must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
+         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). An agent principal is refused.
+         *     Not the generic archive shape: this is a status flip
          *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
          *     refused because a Live List filters on the field: the list keeps evaluating on the kept
          *     values and reports health `retired_field`. Which lists those are is read, for the
@@ -13766,15 +13761,15 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
+         * Edit a picklist custom field's allowed options (regenerates the column's CHECK).
          * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
-         *     one allowed value. 🟡 like `retireCustomField`: this mutates a schema-adjacent CHECK
-         *     constraint, so an agent caller must supply `X-Approval-Token`. A retired field
+         *     one allowed value. Like `retireCustomField`, an agent principal is refused: this
+         *     mutates a schema-adjacent CHECK constraint. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
          *     are frozen; removing an option that stored values still use is also a 409
          *     (`ADD CONSTRAINT` validates existing rows — migrate the values first).
@@ -20619,8 +20614,6 @@ export interface components {
             send_rate_window_seconds?: number;
             /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
             send_max_age_hours?: number;
-            /** @description Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window. */
-            agent_reads_per_window?: number;
             /** @description Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window. */
             agent_writes_per_window?: number;
             /** @description Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window. */
@@ -21620,23 +21613,29 @@ export interface components {
             /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
             send_max_age_hours: number;
         };
+        /** @description What each agent allowance is before an admin changes it, so a screen never restates them. */
+        AgentAllowanceDefaults: {
+            agent_writes_per_window: number;
+            agent_egress_per_window: number;
+            agent_calls_per_window: number;
+            agent_window_hours: number;
+        };
         /**
          * @description How much one agent may do in one window. A passport a user minted has its own allowance;
          *     a connected MCP client has one allowance for all its passports, so a renewed credential
          *     keeps counting where the last one stopped. An agent that reaches a count is refused on
-         *     its next call until the window resets or the user who lent it releases more. A change to
+         *     its next call until the window resets or, for changing calls, the user who lent it releases
+         *     more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
          *     a count applies within a minute, in the window that is running: a raised count gives
          *     headroom within that minute, and a lowered one refuses an agent already past it on its
          *     next call. The per-minute limits are fixed by the build and shown here read-only.
          */
         AgentAllowanceSettings: {
-            /** @description How many records one passport or connection may read per window. Default 2000. */
-            agent_reads_per_window: number;
             /** @description How many changing calls one passport or connection may make per window. Default 200. */
             agent_writes_per_window: number;
             /** @description How many calls that send something out of the workspace one passport or connection may make per window. Default 20. */
             agent_egress_per_window: number;
-            /** @description How many tool calls of any kind one passport or connection may make per window. Default 1000. */
+            /** @description How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000. */
             agent_calls_per_window: number;
             /**
              * @description How long the window in force lasts, in hours. Default 24. Every passport's window
@@ -21660,6 +21659,7 @@ export interface components {
              *     new length may be shorter than that length, never longer.
              */
             agent_window_next_starts_at?: string | null;
+            defaults: components["schemas"]["AgentAllowanceDefaults"];
             /** @description How many tool calls one passport may make per minute. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
@@ -32103,6 +32103,8 @@ export interface components {
              * @description Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
              */
             readonly host_user_id?: string | null;
+            /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
+            readonly colleague_ids?: string[];
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
@@ -38238,10 +38240,10 @@ export interface components {
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
             /**
-             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. rest_only — no MCP tool serves this record_type yet: the verb names only the tier, scope and budget the REST gate admits the call under, and the MCP verb refuses the type. Absent and rest_only both mean the operation's own handler runs and the gate admits it.
              * @enum {string}
              */
-            served_by?: "registry";
+            served_by?: "registry" | "rest_only";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -42205,9 +42207,8 @@ export interface components {
              */
             usage?: components["schemas"]["AgentUsage"];
         };
-        /** @description One window's use of the four agent allowances, and when they reset. */
+        /** @description One window's use of the three agent allowances, and when they reset. */
         AgentUsage: {
-            reads: components["schemas"]["AgentCounterUsage"];
             writes: components["schemas"]["AgentCounterUsage"];
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
@@ -42238,7 +42239,6 @@ export interface components {
             display_name: string;
             /** @description Live passports and connections. A connection counts once. */
             passport_count: number;
-            reads: components["schemas"]["AgentCounterUsage"];
             writes: components["schemas"]["AgentCounterUsage"];
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
@@ -42257,7 +42257,7 @@ export interface components {
             released: number;
         };
         /**
-         * @description The worst of the four allowances. `stopped` when one is used up, so the next call of
+         * @description The worst of the three allowances. `stopped` when one is used up, so the next call of
          *     that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
          * @enum {string}
          */
@@ -60578,18 +60578,7 @@ export interface operations {
     createWebhookSubscription: {
         parameters: {
             query?: never;
-            header?: {
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -60669,16 +60658,6 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
                  * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
                  *     the last-seen entity `version`. If the row's current `version` differs, the write is
@@ -66728,16 +66707,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path?: never;
             cookie?: never;
@@ -66758,7 +66727,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 create attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -66901,16 +66870,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -66930,7 +66889,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 retire attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -66963,16 +66922,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -66996,7 +66945,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 options edit attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -68065,7 +68014,7 @@ export interface operations {
                     "application/json": components["schemas"]["RecordGrant"];
                 };
             };
-            /** @description RBAC denied (`manage_sharing` required), or an agent 🟡 share attempted without an approval token. */
+            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -68105,7 +68054,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description RBAC denied (`manage_sharing` required), or an agent 🟡 revoke attempted without an approval token. */
+            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;

@@ -12,9 +12,9 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { invalidateRecord } from "../lib/recordwritekeys";
 import { navigate } from "../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
-import { invalidateRecord } from "./recordwritekeys";
 import "../design-system/querystates.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];

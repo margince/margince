@@ -72,7 +72,7 @@ func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage) crmc
 	return crmcontracts.AgentUserUsage{
 		UserId: openapi_types.UUID(holder.UserID), DisplayName: holder.DisplayName,
 		PassportCount: len(holder.Subjects),
-		Reads:         wire.Reads, Writes: wire.Writes, Egress: wire.Egress, Calls: wire.Calls,
+		Writes:        wire.Writes, Egress: wire.Egress, Calls: wire.Calls,
 		State: crmcontracts.AgentUsageState(state),
 	}
 }

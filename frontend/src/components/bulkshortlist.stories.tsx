@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { listsMe, shortlist } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
 import { ShortlistVerb } from "./bulkshortlist";
-import { listsMe, shortlist } from "./lists.fixtures";
 
 // "Add to Shortlist" in the bulk bar: the Shortlists this reader looks after,
 // less the one the rows are already shown on.

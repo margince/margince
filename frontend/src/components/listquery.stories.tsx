@@ -17,7 +17,7 @@ import {
   type ViewSpec,
 } from "./listquery";
 
-// ListTable (screens/listquery.tsx) binds useListQuery's server-query state
+// ListTable (components/listquery.tsx) binds useListQuery's server-query state
 // to the design-system list surface (ListTable in listtable.tsx, imported
 // there under the alias ListSurface). It reads the cached ["me"] query, so
 // every story needs the same QueryClientProvider + stubbed /me every screen

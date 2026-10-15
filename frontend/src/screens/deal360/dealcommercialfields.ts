@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
+import type { CreateField } from "../../components/create";
 import type { MessageKey } from "../../i18n/en";
-import type { CreateField } from "../create";
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 

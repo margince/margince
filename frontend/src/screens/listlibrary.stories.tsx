@@ -4,20 +4,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
-import { type LibraryItem, libraryItems } from "./library";
-import { LibraryTable, NewShortlistAction } from "./listlibrary";
-import {
   listsMe,
   liveList,
   OTHER_OWNER_ID,
   shortlist,
   TEAM_ID,
   teamsPage,
-} from "./lists.fixtures";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { type LibraryItem, libraryItems } from "./library";
+import { LibraryTable, NewShortlistAction } from "./listlibrary";
 import { DEFAULT_AUDIENCE } from "./listsharing";
 import type { SavedView } from "./savedviews.queries";
 

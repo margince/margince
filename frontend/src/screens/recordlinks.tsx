@@ -10,7 +10,7 @@
 import { Fragment } from "react";
 
 import type { components } from "../api/schema";
-import { EntityRef } from "./entityref";
+import { EntityRef } from "../components/entityref";
 
 type ActivityLink = components["schemas"]["ActivityLink"];
 

@@ -22,8 +22,8 @@ import {
   type FilterPreview,
   fieldLabel,
   type VocabularyField,
-} from "./filterdata";
-import { historyFieldLabel } from "./historyfieldlabels";
+} from "../lib/filterdata";
+import { historyFieldLabel } from "../lib/historyfieldlabels";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
 type PreviewRow = Record<string, unknown>;

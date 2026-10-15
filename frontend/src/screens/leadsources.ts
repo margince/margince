@@ -4,8 +4,8 @@ import type { components } from "../api/schema";
 import { importLabel } from "../design-system/provenance";
 import { importProvenance } from "../design-system/provenanceof";
 import type { useT } from "../i18n";
+import { LEAD_LIST_KEY } from "../lib/leadkeys";
 import { throwProblem, unwrap } from "../lib/problem";
-import { LEAD_LIST_KEY } from "./leadkeys";
 
 // The lead vocabularies and lead handling, read from the server: which
 // sources a lead may come from (and what each is worth to the score), the

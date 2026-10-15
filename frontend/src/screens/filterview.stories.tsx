@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { listsMe } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import type { FilterVocabulary } from "./filterdata";
 import { OpenedViewPage } from "./filterview";
-import { listsMe } from "./lists.fixtures";
 
 // `#/filters/<tab>/<viewId>`: a saved view opened to be read first, its
 // filter as one sentence above what it selects, and edited in place.

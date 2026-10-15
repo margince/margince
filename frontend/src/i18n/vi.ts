@@ -2615,6 +2615,13 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "activity.detail.loading": "Đang tải hoạt động…",
+  "activity.detail.none": "Hoạt động này",
+  "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
+  "activity.detail.when": "Thời gian",
+  "activity.detail.attendees": "Người tham dự",
+  "activity.detail.colleagues": "Đồng nghiệp",
+  "activity.detail.filedUnder": "Xếp vào",
   "email.detail.bccWithheld":
     "Một số người nhận ở Bcc nên không được hiển thị.",
   "compose.audienceWorkspace": "Mọi thành viên trong công ty",
@@ -4531,9 +4538,9 @@ export const vi = {
   "extraction.field.closeDate": "Ngày chốt dự kiến",
   "docs.filterLabel": "Loại tài liệu",
   "docs.category.all": "Tất cả",
-  "docs.category.contract": "Hợp đồng",
-  "docs.category.offer": "Báo giá",
-  "docs.category.legal": "Pháp lý",
+  "docs.category.contract": "SOW/Hợp đồng",
+  "docs.category.offer": "Đề xuất/Báo giá",
+  "docs.category.legal": "NDA/Pháp lý",
   "docs.category.email": "Tệp đính kèm email",
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
@@ -5655,8 +5662,7 @@ export const vi = {
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
     "Gửi email, đặt lịch họp, cập nhật liên hệ hoặc deal: chạy ngay nếu agent có quyền đó. Cấp quyền chính là phê duyệt.",
-  "settings.tierWait":
-    "Bổ sung dữ liệu, trường tùy chỉnh, webhook, gộp thẻ: chờ trong Phê duyệt.",
+  "settings.tierWait": "Bổ sung dữ liệu, gộp thẻ: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn deal: chỉ chờ khi bước chuyển đó kết thúc deal với kết quả thắng hoặc thua.",
   "settings.locked": "Đã khóa",
@@ -10533,9 +10539,6 @@ export const vi = {
   "agentAllowances.title": "Hạn mức passport của agent",
   "agentAllowances.sub":
     "Những gì một passport hoặc kết nối MCP được làm trong mỗi khung thời gian trước khi dừng. Thay đổi một con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Một passport không bao giờ tự đổi được hạn mức của chính nó.",
-  "agentAllowances.reads.label": "Bản ghi đã đọc",
-  "agentAllowances.reads.help":
-    "Số bản ghi agent được đọc mỗi khung, từ 100 đến 20.000. Quá mức đó, việc đọc chờ chủ sở hữu cho phép thêm.",
   "agentAllowances.writes.label": "Thay đổi",
   "agentAllowances.writes.help":
     "Số thay đổi agent được làm mỗi khung, từ 10 đến 5.000. Quá mức đó, thay đổi chờ chủ sở hữu cho phép thêm.",
@@ -10544,15 +10547,33 @@ export const vi = {
     "Email và các lệnh gọi khác ra khỏi Margince. Việc gửi dừng cho đến khi khung thời gian đặt lại, từ 1 đến 200.",
   "agentAllowances.calls.label": "Tổng số lệnh gọi",
   "agentAllowances.calls.help":
-    "Mọi lệnh gọi công cụ hoặc API. Passport tạm dừng cho đến khi khung thời gian đặt lại, từ 50 đến 20.000.",
-  "agentAllowances.window.label": "Khung thời gian (giờ)",
+    "Mọi lệnh gọi, công cụ hay API, kể cả đọc. Passport tạm dừng cho đến khi khung thời gian đặt lại, từ 50 đến 20.000.",
+  "agentAllowances.window.label": "Khung thời gian",
   "agentAllowances.window.help":
-    "Một hạn mức kéo dài bao lâu, từ 1 đến 168. Độ dài mới bắt đầu ở lần đặt lại kế tiếp.",
+    "Một hạn mức kéo dài bao lâu. Độ dài mới bắt đầu ở lần đặt lại kế tiếp, nên không passport nào được hạn mức mới sớm.",
   "agentAllowances.burst":
     "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport.",
   "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
   "agentAllowances.pending.body":
     "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
+  "agentAllowances.windowLine": "Khung thời gian: {interval}",
+  "agentAllowances.note.release": "Chủ sở hữu có thể cho phép thêm",
+  "agentAllowances.note.stop": "Dừng cho đến khi khung thời gian đặt lại",
+  "agentAllowances.default": "Mặc định {value}",
+  "agentAllowances.state.defaults": "Đang dùng giá trị mặc định",
+  "agentAllowances.state.changed": "Đã đổi khác giá trị mặc định",
+  "agentAllowances.state.body":
+    "Thay đổi một con số có hiệu lực với mọi passport trong vòng một phút, ngay trong khung đang chạy.",
+  "agentAllowances.edit": "Sửa hạn mức",
+  "agentAllowances.save": "Lưu",
+  "agentAllowances.cancel": "Hủy",
+  "agentAllowances.useDefaults": "Dùng giá trị mặc định",
+  "agentAllowances.diff.title": "Có hiệu lực khi bạn lưu",
+  "agentAllowances.diff.count": "{label}: {from} → {to}",
+  "agentAllowances.diff.counts":
+    "Con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Agent đã vượt con số được hạ xuống sẽ bị từ chối ở lệnh gọi kế tiếp.",
+  "agentAllowances.diff.window":
+    "Khung thời gian {from} → {to}, bắt đầu từ lần đặt lại kế tiếp.",
   "agentUsage.title": "Mức dùng agent theo thành viên",
   "agentUsage.sub":
     "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
@@ -10562,12 +10583,11 @@ export const vi = {
     "Chưa thành viên nào có passport hoặc kết nối còn hiệu lực.",
   "agentUsage.resets": "Mọi hạn mức đặt lại lúc {date} UTC.",
   "agentUsage.ofLimit": "{used} / {limit}",
-  "agentUsage.counter.reads": "Bản ghi đã đọc",
   "agentUsage.counter.writes": "Thay đổi",
   "agentUsage.counter.egress": "Lượt gửi",
   "agentUsage.counter.calls": "Lệnh gọi",
   "agentUsage.col.user": "Thành viên",
-  "agentUsage.col.passports": "Passport",
+  "agentUsage.col.passports": "Passport và ứng dụng",
   "agentUsage.state.ok": "Đang hoạt động",
   "agentUsage.state.near": "Gần chạm giới hạn",
   "agentUsage.state.stopped": "Đã dừng",
@@ -13696,10 +13716,10 @@ export const vi = {
   "legalReview.packNoOffer": "Deal này chưa có báo giá.",
   "legalReview.packDocuments": "Tài liệu",
   "legalReview.packNoDocuments":
-    "Không có tài liệu hợp đồng, pháp lý hay báo giá nào bạn mở được.",
-  "legalReview.docCategory.contract": "Hợp đồng",
-  "legalReview.docCategory.offer": "Báo giá",
-  "legalReview.docCategory.legal": "Pháp lý",
+    "Không có tài liệu SOW/Hợp đồng, NDA/Pháp lý hay Đề xuất/Báo giá nào bạn mở được.",
+  "legalReview.docCategory.contract": "SOW/Hợp đồng",
+  "legalReview.docCategory.offer": "Đề xuất/Báo giá",
+  "legalReview.docCategory.legal": "NDA/Pháp lý",
   "legalReview.docState.draft": "Bản nháp",
   "legalReview.docState.current": "Hiện hành",
   "legalReview.docState.final": "Bản cuối",

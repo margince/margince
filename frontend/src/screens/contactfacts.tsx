@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { rosterOwnerName } from "../components/entityref";
 import { ContactLink } from "../design-system/contactlink";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Popover } from "../design-system/popover";
@@ -16,7 +17,6 @@ import { useMemberName } from "../lib/membernames";
 import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
 import { buyingRoleLabel } from "./companycontacts/summary";
-import { rosterOwnerName } from "./entityref";
 
 type Contact = components["schemas"]["Contact"];
 

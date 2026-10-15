@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -27,7 +28,6 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { EntityRef } from "./entityref";
 import "./capture-senders.css";
 
 // What the classifier decided about each sender this mailbox brought in, and

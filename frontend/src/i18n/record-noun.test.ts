@@ -348,6 +348,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.derivedReply",
     "log.attendee",
     "log.otherAttendees",
+    "activity.detail.attendees",
     "book.attendee",
     "followUpSettings.daysHint",
     "scheduling.cancelConfirm",

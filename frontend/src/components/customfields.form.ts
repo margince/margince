@@ -14,12 +14,12 @@ import { formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { CfObject } from "../lib/customfields.logic";
 import {
   type CreateField,
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create";
-import type { CfObject } from "./customfields.logic";
 
 export type CustomField = components["schemas"]["CustomField"];
 

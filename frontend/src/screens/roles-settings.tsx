@@ -3,6 +3,7 @@
 
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+import { useRosterWalk } from "../components/roster";
 import {
   Button,
   EmptyState,
@@ -33,7 +34,6 @@ import {
   useRoles,
 } from "./roles.queries";
 import { RoleBadges, RoleDrawer } from "./roles-drawer";
-import { useRosterWalk } from "./roster";
 import "./roles-settings.css";
 
 // Settings → Roles and permissions: every role the company defines, and the

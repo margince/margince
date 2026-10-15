@@ -364,3 +364,67 @@ export const NarrowedWithMore: Story = {
     );
   },
 };
+
+// A meeting found by search, open in its panel: who was there, where it is
+// filed, and the minutes as the timeline reads them.
+export const ActivityPanelOpen: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /search": () =>
+        jsonResponse({
+          data: [
+            {
+              type: "activity",
+              id: "a2",
+              title: "Quarterly review with Demo GmbH",
+              snippet: "…agreed on the rollout…",
+              score: 0.6,
+              trust_tier: "authoritative",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /activities/a2": () =>
+        jsonResponse({
+          id: "a2",
+          kind: "meeting",
+          subject: "Quarterly review with Demo GmbH",
+          body: "We **agreed** on the rollout.\n\n- Pilot in October\n- Review in December",
+          occurred_at: "2026-09-01T09:00:00Z",
+          source: "manual",
+          captured_by: "human:u-1",
+          created_at: "2026-09-01T09:00:00Z",
+          updated_at: "2026-09-01T09:00:00Z",
+          content_state: "available",
+          host_user_id: "u-1",
+          colleague_ids: ["u-1", "u-2"],
+          links: [
+            { entity_type: "contact", entity_id: "p1" },
+            { entity_type: "company", entity_id: "o1" },
+            { entity_type: "deal", entity_id: "d1" },
+          ],
+        }),
+      "GET /contacts/p1": () =>
+        jsonResponse({ id: "p1", full_name: "Dana Buyer" }),
+      "GET /companies/o1": () =>
+        jsonResponse({ id: "o1", display_name: "Demo GmbH" }),
+      "GET /deals/d1": () => jsonResponse({ id: "d1", name: "Demo rollout" }),
+      "GET /users/names": () =>
+        jsonResponse({
+          data: [
+            { id: "u-1", display_name: "Lena Fischer" },
+            { id: "u-2", display_name: "Anna Weber" },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <SearchScreen
+          q="quarterly review"
+          openActivityId="a2"
+          openAs="activity"
+        />
+      </StoryProviders>
+    );
+  },
+};

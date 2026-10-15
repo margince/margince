@@ -3,21 +3,21 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
-import type { FilterVocabulary } from "./filterdata";
-import { FiltersScreen } from "./filters";
+import type { FilterVocabulary } from "../lib/filterdata";
+import type { List } from "../lib/lists.queries";
 import {
   listsMe,
   liveList,
   shortlist,
   TEAM_ID,
   teamsPage,
-} from "./lists.fixtures";
-import type { List } from "./lists.queries";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { FiltersScreen } from "./filters";
 import type { SavedView } from "./savedviews.queries";
 
 // `#/filters`: every saved view and list the reader can use, in one library.

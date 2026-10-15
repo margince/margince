@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PageAsideProvider } from "../app/pageaside";
+import { PageAsideProvider } from "../components/pageaside";
 import {
   emptyPage,
   installFetchStub,

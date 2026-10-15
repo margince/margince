@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "../lib/problem";
+import { unwrap } from "./problem";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
 import type { MutationOutcome } from "./undoableremoval";
 

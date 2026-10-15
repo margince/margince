@@ -2,13 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "../testing/story-utils";
-import { ListScreen } from "./listpage";
+import type { List } from "../lib/lists.queries";
 import {
   changesSinceVisit,
   chosenListing,
@@ -26,8 +20,14 @@ import {
   SHORTLIST_ID,
   shortlist,
   visitAnswer,
-} from "./lists.fixtures";
-import type { List } from "./lists.queries";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ListScreen } from "./listpage";
 
 // One list opened: its name and verbs, what it is for, the facts about it, its
 // members and what changed. The list page heads itself, so the story is

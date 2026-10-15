@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { Popover } from "../design-system/popover";
 import { provenanceOf } from "../design-system/provenanceof";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
@@ -17,7 +18,6 @@ import {
   companyWebsite,
   displayHost,
 } from "./companyheader";
-import { EntityRef } from "./entityref";
 
 // The account's name-line subtitle and its facts strip: what CompanyIdentityLine
 // used to draw as one running sentence, in the contact record page's own

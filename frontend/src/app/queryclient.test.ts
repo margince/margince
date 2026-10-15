@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
+import { ENTITY_NAME_KEY } from "../components/entityref";
 import {
   ConnectivityError,
   reportReached,
@@ -12,7 +13,6 @@ import {
   watchConnectivity,
 } from "../lib/connectivity";
 import { ProblemError, throwProblem } from "../lib/problem";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
 import {
   createQueryClient,
   liveInterval,

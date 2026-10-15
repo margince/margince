@@ -19,6 +19,7 @@ import {
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
 import { useLocale, useT } from "../i18n";
+import { invalidateRecord } from "../lib/recordwritekeys";
 import { useRecordZone } from "../lib/recordzone";
 import { RecordHistoryTab } from "./history";
 import {
@@ -29,7 +30,6 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "./recordchronology";
-import { invalidateRecord } from "./recordwritekeys";
 import { TimelineActions } from "./timelineactions";
 
 type Lead = components["schemas"]["Lead"];

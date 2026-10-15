@@ -3,8 +3,21 @@ import type { ReactNode } from "react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
+import { useBulkSelection } from "../components/bulkverbs";
+import { CreateAction } from "../components/create";
+import { useObjectCustomFields } from "../components/customfields.form";
+import { useRoster } from "../components/entityref";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+  useTagChips,
+} from "../components/listquery";
+import { useOwnerChips } from "../components/ownerdials";
+import { PageAsideToggle, usePageAside } from "../components/pageaside";
 import {
   Avatar,
   Badge,
@@ -42,9 +55,9 @@ import { useRecordZone } from "../lib/recordzone";
 import { scrollPageToTop } from "../lib/reveal";
 import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
+import { listQueryParams } from "../lib/tagfilter";
 import { AssistantPanel } from "./assistant";
 import { BillingContactsPanel } from "./billingcontacts";
-import { useBulkSelection } from "./bulkverbs";
 import { coldFieldLabel } from "./coldfieldlabels";
 import {
   DealsCard,
@@ -104,22 +117,10 @@ import {
 import { TechnicalProfilePanel } from "./companytechnical";
 import { hasWorkInFlight } from "./companywork";
 import { ComposeModal } from "./compose";
-import { CreateAction } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
 import { CompanySuggestions } from "./dealsuggestion";
-import { useRoster } from "./entityref";
 import { RecordHistoryTab } from "./history";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-  useTagChips,
-} from "./listquery";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { OpenEmailDrawer } from "./openemaildrawer";
-import { useOwnerChips } from "./ownerdials";
 import { PartnerTab } from "./partners";
 import { type OpenReceipt, openCitation } from "./record360";
 import {
@@ -139,7 +140,6 @@ import {
 } from "./recordlist";
 import { RelationshipsTab } from "./relationshiprows";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { listQueryParams } from "./tagfilter";
 import {
   TaskDetailModal,
   TaskQuickActions,
@@ -151,8 +151,8 @@ import { TimelineActions } from "./timelineactions";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { invalidateCompany } from "../lib/recordwritekeys";
 import { useAddressedTab } from "./recordtab";
-import { invalidateCompany } from "./recordwritekeys";
 import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render

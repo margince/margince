@@ -3,16 +3,9 @@
 
 package agents
 
-// The remaining four confirm-first commands the tool schema cannot express
-// (margince/margince#928 task 5): retiring a custom field (no body
-// at all), replacing a picklist's option set, and attaching or detaching a
-// project stakeholder. None of them is a whole-record field patch, so none
-// of them belongs in command.go's patchResolver — but two of the four
-// (retire, options) target `custom_field`, a type the record seam has never
-// served (command.go's servedByTheRecordSeam), while the other two target
-// `project`, which it serves like any other record. routedRecordTarget
-// (command.go) carries that distinction for all four rather than each
-// resolver restating it.
+// Attaching or detaching a project stakeholder: commands the tool schema cannot
+// express. Neither is a field patch, so neither belongs in patchResolver. Both
+// target `project`, which the record seam serves, through routedRecordTarget.
 
 import (
 	"context"
@@ -24,104 +17,10 @@ import (
 )
 
 const (
-	// customFieldRecordType names this file's first two commands' fixed
-	// target. It is not a datasource.EntityType — a custom field is
-	// catalog/schema metadata, never a record the seam can point at
-	// (servedByTheRecordSeam stands down for it, same as six of the twelve
-	// archivable types) — so it is spelled as a plain string, the same way
-	// ArchiveCommand/PatchCommand carry a record type the seam may or may not
-	// recognize.
-	customFieldRecordType = "custom_field"
 	// projectRecordType names the fixed target of this file's stakeholder
 	// commands.
 	projectRecordType = string(datasource.EntityProject)
 )
-
-// RetireCustomFieldCommand is one custom-field retirement, whichever door
-// asked for it. It carries no body — CUSTOM-FIELDS-WIRE-4 is a bare status
-// flip, no field beyond the routed id.
-type RetireCustomFieldCommand struct {
-	ID ids.UUID
-}
-
-// NewRetireCustomFieldCall binds one retirement to the resolver that
-// answers for it.
-//
-//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewRetireCustomFieldCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RetireCustomFieldCommand) GovernedCall {
-	return bind[RetireCustomFieldCommand](retireCustomFieldResolver{
-		language: language,
-		target:   routedRecordTarget{records: records, recordType: customFieldRecordType},
-	}, cmd)
-}
-
-type retireCustomFieldResolver struct {
-	target   routedRecordTarget
-	language baselanguage.Resolver
-}
-
-// Subject names the custom field by id — the seam has no row for it to read
-// a better label from (routedRecordTarget.refuse stands down every time),
-// the same as an archive of the six record-seam-unserved archivable types
-// (command.go).
-func (r retireCustomFieldResolver) Subject(ctx context.Context, cmd RetireCustomFieldCommand) (StageInfo, error) {
-	return StageInfo{
-		TargetType: customFieldRecordType,
-		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).retireCustomField, cmd.ID),
-	}, nil
-}
-
-// Guards stands down: the record seam has no row for a custom field today,
-// so there is nothing here to read and nothing to refuse — but the check is
-// servedByTheRecordSeam itself, not a hand-restated "custom_field has no
-// row" opinion, so a future seam widening (#1021) is picked up automatically
-// rather than silently left blind.
-func (r retireCustomFieldResolver) Guards(ctx context.Context, cmd RetireCustomFieldCommand) error {
-	return r.target.refuse(ctx, cmd.ID)
-}
-
-// UpdateCustomFieldOptionsCommand is one picklist option-set replacement,
-// whichever door asked for it — the routed custom field id only. It does
-// not carry the replacement options: neither Guards nor Subject reads them
-// (the body travels separately, into diff_hash), the same reason
-// UpdateFactCommand's own doc (commandsidecar.go) gives for dropping the
-// corrected value.
-type UpdateCustomFieldOptionsCommand struct {
-	ID ids.UUID
-}
-
-// NewUpdateCustomFieldOptionsCall binds one option-set replacement to the
-// resolver that answers for it.
-//
-//nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewUpdateCustomFieldOptionsCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd UpdateCustomFieldOptionsCommand) GovernedCall {
-	return bind[UpdateCustomFieldOptionsCommand](updateCustomFieldOptionsResolver{
-		language: language,
-		target:   routedRecordTarget{records: records, recordType: customFieldRecordType},
-	}, cmd)
-}
-
-type updateCustomFieldOptionsResolver struct {
-	target   routedRecordTarget
-	language baselanguage.Resolver
-}
-
-// Subject, Guards: the same shape as retireCustomFieldResolver's.
-func (r updateCustomFieldOptionsResolver) Subject(ctx context.Context, cmd UpdateCustomFieldOptionsCommand) (StageInfo, error) {
-	return StageInfo{
-		TargetType: customFieldRecordType,
-		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).customFieldOptions, cmd.ID),
-	}, nil
-}
-
-// Guards does not validate the option set: whether it is non-empty or
-// applies to a picklist field is the engine's own rule (customfields.Service),
-// re-checked at redemption, and restating it here would drift from it.
-func (r updateCustomFieldOptionsResolver) Guards(ctx context.Context, cmd UpdateCustomFieldOptionsCommand) error {
-	return r.target.refuse(ctx, cmd.ID)
-}
 
 // SetStakeholderCommand is one project-stakeholder attach or re-role,
 // whichever door asked for it — the routed project id only. It does not

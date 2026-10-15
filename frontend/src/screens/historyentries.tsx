@@ -15,6 +15,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { EntityKind } from "../lib/entity";
+import { historyFieldLabel } from "../lib/historyfieldlabels";
 import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
@@ -25,7 +26,6 @@ import {
 } from "./history.logic";
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
-import { historyFieldLabel } from "./historyfieldlabels";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";

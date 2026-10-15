@@ -53,7 +53,7 @@ func (h Handlers) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Reques
 
 // CreateWebhookSubscription registers a subscription and returns the
 // one-time signing secret; 503 when no deployment key is configured.
-func (h Handlers) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateWebhookSubscriptionParams) {
+func (h Handlers) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.CreateWebhookSubscriptionRequest
 	if !httperr.Decode(w, r, &req) {
 		return

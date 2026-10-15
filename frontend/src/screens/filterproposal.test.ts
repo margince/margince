@@ -3,18 +3,6 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  acceptProposals,
-  addProposal,
-  landProposal,
-  markProposed,
-  ownGroup,
-  ownLeaf,
-  type Proposal,
-  proposedCount,
-  replaceWithProposal,
-  withoutProposed,
-} from "./filterproposal";
-import {
   decode,
   encode,
   type Group,
@@ -26,7 +14,19 @@ import {
   replaceNode,
   resetIDsForTest,
   rootGroup,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
+import {
+  acceptProposals,
+  addProposal,
+  landProposal,
+  markProposed,
+  ownGroup,
+  ownLeaf,
+  type Proposal,
+  proposedCount,
+  replaceWithProposal,
+  withoutProposed,
+} from "./filterproposal";
 
 // A proposal lands as rows the reader can edit, each marked until they make it
 // theirs. These pin where the rows land, what a second proposal and Undo give

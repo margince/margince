@@ -13,7 +13,7 @@ import {
   mountFilters,
   type Sent,
 } from "../screens/filters.testkit";
-import { LIVE_ID, liveList } from "../screens/lists.fixtures";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import type { NavSection } from "./nav";
 import {
   fixtureSection,

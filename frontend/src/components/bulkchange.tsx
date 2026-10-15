@@ -25,6 +25,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
+import { LISTS_KEY } from "../lib/lists.queries";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import {
   dialogWords,
@@ -33,7 +34,6 @@ import {
   SampleState,
   SkipReason,
 } from "./bulkwords";
-import { LISTS_KEY } from "./lists.queries";
 
 type BulkRecordType = components["schemas"]["BulkRecordType"];
 type BulkVerb = components["schemas"]["BulkVerb"];

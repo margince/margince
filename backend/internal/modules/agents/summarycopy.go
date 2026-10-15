@@ -29,8 +29,8 @@ type summaryCopy struct {
 	enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
-	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem, retireCustomField,
-	customFieldOptions, setStakeholder, removeStakeholder, setCompany, removeCompany,
+	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
+	setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
 	mergeTags, changeList, dismissDuplicate, reopenDuplicate string
 
@@ -52,7 +52,7 @@ type summaryCopy struct {
 	// step-up.
 	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, bulkChange,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
-	stepUpRecords, stepUpChanges string
+	stepUpChanges string
 
 	// lang is the language this set is written in, which names its record
 	// types (recordnouns.go). It is not a sentence, so the census skips it.
@@ -84,8 +84,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Add a line item to offer %s",
 		updateLineItem:      "Update line item %s on offer %s",
 		removeLineItem:      "Remove line item %s from offer %s",
-		retireCustomField:   "Retire custom field %s",
-		customFieldOptions:  "Update options for custom field %s",
 		setStakeholder:      "Set a stakeholder on project %s",
 		removeStakeholder:   "Remove stakeholder %s from project %s",
 		setCompany:          "Put a company on project %s",
@@ -138,7 +136,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Write a summary of the night onto your morning brief",
 		annotateBoth:        "Write a summary of the night and %d finding(s) onto your morning brief",
 		annotateFindings:    "Write %d finding(s) onto your morning brief",
-		stepUpRecords:       "This agent has been handed %d records against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 		stepUpChanges:       "This agent has made %d changes against a limit of %d for this window (most recently through %s). Approve to let it continue for another %d.",
 	},
 	textlang.German: {
@@ -161,8 +158,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Position zum Angebot %s hinzufügen",
 		updateLineItem:      "Position %s im Angebot %s ändern",
 		removeLineItem:      "Position %s aus dem Angebot %s entfernen",
-		retireCustomField:   "Benutzerdefiniertes Feld %s stilllegen",
-		customFieldOptions:  "Optionen des benutzerdefinierten Felds %s ändern",
 		setStakeholder:      "Stakeholder für Projekt %s festlegen",
 		removeStakeholder:   "Stakeholder %s aus Projekt %s entfernen",
 		setCompany:          "Projekt %s ein Unternehmen zuordnen",
@@ -215,7 +210,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Eine Zusammenfassung der Nacht in deinen Morgenbericht schreiben",
 		annotateBoth:        "Eine Zusammenfassung der Nacht und %d Erkenntnis(se) in deinen Morgenbericht schreiben",
 		annotateFindings:    "%d Erkenntnis(se) in deinen Morgenbericht schreiben",
-		stepUpRecords:       "Dieser Agent hat %d Datensätze erhalten, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 		stepUpChanges:       "Dieser Agent hat %d Änderungen vorgenommen, bei einem Limit von %d für dieses Zeitfenster (zuletzt über %s). Gib frei, damit er für weitere %d weitermachen kann.",
 	},
 	textlang.Vietnamese: {
@@ -238,8 +232,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Thêm một dòng mục vào báo giá %s",
 		updateLineItem:      "Cập nhật dòng mục %s trong báo giá %s",
 		removeLineItem:      "Xóa dòng mục %s khỏi báo giá %s",
-		retireCustomField:   "Ngừng sử dụng trường tùy chỉnh %s",
-		customFieldOptions:  "Cập nhật tùy chọn của trường tùy chỉnh %s",
 		setStakeholder:      "Đặt một bên liên quan cho dự án %s",
 		removeStakeholder:   "Gỡ bên liên quan %s khỏi dự án %s",
 		setCompany:          "Gán một công ty cho dự án %s",
@@ -292,7 +284,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		annotateNarrative:   "Viết bản tóm tắt đêm qua vào bản tin buổi sáng của bạn",
 		annotateBoth:        "Viết bản tóm tắt đêm qua và %d phát hiện vào bản tin buổi sáng của bạn",
 		annotateFindings:    "Viết %d phát hiện vào bản tin buổi sáng của bạn",
-		stepUpRecords:       "Agent này đã nhận %d bản ghi so với giới hạn %d cho khung thời gian này (gần nhất qua %s). Phê duyệt để cho phép tiếp tục thêm %d.",
 		stepUpChanges:       "Agent này đã thực hiện %d thay đổi so với giới hạn %d cho khung thời gian này (gần nhất qua %s). Phê duyệt để cho phép tiếp tục thêm %d.",
 	},
 }

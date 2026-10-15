@@ -17,10 +17,10 @@ func TestTheStateIsTheWorstAllowance(t *testing.T) {
 		usage Usage
 		want  UsageState
 	}{
-		{"untouched", Usage{Reads: CounterUsage{Limit: 100}}, UsageOK},
-		{"just under 80%", Usage{Reads: CounterUsage{Used: 79, Limit: 100}}, UsageOK},
+		{"untouched", Usage{Calls: CounterUsage{Limit: 100}}, UsageOK},
+		{"just under 80%", Usage{Calls: CounterUsage{Used: 79, Limit: 100}}, UsageOK},
 		{"at 80%", Usage{Writes: CounterUsage{Used: 8, Limit: 10}}, UsageNear},
-		{"one used up", Usage{Reads: CounterUsage{Used: 1, Limit: 100}, Egress: CounterUsage{Used: 20, Limit: 20}}, UsageStopped},
+		{"one used up", Usage{Calls: CounterUsage{Used: 1, Limit: 100}, Egress: CounterUsage{Used: 20, Limit: 20}}, UsageStopped},
 	} {
 		if got := tc.usage.State(); got != tc.want {
 			t.Errorf("%s: state %q, want %q", tc.name, got, tc.want)

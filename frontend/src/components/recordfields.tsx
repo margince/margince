@@ -10,8 +10,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useDetailsFieldTarget } from "../app/pageaside";
-import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
@@ -27,6 +25,7 @@ import {
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
+import { invalidateRecord } from "../lib/recordwritekeys";
 import type { Route } from "../lib/router";
 import {
   type CreateField,
@@ -36,8 +35,9 @@ import {
   usePublishedValues,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
+import { useDetailsFieldTarget } from "./pageaside";
 import { groupValue, selectOptions } from "./recordfieldvalues";
-import { invalidateRecord } from "./recordwritekeys";
+import { useUnsavedGuard } from "./unsaved";
 
 export type FieldRecord = Record<string, unknown> & {
   id: string;

@@ -10,8 +10,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { unwrap } from "../lib/problem";
+import { decode, encode, type Node } from "../lib/segmentpredicate";
 import { tabOfViewResource, type ViewResource } from "./filtersaddress";
-import { decode, encode, type Node } from "./segmentpredicate";
 
 export type SavedView = components["schemas"]["SavedView"];
 

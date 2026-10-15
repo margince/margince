@@ -42,7 +42,7 @@ import (
 func tightenedPairs(t *testing.T) map[toolRecordType]string {
 	t.Helper()
 	registry := NewRegistry(nil, SendPath{})
-	ambiguous := ambiguousPairs()
+	ambiguous := ambiguousPairs(agentPolicies)
 	pairs := map[toolRecordType]string{}
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierConfirmationRequired {
@@ -119,7 +119,7 @@ func TestEveryVerbTheFloorTightensNamesItsRecordType(t *testing.T) {
 // it is invisible to every gate above, all of which only ask whether the floor
 // knows ENOUGH.
 func TestTheFloorTightensNothingTheContractLeavesAutomatic(t *testing.T) {
-	ambiguous := ambiguousPairs()
+	ambiguous := ambiguousPairs(agentPolicies)
 	for route, pol := range agentPolicies {
 		if pol.Access != accessTool || pol.RecordType == "" || pol.Tier != tierAutoExecute {
 			continue
@@ -202,35 +202,32 @@ func TestNoDedicatedVerbLosesItsFloorToArbitration(t *testing.T) {
 	}
 }
 
-// Arbitration must still bite where it was written to.
+// Arbitration must still bite where it was written to. A confirm-first sidecar
+// route that shares a pair with an auto-execute canonical route must not floor it. Otherwise every ordinary patch through the canonical route would stage
+// on the tool door while the REST door runs it unattended.
 //
-// `PATCH /v1/custom-fields/{id}/options` is confirm-first: editing the option set
-// of a field rewrites what existing rows can say, which is a schema change. The
-// canonical route on the same pair — `PATCH /v1/custom-fields/{id}`, a rename —
-// is auto-execute. Both declare (update_record, custom_field).
-//
-// Without arbitration the options route's tightening collapses onto that pair,
-// and every ordinary custom-field rename stages on the tool door while the REST
-// door runs it unattended. That is #982 pointing the other way, and it is what
-// the first draft of this fix actually did.
+// No pair in the contract has that shape today, so the table is built here and
+// read by the production derivation.
 func TestArbitrationStillDropsASidecarRoutesTightening(t *testing.T) {
-	const sidecar = "PATCH /v1/custom-fields/{id}/options"
-	const canonical = "PATCH /v1/custom-fields/{id}"
-
-	side, declared := agentPolicies[sidecar]
-	canon, alsoDeclared := agentPolicies[canonical]
-	if !declared || !alsoDeclared {
-		t.Fatalf("%s and %s are the pair this gate is built on and one is gone from the contract; "+
-			"point it at another sidecar route rather than deleting it", sidecar, canonical)
+	const sidecar = "PATCH /v1/companies/{id}/facts/{factKey}"
+	policies := map[string]agentPolicy{
+		"PATCH /v1/companies/{id}": {
+			Op: "updateCompany", Access: accessTool, Tool: "update_record",
+			RecordType: recordTypeCompany, Tier: tierAutoExecute,
+		},
+		sidecar: {
+			Op: "updateCompanyFact", Access: accessTool, Tool: "update_record",
+			RecordType: recordTypeCompany, Tier: tierConfirmationRequired,
+		},
 	}
-	if side.Tier != tierConfirmationRequired || canon.Tier != tierAutoExecute {
-		t.Skipf("the custom-field routes no longer have the tightened-sidecar shape "+
-			"(sidecar=%s, canonical=%s); pick another pair for this gate", side.Tier, canon.Tier)
+	if _, floored := floorsFrom(policies)[toolRecordType{tool: "update_record", recordType: "company"}]; floored {
+		t.Errorf("%s is a confirm-first sidecar, and its tightening reached the (update_record, company) "+
+			"floor: every ordinary company patch would stage on the tool door", sidecar)
 	}
 
-	if _, floored := tierFloor("update_record", "custom_field"); floored {
-		t.Errorf("%s tightens an OPTION SET rewrite, and its tightening reached the "+
-			"(update_record, custom_field) floor — every ordinary rename through %s would now stage "+
-			"on the tool door while the REST door runs it unattended", sidecar, canonical)
+	// The same sidecar alone on its pair is the operation, so it keeps its floor.
+	delete(policies, "PATCH /v1/companies/{id}")
+	if _, floored := floorsFrom(policies)[toolRecordType{tool: "update_record", recordType: "company"}]; !floored {
+		t.Errorf("%s is the only route on its pair, and arbitration dropped its floor", sidecar)
 	}
 }

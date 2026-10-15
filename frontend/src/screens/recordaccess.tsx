@@ -29,9 +29,9 @@ import type { MessageKey } from "../i18n/en";
 import { useRecordWriteRefusal } from "../lib/capability";
 import { useMemberName } from "../lib/membernames";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { invalidateRecord, recordWriteKeys } from "../lib/recordwritekeys";
 import { navigate, navigateReplacing } from "../lib/router";
 import { useViewerId } from "../lib/session";
-import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled

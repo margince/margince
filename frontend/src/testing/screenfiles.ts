@@ -6,9 +6,9 @@ import { stable } from "../format/collate";
 /** The frontend's `src/`, which every path below is relative to. */
 export const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The folders a screen can live in. A guard that read screens/ alone would
-// lose a screen moved into a feature folder and still pass on the rest.
-const SCREEN_ROOTS = ["screens", "features"];
+// The folders screen code can live in. A guard that read screens/ alone would
+// lose a part moved into components/ or a feature folder and still pass.
+export const SCREEN_ROOTS = ["screens", "components", "features"];
 
 // screenFiles lists every `.tsx` under the screen folders at any depth, minus
 // tests and stories, as paths relative to `src/` with forward slashes.

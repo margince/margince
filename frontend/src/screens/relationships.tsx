@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { SEARCH_HIT_KIND_KEY } from "../app/searchkinds";
+import type { CreateField } from "../components/create";
 import {
   Button,
   Field,
@@ -21,7 +22,6 @@ import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { isOption } from "../lib/options";
 import { unwrap } from "../lib/problem";
-import type { CreateField } from "./create";
 import {
   type Candidate,
   type RelationshipEntity,

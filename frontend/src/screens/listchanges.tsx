@@ -10,7 +10,7 @@ import { Button } from "../design-system/atoms";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { List } from "./lists.queries";
+import type { List } from "../lib/lists.queries";
 import "./lists.css";
 
 type Summary = NonNullable<List["changes_since_visit"]>;

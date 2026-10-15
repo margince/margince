@@ -49,8 +49,7 @@ import {
 // A cast, a parenthesis and a non-null assertion do NOT escape: see
 // isQueryKeyPosition.
 
-const screensDir = dirname(fileURLToPath(import.meta.url));
-const srcRoot = join(screensDir, "..");
+const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // The roots a lead's cached reads are filed under. `record-history` is NOT one
 // of them: it is the shared history key every record kind uses, and history.tsx
@@ -154,7 +153,7 @@ function sourceFiles(dir: string): string[] {
 
 // The module itself, and this file. Named rather than pattern-matched: a
 // pattern is how a second module quietly joins the exemption.
-const OWNERS = ["screens/leadkeys.ts", "screens/leadkeys.test.ts"];
+const OWNERS = ["lib/leadkeys.ts", "lib/leadkeys.test.ts"];
 
 function handSpelled(): string[] {
   const files = sourceFiles(srcRoot)

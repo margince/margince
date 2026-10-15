@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { components } from "../api/schema";
-
+import type { PickedTag } from "../components/bulktag";
 import { Button } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -14,13 +14,16 @@ import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import type { PickedTag } from "./bulktag";
+import type { RecordTag, TaggableType, TagRestore } from "../lib/tags.queries";
+import {
+  useRecordTags,
+  useRemoveTag,
+  useRestoreTag,
+} from "../lib/tags.queries";
 import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 import { AddTagPicker } from "./tagpicker";
-import type { RecordTag, TaggableType, TagRestore } from "./tags.queries";
-import { useRecordTags, useRemoveTag, useRestoreTag } from "./tags.queries";
 import "./tagspanel.css";
-import { useUndoableRemoval } from "./undoableremoval";
+import { useUndoableRemoval } from "../lib/undoableremoval";
 
 /**
  * The tags on one record — the same component on a contact, a company and a

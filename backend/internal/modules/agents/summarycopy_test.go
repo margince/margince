@@ -38,8 +38,6 @@ var summaryVerbs = map[string][]string{
 	"addLineItem":         {"%s"},
 	"updateLineItem":      {"%s", "%s"},
 	"removeLineItem":      {"%s", "%s"},
-	"retireCustomField":   {"%s"},
-	"customFieldOptions":  {"%s"},
 	"setStakeholder":      {"%s"},
 	"removeStakeholder":   {"%s", "%s"},
 	"setCompany":          {"%s"},
@@ -92,7 +90,6 @@ var summaryVerbs = map[string][]string{
 	"annotateNarrative":   nil,
 	"annotateBoth":        {"%d"},
 	"annotateFindings":    {"%d"},
-	"stepUpRecords":       {"%d", "%d", "%s", "%d"},
 	"stepUpChanges":       {"%d", "%d", "%s", "%d"},
 }
 

@@ -116,7 +116,6 @@ var contractBodies = map[string]string{
 	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
 	"updateCompanyFact":         `{"value":"260"}`,
 	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
-	"updateCustomFieldOptions":  `{"options":["bronze","silver","gold"]}`,
 
 	// Optional: the version names the report the approver read.
 	"approveImportRun": `{"version":2}`,
