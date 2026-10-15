@@ -5,9 +5,9 @@
 
 package integration
 
-// Search's employer arm, word by word: a query whose words are spread over a
-// contact's own name and their current employer's name finds that contact,
-// as "first name plus company" is how a reader finds someone whose last name
+// Search's employer arm, word by word. A query whose words are spread over a
+// contact's own name and their current employer's name finds that contact.
+// A first name plus the company is how a reader finds someone whose last name
 // they forgot.
 
 import (
@@ -124,8 +124,8 @@ func TestAContactMatchingEveryWordItselfAppearsOnce(t *testing.T) {
 	}
 }
 
-// The same question end to end: a company, its staff and their employment made
-// through the API the app uses, then a first name and half the company's name.
+// The same question end to end. The company, its staff and their employment
+// are made through the app's API; the query is a first name and part of the company.
 func TestAFirstNameAndPartOfTheCompanyFindAContactMadeThroughTheApp(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

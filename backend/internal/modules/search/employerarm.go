@@ -29,14 +29,13 @@ type Employer struct {
 const employerArmCompanies = maxPerType
 
 // employerArmSQL is the union element that finds contacts through a company
-// they currently work at, carrying that company as the hit's employer. It is
-// not a searchBranches row: it is a second way to reach the contact type, and
-// every reader of that table means one row per searchable entity.
+// the query matches, carrying that company as the hit's employer. It is not
+// a searchBranches row, because it is a second way to reach the contact type.
+// Every reader of that table means one row per searchable entity.
 //
-// A contact qualifies when the company matches the whole query, or when every
-// word matches either the contact's own text or that company's: "alice demo"
-// finds Alice at Demo GmbH. Companies matching any word seed the arm, so the
-// GIN index drives it and the per-word test reads only their staff.
+// Each word must match the contact's own text or the company's. So "alice
+// demo" finds Alice, who works at Demo. Companies matching any word seed the arm.
+// The GIN index thus picks the seeds, and the per-word test reads only staff.
 //
 // It is a read of the contact, of the company AND of the employment pair, so it
 // takes all three gates. A refusal of any drops the arm and returns "", never an
@@ -84,8 +83,6 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	// scoreExpression, which is never negative, so the keyset cursor needs no
 	// second ordering. DISTINCT ON keeps one row per contact: their
 	// best-matching employer, the primary job first where they hold two there.
-	// Seeds matching the whole query come first, so a word-wise seed never
-	// pushes one out of the cap.
 	return fmt.Sprintf(`SELECT '%[1]s'::text AS rtype, e.id, e.title, NULL::text AS snippet, e.score,
 	       e.employer_id, e.employer_name
 	  FROM (
@@ -97,7 +94,7 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	                       (%[10]s + ts_rank_cd(o.search_tsv, %[11]s, 32))::float8 AS match_rank
 	                  FROM company o
 	                 WHERE %[12]s AND %[5]s
-	                 ORDER BY whole DESC, match_rank DESC, o.id
+	                 ORDER BY whole DESC, match_rank DESC, o.id -- a whole-query seed keeps its place under the cap
 	                 LIMIT $%[6]d
 	               ) m
 	          JOIN relationship r ON r.company_id = m.id AND %[7]s
@@ -113,13 +110,13 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 		companyBranch.ownMatch("o", words.any(), identifierPos), words.everyFoundIn("t", "m")), nil
 }
 
-// typedWords is a plain-word query cut into the tsqueries the employer arm
-// tests one at a time: each finished word whole, the fragment as a prefix.
+// typedWords holds one tsquery per word, for the employer arm to test one at a
+// time. A finished word matches whole and the fragment as a prefix.
 type typedWords []string
 
 // queryWords binds each finished word of a plain-word query on its own and
-// reuses the fragment's binding. Words are whitespace-separated, as
-// websearch_to_tsquery reads a query without operators.
+// reuses the fragment's binding. Words split at whitespace, as
+// websearch_to_tsquery splits a query that has no operators.
 func queryWords(query string, tailPos int, hasFragment bool, arg func(any) int) typedWords {
 	head, _ := splitTypedQuery(query)
 	var words typedWords
