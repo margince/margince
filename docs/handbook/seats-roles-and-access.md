@@ -12,7 +12,7 @@ A "no" from any one of them is a no. **Settings → Overview** shows your own an
 ## Managing colleagues, roles and teams
 
 ### How do I invite a colleague to Margince?
-To invite a colleague to Margince, open **Settings → Members** and choose **Invite member** at the top right, beside the page title.
+To invite a colleague to Margince, open **Settings → Members** and choose **Invite member** at the top of the page.
 1. Open the account menu at the top right and choose **Settings**, then **Members**.
 2. Choose **Invite member**.
 3. Fill **Email** (required) and **Full name** (required).
@@ -60,7 +60,7 @@ The box shows when the link ends. To change your own password, use **Settings �
 Also called: forgot password, password reset, locked out.
 
 ### How do I create a team?
-To create a team in Margince, open **Settings → Teams** and choose **New team** at the top right, beside the page title.
+To create a team in Margince, open **Settings → Teams** and choose **New team** at the top of the page.
 1. Open **Settings → Teams**.
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
