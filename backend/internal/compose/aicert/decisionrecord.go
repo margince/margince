@@ -199,7 +199,11 @@ func (leg decisionLeg) decisionUsage(calls []ai.Call, runs int) (Record, error) 
 	rec.LatencyP50, rec.LatencyP95 = percentile(latencies, 0.50), percentile(latencies, 0.95)
 	rec.MeanTokensIn = pooled.TokensIn / runs
 	rec.MeanTokens = rec.MeanTokensIn
-	if rate, ok := servedRateFor(leg.lane.Provider, rec.ServedModel, leg.lane.Model, ranAt); ok {
+	served := ""
+	if (ai.Call{ServedIdentitySource: rec.ServedIdentitySource}).ReportsItsServedModel() {
+		served = rec.ServedModel
+	}
+	if rate, ok := servedRateFor(leg.lane.Provider, served, leg.lane.Model, ranAt); ok {
 		rec.EstCostMicroUSD = ai.PriceCall(ai.Usage{TokensIn: rec.MeanTokensIn}, rate)
 	}
 	return rec, nil

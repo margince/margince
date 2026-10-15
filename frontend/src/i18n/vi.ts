@@ -13489,9 +13489,9 @@ export const vi = {
   "aiFigures.line.timeoutCount_other": "{count} lần hết thời gian",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác mô hình đã gán, thường nhất là {model}.",
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
   "aiFigures.switched_other":
-    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác mô hình đã gán, thường nhất là {model}.",
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
   "aiFigures.switchedBadge": "Đã đổi mô hình",
   "aiFigures.line.sort": "sắp xếp: {sort}",
   "aiFigures.line.week": "7 ngày: {figures}",

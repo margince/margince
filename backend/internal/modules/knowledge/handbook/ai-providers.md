@@ -154,8 +154,8 @@ You need **AI diagnostics read** to see the figures.
 Also called: AI call log, model latency, AI cost per task, failed AI calls.
 
 ### What does "Model switched" on a model tier mean?
-"Model switched" means the provider answered some of the tier's calls this week
-with a model other than the one tied to the tier. A provider does this when it
+"Model switched" means the provider answered some of the tier's calls in the
+last seven days with a model other than the one tied to the tier. A provider does this when it
 moves a model name to a newer model. The tier's health mark, the tier's editor
 and the task's **Recent calls** say how many calls and which model.
 - **Cost** uses the price of the model that answered. Until that model has a

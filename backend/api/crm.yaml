@@ -33675,7 +33675,7 @@ components:
         tokens_out: { type: integer, format: int64 }
         cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
         unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
-        switched: { type: integer, format: int64, description: 'Calls the provider answered with another model than the one bound, by its own report.' }
+        switched: { type: integer, format: int64, description: 'Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.' }
         switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
     AiTaskFlow:
       type: object
@@ -33698,8 +33698,8 @@ components:
         answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
-        switched: { type: integer, format: int64, description: 'Attempts at this step the provider answered with another model than the one bound, by its own report.' }
-        switched_to: { type: string, description: 'The model the provider named most often on those attempts; absent when switched is 0.' }
+        switched: { type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]

@@ -220,3 +220,21 @@ func TestAPriceSyncReadsOnlyTheModelsAProviderSwitchedTo(t *testing.T) {
 		t.Errorf("switched models = %v, want gemini: %v, vertex: %v and no echoed or assumed model", got, want, want[:1])
 	}
 }
+
+func TestAFailedAttemptIsNotCountedAsASwitch(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	if err := NewCallMeter(f.db).Record(f.ctx, []Call{{
+		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: f.tasks[0],
+		Tier: TierLocalSmall, Provider: providerGemini, ModelID: boundGemini, RequestFingerprint: "fp-" + ids.NewV7().String(),
+		ErrorSentinel: "schema_invalid", ServedModel: answeredGemini, ServedIdentitySource: servedIdentitySourceResponse,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := NewCallReadStore(f.db).CallStats(diagnosticsReader(f.ws), CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByTier, Filter: CallStatsFilter{Tier: string(TierLocalSmall)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Failed != 1 || rows[0].Switched != 0 {
+		t.Errorf("figures = %+v, want one failed attempt and no switch", rows)
+	}
+}

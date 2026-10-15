@@ -23592,7 +23592,7 @@ export interface components {
             unpriced: number;
             /**
              * Format: int64
-             * @description Calls the provider answered with another model than the one bound, by its own report.
+             * @description Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
              */
             switched: number;
             /** @description The model the provider named most often on those calls; absent when switched is 0. */
@@ -23634,10 +23634,10 @@ export interface components {
             };
             /**
              * Format: int64
-             * @description Attempts at this step the provider answered with another model than the one bound, by its own report.
+             * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those attempts; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
             switched_to?: string;
         };
         AiDeferredWork: {

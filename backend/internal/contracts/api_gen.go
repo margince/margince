@@ -23795,7 +23795,7 @@ type AiCallStatsRow struct {
 	P50Ms int64  `json:"p50_ms"`
 	P95Ms int64  `json:"p95_ms"`
 
-	// Switched Calls the provider answered with another model than the one bound, by its own report.
+	// Switched Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
 	Switched int64 `json:"switched"`
 
 	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
@@ -24025,10 +24025,10 @@ type AiFlowStep struct {
 	P50Ms    int64            `json:"p50_ms"`
 	Provider string           `json:"provider"`
 
-	// Switched Attempts at this step the provider answered with another model than the one bound, by its own report.
+	// Switched Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
 	Switched int64 `json:"switched"`
 
-	// SwitchedTo The model the provider named most often on those attempts; absent when switched is 0.
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
 	SwitchedTo *string `json:"switched_to,omitempty"`
 	Tier       string  `json:"tier"`
 }

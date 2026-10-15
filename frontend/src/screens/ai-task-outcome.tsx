@@ -124,7 +124,7 @@ function StepCard({
             <span className="t-caption" role="status">
               {switchedSentence(
                 step.switched,
-                step.attempts,
+                step.answered,
                 step.switched_to,
                 plural,
                 locale,

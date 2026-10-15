@@ -75,8 +75,8 @@ type CallStatsRow struct {
 	TokensOut    int64
 	CostMicroUSD int64
 	Unpriced     int64
-	// Switched counts the calls the provider answered with another model than
-	// their binding, and SwitchedTo is the one it named most often.
+	// Switched counts the answered calls the provider answered with another
+	// model than their binding, and SwitchedTo is the one it named most often.
 	Switched   int64
 	SwitchedTo string
 }
@@ -125,8 +125,8 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		       coalesce(sum(ac.tokens_in), 0), coalesce(sum(ac.tokens_out), 0),
 		       coalesce(sum(%[3]s), 0)::bigint,
 		       count(*) FILTER (WHERE %[4]s),
-		       count(*) FILTER (WHERE %[7]s),
-		       coalesce(mode() WITHIN GROUP (ORDER BY ac.served_model) FILTER (WHERE %[7]s), '')
+		       count(*) FILTER (WHERE %[7]s AND NOT %[2]s),
+		       coalesce(mode() WITHIN GROUP (ORDER BY ac.served_model) FILTER (WHERE %[7]s AND NOT %[2]s), '')
 		  FROM ai_call ac
 		  LEFT JOIN LATERAL (%[5]s) r ON true
 		 WHERE %[6]s
@@ -171,7 +171,7 @@ type FlowStep struct {
 	// GaveUp counts why the walk moved past this step: the attempt's own
 	// sentinel when it failed, else the reason the next attempt was made.
 	GaveUp map[string]int64
-	// Switched and SwitchedTo are CallStatsRow's, over this step's attempts.
+	// Switched and SwitchedTo are CallStatsRow's, over the calls this step answered.
 	Switched   int64
 	SwitchedTo string
 }
@@ -231,8 +231,8 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, arg
 		       coalesce(percentile_disc(0.5) WITHIN GROUP (ORDER BY latency_ms), 0),
 		       coalesce(array_agg(CASE WHEN sentinel <> '' THEN sentinel ELSE next_reason END)
 		                FILTER (WHERE NOT (is_terminal AND NOT failed)), '{}'),
-		       count(*) FILTER (WHERE switched),
-		       coalesce(mode() WITHIN GROUP (ORDER BY served_model) FILTER (WHERE switched), '')
+		       count(*) FILTER (WHERE switched AND is_terminal AND NOT failed),
+		       coalesce(mode() WITHIN GROUP (ORDER BY served_model) FILTER (WHERE switched AND is_terminal AND NOT failed), '')
 		  FROM attempts
 		 GROUP BY decision, tier`, args...)
 	if err != nil {

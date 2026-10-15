@@ -59,5 +59,5 @@ func pricedRate(alias string, fromArg, toArg int) string {
 		LIMIT 1`,
 		rateMatch(alias+".provider", alias+".served_model", day, fromArg, toArg),
 		rateMatch(alias+".provider", alias+".model_id", day, fromArg, toArg),
-		switchedModelSQL(alias))
+		answeredModelSQL(alias)+" <> "+alias+".model_id")
 }
