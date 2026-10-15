@@ -69,8 +69,6 @@ func loadDeployment(cfg *workerConfig) (deployconfig.Config, error) {
 	}
 	cfg.allowDataReset = deployCfg.Operations.AllowDataReset
 	cfg.listsEnabled = deployCfg.Lists.Enabled
-	cfg.ratesFx = deployCfg.Rates.Fx
-	cfg.ratesCurrencies = deployCfg.Rates.FxCurrencies
 	cfg.csvImportCap = deployCfg.EffectiveUploads().CSVImport
 	return deployCfg, nil
 }

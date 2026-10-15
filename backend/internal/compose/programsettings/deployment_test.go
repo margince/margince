@@ -4,12 +4,15 @@
 package programsettings_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // An installation with no auth section signs in by email and password.
@@ -44,5 +47,56 @@ func TestAIPayloadCaptureIsOffUnlessTheFileTurnsItOn(t *testing.T) {
 	}
 	if !config.Val(configtest.MustLoad(t, "version: 1\nai:\n  capture_payloads: true\n", ps.FileSettings()...), ps.CapturePayloads) {
 		t.Fatal("ai.capture_payloads: true read as off")
+	}
+}
+
+func TestTheFxCandidatesAreReadAsWrittenAndHeldToISO4217(t *testing.T) {
+	t.Parallel()
+	cfg := configtest.MustLoad(t, "version: 1\nrates:\n  fx_source: https://example.test/fx\n  fx_currencies: [USD, GBP, CHF]\n", ps.FileSettings()...)
+	if got := config.Val(cfg, ps.RatesFxSource); got != "https://example.test/fx" {
+		t.Errorf("rates.fx_source = %q", got)
+	}
+	if got := strings.Join(config.Val(cfg, ps.RatesFxCurrencies), ","); got != "USD,GBP,CHF" {
+		t.Errorf("rates.fx_currencies = %q", got)
+	}
+	// Unset is empty: the worker supplies USD, GBP and CHF, so loading must
+	// not invent a value.
+	if got := config.Val(configtest.MustLoad(t, "version: 1\n", ps.FileSettings()...), ps.RatesFxCurrencies); len(got) != 0 {
+		t.Errorf("rates.fx_currencies defaulted to %v", got)
+	}
+	for name, list := range map[string]string{"non-iso code": "[USD, US]", "non-letter code": `[USD, "12$"]`, "duplicate": "[USD, usd]"} {
+		if _, err := configtest.Load(t, "rates:\n  fx_currencies: "+list+"\n", nil, nil, ps.FileSettings()...); err == nil {
+			t.Errorf("%s: a malformed fx_currencies set loaded; a typo must fail at boot", name)
+		}
+	}
+}
+
+// --config-file wins key by key over the base: a list it names replaces the
+// base's whole, and a key it leaves out keeps the base's value.
+func TestAConfigFileReplacesAListAndKeepsTheBasesOtherKeys(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	base, over := filepath.Join(dir, "margince.yaml"), filepath.Join(dir, "posture.yaml")
+	for path, body := range map[string]string{
+		base: "version: 1\nrates:\n  fx_source: https://base.test/fx\n  fx_currencies: [USD, GBP, CHF]\n",
+		over: "rates:\n  fx_currencies: [SEK]\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reg, err := config.NewRegistry(ps.FileSettings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(reg, config.Sources{Args: []string{"--config", base, "--config-file", over}, BootstrapRoots: deployconfig.Sections()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := config.Val(cfg, ps.RatesFxCurrencies); len(got) != 1 || got[0] != "SEK" {
+		t.Errorf("fx_currencies = %v; a list the config file names replaces the base's entirely", got)
+	}
+	if got := config.Val(cfg, ps.RatesFxSource); got != "https://base.test/fx" {
+		t.Errorf("fx_source = %q; a key the config file leaves out keeps the base's value", got)
 	}
 }

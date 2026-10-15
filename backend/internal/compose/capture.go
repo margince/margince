@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -154,11 +155,19 @@ func WithCaptureConfig(cfg CaptureConfig) Option {
 // WarnStaleRates says once, at boot, which `rates:` settings the file still
 // carries and nothing acts on. Both roles call it: the api serves the request
 // the operator believed the key governed, and the worker used to run the job.
-func WarnStaleRates(r deployconfig.RatesConfig, log *slog.Logger) {
-	for _, warning := range r.Warnings() {
-		log.Warn("rates configuration: " + warning)
+func WarnStaleRates(c *config.Config, log *slog.Logger) {
+	if len(config.Val(c, RatesModelPricing)) > 0 {
+		log.Warn("rates configuration: rates.model_pricing is ignored: model prices are refreshed from the provider's own " +
+			"catalogue with Refresh model prices under Settings. Remove it from margince.yaml.")
 	}
 }
+
+// RatesModelPricing is accepted so files that carry it still load; model
+// prices come from the provider's catalogue.
+var RatesModelPricing = config.Define(config.Spec[map[string]string]{
+	Key: "rates.model_pricing", Env: "MARGINCE_RATES_MODEL_PRICING", Type: config.Map(config.String), Roles: bothRoles,
+	Doc: "Ignored, with a warning at boot; kept so existing files load.",
+})
 
 // CaptureConfigFromDeploy maps the deployment's `capture:` block onto the
 // compose suppression config the Sink gates read (CAP-PARAM-6, ADR-0072).

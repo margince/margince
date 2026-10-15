@@ -115,6 +115,7 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerC
 		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow),
 		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
 		observeAddr: config.Val(loaded, ps.ObserveAddr), observePprof: config.Val(loaded, ps.ObservePprof),
+		ratesFx: config.Val(loaded, ps.RatesFxSource), ratesCurrencies: config.Val(loaded, ps.RatesFxCurrencies),
 		posture: posture, settings: loaded,
 	}
 }

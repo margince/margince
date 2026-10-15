@@ -74,25 +74,6 @@ func TestOnlyTheRunningPosturesOverlayIsRead(t *testing.T) {
 	}
 }
 
-// The merge rule an operator reads off the YAML in front of them: a mapping
-// merges, a list replaces. Both halves matter — a list that merged would make
-// "which currencies does this installation propose" unanswerable without
-// reading two files and knowing which way each key goes.
-func TestAMappingMergesAndAListReplaces(t *testing.T) {
-	cfg, err := layered(t, runtimeenv.Test,
-		"version: 1\nrates:\n  fx_source: https://base.test/fx\n  fx_currencies: [USD, GBP, CHF]\n",
-		"rates:\n  fx_currencies: [SEK]\n")
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if got := cfg.Rates.FxCurrencies; len(got) != 1 || got[0] != "SEK" {
-		t.Errorf("fx_currencies = %v; a list the overlay names replaces the base's entirely", got)
-	}
-	if got := cfg.Rates.Fx; got != "https://base.test/fx" {
-		t.Errorf("fx_source = %q; a mapping merges, so the base's untouched key stays", got)
-	}
-}
-
 // An overlay committed as a placeholder — the posture exists, its keys are
 // still commented out — is a file a boot must read and shrug at.
 func TestACommentOnlyOverlayIsNotAFailure(t *testing.T) {

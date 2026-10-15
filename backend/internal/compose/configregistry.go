@@ -27,7 +27,7 @@ func allSettings() []config.Any {
 		keyvault.Settings(),
 		blobstore.Settings(),
 		ai.Settings(),
-		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile},
+		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile, RatesModelPricing},
 		[]config.Any{EmailEnabled, EmailFromAddress, SMTPHost, SMTPPort, SMTPUsername, SMTPPassword, SMTPPasswordFile},
 	)
 }

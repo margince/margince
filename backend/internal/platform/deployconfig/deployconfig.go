@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Rates          RatesConfig     `yaml:"rates"`
 	MCP            MCP             `yaml:"mcp"`
 	Capture        Capture         `yaml:"capture"`
 	CompanyContext CompanyContext  `yaml:"company_context"`
@@ -301,9 +300,6 @@ func (c Config) validate() error {
 	}
 	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
 		return fmt.Errorf("deployconfig: workspace.base_language %q is not a language this build speaks (en, de, vi)", lang)
-	}
-	if err := c.Rates.validate(); err != nil {
-		return err
 	}
 	if c.BootstrapAdmin != nil {
 		if err := c.BootstrapAdmin.validate(); err != nil {

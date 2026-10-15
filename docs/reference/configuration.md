@@ -92,6 +92,9 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_EMAIL_SMTP_PASSWORD` | — | `email.smtp.password` (secret; `${none}` removes it) |
 | `MARGINCE_EMAIL_SMTP_PASSWORD_FILE` | — | `email.smtp.password_file` |
 | `MARGINCE_AI_CAPTURE_PAYLOADS` | `false` | `ai.capture_payloads` |
+| `MARGINCE_RATES_FX_SOURCE` | — | `rates.fx_source` |
+| `MARGINCE_RATES_FX_CURRENCIES` | — | `rates.fx_currencies` |
+| `MARGINCE_RATES_MODEL_PRICING` | — | `rates.model_pricing` (ignored) |
 
 ## Common log flags (api, worker)
 
