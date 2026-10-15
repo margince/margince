@@ -28,64 +28,6 @@ export const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
   to: "",
 };
 
-// One key per contract action, so the Action dial offers each; an action the
-// contract adds fails to compile here until it does.
-const AUDIT_ACTIONS = {
-  create: true,
-  update: true,
-  archive: true,
-  merge: true,
-  promote: true,
-  demote: true,
-  disqualify: true,
-  restore: true,
-  export: true,
-  erase: true,
-  anonymize: true,
-  assign: true,
-  advance_stage: true,
-  advance_phase: true,
-  send_email: true,
-  consent_grant: true,
-  consent_withdraw: true,
-  approve: true,
-  reject: true,
-  record_share: true,
-  record_unshare: true,
-  activity_relink: true,
-  import: true,
-  import_undo: true,
-  reset_data: true,
-  password_link_issued: true,
-  connect: true,
-  disconnect: true,
-  schedule: true,
-  reschedule: true,
-  cancel: true,
-  release: true,
-  hold: true,
-  expire: true,
-  resolve: true,
-  restrict: true,
-  pin: true,
-  accrue: true,
-  pay: true,
-  publish: true,
-  pause: true,
-  resume: true,
-  close: true,
-  invite: true,
-  revoke: true,
-  delete: true,
-  place_legal_hold: true,
-  lift_legal_hold: true,
-  request_legal_review: true,
-  withdraw_legal_review: true,
-} as const satisfies Record<AuditLogEntry["action"], true>;
-
-export const AUDIT_ACTION_VALUES: readonly string[] =
-  Object.keys(AUDIT_ACTIONS);
-
 export const AUDIT_LOG_PAGE_SIZE = 20;
 
 export function isNarrowed(filters: AuditLogFilters): boolean {

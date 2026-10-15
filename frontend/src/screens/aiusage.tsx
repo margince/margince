@@ -184,12 +184,15 @@ function MonthTotals({
 function AiUsageBody({
   data,
   decisionsBound,
+  view,
+  onView,
 }: Readonly<{
   data: AiUsage;
   decisionsBound: boolean;
+  view: SpendView;
+  onView: (view: SpendView) => void;
 }>) {
   const t = useT();
-  const [view, setView] = useState<SpendView>("task");
   const lines = useMemo(() => aggregate(data.days), [data.days]);
   const rows = useMemo(() => spendRows(lines), [lines]);
   const showCost = lines.some((line) => line.cost_est_minor !== undefined);
@@ -231,7 +234,7 @@ function AiUsageBody({
             label={t("aiusage.view.label")}
             options={SPEND_VIEWS}
             value={view}
-            onChange={setView}
+            onChange={onView}
             labels={{
               task: t("aiusage.view.task"),
               day: t("aiusage.view.day"),
@@ -286,7 +289,10 @@ export function AiUsageCard() {
   // recomputing it per render would churn the query key on the one day of the
   // month it could change.
   const [month, setMonth] = useState<Month>(currentMonth);
+  // Held here, so the reader's view outlives the body a month step remounts.
+  const [view, setView] = useState<SpendView>("task");
   const query = useAiUsage(month, canSee);
+  const canReadPrices = useCan("ai_model_rate", "read");
   // The decision rates are shown only while a decision model is bound: rows
   // written under a binding outlive it, and a rate for a model nobody runs
   // answers a question nobody is asking. A reader who may not see the routing
@@ -320,9 +326,11 @@ export function AiUsageCard() {
       title={t("aiusage.title")}
       titleAction={<MonthSwitch month={month} onMonth={setMonth} />}
       footer={
-        <a className="link-button" href={routeHash(settingsHref("models"))}>
-          {t("aiusage.pricesLink")}
-        </a>
+        canReadPrices && (
+          <a className="link-button" href={routeHash(settingsHref("models"))}>
+            {t("aiusage.pricesLink")}
+          </a>
+        )
       }
     >
       {query.data === undefined ? (
@@ -333,7 +341,12 @@ export function AiUsageCard() {
           </QueryStates>
         </PanelBody>
       ) : (
-        <AiUsageBody data={query.data} decisionsBound={decisionsBound} />
+        <AiUsageBody
+          data={query.data}
+          decisionsBound={decisionsBound}
+          view={view}
+          onView={setView}
+        />
       )}
     </Panel>
   );

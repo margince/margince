@@ -335,10 +335,10 @@
   }
 
   /* A bare switch stays on its name's line, as a phone's own settings put it;
-   * one with a refusal under it needs the width and stacks. */
+   * one with a refusal or a hint under it needs the width and stacks. */
   .settingrow:not(.settingrow-stack):has(
     > .settingrow-control > .switchrow:only-child
-  ):not(:has(.switchreason)) {
+  ):not(:has(.switchreason, .switchhint)) {
     flex-direction: row;
     align-items: flex-start;
   }

@@ -94,16 +94,16 @@ export function ModelPricesCard() {
   return (
     <Panel
       title={t("aiPriceSync.title")}
-      titleAction={
-        canRefresh || canSetPrice ? (
-          <span className="ai-price-verbs">
+      actions={
+        query.data !== undefined && (canRefresh || canSetPrice) ? (
+          <>
             {canRefresh ? <RefreshModelPricesButton refresh={refresh} /> : null}
             {canSetPrice ? (
               <Button onClick={() => setAdding(true)}>
                 {t("settings.rates.modelAdd")}
               </Button>
             ) : null}
-          </span>
+          </>
         ) : undefined
       }
     >

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -190,6 +191,12 @@ export const RunsLoading: Story = {
         <AutomationRuns automationId="au-1" />
       </StoryProviders>
     );
+  },
+  // The outcome filter stands above the skeleton, so it does not pop in.
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("combobox", { name: "Outcome" }),
+    ).toBeInTheDocument();
   },
 };
 

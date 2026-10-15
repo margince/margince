@@ -8,27 +8,16 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
+import { boundsText } from "../format/bounds";
 import { formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
-import {
-  type Locale,
-  type PluralTranslator,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../i18n";
+import { useLocale, usePlural, useT, type Words } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
-type Words = Readonly<{
-  t: Translator;
-  plural: PluralTranslator;
-  locale: Locale;
-}>;
 
 // The bounds the API refuses past, mirrored so a value out of range is refused
 // in the box before the request. Keyed by the wire property, which is how
@@ -152,10 +141,10 @@ function inWords(
 // The range is said only once a typed value breaks it, in the row's own unit.
 function refusalOf(row: OperationRow, { t, locale }: Words): string {
   const bounds = OPERATION_BOUNDS[row.property];
-  const range = {
-    min: formatNumber(row.lowestOn ?? bounds.min, locale),
-    max: formatNumber(bounds.max, locale),
-  };
+  const range = boundsText(
+    { min: row.lowestOn ?? bounds.min, max: bounds.max },
+    locale,
+  );
   const unit = unitOf(row);
   if (unit === "hours") {
     return t("operations.refusal.hours", range);
@@ -195,27 +184,35 @@ function OperationsCard({
   if (!canRead) {
     return null;
   }
-  const list = (
+  const listOf = (operations: Operations) => (
+    <SettingList bleed={fold ? undefined : "settings"}>
+      {rows.map((row) => (
+        <NumberSettingRow
+          key={row.property}
+          label={t(`operations.${row.copy}.label`)}
+          description={t(`operations.${row.copy}.help`)}
+          testId={`operation-${row.property}`}
+          value={operations[row.property]}
+          {...OPERATION_BOUNDS[row.property]}
+          lowestOn={row.lowestOn}
+          refusal={refusalOf(row, words)}
+          reading={inWords(row, words)}
+          disabled={!canManage || update.isPending}
+          onCommit={(next) => update.mutate({ [row.property]: next })}
+        />
+      ))}
+    </SettingList>
+  );
+  // The gate stands outside the fold, so a failed read shows while it is shut.
+  const gated = (
     <QueryGate query={query} pendingLabel={title}>
-      {(settings) => (
-        <SettingList bleed={fold ? undefined : "settings"}>
-          {rows.map((row) => (
-            <NumberSettingRow
-              key={row.property}
-              label={t(`operations.${row.copy}.label`)}
-              description={t(`operations.${row.copy}.help`)}
-              testId={`operation-${row.property}`}
-              value={settings.operations[row.property]}
-              {...OPERATION_BOUNDS[row.property]}
-              lowestOn={row.lowestOn}
-              refusal={refusalOf(row, words)}
-              reading={inWords(row, words)}
-              disabled={!canManage || update.isPending}
-              onCommit={(next) => update.mutate({ [row.property]: next })}
-            />
-          ))}
-        </SettingList>
-      )}
+      {(settings) =>
+        fold ? (
+          <Disclosure summary={fold}>{listOf(settings.operations)}</Disclosure>
+        ) : (
+          listOf(settings.operations)
+        )
+      }
     </QueryGate>
   );
   return (
@@ -223,9 +220,9 @@ function OperationsCard({
       <PanelBody className="form-stack">
         <PanelIntro>{sub}</PanelIntro>
         {!canManage && <PanelIntro>{t("operations.adminOnly")}</PanelIntro>}
-        {fold && <Disclosure summary={fold}>{list}</Disclosure>}
+        {fold && gated}
       </PanelBody>
-      {!fold && list}
+      {!fold && gated}
       {update.isError && (
         <PanelBody>
           <Callout
@@ -242,8 +239,7 @@ function OperationsCard({
 }
 
 // How often each background pass runs, and how far ahead a mail subscription
-// is renewed. Folded: an operator sets these once, and twelve open boxes made
-// the page read as a form when it is a report.
+// is renewed. Folded, because an operator sets these once and reads them rarely.
 export function BackgroundSchedulesCard() {
   const t = useT();
   return (
@@ -255,6 +251,7 @@ export function BackgroundSchedulesCard() {
     />
   );
 }
+
 // How fast one mailbox may send. Beside the schedules because it is the same
 // kind of answer: how hard the worker leans on somebody else's service.
 export function SendPacingCard() {

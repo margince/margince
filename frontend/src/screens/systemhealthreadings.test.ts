@@ -151,6 +151,15 @@ describe("intakeReading", () => {
       units: [],
     };
     expect(intakeReading(report, words).panel).toBe(false);
+    expect(
+      intakeReading(
+        { ...report, units: [{ unit: "a", refused: 0, refusals: [] }] },
+        words,
+      ),
+    ).toEqual({
+      card: { value: "None", tone: "success" },
+      panel: false,
+    });
     const refused = intakeReading(
       {
         ...report,

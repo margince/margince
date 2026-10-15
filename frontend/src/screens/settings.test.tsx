@@ -63,11 +63,9 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// A principal holding the model-price grants and NOTHING else: enough to reach
-// the two AI diagnostics pages and author the price table, and not enough for
-// the cards whose endpoints ask for the automation grant. Shared by the two
-// cases below, which are one claim asserted on the two addresses it now spans.
-function aiRateReaderBackend() {
+// A principal holding the allowance read and the model-price grants, without
+// `ai_diagnostics:read`. Shared by the cases below, one claim on two addresses.
+function allowanceReaderBackend() {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -471,7 +469,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // The allowance opens AI usage for this principal; the spend card beside it
   // asks `ai_diagnostics:read`, so it keeps its place and says why.
   it("withholds the AI spend from a principal without the diagnostics read", async () => {
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("usage")} />);
 
     // The allowance this grant reads is on screen...
@@ -497,7 +495,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // address reaches the access BOUNDARY, and nothing about the trace appears.
     // If the page and the card ever diverge again this fails, which is the
     // right alarm.
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
     // Waited on the BOUNDARY's own words rather than on an absence: the trace
     // is missing before /me resolves too, so an absence alone would pass
@@ -513,9 +511,13 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() =>
       expect(screen.getByText(/no access to this settings page/i)).toBeTruthy(),
     );
-    // The chrome agrees: no page is current, where the fallback used to mark
-    // Account.
-    expect(screen.queryByText("AI call trace")).toBeNull();
+    // The trace card never mounted, so it never asked for a call.
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      );
+    expect(asked.some((url) => url.includes("/ai/calls"))).toBe(false);
   });
 
   // The way off the boundary leads to the settings home, which is the address
@@ -523,7 +525,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // a second name for one place. Read from the catalog, so renaming the row
   // renames this link and cannot leave the two saying different things.
   it("names the way off the boundary with the sidebar's own word for it", async () => {
-    vi.stubGlobal("fetch", aiRateReaderBackend());
+    vi.stubGlobal("fetch", allowanceReaderBackend());
     render(<SettingsScreen route={settingsHref("model-calls")} />);
     const back = await screen.findByRole("link", {
       name: translate("en", "settings.home"),
@@ -692,7 +694,7 @@ describe("SettingsScreen restructured pages", () => {
     renderSettings("audit");
     const filters = await screen.findByRole("group", { name: "Filters" });
     expect(within(filters).getByLabelText("Actor")).toBeVisible();
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The WRITE opens it, editor included. The page absorbed a route that nothing
@@ -740,7 +742,7 @@ describe("SettingsScreen restructured pages", () => {
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The other half, and the reason opening the page is not the whole answer: a

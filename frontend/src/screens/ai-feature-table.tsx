@@ -84,7 +84,6 @@ export function AiFeatureTable({
     header: t("aiTasks.settings"),
     headerHidden: true,
     align: "end",
-    fold: "end",
     render: (row) => (
       <RowOpen
         label={t(canManage ? "aiRouting.editNamed" : "aiRouting.openNamed", {

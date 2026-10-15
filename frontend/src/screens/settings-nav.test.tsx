@@ -198,7 +198,7 @@ const SEEDED_READS: GrantSpec = {
 // Seats & license.
 //
 // `ai_model_rate` opens AI models, where the model prices panel sits. AI usage
-// and the call log ask `ai_diagnostics:read` or `ai_budget:read` instead.
+// asks `ai_diagnostics:read` or `ai_budget:read`; the call log asks the first.
 const SEEDED_OPS_READS: GrantSpec = {
   ...SEEDED_READS,
   ai_model_rate: ["read"],

@@ -57,8 +57,13 @@ export const Fits: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("table");
+    const table = await canvas.findByRole("table");
     await expect(canvas.queryByRole("region")).toBeNull();
+    const box = table.parentElement;
+    await expect(box).not.toBeNull();
+    if (box) {
+      await expect(endShade(box)).toBe("0px");
+    }
   },
 };
 
@@ -110,7 +115,7 @@ function ModelUsage() {
 }
 
 const endShade = (region: HTMLElement) =>
-  getComputedStyle(region).backgroundSize.split(" ")[0];
+  getComputedStyle(region, "::after").width;
 
 // On a phone the end edge shades while columns lie past it, so a reader knows
 // the table scrolls.
@@ -144,4 +149,11 @@ export const ScrolledToTheEnd: Story = {
     region.scrollLeft = region.scrollWidth;
     await waitFor(() => expect(endShade(region)).toBe("0px"));
   },
+};
+
+// The shade is drawn above the cells, so it holds against the dark plate and a
+// hovered row alike.
+export const EndEdgeOnPhoneDark: Story = {
+  ...EndEdgeOnPhone,
+  globals: { ...EndEdgeOnPhone.globals, theme: "dark" },
 };

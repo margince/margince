@@ -62,6 +62,9 @@ function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
 
 const row = (id: string) => screen.findByTestId(`automation-${id}`);
 
+const templateText = (key: string) =>
+  AUTOMATION_CATALOG.find((entry) => entry.key === key)?.description ?? "";
+
 describe("the configured automations table", () => {
   it("reads each rule's last run as an outcome word, and Never when it has none", async () => {
     mount();
@@ -106,6 +109,22 @@ describe("the configured automations table", () => {
       }),
     ).toBeInTheDocument();
     expect(await row("au-5")).not.toHaveTextContent(/Paused ·/);
+  });
+
+  it("marks a rule that waits for approval, and tells a screen reader one runs by itself", async () => {
+    mount();
+    const approval = within(await row("au-4")).getByText(
+      en["auto.tier.approval"],
+    );
+    expect(approval.closest(".badge")?.className).toContain("badge-warning");
+    expect(
+      within(await row("au-4")).queryByText(en["auto.modeAuto"]),
+    ).toBeNull();
+    const auto = within(await row("au-1")).getByText(en["auto.modeAuto"]);
+    expect(auto).toHaveClass("sr-only");
+    expect(
+      within(await row("au-1")).queryByText(en["auto.tier.approval"]),
+    ).toBeNull();
   });
 
   it("says what a rule does in words, never in its key or raw parameters", async () => {
@@ -226,7 +245,7 @@ describe("the starter library", () => {
     expect(template).not.toHaveTextContent(/clock:|create_task|->/);
     expect(template).toHaveTextContent(en["auto.trigger.renewal"]);
     await user.click(
-      within(template).getByText(AUTOMATION_CATALOG[1].description ?? ""),
+      within(template).getByText(templateText("renewal_reminder")),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -259,7 +278,7 @@ describe("the starter library", () => {
     );
     expect(
       within(await screen.findByRole("dialog")).getByText(
-        AUTOMATION_CATALOG[2].description ?? "",
+        templateText("stage_change_notify"),
       ),
     ).toBeInTheDocument();
   });

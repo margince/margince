@@ -24,14 +24,10 @@ import { HealthCard, type HealthSlot, HealthStrip } from "./healthcard";
 // The copy is the job-health card's, which is the first caller — the shell
 // carries no words of its own, so a story of it has to borrow a real card's.
 
-type Report = Readonly<{ readAt: string; waiting: number; retrying: number }>;
+type Report = Readonly<{ waiting: number; retrying: number }>;
 
-const BUSY: Report = {
-  readAt: "13 Aug 2026, 09:30",
-  waiting: 12,
-  retrying: 2,
-};
-const IDLE: Report = { readAt: "13 Aug 2026, 09:30", waiting: 0, retrying: 0 };
+const BUSY: Report = { waiting: 12, retrying: 2 };
+const IDLE: Report = { waiting: 0, retrying: 0 };
 
 // A hand-built QueryLike, not a routed fetch: the card takes the query as a
 // prop, so its four states are four VALUES. Producing each one through a stub

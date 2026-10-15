@@ -132,7 +132,7 @@ bootstrap_admin:
 #
 # Credentials are NOT here and never will be. A binding names providers; each
 # one's BYOK key lives in the key vault, put there by an admin under
-# Settings -> AI -> Model provider keys, so this section is safe to commit.
+# Settings -> AI -> AI models -> Providers, so this section is safe to commit.
 #
 # The conventional environment variables (GEMINI_API_KEY, ANTHROPIC_API_KEY, …)
 # are still read, but only to SEED: a boot that finds one MAY seal it into the

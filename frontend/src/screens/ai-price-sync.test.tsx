@@ -162,6 +162,8 @@ describe("ModelPricesCard", () => {
           return jsonResponse(meFixture({ allow: ADMIN }));
         if (url.endsWith("/ai/price-sync"))
           return jsonResponse({ auto_sync: true });
+        if (!url.endsWith("/v1/ai-model-rates"))
+          return jsonResponse({ title: "Not found" }, 404);
         return jsonResponse({
           data: [
             {
@@ -180,7 +182,7 @@ describe("ModelPricesCard", () => {
     mount();
     const summary = (await screen.findByText("Anthropic")).closest("summary");
     expect(summary?.getAttribute("aria-expanded")).toBe("false");
-    expect(summary?.textContent).toContain("1");
+    expect(summary?.textContent).toBe("Anthropic, 1");
     expect(
       screen.getByRole("button", { name: "Add model rate" }),
     ).toBeInTheDocument();

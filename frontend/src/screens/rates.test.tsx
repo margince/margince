@@ -516,6 +516,13 @@ describe("the rate sheets", () => {
         /your role cannot change rates/i,
       ),
     ).toBeTruthy();
+    const model = rateCard("Model prices");
+    expect(
+      within(model).getByText("Your role cannot change this."),
+    ).toBeTruthy();
+    expect(
+      within(model).getByRole("switch", { name: "Auto-sync daily" }),
+    ).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "Set rate" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add model rate" })).toBeNull();
   });

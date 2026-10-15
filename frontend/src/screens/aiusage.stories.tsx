@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -69,6 +69,18 @@ export const WithCost: Story = {
   render: story("normal", [{ ...task, cost_est_minor: 124 }]),
 };
 export const Empty: Story = { render: story("normal", []) };
+
+// A reader who may read the model prices is pointed to them.
+export const WithPricesLink: Story = {
+  render: story("normal", [task], { ...OPERATOR, ai_model_rate: ["read"] }),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("link", {
+        name: "Prices are set on AI models",
+      }),
+    ).toHaveAttribute("href", "#/settings/models");
+  },
+};
 
 // A seat holding no ai_diagnostics grant. The card keeps its place and says the
 // figures are withheld — an absent spend card would read as "this

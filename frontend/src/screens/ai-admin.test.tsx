@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { UnsavedGuard, useHasUnsavedChanges } from "../app/unsaved";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";
@@ -34,10 +35,11 @@ function mount(
   snapshot = status,
 ) {
   const writes: unknown[] = [];
+  const server = { budget: snapshot.budget };
   const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
     const path = new URL(req.url).pathname;
-    let body: unknown = snapshot.budget;
+    let body: unknown = server.budget;
     if (path.endsWith("/me")) body = meFixture({ allow });
     else if (path.endsWith("/ai/status")) body = snapshot;
     else if (req.method === "POST")
@@ -76,11 +78,33 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <AiBudgetCard />
+        <UnsavedGuard address="usage" onKeep={() => undefined}>
+          {() => (
+            <>
+              <AiBudgetCard />
+              <UnsavedProbe />
+            </>
+          )}
+        </UnsavedGuard>
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { writes, mock };
+  return { writes, mock, server, client };
+}
+
+function UnsavedProbe() {
+  return (
+    <output data-testid="unsaved">
+      {useHasUnsavedChanges() ? "dirty" : "clean"}
+    </output>
+  );
+}
+
+async function openEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  return screen.getByLabelText("Tokens per full user per month");
 }
 it("explains pooled tokens, UTC reset and unchanged model selection", async () => {
   mount();
@@ -101,15 +125,19 @@ it("states the band only once it is off normal, and never the spend in money", a
       "80% threshold reached: reduced-tier routing is active",
     ),
   ).toBeTruthy();
-  expect(screen.queryByText(/spent/)).toBeNull();
+  expect(document.body.textContent).not.toMatch(/[$€£]\s?\d/);
   cleanup();
   mount(undefined, false, {
     ...status,
     budget: { ...status.budget, band: "normal" },
   });
   await screen.findByText("22.5M of 24M tokens · 94%");
-  expect(screen.queryByText(/threshold reached/)).toBeNull();
-  expect(document.querySelector(".callout")).toBeNull();
+  for (const title of [
+    "80% threshold reached: reduced-tier routing is active",
+    "Allowance reached: background AI is deferred",
+  ]) {
+    expect(screen.queryByText(title)).toBeNull();
+  }
 });
 it("previews both fields before writing the allowance with its revision", async () => {
   const user = userEvent.setup({ delay: null });
@@ -459,4 +487,69 @@ it("the task table says decision model first, and why another feature skips it",
   expect(await openTaskDetails(user, "Triage a site")).toHaveTextContent(
     "Decision model not used: this activity takes only a local decision provider.",
   );
+});
+
+it("guards the editor only while a value differs from the saved allowance", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  const field = await openEditor(user);
+  expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
+  await user.clear(field);
+  await user.type(field, "20000000");
+  expect(screen.getByTestId("unsaved")).toHaveTextContent("dirty");
+  await user.clear(field);
+  await user.type(field, "12000000");
+  expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
+});
+
+it("offers to reload the values when the allowance changed under the editor", async () => {
+  const user = userEvent.setup({ delay: null });
+  const { server, client } = mount();
+  const field = await openEditor(user);
+  await user.clear(field);
+  await user.type(field, "20000000");
+  server.budget = {
+    ...allowance,
+    config: { tokens_per_full_user: 15000000, company_monthly_tokens: null },
+    revision: "budget-v2",
+  };
+  await client.invalidateQueries({ queryKey: ["ai-budget"] });
+  expect(
+    await screen.findByText("This allowance changed while you were editing"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Preview effects" }),
+  ).toBeDisabled();
+
+  await user.click(screen.getByRole("button", { name: "Reload values" }));
+  expect(field).toHaveValue("15000000");
+  expect(
+    screen.queryByText("This allowance changed while you were editing"),
+  ).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Preview effects" }),
+  ).not.toBeDisabled();
+});
+
+it("hands focus back to Edit when the editor closes", async () => {
+  const user = userEvent.setup({ delay: null });
+  mount();
+  await openEditor(user);
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  ).toHaveFocus();
+
+  const field = await openEditor(user);
+  await user.clear(field);
+  await user.type(field, "20000000");
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Save allowance" }),
+    ).not.toBeDisabled(),
+  );
+  await user.click(screen.getByRole("button", { name: "Save allowance" }));
+  await screen.findByText("Allowance saved");
+  expect(screen.getByRole("button", { name: "Edit allowance" })).toHaveFocus();
 });

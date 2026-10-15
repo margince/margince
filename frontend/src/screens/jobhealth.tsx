@@ -314,9 +314,8 @@ function JobHealthBody({
   );
 }
 
-// `job_health:read`, what the endpoint asks for (compose/jobhealth.go). Ops
-// holds it, so an operator watching a stalled queue can read it. `enabled`
-// spares a reader without the grant a call that could only answer 403.
+// `job_health:read`, what the endpoint asks for (compose/jobhealth.go); without
+// it the call could only answer 403, so it is not made.
 export function useJobHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({

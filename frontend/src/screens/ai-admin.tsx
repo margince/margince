@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
@@ -50,7 +50,12 @@ export function AiBudgetCard() {
   const canManage = useCanWrite("ai_budget", "update");
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  useUnsavedGuard(editing);
+  // Set as the editor closes, so the Edit button that comes back takes focus.
+  const handBack = useRef(false);
+  const close = () => {
+    handBack.current = true;
+    setEditing(false);
+  };
   const query = useQuery({
     queryKey: ["ai-budget"],
     enabled: canSee,
@@ -69,6 +74,12 @@ export function AiBudgetCard() {
       titleAction={
         budget && canManage && !editing ? (
           <Button
+            ref={(node) => {
+              if (node && handBack.current) {
+                handBack.current = false;
+                node.focus();
+              }
+            }}
             onClick={() => {
               setSaved(false);
               setEditing(true);
@@ -107,9 +118,9 @@ export function AiBudgetCard() {
               {editing && (
                 <BudgetEditor
                   budget={budget}
-                  onClose={() => setEditing(false)}
+                  onClose={close}
                   onSaved={() => {
-                    setEditing(false);
+                    close();
                     setSaved(true);
                   }}
                 />
@@ -220,6 +231,12 @@ function BudgetPreview({
   );
 }
 
+function companyText(config: Budget["config"]): string {
+  return config.company_monthly_tokens === null
+    ? ""
+    : String(config.company_monthly_tokens);
+}
+
 function validTokenAllowance(value: string) {
   return /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= 1e12;
 }
@@ -234,12 +251,12 @@ function BudgetEditor({
   const [perUser, setPerUser] = useState(() =>
     String(budget.config.tokens_per_full_user),
   );
-  const [company, setCompany] = useState(() =>
-    budget.config.company_monthly_tokens === null
-      ? ""
-      : String(budget.config.company_monthly_tokens),
+  const [company, setCompany] = useState(() => companyText(budget.config));
+  const [revision, setRevision] = useState(budget.revision);
+  useUnsavedGuard(
+    perUser !== String(budget.config.tokens_per_full_user) ||
+      company !== companyText(budget.config),
   );
-  const [revision] = useState(budget.revision);
   const preview = useMutation({
     mutationFn: async (change: Change) => {
       return unwrap(
@@ -273,6 +290,13 @@ function BudgetEditor({
     expected_revision: revision,
   };
   const busy = preview.isPending || save.isPending;
+  const reload = () => {
+    setPerUser(String(budget.config.tokens_per_full_user));
+    setCompany(companyText(budget.config));
+    setRevision(budget.revision);
+    preview.reset();
+    save.reset();
+  };
   return (
     <>
       <div className="form-row">
@@ -306,7 +330,12 @@ function BudgetEditor({
         </Field>
       </div>
       {revision !== budget.revision && (
-        <Callout kind="standing" tone="warning" title={t("aiAdmin.stale")}>
+        <Callout
+          kind="standing"
+          tone="warning"
+          title={t("aiAdmin.stale")}
+          actions={<Button onClick={reload}>{t("aiAdmin.reload")}</Button>}
+        >
           {t("aiAdmin.staleHelp")}
         </Callout>
       )}

@@ -183,6 +183,17 @@ describe("AutomationRuns", () => {
     ).toBe(true);
   });
 
+  it("draws the outcome filter while the first page loads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    render(<AutomationRuns automationId="au-1" />);
+    expect(
+      await screen.findByRole("combobox", { name: "Outcome" }),
+    ).toBeTruthy();
+  });
+
   it("shows the never-fired empty state distinct from an error", async () => {
     vi.stubGlobal(
       "fetch",

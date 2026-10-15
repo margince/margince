@@ -11,7 +11,8 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { type QueryLike, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { RowOpen } from "../design-system/rowopen";
-import { type Translator, useT } from "../i18n";
+import { INTL_LOCALE } from "../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
@@ -220,6 +221,7 @@ function StarterLibrary({
   onUse: (entry: CatalogEntry) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const entries = catalog.data?.data;
   if (entries === undefined || entries.length === 0) {
     return (
@@ -235,7 +237,7 @@ function StarterLibrary({
       bleed
       fold
       label={t("auto.catalog")}
-      columns={libraryColumns(t, canCreate ? onUse : undefined)}
+      columns={libraryColumns(t, locale, canCreate ? onUse : undefined)}
       rows={entries}
       rowKey={(entry) => entry.key}
       rowTestId={(entry) => `template-${entry.key}`}
@@ -246,6 +248,7 @@ function StarterLibrary({
 
 function libraryColumns(
   t: Translator,
+  locale: Locale,
   onUse: ((entry: CatalogEntry) => void) | undefined,
 ): DataTableColumn<CatalogEntry>[] {
   const columns: DataTableColumn<CatalogEntry>[] = [
@@ -258,7 +261,9 @@ function libraryColumns(
         <CellStack>
           <span>{entry.name}</span>
           {entry.description && (
-            <span className="t-caption">{leadSentence(entry.description)}</span>
+            <span className="t-caption">
+              {leadSentence(entry.description, locale)}
+            </span>
           )}
         </CellStack>
       ),
@@ -298,10 +303,11 @@ function libraryColumns(
 }
 
 // The row says what a template does; the dialog it opens reads the rest.
-const FIRST_SENTENCE = /^.*?[.!?。](?=\s|$)/su;
-
-function leadSentence(text: string): string {
-  return FIRST_SENTENCE.exec(text)?.[0] ?? text;
+function leadSentence(text: string, locale: Locale): string {
+  const [first] = new Intl.Segmenter(INTL_LOCALE[locale], {
+    granularity: "sentence",
+  }).segment(text);
+  return first?.segment.trim() ?? text;
 }
 
 // A deleted row takes its menu with it, so focus lands on the list's heading.

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -18,12 +19,12 @@ import { CaptureHealthCard } from "./capturehealth";
 
 type Health = components["schemas"]["CaptureHealth"];
 
-const meta: Meta<typeof CaptureHealthCard> = {
+const meta = {
   title: "Settings/Governance/System health/Mail capture checks",
   component: CaptureHealthCard,
-};
+} satisfies Meta<typeof CaptureHealthCard>;
 export default meta;
-type Story = StoryObj<typeof CaptureHealthCard>;
+type Story = StoryObj<typeof meta>;
 
 function story(health: Health, roles: string[] = ["admin"]) {
   return () => {
@@ -80,9 +81,21 @@ const KEEPING_UP: Health = {
   ],
 };
 
-// Nothing waits anywhere and every pass ran on time. The empty mailbox line is
-// a finding, not a gap.
-export const KeepingUp: Story = { render: story(KEEPING_UP) };
+// Nothing waits anywhere and every pass ran on time. The count says no mailbox
+// waits, so neither the mailbox table nor the state column is drawn.
+export const KeepingUp: Story = {
+  render: story(KEEPING_UP),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Mailboxes with something waiting");
+    await expect(
+      canvas.queryByRole("heading", { name: "Mailboxes" }),
+    ).toBeNull();
+    await expect(
+      canvas.queryByRole("columnheader", { name: "State" }),
+    ).toBeNull();
+  },
+};
 
 // One pass per warning: a failure with its class, a pass skipped behind a
 // failed stage, and a pass stopped at its bound. Two mailboxes carry backlogs.

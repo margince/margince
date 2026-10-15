@@ -569,10 +569,3 @@
   align-items: flex-start;
   gap: var(--space-1);
 }
-
-/* The model prices verbs in the panel head: refresh, then add. */
-.ai-price-verbs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}

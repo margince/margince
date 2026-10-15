@@ -80,27 +80,24 @@ export function AuditDetail({ entry }: Readonly<{ entry: AuditLogEntry }>) {
   );
 }
 
-// A change reads as before and after, a removal as a value cleared, and a
-// creation as the value alone.
+// A change reads as before and after; a creation or a removal as the one value
+// the record held.
 function AuditFieldFacts({
   entry,
   keys,
 }: Readonly<{ entry: AuditLogEntry; keys: string[] }>) {
   const shape = changeShape(entry);
   const value = (key: string): ReactNode => {
-    const before = fieldValue(entry.before, key)?.text ?? null;
     if (shape === "changed") {
       return (
         <FieldDiff
-          oldValue={before}
+          oldValue={fieldValue(entry.before, key)?.text ?? null}
           newValue={fieldValue(entry.after, key)?.text ?? null}
         />
       );
     }
-    if (shape === "removed") {
-      return <FieldDiff oldValue={before} newValue={null} />;
-    }
-    return <AuditValue value={fieldValue(entry.after, key)} />;
+    const held = shape === "removed" ? entry.before : entry.after;
+    return <AuditValue value={fieldValue(held, key)} />;
   };
   return (
     <FactList

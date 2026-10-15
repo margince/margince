@@ -309,7 +309,7 @@ it("distinguishes an empty window from a refused read", async () => {
   expect(screen.queryByText(/automation.update/)).toBeNull();
 });
 
-it("names the month between its arrows and switches the one table between tasks and days", async () => {
+it("names each arrow and switches the one table between tasks and days", async () => {
   const user = userEvent.setup();
   mount({
     budget: { ...budget, currency: "EUR" },
@@ -360,6 +360,49 @@ it("names the month between its arrows and switches the one table between tasks 
   expect(within(day).getByText("3")).toBeTruthy();
   expect(within(day).getByText("107 / 23")).toBeTruthy();
   expect(within(day).getByText("€0.75")).toBeTruthy();
+});
+
+it("keeps the reader's view when they step to another month", async () => {
+  const user = userEvent.setup();
+  mount({
+    budget,
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [
+          {
+            task: "enrich",
+            tier: "premium",
+            calls: 1,
+            tokens_in: 1,
+            tokens_out: 1,
+          },
+        ],
+      },
+    ],
+  });
+  await user.click(await screen.findByRole("button", { name: "By day" }));
+  await user.click(screen.getByRole("button", { name: "Previous month" }));
+  expect(
+    await screen.findByRole("table", { name: "Spend by day" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "By day" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+});
+
+it("points to the model prices only for a reader who may read them", async () => {
+  const body = { budget, days: [] };
+  mount(body, 200, { ...OPERATOR, ai_model_rate: ["read"] });
+  expect(
+    await screen.findByRole("link", { name: "Prices are set on AI models" }),
+  ).toHaveProperty("hash", "#/settings/models");
+  cleanup();
+  mount(body);
+  expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "Prices are set on AI models" }),
+  ).toBeNull();
 });
 
 it("keeps historical usage usable when the live allowance band is unknown", async () => {

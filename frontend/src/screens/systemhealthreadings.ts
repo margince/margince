@@ -4,7 +4,7 @@
 import type { components } from "../api/schema";
 import type { STAT_CARD_TONES } from "../design-system/statcard";
 import { formatNumber } from "../format/format";
-import type { Locale, PluralTranslator, Translator } from "../i18n";
+import type { Translator, Words } from "../i18n";
 import {
   answersFromStandIn,
   answersOnlyFromStandIn,
@@ -26,12 +26,6 @@ export type HealthReading = Readonly<{
   // Whether the full card stands under the row: a finding, or a report with
   // rows to read.
   panel: boolean;
-}>;
-
-type Words = Readonly<{
-  t: Translator;
-  plural: PluralTranslator;
-  locale: Locale;
 }>;
 
 export type HealthProbe<Data> = Readonly<{
@@ -155,7 +149,7 @@ export function intakeReading(
   { t, plural, locale }: Words,
 ): HealthReading {
   const refused = total(health.units, (unit) => unit.refused);
-  if (health.units.length === 0) {
+  if (refused === 0) {
     return {
       card: { value: t("systemHealth.intake.none"), tone: "success" },
       panel: false,

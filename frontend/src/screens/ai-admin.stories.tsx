@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { focusManager } from "@tanstack/react-query";
+import { expect, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -98,6 +99,53 @@ export const Preview: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Preview effects" }),
     );
+  },
+};
+
+// Another admin saved while this one edited: the editor says so and offers the
+// saved values back.
+export const ChangedWhileEditing: Story = {
+  render: () => {
+    let reads = 0;
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { ai_budget: ["read", "update"] } })),
+      "GET /ai/budget": () => {
+        reads += 1;
+        return jsonResponse(
+          reads === 1
+            ? allowance
+            : {
+                ...allowance,
+                config: {
+                  tokens_per_full_user: 15000000,
+                  company_monthly_tokens: null,
+                },
+                revision: "budget-v2",
+              },
+        );
+      },
+    });
+    return (
+      <StoryProviders>
+        <div className="settings-stack">
+          <AiBudgetCard />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit allowance" }),
+    );
+    // A window coming back into focus reads the allowance again.
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await expect(
+      await canvas.findByRole("button", { name: "Reload values" }),
+    ).toBeInTheDocument();
+    focusManager.setFocused(undefined);
   },
 };
 

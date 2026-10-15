@@ -67,11 +67,17 @@ function useReadings() {
       : readHealth({ canSee: canReadIndex, probing, query: index }, t, (data) =>
           searchIndexReading(data, words),
         );
+  const capture = useCaptureHealth();
+  const recovery = useRecoveryHealth();
+  // The search index and provider reports carry no stamp of their own, so the
+  // time of their read stands in for it.
   const stamp = useStamp([
-    jobs,
-    intake,
-    useCaptureHealth(),
-    useRecoveryHealth(),
+    generatedAt(jobs),
+    generatedAt(intake),
+    generatedAt(capture),
+    generatedAt(recovery),
+    fetchedAt(canReadIndex && bound, index),
+    fetchedAt(canSeeProviders, providers),
   ]);
   return {
     stamp,
@@ -90,19 +96,28 @@ function useReadings() {
   };
 }
 
-// When the reports on this page were read, said once for all of them.
-function useStamp(
-  reports: readonly Readonly<{
+function generatedAt(
+  report: Readonly<{
     canSee: boolean;
     query: Readonly<{ data?: Readonly<{ generated_at: string }> }>;
-  }>[],
+  }>,
 ): string | undefined {
+  return report.canSee ? report.query.data?.generated_at : undefined;
+}
+
+function fetchedAt(
+  canSee: boolean,
+  query: Readonly<{ dataUpdatedAt: number }>,
+): string | undefined {
+  return canSee && query.dataUpdatedAt > 0
+    ? new Date(query.dataUpdatedAt).toISOString()
+    : undefined;
+}
+
+// When the reports on this page were read, said once for all of them.
+function useStamp(stamps: readonly (string | undefined)[]): string | undefined {
   const { locale } = useLocale();
-  const oldest = oldestStamp(
-    reports.map(({ canSee, query }) =>
-      canSee ? query.data?.generated_at : undefined,
-    ),
-  );
+  const oldest = oldestStamp(stamps);
   return oldest && formatDateTime(oldest, locale, viewerZone());
 }
 

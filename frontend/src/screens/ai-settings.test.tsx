@@ -2,9 +2,11 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -129,15 +131,30 @@ async function statusLine(): Promise<HTMLElement> {
   return screen.findByTestId("ai-providers-status");
 }
 
+// Every read the page asked for has answered and been drawn.
+async function settled(backend: ReturnType<typeof backendFor>, path: string) {
+  await waitFor(() =>
+    expect(
+      backend.mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(path),
+      ),
+    ).toBe(true),
+  );
+  await act(async () => {
+    await Promise.all(backend.mock.results.map((result) => result.value));
+  });
+}
+
 describe("the providers status line", () => {
-  // A 200 that is not the routing document is an ABSENT read, not a crash:
-  // nothing validates a response, and `Object.values(undefined)` threw inside
-  // render. The keyed count comes from a different read and still answers.
+  // A 200 that is not the routing document is an absent read, not a crash.
+  // The keyed count comes from a different read and still answers.
   it("says nothing about vendors when the routing read answers off-contract", async () => {
-    vi.stubGlobal("fetch", backendFor(OPERATOR, { profile: "eu_hosted" }));
+    const backend = backendFor(OPERATOR, { profile: "eu_hosted" });
+    vi.stubGlobal("fetch", backend);
     render(<AiProviderKeysCard />);
 
     const line = await statusLine();
+    await settled(backend, "/ai/routing");
     expect(within(line).getByText("Keys held: 1 of 2")).toBeTruthy();
     expect(line.textContent).not.toContain("bound, no key");
   });

@@ -191,6 +191,42 @@ export const SwitchBesideNameAtPhoneWidth: Story = {
   },
 };
 
+// A switch with a hint under it needs the width, so at 390px it drops under
+// its name like any other control.
+export const SwitchWithHintStacksAtPhoneWidth: Story = {
+  render: () => (
+    <Card title="Capture">
+      <SettingList>
+        <SettingRow
+          label="Weekly digest"
+          description="One mail on Monday with what moved."
+          control={
+            <Switch
+              label="Weekly digest"
+              labelHidden
+              checked
+              onChange={() => undefined}
+              hint="Sent at 07:00 in your time zone."
+            />
+          }
+        />
+      </SettingList>
+    </Card>
+  ),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const name = canvas
+      .getByText("Weekly digest", { selector: ".t-name" })
+      .getBoundingClientRect();
+    const track = (
+      await canvas.findByRole("switch", { name: "Weekly digest" })
+    ).getBoundingClientRect();
+    await expect(track.top).toBeGreaterThanOrEqual(name.bottom);
+  },
+};
+
 // bleed="settings": a form standing straight in the Panel. The hairlines reach
 // the pane's edges and the row text keeps the intro's x; no row lights up.
 function AccountForm() {

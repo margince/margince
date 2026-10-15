@@ -177,9 +177,11 @@ export function AutomationRuns({
   });
 
   const runs = query.data?.pages.flatMap((page) => page.data) ?? [];
-  // A filter stays on screen once chosen, so a narrowing that found nothing
-  // can be undone.
-  const filterable = runs.length > 0 || outcome !== undefined;
+  // Drawn while the first page loads, so it does not pop in above the runs. A
+  // chosen filter stays, so a narrowing that found nothing can be undone.
+  const filterable =
+    outcome !== undefined ||
+    (!query.isError && (query.isPending || runs.length > 0));
 
   let body: ReactNode;
   if (runs.length === 0) {
@@ -245,7 +247,7 @@ function Inspector({
       aria-labelledby={titled ? headingId : undefined}
     >
       {titled && (
-        <Heading size="xsmall" as="h4" id={headingId}>
+        <Heading size="xsmall" as="h3" id={headingId}>
           {title}
         </Heading>
       )}

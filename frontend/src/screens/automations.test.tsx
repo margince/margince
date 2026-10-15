@@ -77,7 +77,7 @@ const catalog: CatalogEntry[] = [
   {
     key: "stalled_deal_nudge",
     name: "Stalled-deal nudge",
-    description: "Stages a follow-up when a deal stalls.",
+    description: "Stages a follow-up, e.g. a call. The dialog says which.",
     trigger: "deal.stalled",
     action: "send_email",
     tier: "confirmation_required",
@@ -495,10 +495,11 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     const stalled = await screen.findByTestId("template-stalled_deal_nudge");
     expect(screen.getByTestId("template-task_on_stage_entry")).toBeTruthy();
     expect(within(stalled).getByText("Stalled-deal nudge")).toBeTruthy();
+    // The row reads the first sentence only, and "e.g." does not end one.
     expect(
-      within(stalled).getByText("Stages a follow-up when a deal stalls."),
+      within(stalled).getByText("Stages a follow-up, e.g. a call."),
     ).toBeTruthy();
-    expect(stalled).not.toHaveTextContent(/send_email|->/);
+    expect(stalled).not.toHaveTextContent(/The dialog says|send_email|->/);
     expect(
       within(screen.getByTestId("template-task_on_stage_entry")).getByText(
         "Deal stage changed",

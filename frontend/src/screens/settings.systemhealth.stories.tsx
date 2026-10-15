@@ -3,10 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { defaultOperations } from "./operationsettings.fixtures";
@@ -89,21 +91,48 @@ const STAND_IN = {
   "GET /ai/provider-health": { providers: [], configured: ["fake"] },
 };
 
-function page(routes: Record<string, unknown>) {
+// An intake report the server fails to read: its slot says so and its card
+// stands under the row with a retry.
+const INTAKE_FAILED: RouteMap = {
+  "GET /admin/extension-ingest-health": () =>
+    jsonResponse({ code: "internal", message: "Down." }, 500),
+};
+
+// Every report still on its way.
+const IN_FLIGHT: RouteMap = Object.fromEntries(
+  Object.keys(CLEAN).map((key) => [key, () => new Promise<Response>(() => {})]),
+);
+
+const OPERATOR: GrantSpec = {
+  job_health: ["read"],
+  ai_diagnostics: ["read"],
+  embedding_reindex: ["read", "update"],
+  installation_settings: ["read", "update"],
+};
+
+// A reader who may see the search index and providers, not the jobs.
+const NO_JOBS: GrantSpec = {
+  embedding_reindex: ["read"],
+  ai_diagnostics: ["read"],
+};
+
+function page(
+  routes: Record<string, unknown>,
+  {
+    grants = OPERATOR,
+    handlers = {},
+  }: { grants?: GrantSpec; handlers?: RouteMap } = {},
+) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({
-        job_health: ["read"],
-        ai_diagnostics: ["read"],
-        embedding_reindex: ["read", "update"],
-        installation_settings: ["read", "update"],
-      }),
+      "GET /me": meRoute(grants),
       ...Object.fromEntries(
         Object.entries(routes).map(([key, body]) => [
           key,
           () => jsonResponse(body),
         ]),
       ),
+      ...handlers,
     });
     return (
       <StoryProviders>
@@ -115,12 +144,12 @@ function page(routes: Record<string, unknown>) {
   };
 }
 
-const meta: Meta<typeof SystemHealthPage> = {
+const meta = {
   title: "Settings/Governance/System health/Page",
   component: SystemHealthPage,
-};
+} satisfies Meta<typeof SystemHealthPage>;
 export default meta;
-type Story = StoryObj<typeof SystemHealthPage>;
+type Story = StoryObj<typeof meta>;
 
 export const AllClear: Story = {
   render: page(CLEAN),
@@ -167,5 +196,48 @@ export const AnsweringFromTestProvider: Story = {
         "The bound models cannot be called. Add a key under AI models.",
       ),
     ).toBeInTheDocument();
+  },
+};
+
+export const ReadFailed: Story = {
+  render: page(CLEAN, { handlers: INTAKE_FAILED }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = await canvas.findByRole("region", { name: "Status" });
+    await expect(
+      await within(row).findByText("Could not check"),
+    ).toBeInTheDocument();
+    const card = await canvas.findByRole("region", {
+      name: "Refused connector records",
+    });
+    await expect(
+      await within(card).findByRole("button", { name: /retry/i }),
+    ).toBeInTheDocument();
+  },
+};
+
+export const JobsWithheld: Story = {
+  render: page(CLEAN, { grants: NO_JOBS }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = await canvas.findByRole("region", { name: "Status" });
+    await within(row).findByText("Up to date");
+    await expect(within(row).queryByText("Background jobs")).toBeNull();
+    await expect(
+      await canvas.findByText(
+        /background job health covers the whole installation/i,
+      ),
+    ).toBeInTheDocument();
+  },
+};
+
+export const Checking: Story = {
+  render: page({}, { handlers: IN_FLIGHT }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = await canvas.findByRole("region", { name: "Status" });
+    await expect(
+      (await within(row).findAllByText("Checking…")).length,
+    ).toBeGreaterThan(0);
   },
 };

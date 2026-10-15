@@ -150,9 +150,8 @@ function ExtensionIngestBody({
   );
 }
 
-// `job_health:read`, which is what the endpoint asks for
-// (compose/extingesthealth.go). The same operational question as the job card,
-// for the same reader, so the same grant decides both.
+// `job_health:read`, what the endpoint asks for (compose/extingesthealth.go):
+// the job card's question for the same reader, so the same grant decides both.
 export function useExtensionIngestHealth() {
   const canSee = useCan("job_health", "read");
   const query = useQuery({

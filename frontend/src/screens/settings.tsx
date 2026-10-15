@@ -272,11 +272,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
-    // The five-tab strip that used to hold these is gone. Its tabs shared ONE
-    // address, which is why the routing card had to report its draft up to a
-    // page that owned a confirm dialog: the app's unsaved guard watches
-    // addresses and could not see a move between them. Each is an address now,
-    // so the card claims the guard itself and the dialog is deleted.
+    // Each AI page is its own address. The unsaved guard watches addresses, so
+    // it sees a move between them, and each card claims it itself.
     case "models":
       return (
         <>

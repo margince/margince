@@ -230,9 +230,7 @@ function instanceColumns({
           <CellStack>
             <span className="auto-name">
               <span>{automation.name}</span>
-              {entry && entry.tier !== "auto_execute" && (
-                <Badge tone="warning">{t("auto.tier.approval")}</Badge>
-              )}
+              {entry && <Mode tier={entry.tier} />}
             </span>
             {entry && (
               <span className="t-caption">{recipeSentence(entry, t)}</span>
@@ -269,6 +267,16 @@ function instanceColumns({
       render: verbs,
     },
   ];
+}
+
+// Running by itself is the normal mode, so only a screen reader hears it.
+function Mode({ tier }: Readonly<{ tier: CatalogEntry["tier"] }>) {
+  const t = useT();
+  return tier === "auto_execute" ? (
+    <span className="sr-only">{t("auto.modeAuto")}</span>
+  ) : (
+    <Badge tone="warning">{t("auto.tier.approval")}</Badge>
+  );
 }
 
 // Fired and queued are the ordinary ends of a run; only a failure or a block

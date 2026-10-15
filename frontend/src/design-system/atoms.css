@@ -1584,8 +1584,8 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
-/* The end edge shades while columns lie past it and clears at the end. A
-   background, so it sits under the cells and never clips the focus ring. */
+/* The end edge shades while columns lie past it and clears at the end. Drawn
+   above the cells, so a hovered or opaque cell cannot hide it. */
 @property --table-scroll-end {
   syntax: "<length>";
   inherits: false;
@@ -1600,30 +1600,46 @@ span.error-line {
   }
 }
 @supports (animation-timeline: scroll()) {
+  /* The shade shares the table's grid cell, and sticks to the visible end. */
   .table-scroll {
+    display: grid;
+  }
+  .table-scroll > :first-child {
+    grid-area: 1 / 1;
+  }
+  .table-scroll::after {
+    --table-scroll-toward: to left;
+    content: "";
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--table-scroll-end);
+    pointer-events: none;
     background-image: linear-gradient(
-      to left,
+      var(--table-scroll-toward),
       var(--borderStrong) 1px,
       color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
       transparent
     );
-    background-repeat: no-repeat;
-    background-position: right center;
-    background-size: var(--table-scroll-end) 100%;
     /* A box that fits has no scroll timeline, so the shade stays at zero. */
     animation: table-scroll-end linear both;
-    animation-timeline: scroll(self inline);
+    animation-timeline: scroll(nearest inline);
     animation-range: calc(100% - var(--space-8)) 100%;
   }
+  .table-scroll:dir(rtl)::after {
+    --table-scroll-toward: to right;
+  }
   @media (prefers-reduced-motion: reduce) {
-    .table-scroll {
+    .table-scroll::after {
       animation-timing-function: step-end;
     }
   }
   @media (forced-colors: active) {
-    .table-scroll {
+    .table-scroll::after {
       background-image: linear-gradient(
-        to left,
+        var(--table-scroll-toward),
         CanvasText 1px,
         transparent 1px
       );

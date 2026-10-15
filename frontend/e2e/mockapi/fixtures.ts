@@ -942,7 +942,8 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
     documents: [
       {
         id: "mitarbeiterinformation",
-        title: "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz",
+        title:
+          "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz",
         language: "de",
         audience: "employee",
         kind: "template",
@@ -1013,16 +1014,16 @@ export const jobHealth: components["schemas"]["JobHealth"] = {
   ],
 };
 
-// A mailbox row and every sweep on schedule, so the sweeps measure the
-// card's tables rather than its failed read.
+// A mailbox with a backlog and every sweep on schedule, so the sweeps measure
+// the card's tables rather than its failed read.
 export const captureHealth: components["schemas"]["CaptureHealth"] = {
   generated_at: "2026-07-05T06:20:00Z",
   mailboxes: [
     {
       user_id: "u1",
       display_name: "Lena Fischer",
-      contacts_awaiting_decision: 0,
-      oldest_contact_age_seconds: null,
+      contacts_awaiting_decision: 3,
+      oldest_contact_age_seconds: 7_200,
       threads_awaiting_verdict: 0,
       oldest_thread_age_seconds: null,
     },

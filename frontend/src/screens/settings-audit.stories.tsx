@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -196,14 +196,24 @@ export const MorePages: Story = {
   render: story(page(ENTRIES.slice(0, 3), "c-2")),
 };
 
+// The first read is the whole trail; every read after it is the narrowed one.
+function narrowedToNothing(): Answer {
+  let reads = 0;
+  return () => {
+    reads += 1;
+    return page(reads === 1 ? ENTRIES : [])();
+  };
+}
+
 // The dials stand open above the trail; a narrowing that finds nothing says so.
 export const Filtered: Story = {
-  render: story(page(ENTRIES)),
+  render: () => story(narrowedToNothing())(),
   play: async ({ canvasElement }) => {
-    await userEvent.type(
-      await within(canvasElement).findByLabelText("Actor"),
-      "agent:sdr",
-    );
+    const canvas = within(canvasElement);
+    await userEvent.type(await canvas.findByLabelText("Actor"), "agent:sdr");
+    await expect(
+      await canvas.findByText("No recorded actions match these filters."),
+    ).toBeInTheDocument();
   },
 };
 

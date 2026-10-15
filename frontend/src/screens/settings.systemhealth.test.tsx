@@ -4,8 +4,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, within } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
@@ -73,9 +73,15 @@ function stubRoutes(overrides: Record<string, unknown> = {}) {
   );
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-14T10:00:00Z"));
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const strip = () => screen.findByRole("region", { name: "Status" });
@@ -87,8 +93,8 @@ it("answers each clean reading in its slot and draws no card for it", async () =
   const row = await strip();
   expect(await within(row).findByText("Up to date")).toBeInTheDocument();
   expect(await within(row).findByText("Idle")).toBeInTheDocument();
-  expect(within(row).getByText("None")).toBeInTheDocument();
-  expect(within(row).getByText("Answering")).toBeInTheDocument();
+  expect(await within(row).findByText("None")).toBeInTheDocument();
+  expect(await within(row).findByText("Answering")).toBeInTheDocument();
   for (const title of [
     "Search index",
     "Background jobs",
@@ -114,6 +120,28 @@ it("dates the page once, by the stalest report it read", async () => {
   const stalest = formatDateTime("2026-10-14T09:30:00Z", "en", viewerZone());
   expect(await screen.findByText(`As of ${stalest}`)).toBeInTheDocument();
   expect(screen.getAllByText(/^As of /)).toHaveLength(1);
+});
+
+it("dates a report that carries no stamp by when it was read", async () => {
+  vi.setSystemTime(new Date("2026-10-14T09:00:00Z"));
+  stubRoutes();
+  render(<SystemHealthPage />);
+
+  await strip();
+  const read = formatDateTime("2026-10-14T09:00:00Z", "en", viewerZone());
+  expect(await screen.findByText(`As of ${read}`)).toBeInTheDocument();
+});
+
+it("says a malformed provider report could not be checked, and keeps the page", async () => {
+  stubRoutes({ "/ai/provider-health": { providers: null } });
+  render(<SystemHealthPage />);
+
+  const row = await strip();
+  expect(await within(row).findByText("Could not check")).toBeInTheDocument();
+  expect(within(row).getByText("Up to date")).toBeInTheDocument();
+  expect(
+    await screen.findByRole("region", { name: "AI provider status" }),
+  ).toBeInTheDocument();
 });
 
 it("brings a reading's card back under the row once it finds something", async () => {
@@ -162,8 +190,9 @@ it("gives a withheld report no slot and keeps its card saying why", async () => 
       /background job health covers the whole installation/i,
     ),
   ).toBeInTheDocument();
-  // Nothing this reader holds was read, so nothing is dated.
-  expect(screen.queryByText(/^As of /)).toBeNull();
+  // Dated by the reads this reader holds, never by a withheld report.
+  const read = formatDateTime("2026-10-14T10:00:00Z", "en", viewerZone());
+  expect(await screen.findByText(`As of ${read}`)).toBeInTheDocument();
 });
 
 it("keeps a failed reading's card in place while it asks again", async () => {
@@ -191,5 +220,7 @@ it("keeps a failed reading's card in place while it asks again", async () => {
   ).toBeInTheDocument();
   // The card's mount asks once more. A card that hid during that read would
   // mount again and ask forever.
-  expect(intakeCalls.mock.calls.length).toBeLessThanOrEqual(2);
+  await waitFor(() => expect(intakeCalls).toHaveBeenCalledTimes(2));
+  await act(async () => {});
+  expect(intakeCalls).toHaveBeenCalledTimes(2);
 });
