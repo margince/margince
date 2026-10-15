@@ -51,10 +51,6 @@ var (
 	})
 )
 
-// smtpPasswordLimit bounds the password file: anything larger is a path typed
-// wrong.
-const smtpPasswordLimit = 64 << 10
-
 // MailFaults are the checks on an enabled relay that read two settings. It
 // needs somewhere to send and someone to send as, and its password cannot be
 // both declared absent and named by a file.
@@ -98,7 +94,7 @@ func declaredSMTPPassword(c *config.Config) (string, error) {
 	if path == "" {
 		return "", nil
 	}
-	return readDeclaredFile(pathOrigin.Name, path, smtpPasswordLimit)
+	return readDeclaredFile(pathOrigin.Name, path)
 }
 
 // OperatorMailer builds the relay transport from the deployment's settings,

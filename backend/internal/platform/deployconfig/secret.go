@@ -48,11 +48,6 @@ import (
 // reads; every secret here refuses it.
 const SecretRemoved = "${none}"
 
-// secretFileLimit bounds what a reference may pull in. A secret is a password,
-// a key or a token; anything larger is a path typed wrong, and reading it into
-// memory to find that out is the wrong order.
-const secretFileLimit = 64 << 10
-
 // The two reference kinds, named because they are matched, compared and
 // rendered in errors — three places that must agree on the spelling.
 const (
@@ -189,9 +184,9 @@ func (s Secret) readFile() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("deployconfig: %s points at %s, which cannot be read: %w", s.name(), s.arg, err)
 	}
-	if info.Size() > secretFileLimit {
+	if info.Size() > config.SecretFileLimit {
 		return "", fmt.Errorf("deployconfig: %s points at %s, which is %d bytes — a secret is not (limit %d). "+
-			"Check the path names the secret and not something else", s.name(), s.arg, info.Size(), secretFileLimit)
+			"Check the path names the secret and not something else", s.name(), s.arg, info.Size(), config.SecretFileLimit)
 	}
 	raw, err := os.ReadFile(s.arg) // #nosec G304 -- the operator's own secret path; reading it is this function's purpose
 	if err != nil {

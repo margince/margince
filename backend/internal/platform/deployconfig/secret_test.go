@@ -156,7 +156,7 @@ func TestAnOversizedFileIsRefusedWithoutReadingIt(t *testing.T) {
 	// wrong, and pulling it into memory to discover that is the wrong order.
 	dir := t.TempDir()
 	big := filepath.Join(dir, "not-a-secret")
-	if err := os.WriteFile(big, make([]byte, secretFileLimit+1), 0o600); err != nil {
+	if err := os.WriteFile(big, make([]byte, config.SecretFileLimit+1), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	s, err := decodeSecret(t, "s: ${file:"+big+"}")

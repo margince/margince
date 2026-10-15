@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
@@ -65,7 +66,7 @@ func TestATokenFileThatCannotBeALicenseIsRefusedByName(t *testing.T) {
 	}{
 		"missing":   {filepath.Join(t.TempDir(), "typo"), "license.token_file"},
 		"empty":     {writeLicenseFile(t, []byte("\n")), "remove the setting to run unlicensed"},
-		"too large": {writeLicenseFile(t, bytes.Repeat([]byte("x"), licenseTokenLimit+1)), "check the path points at the credential"},
+		"too large": {writeLicenseFile(t, bytes.Repeat([]byte("x"), config.SecretFileLimit+1)), "check the path points at the credential"},
 	} {
 		if _, err := declaredLicenseToken(licenseSettings(t, tokenFileYAML(tc.path)))(); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err %v; want it to say %q", name, err, tc.want)
@@ -75,10 +76,10 @@ func TestATokenFileThatCannotBeALicenseIsRefusedByName(t *testing.T) {
 
 // The bound refuses what cannot be a licence, not what is merely large.
 func TestATokenFileAtTheLimitIsRead(t *testing.T) {
-	path := writeLicenseFile(t, bytes.Repeat([]byte("x"), licenseTokenLimit))
+	path := writeLicenseFile(t, bytes.Repeat([]byte("x"), config.SecretFileLimit))
 	got, err := declaredLicenseToken(licenseSettings(t, tokenFileYAML(path)))()
-	if err != nil || len(got) != licenseTokenLimit {
-		t.Fatalf("read %d bytes, err %v; want %d", len(got), err, licenseTokenLimit)
+	if err != nil || len(got) != config.SecretFileLimit {
+		t.Fatalf("read %d bytes, err %v; want %d", len(got), err, config.SecretFileLimit)
 	}
 }
 

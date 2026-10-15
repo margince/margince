@@ -30,11 +30,6 @@ var bothRoles = []config.Role{config.RoleAPI, config.RoleWorker}
 // licenseTokenOriginNone is the boot line's answer when nothing names a token.
 const licenseTokenOriginNone = "none"
 
-// licenseTokenLimit bounds a token file. A licence is a JWT of a few
-// kilobytes, and everything downstream copies it whole. So a path pointed at a
-// log or an image fails as the mistake it is.
-const licenseTokenLimit = 64 << 10
-
 // declaredLicenseToken reads the token the deployment declares, or "" for an
 // unlicensed installation. A named source that yields nothing is an error. In
 // production, "no licence" and "an empty file" would otherwise refuse the boot
@@ -56,7 +51,7 @@ func declaredLicenseToken(c *config.Config) func() (string, error) {
 		if path == "" {
 			return "", nil
 		}
-		raw, err := readDeclaredFile(pathOrigin.Name, path, licenseTokenLimit)
+		raw, err := readDeclaredFile(pathOrigin.Name, path)
 		if err != nil {
 			return "", err
 		}
@@ -82,14 +77,14 @@ func licenseTokenDeclaredAt(c *config.Config) string {
 
 // readDeclaredFile reads a credential a setting names by path, trimmed, and
 // refuses a file too large to be one before reading it.
-func readDeclaredFile(setting, path string, limit int64) (string, error) {
+func readDeclaredFile(setting, path string) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading %s: %w", setting, err)
 	}
-	if info.Size() > limit {
+	if info.Size() > config.SecretFileLimit {
 		return "", fmt.Errorf("compose: %s %s is %d bytes, more than the credential it names (limit %d) — "+
-			"check the path points at the credential and not at something else", setting, path, info.Size(), limit)
+			"check the path points at the credential and not at something else", setting, path, info.Size(), config.SecretFileLimit)
 	}
 	raw, err := os.ReadFile(path) // #nosec G304 -- the operator's own credential path; reading it is the function's purpose
 	if err != nil {

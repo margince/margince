@@ -16,9 +16,9 @@ const refEnv = "env"
 // never be mistaken for a password: a secret refuses every literal.
 const refNone = "${none}"
 
-// secretFileLimit bounds a ${file:} secret. A password, key or token is far
-// smaller; a larger file is a path typed wrong.
-const secretFileLimit = 64 << 10
+// SecretFileLimit bounds a file that holds a secret, for every reader of one.
+// A password, key or token is far smaller; a larger file is a path typed wrong.
+const SecretFileLimit = 64 << 10
 
 var (
 	errNoneRefused = errors.New(refNone + " declares a credential absent, which this setting does not accept; delete the key to leave it unset")
@@ -39,8 +39,8 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		if err != nil {
 			return "", arg, true, fmt.Errorf("cannot read secret file %s", arg)
 		}
-		if len(raw) > secretFileLimit {
-			return "", arg, true, fmt.Errorf("secret file %s is %d bytes, more than a secret holds (limit %d); check the path", arg, len(raw), secretFileLimit)
+		if len(raw) > SecretFileLimit {
+			return "", arg, true, fmt.Errorf("secret file %s is %d bytes, more than a secret holds (limit %d); check the path", arg, len(raw), SecretFileLimit)
 		}
 		return refused(strings.TrimSuffix(string(raw), "\n"), arg)
 	case refEnv:
