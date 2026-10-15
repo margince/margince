@@ -80,7 +80,7 @@ func UploadSettings() []config.Any {
 
 func megabytes(mb int) int64 { return int64(mb) * bytesPerMB }
 
-// defaultOf panics on a ceiling with no default: a zero would refuse every
+// defaultOf panics on a ceiling with no default. A zero would refuse every
 // upload, and the missing default is a wiring fault the first boot reports.
 func defaultOf(s *config.Setting[int]) int {
 	v, ok := s.Spec().Default.Get()

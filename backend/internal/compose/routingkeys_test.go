@@ -10,9 +10,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-// The routing path opens the vault the boot opened, so its root key comes
-// from the loaded settings and not the process environment; a provider key
-// still comes from the environment.
+// The routing path opens the vault the boot opened. So its root key comes from
+// the loaded settings, never the process environment. A provider key still
+// comes from the environment.
 func TestRoutingKeysTakeTheRootKeyFromSettingsAndProviderKeysFromTheEnvironment(t *testing.T) {
 	t.Setenv(keyvault.EnvRootKey, "from-the-process")
 	t.Setenv("GEMINI_API_KEY", "a-provider-key")
