@@ -83,7 +83,7 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 				COALESCE(r.cache_read_per_mtok_microusd, 0),
 				COALESCE(r.cache_write_per_mtok_microusd, 0)
 			FROM ai_call c
-			LEFT JOIN LATERAL (`+rateMatch("c.provider", "c.model_id", "c.occurred_at::date", 2, 3)+`) r ON true
+			LEFT JOIN LATERAL (`+pricedRate("c", 2, 3)+`) r ON true
 			WHERE c.correlation_id = $1
 			ORDER BY c.occurred_at ASC, c.attempt ASC`, correlationID, fallbackFrom, fallbackTo)
 		if err != nil {
@@ -118,10 +118,7 @@ func summarizeRun(calls []runCall) RunSummary {
 	summary := RunSummary{Currency: "USD", Models: []RunModelUsage{}}
 	grouped := make(map[runModelKey]*RunModelUsage)
 	for _, call := range calls {
-		servedModel := call.ServedModel
-		if call.ServedIdentitySource != servedIdentitySourceResponse {
-			servedModel = ""
-		}
+		servedModel := gradedServedModel(call.ServedModel, call.ServedIdentitySource)
 		key := runModelKey{call.Task, call.Tier, call.Provider, call.ConfiguredModel, servedModel}
 		usage := grouped[key]
 		if usage == nil {

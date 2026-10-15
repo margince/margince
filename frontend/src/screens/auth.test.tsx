@@ -357,6 +357,134 @@ describe("OIDC failure notice", () => {
   });
 });
 
+// The password step answers 202 with a challenge and no session; the code step
+// trades that challenge and one code for the session.
+describe("AuthScreen second factor", () => {
+  const CHALLENGE = "signed-challenge";
+
+  function stubSecondFactor(answerCode: (request: Request) => Response) {
+    return stubApi({ password: true, password_reset: false }, (request) =>
+      new URL(request.url).pathname.endsWith("/auth/login")
+        ? ok(202, { mfa_challenge: CHALLENGE })
+        : answerCode(request),
+    );
+  }
+
+  async function passPasswordStep() {
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    await user.type(
+      screen.getByLabelText("Password"),
+      "correct-horse-battery{enter}",
+    );
+    await screen.findByLabelText(t("auth.mfaCode"));
+    return user;
+  }
+
+  it("asks for a code after a 202 and does not treat it as signed in", async () => {
+    stubSecondFactor(() => ok(200, { user: {}, roles: [], teams: [] }));
+    const onAuthed = vi.fn();
+    const { container } = render(<AuthScreen onAuthed={onAuthed} />);
+
+    await passPasswordStep();
+
+    expect(screen.getByText(t("auth.mfaTitle"))).toBeTruthy();
+    expect(screen.queryByLabelText("Password")).toBeNull();
+    expect(
+      screen.getByLabelText(t("auth.mfaCode")).getAttribute("autocomplete"),
+    ).toBe("one-time-code");
+    expect(onAuthed).not.toHaveBeenCalled();
+    expect(
+      container.querySelector<HTMLElement>(".auth-surface")?.dataset.authPhase,
+    ).toBe("idle");
+  });
+
+  it("posts the challenge with the code and signs in on 200", async () => {
+    const calls = stubSecondFactor(() =>
+      ok(200, { user: {}, roles: [], teams: [] }),
+    );
+    const onAuthed = vi.fn();
+    render(<AuthScreen onAuthed={onAuthed} />);
+
+    const user = await passPasswordStep();
+    await user.type(screen.getByLabelText(t("auth.mfaCode")), "123 456{enter}");
+
+    await waitFor(() => expect(onAuthed).toHaveBeenCalledOnce());
+    const request = calls.find((call) => call.url.endsWith("/auth/mfa"));
+    expect(await request?.json()).toEqual({
+      mfa_challenge: CHALLENGE,
+      code: "123456",
+    });
+    expect(window.location.hash).toBe("#/home");
+  });
+
+  // A recovery code is case-sensitive base64url, so it reaches the server as
+  // typed, letters, dashes and underscores included.
+  it("accepts a recovery code as typed", async () => {
+    const calls = stubSecondFactor(() =>
+      ok(200, { user: {}, roles: [], teams: [] }),
+    );
+    const onAuthed = vi.fn();
+    render(<AuthScreen onAuthed={onAuthed} />);
+
+    const user = await passPasswordStep();
+    await user.type(
+      screen.getByLabelText(t("auth.mfaCode")),
+      "aB3-x_9QzK2mPw{enter}",
+    );
+
+    await waitFor(() => expect(onAuthed).toHaveBeenCalledOnce());
+    const request = calls.find((call) => call.url.endsWith("/auth/mfa"));
+    expect((await request?.json())?.code).toBe("aB3-x_9QzK2mPw");
+  });
+
+  it("refuses a wrong or expired code with one message and clears the field", async () => {
+    stubSecondFactor(() => ok(401, { title: "unauthorized" }));
+    const onAuthed = vi.fn();
+    render(<AuthScreen onAuthed={onAuthed} />);
+
+    const user = await passPasswordStep();
+    await user.type(screen.getByLabelText(t("auth.mfaCode")), "000000{enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(t("auth.mfaErrCode"));
+    expect(screen.getByLabelText(t("auth.mfaCode"))).toHaveProperty(
+      "value",
+      "",
+    );
+    expect(onAuthed).not.toHaveBeenCalled();
+  });
+
+  it("presents rate limiting on the code step as its own state", async () => {
+    stubSecondFactor(() => ok(429, { title: "budget exceeded" }));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    const user = await passPasswordStep();
+    await user.type(screen.getByLabelText(t("auth.mfaCode")), "123456{enter}");
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      t("auth.errRateLimited"),
+    );
+    expect(screen.getByLabelText(t("auth.mfaCode"))).toHaveProperty(
+      "value",
+      "123456",
+    );
+  });
+
+  it("returns to the password step", async () => {
+    stubSecondFactor(() => ok(200, { user: {}, roles: [], teams: [] }));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    const user = await passPasswordStep();
+    await user.click(
+      screen.getByRole("button", { name: t("auth.backToLogin") }),
+    );
+
+    expect(await screen.findByLabelText("Password")).toBeTruthy();
+    expect(screen.queryByLabelText(t("auth.mfaCode"))).toBeNull();
+  });
+});
+
 describe("AuthScreen forgot password", () => {
   it("requests the reset and confirms neutrally", async () => {
     const calls = stubApi({ password: true, password_reset: true }, () =>

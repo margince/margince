@@ -26,6 +26,7 @@ You see only the pages your permissions open. The Reset data page appears only w
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
 - Change your password, display name, email signature, language or theme (appearance): **Account**.
+- Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you: **Meetings**, in **Bookable hours**.
 - Set up how your drafts sound: **Writing voice**.
 - Choose how each kind of notification reaches you: **Notifications**.
@@ -42,7 +43,7 @@ Things for the whole company in Margince each have one settings page.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
-- Set up single sign-on or the Google and Microsoft apps: **Sign-in and apps**.
+- Set up single sign-on or the Google and Microsoft apps, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
 - Set up webhooks or a provider of contact data: **Integrations**.
 
@@ -110,6 +111,17 @@ The company's name is the **Company name** row under **Business context**. Savin
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 
+## Sign-in and apps
+
+The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
+
+### How do I require two-step sign-in for every member?
+To require two-step sign-in for every member of Margince, open Settings → **Sign-in and apps** and turn on **Require second factor**. Margince asks you to confirm first.
+A member without two-step sign-in is asked to set it up the next time they sign in or open Margince, before anything else opens.
+Members who already use it go on as before, with their own phone app.
+The switch keeps its setting when someone resets data.
+Also called: require MFA, two-step sign-in for everyone, sign-in codes for all.
+
 ## Members, Teams, and Seats and license
 
 The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it.
@@ -124,7 +136,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again.
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Webhooks** send a signed message to another system when events you picked happen. You can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
 ## Extensions
 
@@ -237,7 +249,7 @@ All the detail is in [What is kept, what is destroyed](retention-exports-and-del
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
-  prospects (leads) and deals, up to 10 MB unless the installation sets another.
+  prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
   Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the
   AI finds.
@@ -263,81 +275,9 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ## Data import
 
-The Data import page in Settings (group **Data**) brings in companies, contacts, prospects and deals from a ZIP of CSV files, or from one CSV. Only an admin or ops user can import. Undoing an import is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+The Data import page in Settings (group **Data**) brings in companies, contacts, prospects, deals and activities from CSV files. Only an admin or ops user can import.
 
-### What is in the template?
-**Download template** on **Data import** gives a ZIP with one CSV for each record type: `companies.csv`, `contacts.csv`, `leads.csv` and `deals.csv`. Each file has a column for each field the import takes. A custom field has its label as the column name.
-
-The `README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column, or choose it, to see what goes in it, an example, and if a new row needs it.
-Also called: import template, column help, import format.
-
-### How does Margince know which file is which?
-In a ZIP, the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv` or `deals.csv`. On **Check your files**, change the type in **Import as**, or choose **Skip this file**. Each type takes one file. Files whose name gives no type are listed under **Files left out**. One CSV starts as the type its name gives, or as **Prospects**.
-Also called: file types, wrong record type, skip a file.
-
-### What is the source name?
-**Source name** keeps the records of one source together. Upload the same export again with the same source name, and Margince updates the records it made the first time. A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none.
-Also called: re-import a ZIP, upload the export again.
-
-### What does the test run tell me?
-**Test run** counts, for each record type, the rows that are new, the rows that update a record, and the rows that stay the same. It lists each problem with its file, row and column. Each problem has a kind, such as **Broken link**, **Invalid value**, **Unknown owner** or **New tag**. **problems.csv** downloads the list.
-
-A row with a value its field does not take is skipped: fix it in the file and choose **Fix and re-upload**. Nothing is written until you choose **Import {count} rows**.
-Also called: import preview, check an import, import report.
-
-### How do I import deals?
-A `deals.csv` row is one deal. Each row needs a `ref`, your own key for the deal, because two deals can share a name. A new deal also needs a `name` and a `stage`.
-
-| Column | What goes in it |
-|---|---|
-| `pipeline` | The pipeline's name. Empty means the default pipeline. |
-| `stage` | The stage's name in that pipeline. Case does not matter. |
-| `amount` and `currency` | The value as a plain number, and its three-letter currency code. An amount needs a currency. |
-| `close_date` | `YYYY-MM-DD`. An open deal's date cannot be in the past. |
-| `company_ref` | The deal's company, found as a contact's is. |
-| `contact_ref` | A contact on the deal, by `ref`, email or Margince ID. The contact becomes a stakeholder. |
-| `lost_reason` | Needed when the stage is a lost one. Written only when the row creates the deal. |
-
-A deal on a won or lost stage is imported as closed history. The test run says how many deals land that way. Imported deal changes start no automation and earn no commission. Webhooks still receive them, marked as imported.
-
-A row is skipped, with its reason, in these cases:
-- its stage is not in the pipeline;
-- it moves a deal to another pipeline;
-- it changes a deal that is already closed;
-- an open deal's close date is in the past.
-
-Companies and contacts land before deals, so a deal can link to either in the same ZIP.
-Also called: import opportunities, import closed deals, import pipeline history.
-
-### What if a link is broken?
-A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. Tick the box to bring those rows in without the link. The test runs again, and the button says **Import anyway**.
-Also called: missing company, link not found, keep rows with broken links.
-
-### What happens if I import the same file again?
-Importing the same file again with the same source name updates the records that file made the first time, and does not copy them. A row whose values did not change counts as the same, so a file you already imported reports no work.
-Also called: re-import, upload again, update from a spreadsheet.
-
-### What happens to a company I already have?
-A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. To change companies you already have, correct them by their ID instead. A company you cannot see is not counted or named in the test run.
-Also called: duplicates on import, import made copies.
-
-### How do I correct companies with a spreadsheet?
-To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
-1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.
-2. Edit the file, then drop it on **Upload your data** in **Settings → Data import**.
-3. On **Check your files**, set **Import as** to **Companies**, and choose **Next: map 1 file**.
-4. In **Map columns**, map **id** to **id**, and the name column to **display_name**.
-5. Choose **Run test**.
-An empty ID creates a company. An ID that matches no company is skipped and named.
-Also called: bulk edit companies, update companies from Excel, fix company data.
-
-Undo never puts back the old values of a company an import corrected. It only archives the companies that import created.
-
-### What if an import stops partway?
-An import runs on its own once it starts. You can leave the page: **Recent imports** shows when it is done, and its file name opens it again.
-
-When an import stops partway, it says **Import stopped partway** and why. Choose **Resume import** to go on from that row, not from the start. **Tag for this import** puts every record the import creates under one tag, so you can find them later. Records it only updates keep their own tags.
-Also called: import failed, import stopped, continue an import.
+[Importing data](importing-data.md) holds the rest. It covers the template, the steps and the test run. It also covers deals, activities, importing the same file again, undo and the limits.
 
 ---
 

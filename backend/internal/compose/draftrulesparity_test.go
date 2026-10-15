@@ -61,17 +61,9 @@ import (
 // description of this table.
 func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 	return map[string][]string{
-		// Two sites in two registers, which is four assemblies rather than
-		// three: a voiced turn is its own site's prompt plus the voice rule, so
-		// the first message has a voiced variant of its own. It used to send the
-		// REPLY's prompt whenever a profile was loaded, telling the model an
-		// activity was the authoritative reason for a message that answers
-		// nothing.
 		"replydraftmodel.go": {
-			replyDraftSystemFor(replyDraftSystem, fence),
-			replyDraftSystemFor(voicedSite(replyDraftSystem), fence),
-			replyDraftSystemFor(firstDraftSystem, fence),
-			replyDraftSystemFor(voicedSite(firstDraftSystem), fence),
+			replyDraftSystemFor(fence, false),
+			replyDraftSystemFor(fence, true),
 		},
 		"contactdraft/write.go": {
 			contactdraft.SystemPromptFor(fence),
@@ -314,10 +306,9 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 	}
 }
 
-// The first-touch rule rides in the header of each surface that writes at
-// state "none", once, ahead of the shared block: a first touch is where the pull
-// to pitch is strongest. The reply sites are absent: a reply answers a message, and the
-// first-message site is told it writes at "fresh".
+// Each surface that writes at state "none" carries the first-touch rule in its
+// header, ahead of the shared block. A first touch is where the pull to pitch is
+// strongest. The reply site is absent: a reply answers a message.
 func TestEveryFirstTouchSurfaceLeadsWithTheFirstTouchRule(t *testing.T) {
 	if !strings.Contains(draftrules.FirstTouch, "Say only what the caller's stated reason says\nyour side does") {
 		t.Error("the first-touch rule no longer says what a first touch may claim about our side")

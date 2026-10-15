@@ -3,6 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../design-system/panel";
+import type {
+  WeeklyPlan,
+  WeeklyPlanCommitment,
+} from "../features/worklist/weeklyplan.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,7 +16,6 @@ import {
 } from "../testing/story-utils";
 import { PlanSection } from "./brief.plan";
 import { AddCommitment } from "./brief.plan.add";
-import type { WeeklyPlan, WeeklyPlanCommitment } from "./weeklyplan.queries";
 
 // The week ahead, on the Brief's weekly.
 //

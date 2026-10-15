@@ -42,6 +42,16 @@ type writeOptions struct {
 	// keepWhileReferenced refuses an archive of a company a live deal or a
 	// live contact's employment still names.
 	keepWhileReferenced bool
+	// releaseSourceKey clears a retired lead's (source_system, source_id) so
+	// the key can be claimed again.
+	releaseSourceKey bool
+}
+
+// ReleasingSourceKey makes a lead's retirement free its source key.
+// The unique index on that key covers retired rows. Without this, a retired
+// lead replays when the same file is imported again.
+func ReleasingSourceKey() WriteOption {
+	return func(o *writeOptions) { o.releaseSourceKey = true }
 }
 
 // NotTouchedByHumanSince refuses the write when a HUMAN has acted on the record

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { routeHash } from "../lib/router";
+import { navigate, routeHash } from "../lib/router";
 import {
   currentParams,
   hashWithParams,
@@ -40,5 +40,31 @@ export function runHref(id: string): string {
   return hashWithParams(
     routeHash({ ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE }),
     new Map([[RUN_PARAM, id]]),
+  );
+}
+
+const OBJECT_PARAM = "object";
+const CONTACT_PARAM = "contact";
+const ACTIVITY_OBJECT = "activity";
+
+/**
+ * The contact an import started from a contact's page files its activities
+ * under, held in the address (`?object=activity&contact=`). Null for an
+ * ordinary import, which names no record up front.
+ */
+export function usePresetContact(): string | null {
+  const [params] = useUrlParams();
+  if (params.get(OBJECT_PARAM) !== ACTIVITY_OBJECT) return null;
+  return params.get(CONTACT_PARAM) || null;
+}
+
+/** Opens the run page for a file of activities that all belong to one contact. */
+export function openActivityImport(contactId: string): void {
+  navigate(
+    { ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE },
+    new Map([
+      [OBJECT_PARAM, ACTIVITY_OBJECT],
+      [CONTACT_PARAM, contactId],
+    ]),
   );
 }

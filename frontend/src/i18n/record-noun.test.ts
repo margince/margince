@@ -111,7 +111,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterErrorUsers",
     "share.rosterLoading",
     "share.subject",
-    "signInMethods.sub",
     "users.deactivateAgentConfirmBody",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
@@ -202,7 +201,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterErrorUsers",
     "share.rosterLoading",
     "share.subject",
-    "signInMethods.sub",
     "users.deactivateConfirmBody",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.

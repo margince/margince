@@ -86,9 +86,10 @@ func (s *Store) DisqualifyLead(
 				return out, err
 			}
 			if _, err := tx.Exec(ctx,
-				`UPDATE lead SET status = 'disqualified', status_set_by = $4, archived_at = now(), disqualify_reason_id = $2, disqualify_note = $3, `+
+				`UPDATE lead SET status = 'disqualified', status_set_by = $4, archived_at = now(), disqualify_reason_id = $2, disqualify_note = $3,
+					source_id = CASE WHEN $5 THEN NULL ELSE source_id END, `+
 					firstResponseSet+` WHERE id = $1 AND archived_at IS NULL`,
-				id, in.ReasonID, in.Note, setBy); err != nil {
+				id, in.ReasonID, in.Note, setBy, options.releaseSourceKey); err != nil {
 				return out, err
 			}
 			// A retired record carries no tags, the same rule the company and contact
@@ -102,6 +103,9 @@ func (s *Store) DisqualifyLead(
 			after := map[string]any{leadStatusColumn: "disqualified"}
 			if in.ReasonID != nil {
 				after["disqualify_reason_id"] = *in.ReasonID
+			}
+			if options.releaseSourceKey {
+				after["source_id"] = nil
 			}
 			if in.Note != nil {
 				after["disqualify_note"] = *in.Note

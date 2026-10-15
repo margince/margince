@@ -31,8 +31,6 @@
   /* Syllable break with a hyphen first; `anywhere` only when a syllable
      still does not fit. Needs the document's `lang`, which the i18n provider sets. */
   hyphens: auto;
-  /* Not the default limit: it leaves a one-letter tail ("Prognosekategori-e"). */
-  hyphenate-limit-chars: 7 3 3;
 }
 .fieldgrid-value {
   min-width: 0;

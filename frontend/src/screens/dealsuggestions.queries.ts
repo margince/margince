@@ -4,8 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { unwrap } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
 
 export type DealSuggestion = components["schemas"]["DealSuggestion"];
 export type AcceptDealSuggestionBody =

@@ -59,6 +59,7 @@ import { LicenseCard } from "./license";
 import { LinkedInImportCard } from "./linkedin-import";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
+import { MfaSettingRow } from "./mfacard";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
@@ -564,6 +565,7 @@ function AccountCard() {
         <DisplayNameSettingRow toast={toast} />
         <GreetingNameSettingRow toast={toast} />
         <PasswordSettingRow />
+        <MfaSettingRow />
         <SignatureSettingRow toast={toast} />
         <LanguageSettingRow />
         <AppearanceSettingRow />
@@ -573,17 +575,6 @@ function AccountCard() {
   );
 }
 
-/**
- * The language this installation speaks to this reader in.
- *
- * Appearance stands beside it again, in the row below. It is ALSO in the account
- * menu — the setting a reader changes most often, from wherever they happen to
- * be standing — and the two are one state rather than two: both read
- * `useThemeChoice` and write `setThemeChoice`.
- *
- * One dropdown here, which is one row: the locale context is where the answer
- * lives, so nothing here is a second source of truth.
- */
 /**
  * The appearance choice, in Settings as well as in the account menu.
  *
@@ -624,6 +615,10 @@ function AppearanceSettingRow() {
   );
 }
 
+/**
+ * The language this installation speaks to this reader in. The locale context
+ * holds the answer, so this row is not a second source of truth.
+ */
 function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();

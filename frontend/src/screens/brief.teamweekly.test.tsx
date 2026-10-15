@@ -2,6 +2,10 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  TeamWeeklyRep,
+  TeamWeeklyReview,
+} from "../features/worklist/teamweekly.queries";
 import { formatMoneyCompact } from "../format/format";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
@@ -11,7 +15,6 @@ import {
 } from "./brief.fixtures";
 import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
-import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
 // A team's frozen week. Every figure came off the snapshot, so the tests that
 // matter are the ones proving the page cannot say more than the snapshot holds.

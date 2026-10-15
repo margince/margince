@@ -151,9 +151,9 @@ func updateActivityInTx(
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: activityUpdatedChangedFields(in),
-	}); err != nil {
+	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in)}
+	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return out, nil
@@ -328,14 +328,16 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 // it is never LESS guarded than the bare statement it replaces. The gone and
 // already-archived cases keep answering ErrNotFound, which is the same
 // existence-hiding answer as before.
-func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+func (s *Store) ArchiveActivity(
+	ctx context.Context, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption,
+) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = archiveActivityInTx(ctx, tx, id, ifVersion)
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 		return err
 	})
 	return out, err
@@ -343,20 +345,25 @@ func (s *Store) ArchiveActivity(ctx context.Context, id ids.ActivityID, ifVersio
 
 // ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
 // a bulk undo that retires the tasks its change filed in one commit.
-func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) error {
+func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption) error {
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return err
 	}
-	_, err := archiveActivityInTx(ctx, tx, id, ifVersion)
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 	return err
 }
 
-func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64) (crmcontracts.Activity, error) {
+func archiveActivityInTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions,
+) (crmcontracts.Activity, error) {
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := refuseIfTouched(ctx, tx, id, o); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
@@ -384,7 +391,9 @@ func archiveActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVe
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityArchived{}); err != nil {
+	archived := crmcontracts.PublicEventActivityArchived{}
+	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, archived); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return readActivity(ctx, tx, id, storekit.IncludeArchived)

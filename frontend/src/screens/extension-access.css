@@ -10,9 +10,7 @@
 }
 
 /* The version badge and the link to the unit's own page, in the unit card's
-   action slot. The head band is one fixed line, so at 390px the pair shares it
-   with the unit name instead of wrapping under it — a second row is a second
-   height, and the band has none to give. */
+   action slot. */
 .ext-unit-actions {
   display: flex;
   flex-wrap: nowrap;

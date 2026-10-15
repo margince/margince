@@ -22,6 +22,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import {
+  TaskDetailModal,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { useOpenEmail } from "../lib/openemail";
@@ -30,7 +34,6 @@ import { useRecordZone } from "../lib/recordzone";
 import { ComposeModal } from "./compose";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { OpenEmailDrawer } from "./openemaildrawer";
-import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.
 export type PerformableMove = {

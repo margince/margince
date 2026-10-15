@@ -51,7 +51,7 @@ type importColumns struct {
 // readImportCatalog reads one object's catalog. An object no import lands has
 // none, and importTargets refuses it.
 func readImportCatalog(ctx context.Context, db *database.DB, object string) (importCatalog, error) {
-	if _, importable := csvTargets[object]; !importable {
+	if _, importable := csvTargets[object]; !importable || !hasCustomFields(object) {
 		return importCatalog{}, nil
 	}
 	catalog := customfields.NewService(db.Pool(), nil)
@@ -94,6 +94,9 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	cat, err := readImportCatalog(ctx, db, object)
 	if err != nil {
 		return importColumns{}, err
+	}
+	if !hasCustomFields(object) {
+		return importColumns{catalog: cat}, nil
 	}
 	store, err := contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 		ActiveCreateColumns(ctx, object)

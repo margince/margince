@@ -29,10 +29,7 @@ const MaxBundleEntries = 20
 const declaredSizeFactor = 10
 
 // Why an entry of the bundle is listed but not imported.
-const (
-	IgnoredUnknownName      = "unknown_name"
-	IgnoredNotYetImportable = "not_yet_importable"
-)
+const IgnoredUnknownName = "unknown_name"
 
 var zipSignature = []byte("PK\x03\x04")
 
@@ -44,16 +41,15 @@ var bundleFileObjects = map[string]string{
 	"contacts": ObjectContact, "contact": ObjectContact,
 	"leads": ObjectLead, "lead": ObjectLead,
 	"deals": ObjectDeal, "deal": ObjectDeal,
+	// A notes file is an activities file whose rows are notes.
+	"activities": ObjectActivity, "activity": ObjectActivity, "notes": ObjectActivity,
 }
-
-// notYetImportable names files of a type a later writer takes; they are listed,
-// not refused, so a template ZIP from a newer installation still imports.
-var notYetImportable = map[string]bool{"activities": true, "activity": true, "notes": true}
 
 // templateFileStems is the plural each type's template file carries; it must
 // be a key of bundleFileObjects, which the detection test holds.
 var templateFileStems = map[string]string{
 	ObjectCompany: "companies", ObjectContact: "contacts", ObjectLead: "leads", ObjectDeal: "deals",
+	ObjectActivity: "activities",
 }
 
 // BundlePart is one CSV of the bundle matched to the type it imports.
@@ -149,8 +145,6 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 			}
 			byObject[object] = f.Name
 			b.Parts = append(b.Parts, BundlePart{Entry: f.Name, Object: object, Size: f.UncompressedSize64})
-		case notYetImportable[stem]:
-			b.Ignored = append(b.Ignored, IgnoredEntry{Entry: f.Name, Reason: IgnoredNotYetImportable})
 		default:
 			b.Ignored = append(b.Ignored, IgnoredEntry{Entry: f.Name, Reason: IgnoredUnknownName})
 		}

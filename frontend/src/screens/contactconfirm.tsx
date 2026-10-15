@@ -5,11 +5,11 @@ import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { openContactTab } from "../features/worklist/worklist.return";
 import { forReader } from "../format/collate";
 import { formatDayMonth, formatNumber, INTL_LOCALE } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
-import { openContactTab } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 

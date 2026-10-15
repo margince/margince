@@ -88,6 +88,11 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
 		return err
 	}
+	// Which tags the model read as the subject's interests, on the same ground.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM tag_interest_read WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
 	// What was promised, asked or decided in the message — and, on every one of
 	// these rows, a VERBATIM quotation of the words it was read from. The
 	// writer refuses a claim that carries neither the activity nor the snippet,

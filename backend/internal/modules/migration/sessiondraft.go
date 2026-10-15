@@ -159,6 +159,7 @@ type DraftPatch struct {
 	OnDuplicate  *string
 	OnBrokenLink *string
 	ContextTag   *string
+	PresetLinks  *[]PresetLink
 	DraftStep    *string
 }
 
@@ -250,6 +251,7 @@ func (p DraftPatch) applyTo(mapping RunMapping, before, after map[string]any) Ru
 	patchField("on_duplicate", p.OnDuplicate, &mapping.OnDuplicate, before, after)
 	patchField("on_broken_link", p.OnBrokenLink, &mapping.OnBrokenLink, before, after)
 	patchField("context_tag", p.ContextTag, &mapping.ContextTag, before, after)
+	patchField("preset_links", p.PresetLinks, &mapping.PresetLinks, before, after)
 	return mapping
 }
 

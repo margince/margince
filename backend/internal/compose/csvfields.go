@@ -76,6 +76,12 @@ var csvTargets = map[string][]string{
 		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,
 		csvTargetCompanyRef, dealTargetContactRef, csvTargetOwner, csvTargetTags, descriptionField, dealTargetLostReason,
 	},
+	// The kind, direction and links are fixed when an activity lands (isCreateOnlyTarget).
+	// An activity carries no tags and no custom fields.
+	migration.ObjectActivity: {
+		activityTargetType, activityTargetSubject, activityTargetBody, activityTargetOccurredAt, activityTargetLinks,
+		activityTargetDuration, activityTargetMeetingStatus, activityTargetDirection, csvTargetAuthor, csvTargetOwner,
+	},
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -133,6 +139,8 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectContact: fieldEmail,
 	// Two deals may share a name, so a deal is known only by its ref.
 	migration.ObjectDeal: csvTargetRef,
+	// An activity has no natural key at all.
+	migration.ObjectActivity: csvTargetRef,
 }
 
 // importTargets is the closed set a mapping may name for one object: its core
@@ -143,7 +151,9 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 		return nil, fmt.Errorf("import: %q has no mappable fields", object)
 	}
 	targets := append([]string(nil), core...)
-	targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
+	if hasCustomFields(object) {
+		targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
+	}
 	if selectsByID(object) {
 		// Accepted as a column and absent from csvTargets, because those two
 		// lists answer different questions. csvTargets is what a row WRITES, and
@@ -159,6 +169,10 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 	}
 	return append(targets, csvTargetRef), nil
 }
+
+// hasCustomFields reports whether an object's store takes custom-field cells.
+// The activities store has no member for them.
+func hasCustomFields(object string) bool { return object != migration.ObjectActivity }
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
@@ -249,6 +263,12 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	if column, renamed := dealStoredColumns[field]; renamed {
 		return current[column]
+	}
+	if column, renamed := activityStoredColumns[field]; renamed {
+		return current[column]
+	}
+	if field == activityTargetOccurredAt {
+		return storedInstant(current[field])
 	}
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {

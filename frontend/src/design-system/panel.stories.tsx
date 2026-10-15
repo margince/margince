@@ -177,13 +177,9 @@ export const NestedTitleLevel: Story = {
   },
 };
 
-// The band under pressure: a name longer than the panel is wide, and two things
-// at the far end that must keep their own size. The title ends in an ellipsis on
-// its one row — the band stays exactly as tall as every other head on the page,
-// and the badge and the button are not squeezed to buy the title room. Narrowed
-// to 320px on purpose; widen the frame and the ellipsis is the first thing to
-// go.
-export const LongTitleTruncates: Story = {
+// A name longer than the pane at 320px: the verbs drop under it unsqueezed, and
+// the title wraps whole. Wider, the band returns to one 56px line.
+export const LongTitleWraps: Story = {
   decorators: [
     (Story) => (
       <div style={{ maxWidth: 320 }}>
@@ -205,6 +201,41 @@ export const LongTitleTruncates: Story = {
         <PanelRow>Legitimate interest — account management</PanelRow>
       </>
     ),
+  },
+};
+
+// German at a report tile's width: the verb does not fit beside the title,
+// so it drops under it and the title keeps every word. `lang` lets a compound
+// break at a syllable.
+export const GermanTitleBesideAction: Story = {
+  decorators: [
+    (Story) => (
+      <div lang="de" style={{ maxWidth: 300 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    title: "Zeit in der aktuellen Phase",
+    titleAction: <Button variant="link">Datensätze anzeigen</Button>,
+    children: (
+      <PanelBody>
+        <p>Offene Pipeline heute</p>
+      </PanelBody>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const verb = await canvas.findByRole("button", {
+      name: "Datensätze anzeigen",
+    });
+    const title = canvas.getByRole("heading", {
+      name: "Zeit in der aktuellen Phase",
+    });
+    await expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth);
+    await expect(verb.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      title.getBoundingClientRect().bottom,
+    );
   },
 };
 

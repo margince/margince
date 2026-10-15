@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -274,7 +275,7 @@ func TestReplyDraftCaseRecordsEveryRequestTheDrafterIssued(t *testing.T) {
 			len(trace.Requests))
 	}
 	voiced, retry, fallback := trace.Requests[0], trace.Requests[1], trace.Requests[2]
-	if !strings.HasPrefix(voiced.System, string(voicedSite(replyDraftSystem))) {
+	if !strings.HasPrefix(voiced.System, replyDraftSystem+"\n\n"+draftvoice.SystemRule) {
 		t.Errorf("the first request is not in the voice variant: %q", voiced.System)
 	}
 	for _, fragment := range []string{"Voice profile:", "Blunt, never hedges.", "We ship Monday."} {

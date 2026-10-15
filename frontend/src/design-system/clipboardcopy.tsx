@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactElement, useRef, useState } from "react";
+import { type ReactElement, type Ref, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
 
@@ -114,10 +114,17 @@ export function CopyableText({
   text,
   label,
   testId,
-}: Readonly<{ text: string; label: string; testId?: string }>) {
+  ref,
+}: Readonly<{
+  text: string;
+  label: string;
+  testId?: string;
+  ref?: Ref<HTMLDivElement>;
+}>) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: a textarea does not grow to its text, and the value must show whole at any width
     <div
+      ref={ref}
       className="code-block"
       role="textbox"
       aria-readonly="true"

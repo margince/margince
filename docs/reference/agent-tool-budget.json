@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 56,
     "system_frame_tokens": 597,
-    "tokens": 24735,
+    "tokens": 24743,
     "median_tool_tokens": 393,
     "mean_tool_tokens": 441
   },
@@ -94,7 +94,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 993
+      "tokens": 1001
     },
     {
       "name": "list_records",

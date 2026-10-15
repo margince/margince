@@ -79,8 +79,9 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "advance-write-doors", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	next := openStages(t, d.e)[1]
-	viaREST := openDeal(t, d.e, stages, "Rest advanced renewal")
-	viaTool := openDeal(t, d.e, stages, "Tool advanced renewal")
+	// One name for both: deal.stage_changed carries it, and the events must match.
+	viaREST := openDeal(t, d.e, stages, "Advanced renewal")
+	viaTool := openDeal(t, d.e, stages, "Advanced renewal")
 	storedDeal := func(id string) json.RawMessage { return d.restStatus(t, "GET", "/v1/deals/"+id, nil, http.StatusOK) }
 
 	d.restPinned(t, "POST", "/v1/deals/"+viaREST+"/advance", AnyMap{"to_stage_id": next}, versionOf(t, storedDeal(viaREST)))

@@ -28,21 +28,23 @@ import (
 // CallStatsGroup is the column the figures are grouped by.
 type CallStatsGroup string
 
-// The groupings a reader may ask for. served_provider is the host a broker
-// routed the call to, which only a broker reports.
+// The groupings a reader may ask for. served_model is the model that answered;
+// served_provider is the host a broker routed the call to, which only a broker
+// reports.
 const (
 	GroupByProvider       CallStatsGroup = "provider"
 	GroupByModel          CallStatsGroup = "model"
+	GroupByServedModel    CallStatsGroup = "served_model"
 	GroupByServedProvider CallStatsGroup = "served_provider"
 	GroupByTier           CallStatsGroup = "tier"
 	GroupByTask           CallStatsGroup = "task"
 )
 
-// callStatsColumns maps each grouping to its column, a compile-time literal:
+// callStatsColumns maps each grouping to its column expression, built in code:
 // the grouping arrives on a query string and is never formatted in itself.
 var callStatsColumns = map[CallStatsGroup]string{
-	GroupByProvider: "ac.provider", GroupByModel: "ac.model_id", GroupByServedProvider: "ac.served_provider",
-	GroupByTier: "ac.tier", GroupByTask: "ac.task",
+	GroupByProvider: "ac.provider", GroupByModel: "ac.model_id", GroupByServedModel: answeredModelSQL("ac"),
+	GroupByServedProvider: "ac.served_provider", GroupByTier: "ac.tier", GroupByTask: "ac.task",
 }
 
 // CallStatsWindows are the windows the screens offer.
@@ -73,6 +75,10 @@ type CallStatsRow struct {
 	TokensOut    int64
 	CostMicroUSD int64
 	Unpriced     int64
+	// Switched counts the answered calls the provider answered with another
+	// model than their binding, and SwitchedTo is the one it named most often.
+	Switched   int64
+	SwitchedTo string
 }
 
 // failedAttemptSQL is whether the ai_call row aliased alias failed. It carries a
@@ -90,13 +96,13 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 	}
 	column, ok := callStatsColumns[q.GroupBy]
 	if !ok {
-		return nil, invalidAt("group", "must be one of provider, model, served_provider, tier, task")
+		return nil, invalidAt("group", "must be one of provider, model, served_model, served_provider, tier, task")
 	}
 	from, to := rateFallbacks()
 	args := []any{s.now().Add(-q.Window), answeredSentinels}
 	failed := failedAttemptSQL("ac", len(args))
 	args = append(args, from, to)
-	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", len(args)-1, len(args))
+	rate := pricedRate("ac", len(args)-1, len(args))
 	// A row with no tier is a call refused before any rung ran, not an attempt.
 	where := "ac.occurred_at >= $1 AND NOT ac.cache_hit AND ac.tier <> ''"
 	var whereSb101 strings.Builder
@@ -118,14 +124,16 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		       coalesce(percentile_disc(0.95) WITHIN GROUP (ORDER BY ac.latency_ms), 0),
 		       coalesce(sum(ac.tokens_in), 0), coalesce(sum(ac.tokens_out), 0),
 		       coalesce(sum(%[3]s), 0)::bigint,
-		       count(*) FILTER (WHERE %[4]s)
+		       count(*) FILTER (WHERE %[4]s),
+		       count(*) FILTER (WHERE %[7]s AND NOT %[2]s),
+		       coalesce(mode() WITHIN GROUP (ORDER BY ac.served_model) FILTER (WHERE %[7]s AND NOT %[2]s), '')
 		  FROM ai_call ac
 		  LEFT JOIN LATERAL (%[5]s) r ON true
 		 WHERE %[6]s
 		 GROUP BY 1
 		 ORDER BY 2 DESC, 1`,
 		column, failed, callCostMicroUSD("ac"), callUnpriced("ac"),
-		rate, where)
+		rate, where, switchedModelSQL("ac"))
 	rows := []CallStatsRow{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		found, err := tx.Query(ctx, sql, args...)
@@ -136,7 +144,7 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		for found.Next() {
 			var row CallStatsRow
 			if err := found.Scan(&row.Key, &row.Calls, &row.Failed, &row.Timeouts, &row.P50Ms, &row.P95Ms,
-				&row.TokensIn, &row.TokensOut, &row.CostMicroUSD, &row.Unpriced); err != nil {
+				&row.TokensIn, &row.TokensOut, &row.CostMicroUSD, &row.Unpriced, &row.Switched, &row.SwitchedTo); err != nil {
 				return err
 			}
 			rows = append(rows, row)
@@ -163,6 +171,9 @@ type FlowStep struct {
 	// GaveUp counts why the walk moved past this step: the attempt's own
 	// sentinel when it failed, else the reason the next attempt was made.
 	GaveUp map[string]int64
+	// Switched and SwitchedTo are CallStatsRow's, over the calls this step answered.
+	Switched   int64
+	SwitchedTo string
 }
 
 // TaskFlow is what one task's calls did over a window.
@@ -209,7 +220,8 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, arg
 		  SELECT ac.kind = 'decision' AS decision, ac.tier, ac.provider, ac.model_id, ac.latency_ms, ac.is_terminal,
 		         `+failed+` AS failed,
 		         coalesce(ac.error_sentinel, '') AS sentinel,
-		         lead(ac.attempt_reason) OVER (PARTITION BY ac.logical_call_id ORDER BY ac.attempt) AS next_reason
+		         lead(ac.attempt_reason) OVER (PARTITION BY ac.logical_call_id ORDER BY ac.attempt) AS next_reason,
+		         `+switchedModelSQL("ac")+` AS switched, ac.served_model
 		    FROM ai_call ac
 		   WHERE ac.task = $1 AND ac.occurred_at >= $2 AND NOT ac.cache_hit
 		)
@@ -218,7 +230,9 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, arg
 		       count(*), count(*) FILTER (WHERE is_terminal AND NOT failed),
 		       coalesce(percentile_disc(0.5) WITHIN GROUP (ORDER BY latency_ms), 0),
 		       coalesce(array_agg(CASE WHEN sentinel <> '' THEN sentinel ELSE next_reason END)
-		                FILTER (WHERE NOT (is_terminal AND NOT failed)), '{}')
+		                FILTER (WHERE NOT (is_terminal AND NOT failed)), '{}'),
+		       count(*) FILTER (WHERE switched AND is_terminal AND NOT failed),
+		       coalesce(mode() WITHIN GROUP (ORDER BY served_model) FILTER (WHERE switched AND is_terminal AND NOT failed), '')
 		  FROM attempts
 		 GROUP BY decision, tier`, args...)
 	if err != nil {
@@ -230,7 +244,7 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, arg
 		step := FlowStep{GaveUp: map[string]int64{}}
 		var reasons []*string
 		if err := found.Scan(&step.Decision, &step.Tier, &step.Provider, &step.Model,
-			&step.Attempts, &step.Answered, &step.P50Ms, &reasons); err != nil {
+			&step.Attempts, &step.Answered, &step.P50Ms, &reasons, &step.Switched, &step.SwitchedTo); err != nil {
 			return nil, err
 		}
 		for _, reason := range reasons {

@@ -56,7 +56,10 @@ import { OpenEmailDrawer } from "./openemaildrawer";
 import { RecordAccess } from "./recordaccess";
 import { useMailboxConnected } from "./writetohost";
 import "./contact360.css";
-import { navigateKeepingReturn, WorklistReturnLink } from "./worklist.return";
+import {
+  navigateKeepingReturn,
+  WorklistReturnLink,
+} from "../features/worklist/worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];

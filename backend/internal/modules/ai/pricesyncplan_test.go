@@ -218,3 +218,16 @@ func TestAWriteThatYieldedIsReportedKept(t *testing.T) {
 		t.Errorf("line = %+v, want the add turned into a kept price", line)
 	}
 }
+
+func TestAModelTheVendorSwitchedCallsToIsPricedEvenUnlisted(t *testing.T) {
+	src := vendorSources(t, providerGemini)
+	src.Switched = map[string][]string{providerGemini: {"gemini-3.5-flash", "gemini-3.5-flash-001"}}
+	plan := planPriceSync(src, nil)
+
+	if got := writesOf(plan)["gemini/gemini-3.5-flash"]; got.Lane != LaneChat || got.InputUsd != "1.500000" {
+		t.Errorf("switched-to write = %+v, want the catalogue's chat price", got)
+	}
+	if got := plan.lines[providerGemini].Unlisted; !slices.Equal(got, []string{"gemini-3.5-flash-001"}) {
+		t.Errorf("unlisted = %v, want the switched-to model the catalogue does not price", got)
+	}
+}

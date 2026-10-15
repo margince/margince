@@ -627,3 +627,52 @@ export const RowMenuOnPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+const longHeaderColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 4),
+  {
+    key: "region",
+    header: "Relationship to the account",
+    cell: (row: Company) => row.region,
+  },
+  {
+    key: "value",
+    header: "Open deals this quarter",
+    numeric: true,
+    sort: "amount_minor",
+    cell: (row: Company) => formatNumber(row.valueMinor / 12_500, "en"),
+  },
+  {
+    key: "renewal",
+    header: "Vertragsverlängerungskündigungsfrist",
+    cell: (row: Company) => row.size,
+  },
+];
+
+// A header longer than its column wraps, and the column keeps its width.
+// Once the column is sorted, its arrow stays clear of the resize grip.
+export const LongHeadersWrap: Story = {
+  render: () => (
+    <div style={{ maxWidth: "62rem" }}>
+      <Surface rows={companies(4)} columns={longHeaderColumns} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Sort by Open deals this quarter",
+      }),
+    );
+    for (const header of canvasElement.querySelectorAll("thead th")) {
+      await expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+    }
+    const arrow = canvasElement.querySelector(".lt-sort.on .lt-arrow");
+    const grip = arrow?.closest("th")?.querySelector(".lt-grip");
+    if (!arrow || !grip)
+      throw new Error("the sorted header drew no arrow or grip");
+    await expect(arrow.getBoundingClientRect().right).toBeLessThanOrEqual(
+      grip.getBoundingClientRect().left,
+    );
+  },
+};

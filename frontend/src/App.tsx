@@ -54,8 +54,8 @@ import {
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
+import { ConfinedAccountScreen, useConfinement } from "./screens/confinement";
 import { isContactTab } from "./screens/contacttab";
-import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -822,6 +822,7 @@ function AuthedApp({
     }
   }, [authed, described, progress.unfinished, route.screen]);
 
+  const confinement = useConfinement(me.error, me.refetch);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
@@ -833,20 +834,17 @@ function AuthedApp({
       </RaillessFrame>
     );
   }
+  if (confinement) {
+    return (
+      <RaillessFrame>
+        <ConfinedAccountScreen {...confinement} />
+      </RaillessFrame>
+    );
+  }
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // The account is authenticated but lacks a password of its own. The login
-    // screen would loop, since the same correct credentials meet the same
-    // refusal, so the boundary renders the one thing that can resolve it.
-    if (kind === "must-change-password") {
-      return (
-        <RaillessFrame>
-          <ForcedPasswordChangeScreen onChanged={() => me.refetch()} />
-        </RaillessFrame>
-      );
-    }
-    if (kind !== "unauthorized") {
+    if (kind === "connection" || kind === "installation") {
       const retry = () => me.refetch({ cancelRefetch: false });
       return (
         <RaillessFrame>

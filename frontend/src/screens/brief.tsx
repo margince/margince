@@ -7,6 +7,18 @@ import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { PageZones } from "../design-system/pagezones";
+import {
+  TaskDetailModal,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
+import type { TeamWeekReach } from "../features/worklist/teamweekly.queries";
+import { drawerScope } from "../features/worklist/worklist.address";
+import { WorklistPane } from "../features/worklist/worklist.pane";
+import {
+  useWorklist,
+  worklistKey,
+} from "../features/worklist/worklist.queries";
+import { readerTask } from "../features/worklist/worklist.reader";
 import { formatDateTime } from "../format/format";
 import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
@@ -40,12 +52,6 @@ import {
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { MagicPanel } from "./magic";
-import { TaskDetailModal, useTaskUpdate } from "./taskactions";
-import type { TeamWeekReach } from "./teamweekly.queries";
-import { drawerScope } from "./worklist.address";
-import { WorklistPane } from "./worklist.pane";
-import { useWorklist, worklistKey } from "./worklist.queries";
-import { readerTask } from "./worklist.reader";
 import "./brief.css";
 
 export function BriefScreen() {

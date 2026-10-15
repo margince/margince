@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { itemTitle, rowHref } from "../features/worklist/worklist.copy";
+import type {
+  Worklist,
+  WorklistItem,
+} from "../features/worklist/worklist.queries";
 import { de } from "../i18n/de";
 import type { MessageKey } from "../i18n/en";
 import { en } from "../i18n/en";
@@ -9,8 +14,6 @@ import {
   sentenceParts,
   waitingRows,
 } from "./brief.sentence";
-import { itemTitle, rowHref } from "./worklist.copy";
-import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence.
 //

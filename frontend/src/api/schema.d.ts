@@ -8368,6 +8368,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/webhook-subscriptions/body-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render a body template against a sample event, without sending anything.
+         * @description Renders `body_template` with the same engine a delivery uses, against a sample event of
+         *     `event_type` built from the public event contract. Nothing is sent and nothing is stored.
+         *     A template the engine refuses answers 422 on `body_template`, naming the line and column.
+         */
+        post: operations["previewWebhookBody"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhook-subscriptions/{id}": {
         parameters: {
             query?: never;
@@ -8387,8 +8409,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Pause/resume a subscription or re-target its event set.
-         * @description A partial update (pause/resume or re-target the event set). Re-targeting can widen
+         * Pause/resume a subscription, re-target its event set, or change its headers or body template.
+         * @description A partial update (pause/resume, the event set, custom headers, body template). Re-targeting can widen
          *     outbound egress, so an agent principal is refused.
          */
         patch: operations["updateWebhookSubscription"];
@@ -8447,7 +8469,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replay a parked (dead-lettered) delivery. */
+        /**
+         * Replay a parked (dead-lettered) delivery.
+         * @description Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+         *     delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+         *     retry sweep or another replay is sending at this moment is a 409; try again once it ends.
+         */
         post: operations["replayWebhookDelivery"];
         delete?: never;
         options?: never;
@@ -20313,6 +20340,11 @@ export interface components {
             event_types: string[];
             /** @enum {string} */
             state: "active" | "paused";
+            /** @description The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part. */
+            custom_headers: components["schemas"]["WebhookCustomHeader"][];
+            /** @description The body template every delivery is rendered from; null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
             /**
              * Format: int64
              * @description Optimistic-concurrency version; echo it in If-Match on update.
@@ -20324,6 +20356,33 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A custom header as a read shows it. The value stays sealed; `configured` says one is stored. */
+        WebhookCustomHeader: {
+            name: string;
+            configured: boolean;
+        };
+        /** @description A custom header to store. `value` is required for a new name. On update, a row that omits `value` keeps the value already stored under that name. */
+        WebhookCustomHeaderInput: {
+            name: string;
+            value?: string;
+        };
+        /**
+         * @description The Content-Type of a templated body; null means application/json.
+         * @enum {string|null}
+         */
+        WebhookBodyContentType: "application/json" | "text/plain" | "application/x-www-form-urlencoded" | null;
+        WebhookBodyPreviewRequest: {
+            /** @description The event type whose sample the template is rendered against. */
+            event_type: string;
+            body_template: string;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
+        };
+        WebhookBodyPreview: {
+            /** @description The exact bytes a delivery of the sample event would send. */
+            body: string;
+            content_type: string;
+            byte_length: number;
         };
         /** @description The create/rotate response — the subscription plus the `signing_secret`, which is shown EXACTLY ONCE and never retrievable again. Store it now: deliveries are signed with it on the Standard Webhooks scheme (standardwebhooks.com). */
         WebhookSubscriptionCreated: {
@@ -20339,12 +20398,22 @@ export interface components {
             target_url: string;
             /** @description At least one event type from the published catalog; a true set — duplicates are rejected. */
             event_types: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
-        /** @description A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set. */
+        /** @description A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope. */
         UpdateWebhookSubscriptionRequest: {
             /** @enum {string} */
             state?: "active" | "paused";
             event_types?: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
         WebhookSubscriptionListResponse: {
             data: components["schemas"]["WebhookSubscription"][];
@@ -23587,7 +23656,7 @@ export interface components {
             rows: components["schemas"]["AiCallStatsRow"][];
         };
         AiCallStatsRow: {
-            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            /** @description The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
             key: string;
             /** Format: int64 */
             calls: number;
@@ -23613,6 +23682,13 @@ export interface components {
              * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
              */
             unpriced: number;
+            /**
+             * Format: int64
+             * @description Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiTaskFlow: {
             task: string;
@@ -23648,6 +23724,13 @@ export interface components {
             gave_up: {
                 [key: string]: number;
             };
+            /**
+             * Format: int64
+             * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiDeferredWork: {
             carrier: string;
@@ -23951,6 +24034,10 @@ export interface components {
          *     upload. A deal row needs a `ref`, and names its pipeline and stage by
          *     name.
          *
+         *     `activity` creates notes, calls, meetings and emails, after every
+         *     other type of the same upload. A row needs a `ref` and at least one
+         *     link to a company, contact, lead or deal.
+         *
          *     `lead` and `contact` are two answers to one question about a file of
          *     humans, and the caller picks the one that matches where the file came
          *     from.
@@ -23974,7 +24061,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "company" | "lead" | "contact" | "deal";
+        ImportObject: "company" | "lead" | "contact" | "deal" | "activity";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -24089,7 +24176,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
          * @enum {string}
          */
-        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_pipeline_fixed" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "linkedin_held" | "lost_reason_missing" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -24174,6 +24261,20 @@ export interface components {
              *     only touched.
              */
             context_tag_id?: string;
+            /**
+             * @description The record every imported activity is filed under, so the file needs
+             *     no `links` column. Only for a run whose files are all `activity`.
+             *     The contact must be visible to the caller; one that is not, or does
+             *     not exist, is answered `404` the same way.
+             */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
+        };
+        /** @description A record a whole run's activities are filed under. */
+        ImportPresetLink: {
+            /** @enum {string} */
+            type: "contact";
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description What to do with a row naming a record the estate ALREADY holds — found
@@ -24395,6 +24496,8 @@ export interface components {
              */
             context_tag_id?: string | null;
             draft_step?: components["schemas"]["ImportDraftStep"];
+            /** @description The record every imported activity is filed under, as on `CreateImportRunRequest`. An empty list clears it. */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
         };
         /** @description The run's `version` a call was made on. */
         ImportRunVersion: {
@@ -24485,6 +24588,8 @@ export interface components {
              */
             readonly context_tag_id?: string;
             on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /** @description The record every activity of this run is filed under. Absent when the run names none. */
+            readonly preset_links?: components["schemas"]["ImportPresetLink"][];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
@@ -38135,7 +38240,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -60656,6 +60761,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewWebhookBody: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookBodyPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The rendered body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookBodyPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getWebhookSubscription: {
         parameters: {
             query?: never;
@@ -60844,6 +60976,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTagSuggestion: {
@@ -65390,6 +65524,8 @@ export interface operations {
                 provider?: string;
                 /** @description Filter to calls that ended on one configured model id. */
                 model?: string;
+                /** @description Filter to calls one model answered: the model the provider named, else the configured one. */
+                served_model?: string;
                 /** @description Filter to calls a broker served from one upstream host. */
                 served_provider?: string;
                 /** @description Filter to calls that ended on one tier. */
@@ -65419,7 +65555,8 @@ export interface operations {
         parameters: {
             query?: {
                 window?: "24h" | "7d" | "30d";
-                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                /** @description served_model groups by the model that answered: the model the provider named, else the configured one. */
+                group?: "provider" | "model" | "served_model" | "served_provider" | "tier" | "task";
                 provider?: string;
                 model?: string;
                 tier?: string;
@@ -74994,7 +75131,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];

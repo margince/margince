@@ -3024,11 +3024,11 @@ export const en = {
     "Someone already decided this suggestion. Reload to see where it stands.",
   "tagSuggestion.unavailable":
     "The suggestion could not be read. Try again later.",
-  "tagAdmin.descriptionLabel": "Words that show interest",
+  "tagAdmin.descriptionLabel": "What shows interest",
   "tagAdmin.descriptionHint":
-    "Separate words or phrases with commas, for example: pricing for Product X, Product X demo.",
+    "For example, asks about pricing or a Product X demo. Without AI, each comma-separated phrase counts as a match.",
   "tagAdmin.suggestibleLabel":
-    "Suggest this tag when mail or meeting notes use these words",
+    "Suggest this tag when mail, meetings, notes or calls show this interest",
   "tagAdmin.colorNone": "No color",
   "tagAdmin.color.teal": "Teal",
   "tagAdmin.color.amber": "Amber",
@@ -5957,6 +5957,7 @@ export const en = {
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
+  "import.object.activity": "Activities",
   "import.profiled": "Rows profiled from the start of the file: {rows}.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
@@ -5996,6 +5997,8 @@ export const en = {
   "import.hub.uploadLabel": "Upload your data",
   "import.hub.uploadHint": "A ZIP of CSV files, or one CSV. Up to {mb} MB.",
   "import.hub.uploadEmpty": "Choose a file or drop it here",
+  "import.hub.csvOnly":
+    "Only a CSV file can be imported here. Choose a .csv file.",
   "import.hub.order": "Import order:",
   "import.recent.title": "Recent imports",
   "import.recent.col.date": "Date",
@@ -6084,6 +6087,10 @@ export const en = {
   "import.files.columns_other": "{count} columns",
   "import.files.skip": "Skip this file",
   "import.files.typeFor": "Record type for {file}",
+  "import.preset.into": "Importing into {name}",
+  "import.preset.intoUnnamed": "Importing into this contact",
+  "import.preset.hint":
+    "Every row is filed under this contact, so the file needs no links column.",
   "import.files.ignoredTitle": "Files left out",
   "import.files.ignored.unknown_name": "the name matches no record type",
   "import.files.ignored.not_yet_importable":
@@ -6326,6 +6333,55 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.activity_type_unnamed":
+    "Name the activity’s type: note, call, meeting or email.",
+  "import.reason.activity_type_unknown":
+    "“{value}” is not an activity type. The types are: {allowed}.",
+  "import.reason.message_not_importable":
+    "A message needs a channel, so it cannot be imported from a file. Use a note or an email instead.",
+  "import.reason.task_not_importable":
+    "A task would land open on your own list, so it is not imported. Use a note instead.",
+  "import.reason.occurred_at_unnamed":
+    "Give the day the activity happened, as YYYY-MM-DD or with its time zone.",
+  "import.reason.timestamp_needs_zone":
+    "“{value}” has a time but no time zone. Add the zone, like 2026-03-02T10:00:00+07:00.",
+  "import.reason.occurred_at_future":
+    "“{value}” is in the future, and an imported activity must already have happened.",
+  "import.reason.duration_not_valid_for_kind":
+    "Only a call or a meeting has a duration. Remove it from this row.",
+  "import.reason.duration_out_of_range":
+    "“{value}” minutes is outside what an activity can last: zero up to 31 days.",
+  "import.reason.meeting_status_unknown":
+    "“{value}” is not a meeting status. The statuses are: {allowed}.",
+  "import.reason.meeting_status_not_valid_for_kind":
+    "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.direction_unknown":
+    "“{value}” is not a direction. The directions are: {allowed}.",
+  "import.reason.activity_unlinked":
+    "This activity names no record to be filed under. Add a link like deal:D-1001 or contact:jo@acme.com.",
+  "import.reason.link_malformed":
+    "“{value}” is not a link. Write the type, a colon and the key, like deal:D-1001.",
+  "import.reason.link_type_unknown":
+    "“{value}” is not a link type. The types are: {allowed}.",
+  "import.reason.too_many_links": "An activity can name at most {max} links.",
+  "import.reason.company_link_on_meeting":
+    "A call or a meeting is with a contact, not a company. Link the contact who was there.",
+  "import.reason.link_not_attachable":
+    "You cannot add activities to one of the records this row links to, so the row is skipped.",
+  "import.reason.activity_held":
+    "This activity is held under a retention obligation, so the row cannot change it.",
+  "import.reason.lead_not_found":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.lead_not_found_dropped":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.deal_not_found_dropped":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
+  "import.reason.activity_link_ambiguous_dropped":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
@@ -8539,6 +8595,12 @@ export const en = {
   // the authority, not the session.
   // The account whose password an operator chose. Authenticated, and
   // able to do exactly one thing until it has a password of its own.
+  "forcedMfa.pageTitle": "Set up two-step sign-in",
+  "forcedMfa.title": "Set up two-step sign-in",
+  "forcedMfa.body":
+    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+  "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
+  "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
   "forcedPassword.title": "Set your own password",
   "forcedPassword.body":
@@ -8562,6 +8624,63 @@ export const en = {
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
   "password.errorGeneric": "No cause was reported. Retry.",
+  "mfa.title": "Two-step sign-in",
+  "mfa.body": "A code from an authenticator app, asked for after the password.",
+  "mfa.off": "Not set up",
+  "mfa.pending": "Not finished",
+  "mfa.on_one": "On · {count} recovery code left",
+  "mfa.on_other": "On · {count} recovery codes left",
+  "mfa.statusFailed": "Status not loaded. Reload the page.",
+  "mfa.setUp": "Set up",
+  "mfa.remove": "Remove",
+  "mfa.lowTitle": "Few recovery codes left",
+  "mfa.low": "For new codes, remove two-step sign-in and set it up again.",
+  "mfa.setupTitle": "Set up two-step sign-in",
+  "mfa.startFailedTitle": "Setup not started",
+  "mfa.alreadyOn":
+    "Two-step sign-in is already on. Remove it first to set it up again.",
+  "mfa.scan": "Scan this QR code with an authenticator app.",
+  "mfa.qrLabel": "QR code for the authenticator app",
+  "mfa.secretLabel": "Secret key",
+  "mfa.secretHint": "If the app cannot scan, enter this key in it.",
+  "mfa.copyKey": "Copy key",
+  "mfa.copied": "Copied",
+  "mfa.copyKeyFailed":
+    "Copy failed. Select the key above and copy it manually.",
+  "mfa.code": "Code from the app",
+  "mfa.signsOut": "Turning it on signs out all other devices.",
+  "mfa.turnOn": "Turn on",
+  "mfa.turningOn": "Turning on…",
+  "mfa.codeRefused": "The code was not accepted. Check it and retry.",
+  "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
+  "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
+  "mfa.onTitle": "Two-step sign-in on",
+  "mfa.onBody": "All other devices were signed out.",
+  "mfa.saveCodesTitle": "Save these recovery codes now",
+  "mfa.saveCodes":
+    "Each code signs in once without the app. The codes are not shown again.",
+  "mfa.codesLabel": "Recovery codes",
+  "mfa.copyCodes": "Copy codes",
+  "mfa.copyCodesFailed":
+    "Copy failed. Select the codes above and copy them manually.",
+  "mfa.keepCodes": "Save the codes, then choose Done.",
+  "mfa.onElsewhere":
+    "Two-step sign-in was turned on in another session. Enter a code to remove it.",
+  "mfa.done": "Done",
+  "mfa.cancel": "Cancel",
+  "mfa.removeTitle": "Remove two-step sign-in?",
+  "mfa.removeBody":
+    "Signing in then needs only the password, and the recovery codes stop working.",
+  "mfa.removeConfirm": "Remove two-step sign-in",
+  "mfa.removeCode": "Code",
+  "mfa.removeCodeHint":
+    "A code from the authenticator app, or an unused recovery code.",
+  "mfa.discardTitle": "Discard unfinished setup?",
+  "mfa.discardBody":
+    "The authenticator app was never confirmed, so no code is needed.",
+  "mfa.discard": "Discard setup",
+  "mfa.removed": "Two-step sign-in removed",
+  "mfa.discarded": "Setup discarded",
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
@@ -8633,6 +8752,13 @@ export const en = {
   "auth.resetDoneTitle": "Password updated",
   "auth.resetDoneBody":
     "The password was changed and all other sessions were signed out. Sign in with the new password.",
+  "auth.mfaTitle": "Verification code",
+  "auth.mfaSub":
+    "Enter the code from the authenticator app, or one unused recovery code.",
+  "auth.mfaCode": "Code",
+  "auth.mfaVerify": "Verify code",
+  "auth.mfaErrCode":
+    "The code was not accepted. Check it and retry, or go back to sign in and start again.",
   "auth.backToLogin": "Back to sign in",
   "auth.signOut": "Sign out",
 
@@ -10429,6 +10555,7 @@ export const en = {
   "aicalls.outcome.failed": "Failed",
   "aicalls.model.afterDecision": "Decision model, then {tier}",
   "aicalls.filter.servedProvider": "Served by",
+  "aicalls.filter.servedModel": "Answered by",
   "aicalls.sentinel.provider_quota": "Out of quota",
   "aicalls.sentinel.provider_throttled": "Throttled",
   "aicalls.sentinel.provider_refused": "Refused by provider",
@@ -10532,7 +10659,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "How people can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
+    "How members can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available. Every user can sign in this way, so the other methods can be turned off safely.",
@@ -10542,6 +10669,14 @@ export const en = {
     "Shows this provider on the sign-in screen. Turning it off stops sign-ins in progress; existing sessions continue.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
+  "signInMethods.requireMfa": "Require second factor",
+  "signInMethods.requireMfaHint":
+    "Every member needs two-step sign-in turned on to use Margince.",
+  "signInMethods.requireMfaConfirmTitle": "Require second factor?",
+  "signInMethods.requireMfaConfirmBody":
+    "Members without two-step sign-in are asked to set it up before they can continue.",
+  "signInMethods.requireMfaConfirmSelf":
+    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",
@@ -11235,7 +11370,6 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.edit": "Edit",
-  "webhooks.saveDone": "Webhook saved",
   "webhooks.archiveDone": "Webhook archived",
   "webhooks.archive": "Archive",
   "webhooks.archiveConfirm":
@@ -11276,6 +11410,495 @@ export const en = {
   "webhooks.deliveries.replayConfirm.title": "Replay this delivery?",
   "webhooks.deliveries.replayConfirm.body":
     "Retries delivery now with the current secret and a new timestamp, without waiting for the next scheduled retry.",
+  "webhooks.drawer.editTitle": "Edit subscription",
+  "webhooks.drawer.sub":
+    "A new event set or body applies to later events. A new header value also reaches retries already waiting.",
+  "webhooks.drawer.create": "Create subscription",
+  "webhooks.drawer.cancel": "Cancel",
+  "webhooks.field.targetUrlHint": "HTTPS only.",
+  "webhooks.field.targetUrlFixed":
+    "The target cannot change. Create a new subscription to deliver somewhere else.",
+  "webhooks.field.stateHint":
+    "A paused subscription keeps its settings and receives nothing.",
+  "webhooks.events.add": "Add events",
+  "webhooks.field.targetUrlPlaceholder": "https://example.test/hooks/margince",
+  "webhooks.headers.namePlaceholder": "X-Api-Key",
+  "webhooks.events.selected_one": "{count} of {total} selected",
+  "webhooks.events.selected_other": "{count} of {total} selected",
+  "webhooks.events.groupCount_one": "{count} of {total}",
+  "webhooks.events.groupCount_other": "{count} of {total}",
+  "webhooks.events.appliesAtOnce": "Each tick applies at once.",
+  "webhooks.drawer.saveSubscription": "Save subscription",
+  "webhooks.events.helpLabel": "About event types",
+  "webhooks.events.help":
+    "Margince sends one delivery each time a chosen event happens. Add events opens the full list, grouped by record, with what each event carries.",
+  "webhooks.events.count_one": "{count} selected",
+  "webhooks.events.count_other": "{count} selected",
+  "webhooks.events.none": "No events chosen yet.",
+  "webhooks.events.clear": "Clear",
+  "webhooks.events.done": "Done",
+  "webhooks.events.search": "Search events, for example stage or merged",
+  "webhooks.events.noMatch": "No event type matches.",
+  "webhooks.events.selectAll": "Select all",
+  "webhooks.events.remove": "Remove {event}",
+  "webhooks.events.info": "About {event}",
+  "webhooks.events.when": "When it fires",
+  "webhooks.events.fields": "Fields in data",
+  "webhooks.events.noFields": "This event carries no fields in data.",
+  "webhooks.events.fieldsFailed":
+    "The fields could not be loaded. Close this and open it again.",
+  "webhooks.events.visibility":
+    "Sent only for records the subscription’s owner can see.",
+  "webhooks.events.required": "Choose at least one event.",
+  "webhooks.headers.title": "Custom headers",
+  "webhooks.headers.hint":
+    "Sent with every delivery. A value is sealed when saved and never shown again.",
+  "webhooks.headers.helpLabel": "About custom headers",
+  "webhooks.headers.help":
+    "Use a header for a receiver that checks a token or routes by header. Margince sets the signature, event and content headers itself, so those names are refused. A changed value applies to the next attempt, retries included.",
+  "webhooks.headers.add": "Add header",
+  "webhooks.headers.addAuthorization": "Add Authorization",
+  "webhooks.headers.name": "Header name",
+  "webhooks.headers.value": "Header value",
+  "webhooks.headers.valueSet": "Value set",
+  "webhooks.headers.replace": "Replace",
+  "webhooks.headers.remove": "Remove header {name}",
+  "webhooks.headers.none":
+    "No custom headers. Deliveries carry only the headers Margince sets.",
+  "webhooks.body.format": "Body format",
+  "webhooks.body.standard": "Standard envelope",
+  "webhooks.body.custom": "Custom template",
+  "webhooks.body.standardHint":
+    "The published event JSON, which any Standard Webhooks library verifies.",
+  "webhooks.body.customHint": "Your own body, filled from the event.",
+  "webhooks.body.helpLabel": "About the body format",
+  "webhooks.body.help":
+    "A template is rendered once when a delivery is queued, and the signature covers those exact bytes. Retries and replays send the stored body, so an edit applies to later events only.",
+  "webhooks.body.contentType": "Content type",
+  "webhooks.body.contentTypeHint": "Sent as the Content-Type header.",
+  "webhooks.body.startFrom": "Start from",
+  "webhooks.body.startFromPlaceholder": "Choose a preset",
+  "webhooks.body.preset.slack": "Slack",
+  "webhooks.body.preset.teams": "Microsoft Teams",
+  "webhooks.body.preset.generic": "Generic JSON",
+  "webhooks.body.sample": "Sample event",
+  "webhooks.body.template": "Template",
+  "webhooks.body.templateHint":
+    "Inside quotes a placeholder fills in text. For a whole value outside quotes, add | json.",
+  "webhooks.body.tab.template": "Template",
+  "webhooks.body.tab.preview": "Preview",
+  "webhooks.body.insert": "Insert variable",
+  "webhooks.body.size": "Size: {size} bytes",
+  "webhooks.body.previewEmpty": "Choose an event type to preview.",
+  "webhooks.row.customBody": "Custom body",
+  "webhooks.row.headers_one": "Header: {count}",
+  "webhooks.row.headers_other": "Headers: {count}",
+  "webhooks.eventGroup.deals": "Deals",
+  "webhooks.event.deal.created.label": "Deal created",
+  "webhooks.event.deal.created.when": "A deal is opened.",
+  "webhooks.event.deal.updated.label": "Deal details changed",
+  "webhooks.event.deal.updated.when":
+    "A deal’s fields change, other than its stage or owner.",
+  "webhooks.event.deal.stage_changed.label": "Deal moved to another stage",
+  "webhooks.event.deal.stage_changed.when":
+    "A deal moves to a new stage, won and lost included.",
+  "webhooks.event.deal.owner_changed.label": "Deal owner changed",
+  "webhooks.event.deal.owner_changed.when":
+    "A deal is reassigned to another owner.",
+  "webhooks.event.deal.archived.label": "Deal archived",
+  "webhooks.event.deal.archived.when": "A deal is archived.",
+  "webhooks.event.deal.restored.label": "Deal restored",
+  "webhooks.event.deal.restored.when": "An archived deal is brought back.",
+  "webhooks.eventGroup.offers": "Offers",
+  "webhooks.event.offer.created.label": "Offer revision created",
+  "webhooks.event.offer.created.when":
+    "An offer is created, or a sent offer is regenerated into a new draft.",
+  "webhooks.event.offer.sent.label": "Offer marked as sent",
+  "webhooks.event.offer.sent.when":
+    "A draft offer is marked sent and its terms are frozen.",
+  "webhooks.event.offer.accepted.label": "Offer accepted",
+  "webhooks.event.offer.accepted.when": "A sent offer is accepted.",
+  "webhooks.event.offer.rejected.label": "Offer rejected",
+  "webhooks.event.offer.rejected.when": "A sent offer is rejected.",
+  "webhooks.event.offer.superseded.label": "Offer superseded",
+  "webhooks.event.offer.superseded.when":
+    "A sent offer is regenerated into a new draft revision.",
+  "webhooks.eventGroup.pipelines_stages": "Pipelines and stages",
+  "webhooks.event.pipeline.created.label": "Pipeline created",
+  "webhooks.event.pipeline.created.when":
+    "A pipeline is created with its first stages.",
+  "webhooks.event.pipeline.updated.label": "Pipeline changed",
+  "webhooks.event.pipeline.updated.when":
+    "A pipeline is renamed, made default or reordered, or its stages are reordered.",
+  "webhooks.event.pipeline.archived.label": "Pipeline archived",
+  "webhooks.event.pipeline.archived.when":
+    "A pipeline is retired from the pickers.",
+  "webhooks.event.stage.created.label": "Stage added",
+  "webhooks.event.stage.created.when": "A stage is added to a pipeline.",
+  "webhooks.event.stage.updated.label": "Stage changed",
+  "webhooks.event.stage.updated.when":
+    "A stage’s name, semantic or win probability changes.",
+  "webhooks.event.stage.archived.label": "Stage removed",
+  "webhooks.event.stage.archived.when": "A stage is removed from a pipeline.",
+  "webhooks.eventGroup.contacts": "Contacts",
+  "webhooks.event.contact.created.label": "Contact created",
+  "webhooks.event.contact.created.when":
+    "A contact is created by hand, from captured email, or by promoting a lead.",
+  "webhooks.event.contact.updated.label": "Contact details changed",
+  "webhooks.event.contact.updated.when":
+    "A contact’s fields or relationships change.",
+  "webhooks.event.contact.merged.label": "Contacts merged",
+  "webhooks.event.contact.merged.when": "Two contacts are merged into one.",
+  "webhooks.event.contact.archived.label": "Contact archived",
+  "webhooks.event.contact.archived.when": "A contact is archived.",
+  "webhooks.event.contact.restored.label": "Contact restored",
+  "webhooks.event.contact.restored.when":
+    "An archived contact is brought back.",
+  "webhooks.event.conversation_claim.captured.label":
+    "Commitment or request captured",
+  "webhooks.event.conversation_claim.captured.when":
+    "Something a contact promised, asked or decided in a conversation is written to their record.",
+  "webhooks.event.conversation_claim.changed.label":
+    "Captured commitment corrected",
+  "webhooks.event.conversation_claim.changed.when":
+    "Someone edits or dismisses a captured commitment, request or decision.",
+  "webhooks.event.relationship_nudge.decided.label": "Lapsed contact set aside",
+  "webhooks.event.relationship_nudge.decided.when":
+    "A rep sets a lapsed contact aside on their Worklist, or puts them back.",
+  "webhooks.eventGroup.companies": "Companies",
+  "webhooks.event.company.created.label": "Company created",
+  "webhooks.event.company.created.when":
+    "A company is created by hand, by a data import, from captured email or from a website read.",
+  "webhooks.event.company.updated.label": "Company details changed",
+  "webhooks.event.company.updated.when":
+    "A company’s fields or relationships change, enrichment included.",
+  "webhooks.event.company.merged.label": "Companies merged",
+  "webhooks.event.company.merged.when": "Two companies are merged into one.",
+  "webhooks.event.company.archived.label": "Company archived",
+  "webhooks.event.company.archived.when": "A company is archived.",
+  "webhooks.event.company.restored.label": "Company restored",
+  "webhooks.event.company.restored.when":
+    "An archived company is brought back.",
+  "webhooks.eventGroup.leads": "Leads",
+  "webhooks.event.lead.created.label": "Lead created",
+  "webhooks.event.lead.created.when":
+    "A lead is created by hand, from capture, or by a data import.",
+  "webhooks.event.lead.updated.label": "Lead details changed",
+  "webhooks.event.lead.updated.when":
+    "A lead’s fields change, custom fields included, or its routing is recomputed.",
+  "webhooks.event.lead.disqualified.label": "Lead disqualified",
+  "webhooks.event.lead.disqualified.when": "A lead is disqualified.",
+  "webhooks.event.lead.promoted.label": "Lead promoted to contact",
+  "webhooks.event.lead.promoted.when":
+    "A lead shows real engagement and becomes a contact.",
+  "webhooks.event.lead.demoted.label": "Lead promotion undone",
+  "webhooks.event.lead.demoted.when":
+    "A promotion is reversed and the lead goes back to the lead pool.",
+  "webhooks.event.lead.merged.label": "Leads merged",
+  "webhooks.event.lead.merged.when":
+    "Two leads judged to be one prospect are merged.",
+  "webhooks.event.lead.sla_breached.label": "First response overdue",
+  "webhooks.event.lead.sla_breached.when":
+    "A check finds a lead’s first-response deadline passed with no answer.",
+  "webhooks.event.lead_source.changed.label": "Lead source list changed",
+  "webhooks.event.lead_source.changed.when":
+    "A lead source is added, edited or removed in Settings.",
+  "webhooks.event.lead_disqualify_reason.changed.label":
+    "Disqualify reasons changed",
+  "webhooks.event.lead_disqualify_reason.changed.when":
+    "A disqualification reason is added, edited or removed in Settings.",
+  "webhooks.eventGroup.activities_email": "Activities and email",
+  "webhooks.event.activity.captured.label": "Activity logged",
+  "webhooks.event.activity.captured.when":
+    "An activity is logged by hand or captured by a connector.",
+  "webhooks.event.activity.updated.label": "Activity changed",
+  "webhooks.event.activity.updated.when":
+    "An activity is edited or linked to other records.",
+  "webhooks.event.activity.archived.label": "Activity archived",
+  "webhooks.event.activity.archived.when": "An activity is archived.",
+  "webhooks.event.activity.disposition_recorded.label":
+    "Waiting message set aside",
+  "webhooks.event.activity.disposition_recorded.when":
+    "Someone decides what to do about a waiting message and the Worklist stops showing it.",
+  "webhooks.event.activity.marked_handled.label": "Worklist item marked done",
+  "webhooks.event.activity.marked_handled.when":
+    "Someone marks a Worklist item done because they dealt with it another way.",
+  "webhooks.event.engagement.reply.label": "Reply received",
+  "webhooks.event.engagement.reply.when":
+    "An inbound message arrives in a thread you wrote in first.",
+  "webhooks.event.comms.delivery_bounced.label": "Email bounced",
+  "webhooks.event.comms.delivery_bounced.when":
+    "The receiving mail system returns a sent message.",
+  "webhooks.eventGroup.files": "Files",
+  "webhooks.event.attachment.created.label": "File uploaded",
+  "webhooks.event.attachment.created.when": "A file is uploaded to a record.",
+  "webhooks.event.attachment.updated.label": "File details changed",
+  "webhooks.event.attachment.updated.when":
+    "A file’s category, title, state, pinning or the file it replaces changes.",
+  "webhooks.event.attachment.archived.label": "File archived",
+  "webhooks.event.attachment.archived.when": "A file is archived off a record.",
+  "webhooks.eventGroup.projects": "Projects",
+  "webhooks.event.project.created.label": "Project created",
+  "webhooks.event.project.created.when": "A project is opened on a company.",
+  "webhooks.event.project.updated.label": "Project details changed",
+  "webhooks.event.project.updated.when": "A project’s fields change.",
+  "webhooks.event.project.phase_changed.label":
+    "Project moved to another phase",
+  "webhooks.event.project.phase_changed.when":
+    "A project moves to a new phase.",
+  "webhooks.event.project.archived.label": "Project archived",
+  "webhooks.event.project.archived.when": "A project is archived.",
+  "webhooks.eventGroup.contracts": "Contracts",
+  "webhooks.event.contract.created.label": "Contract recorded",
+  "webhooks.event.contract.created.when":
+    "An agreement is recorded against a company.",
+  "webhooks.event.contract.updated.label": "Contract details changed",
+  "webhooks.event.contract.updated.when": "A contract’s fields change.",
+  "webhooks.event.contract.status_changed.label": "Contract status changed",
+  "webhooks.event.contract.status_changed.when":
+    "A member, or an approved proposal, sets a new status.",
+  "webhooks.event.contract.archived.label": "Contract archived",
+  "webhooks.event.contract.archived.when": "A contract is archived.",
+  "webhooks.eventGroup.commissions": "Commissions",
+  "webhooks.event.commission.accrued.label": "Commission earned",
+  "webhooks.event.commission.accrued.when":
+    "A won deal earns its partner a commission.",
+  "webhooks.event.commission.decided.label": "Commission decided",
+  "webhooks.event.commission.decided.when":
+    "A commission entry is approved, paid or voided.",
+  "webhooks.eventGroup.lists": "Lists",
+  "webhooks.event.list.created.label": "List created",
+  "webhooks.event.list.created.when":
+    "Someone makes a Live List or a Shortlist.",
+  "webhooks.event.list.updated.label": "List settings changed",
+  "webhooks.event.list.updated.when":
+    "A list’s name, purpose, filter, sharing, team or steward changes.",
+  "webhooks.event.list.archived.label": "List archived",
+  "webhooks.event.list.archived.when": "A list is archived.",
+  "webhooks.event.list.restored.label": "List restored",
+  "webhooks.event.list.restored.when": "An archived list is brought back.",
+  "webhooks.event.list.member_added.label": "Record added to a Shortlist",
+  "webhooks.event.list.member_added.when":
+    "A record is added to a Shortlist by hand, in a bulk change or by an automation.",
+  "webhooks.event.list.member_removed.label": "Record removed from a Shortlist",
+  "webhooks.event.list.member_removed.when":
+    "A record is taken off a Shortlist by hand or in a bulk change.",
+  "webhooks.event.list.evaluated.label": "Live List changed",
+  "webhooks.event.list.evaluated.when":
+    "A check of a Live List sees records join or leave it.",
+  "webhooks.eventGroup.deal_rooms": "Deal rooms",
+  "webhooks.event.deal_room.opened.label": "Deal room opened",
+  "webhooks.event.deal_room.opened.when": "A deal room is created on a deal.",
+  "webhooks.event.deal_room.updated.label": "Deal room content changed",
+  "webhooks.event.deal_room.updated.when":
+    "Something a buyer reads changes: the title, the welcome message or the documents.",
+  "webhooks.event.deal_room.paused.label": "Deal room paused",
+  "webhooks.event.deal_room.paused.when":
+    "A room is paused and buyer reads are refused.",
+  "webhooks.event.deal_room.resumed.label": "Deal room resumed",
+  "webhooks.event.deal_room.resumed.when": "A paused room serves buyers again.",
+  "webhooks.event.deal_room.closed.label": "Deal room closed",
+  "webhooks.event.deal_room.closed.when": "A room’s content is frozen.",
+  "webhooks.event.deal_room.archived.label": "Deal room archived",
+  "webhooks.event.deal_room.archived.when":
+    "A room ends and buyer access is revoked.",
+  "webhooks.event.deal_room.participant_invited.label": "Buyer invited",
+  "webhooks.event.deal_room.participant_invited.when":
+    "An outside contact is admitted to a deal room.",
+  "webhooks.event.deal_room.participant_revoked.label": "Buyer access removed",
+  "webhooks.event.deal_room.participant_revoked.when":
+    "An outside contact’s access to a room is taken away.",
+  "webhooks.event.deal_room.participant_credential_reissued.label":
+    "Buyer link reissued",
+  "webhooks.event.deal_room.participant_credential_reissued.when":
+    "A participant’s link is resent, or the address it went to is corrected.",
+  "webhooks.event.deal_room.comment_posted.label": "Comment posted in a room",
+  "webhooks.event.deal_room.comment_posted.when":
+    "Someone on either side comments in a room thread.",
+  "webhooks.event.deal_room.thread_resolved.label": "Room thread resolved",
+  "webhooks.event.deal_room.thread_resolved.when":
+    "The seller’s side closes a thread.",
+  "webhooks.event.deal_room.decision_recorded.label":
+    "Buyer decision on a document",
+  "webhooks.event.deal_room.decision_recorded.when":
+    "Never sent today. Kept for receivers that still read older events.",
+  "webhooks.eventGroup.introductions": "Introductions",
+  "webhooks.event.intro_request.created.label": "Introduction requested",
+  "webhooks.event.intro_request.created.when":
+    "A rep asks a colleague to introduce them to a contact.",
+  "webhooks.event.intro_request.decided.label": "Introduction answered",
+  "webhooks.event.intro_request.decided.when":
+    "The colleague answers the request.",
+  "webhooks.event.intro_request.completed.label": "Introduction made",
+  "webhooks.event.intro_request.completed.when":
+    "The introduction happens, or the rep uses the name they were lent.",
+  "webhooks.event.intro_request.replied.label":
+    "Contact replied to introduction",
+  "webhooks.event.intro_request.replied.when":
+    "The contact answers, as seen in captured activity.",
+  "webhooks.event.intro_request.closed.label": "Introduction request closed",
+  "webhooks.event.intro_request.closed.when":
+    "A request ends without an introduction.",
+  "webhooks.eventGroup.consent_privacy": "Consent and privacy",
+  "webhooks.event.consent.changed.label": "Consent recorded",
+  "webhooks.event.consent.changed.when":
+    "A contact’s or lead’s consent for a purpose is recorded.",
+  "webhooks.event.consent.suppressed.label": "Contact opted out of messages",
+  "webhooks.event.consent.suppressed.when":
+    "Someone records that a contact must not be written to.",
+  "webhooks.event.consent.suppression_lifted.label": "Stop lifted",
+  "webhooks.event.consent.suppression_lifted.when":
+    "Someone with the authority takes back one stop.",
+  "webhooks.event.consent.override_recorded.label": "Override recorded",
+  "webhooks.event.consent.override_recorded.when":
+    "A rep vouches that a machine-level refusal may be overruled for one category.",
+  "webhooks.event.consent.override_lifted.label": "Override lifted",
+  "webhooks.event.consent.override_lifted.when":
+    "Someone with the authority takes back one override.",
+  "webhooks.event.retention.applied.label": "Retention action ran",
+  "webhooks.event.retention.applied.when":
+    "A retention or erasure action runs against one record.",
+  "webhooks.event.retention.restricted.label": "Record restricted by law",
+  "webhooks.event.retention.restricted.when":
+    "A legal retention duty changes what may be done with a record.",
+  "webhooks.eventGroup.signals": "Signals",
+  "webhooks.event.signal.detected.label": "Signal detected",
+  "webhooks.event.signal.detected.when": "A signal is created.",
+  "webhooks.event.signal.resolved.label": "Signal resolved",
+  "webhooks.event.signal.resolved.when":
+    "A signal is checked against your companies and contacts.",
+  "webhooks.eventGroup.forecasts_weekly_plans": "Forecasts and weekly plans",
+  "webhooks.event.forecast.created.label": "Forecast call made",
+  "webhooks.event.forecast.created.when":
+    "Someone states what they believe will close in a period.",
+  "webhooks.event.forecast.assurance_created.label":
+    "Forecast input check finished",
+  "webhooks.event.forecast.assurance_created.when":
+    "The nightly check of forecast inputs finishes.",
+  "webhooks.event.forecast.exception_resolved.label":
+    "Forecast finding answered",
+  "webhooks.event.forecast.exception_resolved.when":
+    "Someone answers a finding from the nightly check.",
+  "webhooks.event.forecast.snapshot_created.label": "Forecast snapshot saved",
+  "webhooks.event.forecast.snapshot_created.when":
+    "A set of forecast readings is frozen.",
+  "webhooks.event.forecast.share_issued.label": "Forecast link shared",
+  "webhooks.event.forecast.share_issued.when":
+    "Someone creates a link that shows a forecast to someone else.",
+  "webhooks.event.forecast.share_revoked.label": "Forecast link closed",
+  "webhooks.event.forecast.share_revoked.when":
+    "A share link is closed before it expires.",
+  "webhooks.event.weekly_plan.updated.label": "Weekly plan changed",
+  "webhooks.event.weekly_plan.updated.when":
+    "A rep’s weekly plan is opened, or a commitment is added, edited or settled.",
+  "webhooks.event.weekly_plan.help_requested.label":
+    "Help asked on a commitment",
+  "webhooks.event.weekly_plan.help_requested.when":
+    "A rep asks their lead for help on one commitment.",
+  "webhooks.eventGroup.notices_notifications": "Notices and notifications",
+  "webhooks.event.notice.created.label": "Notice recorded",
+  "webhooks.event.notice.created.when": "A notice is recorded for one user.",
+  "webhooks.event.notice.read.label": "Notice read",
+  "webhooks.event.notice.read.when": "The recipient marks the notice read.",
+  "webhooks.event.notification.preference_changed.label":
+    "Notification setting changed",
+  "webhooks.event.notification.preference_changed.when":
+    "A user changes how a class of notification reaches them.",
+  "webhooks.event.user_delivery.changed.label": "Delivery setting changed",
+  "webhooks.event.user_delivery.changed.when":
+    "A user changes what Margince may send them.",
+  "webhooks.eventGroup.members_access": "Members and access",
+  "webhooks.event.user.invited.label": "Member invited",
+  "webhooks.event.user.invited.when": "An administrator invites a new member.",
+  "webhooks.event.user.activated.label": "Member activated",
+  "webhooks.event.user.activated.when":
+    "An invited member sets their password and becomes active.",
+  "webhooks.event.user.password_link_issued.label": "Password link issued",
+  "webhooks.event.user.password_link_issued.when":
+    "An administrator creates a set-password link to pass on outside Margince, where no outbound email is set up.",
+  "webhooks.event.user.deactivated.label": "Member deactivated",
+  "webhooks.event.user.deactivated.when":
+    "A member’s sessions and agent passports are revoked.",
+  "webhooks.event.user.reactivated.label": "Member reactivated",
+  "webhooks.event.user.reactivated.when":
+    "A deactivated member is brought back.",
+  "webhooks.event.role.changed.label": "Member role changed",
+  "webhooks.event.role.changed.when": "A member’s role is replaced.",
+  "webhooks.event.team.changed.label": "Team changed",
+  "webhooks.event.team.changed.when":
+    "A team is created, renamed, archived or restored, or a member joins or leaves it.",
+  "webhooks.event.passport.revoked.label": "Agent passport revoked",
+  "webhooks.event.passport.revoked.when": "An agent passport is revoked.",
+  "webhooks.event.onboarding.state_changed.label": "Onboarding step reached",
+  "webhooks.event.onboarding.state_changed.when":
+    "A user’s setup wizard is started or moves to the next step.",
+  "webhooks.eventGroup.member_settings_linkedin":
+    "Member settings and LinkedIn",
+  "webhooks.event.user_display_name.changed.label": "Display name changed",
+  "webhooks.event.user_display_name.changed.when":
+    "A member changes the name colleagues see.",
+  "webhooks.event.user_greeting_name.changed.label": "Greeting name changed",
+  "webhooks.event.user_greeting_name.changed.when":
+    "A member’s greeting name is saved, or filled at their first provider sign-in.",
+  "webhooks.event.user_locale.changed.label": "Interface language changed",
+  "webhooks.event.user_locale.changed.when":
+    "A member chooses the language of their own interface.",
+  "webhooks.event.email_signature.changed.label": "Email signature changed",
+  "webhooks.event.email_signature.changed.when":
+    "A member writes, edits or clears their email signature.",
+  "webhooks.event.linkedin_account.changed.label": "LinkedIn account changed",
+  "webhooks.event.linkedin_account.changed.when":
+    "A member records or corrects their own LinkedIn connection.",
+  "webhooks.event.linkedin_network.imported.label": "LinkedIn network imported",
+  "webhooks.event.linkedin_network.imported.when":
+    "A member uploads their LinkedIn connections export.",
+  "webhooks.event.linkedin_match.decided.label": "LinkedIn connection linked",
+  "webhooks.event.linkedin_match.decided.when":
+    "A connection is linked to a contact on file.",
+  "webhooks.eventGroup.voice_dna": "Voice DNA",
+  "webhooks.event.voice.profile_created.label": "Voice profile created",
+  "webhooks.event.voice.profile_created.when":
+    "A member opens their personal writing-voice profile.",
+  "webhooks.event.voice.profile_updated.label": "Voice profile changed",
+  "webhooks.event.voice.profile_updated.when":
+    "The owner changes their preferences or automatic learning.",
+  "webhooks.event.voice.profile_archived.label": "Voice profile archived",
+  "webhooks.event.voice.profile_archived.when": "A voice profile is archived.",
+  "webhooks.event.voice.corpus_changed.label": "Voice samples changed",
+  "webhooks.event.voice.corpus_changed.when":
+    "A writing sample is added, changed or removed, or all samples are cleared.",
+  "webhooks.event.voice.build_changed.label": "Voice build queued",
+  "webhooks.event.voice.build_changed.when":
+    "A voice build is queued, or a pending one is returned.",
+  "webhooks.event.voice.version_changed.label": "Voice version changed",
+  "webhooks.event.voice.version_changed.when":
+    "A voice version is created, activated, rejected or rolled back.",
+  "webhooks.event.voice.draft_outcome_recorded.label":
+    "Voice draft outcome recorded",
+  "webhooks.event.voice.draft_outcome_recorded.when":
+    "The outcome of a draft written in the member’s voice is recorded.",
+  "webhooks.eventGroup.approvals_audit": "Approvals and audit",
+  "webhooks.event.approval.requested.label": "Approval requested",
+  "webhooks.event.approval.requested.when":
+    "An agent action is held for a member to decide.",
+  "webhooks.event.approval.decided.label": "Approval decided",
+  "webhooks.event.approval.decided.when":
+    "A held action is approved, rejected or expires.",
+  "webhooks.event.approval.failure_acknowledged.label": "Failed approval seen",
+  "webhooks.event.approval.failure_acknowledged.when":
+    "The approver has seen that the approved work did not run.",
+  "webhooks.event.coldstart.read_back_proposed.label":
+    "Setup read-back proposed",
+  "webhooks.event.coldstart.read_back_proposed.when":
+    "A read-back of your company profile is staged for approval.",
+  "webhooks.event.coldstart.accepted.label": "Setup read-back accepted",
+  "webhooks.event.coldstart.accepted.when":
+    "A member accepts the staged read-back.",
+  "webhooks.event.coldstart.rejected.label": "Setup read-back rejected",
+  "webhooks.event.coldstart.rejected.when":
+    "A member rejects the staged read-back.",
+  "webhooks.event.audit.appended.label": "Audit entry added",
+  "webhooks.event.audit.appended.when": "Never sent today.",
   "reindexbanner.needed": "Reindex needed",
   "reindexbanner.link": "Review in settings",
 
@@ -11656,6 +12279,7 @@ export const en = {
   "contact.action.openLead": "Open the lead",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
+  "contact.action.importActivities": "Import activities",
 
   "contact.strip.never": "Never",
   "contact.strip.today": "Today",
@@ -13474,7 +14098,7 @@ export const en = {
   "aiRates.refresh.keptCount_one": "{count} hand-set price kept",
   "aiRates.refresh.keptCount_other": "{count} hand-set prices kept",
   "aiProviders.setByHand": "Hand-set",
-  "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
+  "aiRates.refresh.unlisted": "Not in the price list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
@@ -13913,6 +14537,11 @@ export const en = {
   "aiFigures.line.timeoutCount_one": "{count} timeout",
   "aiFigures.line.timeoutCount_other": "{count} timeouts",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
+  "aiFigures.switched_other":
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
+  "aiFigures.switchedBadge": "Model switched",
   "aiFigures.line.sort": "sort: {sort}",
   "aiFigures.line.week": "7 d: {figures}",
   "aiFigures.line.prefix": "7 d: {sentence}",

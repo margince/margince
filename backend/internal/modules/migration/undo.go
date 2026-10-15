@@ -324,15 +324,12 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 }
 
 // humanTouchedSince names which of the given rows a human has touched since
-// THAT ROW was created — not since the run finished (a run resumed or
-// re-entered long after its rows landed would otherwise miss an edit made
-// while it was still in flight). Joined directly against
-// import_record_map.created_at in SQL rather than a single run-level
-// instant passed from Go, one indexed scan per object class.
+// the row was created, not since the run finished. A resumed run would
+// otherwise miss an edit made while it was in flight. The join is against
+// import_record_map.created_at in SQL, one indexed scan per object class.
 //
-// "Touched" is any human-actor audit row on the entity, not only an update:
-// a human who archived an imported row is the case A93 protects. A row
-// audited under this run's own batch is the import's own write.
+// "Touched" is any human-actor audit row on the entity, including an archive.
+// A row audited under any import run's batch is an import's own write.
 func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRow) (map[ids.UUID]bool, error) {
 	touched := map[ids.UUID]bool{}
 	if len(rows) == 0 {
@@ -353,7 +350,7 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 				     SELECT 1 FROM audit_log a
 				      WHERE a.entity_type = $2 AND a.entity_id = m.native_id
 				        AND a.actor_type = 'human' AND a.occurred_at > m.created_at
-				        AND a.batch_id IS DISTINCT FROM m.import_run_id)`,
+				        AND `+storekit.AuditNotFromAnImport+`)`,
 				id, object, nativeIDs)
 			if err != nil {
 				return fmt.Errorf("checking which %s rows a human touched since import: %w", object, err)

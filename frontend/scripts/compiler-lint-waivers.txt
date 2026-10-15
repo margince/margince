@@ -114,4 +114,4 @@
 3 react-hooks/refs src/screens/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/screens/vertex-model-probe.ts
 1 react-hooks/refs src/screens/voice-samples.tsx
-3 react-hooks/refs src/screens/worklist.row.compact.tsx
+3 react-hooks/refs src/features/worklist/worklist.row.compact.tsx

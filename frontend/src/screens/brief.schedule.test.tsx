@@ -2,13 +2,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { formatDateAbbrev, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meetingRow, readingsDay } from "./brief.fixtures";
 import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
-import type { WorklistItem } from "./worklist.queries";
 
 // The two rail panels, and what each of them refuses to claim.
 //

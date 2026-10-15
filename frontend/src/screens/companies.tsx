@@ -45,6 +45,11 @@ import { Stack } from "../design-system/stack";
 import { sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
+import {
+  TaskDetailModal,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -140,20 +145,15 @@ import {
 } from "./recordlist";
 import { RelationshipsTab } from "./relationshiprows";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import {
-  TaskDetailModal,
-  TaskQuickActions,
-  useTaskUpdate,
-} from "./taskactions";
 import { TimelineActions } from "./timelineactions";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { WorklistReturnLink } from "../features/worklist/worklist.return";
 import { invalidateCompany } from "../lib/recordwritekeys";
 import { useAddressedTab } from "./recordtab";
-import { WorklistReturnLink } from "./worklist.return";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.

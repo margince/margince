@@ -30,7 +30,7 @@ To import contacts, companies or prospects, save them as CSV files, or as a ZIP 
 3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
 4. Choose **Run test**, read the **Test run**, then choose **Import {count} rows**.
 5. **Importing** shows each file as it goes, and **Result** shows what was written.
-Only an admin or ops user can import. Nothing is written before you confirm.
+Only an admin or ops user can import. Nothing is written before you confirm. [Importing data](importing-data.md) has the rest. It says what a second upload of the same file does.
 Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?

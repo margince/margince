@@ -1582,15 +1582,16 @@ kinds:
     fleet: true
     go_type: TagScoutArgs
     queue: default
-    timeout: 5m
+    timeout: 15m
     opts_owner: caller
     cadence: 1h
+    registration: {when: [TagSuggestBrain], absent: registers_anyway}
     reason: >-
       Hourly, like deal_scout: a mail asking about a product this morning
-      should be a suggestion by lunch. The pass is one phrase-matching read
-      over thirty days of captured activity and at most two hundred writes per
-      workspace, and calls no model, so five minutes is a ceiling it does not
-      approach.
+      should be a suggestion by lunch. With a tag_suggest lane bound the pass
+      asks the model about at most two hundred unread items per workspace,
+      ten to a call, so it takes owed_verdict's fifteen minutes. Without one
+      it matches description phrases and calls no model.
 
 
   site_deep_read:

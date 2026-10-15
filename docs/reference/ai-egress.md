@@ -60,6 +60,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `site_triage` | `cheap_cloud` → `premium` | no | no | no | the bound decision model | shipped |
 | `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
 | `summarize` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
+| `tag_suggest` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `transcript` | `cheap_cloud` → `premium` | no | no | no | none | planned |
 | `transcript_propose` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `voice_build` | `cheap_cloud` → `premium` | no | no | no | none | shipped |

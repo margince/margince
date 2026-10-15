@@ -88,11 +88,14 @@ const ZIP_NAME = /\.zip$/i;
 
 // The type a single CSV is uploaded as: the format's file name for a type when
 // the file carries one, else the flow's default. A ZIP names its types itself.
+// A preset type, from a contact's page, wins over the name.
 export function uploadObjectFor(
   name: string,
   format: ImportFormat | undefined,
+  preset?: ImportObject,
 ): ImportObject | undefined {
   if (ZIP_NAME.test(name)) return undefined;
+  if (preset) return preset;
   const lower = name.toLowerCase();
   return (
     format?.files.find((file) => file.file === lower)?.object ??

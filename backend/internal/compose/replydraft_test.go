@@ -301,7 +301,7 @@ func TestTheDraftIsGivenBothNamesAGreetingCanTake(t *testing.T) {
 		RecipientLastName: "Rietsch",
 		Subject:           "Rechnung",
 	}
-	req, err := replyDraftRequest(replyDraftSystem, data, nil, "")
+	req, err := replyDraftRequest(data, nil, "")
 	if err != nil {
 		t.Fatalf("replyDraftRequest: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestAVoicedDraftIsToldTheGreetingRuleToo(t *testing.T) {
 	// The voiced prompt is the one a rep with a ready profile actually gets.
 	// A rule that reaches only the plain variant fixes the drafts nobody is
 	// looking at and leaves the ones they are.
-	req, err := replyDraftRequest(replyDraftSystem, replyActivityData{Recipient: "Dietmar"},
+	req, err := replyDraftRequest(replyActivityData{Recipient: "Dietmar"},
 		func(promptfence.Fence) string { return "VOICE" }, "")
 	if err != nil {
 		t.Fatalf("replyDraftRequest: %v", err)
@@ -495,9 +495,6 @@ func TestAGreetingThatCarriesTheBodyPastItsBoundIsRefused(t *testing.T) {
 		"voiced reply": func(brain *replyBrainStub) (replyDraft, error) {
 			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, testVoiceContext())
 			return draft, err
-		},
-		"first message": func(brain *replyBrainStub) (replyDraft, error) {
-			return replyDrafter{brain: brain}.completeFirstVoiced(context.Background(), data, draftvoice.Context{})
 		},
 	}
 	for lane, draft := range lanes {

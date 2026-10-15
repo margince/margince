@@ -41,6 +41,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | IMAP | The standard protocol for reading mail from a mail server. |
+| incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
@@ -61,15 +62,19 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
+| Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
+| subscription | A webhook's setup: the address it sends to and the events it sends. |
 | Telegram | A chat app Margince can send messages through. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
+| webhook | A message Margince sends to another tool's address when a chosen event happens. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
 
 ## Names without a meaning yet

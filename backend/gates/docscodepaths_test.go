@@ -21,7 +21,7 @@ package gates
 // and carry a source extension are judged. A bare filename is resolved anywhere
 // in the tree, because pages legitimately name `storekit.go` without a
 // directory. A path WITH a separator resolves from the repository root, from
-// backend/, or as a TAIL of a tracked path — pages write `screens/worklist.tsx`
+// backend/, or as a TAIL of a tracked path. Pages write `worklist/worklist.tsx`
 // for a file three directories deeper, and rejecting that would fail correct
 // prose. Prose that merely mentions a name is not a claim about a path, and this
 // gate does not read it.
@@ -112,9 +112,9 @@ func notAPathClaim(p string) bool {
 // tail of each path — so both citation styles resolve against one reading.
 type treeIndex struct {
 	paths map[string]bool
-	// suffixes holds every tail of every tracked path, so a page may name a file
-	// relative to a directory this gate does not know — `screens/worklist.tsx`
-	// for frontend/src/screens/worklist.tsx. The one-segment tails are the bare
+	// suffixes holds every tail of every tracked path. A page may then name a
+	// file relative to a directory this gate does not know, as
+	// `worklist/worklist.tsx`. The one-segment tails are the bare
 	// basenames, so a separate index of those would be a subset of this one.
 	suffixes map[string]bool
 }

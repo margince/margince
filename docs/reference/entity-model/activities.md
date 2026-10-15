@@ -6,7 +6,7 @@ The 27 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-60 columns · primary key `(id)` · referenced by 35 foreign keys
+60 columns · primary key `(id)` · referenced by 36 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

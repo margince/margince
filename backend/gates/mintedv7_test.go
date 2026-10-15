@@ -31,6 +31,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // v4Default matches a column whose default mints a v4. Scoped to a column line,
@@ -93,7 +95,7 @@ func TestEveryMintedUUIDIsAV7(t *testing.T) {
 			"not the schema", uuidColumns, uuidColumnFloor)
 	}
 
-	root := filepath.Join(moduleRoot(t), "internal")
+	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
 	paths, err := goFilesUnder(root)
 	if err != nil {
 		t.Fatalf("walking the module: %v", err)

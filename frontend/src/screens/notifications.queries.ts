@@ -9,8 +9,8 @@ import {
 } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { unwrap } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
 
 // The notification query-hook family: the centre's own reads and writes, in one
 // file because the settings page and the topbar panel are two views of one

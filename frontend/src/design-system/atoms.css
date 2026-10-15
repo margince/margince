@@ -1956,10 +1956,17 @@ span.error-line {
   min-block-size: 138px;
 }
 
+/* A compound breaks at a syllable first, and `anywhere` only where a syllable
+   still does not fit. Not on the figure: `anywhere` splits a number. */
+.stat-card-label-text,
+.stat-card-detail {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 /* The compact card, inside a strip that asked for it (`StatStrip density`).
-   One step down the same heading scale, tighter air, and a one-line basis:
-   the row sits above the content a reader came for, so it must not fill the
-   first screen. The full figure stays on the value's tooltip. */
+   One step down the same heading scale and tighter air: the row sits above
+   the content a reader came for, so it must not fill the first screen. */
 [data-density="compact"] .stat-card {
   padding: var(--space-3);
   min-block-size: 0;
@@ -1973,13 +1980,9 @@ span.error-line {
      a name that wraps. */
   min-block-size: 2lh;
 }
-/* A compact tile is too narrow for some names on one line, and a name cut to
-   "No contact…" no longer says which reading it is. */
 [data-density="compact"] .stat-card-label-text {
   flex-shrink: 0;
   max-inline-size: 100%;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
 }
 [data-density="compact"] .stat-card-value {
   font: var(--fontHeadingSmall);
@@ -1987,8 +1990,6 @@ span.error-line {
   margin-block-end: var(--space-1);
 }
 [data-density="compact"] .stat-card-detail {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
   margin-block-end: 0;
 }
 [data-density="compact"] .stat-card-foot {
@@ -2006,10 +2007,9 @@ span.error-line {
 /* The line under the figure. Its TYPE comes from `.t-caption` on the element
    (atoms.tsx) — quiet grey at the meta size is that utility's own spelling, and
    a copy of it here is one that stops moving when the utility does.
-   What the rule owns is the SHAPE: two lines at most, so a reading whose basis
-   runs long cannot push its own card taller than the four beside it. A clamp
-   rather than a scrollbar or an ellipsis on one line: two lines hold the basis
-   a reader needs, and the receipt chip is where the rest of it lives. */
+   What the rule owns is the SHAPE: two lines at most, because a basis may carry
+   user text of any length (a meeting's subject) and must not set the row's
+   height. The receipt chip is where the rest of it lives. */
 .stat-card-detail {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -2042,17 +2042,9 @@ span.error-line {
   color: var(--textSecondary);
   margin-block-end: var(--space-1);
 }
-/* The name itself clamps to ONE line, and the chips beside it do not: a row of
-   readings whose labels wrap to two lines puts every figure in the row at a
-   different height. `min-width: 0` because a flex item's floor is its content,
-   and without it a long label pushes the badge off the card instead of
-   clipping. */
+/* `min-width: 0` because a flex item's floor is its content, and without it a
+   long name pushes the badge off the card instead of wrapping beside it. */
 .stat-card-label-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  overflow: hidden;
   min-width: 0;
 }
 .stat-card-source {
@@ -2072,14 +2064,18 @@ span.error-line {
    this tier owns.
    `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
    so tabular figures declared above it would be thrown away and a column of
-   readings would stop lining up. The figure holds ONE line and ellipsises what
-   does not fit, rather than breaking mid-number: a money reading wrapped
-   between its thousands and its cents reads as two figures. */
+   readings would stop lining up. A figure in words wraps balanced at its
+   spaces. A number cannot break, so only a number wider than the tile ends in
+   an ellipsis, with the whole figure on the card's tooltip. */
 .stat-card-value {
   font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
-  white-space: nowrap;
+  text-wrap: balance;
+  hyphens: auto;
+  /* Stated, not inherited: a sheet above that lets words break would split it. */
+  overflow-wrap: normal;
+  word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-block-end: var(--space-2);
