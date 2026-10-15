@@ -2080,6 +2080,9 @@ span.error-line {
   color: var(--textPrimary);
   text-wrap: balance;
   hyphens: auto;
+  /* Stated, not inherited: a sheet above that lets words break would split it. */
+  overflow-wrap: normal;
+  word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-block-end: var(--space-2);

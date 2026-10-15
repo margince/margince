@@ -585,7 +585,7 @@ describe("the panel head stands at the height every panel shares, and grows only
 
   // Wider than a phone, the padding must leave room for a control on a mouse
   // and a 44px target on touch. The 1px rule is inside the floor.
-  it("pads the band so a one-line head with a control is at most the floor, wider than a phone", () => {
+  it("fits a --controlHeight control or a 44px target within the floor, wider than a phone", () => {
     const floor = tokenPx("--panel-head-h");
     const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
     expect(padding).toMatch(/^var\(--space-\d+\) var\(--padPanel\)$/);

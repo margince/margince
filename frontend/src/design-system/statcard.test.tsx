@@ -255,12 +255,12 @@ const WHOLE = [
 const NUMBER_SPLIT =
   /overflow-wrap\s*:\s*(?:anywhere|break-word)|word-break\s*:\s*break-all/;
 // A number cannot break, so this one rule may end an over-wide one in "…".
-const FIGURE_LAST_RESORT = "atoms.css .stat-card-value";
+const FIGURE_LAST_RESORT = "design-system/atoms.css .stat-card-value";
 
 function cutsOfWholeText(all: readonly Rule[]) {
   return all.flatMap((rule) =>
     alternativesOf(rule.selector).flatMap((selector) => {
-      const where = `${basename(rule.file)} ${selector}`;
+      const where = `${relative(sourceRoot, rule.file)} ${selector}`;
       const subject = classesOf(subjectOf(selector));
       if (!WHOLE.some((one) => subject.has(one))) return [];
       const cut =
@@ -288,6 +288,11 @@ describe("a reading's name and figure are never cut", () => {
     ["atoms.css", ".stat-card-label-text", "-webkit-line-clamp: 1;"],
     ["atoms.css", ".stat-card-label-text", "text-overflow: ellipsis;"],
     ["atoms.css", ".stat-card-value", "overflow-wrap: anywhere;"],
+    [
+      "../../../extensions/demo/frontend/atoms.css",
+      ".stat-card-value",
+      "text-overflow: ellipsis;",
+    ],
     [
       "atoms.css",
       '[data-density="compact"] .stat-card-value',

@@ -15,8 +15,8 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * A floor, not a height. Above 720px the padding leaves room for a control or a
- * 44px touch target, so a one-line head holding either stands at 56px.
+ * A floor, not a height. Above 720px the padding leaves room for a --controlHeight
+ * control or a 44px target, so a head holding one stands at 56px; taller grows it.
  *
  * Its rule divides the CARD from its content, so it runs edge to edge; where a
  * rule between two pieces of content stops is the seam rule's call, below. */

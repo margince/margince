@@ -48,13 +48,12 @@ import { TopBar } from "./topbar";
  * is the arrangement this bar was changed away from.
  *
  * TWO things these frames cannot promise on their own, both because `fe-uat`
- * captures every non-phone story at 1024px:
+ * captures every untagged story at 1024px:
  *
  * - The labeled field and its two key caps belong to a `min-width: 1101px`
- *   arrangement, so the render gate photographs the collapsed glyph on every
- *   wide frame below. The caps are real only in Storybook, in a window wider
- *   than 1100px; `Narrow` is the frame that pins the small arrangement
- *   deterministically.
+ *   arrangement. The render gate photographs them only in `SettingsEntryGerman`,
+ *   tagged `uat-wide`; every other wide frame shows the collapsed glyph.
+ *   `Narrow` is the frame that pins the small arrangement deterministically.
  * - The approvals bell is the other way round — it is hidden only under 700px,
  *   so 1024px does photograph it, and `Phone` is the frame where it is gone.
  *
@@ -91,8 +90,7 @@ const NOTHING_WAITING = { inbox: 0, tasks: 0 };
  * which is where the centred field gives up its slot. Storybook's viewport tool
  * is applied by the MANAGER, which resizes the preview iframe from outside it,
  * so these frames are honest in Storybook. They are honest under the render gate
- * too, for an unrelated reason: `fe-uat` drives every non-phone story at 1024px,
- * which is already inside this same rule.
+ * too: `fe-uat` drives an untagged story at 1024px, which is inside this rule.
  */
 const WIDE_VIEWPORT = {
   viewport: {
@@ -446,6 +444,7 @@ export const SettingsEntryGerman: Story = {
   name: "a settings entry — a German trail longer than its half",
   parameters: WIDE_VIEWPORT,
   globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
   render: () => (
     <BarStory
       route={{ screen: "settings", id: "privacy" }}
