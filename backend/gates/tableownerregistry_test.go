@@ -210,6 +210,7 @@ var tableOwners = map[string]string{
 	"activity_review_template": "internal/modules/activities",
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
+	"worklist_done":            "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -543,7 +544,8 @@ var tableOwners = map[string]string{
 	// two above, and the same ruling: derived content, regenerable from the
 	// records at any time, readable by nobody but the user it was written
 	// for.
-	"deal_status_card": "internal/compose/dealstatus",
+	"deal_status_card":    "internal/compose/dealstatus",
+	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other

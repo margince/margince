@@ -462,6 +462,19 @@ func (s *Service) AuthenticateAgentByID(ctx context.Context, passportID ids.Pass
 	return a, nil
 }
 
+// touchPassport stamps the passport as used, at most once a minute. /mcp
+// authenticates on every exchange, so an unconditional write would add a row
+// update to every tool call. It is a read model, so like a deal-room session's
+// last-seen stamp it writes no audit row or event.
+func touchPassport(ctx context.Context, tx pgx.Tx, passport ids.PassportID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE passport SET last_used_at = now()
+		 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')`, passport); err != nil {
+		return fmt.Errorf("identity: stamping passport %s as used: %w", passport, err)
+	}
+	return nil
+}
+
 // AuthenticateAgent resolves a bearer token to its AgentIdentity. The
 // human's RBAC is loaded LIVE at every call — demoting or deactivating
 // the human instantly narrows every passport they granted ("agent ≤
@@ -475,7 +488,10 @@ func (s *Service) AuthenticateAgent(ctx context.Context, rawToken string) (Agent
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		a, err = s.authenticateAgentWhere(ctx, tx, agentByHashPredicate, hashToken(rawToken))
-		return err
+		if err != nil {
+			return err
+		}
+		return touchPassport(ctx, tx, a.PassportID)
 	})
 	if err != nil {
 		return AgentIdentity{}, err

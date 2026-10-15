@@ -50,7 +50,7 @@ export const WithheldNarrow: Story = {
   render: () => (
     <div style={{ maxWidth: 260 }}>
       <FileChip
-        withheld="Nicht gespeichert, weil die E-Mail privat ist."
+        withheld="Nicht gespeichert, da die E-Mail privat ist."
         filename="gehaltsabrechnung-september.pdf"
         size="120 kB"
       />

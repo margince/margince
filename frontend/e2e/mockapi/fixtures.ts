@@ -578,6 +578,28 @@ export const seededViews: components["schemas"]["SavedView"][] = [
   },
 ];
 
+const usageCounter = (used: number, limit: number) => ({
+  used,
+  limit,
+  released: 0,
+});
+
+// One user's agents this window, for Settings › AI usage › Agent usage by user.
+export const agentUsageByUser = {
+  resets_at: "2026-07-06T00:00:00Z",
+  data: [
+    {
+      user_id: "u1",
+      display_name: "Lena Fischer",
+      passport_count: 1,
+      writes: usageCounter(37, 200),
+      egress: usageCounter(2, 20),
+      calls: usageCounter(160, 1_000),
+      state: "ok",
+    },
+  ],
+};
+
 export const passports = [
   {
     id: "pp-1",
@@ -920,7 +942,7 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
     documents: [
       {
         id: "mitarbeiterinformation",
-        title: "Mitarbeiterinformation zur Erfassung von E-Mail-Korrespondenz",
+        title: "Beschäftigteninformation zur Erfassung von E-Mail-Korrespondenz",
         language: "de",
         audience: "employee",
         kind: "template",

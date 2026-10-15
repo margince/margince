@@ -47,22 +47,31 @@ export function wroteNothing(status: ImportRun["status"]): boolean {
   return status === "pending" || status === "cancelled";
 }
 
-const POLL_MS = 2000;
+// A run takes minutes and the server computes its rate and ETA at read, so a
+// faster poll buys no precision.
+export const IMPORT_POLL_MS = 5000;
 
 // The newest runs first, as the server lists them. Polled while one of them is
 // still moving, so the list shows the end of a run the reader walked away from.
-export function useRecentImports() {
+// A view asks for history or for drafts alone. A draft or a cancelled test
+// then cannot push a finished import out of the one page of history.
+export function useRecentImports(view?: "history" | "drafts") {
   return useQuery({
-    queryKey: [IMPORTS_KEY, "recent"],
+    queryKey: [IMPORTS_KEY, "recent", view ?? "all"],
     queryFn: async () =>
-      unwrap(await api.GET("/imports", { params: { query: { limit: 20 } } }))
-        .data,
+      unwrap(
+        await api.GET("/imports", { params: { query: { limit: 20, view } } }),
+      ).data,
     refetchInterval: (query) =>
-      query.state.data?.some((one) => moving(one.status)) ? POLL_MS : false,
+      query.state.data?.some((one) => moving(one.status))
+        ? IMPORT_POLL_MS
+        : false,
   });
 }
 
-// One run, read again every two seconds while it is moving.
+// One run, read again every IMPORT_POLL_MS while it is moving.
+// It is also read again when the reader returns to the tab, because a run they
+// left has most likely moved.
 export function useImportRun(id: string | null) {
   return useQuery({
     queryKey: [IMPORTS_KEY, "run", id],
@@ -74,7 +83,8 @@ export function useImportRun(id: string | null) {
               await api.GET("/imports/{id}", { params: { path: { id } } }),
             ),
     refetchInterval: (query) =>
-      moving(query.state.data?.status) ? POLL_MS : false,
+      moving(query.state.data?.status) ? IMPORT_POLL_MS : false,
+    refetchOnWindowFocus: "always",
   });
 }
 
@@ -91,8 +101,8 @@ export function useUndoImport() {
   });
 }
 
-// Stops a validating run's test. The run returns to its draft with its choices
-// and file kept, and the read above follows it there.
+// Stops a validating run's test, which returns to its draft with its choices
+// and file kept, or cancels a draft. The reads above follow it there.
 export function useStopImportTest() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -106,7 +116,7 @@ export function useStopImportTest() {
 
 // One run's report: the test run's prediction, then what the run did. Keyed by
 // the run's status and version, so a retest never shows the report it replaced.
-// A test still being read has no report to ask for.
+// A draft and a test still being read have no report to ask for.
 export function useImportReport(
   id: string | null,
   status: ImportRun["status"] | undefined,
@@ -115,7 +125,10 @@ export function useImportReport(
   return useQuery({
     queryKey: [IMPORTS_KEY, "report", id, status, version],
     queryFn:
-      id === null || status === undefined || status === "validating"
+      id === null ||
+      status === undefined ||
+      status === "validating" ||
+      status === "pending"
         ? skipToken
         : async () =>
             unwrap(

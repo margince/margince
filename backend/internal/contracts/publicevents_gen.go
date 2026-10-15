@@ -488,6 +488,7 @@ const (
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
+	ApprovalFailureAcknowledged           SubscribableEventType = "approval.failure_acknowledged"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
 	AttachmentArchived                    SubscribableEventType = "attachment.archived"
 	AttachmentCreated                     SubscribableEventType = "attachment.created"
@@ -631,6 +632,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityUpdated:
 		return true
 	case ApprovalDecided:
+		return true
+	case ApprovalFailureAcknowledged:
 		return true
 	case ApprovalRequested:
 		return true
@@ -995,7 +998,7 @@ type PublicEventActivityDispositionRecorded struct {
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
 
-// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked a waiting message done: they dealt with it another way, by phone, in a meeting, or with no reply owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
+// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 }
@@ -1047,6 +1050,15 @@ type PublicEventApprovalDecided struct {
 
 // PublicEventApprovalDecidedVerdict The decision outcome. `expired` is the window closing on a staging nobody answered (APPR-PARAM-1's "unactioned means rejected"): it is a real verdict written by the expiry sweep, not a rendering, and it is the one verdict with no deciding human — consumers that treat a refusal as a refusal must handle it alongside `rejected`.
 type PublicEventApprovalDecidedVerdict string
+
+// PublicEventApprovalFailureAcknowledged Payload for approval.failure_acknowledged: the human who approved a decision has seen that its work did not run, and the failure leaves their Worklist (approvals/failureack.go). A later failure of the same approval carries a newer failed_at and shows again.
+type PublicEventApprovalFailureAcknowledged struct {
+	// FailedAt When the failure that was acknowledged was recorded.
+	FailedAt time.Time `json:"failed_at"`
+
+	// Kind The approval's kind.
+	Kind string `json:"kind"`
+}
 
 // PublicEventApprovalRequested Payload for approval.requested — an agent's 🟡 call was staged pending a human decision (ADR-0036, approvals/staging.go's StageInTx). The staged approval row's own id is the event's entity ref; this payload names what was staged, its polymorphic target, and when the staging lapses into expired if undecided.
 type PublicEventApprovalRequested struct {
@@ -2632,6 +2644,12 @@ func (PublicEventApprovalDecided) EventType() string { return "approval.decided"
 
 func (PublicEventApprovalDecided) EntityType() string { return "approval" }
 
+func (PublicEventApprovalFailureAcknowledged) EventType() string {
+	return "approval.failure_acknowledged"
+}
+
+func (PublicEventApprovalFailureAcknowledged) EntityType() string { return "approval" }
+
 func (PublicEventApprovalRequested) EventType() string { return "approval.requested" }
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
@@ -3162,6 +3180,7 @@ var PublicEventVersions = map[string]int{
 	"activity.marked_handled":                   1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
+	"approval.failure_acknowledged":             1,
 	"approval.requested":                        1,
 	"attachment.archived":                       1,
 	"attachment.created":                        1,

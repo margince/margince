@@ -35,17 +35,17 @@ func TestGrantsForNewTagsAloneIsTagCreate(t *testing.T) {
 	if got := grantNames(needs); !slices.Equal(got, []string{"tag:create"}) {
 		t.Fatalf("grantsFor(new tags only) = %v, want only tag:create", got)
 	}
-	if needs[0].Action != principal.ActionCreate || !strings.Contains(needs[0].Why, "create tags") {
+	if needs[0].Action != principal.ActionCreate || !strings.Contains(needs[0].Why.English(), "create tags") {
 		t.Fatalf("need = %+v, want its reason to name creating tags", needs[0])
 	}
 }
 
 func TestGrantReasonsNameTheFileInWords(t *testing.T) {
 	needs := grantsFor([]migration.PartMapping{{Object: migration.ObjectCompany}}, tagGrants{})
-	if len(needs) != 2 || needs[0].Why != "You cannot create companies, so the companies file is skipped" {
+	if len(needs) != 2 || needs[0].Why.English() != "You cannot create companies, so the companies file is skipped." {
 		t.Fatalf("needs = %+v, want the create reason in words first", needs)
 	}
-	if strings.Contains(needs[1].Why, "tag") {
-		t.Fatalf("update reason %q names tags, but this file maps no tags column", needs[1].Why)
+	if strings.Contains(needs[1].Why.English(), "tag") {
+		t.Fatalf("update reason %q names tags, but this file maps no tags column", needs[1].Why.English())
 	}
 }

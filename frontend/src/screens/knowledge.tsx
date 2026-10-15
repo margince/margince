@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -15,6 +14,7 @@ import {
 } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { ExpanderChevron } from "../design-system/disclosure";
 import { IconAction } from "../design-system/iconaction";
 import {
   Panel,
@@ -249,7 +249,7 @@ function DocumentSet({
         <span className="knowledge-set-open" id={toggleId}>
           <IconAction
             label={t("knowledge.documentsIn", { set: set.name })}
-            icon={<ChevronDown aria-hidden className="expander-chevron" />}
+            icon={<ExpanderChevron />}
             disclosure={{ expanded: open, controls: documentsId }}
             onClick={toggle}
           />

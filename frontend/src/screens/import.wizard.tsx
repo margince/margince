@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -16,16 +16,16 @@ import { FilesStep, ImportDropzone } from "./import.files";
 import { ImportRefusal } from "./import.notices";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
+import { runHref } from "./importaddress";
 import {
-  type ImportWizardState,
   takeHandedOverUpload,
   uploadObjectFor,
-  useImportWizard,
   type WizardStep,
 } from "./importflow";
 import { MapStep } from "./importmapping";
 import { useImportFormat, useRecentImports, wroteNothing } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
+import { type ImportWizardState, useImportWizard } from "./importwizard";
 import { settingsHref } from "./settingsrouting";
 
 const STEPS: readonly WizardStep[] = [
@@ -43,12 +43,9 @@ export function ImportWizardPage() {
   const { locale } = useLocale();
   const format = useImportFormat(locale);
   const recent = useRecentImports();
-  // A profiled file is work a reader would lose by leaving; a staged run is
-  // kept by the server. Read from the wizard, not the address: leaving drops
-  // the run from the address before the page unmounts.
-  useUnsavedGuard(
-    (wizard.profile !== null || wizard.upload.isPending) && !wizard.staged,
-  );
+  // Only the upload still on its way is work the page could lose. Once it
+  // answers, the draft is the server's and the hub lists it.
+  useUnsavedGuard(wizard.upload.isPending);
   // The file the hub's drop zone took starts here, once the format can say
   // which type a CSV's name gives. The page holds it, so a page closed before
   // then drops it rather than uploading it on a later visit.
@@ -118,6 +115,18 @@ export function ImportWizard({
           };
         })}
       />
+      {wizard.conflict ? (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("import.conflictOtherTab")}
+          actions={
+            <Button variant="ghost" onClick={wizard.dismissConflict}>
+              {t("import.conflictDismiss")}
+            </Button>
+          }
+        />
+      ) : null}
       <Panel
         title={
           <span ref={title} tabIndex={-1}>
@@ -184,15 +193,25 @@ function ClosedRun({
 }: Readonly<{ wizard: ImportWizardState; run: ImportRun }>) {
   const t = useT();
   const cancelled = run.status === "cancelled";
+  const newer = run.superseded_by;
+  const title = newer
+    ? t("import.superseded")
+    : t(cancelled ? "import.closed.cancelled" : "import.closed.draft");
   return (
     <Callout
       tone={cancelled ? "info" : "warning"}
       kind="standing"
-      title={t(cancelled ? "import.closed.cancelled" : "import.closed.draft")}
+      title={title}
       actions={
-        <Button variant="primary" onClick={wizard.reset}>
-          {t("import.closed.upload")}
-        </Button>
+        newer ? (
+          <a className="link-button" href={runHref(newer)}>
+            {t("import.supersededOpen")}
+          </a>
+        ) : (
+          <Button variant="primary" onClick={wizard.reset}>
+            {t("import.closed.upload")}
+          </Button>
+        )
       }
     >
       {cancelled ? undefined : (run.error ?? t("import.closed.stopped"))}

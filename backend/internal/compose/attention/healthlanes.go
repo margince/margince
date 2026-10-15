@@ -48,6 +48,8 @@ type CaptureConcern struct {
 	// hour-old outage and a mailbox idling between ticks reach here identically
 	// without it.
 	FailingSince *time.Time
+	// LastSyncedAt is the connection's last good sync, nil when it never had one.
+	LastSyncedAt *time.Time
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

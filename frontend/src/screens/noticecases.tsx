@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useMemo, useState } from "react";
 import { api } from "../api/client";
+import { EntityRef, rosterOwnerName, useRoster } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -32,7 +33,6 @@ import { useCan, useCanWrite } from "../lib/capability";
 import { useMemberName } from "../lib/membernames";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { EntityRef, rosterOwnerName, useRoster } from "./entityref";
 import {
   acquisitionCaption,
   noticeRuleHint,

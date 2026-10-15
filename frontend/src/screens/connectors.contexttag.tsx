@@ -5,7 +5,7 @@ import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import { useTagVocabulary } from "./tags.queries";
+import { useTagVocabulary } from "../lib/tags.queries";
 
 // The word a connector files what it captures under.
 //

@@ -173,12 +173,9 @@ func (t createRecord) reportDuplicates(ctx context.Context, recordType string, i
 	noteWarning(ctx, w.Code, w.Message)
 
 	for _, d := range found {
-		// EACH disclosed record is cited and CHARGED, on this surface's own rule:
-		// naming a record to an agent is handing that record over, and a tool
-		// that names records without charging is the cheapest read on the
-		// surface. Without this a create discloses up to five other records for
-		// the price of the one it wrote, and repeating the create walks the
-		// workspace for free — the exact shape MCP-SESS-READS exists to bound.
+		// Each disclosed record is cited: naming a record to an agent hands it
+		// over, so the evidence list has to say so. Without this a create
+		// discloses up to five other records while citing only the one it wrote.
 		if other, err := ids.Parse(d.OtherRecordID); err == nil {
 			noteEvidence(ctx, datasource.EntityType(recordType), other)
 		}

@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { busyUsage } from "./agentallowances.fixtures";
 import { SettingsScreen, settingsAddress } from "./settings";
 
 // Minting a passport, in its own file rather than as more of `settings.test.tsx`
@@ -616,5 +617,72 @@ describe("PassportCard: the list", () => {
     vi.stubGlobal("fetch", listBackend([USED]));
     render("agents");
     expect(await screen.findByText("Scout")).toHaveAttribute("title", "Scout");
+  });
+});
+
+describe("PassportCard: this window", () => {
+  it("shows the allowance closest to its limit under the name, and every allowance when opened", async () => {
+    vi.stubGlobal(
+      "fetch",
+      listBackend([{ ...USED, usage: busyUsage }, UNUSED]),
+    );
+    const user = userEvent.setup();
+    render("agents");
+    const busy = (await screen.findByText("Scout")).closest("tr");
+    const idle = screen.getByText("Night runner").closest("tr");
+    if (!(busy && idle)) {
+      throw new Error("the passport rows are not rendered");
+    }
+    // Under the name, because the row has no width for a column of its own.
+    expect(cellOf(busy, "Name")).toHaveTextContent("Changes200 of 200Stopped");
+    expect(within(cellOf(busy, "Name")).getAllByRole("meter")).toHaveLength(1);
+    expect(within(cellOf(idle, "Name")).queryByRole("meter")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Show this window’s usage for Scout",
+      }),
+    );
+
+    for (const label of ["Sends", "Calls"]) {
+      expect(screen.getByRole("meter", { name: label })).toBeTruthy();
+    }
+    // Once in the row, once among the three it opens onto.
+    expect(screen.getAllByRole("meter", { name: "Changes" })).toHaveLength(2);
+  });
+
+  it("shows no empty state over the toggle when every passport is revoked", async () => {
+    const revoked = { ...UNUSED, revoked_at: "2026-09-30T08:00:00Z" };
+    vi.stubGlobal("fetch", listBackend([revoked]));
+    render("agents");
+
+    const toggle = await screen.findByRole("button", {
+      name: "Show 1 revoked passport",
+    });
+    const card = screen
+      .getByRole("heading", { name: "Agent passports" })
+      .closest("section");
+    if (!card?.contains(toggle)) {
+      throw new Error("the toggle is not inside the passports card");
+    }
+    expect(within(card).queryByText("Nothing here yet.")).toBeNull();
+  });
+
+  it("keeps revoked passports out of sight until asked for", async () => {
+    const revoked = { ...UNUSED, revoked_at: "2026-09-30T08:00:00Z" };
+    vi.stubGlobal("fetch", listBackend([USED, revoked]));
+    const user = userEvent.setup();
+    render("agents");
+
+    await screen.findByText("Scout");
+    expect(screen.queryByText("Night runner")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Show 1 revoked passport" }),
+    );
+    expect(screen.getByText("Night runner")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Hide revoked" }));
+    expect(screen.queryByText("Night runner")).toBeNull();
   });
 });

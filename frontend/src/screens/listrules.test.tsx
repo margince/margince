@@ -6,9 +6,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
+import { liveList } from "../testing/lists.fixtures";
 import { StoryProviders } from "../testing/story-utils";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
-import { liveList } from "./lists.fixtures";
 
 afterEach(cleanup);
 

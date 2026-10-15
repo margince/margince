@@ -17,9 +17,17 @@ import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { customColumnLabel, useFilterVocabulary } from "../lib/filterdata";
+import {
+  type List,
+  useArchiveList,
+  useList,
+  useListsAvailable,
+  useUpdateList,
+  useVisitList,
+} from "../lib/lists.queries";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
-import { customColumnLabel, useFilterVocabulary } from "./filterdata";
 import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { filterSentence, useSentenceWords } from "./filtersentence";
@@ -38,18 +46,10 @@ import {
   useListExport,
 } from "./listmembers";
 import { ArchiveListAction } from "./listrules";
-import {
-  type List,
-  useArchiveList,
-  useList,
-  useListsAvailable,
-  useUpdateList,
-  useVisitList,
-} from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
-import { decode } from "./segmentpredicate";
+import { decode } from "../lib/segmentpredicate";
 
 export function ListScreen({ listID }: Readonly<{ listID: string }>) {
   const t = useT();

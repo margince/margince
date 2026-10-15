@@ -435,6 +435,30 @@ describe("the legal identity a contact can state", () => {
     // correct rather than the row having gone blank under the reader.
     expect(screen.getByLabelText("Register / VAT ID")).toBeVisible();
   });
+
+  it.each([
+    { is_anchor: true, refetched: true },
+    { is_anchor: false, refetched: false },
+  ])(
+    "reads /me again after a stated field only when is_anchor is $is_anchor",
+    async ({ is_anchor, refetched }) => {
+      const user = userEvent.setup();
+      const calls = await renderSettledGrid({ ...COMPANY, is_anchor });
+      const reads = () => calls.filter((one) => one.pathname === "/v1/me");
+      const before = reads().length;
+
+      await user.click(
+        screen.getByRole("button", { name: "Change Register / VAT ID" }),
+      );
+      await user.type(screen.getByLabelText("Register / VAT ID"), "DE1");
+      await user.keyboard("{Enter}");
+      await waitFor(() =>
+        expect(screen.queryByLabelText("Register / VAT ID")).toBeNull(),
+      );
+
+      expect(reads().length > before).toBe(refetched);
+    },
+  );
 });
 
 describe("the grouped postal address", () => {

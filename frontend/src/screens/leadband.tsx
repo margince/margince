@@ -9,8 +9,8 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { WriteRefused } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { leadWriteKeys } from "../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { leadWriteKeys } from "./leadkeys";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];

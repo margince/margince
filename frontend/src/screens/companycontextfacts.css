@@ -1,0 +1,38 @@
+/* One fact as a row that opens the editor: the setting row's naming and answer,
+   then the row's chevron at the end. The panel row owns the padding, so the
+   setting row inside it gives up its own. */
+.company-fact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.company-fact > .settingrow {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-block: 0;
+}
+
+/* A long answer (a history, an address) reads as its first lines here; the
+   editor this row opens holds all of it. */
+.company-fact .settingrow-value {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.company-fact-unset {
+  color: var(--textSecondary);
+}
+
+/* The group's name, then how much of it is filled in, at the summary's end
+   beside the chevron. */
+.company-fact-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

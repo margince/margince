@@ -15,16 +15,20 @@ import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useNoticeRead,
   useTaskUpdate,
 } from "./taskactions";
 import { useCompleteTask } from "./taskcomplete";
 import { completeFailureKey } from "./taskwritefollowup";
 import {
+  FailedApprovalAnswer,
+  NoticeAcknowledge,
+} from "./worklist.acknowledge";
+import {
   BriefAct,
   type BriefAnswer,
   BriefSetAsides,
   useBriefAnswer,
+  withFoldedBrief,
 } from "./worklist.briefverbs";
 import { consequenceText } from "./worklist.connection";
 import {
@@ -213,16 +217,11 @@ export function WorklistRow({
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
   const badged = item.overdue === true || isUnprepared(item);
-  // WHERE this lane's answer sits, and the write a brief item's two placements
-  // share. The hook is called on every row and fires on none it is not asked
-  // to: `useBriefItemMark` registers a mutation and reads nothing, and holding
-  // it here is what lets "Act" lead the row's verbs while the two set-asides
-  // stand among the quieter ones WITHOUT the row growing a second mutation.
-  // Two of them would each carry their own settled flag, so acting and then
-  // dismissing would answer one item twice — the same reason PutDownByThumb
-  // holds the disposition write for the verbs and the swipe.
+  // One brief write per row, shared by Act and the two set-asides. The hook
+  // registers a mutation and reads nothing, so every row may call it. Two
+  // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = rowAnswer(item, brief);
+  const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
     title,
@@ -505,6 +504,10 @@ const ANSWER_BY_SOURCE: Partial<
   notice: {
     verb: "acknowledge",
     draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
+  },
+  failed_approval: {
+    verb: "acknowledge",
+    draw: (item) => ({ primary: <FailedApprovalAnswer item={item} /> }),
   },
   automation_run: {
     verb: "retry",
@@ -796,35 +799,6 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         returnFocusTo={() => opener.current}
       />
     </div>
-  );
-}
-
-// A notice's one verb: the reader has seen it, and it leaves the lane.
-// Settled here rather than routed as a link — the mutation this calls is
-// the notice's own read endpoint, and there is no separate surface to send
-// the reader to for "I've seen this".
-function NoticeAcknowledge({ id }: Readonly<{ id: string }>) {
-  const t = useT();
-  const toast = useToast();
-  const acknowledge = useNoticeRead([worklistKey]);
-  return (
-    <Button
-      pending={acknowledge.isPending}
-      onClick={() =>
-        acknowledge.mutate(id, {
-          // A rejected read leaves the button idle with nothing else on
-          // screen to say so — the same rendering a click that did nothing
-          // would leave. Without this the notice stays in the lane and the
-          // reader has no reason to try again.
-          onError: () =>
-            toast.show(t("worklist.verb.acknowledgeFailed"), {
-              tone: "danger",
-            }),
-        })
-      }
-    >
-      {t("worklist.verb.acknowledge")}
-    </Button>
   );
 }
 

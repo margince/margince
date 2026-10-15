@@ -227,7 +227,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 					"is not there is a mistake in the file, not a new company",
 					report.Disposition.Created, report.Disposition.Skipped)
 			}
-			if len(report.Issues) != 1 || !strings.Contains(report.Issues[0].Reason, tc.wants) {
+			if len(report.Issues) != 1 || !strings.Contains(strings.ToLower(report.Issues[0].Reason), tc.wants) {
 				t.Fatalf("issues = %+v, want one naming %q so the contact can go fix the file",
 					report.Issues, tc.wants)
 			}

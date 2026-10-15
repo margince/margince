@@ -9,9 +9,11 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ImportContextTag } from "./import.contexttag";
-import type { ImportWizardState, WizardFile } from "./importflow";
+import { ImportRefusal } from "./import.notices";
+import type { WizardFile } from "./importflow";
 import type { ImportFormat, ImportObject, ImportProfile } from "./importtypes";
 import { isImportObject } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
 /** The drop zone the hub and the wizard's first step share. */
 export function ImportDropzone({
@@ -151,8 +153,18 @@ export function FilesStep({
         value={wizard.contextTagID}
         onChange={wizard.setContextTagID}
       />
+      {wizard.cancelling.error ? (
+        <ImportRefusal
+          title={t("import.cancelFailed")}
+          error={wizard.cancelling.error}
+        />
+      ) : null}
       <div className="import__actions">
-        <Button variant="ghost" onClick={wizard.reset}>
+        <Button
+          variant="ghost"
+          pending={wizard.cancelling.isPending}
+          onClick={wizard.cancel}
+        >
           {t("import.wizard.cancel")}
         </Button>
         <Button

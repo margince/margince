@@ -22,7 +22,21 @@ type SkippedRow struct {
 	// Kind is one of ProblemKinds, so a screen can group the problems.
 	Kind  string `json:"kind,omitempty"`
 	Value string `json:"value,omitempty"`
+	// Code and Params let a screen say Reason in its own language. A report
+	// stored before they existed has neither, and Reason alone is shown.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
+
+// Because answers the row with its reason, in English and as code and params.
+func (s SkippedRow) Because(why Reason) SkippedRow {
+	s.Reason, s.Code, s.Params = why.English(), why.Code, why.Params
+	return s
+}
+
+// Why is the reason the row was written with, empty for a stored report that
+// has no code.
+func (s SkippedRow) Why() Reason { return Reason{Code: s.Code, Params: s.Params} }
 
 // The kinds of problem a report names. The contract's ImportProblemKind enum
 // is this same list, and a test holds the two equal.
@@ -48,7 +62,7 @@ func ProblemKinds() []string {
 // skipReasonEmptyPayload marks a source row with no fields at all — the
 // "payload-less system entries" class the parity preview must disclose
 // rather than silently drop (UC-E18-04 E2).
-const skipReasonEmptyPayload = "empty_payload"
+var skipReasonEmptyPayload = Why(ReasonEmptyPayload)
 
 // ObjectReport is one object class's slice of the run/dry-run report.
 type ObjectReport struct {
@@ -129,13 +143,17 @@ type SkippedAssoc struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Reason string `json:"reason"`
+	// Code and Params say the reason in the reader's language; a report stored
+	// before they existed has only Reason.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.
 func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason}
+		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason, Code: res.SkipWhy.Code, Params: res.SkipWhy.Params}
 		if res.Problem != nil {
 			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
 		}

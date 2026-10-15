@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { AiPending } from "../design-system/aipending";
 import { Badge, EmptyState, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -29,16 +30,15 @@ import {
 } from "./companylookups";
 import {
   byStrengthThenId,
+  momentBasis,
+  momentDefer,
   momentFallbackVerb,
   momentVerb,
 } from "./companytodayverbs";
-import { EntityRef } from "./entityref";
 import {
-  basisAddsARecord,
   CallCard,
   FoundMove,
   type Grounding,
-  MomentEvidence,
   momentIsARow,
   momentKicker,
   type OpenReceipt,
@@ -283,6 +283,7 @@ export function useTodayReading({
               onOpenRecord,
               fallback: momentAction,
             })}
+            defer={momentDefer(view.moment, suggestions.deferOf)}
           />,
         ]
       : []),
@@ -310,14 +311,6 @@ export function useTodayReading({
       <WithheldNotice sections={withheld.map((source) => t(source.label))} />
     ),
   };
-}
-
-// What the moment rests on, drawn only where that is a record its own
-// headline does not already name (`basisAddsARecord` says why).
-function momentBasis(moment: Company360["moment"]): ReactNode {
-  return moment && basisAddsARecord(moment) ? (
-    <MomentEvidence evidence={moment.evidence} />
-  ) : undefined;
 }
 
 /**

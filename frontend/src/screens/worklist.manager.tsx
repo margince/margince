@@ -14,6 +14,11 @@
 // is nobody to reassign work to and nobody to coach.
 
 import { useState } from "react";
+import { useAssignableUserOptions } from "../components/assigneepicker";
+import {
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../components/entityref";
 import {
   Button,
   Field,
@@ -27,8 +32,6 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf } from "../lib/problem";
 import { useMe } from "../lib/session";
-import { useAssignableUserOptions } from "./assigneepicker";
-import { useRosterPartial, useRosterPartialHint } from "./entityref";
 import {
   subjectAcceptsAnOwner,
   type TeamException,

@@ -3,11 +3,8 @@
 
 package agents
 
-// The remaining four commands' resolvers (commandaction.go): retire and
-// update-options target `custom_field`, a type the record seam has never
-// served, so their Guards always stands down; set/remove stakeholder target
-// `project`, which the seam serves like any other record, so they refuse
-// the same two ways patchResolver's own target does.
+// The project-stakeholder resolvers (commandaction.go) target `project`, which
+// the record seam serves. They refuse the same two ways patchResolver does.
 
 import (
 	"context"
@@ -20,36 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// retire and update-options stage OUTSIDE the record seam — the id alone
-// names the target, the same shape TestArchiveStagesATypeTheRecordSeamDoesNotServe
-// proves for an archive of a record-seam-unserved type. Guards is asked
-// against a provider that fails EVERY read, so a resolver that consulted the
-// seam anyway fails here rather than passing on a lenient stub.
-func TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.T) {
-	id := ids.NewV7()
-	cases := []struct {
-		name string
-		call GovernedCall
-	}{
-		{"retire", NewRetireCustomFieldCall(unreadableProvider{}, nil, RetireCustomFieldCommand{ID: id})},
-		{"update_options", NewUpdateCustomFieldOptionsCall(unreadableProvider{}, nil, UpdateCustomFieldOptionsCommand{ID: id})},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			info, err := StageSubject(context.Background(), c.call)
-			if err != nil {
-				t.Fatalf("staging outside the record seam answered %v, want it staged", err)
-			}
-			if info.TargetType != "custom_field" || info.TargetID != id {
-				t.Errorf("staged target = (%s,%s), want (custom_field,%s)", info.TargetType, info.TargetID, id)
-			}
-			if !strings.Contains(info.Summary, id.String()) {
-				t.Errorf("summary %q does not name the id — the seam has no better label to give it", info.Summary)
-			}
-		})
-	}
-}
-
 // setStakeholder and removeStakeholder stage against the PROJECT. Only
 // removeStakeholder carries a path operand (ContactID) into the summary —
 // setStakeholder's contact/role arrive in the body, which the inbox shows
@@ -58,8 +25,8 @@ func TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.T) {
 func TestStakeholderCommandsStageTheProject(t *testing.T) {
 	projectID := ids.NewV7()
 	contactID := ids.NewV7()
-	// project IS served (unlike custom_field), so staging it needs a readable
-	// provider — an unreadable one would fail at Guards before Subject ever ran.
+	// project is served by the seam, so staging it needs a readable provider.
+	// An unreadable one would fail at Guards before Subject ever ran.
 	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityProject, projectID, true)}
 
 	setInfo, err := StageSubject(context.Background(), NewSetStakeholderCall(provider, nil, SetStakeholderCommand{ID: projectID}))

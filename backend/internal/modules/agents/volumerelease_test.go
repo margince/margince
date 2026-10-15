@@ -57,19 +57,18 @@ func steppedUpRegistry(t *testing.T, quota crossedQuota, scope principal.Scope, 
 	return r, staging, ctx
 }
 
-// BYO-STEP-1, end to end through the surface: a read past the threshold is
-// refused AND the question reaches the human who lent the passport. A refusal
-// with no question is the control the spec explicitly does not want — it turns
-// bulk reading into a dead end rather than into a visible, gated event.
-func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) {
+// BYO-STEP-2, end to end through the surface: a change past the threshold is
+// refused and the question reaches the human who lent the passport. A refusal
+// with no question would turn bulk change into a dead end.
+func TestACrossedWriteThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
-		principal.ScopeRead, false)
+		crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42},
+		principal.ScopeWrite, false)
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if _, ok := errors.AsType[*StepUpStagedError](err); !ok {
-		t.Fatalf("a read past its threshold → %v, want a staged step-up", err)
+		t.Fatalf("a write past its threshold → %v, want a staged step-up", err)
 	}
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Error("a staged step-up no longer reads as a budget refusal; every budget-aware caller would miss it")
@@ -81,10 +80,10 @@ func TestACrossedReadThresholdPutsTheQuestionToTheConnectingHuman(t *testing.T) 
 		t.Fatalf("the human was asked %d times, want once", len(staging.steppedUp))
 	}
 	asked := staging.steppedUp[0].Proposal
-	if asked.Counter != agentvolume.Reads || asked.Observed != 2431 || asked.Limit != 2000 || asked.Bucket != "42" {
+	if asked.Counter != agentvolume.Writes || asked.Observed != 241 || asked.Limit != 200 || asked.Bucket != "42" {
 		t.Errorf("the question carried %+v; it must name what was spent, against what, in which window", asked)
 	}
-	if !strings.Contains(staging.steppedUp[0].Summary, "2431") || !strings.Contains(staging.steppedUp[0].Summary, "2000") {
+	if !strings.Contains(staging.steppedUp[0].Summary, "241") || !strings.Contains(staging.steppedUp[0].Summary, "200") {
 		t.Errorf("the sentence a human answers has no numbers in it: %q", staging.steppedUp[0].Summary)
 	}
 }
@@ -138,9 +137,9 @@ func TestAHardStopNeverReachesAHumansInbox(t *testing.T) {
 func TestASuspendedAgentIsRefusedWithoutAskingAnyone(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
 		crossedQuota{counter: agentvolume.Calls, observed: 1001, limit: 1000, bucket: 3},
-		principal.ScopeRead, false)
+		principal.ScopeWrite, false)
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a suspended agent → %v, want a budget refusal", err)
@@ -155,11 +154,11 @@ func TestASuspendedAgentIsRefusedWithoutAskingAnyone(t *testing.T) {
 // call, and the refusal they intended becomes a stream of notifications.
 func TestAQuestionAlreadyRefusedIsNotAskedAgain(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
-		principal.ScopeRead, false)
+		crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42},
+		principal.ScopeWrite, false)
 	staging.stepUpDeclined = true
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if _, ok := errors.AsType[*StepUpStagedError](err); ok {
 		t.Fatal("the agent was told a human is looking at a question that was never staged")
@@ -175,11 +174,11 @@ func TestAQuestionAlreadyRefusedIsNotAskedAgain(t *testing.T) {
 // that is the real reason the call did not run.
 func TestAFailedStagingLeavesTheQuotaRefusalAsTheAnswer(t *testing.T) {
 	r, staging, ctx := steppedUpRegistry(t,
-		crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42},
-		principal.ScopeRead, false)
+		crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42},
+		principal.ScopeWrite, false)
 	staging.stepUpErr = errors.New("the inbox is unreachable")
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a step-up whose staging failed → %v, want the quota refusal", err)
@@ -194,17 +193,17 @@ func TestAFailedStagingLeavesTheQuotaRefusalAsTheAnswer(t *testing.T) {
 // with every other such call, and the release path refuses a row without a
 // passport — so the question could never be answered even if it were asked.
 func TestACallerWithNoPassportIsRefusedWithoutAskingAnyone(t *testing.T) {
-	quota := crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42}
+	quota := crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42}
 	staging := &recordingApprovals{}
 	r := NewRegistry(staging, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
-	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
+	r.Register(&servingTool{spec: writeToolSpec("update_record"), records: 1})
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:passportless", OnBehalfOf: ids.NewV7(),
-		Scopes: principal.NewScopeSet(principal.ScopeRead),
+		Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	})
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a passportless agent past its bound → %v, want the quota refusal", err)
@@ -218,16 +217,16 @@ func TestACallerWithNoPassportIsRefusedWithoutAskingAnyone(t *testing.T) {
 // The Surface-B runner composes one; a volume budget refusal there has nowhere to land
 // and must not become an error about the composition.
 func TestASurfaceWithNoInboxStillRefusesOnTheQuota(t *testing.T) {
-	quota := crossedQuota{counter: agentvolume.Reads, observed: 2431, limit: 2000, bucket: 42}
+	quota := crossedQuota{counter: agentvolume.Writes, observed: 241, limit: 200, bucket: 42}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}, auth.WithVolumeMeter(quota)))
-	r.Register(&servingTool{spec: readToolSpec("search_records"), records: 1})
+	r.Register(&servingTool{spec: writeToolSpec("update_record"), records: 1})
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
-		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeRead),
+		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	})
 
-	_, err := r.Invoke(ctx, "search_records", json.RawMessage(`{}`))
+	_, err := r.Invoke(ctx, "update_record", json.RawMessage(`{}`))
 
 	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
 		t.Fatalf("a quota refusal with no inbox → %v, want the refusal itself", err)
@@ -242,7 +241,7 @@ func TestTheTwoRungsGiveTheAgentDifferentInstructions(t *testing.T) {
 	d := NewDispatcher(nil, bindAuthenticated, "test", "1")
 
 	stepUp := d.explain("search_records", &StepUpStagedError{
-		ApprovalID: ids.New[ids.ApprovalKind](), Counter: agentvolume.Reads,
+		ApprovalID: ids.New[ids.ApprovalKind](), Counter: agentvolume.Writes,
 	})
 	hardStop := d.explain("send_email", &auth.VolumeExceededError{
 		Tool:    "send_email",
@@ -269,7 +268,7 @@ func TestADeclinedStepUpDoesNotClaimNoApprovalCouldLiftIt(t *testing.T) {
 
 	answer := d.explain("search_records", &auth.VolumeExceededError{
 		Tool:    "search_records",
-		Reading: agentvolume.Reading{Counter: agentvolume.Reads, Observed: 4000, Limit: 4000, Exceeded: true},
+		Reading: agentvolume.Reading{Counter: agentvolume.Writes, Observed: 4000, Limit: 4000, Exceeded: true},
 	})
 
 	if strings.Contains(answer, "no approval lifts it") {

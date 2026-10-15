@@ -12,7 +12,7 @@ import {
   toMinorUnits,
 } from "../format/minorunits";
 import { useT } from "../i18n";
-import type { FilterOp, LeafValue } from "./segmentpredicate";
+import type { FilterOp, LeafValue } from "../lib/segmentpredicate";
 
 /** A money clause's operand: one amount, or a list of them for `in`. */
 export function MoneyControl({

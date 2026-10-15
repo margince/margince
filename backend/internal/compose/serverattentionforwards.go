@@ -69,3 +69,13 @@ func (s Server) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request, params crmcontracts.GetTeamBoardParams) {
 	s.attentionHandlers.GetTeamBoard(w, r, params)
 }
+
+// MarkWorklistRowsDone forwards Done, which the assembled day must vouch for.
+func (s Server) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.MarkWorklistRowsDone(w, r)
+}
+
+// ReopenWorklistRows forwards the undo behind Done.
+func (s Server) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
+	s.attentionHandlers.ReopenWorklistRows(w, r)
+}

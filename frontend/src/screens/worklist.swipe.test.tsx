@@ -384,7 +384,9 @@ describe("putting a row down below the fold", () => {
       fetchSpy.mock.calls.length,
       "a second confirm reached the server over a write already out",
     ).toBe(1);
-    expect((await sentBody(fetchSpy)).disposition).toBe("handled");
+    expect((await sentBody(fetchSpy)).rows).toEqual([
+      { source: "customer_waiting", row_id: row([]).id },
+    ]);
 
     // The row still reports the first answer as the one in flight. Done is
     // the busy control. The judgement whose confirm was refused stands down

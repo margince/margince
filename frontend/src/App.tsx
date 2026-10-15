@@ -22,7 +22,7 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
-import { UnsavedGuard } from "./app/unsaved";
+import { UnsavedGuard } from "./components/unsaved";
 import {
   Card,
   EmptyState,
@@ -240,9 +240,9 @@ const TagResultScreen = lazy(() =>
   import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
 );
 
-const SearchScreen = lazy(
+const SearchRoute = lazy(
   routed(() =>
-    import("./screens/search").then((m) => ({ default: m.SearchScreen })),
+    import("./screens/search").then((m) => ({ default: m.SearchRoute })),
   ),
 );
 const SettingsScreen = lazy(
@@ -486,7 +486,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
         <ScreenNotice messageKey="screen.pending" />
       ),
     search: ({ id, id2 }) => (
-      <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
+      <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
     lists: ({ id }) => <FiltersScreen list={id ?? ""} />,

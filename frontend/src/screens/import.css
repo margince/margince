@@ -15,6 +15,14 @@
   align-self: stretch;
 }
 
+/* The progress panel sits in a flex-start column and holds a strip that
+   measures its own width, so it spans the column or each part collapses. */
+.import--fill {
+  align-items: stretch;
+  align-self: stretch;
+  width: 100%;
+}
+
 .import__hint {
   margin: 0;
 }

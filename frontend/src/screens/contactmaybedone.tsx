@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckSquare } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -6,6 +6,7 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { useSetAside } from "./record360";
 import { useClaimSettle, useTaskUpdate } from "./taskactions";
 import { useCompleteTask } from "./taskcomplete";
 
@@ -32,11 +33,12 @@ export function MayBeDoneVerbs({
   const task = useTaskUpdate(refresh);
   const completeTask = useCompleteTask(task);
   const claim = useClaimSettle(refresh);
-  const notYet = useMomentDismiss();
+  const notYet = useMomentSetAside(contactId);
   const done = moment.recommended_action;
   const blocked = done.state === "blocked";
-  const pending = task.isPending || claim.isPending || notYet.isPending;
-  const failure = task.error ?? claim.error ?? notYet.error;
+  const pending =
+    task.isPending || claim.isPending || notYet.deferOf(moment).pending;
+  const failure = task.error ?? claim.error ?? notYet.failure;
   const complete = () => {
     if (question.promise_type === "claim") {
       claim.mutate({ id: question.promise_id, outcome: "done" });
@@ -70,15 +72,7 @@ export function MayBeDoneVerbs({
         <Button
           variant="ghost"
           disabled={pending}
-          onClick={() =>
-            notYet.mutate({
-              contactId,
-              body: {
-                claim_key: moment.claim_key,
-                evidence_fingerprint: moment.evidence_fingerprint,
-              },
-            })
-          }
+          onClick={notYet.deferOf(moment).onDefer}
         >
           {t("contact.mayBeDone.notYet")}
         </Button>
@@ -88,29 +82,41 @@ export function MayBeDoneVerbs({
   );
 }
 
-// Putting one moment away for this reader while its evidence stands. The
-// contact rides with the press, so a page that moved on between the press and
-// the answer still refreshes the contact the dismissal was for.
-function useMomentDismiss() {
+// Putting one moment away for this reader while its evidence stands, and the
+// Undo that shows it again. The contact page's "Not now" and this card's "Not
+// yet" are one dismissal, so both go through here.
+export function useMomentSetAside(contactId: string) {
   const t = useT();
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      contactId,
-      body,
-    }: {
-      contactId: string;
-      body: components["schemas"]["DismissContactMomentRequest"];
-    }) => {
+  return useSetAside<ContactMoment>({
+    setAside: async (moment) => {
       unwrap(
         await api.POST("/contacts/{id}/moment/dismiss", {
           params: { path: { id: contactId } },
-          body,
+          body: {
+            claim_key: moment.claim_key,
+            evidence_fingerprint: moment.evidence_fingerprint,
+          },
         }),
         t,
       );
     },
-    onSuccess: (_data, { contactId }) =>
+    restore: async (moment) => {
+      unwrap(
+        await api.DELETE("/contacts/{id}/moment/dismiss", {
+          params: {
+            path: { id: contactId },
+            query: {
+              claim_key: moment.claim_key,
+              evidence_fingerprint: moment.evidence_fingerprint,
+            },
+          },
+        }),
+        t,
+      );
+    },
+    refresh: () =>
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
+    idOf: (moment) => moment.claim_key,
   });
 }

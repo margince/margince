@@ -145,9 +145,9 @@ func TestTheGateAdmitsAReadItDoesNotLeaveToTheRegistry(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/deals", nil).WithContext(readingAgent(t.Context())))
 
-	if recorder.Code != http.StatusOK || d.lookups.reads[agentvolume.Reads] != 1 {
-		t.Fatalf("GET /v1/deals → %d after %d read-bound lookups, want 200 after 1",
-			recorder.Code, d.lookups.reads[agentvolume.Reads])
+	if recorder.Code != http.StatusOK || d.lookups.reads[agentvolume.Calls] != 1 {
+		t.Fatalf("GET /v1/deals → %d after %d call-ceiling lookups, want 200 after 1",
+			recorder.Code, d.lookups.reads[agentvolume.Calls])
 	}
 }
 

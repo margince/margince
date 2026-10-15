@@ -10,6 +10,7 @@ import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
 import {
+  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -212,6 +213,11 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.startsWith("/approvals/"),
     handle: work.decideApproval,
   },
+  {
+    method: "GET",
+    path: "/activities/a-quarterly",
+    handle: reply(insight.quarterlyReview),
+  },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {
     method: "POST",
@@ -302,6 +308,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },

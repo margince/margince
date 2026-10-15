@@ -9,6 +9,11 @@
 
 import { useCallback } from "react";
 import { api } from "../api/client";
+import { useAssignableUserOptions } from "../components/assigneepicker";
+import {
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../components/entityref";
 import { Field } from "../design-system/atoms";
 import {
   RecordPicker,
@@ -21,8 +26,6 @@ import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import type { MeetingAttendees } from "./activitybody";
-import { useAssignableUserOptions } from "./assigneepicker";
-import { useRosterPartial, useRosterPartialHint } from "./entityref";
 
 const SEARCH_LIMIT = 20;
 

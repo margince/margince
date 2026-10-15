@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowRight } from "lucide-react";
+import { EntityRef } from "../components/entityref";
 import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { PanelBody, PanelGroupHead, PanelRow } from "../design-system/panel";
@@ -12,7 +13,6 @@ import type { MessageKey } from "../i18n/en";
 import { navigate } from "../lib/router";
 import { type MorningDigest, useMorningDigest } from "./brief.queries";
 import { errorClassKey, isUnhealthy } from "./connector-status";
-import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 
 // What the night shift did, as the last group of Home's receipt: counts with

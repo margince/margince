@@ -4,7 +4,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
-  Disclosure,
   Field,
   SegmentedControl,
   TextInput,
@@ -116,40 +115,36 @@ export function ForecastView({
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}
-            {/* What to check comes BEFORE the receipt: a manager with ten
-              minutes reads what needs doing first, and the receipt is what
-              they consult when a number looks wrong. Side by side where the
-              page is wide, so the receipt stops being a full-width table of
-              four numbers. */}
+            {/* What to check comes first: a manager with ten minutes reads what
+                needs doing, and reads the receipt beside it when a number looks
+                wrong. */}
             <div className="analytics-pair">
               <ForecastReview />
-              <Disclosure summary={t("forecast.receipt")}>
-                <EvidenceReceipt
-                  title={t("forecast.receipt")}
-                  counts={[
-                    {
-                      key: "eligible",
-                      term: t("forecast.eligible"),
-                      value: formatNumber(data.eligible_count, locale),
-                    },
-                    {
-                      key: "priced",
-                      term: t("forecast.priced"),
-                      value: formatNumber(data.priced_count, locale),
-                    },
-                    {
-                      key: "confirmed",
-                      term: t("forecast.confirmed"),
-                      value: formatNumber(data.confirmed_date_count, locale),
-                    },
-                    {
-                      key: "fx",
-                      term: t("forecast.fxMissing"),
-                      value: formatNumber(data.fx_missing_count, locale),
-                    },
-                  ]}
-                />
-              </Disclosure>
+              <EvidenceReceipt
+                title={t("forecast.receipt")}
+                counts={[
+                  {
+                    key: "eligible",
+                    term: t("forecast.eligible"),
+                    value: formatNumber(data.eligible_count, locale),
+                  },
+                  {
+                    key: "priced",
+                    term: t("forecast.priced"),
+                    value: formatNumber(data.priced_count, locale),
+                  },
+                  {
+                    key: "confirmed",
+                    term: t("forecast.confirmed"),
+                    value: formatNumber(data.confirmed_date_count, locale),
+                  },
+                  {
+                    key: "fx",
+                    term: t("forecast.fxMissing"),
+                    value: formatNumber(data.fx_missing_count, locale),
+                  },
+                ]}
+              />
             </div>
           </>
         )}

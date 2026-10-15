@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { useRoster } from "../components/entityref";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
@@ -12,7 +13,6 @@ import { DeepReadPanel } from "./companydeepread";
 import type { CompanyTab } from "./companytab";
 import { Company360Call, NeedsList, useTodayReading } from "./companytoday";
 import { sinceLastVisitFooter } from "./companywork";
-import { useRoster } from "./entityref";
 import { type OpenReceipt, RecordSpine, WrittenBy } from "./record360";
 
 type Company = components["schemas"]["Company"];

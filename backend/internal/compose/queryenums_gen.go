@@ -142,7 +142,13 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/forecast/movement": {
 		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case"}, Array: false, Explode: true},
 	},
+	"GET /v1/imports": {
+		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
+	},
 	"GET /v1/imports/format": {
+		{Name: "lang", Values: []string{"en", "de", "vi"}, Array: false, Explode: true},
+	},
+	"GET /v1/imports/{id}/problems.csv": {
 		{Name: "lang", Values: []string{"en", "de", "vi"}, Array: false, Explode: true},
 	},
 	"GET /v1/leads": {

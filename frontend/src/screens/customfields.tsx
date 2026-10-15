@@ -23,9 +23,6 @@ import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
-import { problemMessageOf, unwrap } from "../lib/problem";
-import { useMe } from "../lib/session";
-import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
   CF_OBJECTS,
@@ -36,7 +33,10 @@ import {
   ddlPreview,
   looksStructural,
   slug,
-} from "./customfields.logic";
+} from "../lib/customfields.logic";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
   AuditRail,

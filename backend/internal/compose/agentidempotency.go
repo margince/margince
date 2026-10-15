@@ -107,8 +107,8 @@ func (c agentClaims) Claim(ctx context.Context, tool, key, digest string) (agent
 	}
 }
 
-// Settle records the sealed result, and what it cost the caller's read bound,
-// so a repeat of the same key answers with it at the same price.
+// Settle records the sealed result and the records it handed over. A replay uses
+// the count to tell an answer that named records from one that named none.
 func (c agentClaims) Settle(ctx context.Context, tool, key, attempt string, result json.RawMessage, records int) error {
 	hold, err := c.holdFor(ctx, "settling", tool, key, attempt)
 	if err != nil || !hold.holdsClaim() {

@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { en } from "../i18n/en";
+import type { FilterPreview, VocabularyField } from "../lib/filterdata";
 import { StoryProviders } from "../testing/story-utils";
-import type { FilterPreview, VocabularyField } from "./filterdata";
 import { FilterResults } from "./filterresults";
 
 // FilterResults takes everything as props — the preview response, the vocabulary

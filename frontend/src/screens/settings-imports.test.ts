@@ -45,8 +45,9 @@ function pathTo(entry: string, target: string): string[] | null {
  * question", and it goes stale the first time somebody adds a module — silently,
  * because a gate that reads a smaller tree still reports PASS.
  *
- * Three trees qualify. `src/app/**` is the always-loaded shell, and
- * `src/lib/**` is the infrastructure it loads. `src/screens/**`
+ * Four trees qualify. `src/app/**` is the always-loaded shell, and
+ * `src/lib/**` is the infrastructure it loads. `src/components/**` holds the
+ * parts many screens share. `src/screens/**`
  * is every other screen: a screen that only wants an ADDRESS must not drag the
  * settings cards into its own chunk, which is what `worklist.copy.ts` did —
  * putting the whole settings screen behind Brief, the default landing page.
@@ -55,6 +56,7 @@ const settingsOwnModules = new Set([settingsScreen, settingsNav]);
 const shellEntryPoints = [
   ...productionModulesUnder(join(srcRoot, "app")),
   ...productionModulesUnder(join(srcRoot, "lib")),
+  ...productionModulesUnder(join(srcRoot, "components")),
   ...productionModulesUnder(join(srcRoot, "screens")),
 ]
   .filter((file) => !settingsOwnModules.has(file))

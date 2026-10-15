@@ -266,6 +266,38 @@ export const CriteriaOpen: Story = {
   },
 };
 
+/** One stage's criteria open at a time; adding a criterion opens its stage. */
+export const OneStageOpen: Story = {
+  render: served(sales, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    const discovery = canvas.getByRole("button", {
+      name: "Exit criteria for Discovery",
+    });
+    const proposal = canvas.getByRole("button", {
+      name: "Exit criteria for Proposal",
+    });
+    await userEvent.click(discovery);
+    await userEvent.click(proposal);
+    await expect(proposal).toHaveAttribute("aria-expanded", "true");
+    await expect(discovery).toHaveAttribute("aria-expanded", "false");
+    const actions = canvas.getByRole("button", {
+      name: "Actions for Discovery",
+    });
+    await userEvent.click(actions);
+    const menu = canvasElement.ownerDocument.getElementById(
+      actions.getAttribute("aria-controls") ?? "",
+    );
+    if (!menu) throw new Error("the row menu named no panel");
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Add criterion" }),
+    );
+    await expect(discovery).toHaveAttribute("aria-expanded", "true");
+    await expect(proposal).toHaveAttribute("aria-expanded", "false");
+  },
+};
+
 /** A stage whose odds sit below the stage above it is pointed out, not refused. */
 export const OddsDip: Story = {
   render: served(dipping, true),

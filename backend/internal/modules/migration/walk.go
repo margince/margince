@@ -144,6 +144,7 @@ func (wk *walk) linked(a Assoc, res AssocResult) {
 	} else {
 		wk.rep.AssociationsSkipped = append(wk.rep.AssociationsSkipped, SkippedAssoc{
 			From: a.FromType + "/" + a.FromID, To: a.ToType + "/" + a.ToID, Reason: res.Reason,
+			Code: res.Why.Code, Params: res.Why.Params,
 		})
 	}
 	wk.cursor++

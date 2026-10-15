@@ -8,6 +8,7 @@ import { Button } from "../design-system/atoms";
 import { useOwnToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { contactLeadKey, LEAD_LIST_KEY } from "../lib/leadkeys";
 import {
   ProblemError,
   problemExistingId,
@@ -16,7 +17,6 @@ import {
 } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
-import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
 
 type Lead = components["schemas"]["Lead"];
 

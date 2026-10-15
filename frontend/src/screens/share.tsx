@@ -12,6 +12,12 @@ import { useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
+  EntityRef,
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../components/entityref";
+import {
   Badge,
   Button,
   EmptyState,
@@ -32,12 +38,6 @@ import type { MessageKey } from "../i18n/en";
 import type { EntityKind } from "../lib/entity";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
-import {
-  EntityRef,
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "./entityref";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import {
   ApprovalRequiredError,

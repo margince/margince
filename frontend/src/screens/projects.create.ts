@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { api } from "../api/client";
+import type { CreateField } from "../components/create";
+import { useObjectCustomFields } from "../components/customfields.form";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
-import type { CreateField } from "./create";
-import { useObjectCustomFields } from "./customfields.form";
 import {
   mapProjectCreate,
   type Project,

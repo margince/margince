@@ -21,6 +21,8 @@ import { useLogout, useMe } from "../lib/session";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
+import { AgentAllowancesCard } from "./agentallowances";
+import { AgentUsageByUserCard } from "./agentusage";
 import { AiBudgetCard } from "./ai-admin";
 import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
@@ -166,15 +168,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
 
     // ---- company ----
     case "company":
-      // The installation's own facts, then the money, then the company profile
-      // the AI reads, then the follow-up window. The currency pair stays
+      // The company first (brand, business context and the website that context
+      // is read from), then the installation's own facts. The currency pair stays
       // ADJACENT: the base currency is declared in InstallationSettingsCard and
       // every rate below converts to it.
       return (
         <>
+          <CompanyContextCard />
           <InstallationSettingsCard />
           <FxRatesCard />
-          <CompanyContextCard />
           <FollowUpSettingsCard />
           <SignatureTemplateCard />
         </>
@@ -297,9 +299,12 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "usage":
       return (
         <>
-          {/* The allowance with the month's spend in it, then where it went, then
-              the prices the estimate is drawn from. */}
+          {/* The allowance with the month's spend in it, then what each agent
+              may do and has done, then where the spend went, then the prices
+              the estimate is drawn from. */}
           <AiBudgetCard />
+          <AgentAllowancesCard />
+          <AgentUsageByUserCard />
           <AiUsageCard />
           <ModelPriceDetails />
         </>

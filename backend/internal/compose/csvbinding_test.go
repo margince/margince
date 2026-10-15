@@ -29,19 +29,19 @@ func TestARefIsFreeToTheCompanyItAlreadyStandsForAndToAnUndoneRun(t *testing.T) 
 		"undone": {NativeID: other, RunStatus: migration.StatusUndone, Origin: migration.OriginBound},
 	}}
 	ctx := context.Background()
-	if got := w.refTakenBy(ctx, "same", mine); got != "" {
-		t.Errorf("a ref bound to the named company again = %q, want free", got)
+	if got := w.refTakenBy(ctx, "same", mine); got.Code != "" {
+		t.Errorf("a ref bound to the named company again = %v, want free", got)
 	}
-	if got := w.refTakenBy(ctx, "undone", mine); got != "" {
-		t.Errorf("a ref of an undone run = %q, want free", got)
+	if got := w.refTakenBy(ctx, "undone", mine); got.Code != "" {
+		t.Errorf("a ref of an undone run = %v, want free", got)
 	}
-	if got := w.refTakenBy(ctx, "unseen", mine); got != "" {
-		t.Errorf("an unmapped ref = %q, want free", got)
+	if got := w.refTakenBy(ctx, "unseen", mine); got.Code != "" {
+		t.Errorf("an unmapped ref = %v, want free", got)
 	}
-	if got := w.refTakenBy(ctx, "", mine); got != "" {
-		t.Errorf("a row without a ref = %q, want free", got)
+	if got := w.refTakenBy(ctx, "", mine); got.Code != "" {
+		t.Errorf("a row without a ref = %v, want free", got)
 	}
-	if got := w.refTakenBy(ctx, "taken", mine); got == "" {
+	if got := w.refTakenBy(ctx, "taken", mine); got.Code == "" {
 		t.Error("a ref mapped to another company is free, want a reason")
 	}
 }

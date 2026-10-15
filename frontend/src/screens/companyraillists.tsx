@@ -4,8 +4,8 @@
 import { Disclosure } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useListsAvailable, useRecordLists } from "../lib/lists.queries";
 import { SectionSummary } from "./companyrailshared";
-import { useListsAvailable, useRecordLists } from "./lists.queries";
 import { RecordListsBody } from "./recordlists";
 
 /**

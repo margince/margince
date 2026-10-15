@@ -6,7 +6,7 @@
 // fail to compile until somebody names it.
 
 import type { useT } from "../i18n";
-import type { CfObject, CfType } from "./customfields.logic";
+import type { CfObject, CfType } from "../lib/customfields.logic";
 
 export function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
   return {

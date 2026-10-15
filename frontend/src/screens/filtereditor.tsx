@@ -11,9 +11,10 @@ import { Button, Card } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { addToGroup, isGroup, type Node } from "../lib/segmentpredicate";
 import { FilterBuilder } from "./filterbuilder";
 import { firstClause, focusRow } from "./filterclause";
-import type { FilterVocabulary } from "./filterdata";
 import type { FilterDraft, FilterDraftAction } from "./filterdraft";
 import {
   type PlainWords,
@@ -21,7 +22,6 @@ import {
   ProposalBar,
   UnusedPhrases,
 } from "./filterpropose";
-import { addToGroup, isGroup, type Node } from "./segmentpredicate";
 import "./filters.css";
 
 /** The vocabulary read, which the editor and what is under it wait on. */

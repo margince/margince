@@ -142,10 +142,10 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		overwriteHumanEdited:     "Manuell bearbeitete Felder überschreiben (%s): %s",
 		linkedInLooksLike:        "%s bei %s scheint %s zu sein",
 		unnamedEmployer:          "einem nicht genannten Arbeitgeber",
-		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem anlegen?",
+		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem erstellen?",
 
 		heldNotSent:          "%q wurde nicht gesendet: %s",
-		heldConsentWithdrawn: "ein Empfänger hat seine Einwilligung für diesen Zweck nach der Planung widerrufen",
+		heldConsentWithdrawn: "jemand unter den Empfangenden hat die Einwilligung für diesen Zweck nach der Planung widerrufen",
 		heldSenderInactive:   "das sendende Konto oder sein Postfach ist nicht mehr aktiv",
 		heldPassportRevoked: "die Agent-Zugangsdaten, unter denen die Nachricht geplant wurde, wurden widerrufen oder sind abgelaufen. " +
 			"Dein Konto ist in Ordnung, sende sie also selbst, wenn sie noch rausgehen soll",
@@ -155,8 +155,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		heldSendRefused:    "eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt",
 
 		reviewSendRefused:  "Ein Versand an %s wurde abgelehnt (%s), und jemand fragt, ob er trotzdem rausgehen darf",
-		reviewOneRecipient: "1 Empfänger",
-		reviewRecipients:   "%d Empfänger",
+		reviewOneRecipient: "1 Empfangsadresse",
+		reviewRecipients:   "%d Empfangsadressen",
 
 		coldStartFromURL:             "Cold-Start-Auslesung aus %s",
 		coldStartFromText:            "Cold-Start-Auslesung aus eingefügtem Text",

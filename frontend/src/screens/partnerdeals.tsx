@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { EntityRef } from "../components/entityref";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -10,7 +11,6 @@ import { formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { dealStatusTone } from "./deals";
-import { EntityRef } from "./entityref";
 
 // The deals this partner brought us, on the partner's own company page.
 //

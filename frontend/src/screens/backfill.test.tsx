@@ -558,7 +558,8 @@ describe("honest capability and staleness", () => {
       />,
     );
 
-    expect(screen.getByText(/no progress for/i)).toBeTruthy();
+    expect(screen.getByText(/no progress for 20m/i)).toBeTruthy();
+    expect(screen.queryByText(/0\s*h/)).toBeNull();
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 

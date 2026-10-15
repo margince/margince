@@ -13,6 +13,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordShell } from "../app/testing/recordshell.testkit";
+import { listFetchLimit } from "../components/listquery";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
@@ -28,7 +29,6 @@ import {
 import { stubFetch } from "./company.testkit";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
 import { TodayOnThisAccount } from "./companytoday";
-import { listFetchLimit } from "./listquery";
 import { WriteToHost } from "./writetohost";
 
 // The same P-14/15/16/1 shared-block wiring as contacts

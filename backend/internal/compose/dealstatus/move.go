@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/nextstep"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -63,6 +64,15 @@ const meetingHorizon = 14 * 24 * time.Hour
 // decideMove keeps operational obligations separate from sales progression.
 // Closing a deal ends pipeline advice, not meetings, tasks or customer requests.
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
+	mv := nextMove(f)
+	if mv.Fingerprint != nil {
+		return mv
+	}
+	return stamped(mv)
+}
+
+// nextMove is the rules' choice, in order.
+func nextMove(f facts) crmcontracts.DealStatusCardMove {
 	if meeting, ok := upcomingMeeting(f); ok {
 		activityID := openapi_types.UUID(meeting.ID)
 		subject := meeting.Subject
@@ -273,7 +283,10 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 	if !ok {
 		return crmcontracts.DealStatusCardMove{}, false
 	}
-	return move(ActionDraftEmail, openingReason(seat, len(f.seats)), nil), true
+	// The stakeholder lives only in the reason, so the digest names them: "open
+	// with Alice" set aside must not hide "open with Bob".
+	opening := move(ActionDraftEmail, openingReason(seat, len(f.seats)), nil)
+	return stamped(opening, owedwork.Mark{Kind: "seat", ID: seat.Role + ":" + seat.ContactID.String()}), true
 }
 
 // openingReason says who to open with and why they are the one.

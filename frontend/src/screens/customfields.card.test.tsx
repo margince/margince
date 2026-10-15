@@ -2,16 +2,20 @@
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  CustomField,
+  ObjectCustomFields,
+} from "../components/customfields.form";
 import { LocaleProvider } from "../i18n";
 import { CustomFieldsPanel } from "./customfields.card";
-import type { CustomField, ObjectCustomFields } from "./customfields.form";
 
 // The card reads the live catalog through useObjectCustomFields; mock only that
 // hook so the display/omit behavior is tested against controlled fields, while
 // the real customFieldDisplay formatting runs.
 const activeFields: CustomField[] = [];
-vi.mock("./customfields.form", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./customfields.form")>();
+vi.mock("../components/customfields.form", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../components/customfields.form")>();
   return {
     ...actual,
     useObjectCustomFields: (): ObjectCustomFields => ({

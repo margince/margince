@@ -364,7 +364,7 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Firmenname")).toHaveCount(0);
+  await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await expect(
     page.getByPlaceholder("https://meet.google.com/abc-defg-hij"),
   ).toBeVisible();

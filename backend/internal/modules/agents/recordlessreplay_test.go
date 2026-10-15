@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -72,7 +73,7 @@ func servedRecordless(
 	r.Register(&fakeTool{spec: recordlessSpec(grant)})
 	// An envelope citing no evidence, which is what a vocabulary write records.
 	recorded := json.RawMessage(`{"result":{"id":"t1","name":"Renewal"}}`)
-	out, err := r.ServeRecorded(ctx, "create_tag", recorded, 1)
+	out, err := r.ServeRecorded(ctx, "create_tag", recorded)
 	return out, reader, err
 }
 
@@ -153,5 +154,23 @@ func TestTheVocabularyWritesDeclareTheGrantTheirHandlersCheck(t *testing.T) {
 	for name := range want {
 		t.Errorf("%s is not among the tag vocabulary tools any more; this case "+
 			"names a tool the surface does not have", name)
+	}
+}
+
+// A finished task's result may be polled for the life of its handle, and a poll
+// is not a tools/call. It spends one call, or it would be free and repeatable.
+func TestPollingATaskResultSpendsOneCall(t *testing.T) {
+	t.Parallel()
+	ctx := tagWriter(t, map[string]principal.ObjectGrant{"tag": {Create: true}})
+	charger := newCountingCharger()
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithReplayReader(&norecordReader{}), WithVolumeCharger(charger))
+	r.Register(&fakeTool{spec: recordlessSpec(&mcp.ReplayGrant{Object: "tag", Action: principal.ActionCreate})})
+
+	if _, err := r.ServeTaskResult(ctx, "create_tag", json.RawMessage(`{"result":{"id":"t1"}}`)); err != nil {
+		t.Fatalf("serving a recorded task result: %v", err)
+	}
+
+	if got := charger.charged[agentvolume.Calls]; got != 1 || len(charger.times) != 1 {
+		t.Errorf("polling a task result charged %v, want one call", charger.charged)
 	}
 }

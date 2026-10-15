@@ -64,7 +64,11 @@ func TestNoOperationSummaryClaimsATierItDoesNotHave(t *testing.T) {
 		t.Fatal("no operations were read out of the contract — this census reads an empty document, and an empty one reports PASS")
 	}
 
-	marked := 0
+	// No summary carries a mark today, so a pattern that stopped matching would
+	// pass in silence. Prove it still finds the form a summary would write.
+	if claim := tierMarkClaim.FindStringSubmatch("Edit a field (🟡 — a schema change)."); len(claim) < 3 || claim[1] != "🟡" {
+		t.Fatalf("the tier-mark pattern no longer matches a mark written in a summary, so it would find no claim at all: %v", claim)
+	}
 	for _, name := range sortedOperationNames(ops) {
 		op := ops[name]
 		for _, claim := range tierMarkClaim.FindAllStringSubmatch(op.Summary, -1) {
@@ -72,7 +76,6 @@ func TestNoOperationSummaryClaimsATierItDoesNotHave(t *testing.T) {
 			if slices.Contains(stagedWorkNouns, qualifies) {
 				continue
 			}
-			marked++
 			want := markOfTier(op.MCPTool.Tier)
 			if want == "" {
 				t.Errorf("%s summarises itself as %s but declares no agent tier (x-mcp-tool), so there is no tier for the mark to be:\n\t%s\n\n"+
@@ -85,9 +88,6 @@ func TestNoOperationSummaryClaimsATierItDoesNotHave(t *testing.T) {
 					name, mark, op.MCPTool.Tier, want, op.Summary)
 			}
 		}
-	}
-	if marked == 0 {
-		t.Error("no summary in the contract makes a tier claim at all. Either every mark has moved into the staged-work form this gate deliberately leaves alone — in which case it now guards nothing and should say so — or the claim is no longer written this way and the pattern above has gone stale")
 	}
 }
 

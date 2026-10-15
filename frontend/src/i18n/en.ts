@@ -1134,7 +1134,7 @@ export const en = {
   "nav.automations": "Automations",
   "nav.group.records": "Records",
   "nav.group.work": "Work",
-  "nav.group.intelligence": "Intelligence",
+  "nav.group.intelligence": "Insights",
   "nav.offers": "Offer",
   "nav.share": "Sharing",
   "nav.search": "Search results",
@@ -2380,7 +2380,7 @@ export const en = {
   "co.growthFit.dim.access": "Access",
   "co.growthFit.band.moderate": "Moderate fit",
   "co.growthFit.band.weak": "Weak fit",
-  "co.growthFit.band.unknown": "Not enough to judge",
+  "co.growthFit.band.unknown": "Not enough data",
   "co.growthFit.completeness": "{present} of {expected} inputs recorded",
   "co.growthFit.missing": "Still missing",
   "co.growthFit.capped": "Held back: {reason}.",
@@ -2541,6 +2541,8 @@ export const en = {
   "co.suggest.basedOn": "Based on",
   "co.cite.open": "Open record",
   "co.suggest.dismiss": "Not now",
+  "record.setAside.done": "Set aside. It comes back when something changes.",
+  "record.setAside.restored": "Back on the card.",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed": "Suggestion was not dismissed. Retry.",
   // Said plainly, because the reader's next move depends on it: a step they
@@ -2730,6 +2732,13 @@ export const en = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
+  "activity.detail.loading": "Loading activity…",
+  "activity.detail.none": "This activity",
+  "activity.detail.withheldReason": "Activity content is withheld",
+  "activity.detail.when": "When",
+  "activity.detail.attendees": "Attendees",
+  "activity.detail.colleagues": "Colleagues",
+  "activity.detail.filedUnder": "Filed under",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown.",
   "compose.audienceWorkspace": "Everyone in the company",
@@ -3216,8 +3225,6 @@ export const en = {
   "leadReasons.duplicate":
     "A reason with this name already exists. Choose another name.",
   "followUpSettings.title": "Follow-ups",
-  "followUpSettings.sub":
-    "When a message sent to a customer comes back on the sender’s Home as a follow-up.",
   "followUpSettings.days": "Remind after (days)",
   "followUpSettings.daysHint":
     "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
@@ -3864,6 +3871,8 @@ export const en = {
   "worklist.bulk.selectAll_other": "Select all {count} items shown",
   "worklist.bulk.clear": "Clear selection",
   "worklist.bulk.markDone": "Mark done",
+  "worklist.bulk.doneCount_one": "Marked {count} item done for you.",
+  "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -4713,9 +4722,9 @@ export const en = {
   "extraction.field.closeDate": "Expected close date",
   "docs.filterLabel": "Document category",
   "docs.category.all": "All",
-  "docs.category.contract": "Contract",
-  "docs.category.offer": "Offer",
-  "docs.category.legal": "Legal",
+  "docs.category.contract": "SOW/Contract",
+  "docs.category.offer": "Proposal/Offer",
+  "docs.category.legal": "NDA/Legal",
   "docs.category.email": "Email attachment",
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
@@ -5925,8 +5934,7 @@ export const en = {
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
     "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
-  "settings.tierWait":
-    "Enrichment, custom fields, webhooks, tag merges: wait in Approvals.",
+  "settings.tierWait": "Enrichment and tag merges: wait in Approvals.",
   "settings.tierAdvance":
     "Advance a deal stage: waits only when the move closes the deal as won or lost.",
   "settings.locked": "Locked",
@@ -6019,6 +6027,14 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.cancelFailed": "The import was not canceled",
+  "import.conflictDismiss": "Dismiss",
+  "import.conflictOtherTab":
+    "This import was changed in another tab. Your screen now shows the saved choices.",
+  "import.superseded": "A newer test run replaced this import",
+  "import.supersededOpen": "Open the newer test run",
+  "import.draft.continue": "Continue",
+  "import.draft.cancel": "Cancel",
   "import.sourceBusy":
     "Another import of this source name is still writing. Wait for it to finish, then test again.",
   "import.sourceBusyOpen": "Open that import",
@@ -6100,6 +6116,33 @@ export const en = {
   "import.progress.running": "In progress",
   "import.progress.done": "Done",
   "import.progress.rows": "{type}: {done} of {total} rows",
+  "import.progress.working": "Working…",
+  "import.progress.queued": "Waiting to start",
+  "import.progress.records": "your records",
+  "import.progress.links": "Links",
+  "import.progress.overall": "All files",
+  "import.progress.total": "{done} of {total} rows",
+  "import.progress.rate": "{rate} rows/s",
+  "import.progress.elapsed": "{span} elapsed",
+  "import.progress.etaObject": "about {minutes} min left in {type}",
+  "import.progress.etaRun": "about {minutes} min left",
+  "import.progress.counts": "Rows so far",
+  "import.progress.count.created": "New",
+  "import.progress.count.updated": "Updated",
+  "import.progress.count.unchanged": "Same",
+  "import.progress.count.skipped": "Skipped",
+  "import.progress.count.problems": "Problems",
+  "import.progress.stalled.working": "Still working on it",
+  "import.progress.stalled.server": "Waiting for the server",
+  "import.progress.stalled.body":
+    "No progress for {span}. This page keeps checking and tells you when it moves.",
+  "import.phase.reading": "Reading the file",
+  "import.phase.checking": "Checking {type}",
+  "import.phase.creating_tags": "Creating tags",
+  "import.phase.importing": "Importing {type}",
+  "import.phase.linking": "Linking records",
+  "import.phase.undoing": "Undoing {type}",
+  "import.phase.finishing": "Finishing up",
   "import.progress.leave":
     "You can leave this page. The import keeps going, and Recent imports shows when it is done.",
   "import.result.detail": "{created} created · {updated} updated",
@@ -6137,6 +6180,121 @@ export const en = {
   "import.test.row": "Row {line}",
   "import.test.rowColumn": "Row {line} · {column}",
   "import.test.wholeFile": "Whole file",
+  "import.reason.link_row_not_imported":
+    "This row will not be imported, so there is nobody to link to {name}.",
+  "import.reason.link_contact_not_imported":
+    "The contact “{from}” was not imported, so there was nobody to link to “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "A CSV import has no {from} → {to} link, so it was not applied.",
+  "import.reason.undo_grant_lost":
+    "Your permissions no longer cover this record.",
+  "import.reason.undo_not_visible": "This record is no longer visible to you.",
+  "import.reason.undo_rule_protects":
+    "The record refused the undo because a business rule protects it.",
+  "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.author_too_long": "Author is longer than {max} characters.",
+  "import.reason.cannot_create":
+    "You cannot create {plural}, so the {plural} file is skipped.",
+  "import.reason.cannot_create_tags":
+    "You cannot create tags, so a tag new to the CRM is not added.",
+  "import.reason.cannot_edit":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped.",
+  "import.reason.cannot_edit_and_tag":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped and no tag is added to one.",
+  "import.reason.cannot_read_tags":
+    "You cannot read tags, so the tags column is not imported.",
+  "import.reason.cannot_write_type":
+    "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_duplicate_found":
+    "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
+  "import.reason.company_duplicate_skipped":
+    "A company of this name is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.company_name_empty":
+    "The mapped display_name is empty, so the row names no company.",
+  "import.reason.contact_duplicate_found":
+    "Someone matching this row is already in the CRM. A row naming an address already held is refused, and a near match creates and files the pair for review.",
+  "import.reason.contact_duplicate_skipped":
+    "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.contact_email_held":
+    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+  "import.reason.contact_unnamed":
+    "The row carries neither a name nor an email, so it names no contact.",
+  "import.reason.currency_unset":
+    "“{value}” cannot be read: this currency field has no currency set.",
+  "import.reason.description_too_long":
+    "The description is {length} characters. A company description holds at most {max}.",
+  "import.reason.domain_held":
+    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
+  "import.reason.duplicate_email":
+    "This email address already belongs to another contact.",
+  "import.reason.employer_column_empty":
+    "The company column is empty, so the row names no employer.",
+  "import.reason.employer_column_empty_dropped":
+    "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_not_found":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+  "import.reason.employer_not_found_dropped":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+  "import.reason.empty_payload": "The row has no fields.",
+  "import.reason.field_inactive":
+    "“{value}” cannot be written: this field is no longer active.",
+  "import.reason.id_not_a_company_id":
+    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_visible":
+    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.id_on_non_company":
+    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+  "import.reason.link_ambiguous":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
+  "import.reason.link_ambiguous_dropped":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_not_found":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.link_not_found_dropped":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.linkedin_held":
+    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
+  "import.reason.natural_key_taken": "A record with this key already exists.",
+  "import.reason.not_a_date":
+    "“{value}” is not a date. Write it as YYYY-MM-DD.",
+  "import.reason.not_a_domain":
+    "“{value}” is not a domain that can be written.",
+  "import.reason.not_a_number": "“{value}” is not a number.",
+  "import.reason.not_an_amount":
+    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+  "import.reason.not_an_email":
+    "“{value}” is not an email address that can be written.",
+  "import.reason.not_yes_no": "“{value}” is not yes or no.",
+  "import.reason.option_not_allowed":
+    "“{value}” is not one of this field’s allowed values.",
+  "import.reason.option_not_in_list":
+    "“{value}” is not one of the allowed values: {options}.",
+  "import.reason.options_need_semicolons":
+    "“{value}”: separate several values with semicolons.",
+  "import.reason.owner_refused":
+    "You cannot make this user an owner, so you become the owner of their rows.",
+  "import.reason.owner_unknown":
+    "No user has this email, so you become the owner.",
+  "import.reason.phone_needs_country":
+    "“{value}” needs its country code, like +49 30 1234567.",
+  "import.reason.record_archived":
+    "This row’s record was archived, so it is not updated. Restore the record to update it.",
+  "import.reason.ref_taken_by_another_company":
+    "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
+  "import.reason.row_key_empty":
+    "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
+  "import.reason.row_key_repeated":
+    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+  "import.reason.size_band_invalid":
+    "Size_band “{value}” is not one of {allowed}.",
+  "import.reason.tag_created":
+    "No tag had this name, so the import created it.",
+  "import.reason.tag_name_invalid":
+    "The tag “{name}” cannot be created: its name {detail}.",
+  "import.reason.tag_new":
+    "No tag has this name yet, so the import creates it.",
+  "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
   "import.problem.invalid_value": "Invalid value",
@@ -8944,7 +9102,7 @@ export const en = {
   "settings.page.capture-activity.sub":
     "What capture did with your mail, and why.",
   "settings.page.company.sub":
-    "Company name, currency and business context used across all records.",
+    "Brand, business context, and the currency and calendar every report uses.",
   "settings.page.authentication.sub":
     "How people sign in to this installation, which apps may act for it, and which IdP groups grant roles.",
   "settings.page.members.sub":
@@ -9742,19 +9900,84 @@ export const en = {
   "roles.scope.all": "Everyone’s",
   "roles.scope.allSub": "Every record in the company.",
   "roles.grantsSub": "Each switch saves at once.",
-  "roles.grantsCore": "Records and settings",
-  "roles.grantsExtensions": "Extensions",
   "roles.grantsNarrowOnly":
     "Each switch saves at once. Only an admin can turn a right on; you can turn rights off.",
   "roles.turnOnAdminOnly": "Only an admin can turn a right on.",
   "roles.widenAdminOnly":
     "Only an admin can widen whose records a role reaches; you can narrow it.",
   "roles.objectColumn": "Object",
+  "roles.grants": "Permissions",
+  "roles.showKeys": "Show API names",
+  "roles.group.extension": "{name} extension",
+  "roles.group.other": "Other",
+  "roles.object.activity": "Activities",
+  "roles.object.relationship": "Relationships",
+  "roles.object.partner": "Partners",
+  "roles.object.signal": "Signals",
+  "roles.object.introduction": "Introductions",
+  "roles.object.list": "Lists",
+  "roles.object.saved_view": "Saved views",
+  "roles.object.pipeline": "Pipelines",
+  "roles.object.product": "Products",
+  "roles.object.offer": "Offers",
+  "roles.object.offer_template": "Offer templates",
+  "roles.object.contract": "Contracts",
+  "roles.object.legal_review": "Legal reviews",
+  "roles.object.commission": "Commissions",
+  "roles.object.deal_room": "Deal Rooms",
+  "roles.object.forecast": "Forecasts",
+  "roles.object.weekly_plan": "Weekly plans",
+  "roles.object.tag": "Tags",
+  "roles.object.custom_field": "Custom fields",
+  "roles.object.computed_field": "Computed fields",
+  "roles.object.report_definition": "Saved reports",
+  "roles.object.report_schedule": "Report schedules",
+  "roles.object.report_edition": "Report snapshots",
+  "roles.object.sales_target": "Sales targets",
+  "roles.object.reporting_framework": "Reporting setup",
+  "roles.object.reporting_credit": "SDR outcomes",
+  "roles.object.capture_settings": "Capture rules",
+  "roles.object.capture_trace": "Shared channel activity",
+  "roles.object.channel_connection": "Chat bots",
+  "roles.object.integrations": "Data providers",
+  "roles.object.webhook_subscription": "Webhooks",
+  "roles.object.import_run": "Data imports",
+  "roles.object.finance": "Finance data",
+  "roles.object.fx_rate": "Currency rates",
+  "roles.object.data_coverage": "Data coverage",
+  "roles.object.knowledge_corpus": "Knowledge sources",
+  "roles.object.knowledge_document": "Knowledge documents",
+  "roles.object.automation": "Automations",
+  "roles.object.voice_profile": "Writing voice",
+  "roles.object.ai_routing": "AI routing",
+  "roles.object.ai_budget": "AI allowance",
+  "roles.object.ai_diagnostics": "AI usage",
+  "roles.object.ai_model_rate": "Model prices",
+  "roles.object.embedding_reindex": "Search index",
+  "roles.object.user_admin": "Members",
+  "roles.object.role_admin": "Roles",
+  "roles.object.team_admin": "Teams",
+  "roles.object.team_lead": "Team coaching",
+  "roles.object.team_oversight": "All team weeks",
+  "roles.object.seat_usage": "Seat usage",
+  "roles.object.license": "License",
+  "roles.object.installation_settings": "Company profile",
+  "roles.object.authentication_policy": "Sign-in methods",
+  "roles.object.oauth_application": "OAuth apps",
+  "roles.object.privacy_request": "Privacy requests",
+  "roles.object.consent_config": "Consent purposes",
+  "roles.object.communication_exception": "Send exceptions",
+  "roles.object.retention_policy": "Retention rules",
+  "roles.object.audit_log": "Audit log",
+  "roles.object.job_health": "System health",
+  "roles.object.extension_access": "Extensions",
+  "roles.object.system_reset": "Data reset",
   "roles.preview": "Preview what this role sees",
   "roles.archive": "Archive role",
   "roles.restore": "Restore role",
   "roles.archivedNote":
     "This role is archived. It grants nothing, and nobody can be given it until it is restored.",
+  "roles.archivedReadOnly": "Restore this role to change it.",
   "roles.archivedToast": "{name} archived",
   "roles.restoredToast": "{name} restored",
   "roles.notSaved": "Change not saved",
@@ -9928,42 +10151,37 @@ export const en = {
   "users.link.retry": "Retry",
   "users.link.done": "Done",
   "settings.companyTitle": "Company profile",
+  "settings.companyContextTitle": "Business context",
+  "settings.companyEditContext": "Edit business context",
+  "settings.companyGroupSet_one": "{count} of {total} set",
+  "settings.companyGroupSet_other": "{count} of {total} set",
+  "settings.brandTitle": "Brand",
+  "settings.brandHint":
+    "SVG or transparent PNG under 5 MB. Wide logo: about 800 × 240 px. Square icon: 256 × 256 px, for the collapsed sidebar, which shows the wide logo until one is added.",
   "settings.companyReadOnly":
     "Read-only. Your role cannot change the company profile.",
   "settings.companySub":
-    "Shared business context for drafts, offers, search and agents. Each statement records who supplied it and its source.",
+    "What drafts, offers, search and agents know about your company.",
   "settings.companyTrust":
     "Confirmed statements only. Website text never becomes instructions.",
-  "settings.companyConfirmed_one": "{count} confirmed statement",
-  "settings.companyConfirmed_other": "{count} confirmed statements",
-  "settings.companyMark": "Company logo",
-  "settings.companyMarkIntro":
-    "The sidebar shows the company at 2 widths. The collapsed sidebar uses the wide logo until a square icon is added.",
   "settings.companyMarkWide": "Wide logo",
-  "settings.companyMarkWidePresent":
-    "Shown here and at the top of the expanded sidebar.",
-  "settings.companyMarkWideNone":
-    "No logo yet; initials are shown. Add one here, or read the website to find one.",
   "settings.companyMarkIcon": "Square icon",
-  "settings.companyMarkIconPresent":
-    "Shown in the collapsed sidebar, where the wide logo is too small to read.",
-  "settings.companyMarkIconNone":
-    "No icon yet. The collapsed sidebar uses the wide logo.",
   "settings.companyMarkAdd": "Add",
   "settings.companyMarkReplace": "Replace",
   "settings.companyMarkRemove": "Remove",
-  "settings.companyMarkUploadFailed": "Logo not uploaded",
-  "settings.companyMarkRemoveFailed": "Logo not removed",
+  "settings.companyMarkUploadFailedWide": "Wide logo not uploaded",
+  "settings.companyMarkRemoveFailedWide": "Wide logo not removed",
+  "settings.companyMarkUploadFailedIcon": "Square icon not uploaded",
+  "settings.companyMarkRemoveFailedIcon": "Square icon not removed",
+  "settings.companyMarkUnsupported":
+    "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
+  "settings.companyMarkTooLarge": "Use a smaller file.",
   "settings.companyMarkAddWide": "Add wide logo",
   "settings.companyMarkReplaceWide": "Replace wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
   "settings.companyMarkAddIcon": "Add square icon",
   "settings.companyMarkReplaceIcon": "Replace square icon",
   "settings.companyMarkRemoveIcon": "Remove square icon",
-  "settings.companyMarkWideHint":
-    "SVG or transparent PNG, about 800 × 240 px (up to 4:1), under 5 MB. JPEG, GIF, WebP and ICO also work. Proportions are kept.",
-  "settings.companyMarkIconHint":
-    "SVG or transparent PNG, about 256 × 256 px, square, under 5 MB. A wide file is not cropped; it is shown small inside the square.",
   "settings.companyMarkEmpty": "Drop logo here, or choose a file",
   "settings.companyMarkIconEmpty": "Drop icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
@@ -9983,6 +10201,7 @@ export const en = {
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
   "settings.companySaveFailed": "Company context not saved",
+  "settings.companyNameTooLong": "Shorten the company name.",
   "settings.companyRefreshFailed": "Website read did not finish",
   "settings.companyApplyFailed": "Changes not applied",
   "settings.companyRefreshWarnings": "Warnings from this read",
@@ -10221,8 +10440,6 @@ export const en = {
   "countdown.expired": "Expired",
 
   "installationSettings.companyTitle": "Installation",
-  "installationSettings.companySub":
-    "Installation name, and the timezone reporting periods are computed in.",
   "installationSettings.currencyTitle": "Currency",
   "installationSettings.dateFormat": "Date format",
   "installationSettings.timeFormat": "Time format",
@@ -10235,18 +10452,15 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.name": "Company name",
-  "installationSettings.nameHint":
-    "Shown wherever the product names the company.",
   "installationSettings.timezone": "Reporting timezone",
   "installationSettings.timezoneHint":
-    "IANA timezone name, for example Europe/Berlin. Report periods and record dates are computed and shown in it for the whole team, separate from each user’s display timezone.",
+    "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
-    "Month the fiscal year begins. Reports group by this year and quarter; a year that does not start in January is labeled with both years, like FY2026/27. Changing it relabels every report, and saved views filtered by period then cover different months.",
+    "Reports group by this year and quarter. Changing it relabels every report and shifts the months saved period filters cover.",
   "installationSettings.forwardMeasure": "Projection basis",
   "installationSettings.forwardMeasureHint":
-    "Which remaining deal value the projection adds to won revenue. Commit evidence: committed deals with a confirmed close date. Weighted: every open deal at its stage probability. Manager’s call: replaces the projection; a period with no call falls back to commit evidence and says so.",
+    "Which open deals the projection adds to won revenue.",
   "installationSettings.forwardMeasure.commit_evidence":
     "Commit evidence: confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":
@@ -10735,6 +10949,65 @@ export const en = {
   "agentConnections.ttl.refusal":
     "Enter a whole number of minutes from 5 to 129,600.",
   "agentConnections.updateFailed": "Setting not changed",
+  "agentAllowances.title": "Agent passport allowances",
+  "agentAllowances.sub":
+    "What one passport or MCP connection may do in each window before it stops. A change to a count applies within a minute, in the window that is running. A passport can never change its own allowance.",
+  "agentAllowances.writes.label": "Changes",
+  "agentAllowances.writes.help":
+    "Changes an agent may make per window, 10 to 5,000. Past it, changes wait for its owner to approve more.",
+  "agentAllowances.egress.label": "Sends",
+  "agentAllowances.egress.help":
+    "Emails and other calls that leave Margince. Sends stop until the window resets, 1 to 200.",
+  "agentAllowances.calls.label": "Calls in total",
+  "agentAllowances.calls.help":
+    "Every call, a tool call or an API request, reads included. The passport pauses until the window resets, 50 to 20,000.",
+  "agentAllowances.window.label": "Window",
+  "agentAllowances.window.help":
+    "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
+  "agentAllowances.burst":
+    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport.",
+  "agentAllowances.pending.title": "Window change waiting",
+  "agentAllowances.pending.body":
+    "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
+  "agentAllowances.windowLine": "Window: {interval}",
+  "agentAllowances.note.release": "Its owner can approve more",
+  "agentAllowances.note.stop": "Stops until the window resets",
+  "agentAllowances.default": "Default {value}",
+  "agentAllowances.state.defaults": "At the defaults",
+  "agentAllowances.state.changed": "Changed from the defaults",
+  "agentAllowances.state.body":
+    "A change to a count applies to every passport within a minute, in the window that is running.",
+  "agentAllowances.edit": "Edit allowances",
+  "agentAllowances.save": "Save",
+  "agentAllowances.cancel": "Cancel",
+  "agentAllowances.useDefaults": "Use defaults",
+  "agentAllowances.diff.title": "Applies when you save",
+  "agentAllowances.diff.count": "{label} {from} → {to}",
+  "agentAllowances.diff.counts":
+    "A count applies within a minute, in the window that is running. An agent already past a lowered count is refused on its next call.",
+  "agentAllowances.diff.window":
+    "Window {from} → {to}, starting at the next reset.",
+  "agentUsage.title": "Agent usage by user",
+  "agentUsage.sub":
+    "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
+  "agentUsage.withheld":
+    "Only an administrator, a Management user or an operations user can see agent usage.",
+  "agentUsage.empty": "No user has a live passport or connection.",
+  "agentUsage.resets": "Every allowance resets {date} UTC.",
+  "agentUsage.ofLimit": "{used} of {limit}",
+  "agentUsage.counter.writes": "Changes",
+  "agentUsage.counter.egress": "Sends",
+  "agentUsage.counter.calls": "Calls",
+  "agentUsage.col.user": "User",
+  "agentUsage.col.passports": "Passports and apps",
+  "agentUsage.state.ok": "Working",
+  "agentUsage.state.near": "Near a limit",
+  "agentUsage.state.stopped": "Stopped",
+  "settings.passportColWindow": "This window",
+  "settings.passportUsageToggle": "Show this window’s usage for {name}",
+  "settings.passportsShowRevoked_one": "Show {count} revoked passport",
+  "settings.passportsShowRevoked_other": "Show {count} revoked passports",
+  "settings.passportsHideRevoked": "Hide revoked",
   "operations.schedules.title": "Background schedules",
   "operations.schedules.sub":
     "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
@@ -12546,6 +12819,8 @@ export const en = {
     "Back on your list when they reply.",
   "worklist.disposition.done.handled":
     "Marked done for you. It comes back if they write again.",
+  "worklist.disposition.done.handledRow":
+    "Marked done for you. It comes back if something new happens on it.",
   "worklist.disposition.done.not_mine":
     "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
@@ -12796,6 +13071,7 @@ export const en = {
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
+  "worklist.because.read_only": "you can read this but not change it",
   "worklist.above.pin": "Ranked above the next item because you pinned it.",
   "worklist.above.level":
     "Ranked above the next item because it is more urgent.",
@@ -12941,6 +13217,9 @@ export const en = {
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
+  "worklist.verb.approvalRetried": "Approved change completed",
+  "worklist.verb.approvalRetryFailed":
+    "The approved change still did not run. Retry later, or acknowledge it.",
   "worklist.verb.completeFailed": "Task was not completed. Retry.",
   "worklist.verb.completeStale":
     "This task changed since you opened it, so it was not completed here. The list was refreshed.",
@@ -13922,10 +14201,10 @@ export const en = {
   "legalReview.packNoOffer": "No offer on this deal.",
   "legalReview.packDocuments": "Documents",
   "legalReview.packNoDocuments":
-    "No contract, legal or offer document you can open.",
-  "legalReview.docCategory.contract": "Contract",
-  "legalReview.docCategory.offer": "Offer",
-  "legalReview.docCategory.legal": "Legal",
+    "No SOW/Contract, NDA/Legal or Proposal/Offer document you can open.",
+  "legalReview.docCategory.contract": "SOW/Contract",
+  "legalReview.docCategory.offer": "Proposal/Offer",
+  "legalReview.docCategory.legal": "NDA/Legal",
   "legalReview.docState.draft": "Draft",
   "legalReview.docState.current": "Current",
   "legalReview.docState.final": "Final",

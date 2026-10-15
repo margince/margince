@@ -69,34 +69,10 @@ func (d restCommandDeps) summaryCopy(ctx context.Context) approvalSummaryCopy {
 }
 
 // restCommands maps a crm.yaml operationId to the decoder that turns an HTTP
-// request into the operation's typed command, bound to the resolver that
-// speaks it.
-//
-// The table covers the WHOLE agent-reachable mutating surface — all sixty-nine
-// routes, one entry per operation, with nothing left to answer from the route's
-// own shape (margince/margince#928).
+// request into the operation's typed command, bound to its resolver. It covers
+// every agent-reachable mutating route, one entry per operation.
 // TestEveryAgentReachableMutatingRouteDecodesIntoACommand derives both
-// directions of that from the policy table, so a route the contract adds fails
-// there rather than reaching a door that has no answer for it.
-//
-// Every create and every whole-record patch route is registered, all
-// twenty-six — thirteen creates and thirteen whole-record writes. Twelve of
-// those thirteen route as PATCH; updateOfferTemplate is a PUT, a full replace
-// rather than a field patch, and is the same shape for everything this table
-// answers: one routed {id} naming the record the write lands on, and a body
-// that is that record's fields. Six of the thirteen create record types (custom_field, list,
-// offer_template, product, saved_view, tag) create through their own
-// module's handler, never through create_record's own datasource-provider
-// write path — but that asymmetry is not this table's to answer for.
-// createResolver.Guards (command.go) deliberately asks nothing about whether
-// create_record itself "serves" a record type: that question has a
-// door-dependent answer (create_record's own Handle cannot express these six
-// types; the REST operation that creates one performs it fine through its
-// own handler), so it is asked once, at createRecord.StageInfo (tools.go),
-// on the one door where it is a fact about the executor rather than about
-// the operation. Every whole-record patch route is registered for the same
-// reason patch never had that question at all — see patchResolver.Guards'
-// own comment.
+// directions from the policy table, so a route the contract adds fails there.
 var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error){
 	"approveImportRun":     commitImportCommand,
 	"previewBulkChange":    bulkChangeCommand,
@@ -113,24 +89,20 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"archiveProduct":       archiveCommand,
 	"archiveProject":       archiveCommand,
 	"archiveRelationship":  archiveCommand,
-	"archiveSavedView":     archiveCommand,
 
-	"createCustomField":         createCommand,
-	"createDeal":                createCommand,
-	"createDealRoom":            createCommand,
-	"openDealRoomThread":        createRoomItemCommand,
-	"replyDealRoomThread":       createRoomItemCommand,
-	"createImportRun":           previewImportCommand,
-	"createLead":                createCommand,
-	"createOfferTemplate":       createCommand,
-	"createCompany":             createCommand,
-	"createContact":             createCommand,
-	"createProduct":             createCommand,
-	"createTag":                 createCommand,
-	"createProject":             createCommand,
-	"createRelationship":        createCommand,
-	"createSavedView":           createCommand,
-	"createWebhookSubscription": createCommand,
+	"createDeal":          createCommand,
+	"createDealRoom":      createCommand,
+	"openDealRoomThread":  createRoomItemCommand,
+	"replyDealRoomThread": createRoomItemCommand,
+	"createImportRun":     previewImportCommand,
+	"createLead":          createCommand,
+	"createOfferTemplate": createCommand,
+	"createCompany":       createCommand,
+	"createContact":       createCommand,
+	"createProduct":       createCommand,
+	"createTag":           createCommand,
+	"createProject":       createCommand,
+	"createRelationship":  createCommand,
 
 	// The six list-changing routes share one decoder: each binds its approval
 	// to the list it changes, and create to none (listseam.go).
@@ -141,35 +113,27 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"addListMember":    listChangeCommand,
 	"removeListMember": listChangeCommand,
 
-	opRenameCustomField:         patchCommand,
-	"updateActivity":            patchCommand,
-	"updateOfferTemplate":       patchCommand,
-	"updateDeal":                patchCommand,
-	"updateLead":                patchCommand,
-	"updateOffer":               patchCommand,
-	"updateCompany":             patchCommand,
-	"updateContact":             patchCommand,
-	"updateProduct":             patchCommand,
-	"updateTag":                 patchCommand,
-	"updateProject":             patchCommand,
-	"updateRelationship":        patchCommand,
-	"updateSavedView":           patchCommand,
-	"updateWebhookSubscription": patchCommand,
+	"updateActivity":      patchCommand,
+	"updateOfferTemplate": patchCommand,
+	"updateDeal":          patchCommand,
+	"updateLead":          patchCommand,
+	"updateOffer":         patchCommand,
+	"updateCompany":       patchCommand,
+	"updateContact":       patchCommand,
+	"updateProduct":       patchCommand,
+	"updateTag":           patchCommand,
+	"updateProject":       patchCommand,
+	"updateRelationship":  patchCommand,
 
-	// The eight bespoke confirm-first commands (agentcommandoperand.go): none
-	// of them is a whole-record patch, so none belongs above — each targets
-	// the routed record but carries a SECOND operand (a path segment or, for
-	// removeProjectStakeholder, a second path parameter) that a projection
-	// onto update_record's own {record_type, id, fields} arguments cannot
-	// express (margince/margince#928 task 5).
+	// The bespoke confirm-first commands (agentcommandoperand.go). Each targets
+	// the routed record but carries a second operand, a path segment or a second
+	// path parameter, that update_record's {record_type, id, fields} cannot hold.
 	"confirmCompanyFact":         confirmFactCommand,
 	"createCompanyFact":          createFactCommand,
 	"deleteCompanyFact":          deleteFactCommand,
 	"updateCompanyFact":          updateFactCommand,
 	"confirmCompanyProfileField": confirmProfileFieldCommand,
 	"updateCompanyProfileField":  updateProfileFieldCommand,
-	"retireCustomField":          retireCustomFieldCommand,
-	"updateCustomFieldOptions":   updateCustomFieldOptionsCommand,
 	"setProjectStakeholder":      setStakeholderCommand,
 	"removeProjectStakeholder":   removeStakeholderCommand,
 	"setProjectCompany":          setCompanyCommand,

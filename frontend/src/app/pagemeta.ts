@@ -1,8 +1,8 @@
+import { useEntityName } from "../components/entityref";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import type { Route, Screen } from "../lib/router";
-import { useEntityName } from "../screens/entityref";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import {
   NAV,

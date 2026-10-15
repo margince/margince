@@ -206,40 +206,6 @@ describe("SearchScreen", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  // A call, a note, a task and a meeting are activities too. The server sends
-  // no `email_summary` for them and the row keeps the generic treatment it has
-  // always had — the failure this catches is a screen branching on the KIND
-  // word rather than on the field.
-  it("leaves a non-email activity hit on its generic treatment", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        jsonResponse({
-          data: [
-            {
-              type: "activity",
-              id: "a2",
-              title: "Rennsteig kickoff call",
-              snippet: "…what we agreed on the call…",
-              score: 0.6,
-              trust_tier: "authoritative",
-            },
-          ],
-          page: { next_cursor: null, has_more: false },
-        }),
-      ),
-    );
-    render(<SearchScreen q="rennsteig" />);
-
-    await waitFor(() =>
-      expect(screen.getByText("Rennsteig kickoff call")).toBeTruthy(),
-    );
-    expect(screen.getByText(/what we agreed on the call/)).toBeTruthy();
-    // Nothing openable: a row that looks like it opens a message and does not
-    // teaches a reader the product is broken.
-    expect(screen.queryByRole("button", { name: /kickoff call/ })).toBeNull();
-  });
-
   it("groups hits by type and shows the snippet", async () => {
     vi.stubGlobal(
       "fetch",

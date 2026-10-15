@@ -56,8 +56,14 @@ async function toTheMap(user: UserEvent, file = "leads.csv") {
   await screen.findByRole("row", { name: /Notes/ });
 }
 
+// The save the test run follows: the last PATCH before the validate.
 function staged(sent: ReturnType<typeof stubRoutes>) {
-  return sent.filter((s) => s.path === "POST /imports").at(-1);
+  const validated = sent.findIndex((s) => s.path.endsWith("/validate"));
+  if (validated < 0) return undefined;
+  return sent
+    .slice(0, validated)
+    .filter((s) => s.method === "PATCH")
+    .at(-1);
 }
 
 afterEach(() => {
@@ -91,12 +97,10 @@ describe("one CSV through the run page", () => {
     // "Notes" was suggested nothing, so it stays out: an unmapped column is
     // not a column mapped to nothing.
     expect(staged(sent)?.body).toEqual({
-      connector: "csv",
-      source_ref: "ws/import/abc",
+      version: run.version,
       object: "lead",
       mapping: { Email: "email", "Full Name": "full_name" },
-      on_broken_link: "skip_row",
-      file_name: "leads.csv",
+      draft_step: "map",
     });
     expect(
       await screen.findByText(/the "Email" column is empty/),
