@@ -100,10 +100,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// AllowTestMailbox is an operations.* kill switch (deployconfig.Operations),
-	// not a capture.* tuning knob, so it is set here rather than folded into
-	// CaptureConfigFromDeploy's own deployconfig.Capture-scoped contract.
-	captureCfg := compose.CaptureConfigFromDeploy(deployCfg.Capture, logger)
+	// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning
+	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
+	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
 	compose.WarnStaleRates(cfg.settings, logger)
 	captureCfg.AllowTestMailbox = deployCfg.Operations.AllowTestMailbox
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)

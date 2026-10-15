@@ -276,7 +276,7 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 		return workerBoot{}, err
 	}
 	loaded.Report(log)
-	cfg.captureConfig = compose.CaptureConfigFromDeploy(deployCfg.Capture, log)
+	cfg.captureConfig = compose.CaptureConfigFromDeploy(cfg.settings, log)
 	compose.WarnStaleRates(cfg.settings, log)
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.

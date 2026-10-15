@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -89,15 +88,10 @@ type CaptureConfig struct {
 	// arrive. Settable only in that file — a member must not be able to change
 	// retention of their colleagues' subjects in either direction.
 	//
-	// A plain bool here on purpose: the three-state question is the operator's
-	// and is answered at the boundary, by deployconfig's TracesPayloads.
-	//
 	// Every zero value below this line — the site_lead accept path's
 	// `CaptureConfig{}`, the registry enumerations — means no deployment config
 	// at all, and those keep the off behaviour they have today rather than
 	// inheriting a default meant for a booted role.
-	//
-	// Held by: TestOnlyTheResolverReadsTheTracePayloadsField (backend/internal/platform/deployconfig/capture_test.go)
 	TracePayloads bool
 	// MaxBackfillMonths caps how far back a mailbox import may reach, already
 	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
@@ -124,13 +118,11 @@ type CaptureConfig struct {
 	// drop a separately-assigned keeper, which is a failure with no error and
 	// no missing file to notice.
 	Blob blobstore.Store
-	// AllowTestMailbox is operations.allow_test_mailbox — a deployment-file
-	// kill switch (deployconfig.Operations), not a capture.* tuning knob, so
-	// it is NOT set by CaptureConfigFromDeploy below (which is scoped to
-	// deployconfig.Capture only). Each boot path (cmd/api/main.go,
-	// cmd/worker/main.go) sets it explicitly, right after calling
-	// CaptureConfigFromDeploy. The zero value is false: NewCaptureRegistry
-	// registers the test_mailbox connector only when this is true.
+	// AllowTestMailbox is operations.allow_test_mailbox, a kill switch rather
+	// than a capture.* tuning knob, so CaptureConfigFromDeploy leaves it and
+	// each boot path (cmd/api/main.go, cmd/worker/main.go) sets it. The zero
+	// value is false: NewCaptureRegistry registers the test_mailbox connector
+	// only when this is true.
 	AllowTestMailbox bool
 }
 
@@ -168,28 +160,6 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 	Key: "rates.model_pricing", Env: "MARGINCE_RATES_MODEL_PRICING", Type: config.Map(config.String), Roles: bothRoles,
 	Doc: "Ignored, with a warning at boot; kept so existing files load.",
 })
-
-// CaptureConfigFromDeploy maps the deployment's `capture:` block onto the
-// compose suppression config the Sink gates read (CAP-PARAM-6, ADR-0072).
-//
-// Every role that boots with a config file goes through here, which is why the
-// stale-key warnings are reported here: a setting that is still accepted but no
-// longer acts must say so once, at boot, or an operator goes on believing the
-// file governs something it does not.
-func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureConfig {
-	for _, warning := range c.Warnings() {
-		log.Warn("capture configuration: " + warning)
-	}
-	return CaptureConfig{
-		TransactionalExtra: c.TransactionalExtra,
-		TransactionalNever: c.TransactionalNever,
-		TracePayloads:      c.TracesPayloads(),
-		MaxBackfillMonths:  c.BackfillCeiling(),
-		Logger:             log,
-
-		SkipReservedDomainProposals: c.SkipsReservedDomainProposals(),
-	}
-}
 
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and

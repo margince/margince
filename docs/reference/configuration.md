@@ -96,6 +96,13 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_RATES_FX_CURRENCIES` | — | `rates.fx_currencies` |
 | `MARGINCE_MCP_CONNECTOR_ENABLED` | `false` | `mcp.connector_enabled` |
 | `MARGINCE_RATES_MODEL_PRICING` | — | `rates.model_pricing` (ignored) |
+| `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `capture.freemail_extra` (ignored) |
+| `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `capture.freemail_never` (ignored) |
+| `MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA` | — | `capture.transactional_extra` |
+| `MARGINCE_CAPTURE_TRANSACTIONAL_NEVER` | — | `capture.transactional_never` |
+| `MARGINCE_CAPTURE_TRACE_PAYLOADS` | `true` | `capture.trace_payloads` |
+| `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | `0` (= no cap) | `capture.max_backfill_months` |
+| `MARGINCE_CAPTURE_SKIP_RESERVED_DOMAIN_PROPOSALS` | `true` | `capture.skip_reserved_domain_proposals` |
 
 ## Common log flags (api, worker)
 

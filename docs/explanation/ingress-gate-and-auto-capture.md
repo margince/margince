@@ -562,7 +562,7 @@ has a right to.
 | The ledger of decisions and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
 | Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |
-| T2 registry and its config keys | `capture/transactional.go`, `platform/deployconfig/capture.go` |
+| T2 registry and its config keys | `capture/transactional.go`, `compose/capturesettings.go` |
 | Verdict engine, prompt, sweeps, accept | `backend/internal/compose/captureverdict{,ask,sweeps,accept}.go` |
 | AI task names and routing | `internal/modules/ai/tasks_gen.go` (generated), `internal/compose/brain.go` |
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |
