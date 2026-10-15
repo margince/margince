@@ -233,6 +233,8 @@ def read_transcript(path):
                 # wrong plan, and must_mention only sees the closing prose — so
                 # an unrelated call plus an invented number would score green.
                 calls.append((block.get("name", ""), block.get("input") or {}))
+                # Recorded twice on purpose, as the router and as its verb, so a
+                # scenario may name either; nothing here counts calls.
                 verb = routed(block.get("name", ""), block.get("input") or {}, routes)
                 if verb:
                     called.append(verb[0])

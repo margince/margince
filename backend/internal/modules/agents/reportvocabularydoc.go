@@ -79,10 +79,10 @@ func (ReportVocabularyResource) Resources(context.Context) []mcp.Resource {
 		// Says what it HOLDS, not when to fetch it. A description that orders a
 		// read is measured to draw reads from runs with nothing to plan, which
 		// is why the two write tools stopped doing it.
-		Description: "What each prebuilt report accepts in a run_report plan: the names its " +
+		Description: "What each prebuilt report accepts in a report plan: the names its " +
 			"group_by, filters and aggregates admit, what it answers with no plan at all, and " +
-			"what a filter means when its name alone does not say. run_report names this " +
-			"document instead of carrying it.",
+			"what a filter means when its name alone does not say. read_reports with kind=run " +
+			"names this document instead of carrying it.",
 	}}
 }
 

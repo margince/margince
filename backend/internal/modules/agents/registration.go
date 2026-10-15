@@ -39,7 +39,8 @@ const maxDescriptionRunes = 3000
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
 	spec := t.Spec()
-	if rt, isRouter := t.(router); isRouter {
+	rt, isRouter := t.(router)
+	if isRouter {
 		spec = r.routedSpec(rt)
 	}
 	if spec.Name == "" {
@@ -47,7 +48,7 @@ func (r *Registry) Register(t mcp.Tool) {
 		panic("crmagents: registering a tool with no name")
 	}
 	// A router decides per call by its action, so it has no resolver of its own.
-	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil && len(spec.Actions) == 0 {
+	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil && !isRouter {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: %s is TierDynamic without a TierResolver", spec.Name))
 	}

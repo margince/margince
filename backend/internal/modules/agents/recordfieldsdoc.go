@@ -250,7 +250,7 @@ func activityReachNotes(shapes map[datasource.EntityType]reflect.Type) []string 
 	// far more often. Keyed on the create shapes (which carry `links`), because it
 	// is the write that hands out the only handle.
 	if describesField(shapes, "links") {
-		return []string{"An activity is not searchable — search_records does not serve it — so keep the id " +
+		return []string{"An activity is not searchable — a record search does not serve it — so keep the id " +
 			"an activity write returns; read_record answers it by that id."}
 	}
 	if _, hasActivity := shapes[datasource.EntityActivity]; !hasActivity {

@@ -118,7 +118,8 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 		return p.deals.Read(ctx, ref)
 	case datasource.EntityCommission:
 		return p.commissions.Read(ctx, ref)
-	case datasource.EntityDealRoom, datasource.EntityDealRoomThread:
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomDocument,
+		datasource.EntityDealRoomParticipant, datasource.EntityDealRoomComment:
 		return p.dealRooms.Read(ctx, ref)
 	case datasource.EntityProject:
 		return p.projects.Read(ctx, ref)

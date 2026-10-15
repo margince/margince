@@ -87,9 +87,18 @@ func TestTheRecordProviderServesExactlyTheSeamVocabulary(t *testing.T) {
 				recordType)
 		}
 	}
+	// Every archivable type is in the vocabulary today, so the stood-down half
+	// has no subject of its own. A type outside it must still be refused, or
+	// the half would pass whatever the provider did.
 	if outside == 0 {
-		t.Fatal("no archivable record type sits outside the seam vocabulary — the half of this gate that " +
-			"covers the stood-down types is asserting nothing")
+		const outsider = "custom_field"
+		if isSeamEntity(outsider) {
+			t.Fatalf("%s joined the seam vocabulary; probe a type that is still outside it", outsider)
+		}
+		_, err := native.Read(as, datasource.EntityRef{Type: outsider, ID: ids.NewV7()})
+		if _, ok := errors.AsType[*datasource.UnsupportedEntityError](err); !ok {
+			t.Errorf("the provider answered %v for %q, a type outside the seam vocabulary, want it refused", err, outsider)
+		}
 	}
 }
 

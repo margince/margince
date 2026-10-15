@@ -324,20 +324,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// not. Both tools take the read scope and neither stages anything.
 		{"describe_report_blocks", `{}`},
 		{"compose_analytics_report", `{"blocks":[{"kind":"title","text":"Pipeline this quarter"}]}`},
-		// The list filters each record type takes, and the parts kept under a
-		// record: a fact stated on the company the fixture made.
-		{"describe_list_filters", `{}`},
-		{"change_record_parts", `{"action":"add_company_fact","company_id":"` + company.String() +
-			`","category":"company","field":"employee_range","value":"11-50"}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
 	}
-	// Retiring a word runs last, on a word coined for it, so no call above
-	// meets an archived tag.
-	retired := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"conformance-retired","color":"teal"}`)
-	calls = append(calls, struct{ tool, args string }{"archive_tag", `{"tag_id":"` + retired.String() + `"}`})
+	calls = append(calls, partsAndRetirement(ctx, t, registry, company)...)
 	assertEveryRegisteredToolIsAccountedFor(t, registry, calls)
 
 	for _, call := range calls {
@@ -359,6 +351,20 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			// nothing checks is the comment this whole change replaces.
 			assertEnvelopePopulated(t, call.tool, out)
 		})
+	}
+}
+
+// partsAndRetirement are the list filters each record type takes, a fact
+// stated on the fixture's company, and a retired word. The word is coined for
+// it and retired last, so no call before it meets an archived tag.
+func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Registry, company ids.UUID) []struct{ tool, args string } {
+	t.Helper()
+	retired := coinTagThroughTheToolSurface(ctx, t, registry, `{"name":"conformance-retired","color":"teal"}`)
+	return []struct{ tool, args string }{
+		{"describe_list_filters", `{}`},
+		{"change_record_parts", `{"action":"add_company_fact","company_id":"` + company.String() +
+			`","category":"company","field":"employee_range","value":"11-50"}`},
+		{"archive_tag", `{"tag_id":"` + retired.String() + `"}`},
 	}
 }
 

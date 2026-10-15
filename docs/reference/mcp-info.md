@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 120.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 31751 |
+| Approx. wire tokens | 31767 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 30.9 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 31.0 KB | 25% | Yes, every step |
 | Input schemas | 56.4 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
 | **Description + input schema** | **87.3 KB** | **72%** | **the recurring cost** |
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1201 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1209 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 810 |
@@ -146,9 +146,9 @@ carrying it.
 **Report plan vocabulary**
 
 ```text
-What each prebuilt report accepts in a run_report plan: the names its group_by, filters and
-aggregates admit, what it answers with no plan at all, and what a filter means when its name alone
-does not say. run_report names this document instead of carrying it.
+What each prebuilt report accepts in a report plan: the names its group_by, filters and aggregates
+admit, what it answers with no plan at all, and what a filter means when its name alone does not
+say. read_reports with kind=run names this document instead of carrying it.
 ```
 
 ### report_blocks
@@ -159,7 +159,8 @@ does not say. run_report names this document instead of carrying it.
 
 ```text
 The blocks a report may carry: each kind, whether it renders figures, words or both, and the
-severities a callout may state. compose_analytics_report names this document instead of carrying it.
+severities a callout may state. read_analytics with step=compose names this document instead of
+carrying it.
 ```
 
 ### analytics-schema
@@ -169,8 +170,9 @@ severities a callout may state. compose_analytics_report names this document ins
 **Analytics query vocabulary**
 
 ```text
-The populations a run_analytics_query plan may name, each with its group_by dimensions and its
-measures, derived for this seat. run_analytics_query names this document instead of carrying it.
+The populations an analytics query plan may name, each with its group_by dimensions and its
+measures, derived for this seat. read_analytics with step=query names this document instead of
+carrying it.
 ```
 
 ### create_followups_view
@@ -1058,12 +1060,13 @@ passport scope "write".)
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message on its records.
 task creates a task for a seat. attach attaches a file to a record. relink moves one activity to
-another record; relink_many moves a named set. A relink to a project waits for a human, and a named
-set always waits. attach checks the record first; read list_documents before attaching the same file
-again. Use change_state with move_deal when the same event moves a deal, so move and note are one
-change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry
-carries. (Governance: runs immediately for attach, log, task; decided per call from its arguments
-for relink, relink_many; requires passport scope "write".)
+another record; relink_many moves a named set. relink and relink_many wait for a human when they
+file under a project, and run at once anywhere else. attach checks the record first; read
+list_documents before attaching the same file again. Use change_state with move_deal when the same
+event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A
+staged answer's approval id is what the retry carries. (Governance: runs immediately for attach,
+log, task; decided per call from its arguments for relink, relink_many; requires passport scope
+"write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3188,7 +3191,7 @@ id and version, and next_cursor to read on.
     },
     "limit": {
       "description": "list, meaning, search only",
-      "maximum": 25,
+      "maximum": 50,
       "minimum": 1,
       "type": "integer"
     },
@@ -5693,7 +5696,7 @@ number.
     },
     "limit": {
       "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each.",
-      "maximum": 25,
+      "maximum": 100,
       "minimum": 1,
       "type": "integer"
     },

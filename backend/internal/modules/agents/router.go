@@ -265,11 +265,11 @@ func uniteArgument(seen, next argument) (argument, bool) {
 		return nil, false
 	}
 	united := maps.Clone(seen)
-	// A bound is the tightest the targets set, so every target takes every
-	// value the router advertises. A smaller page still reaches every record
-	// by cursor.
-	tightest(united, next, schemaMinimum, func(a, b float64) float64 { return max(a, b) })
-	tightest(united, next, schemaMaximum, func(a, b float64) float64 { return min(a, b) })
+	// A bound is the loosest the targets set, so a value any target takes is
+	// advertised; the target refuses its own excess by name. A target that sets
+	// no bound takes any value, so the router sets none either.
+	loosest(united, next, schemaMinimum, func(a, b float64) float64 { return min(a, b) })
+	loosest(united, next, schemaMaximum, func(a, b float64) float64 { return max(a, b) })
 	var words, more []string
 	if json.Unmarshal(seen[schemaEnum], &words) != nil || json.Unmarshal(next[schemaEnum], &more) != nil {
 		return united, string(seen[schemaEnum]) == string(next[schemaEnum])
@@ -278,18 +278,17 @@ func uniteArgument(seen, next argument) (argument, bool) {
 	return united, true
 }
 
-// tightest sets a numeric bound to the stricter of two targets' values, keeping
-// whichever one target sets alone.
-func tightest(united, next argument, bound string, stricter func(float64, float64) float64) {
+// loosest sets a numeric bound to the looser of two targets' values, and drops
+// it when either target sets none.
+func loosest(united, next argument, bound string, looser func(float64, float64) float64) {
 	var mine, theirs float64
 	hasMine := united[bound] != nil && json.Unmarshal(united[bound], &mine) == nil
 	hasTheirs := next[bound] != nil && json.Unmarshal(next[bound], &theirs) == nil
-	switch {
-	case hasMine && hasTheirs:
-		united[bound] = mustMarshal(stricter(mine, theirs))
-	case hasTheirs:
-		united[bound] = next[bound]
+	if hasMine && hasTheirs {
+		united[bound] = mustMarshal(looser(mine, theirs))
+		return
 	}
+	delete(united, bound)
 }
 
 func mustMarshal[T any](v T) json.RawMessage {

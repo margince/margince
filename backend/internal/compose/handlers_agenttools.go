@@ -22,11 +22,7 @@ func (s Server) ListAgentTools(w http.ResponseWriter, _ *http.Request) {
 
 // listedAgentTools is the catalog worded as tools/list words it.
 func listedAgentTools(registry *agents.Registry) []crmcontracts.AgentTool {
-	specs := registry.Specs()
-	for i := range specs {
-		specs[i] = registry.Listed(specs[i])
-	}
-	return agentToolsFromSpecs(specs)
+	return agentToolsFromSpecs(registry.ListedSpecs())
 }
 
 func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {

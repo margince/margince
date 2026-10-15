@@ -112,9 +112,11 @@ func TestListPipelinesRefusesAnUnknownArgument(t *testing.T) {
 func TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines(t *testing.T) {
 	const source = pipelinesSource
 	checked := 0
-	for _, spec := range fullRegistry(t).Specs() {
+	registry := fullRegistry(t)
+	for _, spec := range registry.Specs() {
 		// The source and the router fronting it owe no pointer to themselves.
-		if spec.Name == "list_pipelines" || spec.Name == "read_directory" {
+		targets, _ := registry.RouteTargets(spec.Name)
+		if spec.Name == "list_pipelines" || slices.Contains(targets, "list_pipelines") {
 			continue
 		}
 		schemaText := string(spec.InputSchema)

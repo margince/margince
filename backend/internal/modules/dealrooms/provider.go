@@ -108,6 +108,24 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 			return datasource.Record{}, err
 		}
 		return datasource.NewRecord(r, v, v.Version)
+	case datasource.EntityDealRoomDocument:
+		v, err := p.store.GetDocument(ctx, r.ID)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, v.Version)
+	case datasource.EntityDealRoomParticipant:
+		v, err := p.store.GetParticipant(ctx, r.ID)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, nil)
+	case datasource.EntityDealRoomComment:
+		v, err := p.store.GetComment(ctx, r.ID)
+		if err != nil {
+			return datasource.Record{}, err
+		}
+		return datasource.NewRecord(r, v, nil)
 	default:
 		return datasource.Record{}, &datasource.UnsupportedEntityError{Type: string(r.Type)}
 	}

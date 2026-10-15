@@ -385,6 +385,31 @@ func TestARoutedArgumentCarriesEveryTargetsWords(t *testing.T) {
 	}
 }
 
+// Two targets bounding one argument differently advertise the loosest bound, so
+// a value one target takes is never refused by a client holding the schema.
+func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"limit":{"type":"integer","minimum":1,"maximum":50},"size":{"type":"integer","maximum":9}}`))
+	r.Register(shapedTarget("fake_b", `{"limit":{"type":"integer","minimum":1,"maximum":25},"size":{"type":"integer"}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Minimum *float64 `json:"minimum"`
+			Maximum *float64 `json:"maximum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if limit := schema.Properties["limit"]; limit.Maximum == nil || *limit.Maximum != 50 || limit.Minimum == nil || *limit.Minimum != 1 {
+		t.Errorf("limit is advertised as %+v, want 1..50", limit)
+	}
+	if size := schema.Properties["size"]; size.Maximum != nil {
+		t.Errorf("size is advertised with maximum %v, want none: one target takes any size", *size.Maximum)
+	}
+}
+
 func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
 	for why, tc := range map[string]struct{ a, b, own string }{
 		"two shapes for one argument":  {`{"x":{"type":"integer"}}`, `{"x":{"type":"string"}}`, ``},
