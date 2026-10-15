@@ -57,3 +57,57 @@ func TestYAMLRefusesALiteralSecret(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+var relayPassword = config.Define(config.Spec[string]{
+	Key: "smtp.password", Env: "MARGINCE_SMTP_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Doc: "d",
+})
+
+func TestNoneDeclaresASecretAbsentWhereTheSettingAcceptsIt(t *testing.T) {
+	for name, f := range map[string]fixture{
+		"yaml": {files: map[string]string{"margince.yaml": "smtp:\n  password: ${none}\n"}},
+		"env":  {env: []string{"MARGINCE_SMTP_PASSWORD=${none}"}},
+	} {
+		cfg, err := load(t, f, relayPassword)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		v, origin := config.ValWithSource(cfg, relayPassword)
+		if v != "" || !origin.None || origin.Source == config.SourceUnset {
+			t.Fatalf("%s: got %q %+v; want an empty value marked None", name, v, origin)
+		}
+	}
+	cfg, err := load(t, fixture{}, relayPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, origin := config.ValWithSource(cfg, relayPassword); origin.None {
+		t.Fatal("a secret nobody declared is not one declared absent")
+	}
+}
+
+func TestNoneIsRefusedWhereTheSettingDoesNotAcceptIt(t *testing.T) {
+	_, err := load(t, fixture{files: map[string]string{"margince.yaml": "dsn: ${none}\n"}}, dsn)
+	if err == nil || !strings.Contains(err.Error(), "does not accept") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestAReferenceThatHoldsNoneIsRefused(t *testing.T) {
+	_, err := load(t, fixture{
+		files: map[string]string{"margince.yaml": "smtp:\n  password: ${env:RELAY}\n"},
+		env:   []string{"RELAY=${none}"},
+	}, relayPassword)
+	if err == nil || !strings.Contains(err.Error(), "resolves to ${none}") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestASecretFileTooLargeToBeASecretIsRefused(t *testing.T) {
+	_, err := load(t, fixture{
+		env:   []string{"MARGINCE_DSN=${file:{dir}/dsn}"},
+		files: map[string]string{"dsn": strings.Repeat("x", 64<<10+1)},
+	}, dsn)
+	if err == nil || !strings.Contains(err.Error(), "more than a secret holds") || strings.Contains(err.Error(), "xxxx") {
+		t.Fatalf("got %v", err)
+	}
+}

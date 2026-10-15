@@ -54,7 +54,12 @@ func readYAML(path string, known func(string) bool, bootstrapRoots map[string]bo
 	return layer, unknown, nil
 }
 
+// walk skips a null: `key:` with nothing after it, or `key: null`, is how an
+// operator leaves a key unwritten without deleting it.
 func walk(key string, n *yaml.Node, known func(string) bool, out map[string]*yaml.Node, unknown *[]string) {
+	if n.Kind == yaml.ScalarNode && n.Tag == "!!null" {
+		return
+	}
 	if known(key) {
 		out[key] = n
 		return

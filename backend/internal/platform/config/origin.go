@@ -25,6 +25,8 @@ type Origin struct {
 	Source Source
 	Name   string
 	File   string
+	// None is a secret the source declared absent with ${none}.
+	None bool
 }
 
 // FromFlag is true when the command line set the value.

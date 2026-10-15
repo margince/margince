@@ -51,6 +51,9 @@ func resolve(s Any, layers []layer, readFile func(string) ([]byte, error), geten
 func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error) {
 	origin := Origin{Source: l.source, Name: l.names[s.Key()], File: l.file}
 	fault := func(err error) error { return fmt.Errorf("%s (%s): %w", origin.Name, l.source, err) }
+	if s.Secret() && declaredNone(text) {
+		return resolveNone(s, origin, fault)
+	}
 	if s.Secret() {
 		value, file, _, err := resolveRef(text, refs.readFile, refs.getenv)
 		if err != nil {
@@ -86,6 +89,9 @@ func resolveNode(s Any, l layer, node *yaml.Node, refs refReaders) (resolved, er
 	if node.Kind != yaml.ScalarNode {
 		return resolved{}, fault(errLiteralSecret)
 	}
+	if declaredNone(node.Value) {
+		return resolveNone(s, origin, fault)
+	}
 	value, file, isRef, err := resolveRef(node.Value, refs.readFile, refs.getenv)
 	switch {
 	case err != nil:
@@ -99,6 +105,20 @@ func resolveNode(s Any, l layer, node *yaml.Node, refs refReaders) (resolved, er
 	if err != nil {
 		return resolved{}, fault(err)
 	}
+	return resolved{value: v, origin: origin, set: true}, nil
+}
+
+// resolveNone is a secret declared absent: the empty value, marked so a
+// reader can tell it from a secret nobody declared.
+func resolveNone(s Any, origin Origin, fault func(error) error) (resolved, error) {
+	if !s.allowNone() {
+		return resolved{}, fault(errNoneRefused)
+	}
+	v, err := s.parseText("")
+	if err != nil {
+		return resolved{}, fault(err)
+	}
+	origin.None = true
 	return resolved{value: v, origin: origin, set: true}, nil
 }
 

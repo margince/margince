@@ -28,6 +28,7 @@ type Any interface {
 	parseText(string) (any, error)
 	decodeYAML(n *yaml.Node) (any, error)
 	check(any) error
+	allowNone() bool
 	format(any) string
 	defaultValue() (any, bool)
 }

@@ -61,3 +61,14 @@ func TestOverlayFilesBesideTheBaseAreFound(t *testing.T) {
 		t.Fatalf("got %v; example and schema files are templates, not overlays", got)
 	}
 }
+
+func TestANullValueIsAKeyLeftUnwritten(t *testing.T) {
+	p := writeFile(t, t.TempDir(), "margince.yaml", "log: {level: null}\nweb:\nuploads: ~\n")
+	layer, unknown, err := readYAML(p, func(k string) bool { return k == "log.level" }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(layer.values) != 0 || len(unknown) != 0 {
+		t.Fatalf("values %v unknown %v; a null writes nothing", layer.values, unknown)
+	}
+}

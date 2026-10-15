@@ -4,12 +4,26 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
 // refEnv is the ${env:NAME} reference kind.
 const refEnv = "env"
+
+// refNone declares a secret absent. It uses the reference grammar so it can
+// never be mistaken for a password: a secret refuses every literal.
+const refNone = "${none}"
+
+// secretFileLimit bounds a ${file:} secret. A password, key or token is far
+// smaller; a larger file is a path typed wrong.
+const secretFileLimit = 64 << 10
+
+var (
+	errNoneRefused = errors.New(refNone + " declares a credential absent, which this setting does not accept; delete the key to leave it unset")
+	errNoneValue   = errors.New("the reference resolves to " + refNone + "; write " + refNone + " itself where the setting is declared")
+)
 
 // resolveRef turns ${file:p} or ${env:N} into the value; any other text is the
 // literal. The path, never the value, goes into the origin and any error.
@@ -25,13 +39,28 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		if err != nil {
 			return "", arg, true, fmt.Errorf("cannot read secret file %s", arg)
 		}
-		return strings.TrimSuffix(string(raw), "\n"), arg, true, nil
+		if len(raw) > secretFileLimit {
+			return "", arg, true, fmt.Errorf("secret file %s is %d bytes, more than a secret holds (limit %d); check the path", arg, len(raw), secretFileLimit)
+		}
+		return refused(strings.TrimSuffix(string(raw), "\n"), arg)
 	case refEnv:
 		v, set := getenv(arg)
 		if !set {
 			return "", "", true, fmt.Errorf("references %s, which is not set", arg)
 		}
-		return v, "", true, nil
+		return refused(v, "")
 	}
 	return text, "", false, nil
 }
+
+// refused stops a source that holds the absence marker: whether it means a
+// password of that spelling or a removal cannot be told, so neither is taken.
+func refused(value, file string) (string, string, bool, error) {
+	if strings.TrimSpace(value) == refNone {
+		return "", file, true, errNoneValue
+	}
+	return value, file, true, nil
+}
+
+// declaredNone is ${none} written where the secret is declared.
+func declaredNone(text string) bool { return strings.TrimSpace(text) == refNone }

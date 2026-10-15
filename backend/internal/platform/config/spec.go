@@ -33,8 +33,11 @@ type Spec[T any] struct {
 	Min, Max Option[T]
 	Validate func(T) error
 	Secret   bool
-	Roles    []Role
-	Doc      string
+	// AllowNone lets a secret be declared absent with ${none}: it then reads
+	// as empty, and its Origin says None.
+	AllowNone bool
+	Roles     []Role
+	Doc       string
 }
 
 // Store is what a stored setting needs beyond its Spec: who may change it and
@@ -97,6 +100,8 @@ func (s *Setting[T]) Doc() string { return s.spec.Doc }
 
 // Secret is true for a value never shown or logged.
 func (s *Setting[T]) Secret() bool { return s.spec.Secret }
+
+func (s *Setting[T]) allowNone() bool { return s.spec.AllowNone }
 
 // Roles are the programs that read the setting.
 func (s *Setting[T]) Roles() []Role { return s.spec.Roles }

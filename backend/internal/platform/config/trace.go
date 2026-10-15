@@ -27,6 +27,9 @@ func originText(o Origin) string {
 		return "unset"
 	}
 	parts := []string{string(o.Source), o.Name, o.File}
+	if o.None {
+		parts = append(parts, refNone)
+	}
 	kept := parts[:0]
 	for _, p := range parts {
 		if p != "" {
