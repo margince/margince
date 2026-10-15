@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared helper for the parallel integration lane: decide which packages the
-# dispatcher starts first. Source this; don't execute it.
+# dispatcher starts first, and which tests each CI shard runs. Source this;
+# don't execute it.
 #
 # Wall clock is set by when the LONGEST package finishes, so it should start at
 # t=0. Dispatched in discovery order it does not: measured, this lane's long
@@ -73,4 +74,54 @@ order_by_hint() {
     }
     { printf "%012.3f|%s\n", ($2 in secs ? secs[$2] : 999999), $0 }
   ' "$grouped" | LC_ALL=C sort -s -t'|' -k1,1 -rn | cut -d'|' -f2-
+}
+
+# assign_shard DISCOVERY TIMING K N — print the DISCOVERY lines shard K of N runs.
+#
+# DISCOVERY lines are `moduledir|package|Test`; TIMING lines are the same three
+# fields plus `|seconds`. Tests of one package run one after another, so a
+# shard's wall clock is set by its largest package slice. Each package is
+# therefore split on its own: slowest test first, to the shard holding the least
+# of that package's time so far, ties to the shard with the least time overall,
+# then to the lowest index.
+#
+# TIMING names the slow tests one by one; a `dir|package|*|seconds` line gives
+# the weight of every test of that package it does not name. A test with
+# neither weighs 1 s, so a stale file costs balance and never a test. With no
+# timing at all every weight is equal and each package is split by count.
+#
+# Every shard computes the same split from the same two files, and each line
+# goes to exactly one shard; the lane's fan-in checks that the union is whole.
+assign_shard() {
+  local discovery="$1" timing="$2" shard="$3" total="$4"
+  awk -F'|' -v timing="$timing" '
+    BEGIN {
+      while (timing != "" && (getline l < timing) > 0) {
+        n = split(l, f, "|")
+        if (n == 4 && f[4] ~ /^[0-9]+(\.[0-9]+)?$/) {
+          secs[f[1] "|" f[2] "|" f[3]] = f[4] + 0
+        }
+      }
+    }
+    {
+      rest = $1 "|" $2 "|*"
+      weight = ($0 in secs) ? secs[$0] : ((rest in secs) ? secs[rest] : 1)
+      printf "%s|%s|%012.3f|%s\n", $1, $2, weight, $0
+    }
+  ' "$discovery" \
+    | LC_ALL=C sort -t'|' -k1,2 -k3,3r -k4 \
+    | awk -F'|' -v shard="$shard" -v total="$total" '
+        {
+          p = $1 "|" $2
+          weight = $3 + 0
+          best = 1
+          for (s = 2; s <= total; s++) {
+            if (load[p, s] < load[p, best] || (load[p, s] == load[p, best] && sum[s] < sum[best])) best = s
+          }
+          load[p, best] += weight
+          sum[best] += weight
+          if (best == shard) print $4 "|" $5 "|" $6
+        }
+      ' \
+    | LC_ALL=C sort
 }

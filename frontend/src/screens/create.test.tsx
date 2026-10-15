@@ -12,11 +12,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption, toggleOptions } from "../design-system/select-testing";
-import { LocaleProvider } from "../i18n";
-import { en } from "../i18n/en";
-import { CompaniesScreen } from "./companies";
-import { ContactsScreen } from "./contacts";
 import {
   CreateAction,
   type CreateField,
@@ -24,9 +19,17 @@ import {
   splitMultiselectValue,
   submittedValues,
   visibleFields,
-} from "./create";
-import { CATALOG_WAIT_MS } from "./create.dialog";
-import { type CustomField, useObjectCustomFields } from "./customfields.form";
+} from "../components/create";
+import { CATALOG_WAIT_MS } from "../components/create.dialog";
+import {
+  type CustomField,
+  useObjectCustomFields,
+} from "../components/customfields.form";
+import { pickOption, toggleOptions } from "../design-system/select-testing";
+import { ContactsScreen } from "../features/contacts/contacts";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { CompaniesScreen } from "./companies";
 import { DealsScreen } from "./deals";
 
 // Create flows (the "you can actually add a record" acceptance): the list

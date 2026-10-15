@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Button, Disclosure, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
-import { Popover } from "../design-system/popover";
 import { BarList, SegmentBar } from "../design-system/readings";
 import {
   BulletChart,
@@ -10,12 +9,8 @@ import {
   RangeChart,
 } from "../design-system/report-charts";
 import { Waterfall } from "../design-system/waterfall";
-import {
-  formatDateTime,
-  formatMoneyCompact,
-  formatNumber,
-} from "../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { formatDateTime, formatMoneyCompact } from "../format/format";
+import { type Translator, useLocale, useT } from "../i18n";
 import { ChartContext } from "./reporting.chartcontext";
 import { MetricsTable } from "./reporting.metricstable";
 import {
@@ -63,18 +58,23 @@ export function ReportingCharts({
         )
       ),
   );
+  const wide = wideCharts(charts);
   return (
     <div className="reporting-results">
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
       {afterSummary}
       <div className="reporting-grid">
-        {charts.map((chart) => {
+        {charts.map((chart, index) => {
           const drawn =
             chart.points.length > 0 && chart.coverage.status !== "no_data";
           return (
             <Panel
               key={`${chart.kind}:${chart.metric}`}
-              className={`reporting-panel reporting-panel-${chart.kind}`}
+              className={
+                wide[index]
+                  ? "reporting-panel reporting-panel-wide"
+                  : "reporting-panel"
+              }
               title={chartTitle(chart, evaluation, t)}
               // The one door from a chart to the records behind it, in the head
               // beside the title it opens, rather than trailing the figure.
@@ -121,6 +121,30 @@ export function ReportingCharts({
   );
 }
 
+// Kinds that need the page's whole width. The waterfall's steps and the
+// outcomes table each need more room than half a row.
+const WIDE_KINDS: ReadonlySet<ReportingChart["kind"]> = new Set([
+  "pipeline_movement",
+  "sdr_outcomes",
+]);
+
+// Which charts span the whole row. A half-width chart with no partner beside it
+// spans too, or the grid leaves the other half of its row empty.
+export function wideCharts(charts: readonly ReportingChart[]): boolean[] {
+  const wide = charts.map((chart) => WIDE_KINDS.has(chart.kind));
+  let unpaired: number | null = null;
+  for (const [index, isWide] of wide.entries()) {
+    if (!isWide && unpaired == null) {
+      unpaired = index;
+      continue;
+    }
+    if (isWide && unpaired != null) wide[unpaired] = true;
+    unpaired = null;
+  }
+  if (unpaired != null) wide[unpaired] = true;
+  return wide;
+}
+
 function ChartBody({
   chart,
   evaluation,
@@ -131,7 +155,6 @@ function ChartBody({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -208,28 +231,11 @@ function ChartBody({
       return <BulletChart {...shared} targetLabel={t("reporting.target")} />;
     case "stage_age":
       return (
-        <>
-          <RangeChart
-            {...shared}
-            valueLabel={t("reporting.median")}
-            upperLabel={t("reporting.upper")}
-          />
-          <Popover onHover label={t("reporting.sampleDetails")}>
-            {chart.points.map((point) => (
-              <p key={point.key} className="t-caption">
-                {point.label} ·{" "}
-                {point.observations == null
-                  ? t("reporting.observationsUnavailable")
-                  : plural("reporting.observations", point.observations, {
-                      count: formatNumber(point.observations, locale),
-                    })}
-                {point.value == null
-                  ? ` · ${t("reporting.status.insufficient_sample")}`
-                  : ""}
-              </p>
-            ))}
-          </Popover>
-        </>
+        <RangeChart
+          {...shared}
+          valueLabel={t("reporting.median")}
+          upperLabel={t("reporting.upper")}
+        />
       );
     case "target_progress":
       return (
@@ -282,7 +288,10 @@ function ChartBody({
             )}
             onSelect={onSelect}
           />
-          <Disclosure summary={t("reporting.data")}>
+          <Disclosure
+            className="report-chart-data"
+            summary={t("reporting.data")}
+          >
             <DataTable
               label={shared.label}
               rows={chart.points}
@@ -385,7 +394,10 @@ function ChartBody({
             reconciliationWarning={t("reporting.reconcile")}
             onSelect={onSelect}
           />
-          <Disclosure summary={t("reporting.data")}>
+          <Disclosure
+            className="report-chart-data"
+            summary={t("reporting.data")}
+          >
             <DataTable
               label={shared.label}
               rows={[

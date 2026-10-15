@@ -53,6 +53,10 @@ Boot refuses a code with no compiled-in pack, in the api and in the worker. Afte
 Jurisdiction settings page changes it. A data reset (`operations.allow_data_reset`) keeps the company and its users, and applies
 `seeds.*` again from the current file. Every other section of the file is read at each boot.
 
+`workspace.name` is the company's name only until an admin saves the company profile. From then on
+the profile's company name is the name, and each save of it writes the `installation.name` setting in
+the same transaction. `PATCH /installation/settings` refuses a different `name`.
+
 **Legal review.** Legal review on deals is on by default, as the setting `deals.legal_review_enabled`.
 `seeds.legal_review: false` starts a new installation with it off. An admin changes it later under
 Settings → Pipelines, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
@@ -1610,7 +1614,7 @@ Margince still reads a `model_pricing:` key that an older file still has, does n
 writes a warning at boot; remove it.
 
 Model credentials (BYOK cloud tiers) live in the **key vault**. An admin puts them there under
-Settings → AI → Model provider keys. No binary flag holds one, and the binding does not either: a
+Settings → AI → AI models → Providers. No binary flag holds one, and the binding does not either: a
 binding names providers and never a credential.
 
 The normal environment variable of a provider is a **seed** for a role the vault backs. A boot that

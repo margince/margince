@@ -145,6 +145,12 @@ export type SettingsHit = {
   group: string;
 };
 
+/** What the search needs to know about the reader asking. */
+type SettingsSearchReader = { readonly holdsAdminRole: boolean };
+
+/** The reader a caller gets when it names none: no admin pages. */
+const NO_ADMIN_ROLE: SettingsSearchReader = { holdsAdminRole: false };
+
 /**
  * The pages matching `query`, best first.
  *
@@ -153,11 +159,12 @@ export type SettingsHit = {
  * the sidebar is already the list of everything, and repeating it under a
  * search box would say the reader had searched for something.
  */
+
 export function settingsSearch(
   query: string,
   pages: readonly SettingsPage[],
   t: (key: MessageKey) => string,
-  reader: { readonly holdsAdminRole: boolean } = { holdsAdminRole: false },
+  reader: SettingsSearchReader = NO_ADMIN_ROLE,
 ): readonly SettingsHit[] {
   // Split on whitespace, and every word must land somewhere. A reader types
   // "email signature" as one thought, but the two words live in different

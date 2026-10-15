@@ -2,13 +2,13 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import { meetingRow, readingsDay, waitingRow } from "./brief.fixtures";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
-import type { Worklist } from "./worklist.queries";
 
 // The dials, on the rendered page.
 //

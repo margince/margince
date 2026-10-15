@@ -107,10 +107,7 @@ function asIgnored(value: unknown): ImportProfile["ignored"] {
     const read = reader(entry);
     const file = read("file");
     const reason = read("reason");
-    if (
-      typeof file !== "string" ||
-      (reason !== "unknown_name" && reason !== "not_yet_importable")
-    ) {
+    if (typeof file !== "string" || reason !== "unknown_name") {
       throw new Error(unreadableUpload);
     }
     return { file, reason };

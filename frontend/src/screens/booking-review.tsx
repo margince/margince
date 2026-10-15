@@ -16,6 +16,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordPicker } from "../design-system/recordpicker";
 import { Switch } from "../design-system/switch";
+import { refreshContactMeetings } from "../features/contacts/contactmeetings.waiting";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -25,7 +26,6 @@ import { useBookingIntent } from "./booking-common";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
 import { ComposeModal } from "./compose";
-import { refreshContactMeetings } from "./contactmeetings.waiting";
 
 type Invitation = components["schemas"]["MeetingInvitationRequest"];
 type Proposal = components["schemas"]["MeetingProposalRequest"];

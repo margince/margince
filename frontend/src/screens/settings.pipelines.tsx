@@ -11,26 +11,26 @@
 // address, so a reload or a shared link lands on the same one.
 
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { useId } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Disclosure } from "../design-system/atoms";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
+import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { SortableList } from "../design-system/sortablelist";
-import { StageStrip } from "../design-system/stagestrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useUrlParams } from "../lib/urlstate";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
 import { LegalReviewSettingsCard } from "./legalreviewsettings";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
-import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
+import { StageLadderEditor } from "./settings.stages";
 import { ladderOf, str } from "./settings.stageverbs";
 import "./settings.pipelines.css";
 
@@ -74,8 +74,8 @@ function openPipeline(
   );
 }
 
-// One pipeline in the catalog: its name and standing, how long its ladder is,
-// and the ladder's shape, so two pipelines are told apart before either opens.
+// One pipeline in the catalog: its name, its standing and how many open stages
+// it has, so two pipelines are told apart before either opens.
 function PipelineChoice({
   pipeline,
   open,
@@ -84,8 +84,9 @@ function PipelineChoice({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const ladder = ladderOf(pipeline);
-  const openCount = ladder.filter((stage) => stage.semantic === "open").length;
+  const openCount = ladderOf(pipeline).filter(
+    (stage) => stage.semantic === "open",
+  ).length;
   return (
     <button
       type="button"
@@ -93,52 +94,35 @@ function PipelineChoice({
       aria-current={open ? "true" : undefined}
       onClick={onOpen}
     >
-      <span className="pipeline-choice-head">
-        <span className="pipeline-choice-name">{pipeline.name}</span>
-        {pipeline.is_default && !pipeline.archived_at && (
-          <Badge tone="success">{t("pipeline.default")}</Badge>
-        )}
-        <span className="t-caption">
-          {plural("pipeline.openStageCount", openCount, {
-            count: formatNumber(openCount, locale),
-          })}
-        </span>
+      <span className="pipeline-choice-name">{pipeline.name}</span>
+      {pipeline.is_default && !pipeline.archived_at && (
+        <Badge tone="success">{t("pipeline.default")}</Badge>
+      )}
+      <span className="t-caption">
+        {plural("pipeline.openStageCount", openCount, {
+          count: formatNumber(openCount, locale),
+        })}
       </span>
-      <StageStrip
-        compact
-        label={pipeline.name}
-        steps={ladder.map((stage) => ({
-          key: stage.id,
-          name: stage.name,
-          probability: stage.win_probability,
-          reading: "",
-          outcome: stage.semantic === "open" ? undefined : stage.semantic,
-        }))}
-      />
     </button>
   );
 }
 
-// The pipelines themselves: those in use, in the order they are offered, and
-// the retired ones apart, since they hold no place in that order.
+// The pipelines in use, in the order they are offered.
 function CatalogList({
   pipelines,
   openId,
   onOpen,
-  hintId,
 }: Readonly<{
   pipelines: readonly Pipeline[];
   openId: string | undefined;
   onOpen: (id: string) => void;
-  hintId: string;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
+  const hintId = useId();
   const canEdit = useCanWrite("pipeline", "update");
   const order = usePipelineOrder();
   const inUse = pipelines.filter((each) => !each.archived_at);
-  const retired = pipelines.filter((each) => each.archived_at);
   const orders = canEdit && inUse.length > 1;
   const place = (position: number, count: number) => ({
     position: formatNumber(position, locale),
@@ -146,11 +130,6 @@ function CatalogList({
   });
   return (
     <>
-      {orders && (
-        <p id={hintId} className="t-caption stage-hint">
-          {t("pipeline.orderHint")}
-        </p>
-      )}
       <SortableList
         label={t("pipeline.inUse")}
         items={inUse.map((pipeline) => ({ key: pipeline.id, pipeline }))}
@@ -180,118 +159,161 @@ function CatalogList({
           />
         )}
       />
-      {retired.length > 0 && (
-        <Disclosure
-          summary={plural("pipeline.retiredGroup", retired.length, {
-            count: formatNumber(retired.length, locale),
-          })}
-          open={retired.some((each) => each.id === openId) || undefined}
-        >
-          <ul className="pipeline-retired">
-            {retired.map((pipeline) => (
-              <li key={pipeline.id}>
-                <PipelineChoice
-                  pipeline={pipeline}
-                  open={pipeline.id === openId}
-                  onOpen={() => onOpen(pipeline.id)}
-                />
-              </li>
-            ))}
-          </ul>
-        </Disclosure>
+      {orders && (
+        <span id={hintId} className="sr-only">
+          {t("pipeline.orderHint")}
+        </span>
       )}
     </>
   );
 }
 
-// The catalog panel draws its title and its verbs whatever state the list is
-// in: the page is named by it, and a loading or empty list is still this page.
+// The retired pipelines, apart and folded: they hold no place in the order.
+function RetiredPipelines({
+  retired,
+  openId,
+  onOpen,
+}: Readonly<{
+  retired: readonly Pipeline[];
+  openId: string | undefined;
+  onOpen: (id: string) => void;
+}>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <Disclosure
+      summary={plural("pipeline.retiredGroup", retired.length, {
+        count: formatNumber(retired.length, locale),
+      })}
+      open={retired.some((each) => each.id === openId) || undefined}
+    >
+      <PanelBody>
+        <ul className="pipeline-retired">
+          {retired.map((pipeline) => (
+            <li key={pipeline.id}>
+              <PipelineChoice
+                pipeline={pipeline}
+                open={pipeline.id === openId}
+                onOpen={() => onOpen(pipeline.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      </PanelBody>
+    </Disclosure>
+  );
+}
+
+// "New pipeline": in the catalog's head, or in the one pipeline's head while
+// there is no catalog to hold it.
+function NewPipeline({
+  pipelines,
+  onOpen,
+}: Readonly<{
+  pipelines: readonly Pipeline[];
+  onOpen: (id: string) => void;
+}>) {
+  const t = useT();
+  const canCreate = useCanWrite("pipeline", "create");
+  if (!canCreate) return null;
+  const inUse = pipelines.filter((each) => !each.archived_at);
+  const lastPosition = Math.max(0, ...inUse.map((each) => each.position));
+  return (
+    <CreateAction<Pipeline>
+      label={t("pipeline.new")}
+      invalidate="pipelines"
+      screen="settings"
+      stay
+      onCreated={(created) => onOpen(created.id)}
+      // A new pipeline lands last and already holds the two ways out. Its
+      // ladder is open stages plus the close.
+      create={async (values) => {
+        return unwrap(
+          await api.POST("/pipelines", {
+            body: {
+              name: str(values.name),
+              is_default: values.is_default === "true",
+              position: lastPosition + 1,
+              stages: [
+                {
+                  name: t("stage.semWon"),
+                  semantic: "won",
+                  position: 1,
+                  win_probability: 100,
+                },
+                {
+                  name: t("stage.semLost"),
+                  semantic: "lost",
+                  position: 2,
+                  win_probability: 0,
+                },
+              ],
+            },
+          }),
+        );
+      }}
+      fields={createFields(t)}
+    />
+  );
+}
+
+// The catalog draws its title and verb in every state. A loading or empty list
+// is still where a pipeline is chosen and created.
 function PipelineCatalog({
   query,
   openId,
   onOpen,
+  onCreated,
 }: Readonly<{
   query: UseQueryResult<Pipeline[]>;
   openId: string | undefined;
   onOpen: (id: string) => void;
+  onCreated: (id: string) => void;
 }>) {
   const t = useT();
-  const hintId = useId();
-  const canCreate = useCanWrite("pipeline", "create");
-  const canEdit = useCanWrite("pipeline", "update");
-  const inUse = (query.data ?? []).filter((each) => !each.archived_at);
-  const lastPosition = Math.max(0, ...inUse.map((each) => each.position));
+  const pipelines = query.data ?? [];
+  const inUse = pipelines.filter((each) => !each.archived_at);
+  const retired = pipelines.filter((each) => each.archived_at);
   return (
     <Panel
-      title={t("settings.pipelines")}
-      titleAction={
-        canCreate && (
-          <CreateAction<Pipeline>
-            label={t("pipeline.new")}
-            invalidate="pipelines"
-            screen="settings"
-            stay
-            onCreated={(created) => onOpen(created.id)}
-            // A new pipeline lands at the end of the catalog and already holds
-            // the two ways out, so its ladder is open stages plus the close.
-            create={async (values) => {
-              return unwrap(
-                await api.POST("/pipelines", {
-                  body: {
-                    name: str(values.name),
-                    is_default: values.is_default === "true",
-                    position: lastPosition + 1,
-                    stages: [
-                      {
-                        name: t("stage.semWon"),
-                        semantic: "won",
-                        position: 1,
-                        win_probability: 100,
-                      },
-                      {
-                        name: t("stage.semLost"),
-                        semantic: "lost",
-                        position: 2,
-                        win_probability: 0,
-                      },
-                    ],
-                  },
-                }),
-              );
-            }}
-            fields={createFields(t)}
-          />
-        )
-      }
+      title={t("pipeline.catalog")}
+      titleAction={<NewPipeline pipelines={pipelines} onOpen={onCreated} />}
     >
-      <PanelBody>
-        <PanelIntro>{t("settings.pipelinesSub")}</PanelIntro>
-        {!canCreate && !canEdit && (
-          <PanelIntro>{t("settings.pipelinesReadOnly")}</PanelIntro>
-        )}
-        <QueryGate
-          pendingLabel={t("settings.pipelines")}
-          query={query}
-          empty={(pipelines) => pipelines.length === 0}
-        >
-          {(pipelines) => (
-            <CatalogList
-              pipelines={pipelines}
-              openId={openId}
-              onOpen={onOpen}
-              hintId={hintId}
-            />
-          )}
-        </QueryGate>
-      </PanelBody>
+      {(!query.isSuccess || inUse.length > 0 || retired.length === 0) && (
+        <PanelBody>
+          <QueryStates query={query} pendingLabel={t("pipeline.catalog")}>
+            {pipelines.length === 0 ? (
+              <EmptyState plate title={t("pipeline.none")}>
+                {t("pipeline.noneNote")}
+              </EmptyState>
+            ) : (
+              <CatalogList
+                pipelines={pipelines}
+                openId={openId}
+                onOpen={onOpen}
+              />
+            )}
+          </QueryStates>
+        </PanelBody>
+      )}
+      {retired.length > 0 && (
+        <RetiredPipelines retired={retired} openId={openId} onOpen={onOpen} />
+      )}
     </Panel>
   );
 }
 
 // The open pipeline: its standing and verbs in the head, its ladder, and the
 // way to retire it at the foot, where a destructive verb waits last.
-function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
+function PipelineDetail({
+  pipeline,
+  create,
+  arrived,
+}: Readonly<{ pipeline: Pipeline; create: ReactNode; arrived: boolean }>) {
   const t = useT();
+  // The second pipeline brings the catalog and takes "New pipeline" off this
+  // head, so focus would fall to the page.
+  const title = useArrivalFocus<HTMLSpanElement>(arrived);
   // Renaming, reordering stages and making default are pipeline:update;
   // retiring is pipeline:delete; putting one back is update, because
   // restoring is not a deletion.
@@ -299,10 +321,13 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const canRetire = useCanWrite("pipeline", "delete");
   const retired = Boolean(pipeline.archived_at);
   const retireBlockedId = useId();
-  const hintId = useId();
   return (
     <Panel
-      title={pipeline.name}
+      title={
+        <span ref={title} tabIndex={-1}>
+          {pipeline.name}
+        </span>
+      }
       titleAction={
         <span className="pipeline-standing">
           {retired && <Badge>{t("pipeline.retired")}</Badge>}
@@ -332,34 +357,27 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
               }}
             />
           )}
+          {create}
         </span>
       }
     >
-      <StageLadderIntro pipeline={pipeline} canEdit={canEdit} hintId={hintId} />
-      <StageLadderEditor
-        pipeline={pipeline}
-        canEdit={canEdit}
-        hintId={hintId}
-      />
+      {retired && (
+        <PanelBody>
+          <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>
+        </PanelBody>
+      )}
+      <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
       {(retired ? canEdit : canRetire) && (
         <SettingList bleed="settings">
           <SettingRow
             label={retired ? t("pipeline.restore") : t("pipeline.retire")}
             description={
               retired ? undefined : (
-                <>
-                  {t("pipeline.retireNote")}
-                  {/* Why the verb is refused sits in the description, which
-                      wraps; the control column is sized to its content. */}
-                  {pipeline.is_default && (
-                    <>
-                      {" "}
-                      <span id={retireBlockedId}>
-                        {t("pipeline.retireBlocked")}
-                      </span>
-                    </>
-                  )}
-                </>
+                <span id={retireBlockedId}>
+                  {pipeline.is_default
+                    ? t("pipeline.retireBlocked")
+                    : t("pipeline.retireNote")}
+                </span>
               )
             }
             control={
@@ -396,16 +414,40 @@ export function PipelinesCard() {
       return data.data;
     },
   });
+  const [created, setCreated] = useState<string>();
   const open = (id: string) => {
     const next = new Map(params);
     next.set(PIPELINE_PARAM, id);
     setParams(next);
   };
-  const opened = openPipeline(query.data ?? [], params.get(PIPELINE_PARAM));
+  const openCreated = (id: string) => {
+    open(id);
+    setCreated(id);
+  };
+  const pipelines = query.data ?? [];
+  const opened = openPipeline(pipelines, params.get(PIPELINE_PARAM));
+  // One pipeline leaves nothing to choose between, so it stands alone and
+  // carries the catalog's one verb in its own head.
+  const alone = query.isSuccess && pipelines.length === 1;
   return (
     <div className="settings-pipelines">
-      <PipelineCatalog query={query} openId={opened?.id} onOpen={open} />
-      {opened && <PipelineDetail pipeline={opened} />}
+      {!alone && (
+        <PipelineCatalog
+          query={query}
+          openId={opened?.id}
+          onOpen={open}
+          onCreated={openCreated}
+        />
+      )}
+      {opened && (
+        <PipelineDetail
+          pipeline={opened}
+          arrived={opened.id === created}
+          create={
+            alone && <NewPipeline pipelines={pipelines} onOpen={openCreated} />
+          }
+        />
+      )}
       {/* Whether a stage may wait for legal is a pipeline question. */}
       <LegalReviewSettingsCard />
     </div>

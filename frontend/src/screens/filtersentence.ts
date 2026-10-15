@@ -20,14 +20,14 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
-import { fieldLabel, type VocabularyField } from "./filterdata";
+import { fieldLabel, type VocabularyField } from "../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
   isRelativeDate,
   type Leaf,
   type Node,
-} from "./segmentpredicate";
+} from "../lib/segmentpredicate";
 import { useTagCatalog } from "./tagadmin.queries";
 
 /**

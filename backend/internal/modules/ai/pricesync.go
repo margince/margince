@@ -99,7 +99,11 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 	if err != nil {
 		return PriceSources{}, err
 	}
-	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}}
+	switched, err := p.d.Rates.switchedServedModels(ctx, p.now().Add(-switchedModelWindow))
+	if err != nil {
+		return PriceSources{}, err
+	}
+	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}, Switched: switched}
 	for _, s := range statuses {
 		src.Usable[s.Provider] = s.Usable()
 	}

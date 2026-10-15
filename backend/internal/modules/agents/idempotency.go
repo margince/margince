@@ -44,7 +44,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -83,8 +82,7 @@ type Claim struct {
 	// nothing to settle, and the store refuses a settlement that names no
 	// attempt rather than falling back to the key.
 	Attempt string
-	// Records is what the recorded answer was charged against the read bound
-	// when it was produced. A replay of it costs the same (see chargeReplay).
+	// Records is how many records the answer handed over when it was produced.
 	Records int
 	Reason  string
 }
@@ -332,12 +330,12 @@ func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res r
 // that record would give — a distinct "you could see this yesterday" would be
 // the oracle row scope exists to close.
 func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (json.RawMessage, error) {
-	return r.ServeRecorded(ctx, spec.Name, claim.Result, claim.Records)
+	return r.ServeRecorded(ctx, spec.Name, claim.Result)
 }
 
 // ServeRecorded answers a stored envelope to the caller AS THEY ARE NOW: it
-// re-proves every record the document names and re-charges what the original
-// call cost, then hands the bytes back unchanged.
+// re-proves every record the document names, then hands the bytes back
+// unchanged.
 //
 // It exists because there are now TWO surfaces holding a recorded answer — the
 // idempotency claim, and an MCP task whose completed result a client may poll
@@ -347,10 +345,8 @@ func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (
 // would drift the first time either moved.
 //
 // The refusal is ErrNotFound, the existence-hiding answer a live read would
-// give. The count is the ORIGINAL call's, never derived from the evidence list
-// — see chargeReplay for why that arithmetic would make a repeat cheaper than
-// the call.
-func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json.RawMessage, records int) (json.RawMessage, error) {
+// give.
+func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json.RawMessage) (json.RawMessage, error) {
 	spec, ok := r.Spec(tool)
 	if !ok {
 		// A tool that has left the surface cannot have its answer re-proven
@@ -374,10 +370,26 @@ func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json
 	if err := r.ensureReplayVisible(ctx, spec, evidence); err != nil {
 		return nil, err
 	}
-	if err := r.chargeReplay(ctx, spec, records); err != nil {
+	return recorded, nil
+}
+
+// ServeTaskResult is ServeRecorded for the task door, which charges one call.
+//
+// The idempotency door needs no charge of its own: its caller already spent a
+// call on Invoke. Polling a finished task is not a tools/call, so without this
+// the result would be free and repeatable for the life of the handle.
+//
+// A charge that cannot be recorded withholds the result. The caller can ask for
+// the document again, where serving it would leak an uncountable read per poll.
+func (r *Registry) ServeTaskResult(ctx context.Context, tool string, recorded json.RawMessage) (json.RawMessage, error) {
+	out, err := r.ServeRecorded(ctx, tool, recorded)
+	if err != nil {
 		return nil, err
 	}
-	return recorded, nil
+	if err := r.ChargeAdmittedRead(ctx); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // ensureReplayVisible re-reads every record the recorded answer names, through
@@ -440,41 +452,6 @@ func (r *Registry) ensureReplayVisible(
 			}
 			return err
 		}
-	}
-	return nil
-}
-
-// chargeReplay bills a served replay against the caller's READ counter.
-//
-// Only that counter. A replay hands the same records over again, so it is a
-// read; it does NOT perform the action again, so charging the write/send/egress
-// counter chargeAnswer adds would bill a caller for an effect that did not
-// happen twice — and would spend a Passport's send ceiling on a document.
-//
-// The count is what the ORIGINAL call was charged, recorded with the result —
-// not the length of the evidence list. The two differ whenever an answer hands
-// over more than it can name (a probe, a record cited twice), and the evidence
-// list is the shorter of the two every time, so deriving the charge from it
-// would make retrying an answer cheaper than asking for it. One rule, no
-// arithmetic: a replay costs what the call cost.
-//
-// A charge that cannot be recorded WITHHOLDS the replay, with no exception for
-// the write the recording came from — which is why this does not go through
-// r.charge. That helper serves an uncountable write anyway because its effect
-// already happened; on a replay nothing happens, so withholding costs the
-// caller a document it can ask for again, while serving it would leak an
-// uncountable read once per retry for the life of the window.
-func (r *Registry) chargeReplay(ctx context.Context, spec mcp.ToolSpec, records int) error {
-	if r.volume == nil || records <= 0 {
-		return nil
-	}
-	if err := r.volume.Consume(ctx, agentvolume.Reads, records); err != nil {
-		slog.ErrorContext(ctx, "recording a replayed result against the read bound failed",
-			"tool", spec.Name, "records", records, "err", err)
-		return fmt.Errorf(
-			"crmagents: replaying %s would hand over %d records that could not be counted against this "+
-				"agent's read bound, so the answer is withheld: %w",
-			spec.Name, records, apperrors.ErrBudgetExceeded)
 	}
 	return nil
 }

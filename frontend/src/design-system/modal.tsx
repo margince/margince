@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
 import { type ReactNode, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
@@ -29,6 +29,26 @@ export const MODAL_INTENTS = [
 ] as const;
 export type ModalIntent = (typeof MODAL_INTENTS)[number];
 
+// A drawer covers its intent's width or, once the reader expands it, the
+// window less the gutter it floats in.
+export type DrawerSpan = "intent" | "window";
+type DrawerIntent = "drawer" | "drawer-reading";
+
+// Only a drawer can be expanded: a centred dialog asks about the page behind
+// it, and the lightbox already takes the glass.
+type Expansion =
+  | Readonly<{
+      intent: DrawerIntent;
+      span?: DrawerSpan;
+      /** Makes the drawer expandable; the caller keeps the span it reports. */
+      onSpanChange?: (span: DrawerSpan) => void;
+    }>
+  | Readonly<{
+      intent: Exclude<ModalIntent, DrawerIntent>;
+      span?: never;
+      onSpanChange?: never;
+    }>;
+
 // A form with more fields than this is worked through in a drawer.
 export const FORM_DIALOG_MAX_FIELDS = 6;
 export function intentForFieldCount(fields: number): "form" | "drawer" {
@@ -40,6 +60,8 @@ export function Modal({
   onClose,
   labelledBy,
   intent,
+  span = "intent",
+  onSpanChange,
   returnFocusTo,
   initialFocusTo,
   closeReason,
@@ -49,7 +71,6 @@ export function Modal({
   open: boolean;
   onClose: () => void;
   labelledBy: string;
-  intent: ModalIntent;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -70,7 +91,8 @@ export function Modal({
   /** Holds the corner X while a write the dialog started is still out. */
   closeDisabled?: boolean;
   children: ReactNode;
-}>) {
+}> &
+  Expansion) {
   const t = useT();
   const dialog = useRef<HTMLDivElement | null>(null);
   const overlay = useRef<HTMLDivElement | null>(null);
@@ -95,7 +117,8 @@ export function Modal({
     return null;
   }
   const leaving = state === "closing";
-  const box = modalClass(intent);
+  const box = modalClass(intent, span);
+  const wide = span === "window";
   // Portalled to the document body rather than rendered in place: a dialog
   // opened from inside a collapsed container — the record header's overflow
   // menu — would otherwise be hidden along with it, and the click that opened
@@ -157,8 +180,23 @@ export function Modal({
 
             `data-dialog-close` is how `useDialogFocus` tells the door from the
             controls a dialog is FOR: it is a tab stop, and never the one a
-            reader is put down on when the dialog opens. */}
+            reader is put down on when the dialog opens. Expand and Collapse
+            share that corner and that rule: they change the window, not the
+            work in it. */}
         <div className="modal-close" data-dialog-close>
+          {onSpanChange && (
+            <IconAction
+              label={wide ? t("common.collapse") : t("common.expand")}
+              icon={
+                wide ? (
+                  <Minimize2 aria-hidden="true" />
+                ) : (
+                  <Maximize2 aria-hidden="true" />
+                )
+              }
+              onClick={() => onSpanChange(wide ? "intent" : "window")}
+            />
+          )}
           <IconAction
             label={t("common.close")}
             icon={<X aria-hidden="true" />}
@@ -174,12 +212,18 @@ export function Modal({
 }
 
 // Written as branches because dialoglayout.ts runs them to learn each box.
-function modalClass(intent: ModalIntent) {
+function modalClass(intent: ModalIntent, span: DrawerSpan) {
   if (intent === "confirm") return "modal modal-confirm";
   if (intent === "form") return "modal modal-form";
-  if (intent === "drawer") return "modal modal-drawer";
+  if (intent === "drawer") {
+    return span === "window"
+      ? "modal modal-drawer modal-drawer-window"
+      : "modal modal-drawer";
+  }
   if (intent === "drawer-reading") {
-    return "modal modal-drawer modal-drawer-wide";
+    return span === "window"
+      ? "modal modal-drawer modal-drawer-wide modal-drawer-window"
+      : "modal modal-drawer modal-drawer-wide";
   }
   if (intent === "full") return "modal modal-full";
 }

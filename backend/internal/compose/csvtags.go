@@ -26,9 +26,6 @@ import (
 
 const csvTargetTags = "tags"
 
-// newTagReason is the report's word for a name the commit will create.
-const newTagReason = "no tag has this name yet, so the import creates it"
-
 // splitTags reads a tags cell: semicolon-separated names, spaced as the tag
 // store spells them, each once whatever its case.
 func splitTags(cell string) []string {
@@ -54,10 +51,7 @@ func tagCellProblem(cell string) *cellProblem {
 			if bad, ok := errors.AsType[*collections.BadInputError](err); ok {
 				reason = bad.Reason
 			}
-			return &cellProblem{
-				Target: csvTargetTags, Value: name,
-				Message: fmt.Sprintf("the tag %q cannot be created: its name %s", name, reason),
-			}
+			return problemOf(csvTargetTags, name, migration.Why(migration.ReasonTagNameInvalid, "name", name, "detail", reason))
 		}
 	}
 	return nil
@@ -160,7 +154,7 @@ func newTagWarnings(missing []string, firstNamedBy map[string]string, object str
 	var warnings []migration.SkippedRow
 	for _, name := range missing {
 		if firstNamedBy[tagKey(name)] == object {
-			warnings = append(warnings, migration.SkippedRow{Kind: migration.ProblemNewTag, Value: name, Reason: newTagReason})
+			warnings = append(warnings, migration.SkippedRow{Kind: migration.ProblemNewTag, Value: name}.Because(migration.Why(migration.ReasonTagNew)))
 		}
 	}
 	return warnings

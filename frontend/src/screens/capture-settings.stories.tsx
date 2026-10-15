@@ -8,17 +8,24 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
+import { CaptureSettingsCard } from "./capture-settings";
 
-// The posture toggle, in the three answers it can give a reader. The write gate
-// is `capture_settings:update`, so the denied fixture names a seat that holds
-// the read and not the write — `meRoute({})` would be an ADMIN with no object
-// grants, which is a different principal and draws a different card.
+// The denied fixture holds `capture_settings` read without update: `meRoute({})`
+// is an admin with no object grants, which draws a different card.
 function story(auto_enrich: boolean, allow: Parameters<typeof meRoute>[0]) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /capture/settings": () => jsonResponse({ auto_enrich }),
+      "GET /capture/settings": () =>
+        jsonResponse({
+          auto_enrich,
+          mail_sharing: true,
+          shared_posture_allowed: false,
+          signature_enrich: true,
+          auto_enrich_daily_cap: 500,
+          site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+          mail_sync_interval_seconds: 120,
+        }),
     });
     return (
       <StoryProviders>
@@ -31,12 +38,12 @@ function story(auto_enrich: boolean, allow: Parameters<typeof meRoute>[0]) {
 const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
-const meta: Meta<typeof CaptureSettingsCard> = {
+const meta = {
   title: "Settings/Data/Capture rules/Enrichment and website reads",
   component: CaptureSettingsCard,
-};
+} satisfies Meta<typeof CaptureSettingsCard>;
 export default meta;
-type Story = StoryObj<typeof CaptureSettingsCard>;
+type Story = StoryObj<typeof meta>;
 
 export const EnrichOn: Story = { render: story(true, MANAGER) };
 
@@ -60,38 +67,9 @@ export const CannotChangeDark: Story = {
   render: story(true, READER),
 };
 
-// The website-reading limits, editable and refused, read from the same record
-// as the switches above.
-function readingStory(allow: Parameters<typeof meRoute>[0]) {
-  return () => {
-    installFetchStub({
-      "GET /me": meRoute(allow),
-      "GET /capture/settings": () =>
-        jsonResponse({
-          auto_enrich: true,
-          mail_sharing: true,
-          shared_posture_allowed: false,
-          signature_enrich: true,
-          auto_enrich_daily_cap: 500,
-          site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
-          mail_sync_interval_seconds: 120,
-        }),
-    });
-    return (
-      <StoryProviders>
-        <WebsiteReadingCard />
-      </StoryProviders>
-    );
-  };
-}
-
-export const WebsiteReadsEditable: Story = { render: readingStory(MANAGER) };
-
-export const WebsiteReadsCannotChange: Story = {
-  render: readingStory(READER),
-};
-
-export const WebsiteReadsCannotChangeDark: Story = {
-  globals: { theme: "dark" },
-  render: readingStory(READER),
+// Six rows at 390px: each switch and number box drops under its words.
+export const EnrichOnPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(true, MANAGER),
 };

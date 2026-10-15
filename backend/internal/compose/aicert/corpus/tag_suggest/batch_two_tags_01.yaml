@@ -1,0 +1,46 @@
+name: each_item_in_a_batch_gets_its_own_subset_of_two_tags
+task: tag_suggest
+site: interest
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Four items and two tags, one item for every subset. A model that spreads one
+# item's interest across the batch, or answers every item alike, fails at least
+# two positions.
+fixture:
+  tags:
+    - key: ledger_migration
+      name: 'Ledger migration'
+      description: 'wants to move their bookkeeping off spreadsheets'
+    - key: premium_support
+      name: 'Premium support'
+      description: 'wants faster help or a named contact when something breaks'
+  items:
+    - kind: meeting
+      subject: 'Quarterly review with Hafenberg'
+      body: |
+        They want the month-end close out of Excel before the audit, and
+        after last month's outage they asked for one named contact they can
+        call instead of the general queue.
+    - kind: email
+      subject: 'Ticket 4411'
+      body: |
+        It took three days to get an answer on this ticket while our invoicing
+        was stuck. Can we have somebody on your side who picks up when this
+        happens?
+    - kind: email
+      subject: 'Thanks for lunch'
+      body: |
+        Thanks again for lunch yesterday, it was good to meet the team.
+    - kind: call
+      subject: 'Call with Kranich'
+      body: |
+        Their controller keeps the books in a shared workbook and wants a
+        proper system before they hire two more accountants. Asked for a proposal.
+expect:
+  outcome: accepted
+  answer: [[ledger_migration, premium_support], [premium_support], [], [ledger_migration]]
+  judge: none
+  judge_none_reason: >
+    The answer is a closed set of tag keys per item, and the check requires
+    each item's set exactly. A rubric could only rank wrong sets, which the
+    check fails outright.

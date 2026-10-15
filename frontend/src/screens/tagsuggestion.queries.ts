@@ -9,8 +9,8 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { throwProblem } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
 
 export type TagSuggestion = components["schemas"]["TagSuggestion"];
 

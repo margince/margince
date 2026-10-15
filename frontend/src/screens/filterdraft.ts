@@ -10,13 +10,18 @@ import type { FetchStatus } from "@tanstack/react-query";
 import { useReducer, useState } from "react";
 import type { components } from "../api/schema";
 import {
+  encode,
+  type Group,
+  type Node,
+  rootGroup,
+} from "../lib/segmentpredicate";
+import {
   acceptProposals,
   landProposal,
   type Proposal,
   proposedCount,
   replaceWithProposal,
 } from "./filterproposal";
-import { encode, type Group, type Node, rootGroup } from "./segmentpredicate";
 
 type UnusedPhrase = components["schemas"]["FilterProposalUnsupported"];
 

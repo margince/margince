@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { EmptyState } from "../design-system/atoms";
 import { FactList } from "../design-system/factlist";
 import { PanelBody } from "../design-system/panel";
@@ -14,30 +15,19 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { HealthCard } from "./healthcard";
+import { HealthCard, type HealthSlot, HealthStrip } from "./healthcard";
 
-// The shell three System health cards wear, with the body reduced to the least
-// that can stand in for one: what is worth looking at here is the four
-// decisions the shell makes, and a real reading would put its own layout in
-// front of every one of them.
-//
-// The four, in the order the stories below take them: the reading and its
-// stamp; an empty report drawn by the BODY rather than by the gate, because on
-// these cards "nothing is queued" is the finding; the withheld notice, which
-// keeps the card's place instead of removing it; and the read that failed
-// inside the card's own boundary.
+// The shell System health cards wear, with the least body that can stand in.
+// In order: a reading, an empty report the body draws, the withheld notice, a
+// failed read, then the page's row of readings.
 //
 // The copy is the job-health card's, which is the first caller — the shell
 // carries no words of its own, so a story of it has to borrow a real card's.
 
-type Report = Readonly<{ readAt: string; waiting: number; retrying: number }>;
+type Report = Readonly<{ waiting: number; retrying: number }>;
 
-const BUSY: Report = {
-  readAt: "13 Aug 2026, 09:30",
-  waiting: 12,
-  retrying: 2,
-};
-const IDLE: Report = { readAt: "13 Aug 2026, 09:30", waiting: 0, retrying: 0 };
+const BUSY: Report = { waiting: 12, retrying: 2 };
+const IDLE: Report = { waiting: 0, retrying: 0 };
 
 // A hand-built QueryLike, not a routed fetch: the card takes the query as a
 // prop, so its four states are four VALUES. Producing each one through a stub
@@ -69,7 +59,6 @@ function Shell({
       withheld={t("jobs.adminOnly")}
       canSee={canSee}
       query={query}
-      footer={(report) => t("jobs.generatedAt", { time: report.readAt })}
     >
       {(report) => (
         <PanelBody>
@@ -124,7 +113,7 @@ export default meta;
 
 type Story = StoryObj<typeof HealthCard>;
 
-/** A reading, with the stamp under it saying when it was taken. */
+/** A reading. */
 export const Reading: Story = {
   render: story(true, queryState({ data: BUSY })),
 };
@@ -132,9 +121,8 @@ export const Reading: Story = {
 /**
  * An empty report, which is a finding rather than a gap: the queue is idle.
  *
- * The shell passes no `empty` predicate to its gate for exactly this — the
- * generic "nothing here" would understate the one thing the card exists to
- * say — so the sentence comes from the body and the stamp still dates it.
+ * The shell gives its gate no `empty` predicate for this. The generic "nothing
+ * here" would understate the finding, so the sentence comes from the body.
  */
 export const NothingQueued: Story = {
   render: story(true, queryState({ data: IDLE })),
@@ -144,9 +132,6 @@ export const NothingQueued: Story = {
  * A reader without the grant. The card keeps its place and says so, because an
  * absent card on a page this reader opens for its other sections would read as
  * "nothing is queued" — a claim about the installation nobody made.
- *
- * No footer: the query's cache outlives a grant, so a stamp under a withheld
- * body would date a reading the card is no longer showing.
  */
 export const Withheld: Story = {
   render: story(false, queryState({ data: BUSY })),
@@ -176,10 +161,81 @@ export const StillReading: Story = {
   render: story(true, queryState({ isPending: true })),
 };
 
-// The reading in dark, where the panel's header band, the footer rule and the
-// FactList hairline are all re-derived from tokens a step apart: the three have
-// to stay three different weights once the whole plate darkens under them.
+// The reading in dark. The header band and the FactList hairline derive from
+// tokens a step apart, and must stay two weights.
 export const ReadingDark: Story = {
   globals: { theme: "dark" },
   render: story(true, queryState({ data: BUSY })),
+};
+
+const STAMP = "14/10/2026, 10:41";
+
+const CLEAN: readonly HealthSlot[] = [
+  {
+    key: "search",
+    label: "Search index",
+    reading: { card: { value: "Up to date", tone: "success" }, panel: false },
+  },
+  {
+    key: "jobs",
+    label: "Background jobs",
+    reading: { card: { value: "Idle", tone: "success" }, panel: false },
+  },
+  {
+    key: "intake",
+    label: "Connector records",
+    reading: { card: { value: "None", tone: "success" }, panel: false },
+  },
+  {
+    key: "providers",
+    label: "AI provider status",
+    reading: { card: { value: "Answering", tone: "success" }, panel: false },
+  },
+];
+
+// One slot found something: its tone says how bad, and its card stands below.
+const ONE_DEGRADED: readonly HealthSlot[] = CLEAN.map((slot) =>
+  slot.key === "jobs"
+    ? {
+        ...slot,
+        reading: { card: { value: "2 dead", tone: "danger" }, panel: true },
+      }
+    : slot,
+);
+
+function strip(slots: readonly HealthSlot[]) {
+  return () => (
+    <StoryProviders>
+      <HealthStrip slots={slots} stamp={STAMP} />
+    </StoryProviders>
+  );
+}
+
+/** The page's row of readings with every answer clean, dated once. */
+export const StripAllClear: Story = {
+  render: strip(CLEAN),
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByRole("region", {
+      name: "Status",
+    });
+    await expect(
+      within(row).getAllByText(/./, { selector: ".stat-card-value" }),
+    ).toHaveLength(4);
+  },
+};
+
+export const StripOneDegraded: Story = { render: strip(ONE_DEGRADED) };
+
+export const StripOneDegradedDark: Story = {
+  globals: { theme: "dark" },
+  render: strip(ONE_DEGRADED),
+};
+
+// On a phone each slot folds into a row: name and door leading, answer
+// trailing.
+export const StripAtPhoneWidth: Story = {
+  render: strip(ONE_DEGRADED),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

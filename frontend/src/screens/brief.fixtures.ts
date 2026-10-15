@@ -3,13 +3,13 @@ import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { jsonResponse } from "../testing/story-utils";
-import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
 import {
   teamWeekFigures,
   tobiasFunnel,
   tobiasPatterns,
-} from "./teamweekly.fixtures";
+} from "../features/worklist/teamweekly.fixtures";
+import { jsonResponse } from "../testing/story-utils";
+import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
 
 // The fixtures every Brief story is built from — the whole page in
 // `brief.stories.tsx`, its parts one at a time in `brief.parts.stories.tsx`. They

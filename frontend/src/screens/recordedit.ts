@@ -1,10 +1,10 @@
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
+import type { FieldRecord } from "../components/recordfields";
+import { contactEditComparison } from "../features/contacts/contactformfields";
 import { saveIndependentEdit } from "../lib/independentedit";
 import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
-import { contactEditComparison } from "./contactformfields";
-import type { FieldRecord } from "./recordfields";
 
 // Core and custom fields use the same conditional write and recovery policy.
 export function saveRecordEdit(

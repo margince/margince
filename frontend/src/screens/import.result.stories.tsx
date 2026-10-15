@@ -135,7 +135,7 @@ export const CompleteDark: Story = {
   render: page(run("complete", { checkpoint: 266 }), report("complete")),
 };
 
-/** An undo that kept one edited record and could not reverse another. */
+/** An undo that kept an edited record and a company that a deal still names. */
 export const Undone: Story = {
   render: page(
     run("undone", { checkpoint: 266 }),
@@ -145,15 +145,19 @@ export const Undone: Story = {
         status: "undone",
         reversed_count: 228,
         kept: [
-          { object: "contact", id: "01a04298-2000-7000-8000-000000000002" },
-        ],
-        errored: [
+          {
+            object: "contact",
+            id: "01a04298-2000-7000-8000-000000000002",
+            reason_code: "undo_edited",
+          },
           {
             object: "company",
             id: "01a04298-2000-7000-8000-000000000001",
-            reason: "A contact still references this company.",
+            reason_code: "undo_still_referenced",
+            params: { deals: "1", contacts: "0" },
           },
         ],
+        errored: [],
       },
     }),
   ),

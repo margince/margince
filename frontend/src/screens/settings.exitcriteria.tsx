@@ -4,24 +4,29 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { type CreateField, CreateRecordModal } from "../components/create";
+import { EditAction } from "../components/edit";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { IconAction } from "../design-system/iconaction";
+import { KeyCode } from "../design-system/keyedname";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { type CreateField, CreateRecordModal } from "./create";
 import {
   CRITERION_KIND_LABEL,
   CRITERION_KINDS,
   type CriterionKind,
   criterionKindOf,
 } from "./criterionkinds";
-import { EditAction } from "./edit";
 import { useLegalReviewAvailable } from "./legalreviews.queries";
+import "./settings.pipelines.css";
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -71,9 +76,9 @@ export function StageExitCriteria({
   const criteria = [...(query.data ?? [])].sort(
     (a, b) => a.position - b.position,
   );
+  const settled = !query.isPending && !query.isError;
   return (
-    <div className="form-stack">
-      <p>{t("stage.criteria.sub")}</p>
+    <div className="stage-criteria">
       {criteria.some((c) => BUYER_KINDS.includes(c.kind)) && (
         <Callout
           tone="info"
@@ -97,24 +102,32 @@ export function StageExitCriteria({
           <p>{t("stage.criteria.unreadable")}</p>
         </Callout>
       )}
+      {criteria.length > 0 && (
+        <SettingList>
+          {criteria.map((criterion) => (
+            <CriterionRow
+              key={criterion.id}
+              criterion={criterion}
+              stageId={stageId}
+              canEdit={canEdit}
+            />
+          ))}
+        </SettingList>
+      )}
       {/* "Nothing yet" is a claim about the stage, so it is only honest once
           the read has actually answered. A failed read says so above instead:
           a screen that reported an empty configuration after a 500 would have
           an admin adding criteria that are already there. */}
-      {criteria.length === 0 && !query.isPending && !query.isError && (
-        <p>{t("stage.criteria.none")}</p>
+      {(canEdit || (settled && criteria.length === 0)) && (
+        <div className="stage-criteria-foot">
+          {settled && criteria.length === 0 && (
+            <p>{t("stage.criteria.none")}</p>
+          )}
+          {canEdit && (
+            <CriterionCreate stageId={stageId} stageName={stageName} />
+          )}
+        </div>
       )}
-      <ul className="criterion-rows">
-        {criteria.map((criterion) => (
-          <CriterionRow
-            key={criterion.id}
-            criterion={criterion}
-            stageId={stageId}
-            canEdit={canEdit}
-          />
-        ))}
-      </ul>
-      {canEdit && <CriterionCreate stageId={stageId} stageName={stageName} />}
     </div>
   );
 }
@@ -131,57 +144,59 @@ function CriterionRow({
   const t = useT();
   const queryClient = useQueryClient();
   return (
-    <li className="criterion-row">
-      <span className="criterion-label">{criterion.label}</span>
-      <span className="t-caption criterion-key">{criterion.key}</span>
-      <Badge>{t(CRITERION_KIND_LABEL[criterion.kind])}</Badge>
-      <Badge tone={criterion.required ? "warning" : undefined}>
-        {criterion.required
-          ? t("stage.criteria.required")
-          : t("stage.criteria.optional")}
-      </Badge>
-      {canEdit && (
-        <span className="criterion-verbs">
-          <EditAction<Criterion>
-            label={t("stage.criteria.editOf", { name: criterion.label })}
-            savedMessage={(saved) =>
-              t("record.saveDone", { name: saved.label })
-            }
-            invalidate="pipelines"
-            recordKey="stage"
-            record={{
-              id: criterion.id,
-              version: criterion.version,
-              label: criterion.label,
-              kind: criterion.kind,
-              required: String(criterion.required),
-              hint: criterion.hint ?? "",
-            }}
-            fields={criterionEditFields(t, criterion.kind)}
-            update={async (values, _rows, opened) => {
-              const saved = unwrap(
-                await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
-                  params: {
-                    path: { id: stageId, criterion_id: criterion.id },
-                    // The version the form OPENED on, not the one the row
-                    // carries now. A background refetch can pull in another
-                    // editor's save while this modal stays open; pinning the
-                    // live version would then submit these stale values
-                    // against their version and overwrite them.
-                    ...ifMatch(requireVersion(opened?.version)),
-                  },
-                  body: criterionEditBody(values),
-                }),
-              );
-              // The edit form refreshes the pipelines; this list is read apart.
-              queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
-              return saved;
-            }}
-          />
-          <CriterionRemove criterion={criterion} stageId={stageId} />
-        </span>
-      )}
-    </li>
+    <SettingRow
+      label={criterion.label}
+      description={t(CRITERION_KIND_LABEL[criterion.kind])}
+      value={
+        <Badge tone={criterion.required ? "warning" : undefined}>
+          {criterion.required
+            ? t("stage.criteria.required")
+            : t("stage.criteria.optional")}
+        </Badge>
+      }
+      control={
+        canEdit && (
+          <span className="cell-actions">
+            <EditAction<Criterion>
+              label={t("stage.criteria.editOf", { name: criterion.label })}
+              savedMessage={(saved) =>
+                t("record.saveDone", { name: saved.label })
+              }
+              invalidate="pipelines"
+              recordKey="stage"
+              record={{
+                id: criterion.id,
+                version: criterion.version,
+                label: criterion.label,
+                kind: criterion.kind,
+                required: String(criterion.required),
+                hint: criterion.hint ?? "",
+              }}
+              fields={criterionEditFields(t, criterion)}
+              update={async (values, _rows, opened) => {
+                const saved = unwrap(
+                  await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
+                    params: {
+                      path: { id: stageId, criterion_id: criterion.id },
+                      // Pin the version the form opened on. A refetch may carry
+                      // another editor's save, which the live version would overwrite.
+                      ...ifMatch(requireVersion(opened?.version)),
+                    },
+                    body: criterionEditBody(values),
+                  }),
+                );
+                // The edit form refreshes the pipelines; this list is read apart.
+                queryClient.invalidateQueries({
+                  queryKey: criteriaKey(stageId),
+                });
+                return saved;
+              }}
+            />
+            <CriterionRemove criterion={criterion} stageId={stageId} />
+          </span>
+        )
+      }
+    />
   );
 }
 
@@ -289,13 +304,12 @@ function CriterionRemove({
   });
   return (
     <>
-      <Button
-        variant="ghost"
-        aria-label={t("stage.criteria.removeOf", { name: criterion.label })}
+      <IconAction
+        label={t("stage.criteria.removeOf", { name: criterion.label })}
+        icon={<Trash2 aria-hidden />}
+        opensDialog
         onClick={() => setOpen(true)}
-      >
-        {t("stage.criteria.remove")}
-      </Button>
+      />
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
@@ -363,16 +377,20 @@ function criterionCreateFields(
   ];
 }
 
-// The edit form omits `key`: evidence matches a criterion by key across an
-// edit, so renaming one would orphan every claim already recorded under it.
-// The contract has no key field on the PATCH body either.
+// The edit form shows `key` and never edits it: evidence matches a criterion by
+// key, so renaming one would orphan every claim already recorded under it.
 function criterionEditFields(
   t: ReturnType<typeof useT>,
-  current: CriterionKind,
+  current: Pick<Criterion, "key" | "kind">,
 ): CreateField[] {
-  const legal = current === "legal_reviewed";
+  const legal = current.kind === "legal_reviewed";
   return [
-    { key: "label", label: "stage.criteria.label", required: true },
+    {
+      key: "label",
+      label: "stage.criteria.label",
+      required: true,
+      hint: <KeyCode code={current.key} />,
+    },
     ...criterionShapeFields(t, (kind) => (kind === "legal_reviewed") === legal),
   ];
 }

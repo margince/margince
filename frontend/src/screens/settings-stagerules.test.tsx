@@ -381,11 +381,12 @@ describe("stage automation rules", () => {
     expect(
       rows.map((row) => row.querySelector(".t-name")?.textContent),
     ).toEqual(["Discovery → Negotiation", "Negotiation → Contract"]);
-    // Each row keeps the hint, and the switch is described by it.
+    // An automatic rule says what it is doing, and the switch is described by
+    // it; the panel intro says once what switching on means.
     const toggle = within(rows[0]).getByRole("switch");
     expect(toggle.getAttribute("aria-describedby")).toBeTruthy();
-    expect(rows[0].textContent).toContain("Margince moves the deal");
     expect(rows[0].textContent).toContain("Undo for 72 h");
+    expect(rows[1].querySelector(".settingrow-description")).toBeNull();
   });
 
   it("draws a suspension inside its transition's row, with the way back beside the switch", async () => {

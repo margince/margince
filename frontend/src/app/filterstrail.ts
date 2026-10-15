@@ -3,6 +3,7 @@
 
 import type { Crumb } from "../design-system/breadcrumb";
 import { useT } from "../i18n";
+import { useList } from "../lib/lists.queries";
 import { type Route, routeHash } from "../lib/router";
 import {
   type FiltersAddress,
@@ -10,7 +11,6 @@ import {
   NEW_FILTER_LABEL,
   opensAFocusedFiltersPage,
 } from "../screens/filtersaddress";
-import { useList } from "../screens/lists.queries";
 import { openableTree, useSavedView } from "../screens/savedviews.queries";
 
 /** The list a page names: one list's own page, or its filter's. */

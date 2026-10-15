@@ -4,15 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../design-system/panel";
 import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../features/worklist/worklist.receiptreview.fixtures";
+import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../testing/story-utils";
 import { BriefChanges } from "./brief.changes";
-import {
-  automaticDateReceipt,
-  automaticStageReceipt,
-} from "./worklist.receiptreview.fixtures";
 
 const meta: Meta<typeof BriefChanges> = {
   title: "Shell/Home/Changes",

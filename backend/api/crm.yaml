@@ -8,7 +8,7 @@ openapi: 3.1.0
 # mirrors into this file from anywhere else: change the wire here, and the
 # generated code follows.
 #
-# Conventions (full text in ./README.md):
+# Conventions (for a client: docs/reference/rest-api.md):
 #   - Resources are plural nouns (/contacts, /companies, /deals, ...).
 #   - Pagination is cursor-based: ?cursor=&limit= -> { data, page: {next_cursor, has_more} }.
 #   - Errors are RFC 7807 problem+json with a stable machine `code`, plus `details`.
@@ -976,6 +976,24 @@ paths:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /openapi.json:
+    get:
+      tags: [Identity]
+      operationId: getAgentOpenAPIDocument
+      summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+      description: |
+        The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+        Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+        address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+        both read it: the document says what a passport may call and holds no record data.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /oauth/consent-request:
     get:
@@ -2004,6 +2022,34 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Contacts]
+      operationId: restoreContactMoment
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of the moment with this `claim_key`, only while it is
+        still held against this `evidence_fingerprint`. An Undo from an older toast therefore
+        leaves a newer dismissal of changed evidence standing. Idempotent: a moment nobody
+        dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: claim_key
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `claim_key` of the moment that was dismissed, unchanged.
+        - name: evidence_fingerprint
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The `evidence_fingerprint` the moment carried when it was dismissed.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/intro-note-draft:
     parameters:
@@ -2865,6 +2911,11 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -2880,6 +2931,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -3798,6 +3850,9 @@ paths:
         there is nothing to silence. So the stored set grows by one row per suggestion a
         human actually dismissed, and no dismissal is ever dropped to make room.
 
+        The account's moment (`Company360.moment`) is set aside the same way: its
+        `evidence_fingerprint` is accepted here while that promise is open on the account.
+
         Human-only: an agent has no opinion to record.
       requestBody:
         required: true
@@ -3837,6 +3892,27 @@ paths:
                     a reader sees as the card refusing to go away.
       responses:
         '204': { description: "Dismissed, or nothing matched and nothing was stored." }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Companies]
+      operationId: restoreCompanySuggestion
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Show a dismissed suggestion or moment again, the undo behind "Not now".
+      description: |
+        Clears this reader's dismissal of this fingerprint on this account. Idempotent: a
+        fingerprint nobody dismissed answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` that was dismissed, unchanged.
+      responses:
+        '204': { description: 'Shown again, or was never hidden.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -4588,7 +4664,7 @@ paths:
         margin tier as it stood that day. A clawback is a reversal row plus a void on the
         original, never an edit — so the ledger reads the same tomorrow as it did when a
         partner was told what they had earned.
-      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: list_records, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -4634,7 +4710,7 @@ paths:
       tags: [Commissions]
       operationId: getCommissionEntry
       summary: One ledger entry.
-      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_record, record_type: commission, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The entry.
@@ -6969,7 +7045,7 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
-      x-mcp-tool: { verb: search_records, record_type: activity, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: activity, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -12588,6 +12664,8 @@ paths:
     get:
       tags: [Views]
       operationId: listSavedViews
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: List the caller's saved views (per-user; optionally scoped to one resource).
       parameters:
         - name: resource
@@ -12604,7 +12682,8 @@ paths:
     post:
       tags: [Views]
       operationId: createSavedView
-      x-mcp-tool: { verb: create_record, record_type: saved_view, tier: auto_execute, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: Save a per-user view (columns, sort, filter state) for a resource.
       requestBody:
         required: true
@@ -12625,6 +12704,8 @@ paths:
     get:
       tags: [Views]
       operationId: getSavedView
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: Get one of the caller's saved views by id.
       responses:
         '200':
@@ -12636,7 +12717,8 @@ paths:
     patch:
       tags: [Views]
       operationId: updateSavedView
-      x-mcp-tool: { verb: update_record, record_type: saved_view, tier: auto_execute, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: Update a saved view's name or query state.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -12657,7 +12739,8 @@ paths:
     delete:
       tags: [Views]
       operationId: archiveSavedView
-      x-mcp-tool: { verb: archive_record, record_type: saved_view, tier: auto_execute, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: Archive a saved view.
       responses:
         '200':
@@ -12684,6 +12767,9 @@ paths:
         the export is then listed on the list as a use. Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
+        A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
+        with a quote so a spreadsheet does not evaluate it; a bare international phone number
+        (`+` and 6 to 15 digits) is left unquoted.
       requestBody:
         required: true
         content:
@@ -12909,17 +12995,15 @@ paths:
     post:
       tags: [Webhooks]
       operationId: createWebhookSubscription
-      x-mcp-tool: { verb: create_record, record_type: webhook_subscription, tier: confirmation_required, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       summary: Register an outbound webhook subscription (returns the signing secret once).
       description: |
-        Registers a target URL + event-type subset. Registering outbound egress, so an agent
-        principal's call is 🟡 — staged for human approval (ADR-0036), then redeemed with the
-        `X-Approval-Token`; a human on a session registers directly. Every register/change/delete
+        Registers a target URL + event-type subset. Registering outbound egress is a human's to
+        do, so an agent principal is refused. Every register/change/delete
         is audited. The `signing_secret` in the response is shown EXACTLY ONCE — deliveries are
         signed with it on the Standard Webhooks scheme (verify the `webhook-signature` header).
         `target_url` must be https://.
-      parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: true
         content:
@@ -12931,6 +13015,32 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebhookSubscriptionCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /webhook-subscriptions/body-preview:
+    post:
+      tags: [Webhooks]
+      operationId: previewWebhookBody
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Render a body template against a sample event, without sending anything.
+      description: |
+        Renders `body_template` with the same engine a delivery uses, against a sample event of
+        `event_type` built from the public event contract. Nothing is sent and nothing is stored.
+        A template the engine refuses answers 422 on `body_template`, naming the line and column.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookBodyPreviewRequest' }
+      responses:
+        '200':
+          description: The rendered body.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookBodyPreview' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -12956,14 +13066,13 @@ paths:
     patch:
       tags: [Webhooks]
       operationId: updateWebhookSubscription
-      x-mcp-tool: { verb: update_record, record_type: webhook_subscription, tier: confirmation_required, scope: write }
-      summary: Pause/resume a subscription or re-target its event set.
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Pause/resume a subscription, re-target its event set, or change its headers or body template.
       description: |
-        A partial update (pause/resume or re-target the event set). Re-targeting can widen
-        outbound egress, so an agent principal's call is 🟡 — staged for approval and redeemed
-        with the `X-Approval-Token`; a human updates directly.
+        A partial update (pause/resume, the event set, custom headers, body template). Re-targeting can widen
+        outbound egress, so an agent principal is refused.
       parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
         required: true
@@ -13054,6 +13163,10 @@ paths:
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: Replay a parked (dead-lettered) delivery.
+      description: |
+        Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+        delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+        retry sweep or another replay is sending at this moment is a 409; try again once it ends.
       responses:
         '200':
           description: The delivery after the replay attempt.
@@ -13063,6 +13176,8 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /tags -------------------------------------
   /tag-suggestions/{id}:
@@ -13257,7 +13372,7 @@ paths:
     delete:
       tags: [Tags]
       operationId: archiveTag
-      x-mcp-tool: { verb: archive_record, record_type: tag, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: archive_record, record_type: tag, tier: auto_execute, scope: write, served_by: rest_only }
       summary: Archive a tag.
       description: |
         Retiring a word leaves every record that carries it alone: the taggings stay, so a
@@ -13354,7 +13469,7 @@ paths:
     get:
       tags: [Tags]
       operationId: getRecordTags
-      x-mcp-tool: { verb: get_record_tags, record_type: tag, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: get_record_tags, tier: auto_execute, scope: read }
       summary: The tags on one record, and who put them there.
       description: |
         ONE read for every advertised record type, because the panel that draws them is one
@@ -13392,7 +13507,7 @@ paths:
     post:
       tags: [Tags]
       operationId: applyTag
-      x-mcp-tool: { verb: apply_tag, record_type: tag, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: apply_tag, tier: auto_execute, scope: write }
       summary: Apply a tag to an entity (contact/company/deal/lead/project).
       requestBody:
         required: true
@@ -13413,7 +13528,7 @@ paths:
     delete:
       tags: [Tags]
       operationId: removeTag
-      x-mcp-tool: { verb: remove_tag, record_type: tag, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: remove_tag, tier: auto_execute, scope: write }
       summary: Take one tag off one entity, leaving the tag itself in place.
       description: |
         Undo for applyTag. archiveTag retires a tag from the whole workspace, which is not the
@@ -14300,7 +14415,8 @@ paths:
       summary: Save the installation's own company — the human's confirm-first write.
       description: |
         Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-        later one. This is a HUMAN write: every field is stamped
+        later one. Its `display_name` is the installation's name: the same transaction writes it to
+        `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
         `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
         from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
         theirs, and a later agent read-back will not overwrite it.
@@ -16142,6 +16258,66 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/done:
+    put:
+      tags: [Brief]
+      operationId: markWorklistRowsDone
+      x-agent-access: human-only
+      # Session cookie only: clearing your own list is a contact's judgement
+      # about their own day, and an agent has no list to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Take rows off your own Worklist, because there is nothing more to do there.
+      description: |
+        Done on any row that offers `handled` in its `dispositions`. One row, or every row a
+        reader ticked: the batch lands whole or not at all, and one call to
+        `/worklist/done/undo` with the same rows reverses it.
+
+        PER READER. A row the caller marks done leaves the caller's list and nobody else's.
+
+        A row comes back on its own when something new happens on its subject. A message,
+        an unanswered message of the caller's own and a meeting follow-up keep their Done
+        on the activity, so the next message or meeting is new work. Every other row
+        returns once it reports an event on its subject after the press: a new failure on
+        a health row, a connection that synced again, new activity or a passed close date
+        on a deal at risk.
+
+        Each row must be one the caller's Worklist draws now, under a scope they hold, with
+        every lane's own grant and row scope. Any other row answers 404, the same as one
+        that does not exist, and nothing in the batch is written. A source whose rows never
+        offer Done answers 422. A row named twice is written once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorklistDoneRequest' }
+      responses:
+        '204': { description: 'Off the list, or was already.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/done/undo:
+    post:
+      tags: [Brief]
+      operationId: reopenWorklistRows
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put rows back on your own Worklist — the undo behind Done.
+      description: |
+        Clears what THIS reader marked done. Idempotent: a row nobody marked done is the
+        same success, because the reader's goal state already holds. A POST rather than a
+        DELETE, because the batch travels in a body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorklistDoneRequest' }
+      responses:
+        '204': { description: 'Back on the list, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /worklist/team:
     get:
@@ -17661,6 +17837,33 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/agent-usage:
+    get:
+      tags: [AI]
+      operationId: listAgentUsageByUser
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How much of their allowances each user's agents have used in this window.
+      description: |
+        One row per user with a live passport or connection, summed over all of them: what
+        was used, the allowance it is judged against, and the worst state among them. It names
+        no passport, label, permission or token, and says nothing about what an agent read or
+        changed: which agents act for a user is that user's own business, and this read
+        answers only how much. Readable by whoever may read the AI usage page.
+      responses:
+        '200':
+          description: Usage per user.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentUsageByUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '503':
+          description: The agent counters cannot be read right now. Try again shortly.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /ai/profile:
     get:
       tags: [AI]
@@ -18158,6 +18361,7 @@ paths:
         - { name: task, in: query, schema: { type: string }, description: 'Filter to one task (capture_classify, enrich, …).' }
         - { name: provider, in: query, schema: { type: string }, description: 'Filter to calls that ended on one provider (openai_compatible, gemini, …).' }
         - { name: model, in: query, schema: { type: string }, description: 'Filter to calls that ended on one configured model id.' }
+        - { name: served_model, in: query, schema: { type: string }, description: 'Filter to calls one model answered: the model the provider named, else the configured one.' }
         - { name: served_provider, in: query, schema: { type: string }, description: 'Filter to calls a broker served from one upstream host.' }
         - { name: tier, in: query, schema: { type: string }, description: 'Filter to calls that ended on one tier.' }
       responses:
@@ -18184,7 +18388,7 @@ paths:
         way /ai/usage prices it, and calls no rate prices are counted in `unpriced`.
       parameters:
         - { name: window, in: query, schema: { type: string, enum: ['24h', '7d', '30d'], default: '7d' } }
-        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_provider, tier, task], default: provider } }
+        - { name: group, in: query, schema: { type: string, enum: [provider, model, served_model, served_provider, tier, task], default: provider }, description: 'served_model groups by the model that answered: the model the provider named, else the configured one.' }
         - { name: provider, in: query, schema: { type: string } }
         - { name: model, in: query, schema: { type: string } }
         - { name: tier, in: query, schema: { type: string } }
@@ -18564,6 +18768,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /approvals/{id}/failure-acknowledgement:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Approvals]
+      operationId: acknowledgeApprovalFailure
+      x-agent-access: human-only
+      # Session cookie only: seeing that your own decision did not take effect
+      # is the decider's judgement, and an agent has no Worklist to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Say you have seen that an approved change did not run, so it leaves your Worklist.
+      description: |
+        An approval whose released work failed is carried back to the contact who approved it
+        on the Worklist. This takes that row off their list. The approval and its failure stay
+        on the record, and the Approval still reports `effect_failed_at`.
+
+        The acknowledgement is held against the failure it saw. If the same approval fails
+        again later, for example after the decider approves it once more to retry the work,
+        the new failure shows again.
+
+        Only the contact who decided the approval may acknowledge its failure. Any other
+        caller, and an approval with no failure, answers `404`.
+
+        The request names the failure the reader saw, by its `effect_failed_at`. If the
+        approval has failed again since, the newer failure is not acknowledged: the call
+        answers `409` and the row stays on the list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [failed_at]
+              additionalProperties: false
+              properties:
+                failed_at:
+                  type: string
+                  format: date-time
+                  description: The `effect_failed_at` of the failure the reader saw, as the Worklist row's `occurred_at` carries it.
+      responses:
+        '204': { description: 'Acknowledged. Acknowledging the same failure again is the same success.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The approval failed again after the failure named in the request.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---- Approval bundles: one act's proposals, decided together (D2/R7) -------
   /approval-bundles/{bundle_id}/approve:
     parameters:
@@ -18936,13 +19191,15 @@ paths:
         An assignee-scoped list would leave a card nobody could find the moment the colleague it named
         went on leave.
 
-        Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-        caller to discover it.
+        Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+        waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+        stranded the oldest reviews, which are the ones a reviewer most needs.
       parameters:
         - name: limit
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: What is waiting.
@@ -19583,7 +19840,7 @@ paths:
         CUSTOM-FIELDS-WIRE-1. Unlike a normal resource list, this admin view returns both
         active and retired fields by default — `status` narrows to one lifecycle state.
         Backs the custom-fields admin field table.
-      x-mcp-tool: { verb: search_records, record_type: custom_field, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: describe_query_vocabulary, record_type: custom_field, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -19618,22 +19875,20 @@ paths:
     post:
       tags: [CustomFields]
       operationId: createCustomField
-      summary: Define a new custom field on an existing core object (🟡 — a schema change).
+      summary: Define a new custom field on an existing core object (a schema change).
       description: |
         CUSTOM-FIELDS-WIRE-2. Runs the governed engine's single-transaction add: schema
-        change + catalog row + one audit entry land or roll back together. Always 🟡 —
-        a schema change is never 🟢 — so an agent caller must supply `X-Approval-Token`,
-        exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-        itself the approval. `column_name` is server-derived and never client-supplied —
+        change + catalog row + one audit entry land or roll back together. A schema change
+        is a human's to make, so an agent principal is refused. `column_name` is server-derived and never client-supplied —
         immutable once live. When the requested `label`/`type`/`object` combination is
         judged structural — a new object, a relationship, or logic, never one of the six
         closed types on one of the five closed objects — the request is refused with a
         `structural_change_refused` 422 (see the example below) and nothing is written:
         a structural change ships as a reviewed source change, not a runtime column.
-      x-mcp-tool: { verb: create_record, record_type: custom_field, tier: confirmation_required, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: true
         content:
@@ -19668,7 +19923,7 @@ paths:
               schema: { $ref: '#/components/schemas/CustomField' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: RBAC denied, or an agent 🟡 create attempted without an approval token.
+          description: RBAC denied, or the caller is an agent principal.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -19761,14 +20016,15 @@ paths:
     patch:
       tags: [CustomFields]
       operationId: renameCustomField
-      summary: Rename a custom field's display label (🟢 — not a schema change).
+      summary: Rename a custom field's display label (not a schema change).
       description: |
         CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
         moves — the physical column identity is stable across rename. Merge-PATCH:
         `column_name`, `object`, and `type` are absent from the request schema entirely.
         A retired field refuses rename with a 409 `conflict` — retirement is terminal,
         so its label is frozen.
-      x-mcp-tool: { verb: update_record, record_type: custom_field, tier: auto_execute, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -19817,22 +20073,21 @@ paths:
     post:
       tags: [CustomFields]
       operationId: retireCustomField
-      summary: Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+      summary: Retire (soft-retire) a custom field. It cannot be undone.
       description: |
         CUSTOM-FIELDS-WIRE-4. Sets `status=retired`; hides the field from the API and
         filtering while the column and every value in it are preserved — the engine never
-        drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
-        posture: an irreversible-feeling state change users must confirm) — an agent caller
-        must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
+        drops a column as a side effect (CUSTOM-FIELDS-AC-13). An agent principal is refused.
+        Not the generic archive shape: this is a status flip
         on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
         refused because a Live List filters on the field: the list keeps evaluating on the kept
         values and reports health `retired_field`. Which lists those are is read, for the
         caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
         replayed answer would otherwise repeat list names the caller may no longer find.
-      x-mcp-tool: { verb: update_record, record_type: custom_field, tier: confirmation_required, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
       responses:
         '200':
           description: >-
@@ -19842,7 +20097,7 @@ paths:
               schema: { $ref: '#/components/schemas/CustomField' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: RBAC denied, or an agent 🟡 retire attempted without an approval token.
+          description: RBAC denied, or the caller is an agent principal.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -19862,7 +20117,7 @@ paths:
     patch:
       tags: [CustomFields]
       operationId: updateCustomFieldOptions
-      summary: Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
+      summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
       description: |
         CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
         otherwise). Replaces the catalog's `options` array and regenerates the physical
@@ -19870,15 +20125,15 @@ paths:
         one-transaction owner-ALTER shape as `createCustomField` — this is the
         one DDL path rename/retire never touch). Removing every option is refused (422,
         detail "A picklist needs at least one option") — a picklist always keeps at least
-        one allowed value. 🟡 like `retireCustomField`: this mutates a schema-adjacent CHECK
-        constraint, so an agent caller must supply `X-Approval-Token`. A retired field
+        one allowed value. Like `retireCustomField`, an agent principal is refused: this
+        mutates a schema-adjacent CHECK constraint. A retired field
         refuses the edit with a 409 `conflict` — retirement is terminal, so its options
         are frozen; removing an option that stored values still use is also a 409
         (`ADD CONSTRAINT` validates existing rows — migrate the values first).
-      x-mcp-tool: { verb: update_record, record_type: custom_field, tier: confirmation_required, scope: write }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
         required: true
         content:
@@ -19892,7 +20147,7 @@ paths:
               schema: { $ref: '#/components/schemas/CustomField' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: RBAC denied, or an agent 🟡 options edit attempted without an approval token.
+          description: RBAC denied, or the caller is an agent principal.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -20972,7 +21227,8 @@ paths:
         - { name: subject_id, in: query, schema: { type: string, format: uuid } }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
-      x-mcp-tool: { verb: search_records, record_type: record_grant, tier: auto_execute, scope: read }
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
       responses:
         '200':
           description: A page of record grants.
@@ -21027,7 +21283,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RecordGrant' }
         '403':
-          description: RBAC denied (`manage_sharing` required), or an agent 🟡 share attempted without an approval token.
+          description: RBAC denied (`manage_sharing` required), or the caller is an agent principal.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -21060,7 +21316,7 @@ paths:
       responses:
         '204': { description: Revoked. }
         '403':
-          description: RBAC denied (`manage_sharing` required), or an agent 🟡 revoke attempted without an approval token.
+          description: RBAC denied (`manage_sharing` required), or the caller is an agent principal.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -22585,7 +22841,7 @@ paths:
       tags: [Offers]
       operationId: listProducts
       summary: List rate-card products (live by default; cursor-paginated).
-      x-mcp-tool: { verb: search_records, record_type: product, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -22613,7 +22869,7 @@ paths:
       description: |
         Price is integer minor-units + ISO-4217 currency (P11, no float money). `sku` is
         optional; when present it is unique per workspace (409 on a live duplicate).
-      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -22641,7 +22897,7 @@ paths:
       tags: [Offers]
       operationId: getProduct
       summary: Get a product by id.
-      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_record, record_type: product, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The product.
@@ -22653,7 +22909,7 @@ paths:
       tags: [Offers]
       operationId: updateProduct
       summary: Update a product (partial). Existing offer lines keep their price snapshot.
-      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -22674,7 +22930,7 @@ paths:
       tags: [Offers]
       operationId: archiveProduct
       summary: Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
-      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: archive_record, record_type: product, tier: auto_execute, scope: write, served_by: rest_only }
       responses:
         '200':
           description: Archived product.
@@ -22709,7 +22965,7 @@ paths:
       description: |
         Scoped by the parent deal's visibility: a room whose deal the caller cannot
         see is absent, indistinguishable from one that does not exist.
-      x-mcp-tool: { verb: search_records, record_type: deal_room, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -22751,7 +23007,7 @@ paths:
         The steward defaults to the deal's owner and is the named human a buyer is
         pointed at for help; a room whose steward left the company points its buyers
         at nobody, so the field transfers deliberately rather than following the deal.
-      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: deal_room, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -22780,7 +23036,7 @@ paths:
       tags: [Deals]
       operationId: getDealRoom
       summary: Get a Deal Room by id.
-      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_record, record_type: deal_room, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The Deal Room.
@@ -23003,7 +23259,7 @@ paths:
         Revoked participants are included by default and marked: their comments and
         decisions stay attributed to them, so a roster that hid them would
         leave unexplained names on the room's history.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_participant, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: deal_room_participant, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - name: active_only
           in: query
@@ -23175,7 +23431,7 @@ paths:
         Each entry points at an attachment already filed on the room's deal; the room
         holds no bytes of its own. Grouped by one of four fixed groups and ordered
         within each.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_document, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: deal_room_document, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The room's documents.
@@ -23277,7 +23533,7 @@ paths:
       description: |
         Live on both sides: nothing here waits for a publish. Optionally narrowed to
         one document. A room-level thread has no `document_id`.
-      x-mcp-tool: { verb: search_records, record_type: deal_room_thread, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: deal_room_thread, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - name: document_id
           in: query
@@ -23299,7 +23555,7 @@ paths:
         The first comment is the body. Refused once the room can no longer reach a
         buyer (closed, expired, archived). A document thread is pinned to the
         document's current version.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_thread, tier: auto_execute, scope: write, served_by: rest_only }
       requestBody:
         required: true
         content:
@@ -23328,7 +23584,7 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: Refused on a resolved thread and in a room that can no longer reach a buyer.
-      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: deal_room_comment, tier: auto_execute, scope: write, served_by: rest_only }
       requestBody:
         required: true
         content:
@@ -23390,7 +23646,7 @@ paths:
       operationId: listOfferTemplates
       summary: List offer templates (branded DE/EN PDF layouts), newest first.
       description: Default view excludes archived rows; pass include_archived=true to include them.
-      x-mcp-tool: { verb: search_records, record_type: offer_template, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23417,7 +23673,7 @@ paths:
         `offer_template_name_duplicate`). At most one default template per locale (409
         `offer_template_default_conflict` — setting `is_default=true` while another
         default already holds that locale).
-      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23466,7 +23722,7 @@ paths:
       tags: [Offers]
       operationId: getOfferTemplate
       summary: Get an offer template by id.
-      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_record, record_type: offer_template, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The offer template.
@@ -23481,7 +23737,7 @@ paths:
       operationId: updateOfferTemplate
       summary: Update an offer template (full replace — every writable field is replaced).
       description: Uses PUT (not PATCH) — omitting a writable field resets it, it is not a partial no-op.
-      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -23506,7 +23762,7 @@ paths:
       operationId: archiveOfferTemplate
       summary: Archive (soft-delete) an offer template.
       description: Sets archived_at (soft-archive); hidden from the default list but still fetchable by id. Offers already carrying this template_id are unaffected — a template is never deleted out from under an existing offer.
-      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: archive_record, record_type: offer_template, tier: auto_execute, scope: write, served_by: rest_only }
       responses:
         '200':
           description: Archived offer template.
@@ -23627,7 +23883,7 @@ paths:
       tags: [Offers]
       operationId: listDealOffers
       summary: List a deal's offers, newest revision first.
-      x-mcp-tool: { verb: search_records, record_type: offer, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: search_records, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -23649,7 +23905,7 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
-      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: create_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -23675,7 +23931,7 @@ paths:
       tags: [Offers]
       operationId: getOffer
       summary: Get an offer with its line items and computed totals.
-      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_record, record_type: offer, tier: auto_execute, scope: read, served_by: rest_only }
       responses:
         '200':
           description: The offer.
@@ -23687,7 +23943,7 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -23713,7 +23969,7 @@ paths:
       operationId: archiveOffer
       summary: Archive (soft-delete) an offer.
       description: An accepted offer prices its deal and is refused 409 `offer_accepted`; archive any other status.
-      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: archive_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       responses:
         '200':
           description: Archived offer.
@@ -23730,7 +23986,7 @@ paths:
       tags: [Offers]
       operationId: addOfferLineItem
       summary: Add a line item to a draft offer (position defaults to next; totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       requestBody:
         required: true
         content:
@@ -23756,7 +24012,7 @@ paths:
       tags: [Offers]
       operationId: updateOfferLineItem
       summary: Update a draft offer's line item (totals recomputed; totals themselves are not settable).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       requestBody:
         required: true
         content:
@@ -23774,7 +24030,7 @@ paths:
       tags: [Offers]
       operationId: removeOfferLineItem
       summary: Remove a line item from a draft offer (totals recomputed).
-      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: update_record, record_type: offer, tier: auto_execute, scope: write, served_by: rest_only }
       responses:
         '200':
           description: The offer without the line, totals recomputed.
@@ -24247,10 +24503,7 @@ paths:
       # queue's MARKS stay human-only below: they are how that human notices
       # what the agent did.
       #
-      # The tool charges one read per item against MCP-SESS-READS. Brief items
-      # are contract types rather than datasource records, so nothing charges
-      # for them by default, and a densely-joined brief metered per call would
-      # be the cheapest bulk read on the surface (A139).
+      # The tool spends one call, like every read.
       x-mcp-tool: { verb: read_brief, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -25094,6 +25347,7 @@ paths:
 
         Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
         opening the file reads them as the text the record holds rather than evaluating them.
+        A bare international phone number (`+` and 6 to 15 digits) is left unquoted.
       x-agent-access: human-only
       responses:
         '200':
@@ -26333,6 +26587,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /deals/{id}/move/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: dismissDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Set the deal card's move aside for me until it changes.
+      description: |
+        The deal page's "Not now", by the rule the contact and company pages use: per reader,
+        and held against the move's `fingerprint`, so it lifts by itself when the card names a
+        different move. It feeds no formula, no brief and no other reader's page.
+
+        One set-aside per reader and deal: a second one replaces the first, because the card
+        shows one move. Reading the deal is the licence to set its move aside; an id the
+        caller cannot read answers 404, the same as one that does not exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissDealMoveRequest' }
+      responses:
+        '204': { description: Set aside. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Deals]
+      operationId: restoreDealMove
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Put a set-aside move back on the deal card, the undo behind "Not now".
+      description: |
+        Clears this reader's set-aside of the move with this fingerprint. Idempotent: a
+        move nobody set aside answers the same success, because the goal state holds.
+      parameters:
+        - name: fingerprint
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+          description: The `fingerprint` of the move that was set aside, unchanged.
+      responses:
+        '204': { description: 'Back on the card, or was never off it.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -27699,6 +28002,11 @@ paths:
         The file's rows are counted first. A file with more rows than one test
         run reads is refused 422 `too_many_rows`, and no run and no stored file
         are left behind.
+
+        A cell an export quoted against formula evaluation (a quote before `=`,
+        `+`, `-`, `@`, a tab or a carriage return) is read without that one
+        quote, here and in the run, so an unedited export imports as the values
+        it was written from.
       requestBody:
         required: true
         content:
@@ -27707,7 +28015,7 @@ paths:
               type: object
               required: [file]
               properties:
-                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part''s type. A ZIP is known by its content, not its name.' }
+                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part''s type. A ZIP is known by its content, not its name.' }
                 object: { $ref: '#/components/schemas/ImportObject' }
       responses:
         '200':
@@ -27742,8 +28050,14 @@ paths:
 
         Gated on reading `import_run`, the same grant that reads one run. A
         `limit` outside 1..50 is clamped to the nearest bound, not refused.
+
+        `view` narrows the list so that drafts and abandoned runs cannot push
+        a finished import out of one page: `history` is every run that wrote,
+        is writing or failed (not drafts, not cancelled runs), and `drafts` is
+        the runs still waiting for a test. Left out, every run is listed.
       parameters:
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: view, in: query, schema: { type: string, enum: [history, drafts] } }
         - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
@@ -28057,6 +28371,8 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — a file to download
       x-agent-access: human-only
       summary: Download the run's row problems as a CSV.
+      parameters:
+        - { name: lang, in: query, required: false, schema: { type: string, enum: [en, de, vi], default: en }, description: 'The language of the header and of each reason. An issue stored without a code is written in English.' }
       description: |
         The report's `issues` as a spreadsheet: `file,row,column,problem,value`,
         one line per issue. A cell that a spreadsheet would read as a formula
@@ -28473,6 +28789,11 @@ paths:
 
         `404` therefore means the company is unreachable, or — for the confirm operation, or for
         an agent's first statement — that no such claim exists to answer for.
+
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -29281,13 +29602,13 @@ components:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
     PayloadTooLarge:
-      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
+      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
           examples:
             tooLarge:
-              value: { type: 'https://errors.gradion.com/payload_too_large', title: Payload too large, status: 413, code: payload_too_large, detail: The upload exceeds this installation's ceiling for this route. }
+              value: { type: 'https://errors.gradion.com/body_too_large', title: Request Entity Too Large, status: 413, code: body_too_large, detail: the upload exceeds the limit this installation sets for this route }
     UnsupportedMediaType:
       description: 'The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success.'
       content:
@@ -29538,7 +29859,7 @@ components:
         target URL that receives signed HTTP POSTs for a chosen subset of the published
         event catalog. The signing secret is NEVER returned here — it is surfaced once,
         at create/rotate, in `WebhookSubscriptionCreated`.
-      required: [id, owner_id, target_url, event_types, state, version]
+      required: [id, owner_id, target_url, event_types, state, custom_headers, version]
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
@@ -29548,10 +29869,60 @@ components:
           items: { type: string }
           description: The subscribed event types, each from the published event catalog.
         state: { type: string, enum: [active, paused] }
+        custom_headers:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookCustomHeader' }
+          description: >-
+            The headers sent with every delivery, by name. A value is sealed when saved and never
+            returned, not even in part.
+        body_template:
+          type: [string, 'null']
+          description: The body template every delivery is rendered from; null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
         version: { type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update. }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+
+    WebhookCustomHeader:
+      type: object
+      description: A custom header as a read shows it. The value stays sealed; `configured` says one is stored.
+      required: [name, configured]
+      properties:
+        name: { type: string }
+        configured: { type: boolean }
+
+    WebhookCustomHeaderInput:
+      type: object
+      description: >-
+        A custom header to store. `value` is required for a new name. On update, a row that
+        omits `value` keeps the value already stored under that name.
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 64 }
+        value: { type: string, maxLength: 4096 }
+
+    WebhookBodyContentType:
+      type: [string, 'null']
+      enum: [application/json, text/plain, application/x-www-form-urlencoded, null]
+      description: The Content-Type of a templated body; null means application/json.
+
+    WebhookBodyPreviewRequest:
+      type: object
+      required: [event_type, body_template]
+      properties:
+        event_type: { type: string, description: The event type whose sample the template is rendered against. }
+        body_template: { type: string, maxLength: 16384 }
+        body_content_type: { $ref: '#/components/schemas/WebhookBodyContentType' }
+
+    WebhookBodyPreview:
+      type: object
+      required: [body, content_type, byte_length]
+      properties:
+        body: { type: string, description: The exact bytes a delivery of the sample event would send. }
+        content_type: { type: string }
+        byte_length: { type: integer }
 
     WebhookSubscriptionCreated:
       type: object
@@ -29581,10 +29952,25 @@ components:
           uniqueItems: true
           items: { type: string }
           description: At least one event type from the published catalog; a true set — duplicates are rejected.
+        custom_headers:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/WebhookCustomHeaderInput' }
+          description: Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+        body_template:
+          type: [string, 'null']
+          maxLength: 16384
+          description: >-
+            A `{{ path }}` template over the public event envelope. Inside a JSON string use
+            `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
 
     UpdateWebhookSubscriptionRequest:
       type: object
-      description: A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set.
+      description: >-
+        A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole
+        set; `body_template: null` returns to the standard envelope.
       minProperties: 1
       properties:
         state: { type: string, enum: [active, paused] }
@@ -29593,6 +29979,19 @@ components:
           minItems: 1
           uniqueItems: true
           items: { type: string }
+        custom_headers:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/WebhookCustomHeaderInput' }
+          description: Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+        body_template:
+          type: [string, 'null']
+          maxLength: 16384
+          description: >-
+            A `{{ path }}` template over the public event envelope. Inside a JSON string use
+            `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+        body_content_type:
+          $ref: '#/components/schemas/WebhookBodyContentType'
 
     WebhookSubscriptionListResponse:
       type: object
@@ -29643,11 +30042,14 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |
+            The company's display name. An administrator saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |
@@ -29745,6 +30147,8 @@ components:
             they were issued with.
         operations:
           $ref: '#/components/schemas/OperationSettings'
+        agent_allowances:
+          $ref: '#/components/schemas/AgentAllowanceSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -29778,7 +30182,14 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
-        name: { type: string, maxLength: 200, description: Rename the company. }
+        name:
+          type: string
+          maxLength: 200
+          deprecated: true
+          description: |
+            Accepted only when it equals the stored name, so an older client that resends the whole
+            form still saves. Any other value is refused with `422 set_on_company_profile`: the
+            installation's name is the anchor company's display name, changed through `PUT /company`.
         country:
           type: string
           description: |
@@ -29889,6 +30300,18 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            Set how long one agent allowance window lasts, in hours. The window in force is never
+            cut short: the new length takes effect at its next reset, and the response names that
+            moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+            in force cancels a change that is still waiting.
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -31314,6 +31737,61 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
+
+    AgentAllowanceDefaults:
+      type: object
+      additionalProperties: false
+      description: What each agent allowance is before an admin changes it, so a screen never restates them.
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours]
+      properties:
+        agent_writes_per_window: { type: integer }
+        agent_egress_per_window: { type: integer }
+        agent_calls_per_window: { type: integer }
+        agent_window_hours: { type: integer }
+
+    AgentAllowanceSettings:
+      type: object
+      additionalProperties: false
+      description: |
+        How much one agent may do in one window. A passport a user minted has its own allowance;
+        a connected MCP client has one allowance for all its passports, so a renewed credential
+        keeps counting where the last one stopped. An agent that reaches a count is refused on
+        its next call until the window resets or, for changing calls, the user who lent it releases
+        more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
+        a count applies within a minute, in the window that is running: a raised count gives
+        headroom within that minute, and a lowered one refuses an agent already past it on its
+        next call. The per-minute limits are fixed by the build and shown here read-only.
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, defaults, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      properties:
+        agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.' }
+        agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.' }
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |
+            How long the window in force lasts, in hours. Default 24. Every passport's window
+            resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+        agent_window_resets_at:
+          type: string
+          format: date-time
+          description: When the window in force resets and every count starts again from zero.
+        agent_window_next_hours:
+          type: [integer, 'null']
+          description: |
+            The window length an admin saved that is not in force yet, in hours. Null when no
+            change is waiting.
+        agent_window_next_starts_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the saved window length takes over: the next reset of the window in force that
+            is at least a minute away. Null when no change is waiting. The first window under the
+            new length may be shorter than that length, never longer.
+        defaults: { $ref: '#/components/schemas/AgentAllowanceDefaults' }
+        mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
+        mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
     UpdateCaptureSettingsRequest:
       type: object
@@ -33313,9 +33791,9 @@ components:
         rows: { type: array, items: { $ref: '#/components/schemas/AiCallStatsRow' } }
     AiCallStatsRow:
       type: object
-      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced]
+      required: [key, calls, failed, timeouts, p50_ms, p95_ms, tokens_in, tokens_out, cost_microusd, unpriced, switched]
       properties:
-        key: { type: string, description: 'The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
+        key: { type: string, description: 'The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report).' }
         calls: { type: integer, format: int64 }
         failed: { type: integer, format: int64 }
         timeouts: { type: integer, format: int64 }
@@ -33325,6 +33803,8 @@ components:
         tokens_out: { type: integer, format: int64 }
         cost_microusd: { type: integer, format: int64, description: 'USD micro-units, priced at each call''s day.' }
         unpriced: { type: integer, format: int64, description: 'Calls that spent tokens no rate prices; their cost is not in cost_microusd.' }
+        switched: { type: integer, format: int64, description: 'Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
     AiTaskFlow:
       type: object
       required: [task, window, total, unanswered, steps]
@@ -33336,7 +33816,7 @@ components:
         steps: { type: array, items: { $ref: '#/components/schemas/AiFlowStep' }, description: 'The decision model first, then each tier in ladder order.' }
     AiFlowStep:
       type: object
-      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up]
+      required: [decision, tier, provider, model, attempts, answered, p50_ms, gave_up, switched]
       properties:
         decision: { type: boolean }
         tier: { type: string }
@@ -33346,6 +33826,8 @@ components:
         answered: { type: integer, format: int64, description: 'Logical calls this step answered and served to the caller.' }
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
+        switched: { type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -33675,11 +34157,19 @@ components:
 
     ImportObject:
       type: string
-      enum: [company, lead, contact]
+      enum: [company, lead, contact, deal, activity]
       description: |
         What the file's rows are, and therefore what the run creates.
 
         `company` creates companies.
+
+        `deal` creates deals, after the companies and contacts of the same
+        upload. A deal row needs a `ref`, and names its pipeline and stage by
+        name.
+
+        `activity` creates notes, calls, meetings and emails, after every
+        other type of the same upload. A row needs a `ref` and at least one
+        link to a company, contact, lead or deal.
 
         `lead` and `contact` are two answers to one question about a file of
         humans, and the caller picks the one that matches where the file came
@@ -33797,8 +34287,8 @@ components:
         file:   { type: string, description: 'The entry''s path inside the ZIP.' }
         reason:
           type: string
-          enum: [unknown_name, not_yet_importable]
-          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
+          enum: [unknown_name]
+          description: '`unknown_name`: the file name names no type this CRM knows.'
 
     ImportPartRequest:
       type: object
@@ -33831,6 +34321,11 @@ components:
       type: string
       enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+
+    ImportReasonCode:
+      type: string
+      enum: [activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
     CreateImportRunRequest:
       type: object
@@ -33921,6 +34416,23 @@ components:
             leaves that record's tags alone — the run did not put it in the
             estate, and tagging it would claim the batch contains records it
             only touched.
+        preset_links:
+          type: array
+          items: { $ref: '#/components/schemas/ImportPresetLink' }
+          maxItems: 1
+          description: |
+            The record every imported activity is filed under, so the file needs
+            no `links` column. Only for a run whose files are all `activity`.
+            The contact must be visible to the caller; one that is not, or does
+            not exist, is answered `404` the same way.
+
+    ImportPresetLink:
+      type: object
+      description: A record a whole run's activities are filed under.
+      required: [type, id]
+      properties:
+        type: { type: string, enum: [contact] }
+        id:   { type: string, format: uuid }
 
     ImportOnDuplicate:
       type: string
@@ -33998,6 +34510,11 @@ components:
         from:   { type: string, description: 'The record the link starts at, by the key the file identified it with.' }
         to:     { type: string, description: 'What the file named as the other end — a company name, not an id, because no id was found.' }
         reason: { type: string, description: 'Why it was not applied, in the words of the contact who made the file.' }
+        reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
+        params:
+          type: object
+          additionalProperties: { type: string }
+          description: The values `reason_code`'s sentence names. Absent on a report stored before codes.
 
     ImportRunDisposition:
       type: object
@@ -34083,6 +34600,11 @@ components:
         kind:   { $ref: '#/components/schemas/ImportProblemKind' }
         value:  { type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.' }
         reason: { type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.' }
+        reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
+        params:
+          type: object
+          additionalProperties: { type: string }
+          description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.'
 
     ImportPartReport:
       type: object
@@ -34093,6 +34615,8 @@ components:
         object:      { $ref: '#/components/schemas/ImportObject' }
         rows_read:   { type: integer, minimum: 0 }
         disposition: { $ref: '#/components/schemas/ImportRunDisposition' }
+        closed_won:  { type: integer, minimum: 1, description: 'Deals of a deals file that land already won, as closed history. Absent when none does.' }
+        closed_lost: { type: integer, minimum: 1, description: 'Deals of a deals file that land already lost, as closed history. Absent when none does.' }
 
     ImportRunReport:
       type: object
@@ -34157,6 +34681,11 @@ components:
           format: uuid
           description: 'The tag every created record is filed under; `null` files them under none.'
         draft_step: { $ref: '#/components/schemas/ImportDraftStep' }
+        preset_links:
+          type: array
+          items: { $ref: '#/components/schemas/ImportPresetLink' }
+          maxItems: 1
+          description: 'The record every imported activity is filed under, as on `CreateImportRunRequest`. An empty list clears it.'
 
     ImportRunVersion:
       type: object
@@ -34222,13 +34751,19 @@ components:
             `errored`.
         kept:
           type: array
-          description: 'Import-created rows a human edited since import, therefore left in place (A93).'
+          description: 'Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.'
           items:
             type: object
             required: [object, id]
             properties:
               object: { $ref: '#/components/schemas/ImportObject' }
               id: { type: string, format: uuid }
+              reason: { type: string, description: 'Why the row was left in place, in terms the operator can act on. Absent in a report written before kept rows carried one.' }
+              reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
+              params:
+                type: object
+                additionalProperties: { type: string }
+                description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none.'
         errored:
           type: array
           description: |
@@ -34243,6 +34778,7 @@ components:
               object: { $ref: '#/components/schemas/ImportObject' }
               id: { type: string, format: uuid }
               reason: { type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.' }
+              reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
 
     ImportRun:
       type: object
@@ -34260,6 +34796,11 @@ components:
         context_tag_id: { type: string, format: uuid, readOnly: true, description: 'The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.' }
         on_broken_link:
           $ref: '#/components/schemas/ImportOnBrokenLink'
+        preset_links:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/ImportPresetLink' }
+          description: 'The record every activity of this run is filed under. Absent when the run names none.'
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.' }
@@ -34275,6 +34816,47 @@ components:
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
+        phase:       { $ref: '#/components/schemas/ImportRunPhase' }
+        phase_object: { type: string, description: 'The object the run is working on in `phase`, when it is working on one.' }
+        progress:    { $ref: '#/components/schemas/ImportRunProgress' }
+        started_at:  { type: string, format: date-time, description: 'When a worker took up the run''s current job: its test, its commit or its undo. Absent while the job only waits.' }
+        finished_at: { type: string, format: date-time, description: 'When the run reached a final status: complete, undone or cancelled. Absent while it can still move.' }
+        elapsed_seconds: { type: integer, minimum: 0, description: 'Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.' }
+        idle_seconds: { type: integer, minimum: 0, description: 'Seconds since the run last made progress. Absent when the run is not being worked.' }
+        heartbeat_age_seconds: { type: integer, minimum: 0, description: 'Seconds since the worker last said it is alive. Absent when the run is not being worked.' }
+        rate_rows_per_second: { type: number, minimum: 0, description: 'Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.' }
+        eta_seconds_low: { type: integer, minimum: 1, description: 'The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.' }
+        eta_seconds_high: { type: integer, minimum: 1, description: 'The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.' }
+        eta_scope:   { type: string, enum: [object, run], description: '`object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.' }
+
+    ImportRunPhase:
+      type: string
+      enum: [reading, checking, creating_tags, importing, linking, undoing, finishing]
+      description: 'What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.'
+
+    ImportRunProgress:
+      type: object
+      description: 'What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero.'
+      required: [objects, counts]
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            required: [object, rows_done, rows_total]
+            properties:
+              object:     { type: string, description: 'An import object, or `links` for the link phase after every object.' }
+              rows_done:  { type: integer, minimum: 0 }
+              rows_total: { type: integer, minimum: 0 }
+        counts:
+          type: object
+          required: [created, updated, unchanged, skipped, problems]
+          properties:
+            created:   { type: integer, minimum: 0 }
+            updated:   { type: integer, minimum: 0 }
+            unchanged: { type: integer, minimum: 0 }
+            skipped:   { type: integer, minimum: 0 }
+            problems:  { type: integer, minimum: 0, description: 'Rows that carry a problem, skipped or landed.' }
 
     ImportRunPart:
       type: object
@@ -34283,6 +34865,10 @@ components:
         file:      { type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.' }
         object:    { $ref: '#/components/schemas/ImportObject' }
         row_count: { type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.' }
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+          description: '`{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none.'
 
     ImportRunList:
       type: object
@@ -35334,6 +35920,14 @@ components:
         strength: { allOf: [ { $ref: '#/components/schemas/RelationshipStrength' } ], readOnly: true, description: 'Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.' }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of
+            "Typed by you". Null when no import wrote it. The name is the source the import was run
+            for (`bundle`); an empty string is an import that was given none. Derived from
+            `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
           readOnly: true
@@ -35808,6 +36402,14 @@ components:
             `listCompanies` and `getCompany`; write responses omit it.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of
+            "Typed by you". Null when no import wrote it. The name is the source the import was run
+            for (`bundle`); an empty string is an import that was given none. Derived from
+            `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
           readOnly: true
@@ -37863,6 +38465,14 @@ components:
           description: >-
             When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one
             "last touch": which direction went last is the whole question.
+        last_live_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When they last wrote to us, leaving out email an import brought in as history. Equal to
+            `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this,
+            because history that arrived by import is not a reply. Absent when the caller has no
+            activity grant, named in `sections_omitted` as `last_touch`.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -38303,6 +38913,14 @@ components:
       properties:
         claim_key: { type: string }
         evidence_fingerprint: { type: string }
+
+    DismissDealMoveRequest:
+      type: object
+      description: The move to set aside, named by the fingerprint the card served it with.
+      required: [fingerprint]
+      properties:
+        fingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+      additionalProperties: false
 
     MeetingBrief:
       type: object
@@ -39687,6 +40305,14 @@ components:
         evidence:
           type: array
           items: { $ref: '#/components/schemas/DealNextBestActionEvidence' }
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
 
     DealNextBestActionEvidence:
@@ -41425,6 +42051,14 @@ components:
             discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of
+            "Typed by you". Null when no import wrote it. The name is the source the import was run
+            for (`bundle`); an empty string is an import that was given none. Derived from
+            `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
           readOnly: true
@@ -43538,6 +44172,16 @@ components:
             activity names OUR side of an exchange — a mail says only which contact it was with,
             and the mailbox behind it is not on the row. Null on every other kind, and on a
             meeting nobody was recorded as hosting.
+        colleague_ids:
+          type: array
+          readOnly: true
+          items: { type: string, format: uuid }
+          description: >-
+            The colleagues recorded as taking part: the one who logged a call or meeting, the
+            ones named as attending, and the seats capture stamped on a captured one, never a
+            blind copy. Filled
+            wherever one activity is answered whole (its read, its update); a list leaves it out.
+            Withheld with the content, so it is absent whenever `content_state` is `withheld`.
         direction: { type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
@@ -43623,6 +44267,14 @@ components:
           items: { $ref: '#/components/schemas/ActivityLink' }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of
+            "Typed by you". Null when no import wrote it. The name is the source the import was run
+            for (`bundle`); an empty string is an import that was given none. Derived from
+            `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
           readOnly: true
@@ -43972,6 +44624,18 @@ components:
             carry a record id, but a folded group carries a synthetic key its lane mints,
             and a uuid-only field would leave those rows unpinnable for a reason no reader
             could see.
+
+    WorklistDoneRequest:
+      type: object
+      additionalProperties: false
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: The rows, each named by its lane and its id, as a pin names one.
+          items: { $ref: '#/components/schemas/WorklistPinRequest' }
 
     DismissRelationshipNudgeRequest:
       type: object
@@ -45425,6 +46089,14 @@ components:
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of
+            "Typed by you". Null when no import wrote it. The name is the source the import was run
+            for (`bundle`); an empty string is an import that was given none. Derived from
+            `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
           readOnly: true
@@ -51595,7 +52267,7 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         request_settlement, account_scan]
+         request_settlement, account_scan, tag_suggest]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -51813,14 +52485,16 @@ components:
             equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
         served_by:
           type: string
-          enum: [registry]
+          enum: [registry, rest_only]
           description: >-
             registry — the operation's handler runs the tool through the tool registry, the
             entry the MCP door uses, which admits the call itself: scope, seat, tier,
             approval, retry key and volume budget. The REST admission gate passes such an
             operation through untouched, because admitting it there as well would charge an
-            agent twice and stage a confirm-first call twice. Absent means the operation's
-            own handler runs and the gate admits it.
+            agent twice and stage a confirm-first call twice. rest_only — no MCP tool serves
+            this record_type yet: the verb names only the tier, scope and budget the REST
+            gate admits the call under, and the MCP verb refuses the type. Absent and
+            rest_only both mean the operation's own handler runs and the gate admits it.
 
     # ---- AI: cold-start ----
     ColdStartRequest:
@@ -52038,7 +52712,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1 }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -53812,11 +54486,17 @@ components:
     CommunicationReviewList:
       type: object
       description: A page of refused sends waiting for a decision.
-      required: [data, total]
+      required: [data, page, total]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/CommunicationReview' }
+        page:
+          allOf:
+            - $ref: '#/components/schemas/PageInfo'
+          description: |
+            Where this page was cut. `total` beside it is the same count this object may carry, kept
+            at the top level because it shipped there: a client reading it keeps working.
         total:
           type: integer
           description: |
@@ -56037,6 +56717,77 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        usage:
+          allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
+          description: |
+            What this passport has used of its allowances in the window that is running. A
+            connection's passports share one count, so a renewed credential keeps it. **Omitted**
+            on a revoked or expired passport, and when the counters cannot be read: the list is
+            still answered, without the usage.
+
+    AgentUsage:
+      type: object
+      description: One window's use of the three agent allowances, and when they reset.
+      required: [writes, egress, calls, resets_at, state]
+      properties:
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentUsageByUser:
+      type: object
+      required: [data, resets_at]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/AgentUserUsage' }
+          description: Users with at least one live passport or connection, by name.
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+
+    AgentUserUsage:
+      type: object
+      description: |
+        One user's agents in the running window. Each count and allowance is the sum over
+        their live passports and connections, so a user with two passports has twice the
+        allowance. `state` is the worst state of any one of them.
+      required: [user_id, display_name, passport_count, writes, egress, calls, state]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        passport_count: { type: integer, minimum: 1, description: 'Live passports and connections. A connection counts once.' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentCounterUsage:
+      type: object
+      description: One allowance in the running window.
+      required: [used, limit, released]
+      properties:
+        used: { type: integer, minimum: 0, description: What has been used in this window. }
+        limit:
+          type: integer
+          minimum: 0
+          description: |
+            The allowance in force: the installation's value, plus one more allowance for each
+            release a user granted in this window.
+        released: { type: integer, minimum: 0, description: How many times a user released more in this window. }
+
+    AgentUsageState:
+      type: string
+      enum: [ok, near, stopped]
+      description: |
+        The worst of the three allowances. `stopped` when one is used up, so the next call of
+        that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 
     PassportConnection:
       type: object
@@ -57885,6 +58636,13 @@ components:
             `complete` and `snooze` has to name the row those presses condition on, or two contacts
             acting on one task each overwrite the other and neither is told.
         occurred_at: { type: string, format: date-time, description: "When a done_for_you receipt actually happened." }
+        subject_moved_at:
+          type: string
+          format: date-time
+          description: |
+            When something last happened on the item's subject, where its lane knows and
+            `occurred_at` does not say it: a deal's last activity, a connection's last good
+            sync. A Worklist row marked done comes back once this passes the press.
         undo:
           allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
           description: >-
@@ -59471,8 +60229,12 @@ components:
             rule, and a client guessing it draws a verb that 404s or hides one the rep
             is entitled to.
 
-            Absent or empty means the row cannot be set aside — most sources answer
-            through the surface that owns them and leave nothing to dispose of here.
+            `handled` is Done: nothing more to do here, take it off my list. It posts to
+            `/worklist/done` on every row that carries it. Only a waiting message offers
+            the other three, which post to `/activities/{id}/disposition`.
+
+            Absent or empty means the row leaves through its own verb in `actions`, or,
+            where it has none, a reason in `because` says why.
         primary_action:
           type: string
           enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge]
@@ -59498,6 +60260,18 @@ components:
             folded into one, and this carries the brief entry's id so the verbs that
             belong to the brief (`/brief/items/{id}/act`, and its set-aside and
             dismiss) still reach it. Absent on a row the night did not raise.
+
+            Set only on the reader's own queue: the brief is the acting reader's,
+            so a page naming another owner never carries it.
+        brief_actions:
+          type: array
+          items: { type: string, enum: [set_aside, dismiss] }
+          description: |
+            The verbs the folded brief entry offers, copied from that entry's own
+            row and posted to `/brief/items/{brief_item_id}/…`. The row's own
+            `actions` stay the row's: these answer the brief entry, not the deal.
+
+            Present exactly when `brief_item_id` is.
         brief_section:
           type: string
           enum: [respond_now, prepare_conversations, move_revenue, build_pipeline, review_and_repair]
@@ -59945,8 +60719,8 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file]
-          description: 'Which fact this is. The client writes the phrase.'
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
     WorklistComparison:

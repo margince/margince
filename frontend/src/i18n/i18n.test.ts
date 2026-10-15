@@ -17,6 +17,12 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // Product names, an example address and an example header name.
+  "webhooks.body.preset.slack",
+  "webhooks.body.preset.teams",
+  "webhooks.eventGroup.voice_dna",
+  "webhooks.field.targetUrlPlaceholder",
+  "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   "signatureTemplate.placeholder",
   // Latency percentiles and OpenRouter's own name read the same in every
@@ -27,6 +33,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
+  // Audit filter examples in the stored spelling the filter matches.
+  "settings.auditActorExample",
+  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The name of the network, offered as a profile field in the research drawer.
@@ -268,7 +277,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
   "aicalls.ms",
-  "operations.inWords",
+  "operations.reading",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
   "share.ceiling.post",

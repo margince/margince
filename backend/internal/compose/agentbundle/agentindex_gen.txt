@@ -2,13 +2,6 @@
 
 Every call a passport can make, grouped by area. Find the operationId in openapi.yaml for its parameters and answers.
 
-## Webhooks
-
-| Call | operationId | What it does | Permission | Runs |
-| --- | --- | --- | --- | --- |
-| `POST /webhook-subscriptions` | createWebhookSubscription | Register an outbound webhook subscription (returns the signing secret once). | Change records | waits for approval |
-| `PATCH /webhook-subscriptions/{id}` | updateWebhookSubscription | Pause/resume a subscription or re-target its event set. | Change records | waits for approval |
-
 ## Contacts
 
 | Call | operationId | What it does | Permission | Runs |
@@ -220,22 +213,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type. | Read records | at once |
-| `GET /views` | listSavedViews | List the caller's saved views (per-user; optionally scoped to one resource). | Read records | at once |
-| `POST /views` | createSavedView | Save a per-user view (columns, sort, filter state) for a resource. | Change records | at once |
-| `GET /views/{id}` | getSavedView | Get one of the caller's saved views by id. | Read records | at once |
-| `PATCH /views/{id}` | updateSavedView | Update a saved view's name or query state. | Change records | at once |
-| `DELETE /views/{id}` | archiveSavedView | Archive a saved view. | Change records | at once |
 
 ## CustomFields
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /custom-fields` | listCustomFields | List custom fields for an object (admin read; includes retired by default). | Read records | at once |
-| `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object (a schema change). | Change records | waits for approval |
-| `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field's display label (not a schema change). | Change records | at once |
 | `GET /custom-fields/{id}/lists` | listCustomFieldLiveLists | The Live Lists whose filter names this custom field. | Read records | at once |
-| `POST /custom-fields/{id}/retire` | retireCustomField | Retire (soft-retire) a custom field — irreversible-feeling, confirm-first. | Change records | waits for approval |
-| `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options (regenerates the column's CHECK). | Change records | waits for approval |
 
 ## Reports
 
@@ -303,6 +287,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /whoami` | getActingIdentity | Who this caller acts for. | Read records | at once |
+| `GET /openapi.json` | getAgentOpenAPIDocument | The OpenAPI 3.1 document of every operation a passport can call, as JSON. | Read records | at once |
 | `GET /installation/settings` | getInstallationSettings | The installation's own settings. | Read records | at once |
 | `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | Read records | at once |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | Read records | at once |
@@ -324,12 +309,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /bulk/{id}` | getBulkChange | Read what one bulk change did, and whether it was undone. | Read records | at once |
 | `POST /bulk/{id}/undo/preview` | previewBulkUndo | Say what undoing one bulk change would do, without doing it. | Change records | at once |
 | `POST /bulk/{id}/undo` | undoBulkChange | Put back what one bulk change did, record by record. | Change records | at once |
-
-## Access
-
-| Call | operationId | What it does | Permission | Runs |
-| --- | --- | --- | --- | --- |
-| `GET /record-grants` | listRecordGrants | List manual per-record grants, filtered by record or by subject. | Read records | at once |
 
 ## Attachments
 

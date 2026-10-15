@@ -24,7 +24,7 @@ Also called: email notifications, turn off emails, alerts, daily digest.
 ## Account
 
 The Account page in Settings holds one card, **Your account**. It holds who you
-are, how you sign in and how you sign off. It also holds which language the
+are, how you sign in (password and two-step sign-in) and how you sign off. It also holds which language the
 product uses with you (English, Deutsch or Tiếng Việt), and how it looks. It
 also has **Sign out**.
 **Appearance** is here as well as in the account menu, where it is called
@@ -39,6 +39,48 @@ To change your password in Margince, open Settings → **Account** and choose **
 Margince says **Password changed** and signs you out on all your other computers and phones.
 Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or ask an administrator for a new link to set a password.
 Also called: reset my password, update login.
+
+### How do I turn on two-step sign-in?
+To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
+1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
+2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
+3. Type the code the app shows into **Code from the app**, and choose **Turn on**.
+4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
+5. Choose **Done**.
+
+Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left".
+When two or fewer are left, the row warns you.
+Turning it on signs you out on all your other computers and phones.
+Also called: MFA, second sign-in step, sign-in code, code app.
+
+A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
+
+### What if Margince asks me to set up two-step sign-in before I can continue?
+Your installation requires two-step sign-in, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**.
+Choose **Set up**. The steps are the same as on the **Account** page, from the picture to **Turn on**.
+Keep your **Recovery codes**, choose **Done**, and Margince opens.
+
+If you are already signed in when the switch goes on, you see this page the next time Margince checks.
+**Sign out** leaves without setting it up.
+Also called: required two-step sign-in, must set up, cannot continue.
+
+### How do I sign in with two-step sign-in?
+To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
+Type the code your phone app shows now, or one of your backup codes, into **Code**, and choose **Verify code**.
+Each backup code works once. A wrong code is refused, and after too many wrong codes Margince makes you wait a short while.
+
+The code page stays open for five minutes. After that, choose **Back to sign in** and start again with your password.
+Also called: sign-in code, code not working, use a backup code.
+
+### How do I turn off two-step sign-in?
+To turn off two-step sign-in in Margince, open Settings → **Account**, choose **Remove** in the **Two-step sign-in** row, and enter a code.
+The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
+For new backup codes, or to move to a new phone, remove it and set it up again.
+
+If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there.
+Also called: new phone, new backup codes, lost phone.
+
+Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
 
 ### How do I change my display name?
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field and choose **Save**.
@@ -197,6 +239,10 @@ The Connections page in Settings holds the mailbox and calendar you connected,
 and your LinkedIn import. Connections is what *you* connected; **Integrations**
 is what the *installation* is connected to.
 
+**What your connections found** counts what they brought in: **Senders**,
+**Waiting on a decision** (only while a sender waits), **Held threads** and
+**Network reach**. Choose **View** on a row to see its list.
+
 ### How do I connect my mailbox?
 To connect your mailbox or calendar to Margince, open Settings → **Connections** and choose **Add connector** in **Connected mailboxes and calendars**.
 1. Pick a provider: **Gmail**, **Google Calendar**, **Outlook**, **Outlook Calendar** or **IMAP mailbox**. You connect a calendar apart from its mail.
@@ -218,18 +264,18 @@ the CRM. Your rules apply only to mailboxes you connected. The company's rules
 apply to everyone, and only an administrator may add or remove one of those. A
 rule applies from the next message; what is already captured stays.
 
-**Outcomes** are counts for those 24 hours: **Captured**, **Dropped as
-internal**, **No contact created**, **Awaiting sender check** and **Derivation
-failed**. Click one to narrow the list under it.
+**Outcomes** are counts for those 24 hours: **Captured**, **Internal**, **No
+contact created**, **Awaiting check** and **Failed**. Click one to narrow the
+list under it.
 
-**Messages**, behind a disclosure, is the log for each message: which step a message
+**Messages** is the log for each message: which step a message
 stopped at, and why. Open it when a message you expected did not show up. By
 default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.
-1. Click an **Outcomes** count, such as **Dropped as internal** or **No contact created**, to narrow the list.
+1. Click an **Outcomes** count, such as **Internal** or **No contact created**, to narrow the list.
 2. Open a row's steps to see where that message stopped, and why.
 
 Mail between colleagues is never stored, and a sender under **Capture exclusions** is always kept out.

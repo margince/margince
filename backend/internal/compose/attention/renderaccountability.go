@@ -19,14 +19,18 @@ import (
 
 // failedItem is one approved decision whose released work did not run,
 // carried back to the contact who approved it. The sentence was written for
-// the reader when the failure was recorded; `open` is offered only when the
-// decision named a record the client can route to.
+// the reader when the failure was recorded. `open` is offered only when the
+// decision named a record the client can route to. `acknowledge` is always
+// offered; `retry` only where approving again would run the work.
 func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
 	kind := failed.Kind
 	sentence := failed.Sentence
 	occurred := failed.FailedAt
 	subject := subjectOf(failed.TargetType, failed.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
+	actions := []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsAcknowledge}
+	if failed.Retryable {
+		actions = append(actions, crmcontracts.AttentionItemActionsRetry)
+	}
 	if openableSubject(subject) {
 		actions = append(actions, actionOpen)
 	}

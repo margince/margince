@@ -4,14 +4,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { EmptyState, Skeleton } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { RowOpen } from "../design-system/rowopen";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
@@ -21,10 +18,9 @@ import { navigate } from "../lib/router";
 // knows an account has no content when there is one member, while asking
 // whether your own network reaches it has content immediately.
 //
-// The report is the card's subject, so the table stands straight in the panel.
 // What the list cannot show is stated above the figures it qualifies.
 
-type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
+export type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 type ReachAccount = LinkedInReach["accounts"][number];
 
 // The largest page the contract's `limit` admits, asked for explicitly. This
@@ -38,7 +34,7 @@ const REACH_PAGE_LIMIT = 200;
 
 const REACH_KEY = ["linkedin-reach", REACH_PAGE_LIMIT] as const;
 
-function useLinkedInReach() {
+export function useLinkedInReach() {
   return useQuery({
     queryKey: REACH_KEY,
     queryFn: async (): Promise<LinkedInReach> => {
@@ -60,7 +56,7 @@ function useLinkedInReach() {
  * connections exist and simply match nothing on file yet. Neither is a
  * footnote: they qualify the figures, so they read before them.
  */
-function reachCaveat(
+export function reachCaveat(
   t: ReturnType<typeof useT>,
   locale: Locale,
   reach: LinkedInReach | undefined,
@@ -81,39 +77,16 @@ function reachCaveat(
   });
 }
 
-/** Which accounts this member's imported network reaches. */
-export function LinkedInReachCard() {
+/** Which accounts this member's imported network reaches, caveat first. */
+export function NetworkReach({ reach }: Readonly<{ reach: LinkedInReach }>) {
   const t = useT();
   const { locale } = useLocale();
-  const query = useLinkedInReach();
-  const accounts = query.data?.accounts ?? [];
-  const caveat = query.isSuccess
-    ? reachCaveat(t, locale, query.data, accounts.length)
-    : undefined;
-
+  const caveat = reachCaveat(t, locale, reach, reach.accounts.length);
   return (
-    <Panel title={t("linkedinReach.title")}>
-      <PanelBody>
-        <PanelIntro>{t("linkedinReach.sub")}</PanelIntro>
-        {query.isPending && <Skeleton width="70%" />}
-        {/* A failed read is not an empty one: a refusal drawn as "no
-            accounts reached" reads as a network that reaches nobody. */}
-        {query.isError && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("linkedinReach.readFailed")}
-          >
-            {problemMessageOf(query.error, t)}
-          </Callout>
-        )}
-        {caveat && <p className="t-caption">{caveat}</p>}
-        {query.isSuccess && accounts.length === 0 && (
-          <EmptyState>{t("linkedinReach.empty")}</EmptyState>
-        )}
-      </PanelBody>
-      {accounts.length > 0 && <ReachTable accounts={accounts} />}
-    </Panel>
+    <>
+      {caveat && <p className="t-caption">{caveat}</p>}
+      {reach.accounts.length > 0 && <ReachTable accounts={reach.accounts} />}
+    </>
   );
 }
 
@@ -132,7 +105,6 @@ function ReachTable({
     });
   return (
     <DataTable
-      bleed
       fold
       label={t("linkedinReach.accountsLabel")}
       rows={[...accounts]}

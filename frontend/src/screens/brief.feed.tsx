@@ -6,6 +6,13 @@ import { useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { worklistLaneHref } from "../features/worklist/worklist.header";
+import {
+  type Worklist,
+  type WorklistItem,
+  worklistKey,
+} from "../features/worklist/worklist.queries";
+import { WorklistRow } from "../features/worklist/worklist.row";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -14,15 +21,8 @@ import { identity, Triage } from "./brief.focus";
 import { laneUnread } from "./brief.readings.honesty";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { OpenEmailDrawer } from "./openemaildrawer";
-import { worklistLaneHref } from "./worklist.header";
-import {
-  type Worklist,
-  type WorklistItem,
-  worklistKey,
-} from "./worklist.queries";
-import { WorklistRow } from "./worklist.row";
 
-import "./worklist.css";
+import "../features/worklist/worklist.css";
 import "./brief.feed.css";
 
 export function BriefFeed({

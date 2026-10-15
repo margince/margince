@@ -13,7 +13,7 @@ import {
   mountFilters,
   type Sent,
 } from "../screens/filters.testkit";
-import { LIVE_ID, liveList } from "../screens/lists.fixtures";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import type { NavSection } from "./nav";
 import {
   fixtureSection,
@@ -288,11 +288,11 @@ describe("Top bar trail", () => {
   });
 
   // A composed unit is offered from Settings and has no index of its own, so
-  // Settings is what its trail leads back to. The unit is named by the
-  // descriptor, which is the only thing that knows what an installation composed.
+  // Settings is what its trail leads back to. The unit is named as the settings
+  // pages name it: its title, else its key read as words.
   it("leads a composed unit back to Settings", () => {
     renderTopBar({ screen: "ext", id: "notes" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Settings", "notes"]);
+    expect(stopTexts()).toEqual(["Settings", "Notes"]);
     expect(
       within(trail())
         .getByRole("link", { name: "Settings" })

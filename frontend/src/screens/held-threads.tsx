@@ -2,13 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { EntityRef } from "../components/entityref";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable } from "../design-system/datatable";
 import { EmailReference } from "../design-system/emailreference";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
 import { useToast } from "../design-system/toast";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -17,7 +16,6 @@ import type { MessageKey } from "../i18n/en";
 import { useOpenEmail } from "../lib/openemail";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useThreadAudience } from "./audienceservice";
-import { EntityRef } from "./entityref";
 import { OpenEmailDrawer } from "./openemaildrawer";
 import { VerdictPassNote } from "./verdictpass";
 import "./held-threads.css";
@@ -49,37 +47,21 @@ const kindLabel: Record<string, MessageKey> = {
   explicitly_confidential: "heldThreads.kind.explicitlyConfidential",
 };
 
-export function HeldThreadsCard() {
-  const t = useT();
-  const query = useQuery({
+export function useHeldThreads() {
+  return useQuery({
     queryKey: ["held-threads"],
     queryFn: async () => {
       return unwrap(await api.GET("/capture/held-threads"));
     },
   });
+}
 
+export function HeldThreads({ list }: Readonly<{ list: HeldThreadList }>) {
   return (
-    <Panel title={t("heldThreads.title")}>
-      <PanelBody>
-        <PanelIntro>{t("heldThreads.sub")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("heldThreads.title")}>
-        {(list) =>
-          list.data.length === 0 ? (
-            // Nothing held is a reading, not an absent list: "my mailbox is
-            // withholding nothing right now" is what an owner opens this to see.
-            <PanelBody>
-              <EmptyState>{t("heldThreads.empty")}</EmptyState>
-            </PanelBody>
-          ) : (
-            <>
-              <HeldThreadNotices list={list} />
-              <HeldThreadTable rows={list.data} />
-            </>
-          )
-        }
-      </QueryGate>
-    </Panel>
+    <>
+      <HeldThreadNotices list={list} />
+      <HeldThreadTable rows={list.data} />
+    </>
   );
 }
 
@@ -94,12 +76,12 @@ function HeldThreadNotices({ list }: Readonly<{ list: HeldThreadList }>) {
     return null;
   }
   return (
-    <PanelBody className="form-stack">
+    <div className="form-stack">
       <BacklogCallout rows={list.data} />
       {waiting && (
         <VerdictPassNote clock={list.thread_verdict} subject="threads" />
       )}
-    </PanelBody>
+    </div>
   );
 }
 
@@ -149,7 +131,6 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   return (
     <>
       <DataTable<HeldThread>
-        bleed
         fold
         label={t("heldThreads.title")}
         rows={rows}
@@ -226,7 +207,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
         ]}
       />
       {(release.isError || stillHeld.length > 0) && (
-        <PanelBody className="form-stack">
+        <div className="form-stack">
           {release.isError && (
             <Callout
               tone="danger"
@@ -251,10 +232,10 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
               </ul>
             </Callout>
           )}
-        </PanelBody>
+        </div>
       )}
-      {/* One drawer over the table, at its level rather than inside a row:
-          two mounted dialogs would be two `aria-modal` elements. */}
+      {/* One email drawer for the table, not one per row, so a long list
+          mounts one dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}

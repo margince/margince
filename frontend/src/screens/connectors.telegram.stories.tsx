@@ -64,12 +64,28 @@ const meta: Meta<typeof TelegramConnectorsPanel> = {
 export default meta;
 type Story = StoryObj<typeof TelegramConnectorsPanel>;
 
+// No bot: one row says so and carries the connect verb.
 export const NoBotYet: Story = { render: telegramStory([]) };
+
+export const NoBotYetPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: telegramStory([]),
+};
 
 // A send refuses outright while two bots are live. This panel is the only
 // surface that can end that, so each bot has its own Disconnect.
 export const TwoBots: Story = {
   render: telegramStory([salesBot, supportBotPending]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findAllByTestId("telegram-connection"),
+    ).toHaveLength(2);
+    await expect(
+      canvas.queryByText(/One bot receives and sends messages/),
+    ).toBeNull();
+  },
 };
 
 export const TwoBotsDark: Story = {

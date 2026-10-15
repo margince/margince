@@ -100,25 +100,40 @@ export const TEAMS = [
   { id: "t-nordics", name: "Nordics" },
 ];
 
-// Both helpers narrow by instance rather than asserting: a cast would let the
-// suite read `.disabled` off whatever the query happened to return, so a control
-// that stopped being the Select trigger would surface as a confusing undefined
-// instead of a named failure.
+// The open chooser, else the resting value that opens it. Narrowed by instance,
+// so a control that stopped being a button fails by name.
 export function roleSelect(row: HTMLElement, name: string) {
-  const control = within(row).getByRole("combobox", {
-    name: new RegExp(`set role for ${name}`, "i"),
-  });
+  const control = roleControl(row, name);
   if (!(control instanceof HTMLButtonElement)) {
-    throw new Error(`the role control for ${name} is not a select trigger`);
+    throw new Error(`the role control for ${name} is not a button`);
   }
   return control;
 }
 
-// What the closed control reads. The trigger's only text is its face — the
-// chevron is aria-hidden and carries none — so this is the role an operator
-// sees on the row without opening anything.
-export function roleShown(row: HTMLElement, name: string): string {
-  return roleSelect(row, name).textContent ?? "";
+// Null where the reader may not change this member's role: the value is words.
+export function roleControl(row: HTMLElement, name: string) {
+  const named = new RegExp(`${name}’s role`, "i");
+  return (
+    within(row).queryByRole("combobox", { name: named }) ??
+    within(row).queryByRole("button", { name: named })
+  );
+}
+
+// What the role cell reads, open or at rest: neither its screen-reader text (a
+// refusal's reason, the chooser's hidden label) nor a refused save's alert.
+export function roleShown(row: HTMLElement): string {
+  const cell = row.querySelector(".users-role");
+  if (!(cell instanceof HTMLElement)) {
+    throw new Error("the row has no role cell");
+  }
+  const face = cell.cloneNode(true);
+  if (!(face instanceof HTMLElement)) {
+    throw new Error("the role cell did not clone");
+  }
+  for (const hidden of face.querySelectorAll(".sr-only, [role='alert']")) {
+    hidden.remove();
+  }
+  return face.textContent ?? "";
 }
 
 // A member is one row of the roster table.
@@ -168,12 +183,17 @@ export async function rowMenu(
 const ADMIN_USER_ADMIN: Record<string, string[]> = {
   user_admin: ["read", "create", "update", "delete"],
 };
+type BackendPrincipal = { roles: string[]; allow?: Record<string, string[]> };
+
+/** The signed-in admin a caller gets when it names no principal. */
+const ADMIN_PRINCIPAL: BackendPrincipal = {
+  roles: ["admin"],
+  allow: ADMIN_USER_ADMIN,
+};
+
 export function backend(
   calls: { method: string; url: string; body?: unknown }[],
-  me: { roles: string[]; allow?: Record<string, string[]> } = {
-    roles: ["admin"],
-    allow: ADMIN_USER_ADMIN,
-  },
+  me: BackendPrincipal = ADMIN_PRINCIPAL,
 ) {
   const allow = me.allow ?? {};
   const objects: Record<string, Record<string, boolean>> = {};

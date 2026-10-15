@@ -128,10 +128,15 @@ describe("OwnDomainsCard", () => {
     expect(
       screen.getByRole("heading", { name: en["ownDomains.curatedTitle"] }),
     ).toBeTruthy();
-    expect(screen.getByText(en["ownDomains.irreversible"])).toBeTruthy();
     expect(
       within(managed).getByRole("button", { name: /remove brandt\.de/i }),
     ).toBeTruthy();
+    // The company group's one verb leads to the profile that owns its rows.
+    expect(
+      screen
+        .getByRole("link", { name: en["ownDomains.openCompany"] })
+        .getAttribute("href"),
+    ).toBe("#/settings/company");
     // The add form is behind ONE verb, in the card's header rather than in a
     // row that repeats its own label — and the field is not on the card until
     // the verb is pressed, so every row stays an answer.
@@ -168,6 +173,10 @@ describe("OwnDomainsCard", () => {
       screen.getByRole("button", { name: en["ownDomains.addOpen"] }),
     );
     const dialog = screen.getByRole("dialog");
+    // What a registration costs is said where it is made.
+    expect(
+      within(dialog).getByText(en["ownDomains.irreversible"]),
+    ).toBeTruthy();
     await user.type(
       within(dialog).getByLabelText(/add own domain/i),
       "brandt.de",

@@ -10,6 +10,7 @@ import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
 import {
+  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -21,10 +22,13 @@ import {
   automationCatalog,
   brandt,
   captureActivity,
+  captureHealth,
+  extensionIngestHealth,
   installationJurisdiction,
   jobHealth,
   knowledgeCorpora,
   passports,
+  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
@@ -212,6 +216,11 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.startsWith("/approvals/"),
     handle: work.decideApproval,
   },
+  {
+    method: "GET",
+    path: "/activities/a-quarterly",
+    handle: reply(insight.quarterlyReview),
+  },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {
     method: "POST",
@@ -302,6 +311,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },
@@ -310,8 +320,20 @@ export const routes: readonly MockRoute[] = [
   { method: "GET", path: "/ai/task-overrides", handle: reply({}) },
   { path: "/ai/routing/schema", handle: reply({}) },
   { path: "/admin/job-health", handle: reply(jobHealth) },
+  { path: "/admin/capture-health", handle: reply(captureHealth) },
+  { path: "/admin/recovery-health", handle: reply(recoveryHealth) },
+  {
+    path: "/admin/extension-ingest-health",
+    handle: reply(extensionIngestHealth),
+  },
   { path: "/capture/settings", handle: capture.captureSettings },
   { path: "/capture/senders", handle: capture.senders },
+  {
+    path: "/capture/contacts-awaiting-decision",
+    handle: capture.awaitingDecision,
+  },
+  { path: "/capture/held-threads", handle: capture.heldThreads },
+  { path: "/me/linkedin-reach", handle: capture.linkedInReach },
   {
     path: (path) =>
       path.startsWith("/capture/senders/") && path.endsWith("/decision"),

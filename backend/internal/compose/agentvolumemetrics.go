@@ -35,7 +35,7 @@ import (
 // from one that never claimed to.
 func (s Server) writeAgentVolumeSection(w io.Writer) {
 	reach := s.volumeMeter.Answerable()
-	httpserver.WriteLine(w, "# HELP margince_agent_volume_bound Whether this role composed a bound on agent reads (MCP-SESS-READS): 1 when it did, 0 when it declared it serves no bounded agent surface.\n")
+	httpserver.WriteLine(w, "# HELP margince_agent_volume_bound Whether this role composed a bound on agent calls (MCP-SESS-CALLS and the counters beside it): 1 when it did, 0 when it declared it serves no bounded agent surface.\n")
 	httpserver.WriteLine(w, "# TYPE margince_agent_volume_bound gauge\n")
 	httpserver.WriteLine(w, "margince_agent_volume_bound %d\n", boolGauge(reach.Bound))
 	httpserver.WriteLine(w, "# HELP margince_agent_volume_answerable Whether the bound could read its counter store on its last attempt: 0 means the bound is failing closed and every agent read on this role is refusing. Draining the pod does not fix it; restore the counter store.\n")

@@ -1,12 +1,5 @@
-/* The company-profile surface (Settings → General).
- *
- * Almost nothing is left here on purpose. The profile is a `SettingList` of
- * rows, its editor is a `Modal`, and the provenance under every value is the
- * design system's own `EvidenceMark` — so the field grid, the website row, the
- * kicker line and the trust plate this sheet used to lay out are gone with the
- * markup that needed them. What remains is what no primitive knows: how this
- * screen's own panels stack, and how the comparison rows of a website read sit
- * inside one. */
+/* The company-profile surface: how its panels stack, and how the comparison
+ * rows of a website read sit inside one. */
 
 /* The page's panels — what we know, where we read it from, and the review a
  * refresh opens. Owned here rather than by the settings page, because these
@@ -15,13 +8,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-/* The confirmed-statement count in the profile panel's footer band, holding the
- * left so the rollout badge beside it lands at the panel's own right edge.
- * `.panel-foot` is already the flex row; this is only which end each fact takes. */
-.company-context-count {
-  margin-right: auto;
 }
 
 /* One proposed change, as a full-bleed row of the review panel: its name and

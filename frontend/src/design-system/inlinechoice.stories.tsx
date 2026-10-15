@@ -92,3 +92,20 @@ export const RefusedSave: Story = {
     await expect(refusal).toHaveClass("field-error");
   },
 };
+
+// A value longer than its column wraps from its start edge, as a cell's text
+// does, not centred as a button's label would be.
+export const WrappingValue: Story = {
+  render: () => (
+    <div style={{ inlineSize: "8rem" }}>
+      <InlineChoice
+        label="Role"
+        value="individual"
+        options={[{ value: "individual", label: "Individual (own records)" }]}
+        render={() => "Individual (own records)"}
+        canEdit
+        onSave={async () => undefined}
+      />
+    </div>
+  ),
+};

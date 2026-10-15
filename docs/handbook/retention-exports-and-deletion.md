@@ -30,24 +30,24 @@ To import contacts, companies or prospects, save them as CSV files, or as a ZIP 
 3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
 4. Choose **Run test**, read the **Test run**, then choose **Import {count} rows**.
 5. **Importing** shows each file as it goes, and **Result** shows what was written.
-Only an admin or ops user can import. Nothing is written before you confirm.
+Only an admin or ops user can import. Nothing is written before you confirm. [Importing data](importing-data.md) has the rest. It says what a second upload of the same file does.
 Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
 To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
-Undo goes in reverse order: prospects first, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. Those are listed under "Kept because they were edited after the import:".
+Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:".
 
 Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 
 Also called: reverse an import, roll back an upload.
 
 ### How do I delete a contact permanently?
-Margince has no delete button for a contact: **More actions → Archive** hides it but keeps it. To destroy a contact's data for good, an admin fulfills an **erasure** request in **Settings → Privacy and retention → Privacy requests** (see below). Companies, deals, leads and projects have no delete button either; an erasure request always names a contact. A lead's data is destroyed only by the **Leads that never converted** rule (when set to anonymize), or with the contact it belongs to. A deal is only archived, never destroyed. Companies and projects have no retention rule at all.
+Margince has no delete button for a contact: **More actions → Archive** hides it but keeps it. To destroy a contact's data for good, an admin fulfills an **erasure** request in **Settings → Privacy and retention → Requests → Privacy** (see below). Companies, deals, leads and projects have no delete button either; an erasure request always names a contact. A lead's data is destroyed only by the **Leads that never converted** rule (when set to anonymize), or with the contact it belongs to. A deal is only archived, never destroyed. Companies and projects have no retention rule at all.
 
 Also called: remove a contact, hard delete, purge, wipe.
 
 ### How do I handle a GDPR erasure request?
-To erase a contact on request, an admin opens **Settings → Privacy and retention**, goes to **Privacy requests** and chooses **New request**.
+To erase a contact on request, an admin opens **Settings → Privacy and retention**, chooses **Privacy** in the **Requests** panel and then **New request**.
 1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
 3. Choose the request in the list to open it, write the **Resolution** and choose **Fulfill**.
@@ -56,7 +56,7 @@ This cannot be undone. A contact that the law says you must still keep is refuse
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an admin opens **Settings → Privacy and retention → Privacy requests** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution** and choose **Fulfill**.
+To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution** and choose **Fulfill**.
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
@@ -70,7 +70,7 @@ Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?
 To change a retention rule, an Admin or Ops user opens **Settings → Privacy and retention** and uses the **Retention** card.
-1. Choose **Edit** on a rule, or **Add policy** for a new one.
+1. Press a rule's row to edit it, or choose **Add policy** for a new one.
 2. Set **Applies to**, **Window in days** (a whole number, at least 1) and **Action**.
 3. If you like, fill **Lawful basis**, then choose **Save policy** or **Create policy**.
 To pause a rule, turn **Enabled** off; **Delete policy** removes it fully.
@@ -152,7 +152,7 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
-Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly with **Data retention (seconds)** in **Settings → System health**. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
+Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
 ### One window nobody can change
 
@@ -184,7 +184,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 ## Privacy requests
 
-The list of privacy requests, **Settings → Privacy and retention → Privacy requests**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
+The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
 A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
 
@@ -237,11 +237,11 @@ When the law says you must keep a record that an erasure would remove, you see *
 
 ### Restricted records
 
-**Restricted records** are what the law makes you keep after an erasure: "which record, why and until when." Held records are hidden from every ordinary view and cannot be changed. The details that name someone are removed at once, and the screen reports how many fields were removed. They are erased when the time limit ends. The mail itself is hidden "so that it is not read."
+**Restricted records** are what the law makes you keep after an erasure. **Requests → Held** lists them: "which record, why and until when." Held records are hidden from every ordinary view and cannot be changed. The details that name someone are removed at once, and the screen reports how many fields were removed. They are erased when the time limit ends. The mail itself is hidden "so that it is not read."
 
 The record kinds that can be held this way are Email, Call, Meeting and Message, in a group the app calls **Commercial correspondence**.
 
-An admin or ops user can **Pin a record** under the floor by hand, for mail the automatic rule cannot see. The app gives mail with suppliers and about buying as the example. That mail must be kept under §257 HGB and has no deal in Margince to link it to. The record ID is on its audit entry.
+An admin or ops user can pin a record under the floor by hand, for mail the automatic rule cannot see. The app gives mail with suppliers and about buying as the example. That mail must be kept under §257 HGB and has no deal in Margince to link it to. Choose **Held**, click **Pin a record** in the panel head, fill **Record ID** and **Why**, and click **Pin and hold**. The record ID is on its audit entry.
 
 An admin or ops user can also **Release** a held record. Read what that means before you do it:
 

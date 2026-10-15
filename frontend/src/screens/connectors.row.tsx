@@ -119,6 +119,7 @@ export function ConnectorRow({
               </span>
               <RowOpen
                 label={t("connectors.openNamed", { name: identity })}
+                opensDialog
                 onOpen={() => setOpened(true)}
               />
             </span>

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
 /**
@@ -20,19 +21,23 @@ test.beforeEach(async ({ page }) => {
 
 type Page = import("@playwright/test").Page;
 
-// The installation's own name, edited in the dialog the company card's
-// verb opens.
+// The reporting timezone, edited in the dialog the company card's verb opens.
 //
 // Chosen over the account page's sign-off because THIS draft is the one that
 // outlives its dialog: dismissing the dialog keeps what was typed, so an
 // unsaved edit is still unsaved on the way out of the page — which is the state
 // the guard exists to notice. A sign-off half-typed into a dialog nobody
 // reopened is discarded by design, so it never reaches the guard at all.
-const companyName = (page: Page) =>
-  page.getByRole("textbox", { name: "Unternehmensname" });
+const timezone = (page: Page) =>
+  page.getByRole("textbox", { name: de["installationSettings.timezone"] });
 
-const editCompanyName = (page: Page) =>
-  page.getByRole("button", { name: "Unternehmensname bearbeiten" });
+const editTimezone = (page: Page) =>
+  page.getByRole("button", {
+    name: de["installationSettings.editField"].replace(
+      "{field}",
+      de["installationSettings.timezone"],
+    ),
+  });
 
 // Types into the dialog and closes it again, leaving the draft behind on a page
 // with nothing open over it — which is what makes the navigation below possible.
@@ -40,10 +45,10 @@ const editCompanyName = (page: Page) =>
 // still resolves, but it resolves by REDIRECTING to this one, so a test that
 // navigated by the old spelling would be asserting the guard against an address
 // the app rewrites out from under it.
-const typeAndCloseDialog = async (page: Page, name: string) => {
+const typeAndCloseDialog = async (page: Page, zone: string) => {
   await page.goto("/#/settings/company");
-  await editCompanyName(page).click();
-  await companyName(page).fill(name);
+  await editTimezone(page).click();
+  await timezone(page).fill(zone);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
 };
@@ -56,7 +61,7 @@ const leaveSettings = (page: Page) => page.locator('a[href="#/home"]').click();
 test("a settings draft holds the page when the reader leaves for another screen", async ({
   page,
 }) => {
-  await typeAndCloseDialog(page, "Gradion Nord GmbH");
+  await typeAndCloseDialog(page, "Europe/Vienna");
 
   // Out of settings entirely, which is the move the old guard could not see.
   // The brand link is the way out: while settings is open the rail holds the
@@ -73,14 +78,14 @@ test("a settings draft holds the page when the reader leaves for another screen"
   await expect(page).toHaveURL(/#\/settings\/company$/);
   // The draft survived the question: reopening the dialog shows what was typed
   // rather than the value the server still holds.
-  await editCompanyName(page).click();
-  await expect(companyName(page)).toHaveValue("Gradion Nord GmbH");
+  await editTimezone(page).click();
+  await expect(timezone(page)).toHaveValue("Europe/Vienna");
 });
 
 test("discarding leaves for the screen the reader asked for", async ({
   page,
 }) => {
-  await typeAndCloseDialog(page, "Ein halber Name");
+  await typeAndCloseDialog(page, "Europe/Ber");
   await leaveSettings(page);
 
   await page.getByRole("button", { name: /verwerfen/i }).click();

@@ -57,13 +57,9 @@ button.evidence-chip:hover {
 }
 
 .evidence-chip-toggle svg {
+  flex: none;
   inline-size: 12px;
   block-size: 12px;
-  transition: transform var(--dur-state) var(--ease-in-out);
-}
-
-.evidence-chip-toggle[aria-expanded="true"] svg {
-  transform: rotate(90deg);
 }
 
 /* The line reference reads as a pointer INTO the source, not as more of the

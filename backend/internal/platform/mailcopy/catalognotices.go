@@ -33,9 +33,9 @@ func noticeLines(line writeLine) {
 		"Sender decisions waiting without an answer: %d. Mail stays withheld from "+
 			"your colleagues while this lasts — nothing is lost, and it clears on its own "+
 			"once the classifier answers again.",
-		"Absender-Entscheidungen ohne Antwort: %d. Mail bleibt deinen Kolleginnen und Kollegen "+
-			"vorenthalten, solange das anhält — nichts geht verloren, und es löst sich von selbst, "+
-			"sobald die Klassifizierung wieder antwortet.",
+		"Entscheidungen zu Absendeadressen ohne Antwort: %d. E-Mails bleiben den anderen "+
+			"Teammitgliedern vorenthalten, solange das anhält. Es geht nichts verloren, und es löst "+
+			"sich von selbst, sobald die Klassifizierung wieder antwortet.",
 		"%d quyết định về người gửi đang chờ mà chưa có câu trả lời. Thư vẫn được giữ lại, "+
 			"không cho đồng nghiệp của bạn thấy, trong thời gian này — không có gì bị mất, "+
 			"và tình trạng này tự hết khi bộ phân loại trả lời lại.")

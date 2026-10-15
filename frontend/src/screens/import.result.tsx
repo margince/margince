@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { ActionRow } from "../design-system/actionrow";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { QueryStates } from "../design-system/querystates";
@@ -11,14 +12,21 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { UndoConfirm, UndoErrors } from "./import.notices";
-import { PartCounts, partsOf, problemsHref } from "./import.testrun";
-import type { ImportWizardState } from "./importflow";
+import {
+  hasProgress,
+  ImportProgressPanel,
+  panelStalled,
+  workerSilent,
+} from "./import.progress";
+import { PartCounts, ProblemsDownload, partsOf } from "./import.testrun";
+import { reasonText } from "./importreason";
 import type {
   ImportFormat,
   ImportReport,
   ImportRun,
   ImportRunPart,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 import { settingsHref } from "./settingsrouting";
 
 type PartProgress = Readonly<{
@@ -91,7 +99,7 @@ export function PartProgressList({
 }
 
 /**
- * The import while it runs, read again every two seconds: one bar per file. A
+ * The import while it runs: one bar per file. A
  * run that stopped says why and resumes from where it stopped.
  */
 export function ImportProgress({
@@ -108,7 +116,11 @@ export function ImportProgress({
   const failed = run.status === "failed";
   return (
     <div className="import">
-      <PartProgressList run={run} order={format.order} />
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.progress.working")} />
+      ) : (
+        <PartProgressList run={run} order={format.order} />
+      )}
       {failed ? (
         <>
           <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
@@ -216,40 +228,38 @@ function ResultBody({
         />
       ) : null}
       {run.status === "undoing" ? (
-        <>
-          <p className="import__hint t-sub">{t("import.result.undoing")}</p>
-          <Button
-            variant="ghost"
-            pending={undo.isPending}
-            busyLabel={t("import.undoing")}
-            onClick={() => undo.mutate(run.id)}
-          >
-            {t("import.continueUndo")}
-          </Button>
-        </>
+        <UndoProgress
+          run={run}
+          pending={undo.isPending}
+          onContinue={() => undo.mutate(run.id)}
+        />
       ) : null}
       {run.status === "undone" ? <UndoOutcome undo={report.undo} /> : null}
-      <div className="import__actions">
-        {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(run.id)} download>
-            {t("import.result.problemsFile")}
-          </a>
+      <ActionRow
+        className="import__footer"
+        primary={
+          <>
+            <Button variant="ghost" onClick={wizard.reset}>
+              {t("import.another")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => navigate(settingsHref("import"))}
+            >
+              {t("import.result.done")}
+            </Button>
+          </>
+        }
+      >
+        {(report.issues ?? []).length > 0 ? (
+          <ProblemsDownload runId={run.id} />
         ) : null}
         {run.status === "complete" ? (
           <Button variant="danger" onClick={() => setAsking(true)}>
             {t("import.result.undo")}
           </Button>
         ) : null}
-        <Button variant="ghost" onClick={wizard.reset}>
-          {t("import.another")}
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => navigate(settingsHref("import"))}
-        >
-          {t("import.result.done")}
-        </Button>
-      </div>
+      </ActionRow>
       {undo.error && !asking ? (
         <Callout tone="danger" kind="outcome" title={t("import.undoFailed")}>
           {problemMessageOf(undo.error, t)}
@@ -268,6 +278,43 @@ function ResultBody({
           undo.mutate(run.id, { onSuccess: () => setAsking(false) })
         }
       />
+    </div>
+  );
+}
+
+// A reversal while it runs: the rows reversed so far, as the import step draws
+// its own. Continue undo appears only once the worker has gone quiet, since
+// pressing it on a live run could only be refused.
+function UndoProgress({
+  run,
+  pending,
+  onContinue,
+}: Readonly<{ run: ImportRun; pending: boolean; onContinue: () => void }>) {
+  const t = useT();
+  const stopped = workerSilent(run);
+  const panelSaysStopped = hasProgress(run) && panelStalled(run);
+  return (
+    <div className="import import--fill">
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.undoing")} />
+      ) : null}
+      {panelSaysStopped ? null : (
+        <p className="import__hint t-sub">
+          {t(stopped ? "import.result.undoStopped" : "import.result.undoing")}
+        </p>
+      )}
+      {stopped ? (
+        <div className="import__actions">
+          <Button
+            variant="ghost"
+            pending={pending}
+            busyLabel={t("import.undoing")}
+            onClick={onContinue}
+          >
+            {t("import.continueUndo")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -297,6 +344,9 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
                 {undo.kept.map((row) => (
                   <li key={`${row.object}-${row.id}`}>
                     {t(`import.object.${row.object}`)}: {row.id}
+                    {row.reason || row.reason_code
+                      ? ` — ${reasonText(t, row.reason ?? "", row.reason_code, row.params)}`
+                      : null}
                   </li>
                 ))}
               </ul>

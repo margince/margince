@@ -24,7 +24,11 @@ func (h importHandlers) ListImportRuns(w http.ResponseWriter, r *http.Request, p
 	if params.Cursor != nil {
 		cursor = *params.Cursor
 	}
-	runs, page, err := migration.NewRunStore(h.db).ListStaged(r.Context(), cursor, importRunListLimit(params.Limit))
+	view := migration.ViewAll
+	if params.View != nil {
+		view = migration.RunView(*params.View)
+	}
+	runs, page, err := migration.NewRunStore(h.db).ListStaged(r.Context(), cursor, importRunListLimit(params.Limit), view)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

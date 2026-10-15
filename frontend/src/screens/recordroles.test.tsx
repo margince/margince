@@ -163,7 +163,10 @@ it("says where a role applies and who holds it in words, never the stored keys",
   render(<RecordRolesCard />);
   const row = await screen.findByTestId("record-role-technical_contact");
   expect(within(row).getByText("Technical contact")).toBeInTheDocument();
-  expect(within(row).getByText("technical_contact")).toBeInTheDocument();
+  expect(within(row).queryByText("technical_contact")).toBeNull();
+  expect(
+    within(row).getByRole("switch").closest("td")?.getAttribute("data-fold"),
+  ).toBe("end");
   expect(
     within(row).getByText("On companies, deals and projects"),
   ).toBeInTheDocument();
@@ -196,6 +199,7 @@ it("renames a role through its menu's dialog and retires one through its switch"
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["recordRoles.addLabel"]);
   expect(field).toHaveValue("Delivery lead");
+  expect(dialog.getByText("delivery_lead").tagName).toBe("CODE");
   await user.clear(field);
   await user.type(field, "Project lead{Enter}");
   await waitFor(() =>
@@ -233,7 +237,7 @@ it("says a duplicate name on the Name field and keeps the dialog open", async ()
   expect(dialog.queryByText(en["recordRoles.duplicate"])).toBeNull();
 });
 
-it("leaves every control inert for a reader and says why", async () => {
+it("leaves every control inert for a reader, and leaves the why to the page", async () => {
   vi.stubGlobal("fetch", rolesBackend({ custom_field: ["read"] }));
   render(<RecordRolesCard />);
   expect(
@@ -241,7 +245,7 @@ it("leaves every control inert for a reader and says why", async () => {
       name: "Technical contact can be newly assigned",
     }),
   ).toBeDisabled();
-  expect(screen.getByText(en["leadSources.readOnlyTitle"])).toBeTruthy();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
   expect(screen.queryByRole("button", { name: "Add role" })).toBeNull();
   expect(
     screen.queryByRole("button", {
@@ -250,5 +254,39 @@ it("leaves every control inert for a reader and says why", async () => {
   ).toBeNull();
   expect(
     screen.queryByRole("columnheader", { name: en["leadSources.colActions"] }),
+  ).toBeNull();
+});
+
+it("tells a seat that may add but not edit which half is theirs", async () => {
+  vi.stubGlobal("fetch", rolesBackend({ custom_field: ["read", "create"] }));
+  render(<RecordRolesCard />);
+  expect(
+    await screen.findByRole("button", { name: "Add role" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("switch", {
+      name: "Technical contact can be newly assigned",
+    }),
+  ).toBeDisabled();
+  expect(screen.getByText(en["leadSources.addOnlyTitle"])).toBeTruthy();
+});
+
+// Nothing to retire here by deletion, so the page's read-only notice covers a
+// delete-only seat and the card adds no reason of its own.
+it("leaves a delete-only seat to the page's notice", async () => {
+  vi.stubGlobal("fetch", rolesBackend({ custom_field: ["read", "delete"] }));
+  render(<RecordRolesCard />);
+  expect(
+    await screen.findByRole("switch", {
+      name: "Technical contact can be newly assigned",
+    }),
+  ).toBeDisabled();
+  expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
+  expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add role" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: en["table.rowActions"].replace("{name}", "Technical contact"),
+    }),
   ).toBeNull();
 });

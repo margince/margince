@@ -86,7 +86,7 @@ func TestADraftSaveRefusesAChoiceOutsideItsValues(t *testing.T) {
 		{"draft step", crmcontracts.UpdateImportRunRequest{DraftStep: new(crmcontracts.ImportDraftStep("review"))}, "draft_step"},
 		{"source name", crmcontracts.UpdateImportRunRequest{SourceName: new("crm/export")}, "source_name"},
 		{"part object", crmcontracts.UpdateImportRunRequest{Parts: &[]crmcontracts.ImportPartRequest{{
-			File: "deals.csv", Object: crmcontracts.ImportObject("deal"),
+			File: "invoices.csv", Object: crmcontracts.ImportObject("invoice"),
 		}}}, "object"},
 		{"zero tag", crmcontracts.UpdateImportRunRequest{ContextTagId: new(openapi_types.UUID{})}, "context_tag_id"},
 	}
@@ -187,5 +187,32 @@ func TestADraftShowsItsProfileOnlyWhileAChoiceCanBeMade(t *testing.T) {
 		if got := toContractImportRun(run); got.Profile != nil {
 			t.Errorf("a %s run answered a profile, want none", name)
 		}
+	}
+}
+
+// A draft save is checked as the mapping it leaves behind, so a preset saved
+// first and an object changed after cannot meet unchecked.
+func TestADraftSaveCannotPairAPresetWithARunOfAnotherObject(t *testing.T) {
+	link := []migration.PresetLink{{Type: "contact", ID: ids.NewV7().String()}}
+	stored := &migration.RunMapping{Object: migration.ObjectActivity, PresetLinks: link}
+	other := migration.ObjectCompany
+	cases := map[string]migration.RunMapping{
+		"object changed under a saved preset": mergedWithPatch(stored, migration.DraftPatch{Object: &other}),
+		"preset added to a company draft": mergedWithPatch(
+			&migration.RunMapping{Object: migration.ObjectCompany}, migration.DraftPatch{PresetLinks: &link}),
+		"preset added to a bundle with a company part": mergedWithPatch(nil, migration.DraftPatch{
+			PresetLinks: &link,
+			Parts: &[]migration.PartMapping{
+				{File: "a.csv", Object: migration.ObjectActivity}, {File: "c.csv", Object: migration.ObjectCompany},
+			},
+		}),
+	}
+	for name, merged := range cases {
+		if err := refuseNonActivityPreset(merged); err == nil {
+			t.Errorf("%s: the save was accepted", name)
+		}
+	}
+	if err := refuseNonActivityPreset(mergedWithPatch(stored, migration.DraftPatch{})); err != nil {
+		t.Errorf("an unchanged activities draft with its preset was refused: %v", err)
 	}
 }

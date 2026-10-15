@@ -12,7 +12,11 @@ import { RowOpen } from "../design-system/rowopen";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { TierCallsLine } from "./ai-call-figures";
+import {
+  TierCallsLine,
+  TierSwitchedBadge,
+  TierSwitchedLine,
+} from "./ai-call-figures";
 import {
   callCodeName,
   DECIDE_RUNG,
@@ -225,7 +229,7 @@ function TierCell({
         />
       )}
       <CellStack>
-        <KeyedName name={tierLabel(lane.name, t)} code={lane.name} />
+        <span>{tierLabel(lane.name, t)}</span>
         {gloss && <span className="t-caption ai-tier-gloss">{gloss}</span>}
       </CellStack>
     </span>
@@ -264,6 +268,7 @@ function BindingCell({
       <span className="ai-tier-modelline">
         <TermChip term="provider">{providerName(binding.provider, t)}</TermChip>
         <span className="ai-tier-model">{binding.model}</span>
+        <TierSwitchedBadge tier={rungOf(lane.name)} />
       </span>
       {failing(rung) ? (
         <ErrorLine inline>{failure(rung, t, plural, locale)}</ErrorLine>
@@ -305,6 +310,7 @@ function OpenVerb({
     return (
       <RowOpen
         label={t("aiRouting.decisions.add")}
+        opensDialog
         refusal={canManage ? undefined : t("aiRouting.adminOnly")}
         onOpen={onAdd}
       />
@@ -314,6 +320,7 @@ function OpenVerb({
   return (
     <RowOpen
       label={t("aiRouting.editNamed", { name: tierLabel(row.lane.name, t) })}
+      opensDialog
       onOpen={row.lane.onEdit}
     />
   );
@@ -390,6 +397,7 @@ function HealthDot({
       <p>
         <TierCallsLine tier={rungOf(lane)} sort={sort} />
       </p>
+      <TierSwitchedLine tier={rungOf(lane)} />
     </Popover>
   );
 }

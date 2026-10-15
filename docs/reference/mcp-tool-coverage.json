@@ -2150,7 +2150,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 988,
+      "tokens": 1001,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -2290,36 +2290,6 @@
       }
     },
     {
-      "name": "create_record",
-      "tokens": 678,
-      "agents": [],
-      "required_by_cases": [
-        "case1_log_it",
-        "case2_business_card",
-        "case54_a_word_from_the_fair",
-        "case56_not_the_same"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_forecast",
       "tokens": 677,
       "agents": [],
@@ -2347,6 +2317,36 @@
           "runs": 5,
           "passed": 4,
           "reliability": 0.8,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "create_record",
+      "tokens": 627,
+      "agents": [],
+      "required_by_cases": [
+        "case1_log_it",
+        "case2_business_card",
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }

@@ -40,6 +40,10 @@ with `write` can also answer what is waiting (`list_approvals`,
 `read_approval` and `decide_approval`), with the rights of its own human. A passport
 made with `read` can read the list and each approval, but cannot decide one.
 
+Lists, errors, retries and approvals over REST are in
+[reference/rest-api.md](../reference/rest-api.md), and `GET /v1/openapi.json` lists every operation a
+passport can call.
+
 To connect an MCP client, you take a separate path and need nothing from this
 page. `claude mcp add`, or the connect step of any client, shows its own consent
 screen. It makes its own credential from the scopes the signed-in human leaves

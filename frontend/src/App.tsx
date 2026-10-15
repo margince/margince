@@ -22,19 +22,21 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
-import { UnsavedGuard } from "./app/unsaved";
+import { UnsavedGuard } from "./components/unsaved";
 import {
   Card,
   EmptyState,
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
+import { isContactTab } from "./features/contacts/contacttab";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
   composedScreens,
   EXTENSION_SCREEN,
   findExtension,
+  unitTitle,
 } from "./lib/extensions";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
@@ -53,8 +55,7 @@ import {
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
-import { isContactTab } from "./screens/contacttab";
-import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
+import { ConfinedAccountScreen, useConfinement } from "./screens/confinement";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -185,12 +186,16 @@ const PartnersScreen = lazy(
 );
 const ContactsScreen = lazy(
   routed(() =>
-    import("./screens/contacts").then((m) => ({ default: m.ContactsScreen })),
+    import("./features/contacts/contacts").then((m) => ({
+      default: m.ContactsScreen,
+    })),
   ),
 );
 const ContactPageV2 = lazy(
   routed(() =>
-    import("./screens/contactpage").then((m) => ({ default: m.ContactPageV2 })),
+    import("./features/contacts/contactpage").then((m) => ({
+      default: m.ContactPageV2,
+    })),
   ),
 );
 const BuyerRoomScreen = lazy(() =>
@@ -240,9 +245,9 @@ const TagResultScreen = lazy(() =>
   import("./screens/tagresult").then((m) => ({ default: m.TagResultScreen })),
 );
 
-const SearchScreen = lazy(
+const SearchRoute = lazy(
   routed(() =>
-    import("./screens/search").then((m) => ({ default: m.SearchScreen })),
+    import("./screens/search").then((m) => ({ default: m.SearchRoute })),
   ),
 );
 const SettingsScreen = lazy(
@@ -395,6 +400,7 @@ function CustomRoute({ name }: Readonly<{ name?: string }>) {
 
 function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const unit = findExtension(name);
   if (!unit) {
     return (
@@ -420,7 +426,7 @@ function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
       {/* level 1: the head yields to a composed unit, so this card is the only
           thing left that can name the page. A unit with no screen would
           otherwise have no page-level heading at all. */}
-      <SectionHeader title={unit.name} level={1} />
+      <SectionHeader title={unitTitle(unit, locale)} level={1} />
       <Card>
         <ul>
           {unit.verbs.map((verb) => (
@@ -486,7 +492,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
         <ScreenNotice messageKey="screen.pending" />
       ),
     search: ({ id, id2 }) => (
-      <SearchScreen q={id ? safeDecode(id) : ""} openActivityId={id2} />
+      <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
     tags: ({ id }) => <TagResultScreen tagID={id} />,
     lists: ({ id }) => <FiltersScreen list={id ?? ""} />,
@@ -820,6 +826,7 @@ function AuthedApp({
     }
   }, [authed, described, progress.unfinished, route.screen]);
 
+  const confinement = useConfinement(me.error, me.refetch);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
@@ -831,20 +838,17 @@ function AuthedApp({
       </RaillessFrame>
     );
   }
+  if (confinement) {
+    return (
+      <RaillessFrame>
+        <ConfinedAccountScreen {...confinement} />
+      </RaillessFrame>
+    );
+  }
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // The account is authenticated but lacks a password of its own. The login
-    // screen would loop, since the same correct credentials meet the same
-    // refusal, so the boundary renders the one thing that can resolve it.
-    if (kind === "must-change-password") {
-      return (
-        <RaillessFrame>
-          <ForcedPasswordChangeScreen onChanged={() => me.refetch()} />
-        </RaillessFrame>
-      );
-    }
-    if (kind !== "unauthorized") {
+    if (kind === "connection" || kind === "installation") {
       const retry = () => me.refetch({ cancelRefetch: false });
       return (
         <RaillessFrame>

@@ -3,13 +3,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ErrorLine } from "../design-system/errorline";
 import { NumberSettingRow } from "../design-system/numbersetting";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
+import { useMe } from "../lib/session";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];
 
@@ -57,12 +58,14 @@ function useUpdateFollowUpSettings() {
 export function FollowUpSettingsCard() {
   const t = useT();
   const canEdit = useCanWrite("installation_settings", "update");
+  // The read-only line waits for /me, so a reader who may edit never sees it.
+  const readOnly = useMe().isSuccess && !canEdit;
   const query = useFollowUpSettings();
   const update = useUpdateFollowUpSettings();
   return (
     <Panel title={t("followUpSettings.title")}>
       <PanelBody>
-        <PanelIntro>{t("followUpSettings.sub")}</PanelIntro>
+        {readOnly && <p>{t("installationSettings.readOnly")}</p>}
         <QueryGate query={query} pendingLabel={t("followUpSettings.title")}>
           {(settings) => (
             <SettingList>

@@ -43,7 +43,13 @@ type Session struct {
 	Actor                *StoredActor
 	AttemptCorrelationID *ids.UUID
 	Phase                string
+	PhaseObject          string
 	Progress             *Progress
+	// StartedAt, FinishedAt, ProgressAt and HeartbeatAt are the lease's own
+	// instants; nil until the worker has set them. ReadAt is the database
+	// clock at the read, so ages are never taken against a client's clock.
+	StartedAt, FinishedAt, ProgressAt, HeartbeatAt *time.Time
+	ReadAt                                         time.Time
 }
 
 // The wizard steps a draft can be reopened on.
@@ -156,7 +162,7 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 			id, state.status, state.jobAttempt, c.lease.Status, c.lease.Attempt, ErrSuperseded)
 	}
 	if state.connector != ConnectorCSV {
-		return fmt.Errorf("import run %s is a %s run, which keeps no session: %w", id, state.connector, apperrors.ErrConflict)
+		return RefuseRun(id, "this import came from another source, which keeps no session")
 	}
 	if state.supersededBy != nil && !slices.Contains(move.from, state.status) {
 		return &SupersededError{RunID: id, By: *state.supersededBy}
@@ -168,10 +174,10 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return err
 	}
 	if c.approved && !state.approved {
-		return fmt.Errorf("import run %s was never approved, so it cannot resume: %w", id, apperrors.ErrConflict)
+		return RefuseRun(id, "this import was never approved, so it cannot resume")
 	}
 	if move.to == StatusRunning && state.released {
-		return fmt.Errorf("import run %s no longer holds its uploaded file, so it cannot run; upload the file again: %w", id, apperrors.ErrConflict)
+		return RefuseRun(id, "this import no longer holds its uploaded file, so it cannot run; upload the file again")
 	}
 	return nil
 }
@@ -187,12 +193,12 @@ var nextStepWhenAlready = map[string]string{
 // refusedStart is the conflict for a move that may not start from status.
 func refusedStart(id RunID, status, to string) error {
 	if status != to {
-		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, status, to, apperrors.ErrConflict)
+		return RefuseRun(id, "this import is %s, so it cannot become %s", statusWords(status), statusWords(to))
 	}
 	if next, ok := nextStepWhenAlready[status]; ok {
-		return fmt.Errorf("import run %s is already %s; %s: %w", id, status, next, apperrors.ErrConflict)
+		return RefuseRun(id, "this import is already %s; %s", statusWords(status), next)
 	}
-	return fmt.Errorf("import run %s is already %s: %w", id, status, apperrors.ErrConflict)
+	return RefuseRun(id, "this import is already %s", statusWords(status))
 }
 
 // admitsVersion refuses a version other than zero that is not the run's.
@@ -404,7 +410,7 @@ func nameHolder(ctx context.Context, tx pgx.Tx, id RunID) error {
 		 WHERE run.id = $1 AND other.id <> run.id AND other.status = ANY($2)
 		 LIMIT 1`, id, nameHeldBy).Scan(&holder)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("another run of import run %s's source name moved at the same time: %w", id, apperrors.ErrConflict)
+		return RefuseRun(id, "another import of this source name moved at the same time; try again")
 	}
 	if err != nil {
 		return fmt.Errorf("finding the run that holds the source name: %w", err)

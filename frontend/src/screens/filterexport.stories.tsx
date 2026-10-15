@@ -6,13 +6,13 @@ import { userEvent, within } from "storybook/test";
 import { OverflowMenu } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { newGroup, newLeaf } from "../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
 import { ExportFilterItems, useFilterExport } from "./filterexport";
-import { newGroup, newLeaf } from "./segmentpredicate";
 
 // Exporting what a filter selects: one item per format, in the menu of the
 // band the filter is kept from. A success hands the browser a file and leaves

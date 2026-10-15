@@ -20,8 +20,35 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
+import type { CreateField } from "../components/create";
+import { CreateAction } from "../components/create";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "../components/customfields.form";
+import {
+  EntityRef,
+  type OwnerNaming,
+  rosterOwnerNaming,
+  useEntityName,
+} from "../components/entityref";
+import {
+  LIST_PAGE_SIZES,
+  type ListQuery,
+  type ListState,
+  ListTable,
+  listPageOf,
+  listQueryFromParams,
+  mergeScreenDials,
+  paramsFromListQuery,
+  useTagChips,
+  withListPage,
+  withoutScreenDials,
+} from "../components/listquery";
+import { useOwnerChips } from "../components/ownerdials";
+import { PageAsideToggle, usePageAside } from "../components/pageaside";
+import { RecordFields, rawRecord } from "../components/recordfields";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -56,6 +83,7 @@ import { Select } from "../design-system/select";
 import { Row } from "../design-system/stack";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { WorklistReturnLink } from "../features/worklist/worklist.return";
 import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
@@ -76,6 +104,7 @@ import { useRecordZone } from "../lib/recordzone";
 import { scrollPageToTop } from "../lib/reveal";
 import { navigate, routeHash } from "../lib/router";
 import { useMe, useViewerId } from "../lib/session";
+import { parseTagIDs, parseTagMode, tagQueryParams } from "../lib/tagfilter";
 import { currentParams, replaceDial, useUrlParams } from "../lib/urlstate";
 import {
   type AcquisitionSource,
@@ -84,12 +113,6 @@ import {
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
-import type { CreateField } from "./create";
-import { CreateAction } from "./create";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "./customfields.form";
 import {
   type ClosedDeal,
   CloseReviewOffer,
@@ -97,6 +120,7 @@ import {
 } from "./deal360/closereviewoffer";
 import {
   type AdvanceInput,
+  advanceErrorBehind,
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
@@ -142,36 +166,15 @@ import {
 } from "./dealproject";
 import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { useSuggestionGhosts } from "./dealsuggestion";
-import {
-  EntityRef,
-  type OwnerNaming,
-  rosterOwnerNaming,
-  useEntityName,
-} from "./entityref";
 import { searchCompanies } from "./filterreference";
 import { LegalReviewQueueLink } from "./legalreviews";
 import { useLegalReviewAvailable } from "./legalreviews.queries";
-import {
-  LIST_PAGE_SIZES,
-  type ListQuery,
-  type ListState,
-  ListTable,
-  listPageOf,
-  listQueryFromParams,
-  mergeScreenDials,
-  paramsFromListQuery,
-  useTagChips,
-  withListPage,
-  withoutScreenDials,
-} from "./listquery";
 import { OpenEmailDrawer } from "./openemaildrawer";
-import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
 import { RecordCustomFields } from "./recordcustomfields";
 import { saveRecordEdit } from "./recordedit";
-import { RecordFields, rawRecord } from "./recordfields";
 import {
   mineEmptyNote,
   ownerColumn,
@@ -182,9 +185,7 @@ import { RecordListsPanel } from "./recordlists";
 import { useRecordOwners } from "./recordreferences";
 import { RecordTeam } from "./recordteam";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
-import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { TagsPanel } from "./tagspanel";
-import { WorklistReturnLink } from "./worklist.return";
 
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
@@ -1732,11 +1733,10 @@ function useBoardInteractions({
 
 // Every dial on this screen, read from and written to the ADDRESS.
 //
-// A hook of its own because this screen hand-rolls what screens/listquery.tsx
-// does for every other list — it drives a board as well as a table, so it
-// reaches for the same codec rather than growing a second answer to what a
-// narrowed list's URL looks like — and the hand-rolling is the part worth
-// reading in one piece.
+// A hook of its own, because this screen hand-rolls what
+// components/listquery.tsx does for every other list. It drives a board as
+// well as a table. It uses the same codec, so a narrowed list's URL has one
+// answer. The hand-rolled part is worth reading in one piece.
 //
 // `pipeline_id` and `view` sit beside the query's own dials: the first is
 // already a wire parameter name, and the second is the one dial here that is
@@ -2244,7 +2244,7 @@ export function DealsScreen({
           unit: "unit.deals",
         })}
       />
-      <ErrorLine error={advance.error} />
+      <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -3110,7 +3110,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                <ErrorLine error={advance.error} />
+                <ErrorLine
+                  error={advanceErrorBehind(advance.error, pending !== null)}
+                />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

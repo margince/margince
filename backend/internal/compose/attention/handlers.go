@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -217,4 +218,32 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// MarkWorklistRowsDone takes rows off the calling reader's own Worklist.
+func (h Handlers) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
+	h.worklistDone(w, r, h.svc.MarkRowsDone)
+}
+
+// ReopenWorklistRows puts rows back on the calling reader's own Worklist.
+func (h Handlers) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
+	h.worklistDone(w, r, h.svc.ReopenRows)
+}
+
+func (h Handlers) worklistDone(
+	w http.ResponseWriter, r *http.Request, write func(context.Context, []RowRef) error,
+) {
+	var req crmcontracts.WorklistDoneRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	rows := make([]RowRef, 0, len(req.Rows))
+	for _, row := range req.Rows {
+		rows = append(rows, RowRef{Source: row.Source, RowID: row.RowId})
+	}
+	if err := write(r.Context(), rows); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

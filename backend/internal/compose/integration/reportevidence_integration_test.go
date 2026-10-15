@@ -298,9 +298,9 @@ func TestReportEvidenceReportsAbstentions(t *testing.T) {
 	}
 }
 
-// An abstention serves an id, and a served id is a read: the envelope sources
-// it, which is what the passport's read bound charges.
-func TestAnAbstentionIsChargedAsARead(t *testing.T) {
+// An abstention serves an id, and a served id is a read. The envelope sources
+// it, so the answer counts as having handed a record over.
+func TestAnAbstentionIsCountedAsARead(t *testing.T) {
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)

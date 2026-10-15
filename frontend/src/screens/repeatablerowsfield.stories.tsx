@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import type { FormRow } from "../components/create";
+import { RepeatableRowsField } from "../components/repeatablerowsfield";
+import { contactCreateFields } from "../features/contacts/contactformfields";
 import { LocaleProvider, useT } from "../i18n";
-import { contactCreateFields } from "./contactformfields";
-import type { FormRow } from "./create";
-import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // The repeatable-row field on its own, in the states the row list itself
 // decides: a single row disables both move buttons; in a longer list the first

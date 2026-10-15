@@ -14,7 +14,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import "./settings.stageautomation.css";
@@ -199,25 +199,9 @@ function TransitionRule({
       description={
         suspended ? (
           <SuspensionNote rule={suspended} />
-        ) : (
-          <>
-            {t("stageAutomation.modeHint")}
-            {rule?.mode === "auto" && (
-              <span className="stagerule-note t-caption">
-                {notEarnedYet(row, rule, reportWindowDays)
-                  ? t("stageAutomation.notEarnedYet", {
-                      why: notEarnedYet(row, rule, reportWindowDays),
-                    })
-                  : t("stageAutomation.undoWindow", {
-                      // Through the locale: a bare String() prints the English
-                      // notation to every reader, and a magnitude in somebody
-                      // else's notation is one they read wrong.
-                      hours: formatNumber(rule.undo_window_hours, locale),
-                    })}
-              </span>
-            )}
-          </>
-        )
+        ) : rule?.mode === "auto" ? (
+          autoNote(row, rule, reportWindowDays, t, locale)
+        ) : undefined
       }
       control={(props) => (
         <>
@@ -235,7 +219,6 @@ function TransitionRule({
             labelHidden
             checked={rule?.mode === "auto"}
             disabled={!mayChange}
-            reason={mayChange ? undefined : t("stageAutomation.readOnly")}
             pending={saving}
             onChange={(on) => onToggle(on ? "auto" : "propose", rule?.version)}
           />
@@ -243,6 +226,22 @@ function TransitionRule({
       )}
     />
   );
+}
+
+function autoNote(
+  row: TransitionRecord,
+  rule: TransitionPolicy,
+  reportWindowDays: number,
+  t: Translator,
+  locale: Locale,
+): string {
+  const short = notEarnedYet(row, rule, reportWindowDays);
+  if (short) return t("stageAutomation.notEarnedYet", { why: short });
+  // Through the locale: a bare String() prints the English notation to every
+  // reader, and a magnitude in somebody else's notation is one they read wrong.
+  return t("stageAutomation.undoWindow", {
+    hours: formatNumber(rule.undo_window_hours, locale),
+  });
 }
 
 /**

@@ -15,15 +15,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const csvTargetOwner = "owner_email"
-
-// unknownOwnerReason is the report's word for an address no seat holds.
-const unknownOwnerReason = "no user has this email, so you become the owner"
 
 // seatsByEmail answers the seat each address belongs to, keyed by the folded
 // address, in one query. An address no seat holds is absent.
@@ -96,7 +94,8 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 	}
 	seat, known := o.seats[foldedEmail(raw)]
 	if !known {
-		return nil, &migration.SkippedRow{Kind: migration.ProblemUnknownOwner, Value: strings.TrimSpace(raw), Reason: unknownOwnerReason}
+		warning := migration.SkippedRow{Kind: migration.ProblemUnknownOwner, Value: strings.TrimSpace(raw)}.Because(unknownOwnerWhy)
+		return nil, &warning
 	}
 	owner := ids.From[ids.UserKind](seat)
 	return &owner, nil
@@ -145,4 +144,36 @@ func ownerFrom(fields map[string]string, typed map[string]any) *ids.UserID {
 	}
 	owner := ids.From[ids.UserKind](seat)
 	return &owner
+}
+
+// collapseUnknownOwners folds the unknown-owner warnings of one file that name
+// one address into a single issue. It sits on the first row that names the
+// address and carries how many rows do. Every row still lands with the
+// importer as owner.
+func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.ImportRowIssue {
+	first := map[string]int{}
+	counts := map[string]int{}
+	// Non-nil: an empty list is `[]` on the wire, never null.
+	out := make([]crmcontracts.ImportRowIssue, 0, len(issues))
+	for _, issue := range issues {
+		if issue.Kind == nil || string(*issue.Kind) != migration.ProblemUnknownOwner {
+			out = append(out, issue)
+			continue
+		}
+		key := derefString(issue.File) + "\x00" + foldedEmail(derefString(issue.Value))
+		if _, seen := first[key]; !seen {
+			first[key] = len(out)
+			out = append(out, issue)
+		}
+		counts[key]++
+	}
+	for key, at := range first {
+		why := migration.WhyCount(migration.ReasonOwnerUnknown, "rows", counts[key])
+		was := out[at]
+		out[at] = crmcontracts.ImportRowIssue{
+			Line: was.Line, File: was.File, Column: was.Column, Kind: was.Kind, Value: was.Value,
+			Reason: why.English(), ReasonCode: reasonCodeOrAbsent(why.Code), Params: paramsOrAbsent(why.Params),
+		}
+	}
+	return out
 }

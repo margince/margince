@@ -22,6 +22,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
+import { useUndoableRemoval } from "../lib/undoableremoval";
 import type { Tag } from "./tagadmin.queries";
 import {
   useArchiveTag,
@@ -30,7 +31,6 @@ import {
   useRestoreTag,
 } from "./tagadmin.queries";
 import { TagDialog } from "./tagdialog";
-import { useUndoableRemoval } from "./undoableremoval";
 import "./tagadmin.css";
 
 type TagVerbs = Readonly<{ canEdit: boolean; canArchive: boolean }>;
@@ -64,9 +64,12 @@ export function TagVocabularyCard() {
   const [merging, setMerging] = useState<Tag | null>(null);
   const words = catalog.data?.data ?? [];
 
+  // An empty list shares the intro's body: a band of its own for one sentence
+  // reads as a second section.
+  const listed = canRead && catalog.isSuccess && words.length > 0;
   return (
     <Panel
-      title={t("tagAdmin.title")}
+      title={t("tagAdmin.listLabel")}
       titleAction={
         canCreate && (
           <Button onClick={() => setAdding(true)}>{t("tagAdmin.add")}</Button>
@@ -88,22 +91,20 @@ export function TagVocabularyCard() {
             {t("tagAdmin.truncated")}
           </Callout>
         )}
+        {canRead && !listed && (
+          <QueryStates query={catalog} pendingLabel={t("tagAdmin.listLabel")}>
+            <EmptyState>{t("tagAdmin.empty")}</EmptyState>
+          </QueryStates>
+        )}
       </PanelBody>
-      {canRead &&
-        (catalog.isSuccess && words.length > 0 ? (
-          <TagTable
-            words={words}
-            verbs={verbs}
-            onEdit={setEditing}
-            onMerge={setMerging}
-          />
-        ) : (
-          <PanelBody>
-            <QueryStates query={catalog} pendingLabel={t("tagAdmin.title")}>
-              <EmptyState>{t("tagAdmin.empty")}</EmptyState>
-            </QueryStates>
-          </PanelBody>
-        ))}
+      {listed && (
+        <TagTable
+          words={words}
+          verbs={verbs}
+          onEdit={setEditing}
+          onMerge={setMerging}
+        />
+      )}
       {adding && (
         <TagDialog vocabulary={words} onClose={() => setAdding(false)} />
       )}

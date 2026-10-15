@@ -92,6 +92,10 @@ func TestEveryOutboundIdentityHasARequestBehindIt(t *testing.T) {
 			"either the naming moved or the walk no longer reaches the file", outboundIdentities)
 	}
 
+	senders := make(map[string]*regexp.Regexp, len(identities))
+	for _, name := range identities {
+		senders[name] = regexp.MustCompile(`\boutbound\.` + name + `(Product|Header)\b`)
+	}
 	users := map[string]int{}
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
@@ -110,7 +114,7 @@ func TestEveryOutboundIdentityHasARequestBehindIt(t *testing.T) {
 		for _, name := range identities {
 			// Either half counts, and per FILE rather than per occurrence: the
 			// question is whether anything sends this identity, not how often.
-			if regexp.MustCompile(`\boutbound\.` + name + `(Product|Header)\b`).Match(source) {
+			if senders[name].Match(source) {
 				users[name]++
 			}
 		}

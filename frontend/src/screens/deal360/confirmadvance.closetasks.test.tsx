@@ -15,9 +15,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { BulkUndoProvider } from "../../components/bulkchange";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { BulkUndoProvider } from "../bulkchange";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 
 // Closing a deal with open tasks asks what happens to them. Complete all runs

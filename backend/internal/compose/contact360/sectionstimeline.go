@@ -307,6 +307,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	touch := touched[contactID]
 	out.LastInboundAt = touch.InboundAt
 	out.LastOutboundAt = touch.OutboundAt
+	out.LastLiveInboundAt = touch.LiveInboundAt
 	return nil
 }
 

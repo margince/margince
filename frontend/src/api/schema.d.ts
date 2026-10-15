@@ -520,6 +520,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/openapi.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+         * @description The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+         *     Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+         *     address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+         *     both read it: the document says what a passport may call and holds no record data.
+         */
+        get: operations["getAgentOpenAPIDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/consent-request": {
         parameters: {
             query?: never;
@@ -1166,7 +1189,14 @@ export interface paths {
          *     shared truth, a dismissal is a preference.
          */
         post: operations["dismissContactMoment"];
-        delete?: never;
+        /**
+         * Show a dismissed moment again, the undo behind "Not now".
+         * @description Clears this reader's dismissal of the moment with this `claim_key`, only while it is
+         *     still held against this `evidence_fingerprint`. An Undo from an older toast therefore
+         *     leaves a newer dismissal of changed evidence standing. Idempotent: a moment nobody
+         *     dismissed answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreContactMoment"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1757,7 +1787,13 @@ export interface paths {
         delete: operations["archiveCompany"];
         options?: never;
         head?: never;
-        /** Update a company (partial). */
+        /**
+         * Update a company (partial).
+         * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         */
         patch: operations["updateCompany"];
         trace?: never;
     };
@@ -2496,10 +2532,18 @@ export interface paths {
          *     there is nothing to silence. So the stored set grows by one row per suggestion a
          *     human actually dismissed, and no dismissal is ever dropped to make room.
          *
+         *     The account's moment (`Company360.moment`) is set aside the same way: its
+         *     `evidence_fingerprint` is accepted here while that promise is open on the account.
+         *
          *     Human-only: an agent has no opinion to record.
          */
         post: operations["dismissCompanySuggestion"];
-        delete?: never;
+        /**
+         * Show a dismissed suggestion or moment again, the undo behind "Not now".
+         * @description Clears this reader's dismissal of this fingerprint on this account. Idempotent: a
+         *     fingerprint nobody dismissed answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreCompanySuggestion"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8199,6 +8243,9 @@ export interface paths {
          *     the export is then listed on the list as a use. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
+         *     A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
+         *     with a quote so a spreadsheet does not evaluate it; a bare international phone number
+         *     (`+` and 6 to 15 digits) is left unquoted.
          */
         post: operations["createFilteredExport"];
         delete?: never;
@@ -8308,14 +8355,35 @@ export interface paths {
         put?: never;
         /**
          * Register an outbound webhook subscription (returns the signing secret once).
-         * @description Registers a target URL + event-type subset. Registering outbound egress, so an agent
-         *     principal's call is 🟡 — staged for human approval (ADR-0036), then redeemed with the
-         *     `X-Approval-Token`; a human on a session registers directly. Every register/change/delete
+         * @description Registers a target URL + event-type subset. Registering outbound egress is a human's to
+         *     do, so an agent principal is refused. Every register/change/delete
          *     is audited. The `signing_secret` in the response is shown EXACTLY ONCE — deliveries are
          *     signed with it on the Standard Webhooks scheme (verify the `webhook-signature` header).
          *     `target_url` must be https://.
          */
         post: operations["createWebhookSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhook-subscriptions/body-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render a body template against a sample event, without sending anything.
+         * @description Renders `body_template` with the same engine a delivery uses, against a sample event of
+         *     `event_type` built from the public event contract. Nothing is sent and nothing is stored.
+         *     A template the engine refuses answers 422 on `body_template`, naming the line and column.
+         */
+        post: operations["previewWebhookBody"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8341,10 +8409,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Pause/resume a subscription or re-target its event set.
-         * @description A partial update (pause/resume or re-target the event set). Re-targeting can widen
-         *     outbound egress, so an agent principal's call is 🟡 — staged for approval and redeemed
-         *     with the `X-Approval-Token`; a human updates directly.
+         * Pause/resume a subscription, re-target its event set, or change its headers or body template.
+         * @description A partial update (pause/resume, the event set, custom headers, body template). Re-targeting can widen
+         *     outbound egress, so an agent principal is refused.
          */
         patch: operations["updateWebhookSubscription"];
         trace?: never;
@@ -8402,7 +8469,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replay a parked (dead-lettered) delivery. */
+        /**
+         * Replay a parked (dead-lettered) delivery.
+         * @description Re-attempts a dead-lettered or retrying delivery now, with a fresh attempt budget. A
+         *     delivered or pending one, or one whose body could not be rendered, is a 422. A delivery a
+         *     retry sweep or another replay is sending at this moment is a 409; try again once it ends.
+         */
         post: operations["replayWebhookDelivery"];
         delete?: never;
         options?: never;
@@ -9237,7 +9309,8 @@ export interface paths {
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-         *     later one. This is a HUMAN write: every field is stamped
+         *     later one. Its `display_name` is the installation's name: the same transaction writes it to
+         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
          *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
          *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
          *     theirs, and a later agent read-back will not overwrite it.
@@ -10685,6 +10758,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Take rows off your own Worklist, because there is nothing more to do there.
+         * @description Done on any row that offers `handled` in its `dispositions`. One row, or every row a
+         *     reader ticked: the batch lands whole or not at all, and one call to
+         *     `/worklist/done/undo` with the same rows reverses it.
+         *
+         *     PER READER. A row the caller marks done leaves the caller's list and nobody else's.
+         *
+         *     A row comes back on its own when something new happens on its subject. A message,
+         *     an unanswered message of the caller's own and a meeting follow-up keep their Done
+         *     on the activity, so the next message or meeting is new work. Every other row
+         *     returns once it reports an event on its subject after the press: a new failure on
+         *     a health row, a connection that synced again, new activity or a passed close date
+         *     on a deal at risk.
+         *
+         *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
+         *     every lane's own grant and row scope. Any other row answers 404, the same as one
+         *     that does not exist, and nothing in the batch is written. A source whose rows never
+         *     offer Done answers 422. A row named twice is written once.
+         */
+        put: operations["markWorklistRowsDone"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/done/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put rows back on your own Worklist — the undo behind Done.
+         * @description Clears what THIS reader marked done. Idempotent: a row nobody marked done is the
+         *     same success, because the reader's goal state already holds. A POST rather than a
+         *     DELETE, because the batch travels in a body.
+         */
+        post: operations["reopenWorklistRows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/team": {
         parameters: {
             query?: never;
@@ -11971,6 +12102,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/agent-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much of their allowances each user's agents have used in this window.
+         * @description One row per user with a live passport or connection, summed over all of them: what
+         *     was used, the allowance it is judged against, and the worst state among them. It names
+         *     no passport, label, permission or token, and says nothing about what an agent read or
+         *     changed: which agents act for a user is that user's own business, and this read
+         *     answers only how much. Readable by whoever may read the AI usage page.
+         */
+        get: operations["listAgentUsageByUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/profile": {
         parameters: {
             query?: never;
@@ -12660,6 +12815,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/{id}/failure-acknowledgement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say you have seen that an approved change did not run, so it leaves your Worklist.
+         * @description An approval whose released work failed is carried back to the contact who approved it
+         *     on the Worklist. This takes that row off their list. The approval and its failure stay
+         *     on the record, and the Approval still reports `effect_failed_at`.
+         *
+         *     The acknowledgement is held against the failure it saw. If the same approval fails
+         *     again later, for example after the decider approves it once more to retry the work,
+         *     the new failure shows again.
+         *
+         *     Only the contact who decided the approval may acknowledge its failure. Any other
+         *     caller, and an approval with no failure, answers `404`.
+         *
+         *     The request names the failure the reader saw, by its `effect_failed_at`. If the
+         *     approval has failed again since, the newer failure is not acknowledged: the call
+         *     answers `409` and the row stays on the list.
+         */
+        post: operations["acknowledgeApprovalFailure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approval-bundles/{bundle_id}/approve": {
         parameters: {
             query?: never;
@@ -12984,8 +13175,9 @@ export interface paths {
          *     An assignee-scoped list would leave a card nobody could find the moment the colleague it named
          *     went on leave.
          *
-         *     Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-         *     caller to discover it.
+         *     Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+         *     waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+         *     stranded the oldest reviews, which are the ones a reviewer most needs.
          */
         get: operations["listCommunicationReviews"];
         put?: never;
@@ -13501,12 +13693,10 @@ export interface paths {
         get: operations["listCustomFields"];
         put?: never;
         /**
-         * Define a new custom field on an existing core object (🟡 — a schema change).
+         * Define a new custom field on an existing core object (a schema change).
          * @description CUSTOM-FIELDS-WIRE-2. Runs the governed engine's single-transaction add: schema
-         *     change + catalog row + one audit entry land or roll back together. Always 🟡 —
-         *     a schema change is never 🟢 — so an agent caller must supply `X-Approval-Token`,
-         *     exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-         *     itself the approval. `column_name` is server-derived and never client-supplied —
+         *     change + catalog row + one audit entry land or roll back together. A schema change
+         *     is a human's to make, so an agent principal is refused. `column_name` is server-derived and never client-supplied —
          *     immutable once live. When the requested `label`/`type`/`object` combination is
          *     judged structural — a new object, a relationship, or logic, never one of the six
          *     closed types on one of the five closed objects — the request is refused with a
@@ -13537,7 +13727,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Rename a custom field's display label (🟢 — not a schema change).
+         * Rename a custom field's display label (not a schema change).
          * @description CUSTOM-FIELDS-WIRE-3. Audited catalog `label` update only; `column_name` never
          *     moves — the physical column identity is stable across rename. Merge-PATCH:
          *     `column_name`, `object`, and `type` are absent from the request schema entirely.
@@ -13586,12 +13776,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
+         * Retire (soft-retire) a custom field. It cannot be undone.
          * @description CUSTOM-FIELDS-WIRE-4. Sets `status=retired`; hides the field from the API and
          *     filtering while the column and every value in it are preserved — the engine never
-         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). 🟡 (mirrors `archiveContact`'s
-         *     posture: an irreversible-feeling state change users must confirm) — an agent caller
-         *     must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
+         *     drops a column as a side effect (CUSTOM-FIELDS-AC-13). An agent principal is refused.
+         *     Not the generic archive shape: this is a status flip
          *     on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
          *     refused because a Live List filters on the field: the list keeps evaluating on the kept
          *     values and reports health `retired_field`. Which lists those are is read, for the
@@ -13622,15 +13811,15 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit a picklist custom field's allowed options (🟡 — regenerates the column's CHECK).
+         * Edit a picklist custom field's allowed options (regenerates the column's CHECK).
          * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
-         *     one allowed value. 🟡 like `retireCustomField`: this mutates a schema-adjacent CHECK
-         *     constraint, so an agent caller must supply `X-Approval-Token`. A retired field
+         *     one allowed value. Like `retireCustomField`, an agent principal is refused: this
+         *     mutates a schema-adjacent CHECK constraint. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
          *     are frozen; removing an option that stored values still use is also a 409
          *     (`ADD CONSTRAINT` validates existing rows — migrate the values first).
@@ -17150,6 +17339,7 @@ export interface paths {
          *
          *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
          *     opening the file reads them as the text the record holds rather than evaluating them.
+         *     A bare international phone number (`+` and 6 to 15 digits) is left unquoted.
          */
         get: operations["exportForecastShare"];
         put?: never;
@@ -18060,6 +18250,40 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/move/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set the deal card's move aside for me until it changes.
+         * @description The deal page's "Not now", by the rule the contact and company pages use: per reader,
+         *     and held against the move's `fingerprint`, so it lifts by itself when the card names a
+         *     different move. It feeds no formula, no brief and no other reader's page.
+         *
+         *     One set-aside per reader and deal: a second one replaces the first, because the card
+         *     shows one move. Reading the deal is the licence to set its move aside; an id the
+         *     caller cannot read answers 404, the same as one that does not exist.
+         */
+        post: operations["dismissDealMove"];
+        /**
+         * Put a set-aside move back on the deal card, the undo behind "Not now".
+         * @description Clears this reader's set-aside of the move with this fingerprint. Idempotent: a
+         *     move nobody set aside answers the same success, because the goal state holds.
+         */
+        delete: operations["restoreDealMove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -19116,6 +19340,11 @@ export interface paths {
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
          *     are left behind.
+         *
+         *     A cell an export quoted against formula evaluation (a quote before `=`,
+         *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
+         *     quote, here and in the run, so an unedited export imports as the values
+         *     it was written from.
          */
         post: operations["uploadImportSource"];
         delete?: never;
@@ -19139,6 +19368,11 @@ export interface paths {
          *
          *     Gated on reading `import_run`, the same grant that reads one run. A
          *     `limit` outside 1..50 is clamped to the nearest bound, not refused.
+         *
+         *     `view` narrows the list so that drafts and abandoned runs cannot push
+         *     a finished import out of one page: `history` is every run that wrote,
+         *     is writing or failed (not drafts, not cancelled runs), and `drafts` is
+         *     the runs still waiting for a test. Left out, every run is listed.
          */
         get: operations["listImportRuns"];
         put?: never;
@@ -19687,6 +19921,11 @@ export interface paths {
          *
          *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
+         *
+         *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -20101,6 +20340,11 @@ export interface components {
             event_types: string[];
             /** @enum {string} */
             state: "active" | "paused";
+            /** @description The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part. */
+            custom_headers: components["schemas"]["WebhookCustomHeader"][];
+            /** @description The body template every delivery is rendered from; null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
             /**
              * Format: int64
              * @description Optimistic-concurrency version; echo it in If-Match on update.
@@ -20112,6 +20356,33 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        /** @description A custom header as a read shows it. The value stays sealed; `configured` says one is stored. */
+        WebhookCustomHeader: {
+            name: string;
+            configured: boolean;
+        };
+        /** @description A custom header to store. `value` is required for a new name. On update, a row that omits `value` keeps the value already stored under that name. */
+        WebhookCustomHeaderInput: {
+            name: string;
+            value?: string;
+        };
+        /**
+         * @description The Content-Type of a templated body; null means application/json.
+         * @enum {string|null}
+         */
+        WebhookBodyContentType: "application/json" | "text/plain" | "application/x-www-form-urlencoded" | null;
+        WebhookBodyPreviewRequest: {
+            /** @description The event type whose sample the template is rendered against. */
+            event_type: string;
+            body_template: string;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
+        };
+        WebhookBodyPreview: {
+            /** @description The exact bytes a delivery of the sample event would send. */
+            body: string;
+            content_type: string;
+            byte_length: number;
         };
         /** @description The create/rotate response — the subscription plus the `signing_secret`, which is shown EXACTLY ONCE and never retrievable again. Store it now: deliveries are signed with it on the Standard Webhooks scheme (standardwebhooks.com). */
         WebhookSubscriptionCreated: {
@@ -20127,12 +20398,22 @@ export interface components {
             target_url: string;
             /** @description At least one event type from the published catalog; a true set — duplicates are rejected. */
             event_types: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
-        /** @description A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set. */
+        /** @description A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope. */
         UpdateWebhookSubscriptionRequest: {
             /** @enum {string} */
             state?: "active" | "paused";
             event_types?: string[];
+            /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
+            custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
+            /** @description A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope. */
+            body_template?: string | null;
+            body_content_type?: components["schemas"]["WebhookBodyContentType"];
         };
         WebhookSubscriptionListResponse: {
             data: components["schemas"]["WebhookSubscription"][];
@@ -20174,7 +20455,11 @@ export interface components {
          *     changed only by admin/ops.
          */
         InstallationSettings: {
-            /** @description The company's display name. */
+            /**
+             * @description The company's display name. An administrator saving the anchor company's `display_name`
+             *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+             *     transaction; before the first save it is the name the installation was configured with.
+             */
             name: string;
             /**
              * @description IANA zone name every reporting period boundary is computed in (not a user's own
@@ -20266,6 +20551,7 @@ export interface components {
              */
             oauth_access_token_ttl_minutes: number;
             operations: components["schemas"]["OperationSettings"];
+            agent_allowances: components["schemas"]["AgentAllowanceSettings"];
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -20295,7 +20581,12 @@ export interface components {
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
-            /** @description Rename the company. */
+            /**
+             * @deprecated
+             * @description Accepted only when it equals the stored name, so an older client that resends the whole
+             *     form still saves. Any other value is refused with `422 set_on_company_profile`: the
+             *     installation's name is the anchor company's display name, changed through `PUT /company`.
+             */
             name?: string;
             /**
              * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
@@ -20415,6 +20706,19 @@ export interface components {
             send_rate_window_seconds?: number;
             /** @description Set the value `OperationSettings.send_max_age_hours` describes. */
             send_max_age_hours?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window. */
+            agent_writes_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window. */
+            agent_egress_per_window?: number;
+            /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
+            agent_calls_per_window?: number;
+            /**
+             * @description Set how long one agent allowance window lasts, in hours. The window in force is never
+             *     cut short: the new length takes effect at its next reset, and the response names that
+             *     moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
+             *     in force cancels a change that is still waiting.
+             */
+            agent_window_hours?: number;
             /**
              * @description How far back the maintenance banner looks before it calls dead work a problem, in
              *     hours. 24 by default, bounded above by River's own seven-day retention — a window
@@ -21400,6 +21704,58 @@ export interface components {
             send_rate_window_seconds: number;
             /** @description How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24. */
             send_max_age_hours: number;
+        };
+        /** @description What each agent allowance is before an admin changes it, so a screen never restates them. */
+        AgentAllowanceDefaults: {
+            agent_writes_per_window: number;
+            agent_egress_per_window: number;
+            agent_calls_per_window: number;
+            agent_window_hours: number;
+        };
+        /**
+         * @description How much one agent may do in one window. A passport a user minted has its own allowance;
+         *     a connected MCP client has one allowance for all its passports, so a renewed credential
+         *     keeps counting where the last one stopped. An agent that reaches a count is refused on
+         *     its next call until the window resets or, for changing calls, the user who lent it releases
+         *     more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
+         *     a count applies within a minute, in the window that is running: a raised count gives
+         *     headroom within that minute, and a lowered one refuses an agent already past it on its
+         *     next call. The per-minute limits are fixed by the build and shown here read-only.
+         */
+        AgentAllowanceSettings: {
+            /** @description How many changing calls one passport or connection may make per window. Default 200. */
+            agent_writes_per_window: number;
+            /** @description How many calls that send something out of the workspace one passport or connection may make per window. Default 20. */
+            agent_egress_per_window: number;
+            /** @description How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000. */
+            agent_calls_per_window: number;
+            /**
+             * @description How long the window in force lasts, in hours. Default 24. Every passport's window
+             *     resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+             */
+            agent_window_hours: number;
+            /**
+             * Format: date-time
+             * @description When the window in force resets and every count starts again from zero.
+             */
+            agent_window_resets_at: string;
+            /**
+             * @description The window length an admin saved that is not in force yet, in hours. Null when no
+             *     change is waiting.
+             */
+            agent_window_next_hours?: number | null;
+            /**
+             * Format: date-time
+             * @description When the saved window length takes over: the next reset of the window in force that
+             *     is at least a minute away. Null when no change is waiting. The first window under the
+             *     new length may be shorter than that length, never longer.
+             */
+            agent_window_next_starts_at?: string | null;
+            defaults: components["schemas"]["AgentAllowanceDefaults"];
+            /** @description How many tool calls one passport may make per minute. Fixed by the build. */
+            mcp_calls_per_minute: number;
+            /** @description How many streams one passport may open per minute. Fixed by the build. */
+            mcp_stream_opens_per_minute: number;
         };
         /** @description A sparse capture-settings patch (admin/ops). */
         UpdateCaptureSettingsRequest: {
@@ -23300,7 +23656,7 @@ export interface components {
             rows: components["schemas"]["AiCallStatsRow"][];
         };
         AiCallStatsRow: {
-            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            /** @description The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
             key: string;
             /** Format: int64 */
             calls: number;
@@ -23326,6 +23682,13 @@ export interface components {
              * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
              */
             unpriced: number;
+            /**
+             * Format: int64
+             * @description Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiTaskFlow: {
             task: string;
@@ -23361,6 +23724,13 @@ export interface components {
             gave_up: {
                 [key: string]: number;
             };
+            /**
+             * Format: int64
+             * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiDeferredWork: {
             carrier: string;
@@ -23660,6 +24030,14 @@ export interface components {
          *
          *     `company` creates companies.
          *
+         *     `deal` creates deals, after the companies and contacts of the same
+         *     upload. A deal row needs a `ref`, and names its pipeline and stage by
+         *     name.
+         *
+         *     `activity` creates notes, calls, meetings and emails, after every
+         *     other type of the same upload. A row needs a `ref` and at least one
+         *     link to a company, contact, lead or deal.
+         *
          *     `lead` and `contact` are two answers to one question about a file of
          *     humans, and the caller picks the one that matches where the file came
          *     from.
@@ -23683,7 +24061,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "company" | "lead" | "contact";
+        ImportObject: "company" | "lead" | "contact" | "deal" | "activity";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -23759,10 +24137,10 @@ export interface components {
             /** @description The entry's path inside the ZIP. */
             file: string;
             /**
-             * @description `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+             * @description `unknown_name`: the file name names no type this CRM knows.
              * @enum {string}
              */
-            reason: "unknown_name" | "not_yet_importable";
+            reason: "unknown_name";
         };
         /** @description One file of a ZIP run, with the type and mapping the human settled for it. */
         ImportPartRequest: {
@@ -23794,6 +24172,11 @@ export interface components {
          * @enum {string}
          */
         ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
+        /**
+         * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
+         * @enum {string}
+         */
+        ImportReasonCode: "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -23878,6 +24261,20 @@ export interface components {
              *     only touched.
              */
             context_tag_id?: string;
+            /**
+             * @description The record every imported activity is filed under, so the file needs
+             *     no `links` column. Only for a run whose files are all `activity`.
+             *     The contact must be visible to the caller; one that is not, or does
+             *     not exist, is answered `404` the same way.
+             */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
+        };
+        /** @description A record a whole run's activities are filed under. */
+        ImportPresetLink: {
+            /** @enum {string} */
+            type: "contact";
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description What to do with a row naming a record the estate ALREADY holds — found
@@ -23948,6 +24345,11 @@ export interface components {
             to: string;
             /** @description Why it was not applied, in the words of the contact who made the file. */
             reason: string;
+            reason_code?: components["schemas"]["ImportReasonCode"];
+            /** @description The values `reason_code`'s sentence names. Absent on a report stored before codes. */
+            params?: {
+                [key: string]: string;
+            };
         };
         /** @description What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something. */
         ImportRunDisposition: {
@@ -24026,6 +24428,11 @@ export interface components {
             value?: string;
             /** @description What is wrong, in terms of the file the human uploaded — never a database or driver message. */
             reason: string;
+            reason_code?: components["schemas"]["ImportReasonCode"];
+            /** @description The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed. */
+            params?: {
+                [key: string]: string;
+            };
         };
         /** @description One file's slice of a run's report. */
         ImportPartReport: {
@@ -24034,6 +24441,10 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             rows_read: number;
             disposition: components["schemas"]["ImportRunDisposition"];
+            /** @description Deals of a deals file that land already won, as closed history. Absent when none does. */
+            closed_won?: number;
+            /** @description Deals of a deals file that land already lost, as closed history. Absent when none does. */
+            closed_lost?: number;
         };
         /**
          * @description The same shape before and after approval: a dry run reports what the
@@ -24085,6 +24496,8 @@ export interface components {
              */
             context_tag_id?: string | null;
             draft_step?: components["schemas"]["ImportDraftStep"];
+            /** @description The record every imported activity is filed under, as on `CreateImportRunRequest`. An empty list clears it. */
+            preset_links?: components["schemas"]["ImportPresetLink"][];
         };
         /** @description The run's `version` a call was made on. */
         ImportRunVersion: {
@@ -24136,11 +24549,18 @@ export interface components {
             reversed_count: number;
             /** @description Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`. */
             updates_not_reversed?: number;
-            /** @description Import-created rows a human edited since import, therefore left in place (A93). */
+            /** @description Import-created rows left in place: a human edited them since import (A93), or a live record still names the company. */
             kept: {
                 object: components["schemas"]["ImportObject"];
                 /** Format: uuid */
                 id: string;
+                /** @description Why the row was left in place, in terms the operator can act on. Absent in a report written before kept rows carried one. */
+                reason?: string;
+                reason_code?: components["schemas"]["ImportReasonCode"];
+                /** @description The values the sentence of `reason_code` names, by name. Absent when the code names none. */
+                params?: {
+                    [key: string]: string;
+                };
             }[];
             /**
              * @description Import-created rows the reversal could not archive (a business
@@ -24154,6 +24574,7 @@ export interface components {
                 id: string;
                 /** @description What kept it from reversing, in terms the operator can act on — never a database or driver message. */
                 reason: string;
+                reason_code?: components["schemas"]["ImportReasonCode"];
             }[];
         };
         ImportRun: {
@@ -24174,6 +24595,8 @@ export interface components {
              */
             readonly context_tag_id?: string;
             on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /** @description The record every activity of this run is filed under. Absent when the run names none. */
+            readonly preset_links?: components["schemas"]["ImportPresetLink"][];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
@@ -24203,6 +24626,59 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            phase?: components["schemas"]["ImportRunPhase"];
+            /** @description The object the run is working on in `phase`, when it is working on one. */
+            phase_object?: string;
+            progress?: components["schemas"]["ImportRunProgress"];
+            /**
+             * Format: date-time
+             * @description When a worker took up the run's current job: its test, its commit or its undo. Absent while the job only waits.
+             */
+            started_at?: string;
+            /**
+             * Format: date-time
+             * @description When the run reached a final status: complete, undone or cancelled. Absent while it can still move.
+             */
+            finished_at?: string;
+            /** @description Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock. */
+            elapsed_seconds?: number;
+            /** @description Seconds since the run last made progress. Absent when the run is not being worked. */
+            idle_seconds?: number;
+            /** @description Seconds since the worker last said it is alive. Absent when the run is not being worked. */
+            heartbeat_age_seconds?: number;
+            /** @description Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle. */
+            rate_rows_per_second?: number;
+            /** @description The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is. */
+            eta_seconds_low?: number;
+            /** @description The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next. */
+            eta_seconds_high?: number;
+            /**
+             * @description `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
+             * @enum {string}
+             */
+            eta_scope?: "object" | "run";
+        };
+        /**
+         * @description What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
+         * @enum {string}
+         */
+        ImportRunPhase: "reading" | "checking" | "creating_tags" | "importing" | "linking" | "undoing" | "finishing";
+        /** @description What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero. */
+        ImportRunProgress: {
+            objects: {
+                /** @description An import object, or `links` for the link phase after every object. */
+                object: string;
+                rows_done: number;
+                rows_total: number;
+            }[];
+            counts: {
+                created: number;
+                updated: number;
+                unchanged: number;
+                skipped: number;
+                /** @description Rows that carry a problem, skipped or landed. */
+                problems: number;
+            };
         };
         ImportRunPart: {
             /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
@@ -24210,6 +24686,10 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
+            mapping?: {
+                [key: string]: string;
+            };
         };
         ImportRunList: {
             data: components["schemas"]["ImportRun"][];
@@ -25034,6 +25514,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
+            readonly imported_from?: string | null;
             /**
              * @description Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -25384,6 +25866,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
+            readonly imported_from?: string | null;
             /**
              * @description Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -27024,6 +27508,11 @@ export interface components {
              * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
              */
             last_outbound_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             */
+            last_live_inbound_at?: string | null;
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
             strength?: components["schemas"]["RelationshipStrength"];
@@ -27324,6 +27813,10 @@ export interface components {
         DismissContactMomentRequest: {
             claim_key: string;
             evidence_fingerprint: string;
+        };
+        /** @description The move to set aside, named by the fingerprint the card served it with. */
+        DismissDealMoveRequest: {
+            fingerprint: string;
         };
         /**
          * @description The pre-meeting brief for one booked meeting (ADR-0097 D5), assembled fresh on every
@@ -28285,6 +28778,13 @@ export interface components {
                 [key: string]: unknown;
             };
             evidence: components["schemas"]["DealNextBestActionEvidence"][];
+            /**
+             * @description A digest of what the move names: its verb, operands and evidence, taken when the
+             *     rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+             *     the set-aside lifts when the card names a different move. Absent on a move with
+             *     nothing to do (`none`).
+             */
+            readonly fingerprint?: string;
         };
         DealNextBestActionEvidence: {
             text: string;
@@ -29771,6 +30271,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
+            readonly imported_from?: string | null;
             /**
              * @description Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -31755,6 +32257,8 @@ export interface components {
              * @description Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
              */
             readonly host_user_id?: string | null;
+            /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
+            readonly colleague_ids?: string[];
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
@@ -31804,6 +32308,8 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
+            readonly imported_from?: string | null;
             /**
              * @description Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
              *     WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
@@ -32063,6 +32569,10 @@ export interface components {
              *     could see.
              */
             row_id: string;
+        };
+        WorklistDoneRequest: {
+            /** @description The rows, each named by its lane and its id, as a pin names one. */
+            rows: components["schemas"]["WorklistPinRequest"][];
         };
         DismissRelationshipNudgeRequest: {
             /**
@@ -33376,6 +33886,8 @@ export interface components {
             qualification_evidence?: components["schemas"]["LeadQualificationEvidence"];
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
+            readonly imported_from?: string | null;
             /**
              * @description Who created this lead in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a lead somebody entered here has no author but the one `captured_by` already names.
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -37750,7 +38262,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -37886,10 +38398,10 @@ export interface components {
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
             /**
-             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. rest_only — no MCP tool serves this record_type yet: the verb names only the tier, scope and budget the REST gate admits the call under, and the MCP verb refuses the type. Absent and rest_only both mean the operation's own handler runs and the gate admits it.
              * @enum {string}
              */
-            served_by?: "registry";
+            served_by?: "registry" | "rest_only";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -38116,6 +38628,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
+            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -39652,6 +40165,11 @@ export interface components {
         /** @description A page of refused sends waiting for a decision. */
         CommunicationReviewList: {
             data: components["schemas"]["CommunicationReview"][];
+            /**
+             * @description Where this page was cut. `total` beside it is the same count this object may carry, kept
+             *     at the top level because it shipped there: a client reading it keeps working.
+             */
+            page: components["schemas"]["PageInfo"];
             /**
              * @description How many are waiting in total. A page at its limit has more behind it, and this is how
              *     the caller knows rather than by discovering it.
@@ -41839,7 +42357,69 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /**
+             * @description What this passport has used of its allowances in the window that is running. A
+             *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
+             *     on a revoked or expired passport, and when the counters cannot be read: the list is
+             *     still answered, without the usage.
+             */
+            usage?: components["schemas"]["AgentUsage"];
         };
+        /** @description One window's use of the three agent allowances, and when they reset. */
+        AgentUsage: {
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+            state: components["schemas"]["AgentUsageState"];
+        };
+        AgentUsageByUser: {
+            /** @description Users with at least one live passport or connection, by name. */
+            data: components["schemas"]["AgentUserUsage"][];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+        };
+        /**
+         * @description One user's agents in the running window. Each count and allowance is the sum over
+         *     their live passports and connections, so a user with two passports has twice the
+         *     allowance. `state` is the worst state of any one of them.
+         */
+        AgentUserUsage: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @description Live passports and connections. A connection counts once. */
+            passport_count: number;
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            state: components["schemas"]["AgentUsageState"];
+        };
+        /** @description One allowance in the running window. */
+        AgentCounterUsage: {
+            /** @description What has been used in this window. */
+            used: number;
+            /**
+             * @description The allowance in force: the installation's value, plus one more allowance for each
+             *     release a user granted in this window.
+             */
+            limit: number;
+            /** @description How many times a user released more in this window. */
+            released: number;
+        };
+        /**
+         * @description The worst of the three allowances. `stopped` when one is used up, so the next call of
+         *     that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+         * @enum {string}
+         */
+        AgentUsageState: "ok" | "near" | "stopped";
         /**
          * @description The connection a grant-bound passport belongs to, so Settings can name it by the client the
          *     human actually approved instead of the raw DCR client id its label carries.
@@ -43455,6 +44035,13 @@ export interface components {
              */
             occurred_at?: string;
             /**
+             * Format: date-time
+             * @description When something last happened on the item's subject, where its lane knows and
+             *     `occurred_at` does not say it: a deal's last activity, a connection's last good
+             *     sync. A Worklist row marked done comes back once this passes the press.
+             */
+            subject_moved_at?: string;
+            /**
              * @description The way back from work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
              */
@@ -44939,8 +45526,12 @@ export interface components {
              *     rule, and a client guessing it draws a verb that 404s or hides one the rep
              *     is entitled to.
              *
-             *     Absent or empty means the row cannot be set aside — most sources answer
-             *     through the surface that owns them and leave nothing to dispose of here.
+             *     `handled` is Done: nothing more to do here, take it off my list. It posts to
+             *     `/worklist/done` on every row that carries it. Only a waiting message offers
+             *     the other three, which post to `/activities/{id}/disposition`.
+             *
+             *     Absent or empty means the row leaves through its own verb in `actions`, or,
+             *     where it has none, a reason in `because` says why.
              */
             dispositions?: ("handled" | "snooze" | "not_mine" | "not_sales")[];
             /**
@@ -44965,8 +45556,19 @@ export interface components {
              *     folded into one, and this carries the brief entry's id so the verbs that
              *     belong to the brief (`/brief/items/{id}/act`, and its set-aside and
              *     dismiss) still reach it. Absent on a row the night did not raise.
+             *
+             *     Set only on the reader's own queue: the brief is the acting reader's,
+             *     so a page naming another owner never carries it.
              */
             brief_item_id?: string;
+            /**
+             * @description The verbs the folded brief entry offers, copied from that entry's own
+             *     row and posted to `/brief/items/{brief_item_id}/…`. The row's own
+             *     `actions` stay the row's: these answer the brief entry, not the deal.
+             *
+             *     Present exactly when `brief_item_id` is.
+             */
+            brief_actions?: ("set_aside" | "dismiss")[];
             /**
              * @description Which part of the morning this row belongs to, as a LABEL and never as an
              *     order.
@@ -45300,10 +45902,10 @@ export interface components {
          */
         WorklistReason: {
             /**
-             * @description Which fact this is. The client writes the phrase.
+             * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -45849,7 +46451,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
         PayloadTooLarge: {
             headers: {
                 [name: string]: unknown;
@@ -46824,6 +47426,29 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAgentOpenAPIDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The OpenAPI 3.1 document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getConsentRequest: {
@@ -47815,6 +48440,36 @@ export interface operations {
         };
         responses: {
             /** @description Dismissed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreContactMoment: {
+        parameters: {
+            query: {
+                /** @description The `claim_key` of the moment that was dismissed, unchanged. */
+                claim_key: string;
+                /** @description The `evidence_fingerprint` the moment carried when it was dismissed. */
+                evidence_fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shown again, or was never hidden. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -48860,6 +49515,7 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
@@ -49618,6 +50274,34 @@ export interface operations {
         };
         responses: {
             /** @description Dismissed, or nothing matched and nothing was stored. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCompanySuggestion: {
+        parameters: {
+            query: {
+                /** @description The `fingerprint` that was dismissed, unchanged. */
+                fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Shown again, or was never hidden. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -60075,18 +60759,7 @@ export interface operations {
     createWebhookSubscription: {
         parameters: {
             query?: never;
-            header?: {
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -60103,6 +60776,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookSubscriptionCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewWebhookBody: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookBodyPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The rendered body. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookBodyPreview"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -60166,16 +60866,6 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
                 /**
                  * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
                  *     the last-seen entity `version`. If the row's current `version` differs, the write is
@@ -60308,6 +60998,8 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTagSuggestion: {
@@ -63190,6 +63882,58 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    markWorklistRowsDone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistDoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Off the list, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reopenWorklistRows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistDoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Back on the list, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getTeamBoard: {
         parameters: {
             query?: {
@@ -64444,6 +65188,37 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listAgentUsageByUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage per user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentUsageByUser"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The agent counters cannot be read right now. Try again shortly. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getAiProfile: {
         parameters: {
             query?: never;
@@ -64771,6 +65546,8 @@ export interface operations {
                 provider?: string;
                 /** @description Filter to calls that ended on one configured model id. */
                 model?: string;
+                /** @description Filter to calls one model answered: the model the provider named, else the configured one. */
+                served_model?: string;
                 /** @description Filter to calls a broker served from one upstream host. */
                 served_provider?: string;
                 /** @description Filter to calls that ended on one tier. */
@@ -64800,7 +65577,8 @@ export interface operations {
         parameters: {
             query?: {
                 window?: "24h" | "7d" | "30d";
-                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                /** @description served_model groups by the model that answered: the model the provider named, else the configured one. */
+                group?: "provider" | "model" | "served_model" | "served_provider" | "tier" | "task";
                 provider?: string;
                 model?: string;
                 tier?: string;
@@ -65215,6 +65993,50 @@ export interface operations {
             };
         };
     };
+    acknowledgeApprovalFailure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `effect_failed_at` of the failure the reader saw, as the Worklist row's `occurred_at` carries it.
+                     */
+                    failed_at: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Acknowledged. Acknowledging the same failure again is the same success. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The approval failed again after the failure named in the request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     approveApprovalBundle: {
         parameters: {
             query?: never;
@@ -65542,6 +66364,17 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -66087,16 +66920,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path?: never;
             cookie?: never;
@@ -66117,7 +66940,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 create attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -66260,16 +67083,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -66289,7 +67102,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 retire attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -66322,16 +67135,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description A signed, single-use approval token (see schema `ApprovalToken`) minted by
-                 *     POST /approvals/{id}/approve, authorizing exactly one 🟡 confirm-first operation. It is a
-                 *     compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-                 *     principal — it is NOT a bare opaque string (ADR-0036). The server rejects a token that is
-                 *     expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-                 *     match the operation being executed (`403 code: approval_token_invalid`). Required when an
-                 *     AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -66355,7 +67158,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or an agent 🟡 options edit attempted without an approval token. */
+            /** @description RBAC denied, or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -67424,7 +68227,7 @@ export interface operations {
                     "application/json": components["schemas"]["RecordGrant"];
                 };
             };
-            /** @description RBAC denied (`manage_sharing` required), or an agent 🟡 share attempted without an approval token. */
+            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -67464,7 +68267,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description RBAC denied (`manage_sharing` required), or an agent 🟡 revoke attempted without an approval token. */
+            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -73050,6 +73853,63 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    dismissDealMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissDealMoveRequest"];
+            };
+        };
+        responses: {
+            /** @description Set aside. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreDealMove: {
+        parameters: {
+            query: {
+                /** @description The `fingerprint` of the move that was set aside, unchanged. */
+                fingerprint: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Back on the card, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getDealCoverage: {
         parameters: {
             query?: never;
@@ -74293,7 +75153,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];
@@ -74333,6 +75193,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                view?: "history" | "drafts";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -74592,7 +75453,10 @@ export interface operations {
     };
     downloadImportProblems: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The language of the header and of each reason. An issue stored without a code is written in English. */
+                lang?: "en" | "de" | "vi";
+            };
             header?: never;
             path: {
                 id: string;

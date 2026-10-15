@@ -7,7 +7,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -205,12 +205,12 @@ export function OvernightGrantCard() {
   // While a flip is in flight the switch shows what the rep just chose, so it
   // does not snap back to the stored answer for the width of a round trip.
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  // The cost is said when the reader switches it off here. On a later visit a
+  // standing warning would read their own answer back to them as a fault.
+  const [withdrew, setWithdrew] = useState(false);
 
   return (
     <Panel title={t("overnightGrant.title")}>
-      <PanelBody>
-        <PanelIntro>{t("overnightGrant.sub")}</PanelIntro>
-      </PanelBody>
       <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
         {(grants) => {
           const grant = morningBriefGrant(grants);
@@ -239,6 +239,7 @@ export function OvernightGrantCard() {
                       pending={save.isPending}
                       onChange={(next) => {
                         setOptimistic(next);
+                        setWithdrew(!next);
                         save.mutate(next, {
                           onSettled: () => setOptimistic(null),
                         });
@@ -248,7 +249,7 @@ export function OvernightGrantCard() {
                 />
               </SettingList>
               <GrantNotices
-                showDanger={!shown}
+                showDanger={withdrew && !shown}
                 showRenewal={lapsed && shown}
                 showScopeRenewal={outgrown && shown}
                 error={

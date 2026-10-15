@@ -1,8 +1,8 @@
-import { useT } from "../i18n";
+import { useEntityName } from "../components/entityref";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
 import type { Route, Screen } from "../lib/router";
-import { useEntityName } from "../screens/entityref";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import {
   NAV,
@@ -191,6 +191,7 @@ export function sectionHead(
  */
 export function useRouteSubject(route: Route): string {
   const t = useT();
+  const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
   // A composed unit's page is named by the UNIT, which is not in `NAV` and has
   // no title key: without this the subject fell through to `shell.unknownPage`
@@ -211,7 +212,7 @@ export function useRouteSubject(route: Route): string {
     return name ?? (reading === "failed" ? t("ref.nameLoadFailed") : route.id);
   }
   if (unit) {
-    return unit.name;
+    return unitTitle(unit, locale);
   }
   const reserved = reservedPageTitle(route);
   return reserved

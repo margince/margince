@@ -11,10 +11,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { translate } from "../i18n";
 import { en } from "../i18n/en";
-import type { FilterVocabulary } from "./filterdata";
+import type { FilterVocabulary } from "../lib/filterdata";
+import { TEAM_ID } from "../testing/lists.fixtures";
 import { FiltersScreen } from "./filters";
 import { type FiltersServer, mountFilters, type Sent } from "./filters.testkit";
-import { TEAM_ID } from "./lists.fixtures";
 
 // "Save this filter", driven from the page that offers it: what each answer
 // sends, where the reader lands, and what the dialog keeps between openings.

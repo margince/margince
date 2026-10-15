@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { RowOpen } from "../design-system/rowopen";
 import { forReader } from "../format/collate";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { tierLabel, tierRank } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import {
@@ -44,29 +44,20 @@ export function AiFeatureTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const columns: DataTableColumn<Feature>[] = [
-    {
-      key: "activity",
-      header: t("aiAdmin.activity"),
-      grow: true,
-      render: (row) => (
-        <TaskCell
-          row={row}
-          health={health}
-          providers={providers}
-          canTrace={canTrace}
-          editable={onEdit !== undefined}
-        />
-      ),
-    },
-    {
-      key: "tier",
-      header: t("aiTerms.tier"),
-      render: (row) => (
-        <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
-      ),
-    },
-  ];
+  const activity: DataTableColumn<Feature> = {
+    key: "activity",
+    header: t("aiAdmin.activity"),
+    grow: true,
+    render: (row) => (
+      <TaskCell
+        row={row}
+        health={health}
+        providers={providers}
+        canTrace={canTrace}
+        editable={onEdit !== undefined}
+      />
+    ),
+  };
   if (!onEdit) {
     // The budget preview shows the model a budget moves each task onto.
     return (
@@ -75,57 +66,77 @@ export function AiFeatureTable({
         rows={decisionFirstOrder(rows)}
         rowKey={(row) => row.task}
         columns={[
-          ...columns,
+          activity,
+          {
+            key: "tier",
+            header: t("aiTerms.tier"),
+            render: (row) => (
+              <TermChip term="tier">{tierLabel(row.leading_tier, t)}</TermChip>
+            ),
+          },
           { key: "model", header: t("aiAdmin.model"), render: modelCell },
         ]}
       />
     );
   }
-  const sorted = [...rows].sort(
-    (a, b) =>
-      tierRank(a.leading_tier) - tierRank(b.leading_tier) ||
-      forReader(a.display_name, b.display_name, locale),
-  );
-  return (
-    <DataTable
-      bleed
-      fold
-      label={t("aiAdmin.features")}
-      rows={sorted}
-      rowKey={(row) => row.task}
-      rowTestId={(row) => `ai-task-row-${row.task}`}
-      rowOpens={(row) => row.defaults !== undefined}
-      onRowClick={onEdit}
-      columns={[
-        ...columns,
-        {
-          key: "edit",
-          header: t("aiTasks.settings"),
-          headerHidden: true,
-          align: "end",
-          fold: "end",
-          render: (row) => (
-            <RowOpen
-              label={t(
-                canManage ? "aiRouting.editNamed" : "aiRouting.openNamed",
-                {
-                  name: row.display_name,
-                },
-              )}
-              // The embeddings lane is not a task an admin tunes: it has no
-              // ladder, thinking or timeout of its own.
-              refusal={
-                row.defaults === undefined
-                  ? t("aiTasks.embeddingsEdit")
-                  : undefined
-              }
-              onOpen={() => onEdit(row)}
-            />
-          ),
-        },
-      ]}
-    />
-  );
+  const edit: DataTableColumn<Feature> = {
+    key: "edit",
+    header: t("aiTasks.settings"),
+    headerHidden: true,
+    align: "end",
+    render: (row) => (
+      <RowOpen
+        label={t(canManage ? "aiRouting.editNamed" : "aiRouting.openNamed", {
+          name: row.display_name,
+        })}
+        // The embeddings lane is not a task an admin tunes: it has no
+        // ladder, thinking or timeout of its own.
+        refusal={
+          row.defaults === undefined ? t("aiTasks.embeddingsEdit") : undefined
+        }
+        opensDialog
+        onOpen={() => onEdit(row)}
+      />
+    ),
+  };
+  // One table per tier, headed by the tier's name, so no column repeats it.
+  return byTier(rows, locale).map(({ tier, tasks }) => {
+    const name = tierLabel(tier, t);
+    return (
+      <DataTable
+        key={tier}
+        bleed
+        label={name}
+        rows={tasks}
+        rowKey={(row) => row.task}
+        rowTestId={(row) => `ai-task-row-${row.task}`}
+        rowOpens={(row) => row.defaults !== undefined}
+        onRowClick={onEdit}
+        columns={[{ ...activity, header: name }, edit]}
+      />
+    );
+  });
+}
+
+function byTier(
+  rows: readonly Feature[],
+  locale: Locale,
+): { tier: string; tasks: Feature[] }[] {
+  const groups = new Map<string, Feature[]>();
+  for (const row of rows) {
+    groups.set(row.leading_tier, [
+      ...(groups.get(row.leading_tier) ?? []),
+      row,
+    ]);
+  }
+  return [...groups]
+    .sort(([a], [b]) => tierRank(a) - tierRank(b))
+    .map(([tier, tasks]) => ({
+      tier,
+      tasks: tasks.sort((a, b) =>
+        forReader(a.display_name, b.display_name, locale),
+      ),
+    }));
 }
 
 // The model that answers. A decision model in front of it is told in the name's

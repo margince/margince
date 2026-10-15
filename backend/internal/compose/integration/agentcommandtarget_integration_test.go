@@ -5,16 +5,11 @@
 
 package integration
 
-// A REST archive of a record type the archive_record TOOL cannot even express
-// still stages against the row it names.
+// A REST archive of a record type the archive_record tool cannot express.
 //
-// `tag` is outside that tool's declared enum, and outside the record seam's
-// vocabulary too — nothing the tool door can reach describes it. The REST door
-// archives it all the same, so it is the operation, not the tool's schema, that
-// decides what a governed call is about. The proof has to be the approval ROW:
-// ErrRequiresApproval comes back from a refusal with nowhere to land as
-// readily as from a staged one, and a target_entity_id that is merely a
-// well-formed uuid is not the record anybody will decide about.
+// `tag` is outside that tool's declared enum and outside the record seam's
+// vocabulary. The REST door archives it all the same, so the operation, not the
+// tool's schema, decides what a governed call is about.
 
 import (
 	"net/http"
@@ -30,11 +25,6 @@ import (
 // short of it — so this route is reachable only over REST, and it used to stage
 // there. It no longer does: a passport carries the granting human's seat and
 // row scope, and archiving a tag is ordinary work its holder does unaided.
-//
-// What the staging used to prove — that a row outside the tool's vocabulary is
-// still named correctly when a floor puts it back behind an approval — is held
-// by TestARestCreateStagesItsRecordTypeWithNoTargetID on a route that still
-// carries its floor.
 func TestARestArchiveOutsideTheToolSchemaPerformsOnTheAgentsPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

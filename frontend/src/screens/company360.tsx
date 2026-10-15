@@ -37,7 +37,12 @@ import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
+import { EntityRef } from "../components/entityref";
 import { FactList } from "../design-system/factlist";
+import {
+  TaskCompleteCheck,
+  type useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { HealthStat, WITHHELD_READING } from "./company360health";
 import { LastTouchStat } from "./company360lasttouch";
 import {
@@ -46,7 +51,11 @@ import {
   LIFECYCLE_LABELS,
   useHealthReason,
 } from "./companylookups";
-import { EntityRef } from "./entityref";
+import {
+  type DeferOf,
+  DismissFailed,
+  useCompanySetAside,
+} from "./companysetaside";
 import {
   EvidenceSources,
   FoundMove,
@@ -55,7 +64,6 @@ import {
   SentenceList,
   WrittenBy,
 } from "./record360";
-import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
 //
@@ -1329,31 +1337,14 @@ export function useSuggestionsBody({
   // The truncation count and a failed dismissal, additive on top of whatever
   // else the caller's own footer carries.
   footer?: ReactNode;
+  // The "Not now" of these rows, which the account's moment shares.
+  deferOf: DeferOf;
 } {
   const { locale } = useLocale();
   const t = useT();
   const recordZone = useRecordZone();
   const client = useQueryClient();
-  const dismiss = useMutation({
-    mutationFn: async (fingerprint: string) => {
-      unwrap(
-        await api.POST("/companies/{id}/suggestions/dismiss", {
-          params: { path: { id: companyId } },
-          body: { fingerprint },
-        }),
-      );
-    },
-    // The 360 is the only thing that knows which suggestions survive, so the
-    // row goes when the re-read says it does. Hiding it locally on click would
-    // hide it even when the dismissal never reached the server.
-    onSuccess: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: ["company360", companyId] }),
-        // The scan serves the merged list, so it re-reads too — else a
-        // dismissed model finding would stand until the next open.
-        client.invalidateQueries({ queryKey: ["account-scan", companyId] }),
-      ]),
-  });
+  const notNow = useCompanySetAside(companyId);
   const write = useMutation({
     // The body is the SERVER's, passed as a variable: the click posts the step
     // the row was drawn from, never one recomposed here from the row's words.
@@ -1396,14 +1387,24 @@ export function useSuggestionsBody({
   // section gives.
   const suggestions = keep ? all.filter(keep) : all;
   if (state !== "ready" || suggestions.length === 0) {
-    return { ready: false, rows: null, count: 0, hasDraftReply: false };
+    const failure = notNow.failure;
+    const footer = failure ? <DismissFailed failure={failure} /> : undefined;
+    const { deferOf } = notNow;
+    return {
+      ready: false,
+      rows: null,
+      count: 0,
+      hasDraftReply: false,
+      deferOf,
+      footer,
+    };
   }
   // How many the cap dropped that THIS caller should report. The count
   // describes the whole list, so a narrowed caller reports none: "2 more" under
   // a filtered card counts advice that card was never going to draw.
   const notShown = keep ? 0 : (dropped ?? 0);
   const footer =
-    notShown > 0 || dismiss.isError || write.isError ? (
+    notShown > 0 || notNow.failure || write.isError ? (
       <>
         {/* A truncated list with no count reads as "that is everything".
             Absent means the section was never computed, which this card
@@ -1413,13 +1414,7 @@ export function useSuggestionsBody({
             {t("co.suggest.more", { count: formatNumber(notShown, locale) })}
           </p>
         )}
-        {/* The row staying put with no word reads as a click that missed,
-            and the rep clicks again. */}
-        {dismiss.isError && (
-          <ErrorLine>
-            {`${t("co.suggest.dismissFailed")} ${problemMessageOf(dismiss.error, t)}`}
-          </ErrorLine>
-        )}
+        {notNow.failure && <DismissFailed failure={notNow.failure} />}
         {/* Same rule for the write, and it matters more: a rep who thinks the
             step was written stops looking for it. */}
         {write.isError && (
@@ -1472,16 +1467,13 @@ export function useSuggestionsBody({
       }
       // Only the row in flight is disabled: one dismissal must not freeze the
       // rep's other choices.
-      defer={{
-        onDefer: () => dismiss.mutate(suggestion.fingerprint),
-        pending:
-          dismiss.isPending && dismiss.variables === suggestion.fingerprint,
-      }}
+      defer={notNow.deferOf(suggestion.fingerprint)}
     />
   ));
   return {
     ready: true,
     rows,
+    deferOf: notNow.deferOf,
     count: suggestions.length,
     hasDraftReply: suggestions.some(
       (suggestion) => suggestion.action?.kind === "draft_reply",

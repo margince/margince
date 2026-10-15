@@ -1,6 +1,15 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { CreateAction, type CreateField } from "../components/create";
+import { EditAction } from "../components/edit";
+import {
+  type ListPage,
+  type ListQuery,
+  ListTable,
+  listFetchLimit,
+  useListQuery,
+} from "../components/listquery";
 import { Badge, OverflowMenu } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -10,15 +19,6 @@ import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
-import { CreateAction, type CreateField } from "./create";
-import { EditAction } from "./edit";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "./listquery";
 import "./listsection.css";
 
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -212,7 +212,24 @@ export function OfferTemplatesAdmin() {
   };
 
   return (
-    <Panel className="listsection" title={t("template.title")}>
+    <Panel
+      className="listsection"
+      title={t("template.title")}
+      titleAction={
+        canCreate ? (
+          <CreateAction
+            label={t("template.new")}
+            invalidate="offer-templates"
+            // `stay`: a fresh template has no page of its own to open. The list
+            // it joins is already on screen.
+            screen="settings"
+            stay
+            create={createTemplate}
+            fields={fields}
+          />
+        ) : undefined
+      }
+    >
       <PanelBody className="listsection-intro">
         <PanelIntro>{t("template.settingsSub")}</PanelIntro>
         {/* Stated once for the whole section (design-system README, "Absent,
@@ -230,24 +247,9 @@ export function OfferTemplatesAdmin() {
       </PanelBody>
       <ListTable
         state={list}
-        hideShortPager
+        hideShortChrome
         unit="unit.offerTemplates"
         searchable={false}
-        action={
-          canCreate ? (
-            <CreateAction
-              label={t("template.new")}
-              invalidate="offer-templates"
-              // `stay` because a fresh template has no page of its own to
-              // open: the list the row joins is already on screen, and this
-              // panel is one of the settings surfaces the screen names.
-              screen="settings"
-              stay
-              create={createTemplate}
-              fields={fields}
-            />
-          ) : undefined
-        }
         columns={[
           {
             key: "name",

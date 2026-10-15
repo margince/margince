@@ -17,12 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { meFixture } from "../testing/mefixture";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
+import { recordWriteKeys } from "../lib/recordwritekeys";
 import {
   LIVE_ID,
   listsMe,
@@ -32,9 +27,14 @@ import {
   notOnLiveWhy,
   SHORTLIST_ID,
   shortlist,
-} from "./lists.fixtures";
+} from "../testing/lists.fixtures";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { RecordListsPanel } from "./recordlists";
-import { recordWriteKeys } from "./recordwritekeys";
 
 afterEach(() => {
   cleanup();

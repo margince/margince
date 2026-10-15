@@ -17,7 +17,14 @@ import {
   PREVIEW_PAGE,
   useFilterPreview,
   type VocabularyField,
-} from "./filterdata";
+} from "../lib/filterdata";
+import {
+  fieldsNamed,
+  type Group,
+  isComplete,
+  isGroup,
+  type Node,
+} from "../lib/segmentpredicate";
 import { type VocabularyRead, vocabularyState } from "./filtereditor";
 import { FilterResults } from "./filterresults";
 import {
@@ -26,13 +33,6 @@ import {
   RESOURCE_OF,
   UNIT_LABEL,
 } from "./filtersaddress";
-import {
-  fieldsNamed,
-  type Group,
-  isComplete,
-  isGroup,
-  type Node,
-} from "./segmentpredicate";
 import "./filters.css";
 
 type Preview = ReturnType<typeof useFilterPreview>;

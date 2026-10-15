@@ -106,6 +106,10 @@ get prices from the OpenRouter list. Other providers keep the prices you set.
 A new chat or embedding model your key lists is added when models.dev prices it
 as the same kind of model.
 
+When a provider answers a tier with another model than the one tied to it, that
+model gets a price too. If no list prices it, it shows as **Not in the price
+list**.
+
 A price you set by hand is never changed by the
 sync; remove it to hand the model back.
 Turn **Auto-sync daily** off to stop the daily run, or choose **Refresh model
@@ -149,6 +153,20 @@ You need **AI diagnostics read** to see the figures.
 
 Also called: AI call log, model latency, AI cost per task, failed AI calls.
 
+### What does "Model switched" on a model tier mean?
+"Model switched" means the provider answered some of the tier's recent calls
+with a model other than the one tied to the tier. Recent means the last 7 days. A provider does this when it
+moves a model name to a newer model. The tier's health mark, the tier's editor
+and the task's **Recent calls** say how many calls and which model.
+- **Cost** uses the price of the model that answered. Until that model has a
+  price, the price of the tied model is used.
+- **Recent calls** **By model** lists the model that answered, so the new model
+  has its own row. **View calls** opens those calls.
+- To keep the new model, tie the tier to it under **Model tiers**. To stay on
+  the old one, tie a fixed version of it if the provider offers one.
+
+Also called: provider changed the model, served model, model name moved.
+
 ### How do I choose which OpenRouter hosts serve a model tier?
 To choose how OpenRouter picks a host, open **Model tiers**, open the tier's row, and fill **Serving**.
 Host routing applies only when the tier's provider is **OpenAI-compatible** and its **Service** is OpenRouter.
@@ -191,10 +209,11 @@ To check the change, come back to **Recent calls** after some calls. A call's ow
 Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?
-To see whether an AI provider is working in Margince, open **Settings**, then **System health**, and read the **AI provider status** card.
-**AI models** also shows a second badge on each provider under **Providers**.
-The card lists only providers that are not answering as normal, with why, **Started** and **Next check**. With none listed, it reads "All AI providers are answering."
-It shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can open it.
+To see whether an AI provider is working, open **Settings**, then **System health**. Read **AI provider status** in the **Status** row at the top.
+It says "Answering" while every provider answers. **AI models** also shows a second badge on each provider under **Providers**.
+
+When a provider is not answering as normal, the row says how many need attention, and the **AI provider status** card opens under it. The card lists each one with why, **Started** and **Next check**.
+The card shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can see it.
 Also called: is the AI down, AI outage, model provider health, AI provider status.
 
 ### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
@@ -217,6 +236,6 @@ Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
 
 ### What does a provider badge on AI models mean?
 A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
-Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card. Testing a new key under **Providers** clears it at once.
+Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card under the **Status** row. Testing a new key under **Providers** clears it at once.
 A rate limit reply or a "no permission for this model" refusal does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
 Also called: provider status, provider down, API key refused, out of credit.

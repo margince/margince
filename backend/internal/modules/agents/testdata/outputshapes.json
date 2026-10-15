@@ -7665,7 +7665,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -7694,7 +7703,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -7725,6 +7743,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {
@@ -7799,6 +7823,9 @@
                         },
                         "reason": {
                           "type": "string"
+                        },
+                        "reason_code": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -7818,6 +7845,18 @@
                           "format": "uuid"
                         },
                         "object": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },
@@ -8957,6 +8996,12 @@
                 "file": {
                   "type": "string"
                 },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
                 "object": {
                   "type": "string"
                 },
@@ -9020,7 +9065,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -9049,7 +9103,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -9080,6 +9143,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {
@@ -9154,6 +9223,9 @@
                         },
                         "reason": {
                           "type": "string"
+                        },
+                        "reason_code": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -9173,6 +9245,18 @@
                           "format": "uuid"
                         },
                         "object": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },

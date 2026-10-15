@@ -53,9 +53,10 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 	// long gap, and a promise is overdue.
 	replied := at(1)
 	page := &crmcontracts.Contact360{
-		NextMeeting:    meeting(ahead(24)),
-		LastInboundAt:  &replied,
-		LastOutboundAt: new(at(40)),
+		NextMeeting:       meeting(ahead(24)),
+		LastInboundAt:     &replied,
+		LastLiveInboundAt: &replied,
+		LastOutboundAt:    new(at(40)),
 		Claims: &[]crmcontracts.ConversationClaim{{
 			Kind:             crmcontracts.ConversationClaimKindCommitmentOurs,
 			Status:           crmcontracts.ConversationClaimStatusOpen,
@@ -76,9 +77,10 @@ func TestTheLadderSelectsExactlyOneMoment(t *testing.T) {
 func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 	replied := at(1)
 	page := &crmcontracts.Contact360{
-		NextMeeting:    meeting(ahead(96)),
-		LastInboundAt:  &replied,
-		LastOutboundAt: new(at(40)),
+		NextMeeting:       meeting(ahead(96)),
+		LastInboundAt:     &replied,
+		LastLiveInboundAt: &replied,
+		LastOutboundAt:    new(at(40)),
 	}
 	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleReEngaged {
@@ -90,9 +92,10 @@ func TestAMeetingBeyondSeventyTwoHoursDoesNotWin(t *testing.T) {
 // rather than "last touch", because last touch cannot tell the two apart.
 func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(30)),
-		LastInboundAt:  new(at(2)),
-		Activities:     timelineOf(),
+		LastOutboundAt:    new(at(30)),
+		LastInboundAt:     new(at(2)),
+		LastLiveInboundAt: new(at(2)),
+		Activities:        timelineOf(),
 		Network: &struct {
 			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
 		}{},
@@ -108,8 +111,9 @@ func TestAnAnsweredConversationIsNotGoneQuiet(t *testing.T) {
 // a verdict has to be able to see what produced it.
 func TestGoneQuietNamesTheRuleItFiredOn(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(9)),
-		LastInboundAt:  new(at(16)),
+		LastOutboundAt:    new(at(9)),
+		LastInboundAt:     new(at(16)),
+		LastLiveInboundAt: new(at(16)),
 	}
 	got := deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleGoneQuiet {
@@ -141,7 +145,7 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 	// One page per rung, each built to make that rung fire.
 	pages := map[string]*crmcontracts.Contact360{
 		"meeting prep": {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
-		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16))},
+		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16)), LastLiveInboundAt: new(at(16))},
 		"thin relationship": {
 			Activities: timelineOf(),
 			Network: &struct {
@@ -173,8 +177,9 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 		},
 		// Rung 2 wants inbound that arrived after a long silence of ours.
 		"re-engaged": {
-			LastOutboundAt: new(at(40)),
-			LastInboundAt:  new(at(3)),
+			LastOutboundAt:    new(at(40)),
+			LastInboundAt:     new(at(3)),
+			LastLiveInboundAt: new(at(3)),
 		},
 		// Rung 4 wants an open commitment OF OURS whose date has passed.
 		"overdue promise": {
@@ -245,8 +250,8 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 }
 
 // dispatchedByTheContactPage is the set of destination surfaces the contact page
-// actually opens — the `switch` in frontend/src/screens/contactpage.tsx's
-// runContactMomentAction.
+// actually opens: the `switch` in runContactMomentAction, in
+// frontend/src/features/contacts/contactpage.tsx.
 //
 // The contract admits more surfaces than the page handles, and the ones it does
 // not handle fall to a `default` that deliberately does nothing rather than
@@ -529,8 +534,9 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 func TestAnOverdueTaskOutranksASilence(t *testing.T) {
 	quiet := func() *crmcontracts.Contact360 {
 		return &crmcontracts.Contact360{
-			LastOutboundAt: new(now.Add(-9 * 24 * time.Hour)),
-			LastInboundAt:  new(now.Add(-16 * 24 * time.Hour)),
+			LastOutboundAt:    new(now.Add(-9 * 24 * time.Hour)),
+			LastInboundAt:     new(now.Add(-16 * 24 * time.Hour)),
+			LastLiveInboundAt: new(now.Add(-16 * 24 * time.Hour)),
 		}
 	}
 	task := func(due time.Time) []crmcontracts.Activity {
@@ -928,8 +934,9 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 // reason the old sentence could not be true.
 func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 	page := &crmcontracts.Contact360{
-		LastOutboundAt: new(at(60)),
-		LastInboundAt:  new(at(1)),
+		LastOutboundAt:    new(at(60)),
+		LastInboundAt:     new(at(1)),
+		LastLiveInboundAt: new(at(1)),
 	}
 
 	got := deriveMoment(readerCtx(), now, page)
@@ -961,3 +968,23 @@ func TestTheReEngagementRungAttributesTheSilenceToUs(t *testing.T) {
 // The rung is deliberately not narrowed to the deciding roles: a deal with no
 // next step is worth saying whoever the seat belongs to. What was wrong was the
 // sentence.
+
+// Email an import brought in as history is not a reply. Only mail written live
+// raises the re-engaged suggestion; the engagement date still shows it.
+func TestImportedInboundDoesNotRaiseTheReEngagedSuggestion(t *testing.T) {
+	imported := &crmcontracts.Contact360{
+		LastOutboundAt: new(at(60)),
+		LastInboundAt:  new(at(3)),
+	}
+	if got := deriveMoment(readerCtx(), now, imported); got.Rule == crmcontracts.ContactMomentRuleReEngaged {
+		t.Fatalf("an imported inbound raised %q", got.Rule)
+	}
+	live := &crmcontracts.Contact360{
+		LastOutboundAt:    new(at(60)),
+		LastInboundAt:     new(at(3)),
+		LastLiveInboundAt: new(at(3)),
+	}
+	if got := deriveMoment(readerCtx(), now, live); got.Rule != crmcontracts.ContactMomentRuleReEngaged {
+		t.Fatalf("a live inbound gave %q, want re_engaged", got.Rule)
+	}
+}

@@ -462,7 +462,7 @@ describe("adding a document from the account", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: /Category/ }),
-      "Contract",
+      "SOW/Contract",
     );
     await user.type(screen.getByLabelText(/Title/), "Signed order form");
     await user.upload(screen.getByLabelText(/File/), orderForm());
@@ -485,7 +485,12 @@ describe("adding a document from the account", () => {
     await user.click(screen.getByRole("combobox", { name: /Category/ }));
     const listbox = screen.getByRole("listbox");
     // What a human uploading from their own disk MAY say about a file.
-    for (const offered of ["Contract", "Offer", "Legal", "Other"]) {
+    for (const offered of [
+      "SOW/Contract",
+      "Proposal/Offer",
+      "NDA/Legal",
+      "Other",
+    ]) {
       expect(
         within(listbox).getByRole("option", { name: offered }),
       ).toBeTruthy();
@@ -524,7 +529,7 @@ describe("adding a document from the account", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: /Category/ }),
-      "Contract",
+      "SOW/Contract",
     );
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await pressUpload(user);
@@ -660,7 +665,7 @@ describe("adding a document from the account", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: /Category/ }),
-      "Contract",
+      "SOW/Contract",
     );
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await pressUpload(user);
@@ -687,7 +692,7 @@ describe("adding a document from the account", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: /Category/ }),
-      "Contract",
+      "SOW/Contract",
     );
     await user.upload(screen.getByLabelText(/File/), orderForm());
     await pressUpload(user);

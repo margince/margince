@@ -1606,7 +1606,7 @@
 }
 
 /* `.meta-row`: one row of a condensed list, read as a face and a body. The
- * contact page's conversation memory (screens/contactmemory.tsx) and the
+ * contact page's conversation memory (features/contacts/contactmemory.tsx) and the
  * company page's stated facts (screens/companyfactrow.tsx) both draw it. A
  * face down a quiet left column, a meta line over the content, and the time
  * and the trailing action closing each line at the far edge. Two rows, three

@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestTheSenderOverrideLockIsSpelledTheSameOnBothSides derives both spellings
@@ -25,7 +27,7 @@ import (
 func TestTheSenderOverrideLockIsSpelledTheSameOnBothSides(t *testing.T) {
 	t.Parallel()
 	const entity = `"capture_sender_override"`
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	capturedIn := readSource(t, filepath.Join(root, "internal/modules/capture/senderoverride.go"))
 	contactsIn := readSource(t, filepath.Join(root, "internal/modules/contacts/contactprivate.go"))
 

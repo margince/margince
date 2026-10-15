@@ -11,7 +11,7 @@ import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { jsonResponse, render } from "./settings.testkit";
 
-// What a closed deal is asked, one group per template, so an administrator
+// What a closed deal is asked, one panel per template, so an administrator
 // reads the questions under the template that asks them.
 
 beforeEach(() => {
@@ -125,8 +125,8 @@ describe("outcome review questions", () => {
     const lossHead = await screen.findByRole("heading", {
       name: "Loss review",
     });
-    const head = lossHead.closest<HTMLElement>(".panel-grouphead");
-    if (!head) throw new Error("the template name is not a group head");
+    const head = lossHead.closest<HTMLElement>(".panel-head");
+    if (!head) throw new Error("the template name is not a panel title");
     const edit = screen.getByRole("button", {
       name: "Edit questions",
       description: "Loss review",
@@ -138,6 +138,18 @@ describe("outcome review questions", () => {
     expect(
       within(dialog).getByRole("heading", { name: "Loss review" }),
     ).toBeTruthy();
+  });
+
+  it("names each panel by its template and leaves the outcome to the name", async () => {
+    served(EDITOR);
+    render(<ReviewTemplatesCard />);
+
+    expect(
+      await screen.findByRole("region", { name: "Win review" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Loss review" })).toBeTruthy();
+    expect(screen.queryByText("Won")).toBeNull();
+    expect(screen.queryByText("Lost")).toBeNull();
   });
 
   it("offers no edit verb to a reader who may only read the questions", async () => {

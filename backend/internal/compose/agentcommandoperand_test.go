@@ -3,11 +3,10 @@
 
 package compose
 
-// The REST door's half of the eight bespoke commands (agentcommandoperand.go):
-// the routed {id}'s existence-hiding 404, the second path operand's 422, and
-// the staged target each decoder resolves to — the same proof shape
-// agentcommand_test.go gives archive/patch, for a family whose operand lives
-// in a SECOND path parameter rather than in the body.
+// The REST door's half of the bespoke commands (agentcommandoperand.go). Each
+// decoder is held to the routed {id}'s existence-hiding 404, the second path
+// operand's 422, and the staged target it resolves to. agentcommand_test.go
+// gives archive and patch the same proof.
 
 import (
 	"bytes"
@@ -42,10 +41,8 @@ func operandRequest(method, path, routeID, extraParam, extraValue string, body [
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 }
 
-// A malformed routed {id} answers 404 for every one of the eight, the same
-// existence-hiding answer archiveCommand/patchCommand already give — proven
-// once per decoder rather than assuming the shared routedID helper carries
-// the property for free.
+// A malformed routed {id} answers 404 for every one of them, as it does for
+// archive and patch. It is proven per decoder, not assumed from routedID.
 func TestAMalformedOperandRouteIDAnswersNotFound(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -56,8 +53,6 @@ func TestAMalformedOperandRouteIDAnswersNotFound(t *testing.T) {
 		{"updateCompanyFact", updateFactCommand, operandRequest(http.MethodPatch, "/v1/companies", "not-a-uuid", "factKey", "k", []byte(`{"value":"v"}`))},
 		{"confirmCompanyProfileField", confirmProfileFieldCommand, operandRequest(http.MethodPost, "/v1/companies", "not-a-uuid", "field", "icp", nil)},
 		{"updateCompanyProfileField", updateProfileFieldCommand, operandRequest(http.MethodPatch, "/v1/companies", "not-a-uuid", "field", "icp", []byte(`{"value":"v"}`))},
-		{"retireCustomField", retireCustomFieldCommand, operandRequest(http.MethodPost, "/v1/custom-fields", "not-a-uuid", "", "", nil)},
-		{"updateCustomFieldOptions", updateCustomFieldOptionsCommand, operandRequest(http.MethodPatch, "/v1/custom-fields", "not-a-uuid", "", "", []byte(`{"options":["a"]}`))},
 		{"setProjectStakeholder", setStakeholderCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"contact_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`))},
 		{"removeProjectStakeholder", removeStakeholderCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "contact_id", ids.NewV7().String(), nil)},
 		{"setProjectCompany", setCompanyCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"company_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`))},
@@ -131,11 +126,10 @@ func TestARemoveStakeholderMalformedContactIDAnswers422(t *testing.T) {
 	}
 }
 
-// Each of the eight stages against the routed record it names — proven
-// through stageRefusal end to end, the same shape TestAPatchStagesItsRecordAndID
-// proves for a whole-record patch.
+// Each of them stages against the routed record it names, proven through
+// stageRefusal end to end, as TestAPatchStagesItsRecordAndID does for a patch.
 func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
-	companyID, projectID, cfID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	companyID, projectID := ids.NewV7(), ids.NewV7()
 	cases := []struct {
 		name           string
 		pol            agentPolicy
@@ -167,18 +161,6 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 			agentPolicy{Op: "updateCompanyProfileField", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany},
 			operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "field", "icp", []byte(`{"value":"Payments infra"}`)),
 			[]byte(`{"value":"Payments infra"}`), "company", companyID,
-		},
-		{
-			"retireCustomField",
-			agentPolicy{Op: "retireCustomField", Access: accessTool, Tool: "update_record", RecordType: recordTypeCustomField},
-			operandRequest(http.MethodPost, "/v1/custom-fields", cfID.String(), "", "", nil), nil,
-			"custom_field", cfID,
-		},
-		{
-			"updateCustomFieldOptions",
-			agentPolicy{Op: "updateCustomFieldOptions", Access: accessTool, Tool: "update_record", RecordType: recordTypeCustomField},
-			operandRequest(http.MethodPatch, "/v1/custom-fields", cfID.String(), "", "", []byte(`{"options":["a","b"]}`)),
-			[]byte(`{"options":["a","b"]}`), "custom_field", cfID,
 		},
 		{
 			"setProjectStakeholder",
@@ -218,19 +200,9 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 	}
 }
 
-// What resolving these eight through their own commands buys, and it is a
-// refusal rather than a label: Guards runs before anything stages.
-// A company or project the caller cannot see stages NOTHING — the same
-// proof shape TestAnArchiveOfAnUnseeableRecordStagesNothing gives archive —
-// for one op from each seam-served family (company, project). The two
-// custom_field ops have no such proof: the seam has never served that type,
-// so there is no read for Guards to skip. That they never attempt one is
-// TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam's own claim
-// (modules/agents/commandaction_test.go), proven there against
-// unreadableProvider{} — a provider that fails every read, so a resolver
-// that consulted it anyway would fail that test rather than pass here:
-// TestEachOperandCommandStagesTheRoutedRecord's use of `seamRecord{}` (every
-// read succeeds) cannot tell "never read" apart from "read and got lucky".
+// Guards runs before anything stages, so a company or project the caller
+// cannot see stages nothing. One op from each seam-served family is held, as
+// TestAnArchiveOfAnUnseeableRecordStagesNothing holds archive.
 func TestAnOperandCommandOfAnUnseeableRecordStagesNothing(t *testing.T) {
 	staging := &capturingApprovals{}
 	pol := agentPolicy{Op: "confirmCompanyFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}

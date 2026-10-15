@@ -256,9 +256,13 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 		return migration.RunMapping{}, httperr.Validation("file_name", "too_long",
 			fmt.Sprintf("A file name is at most %d characters.", maxImportFileName))
 	}
+	presets, err := presetLinksFrom(req.PresetLinks)
+	if err != nil {
+		return migration.RunMapping{}, err
+	}
 	return migration.RunMapping{
 		OnDuplicate: onDuplicate, ContextTag: contextTag, OnBrokenLink: onBrokenLink,
-		SourceName: sourceName, FileName: fileName,
+		SourceName: sourceName, FileName: fileName, PresetLinks: presets,
 	}, nil
 }
 
@@ -387,6 +391,7 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		out.Error = &message
 	}
 	applySession(&out, run)
+	applyProgress(&out, run)
 	return out
 }
 
@@ -483,10 +488,12 @@ func applyImportMapping(out *crmcontracts.ImportRun, run migration.Run, m *migra
 		policy := crmcontracts.ImportOnBrokenLink(m.OnBrokenLink)
 		out.OnBrokenLink = &policy
 	}
+	out.PresetLinks = presetLinksOnWire(m.PresetLinks)
 	parts := make([]crmcontracts.ImportRunPart, 0, len(m.PartList()))
 	for _, p := range m.PartList() {
 		parts = append(parts, crmcontracts.ImportRunPart{
 			File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
+			Mapping: savedMappingOf(p),
 		})
 	}
 	out.Parts = &parts

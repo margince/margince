@@ -3,12 +3,7 @@
 
 import { useId, useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -21,9 +16,7 @@ import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 import "./reviewtemplates.css";
 
 /**
- * The questions a closed deal is asked, per outcome.
- *
- * Administrators edit future questions; saved reviews keep their snapshots.
+ * The questions a closed deal is asked, one panel per template.
  *
  * The questions are shown in full rather than counted. An administrator opening
  * this page is asking what their reps are being asked, and "3 questions" does
@@ -37,7 +30,7 @@ export function ReviewTemplatesCard() {
   const [editing, setEditing] = useState<ReviewTemplate | null>(null);
   if (isPending || isError || templates.length === 0) {
     return (
-      <Panel title={t("reviewTemplates.title")}>
+      <Panel>
         <PanelBody>
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}
@@ -51,12 +44,9 @@ export function ReviewTemplatesCard() {
     );
   }
   return (
-    <Panel title={t("reviewTemplates.title")}>
-      <PanelBody>
-        <PanelIntro>{t("reviewTemplates.editHint")}</PanelIntro>
-      </PanelBody>
+    <>
       {templates.map((template) => (
-        <TemplateGroup
+        <TemplatePanel
           key={template.id}
           template={template}
           onEdit={canEdit ? () => setEditing(template) : undefined}
@@ -68,11 +58,11 @@ export function ReviewTemplatesCard() {
           onClose={() => setEditing(null)}
         />
       )}
-    </Panel>
+    </>
   );
 }
 
-function TemplateGroup({
+function TemplatePanel({
   template,
   onEdit,
 }: Readonly<{ template: ReviewTemplate; onEdit?: () => void }>) {
@@ -80,32 +70,22 @@ function TemplateGroup({
   const { locale } = useLocale();
   const headId = useId();
   return (
-    <>
-      <PanelGroupHead
-        title={template.label}
-        level="h3"
-        id={headId}
-        action={
-          <span className="reviewtemplate-head-end">
-            <Badge tone={template.outcome === "won" ? "success" : "danger"}>
-              {t(
-                template.outcome === "won"
-                  ? "outcomeReview.outcomeWon"
-                  : "outcomeReview.outcomeLost",
-              )}
-            </Badge>
-            {/* Retired templates stay listed. An old review names the template it
-                came from, so a reader who finds that name here learns it is no
-                longer offered rather than meeting a name the product denies. */}
-            {!template.active && <Badge>{t("reviewTemplates.retired")}</Badge>}
-            {onEdit && (
-              <Button aria-describedby={headId} onClick={onEdit}>
-                {t("reviewTemplates.edit")}
-              </Button>
-            )}
-          </span>
-        }
-      />
+    <Panel
+      title={<span id={headId}>{template.label}</span>}
+      titleAction={
+        <span className="reviewtemplate-head-end">
+          {/* Retired templates stay listed. An old review names the template it
+              came from, so a reader who finds that name here learns it is no
+              longer offered rather than meeting a name the product denies. */}
+          {!template.active && <Badge>{t("reviewTemplates.retired")}</Badge>}
+          {onEdit && (
+            <Button aria-describedby={headId} onClick={onEdit}>
+              {t("reviewTemplates.edit")}
+            </Button>
+          )}
+        </span>
+      }
+    >
       <ol className="reviewtemplate-questions" aria-labelledby={headId}>
         {template.questions.map((question, index) => (
           <li
@@ -125,6 +105,6 @@ function TemplateGroup({
           </li>
         ))}
       </ol>
-    </>
+    </Panel>
   );
 }

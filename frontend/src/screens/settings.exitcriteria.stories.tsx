@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -13,8 +14,7 @@ import {
 import { StageExitCriteria } from "./settings.exitcriteria";
 
 // What a stage asks for before a deal may leave it, as the pipelines card draws
-// it inside one stage's row. Two states are worth a picture: the standing
-// notice about who evidence has to come from, and the read that failed.
+// it inside one stage's row.
 
 type Criterion = components["schemas"]["StageExitCriterion"];
 
@@ -88,4 +88,83 @@ export const Unreadable: Story = {
       <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
     </Served>
   ),
+};
+
+/** Two criteria, one that blocks the move and one that only counts toward it. */
+export const RequiredAndOptional: Story = {
+  render: () => (
+    <Served
+      answer={() =>
+        jsonResponse({
+          data: [
+            criterion({}),
+            criterion({
+              id: "33333333-3333-4333-8333-333333333333",
+              key: "champion_named",
+              label: "A champion is named",
+              kind: "role_identified",
+              required: false,
+              position: 2,
+            }),
+          ],
+        })
+      }
+    >
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
+    </Served>
+  ),
+};
+
+/** None yet: one line, and the verb that adds the first. */
+export const Empty: Story = {
+  render: () => (
+    <Served answer={() => jsonResponse({ data: [] })}>
+      <StageExitCriteria stageId={STAGE_ID} stageName="Discovery" canEdit />
+    </Served>
+  ),
+};
+
+/** A reader sees each criterion and its standing, and no verb. */
+export const ReadOnly: Story = {
+  render: () => (
+    <Served answer={() => jsonResponse({ data: [criterion({})] })}>
+      <StageExitCriteria
+        stageId={STAGE_ID}
+        stageName="Discovery"
+        canEdit={false}
+      />
+    </Served>
+  ),
+};
+
+export const RequiredAndOptionalDark: Story = {
+  globals: { theme: "dark" },
+  render: RequiredAndOptional.render,
+};
+
+/** The edit form names the key it keeps, in the code face, and offers no field for it. */
+export const EditShowsKey: Story = {
+  render: RequiredAndOptional.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Edit Buyer confirmed the budget",
+      }),
+    );
+    const dialog = within(
+      await within(canvasElement.ownerDocument.body).findByRole("dialog"),
+    );
+    const key = await dialog.findByText("buyer_confirmed_budget");
+    await expect(key.tagName).toBe("CODE");
+    await expect(key.parentElement).toHaveTextContent(
+      "Key: buyer_confirmed_budget",
+    );
+  },
+};
+
+export const EditShowsKeyPhone: Story = {
+  ...EditShowsKey,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

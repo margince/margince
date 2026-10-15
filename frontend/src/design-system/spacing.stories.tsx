@@ -294,7 +294,7 @@ const SIZING: readonly Measure[] = [
   { token: "--inputPaddingY", usage: "Block inset inside a text input." },
   {
     token: "--panel-head-h",
-    usage: "A panel's header band. Fixed: what does not fit goes in the body.",
+    usage: "A panel's header band. A floor: a longer head wraps.",
   },
   {
     token: "--menuMinInlineSize",
@@ -314,6 +314,7 @@ const SIZING: readonly Measure[] = [
   { token: "--dialogFormWidth", usage: "A form dialog." },
   { token: "--drawerWidth", usage: "A drawer." },
   { token: "--drawerReadingWidth", usage: "A drawer made for reading." },
+  { token: "--drawerWindowWidth", usage: "A drawer grown to the window." },
   { token: "--dialogFullWidth", usage: "A full-width dialog." },
   {
     token: "--phoneAgentRise",

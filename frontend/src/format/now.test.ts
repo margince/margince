@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
-import { formatCountdown, formatElapsed, useNow } from "./now";
+import { formatCountdown, formatElapsed, formatSpan, useNow } from "./now";
 
 // Task 9 (AC-7 groundwork): useNow/formatCountdown feed Task 10's live
 // expiry countdown. No real clock in tests (craft T11) — vi.useFakeTimers()
@@ -111,6 +111,23 @@ describe("formatElapsed (pure)", () => {
   it("names one unit only", () => {
     expect(formatElapsed(25 * 60 * 60_000 + 42 * 60_000, t, "en")).toBe(
       "1 d ago",
+    );
+  });
+});
+
+describe("formatSpan", () => {
+  const t = (key: string, p?: Record<string, unknown>) =>
+    `${key}:${JSON.stringify(p ?? {})}`;
+
+  it("formatSpan says minutes and seconds under an hour", () => {
+    expect(formatSpan(20 * 60_000 + 5_000, t, "en")).toBe(
+      'countdown.minutesSeconds:{"minutes":"20","seconds":"5"}',
+    );
+  });
+
+  it("keeps the two largest units above an hour", () => {
+    expect(formatSpan(26 * 3_600_000, t, "en")).toBe(
+      'countdown.daysHours:{"days":"1","hours":"2"}',
     );
   });
 });

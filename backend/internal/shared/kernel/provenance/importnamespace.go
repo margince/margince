@@ -171,6 +171,30 @@ func DisplayVia(sourceSystem *string) *string {
 	return &shown
 }
 
+// csvImportConnector is the connector segment the CSV importer writes after the
+// reserved prefix. The importer's own name for it is migration.ConnectorCSV; a
+// test in compose holds the two together.
+const csvImportConnector = "csv"
+
+// ImportedFrom answers where an imported row came from: nil when no import
+// wrote it, else the name of the source the import was run for. An empty name is
+// an import that was given none. A CSV run is named by its source name, so
+// `mirror:csv:bundle` reads `bundle`; another connector reads as itself.
+//
+// One derivation for every record kind an import writes, so the screens agree on
+// which rows are imported without each spelling the namespace.
+func ImportedFrom(sourceSystem *string) *string {
+	if sourceSystem == nil || !ImporterNamespace(*sourceSystem) {
+		return nil
+	}
+	name := DisplaySourceSystem(*sourceSystem)
+	if name == csvImportConnector {
+		name = ""
+	}
+	name = strings.TrimPrefix(name, csvImportConnector+":")
+	return &name
+}
+
 // RefuseWire guards BOTH provenance fields a create wire can carry, in one
 // statement so a mapper spends one line rather than two `if err != nil` blocks.
 //

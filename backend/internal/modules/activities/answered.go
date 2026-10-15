@@ -259,7 +259,7 @@ func firstAnswerAtSQL(inbound, until string) string {
 //
 // The newer-inbound walk names its kinds for the index, as answerArms does.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
-	return `(` + requestOpenSQL + `
+	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)

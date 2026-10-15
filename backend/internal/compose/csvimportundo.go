@@ -4,14 +4,12 @@
 package compose
 
 import (
-	"fmt"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // UndoImportRun reverses a completed csv run (IEM-WIRE-9). Mapping.Object is
@@ -25,7 +23,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 	if run.Mapping == nil {
-		httperr.Write(w, r, fmt.Errorf("import run %s carries no mapping, so it created nothing to undo: %w", run.ID, apperrors.ErrConflict))
+		httperr.Write(w, r, migration.RefuseRun(run.ID, "this import carries no mapping, so it created nothing to undo"))
 		return
 	}
 

@@ -6,12 +6,13 @@ import { api } from "./api/client";
 import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { createQueryClient } from "./app/queryclient";
+import { BulkUndoProvider } from "./components/bulkchange";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { sessionRefusalWatch } from "./lib/session";
 import { startTheme } from "./lib/theme";
-import { BulkUndoProvider } from "./screens/bulkchange";
 import "./app.css";
 
 const queryClient = createQueryClient();
@@ -33,31 +34,7 @@ startTheme();
 listenForInstall();
 registerServiceWorker();
 
-// A 403 is the server disagreeing with the capability snapshot the UI is
-// rendering from — either the grants changed under a live session (a role
-// change revokes nothing, so the session survives it) or the snapshot was
-// wrong. Either way the cached answer is stale the moment it is contradicted,
-// so refetch it rather than let the offending control sit there until the tab
-// next takes focus.
-//
-// Registered here because this is where the query client lives; the API module
-// itself owns no cache. Only /me is invalidated — a 403 says nothing about the
-// freshness of the data queries.
-api.use({
-  onResponse({ response }) {
-    // Never on /me's OWN 403. Invalidating the query that produced the response
-    // refetches it, which 403s again — a request loop in place of a stable
-    // error. (A dead session answers 401 here, not 403, so this path is the
-    // unusual one; it still must not spin.)
-    if (
-      response.status === 403 &&
-      !new URL(response.url).pathname.endsWith("/me")
-    ) {
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    }
-    return response;
-  },
-});
+api.use(sessionRefusalWatch(queryClient));
 
 const root = document.getElementById("root");
 if (!root) {

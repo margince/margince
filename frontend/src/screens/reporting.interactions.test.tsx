@@ -224,6 +224,7 @@ it("requires confirmation before archiving and explains the schedule effect", as
   expect(archive).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(archive).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Report actions" }));
   await user.click(
     await screen.findByRole("button", { name: "Archive report" }),
   );

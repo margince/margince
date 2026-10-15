@@ -37,6 +37,15 @@ const TIMELINE_KINDS: readonly TimelineEntry["kind"][] = [
   "message",
 ];
 
+// What a rep writes is markdown, for the timeline row and the activity panel
+// alike; a mail, a chat and a transcript stay text.
+const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
+export function writtenAsMarkdown(
+  entry: Pick<TimelineEntry, "kind" | "transcript">,
+): boolean {
+  return WRITTEN_KINDS.has(entry.kind) && !entry.transcript;
+}
+
 function timelineKind(kind: string): TimelineEntry["kind"] {
   const known = TIMELINE_KINDS.find((candidate) => candidate === kind);
   return known ?? "note";
@@ -156,6 +165,8 @@ export function activityTimeline(
         activity.captured_by,
         viewerUserId,
         activity.author,
+        activity.source,
+        activity.imported_from,
       ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance

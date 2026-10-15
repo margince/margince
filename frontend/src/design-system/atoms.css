@@ -17,6 +17,7 @@
 }
 
 .table {
+  --tableCellPadBlock: 10px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -26,7 +27,7 @@
   border-bottom: 1px solid var(--borderStrong);
 }
 .table td {
-  padding: 10px 12px;
+  padding: var(--tableCellPadBlock) 12px;
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
@@ -36,23 +37,76 @@
    their own sheets (`.provider-spend-table`, and now `.ext-matrix` and
    `.import__table`); this is the same obligation derived from the component
    instead of maintained as a list of the tables somebody remembered. `th` as
-   well as `td`, because a table with row headers puts one in the last row. */
-.table tbody tr:last-child td,
-.table tbody tr:last-child th {
+   well as `td`, because a table with row headers puts one in the last row.
+   Child combinators, so a table nested in the last row keeps its own rules. */
+.table > tbody > tr:last-child > td,
+.table > tbody > tr:last-child > th {
   border-bottom: 0;
 }
-.table tbody tr {
+.table > tbody > tr {
   cursor: default;
 }
-.table tbody tr:hover td {
+.table > tbody > tr:hover > td {
   background: var(--bgHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
-   so the first column lines up with a PanelBody's text. */
-.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+   so the first column lines up with a PanelBody's text. A table opened from a
+   disclosure that bleeds spans the pane with it. */
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel > .table-scroll-bleed > .table > * > tr > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child {
   padding-inline-start: var(--padPanel);
 }
-.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+.panel > .table-scroll-bleed > .table > * > tr > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child {
   padding-inline-end: var(--padPanel);
 }
 /* The pinned first column is opaque because the rest scrolls under it. Any
@@ -261,6 +315,8 @@
   inset-inline-end: var(--space-4);
   /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
   z-index: 2;
+  display: flex;
+  gap: var(--gapActions);
 }
 
 /* The dialog's first line stops short of the control drawn over it. A heading
@@ -283,7 +339,17 @@
   > .drawer-head
   > :first-child
   > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+/* An expandable drawer has Expand beside the X, and its title clears both. A
+   phone hides Expand, so there the corner is the X alone. */
+@media (min-width: 721px) {
+  .modal:has(> .modal-close > :nth-child(2)) {
+    --modal-corner: calc(var(--controlHeight) * 2 + var(--gapActions));
+  }
 }
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
@@ -391,6 +457,12 @@
   flex-direction: column;
   padding: 0;
 }
+/* An expanded drawer takes the window less the gap it floats in, whatever its
+   intent's width. After the intents' widths, which it replaces, and before the
+   phone sheet, which replaces it. */
+.modal-drawer-window {
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+}
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
@@ -475,6 +547,11 @@
      exactly the two dimensions it would spend, so the sheet takes the glass. */
   .overlay-right {
     padding: 0;
+  }
+  /* The sheet is the whole window already, so Expand has nothing to give. The
+     X is the corner's last control, and everything before it is Expand. */
+  .modal-close > :not(:last-child) {
+    display: none;
   }
   /* A confirm stays a card over the scrim: it asks one question about the
      page it covers, and the page has to stay in view for that. */
@@ -1508,10 +1585,83 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
+/* The end edge shades while columns lie past it and clears at the end. Drawn
+   above the cells, so a hovered or opaque cell cannot hide it. */
+@property --table-scroll-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes table-scroll-end {
+  from {
+    --table-scroll-end: var(--space-8);
+  }
+  to {
+    --table-scroll-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  /* The shade shares the table's grid cell, and sticks to the visible end. */
+  /* One track the box's width: a table sized to it must not grow to its content. */
+  .table-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .table-scroll > :first-child {
+    grid-area: 1 / 1;
+  }
+  /* A table with no width of its own keeps it, as it would in a block. */
+  .table-scroll > table:first-child {
+    justify-self: start;
+  }
+  /* Clear of the inset focus ring, which the shade would otherwise cover. */
+  .table-scroll:focus-visible::after {
+    inset-inline-end: 2px;
+  }
+  .table-scroll::after {
+    --table-scroll-toward: to left;
+    content: "";
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--table-scroll-end);
+    pointer-events: none;
+    background-image: linear-gradient(
+      var(--table-scroll-toward),
+      var(--borderStrong) 1px,
+      color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
+      transparent
+    );
+    /* A box that fits has no scroll timeline, so the shade stays at zero. */
+    animation: table-scroll-end linear both;
+    animation-timeline: scroll(nearest inline);
+    animation-range: calc(100% - var(--space-8)) 100%;
+  }
+  .table-scroll:dir(rtl)::after {
+    --table-scroll-toward: to right;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .table-scroll::after {
+      animation-timing-function: step-end;
+    }
+  }
+  @media (forced-colors: active) {
+    .table-scroll::after {
+      background-image: linear-gradient(
+        var(--table-scroll-toward),
+        CanvasText 1px,
+        transparent 1px
+      );
+    }
+  }
+}
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open
-   and closed leaves the reader unsure whether the click did anything. */
+   and closed leaves the reader unsure whether the click did anything. It turns
+   with `.expander-chevron`, at the end of the row. */
 .disclosure {
   border-top: 1px solid var(--borderSubtle);
   padding-top: var(--space-3);
@@ -1549,14 +1699,10 @@ span.error-line {
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
-.disclosure-chevron {
+.disclosure-summary > .expander-chevron {
   width: 14px;
   height: 14px;
   flex: none;
-  transition: transform var(--dur-state);
-}
-.disclosure[open] .disclosure-chevron {
-  transform: rotate(90deg);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1582,6 +1728,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
@@ -1589,25 +1741,25 @@ span.error-line {
   padding-top: var(--space-3);
 }
 
-/* The chevron on a control that opens something which is NOT a `<details>` —
-   the next table row, a panel below the button. `Disclosure` owns its own; this
-   is for the two screens that had each written the turn as an inline
-   `style={{ transform: expanded ? "rotate(180deg)" : undefined }}`, which is
-   the open state spelled twice per call site: once for the reader who sees the
-   glyph and once, separately, for the one who hears `aria-expanded`. Keyed off
-   that attribute instead, the two cannot disagree.
-
-   The turn is unconditional — a reader who asked for less motion still needs
-   the chevron to point at an opened row — and only the tween is conditional. */
+/* Keyed off `aria-expanded`, so the glyph and a screen reader agree. Reduced
+   motion keeps the turn and drops the tween, which runs on the fold's time. */
 .expander-chevron {
-  transition: transform var(--dur-state) var(--ease-in-out);
+  transition: transform var(--dur-move) var(--ease-in-out);
 }
 [aria-expanded="true"] > .expander-chevron,
 [aria-expanded="true"] .expander-chevron {
   transform: rotate(180deg);
 }
+/* In-out: a fold travels between two resting places. Clipped on the block axis
+   only, so a focus ring inside keeps its sides. */
+[data-folding] {
+  box-sizing: border-box;
+  overflow: visible clip;
+  transition: height var(--dur-move) var(--ease-in-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .expander-chevron {
+  .expander-chevron,
+  [data-folding] {
     transition: none;
   }
 }
@@ -1619,10 +1771,9 @@ span.error-line {
   position: relative;
   display: inline-flex;
 }
-/* Fixed and portalled to the body: the panel is positioned against the
-   trigger's viewport rectangle by the component, so it is not clipped by a
-   card that hides its own overflow and cannot be trapped by a stacking context
-   between the two. */
+/* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
+   positioned against the trigger's viewport rectangle, so a card that hides
+   its own overflow cannot clip it. */
 .overflow-menu-items {
   position: fixed;
   /* Above the phone layout's fixed bottom rail (shell.css, z-index 30) and
@@ -1805,10 +1956,17 @@ span.error-line {
   min-block-size: 138px;
 }
 
+/* A compound breaks at a syllable first, and `anywhere` only where a syllable
+   still does not fit. Not on the figure: `anywhere` splits a number. */
+.stat-card-label-text,
+.stat-card-detail {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 /* The compact card, inside a strip that asked for it (`StatStrip density`).
-   One step down the same heading scale, tighter air, and a one-line basis:
-   the row sits above the content a reader came for, so it must not fill the
-   first screen. The full figure stays on the value's tooltip. */
+   One step down the same heading scale and tighter air: the row sits above
+   the content a reader came for, so it must not fill the first screen. */
 [data-density="compact"] .stat-card {
   padding: var(--space-3);
   min-block-size: 0;
@@ -1818,6 +1976,9 @@ span.error-line {
 [data-density="compact"] .stat-card-label {
   flex-wrap: wrap;
   row-gap: 0;
+  /* Two lines held for every name, so the figures of a row stay level beside
+     a name that wraps. */
+  min-block-size: 2lh;
 }
 [data-density="compact"] .stat-card-label-text {
   flex-shrink: 0;
@@ -1829,8 +1990,6 @@ span.error-line {
   margin-block-end: var(--space-1);
 }
 [data-density="compact"] .stat-card-detail {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
   margin-block-end: 0;
 }
 [data-density="compact"] .stat-card-foot {
@@ -1848,10 +2007,9 @@ span.error-line {
 /* The line under the figure. Its TYPE comes from `.t-caption` on the element
    (atoms.tsx) — quiet grey at the meta size is that utility's own spelling, and
    a copy of it here is one that stops moving when the utility does.
-   What the rule owns is the SHAPE: two lines at most, so a reading whose basis
-   runs long cannot push its own card taller than the four beside it. A clamp
-   rather than a scrollbar or an ellipsis on one line: two lines hold the basis
-   a reader needs, and the receipt chip is where the rest of it lives. */
+   What the rule owns is the SHAPE: two lines at most, because a basis may carry
+   user text of any length (a meeting's subject) and must not set the row's
+   height. The receipt chip is where the rest of it lives. */
 .stat-card-detail {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1884,17 +2042,9 @@ span.error-line {
   color: var(--textSecondary);
   margin-block-end: var(--space-1);
 }
-/* The name itself clamps to ONE line, and the chips beside it do not: a row of
-   readings whose labels wrap to two lines puts every figure in the row at a
-   different height. `min-width: 0` because a flex item's floor is its content,
-   and without it a long label pushes the badge off the card instead of
-   clipping. */
+/* `min-width: 0` because a flex item's floor is its content, and without it a
+   long name pushes the badge off the card instead of wrapping beside it. */
 .stat-card-label-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  overflow: hidden;
   min-width: 0;
 }
 .stat-card-source {
@@ -1914,14 +2064,18 @@ span.error-line {
    this tier owns.
    `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
    so tabular figures declared above it would be thrown away and a column of
-   readings would stop lining up. The figure holds ONE line and ellipsises what
-   does not fit, rather than breaking mid-number: a money reading wrapped
-   between its thousands and its cents reads as two figures. */
+   readings would stop lining up. A figure in words wraps balanced at its
+   spaces. A number cannot break, so only a number wider than the tile ends in
+   an ellipsis, with the whole figure on the card's tooltip. */
 .stat-card-value {
   font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
-  white-space: nowrap;
+  text-wrap: balance;
+  hyphens: auto;
+  /* Stated, not inherited: a sheet above that lets words break would split it. */
+  overflow-wrap: normal;
+  word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-block-end: var(--space-2);
@@ -2194,7 +2348,7 @@ span.error-line {
 /* The two chip-shaped links, and the disclosure and table rows beside them. All
    four changed colour on hover in a single frame. */
 .disclosure-summary,
-.table tbody tr td {
+.table > tbody > tr > td {
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);

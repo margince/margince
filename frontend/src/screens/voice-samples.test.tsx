@@ -286,16 +286,18 @@ describe("VoiceHistory", () => {
     const user = userEvent.setup();
     render(<VoiceHistory profileId="vp-1" canEdit onChanged={() => {}} />);
 
+    const menu = await screen.findByRole("button", {
+      name: "Actions for Version 1",
+    });
+    await user.click(menu);
     await user.click(
-      await screen.findByRole("button", { name: "Actions for Version 1" }),
+      screen.getByRole("button", { name: "Roll back to version 1" }),
     );
-    const verb = screen.getByRole("button", { name: "Roll back to version 1" });
-    await user.click(verb);
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Cancel",
       }),
     );
-    await waitFor(() => expect(document.activeElement).toBe(verb));
+    await waitFor(() => expect(document.activeElement).toBe(menu));
   });
 });

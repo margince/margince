@@ -631,7 +631,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 	e := setupImportApp(t)
 
-	if _, status := uploadCSV(t, e, "deal", prospectCSV); status != http.StatusUnprocessableEntity {
+	if _, status := uploadCSV(t, e, "note", prospectCSV); status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unsupported object → %d, want 422", status)
 	}
 	if _, status := uploadCSV(t, e, "lead", ""); status != http.StatusUnprocessableEntity {

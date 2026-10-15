@@ -9,7 +9,7 @@ import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import { unwrap } from "../lib/problem";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
-import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
+import { StageLadderEditor } from "./settings.stages";
 import "./settings.pipelines.css";
 import {
   installFetchStub,
@@ -25,7 +25,6 @@ type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
 
 const PIPELINE_ID = "33333333-3333-4333-8333-333333333333";
-const HINT_ID = "stage-order-hint";
 
 function stage(
   n: number,
@@ -156,16 +155,7 @@ function LiveLadder({
   }
   return (
     <Panel title={pipeline.name}>
-      <StageLadderIntro
-        pipeline={pipeline}
-        canEdit={canEdit}
-        hintId={HINT_ID}
-      />
-      <StageLadderEditor
-        pipeline={pipeline}
-        canEdit={canEdit}
-        hintId={HINT_ID}
-      />
+      <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
     </Panel>
   );
 }
@@ -263,6 +253,57 @@ export const CriteriaOpen: Story = {
     await expect(
       await canvas.findByText("Buyer confirmed the budget"),
     ).toBeInTheDocument();
+  },
+};
+
+/** A reader's criteria: the rows and their standing, with no verb to change them. */
+export const CriteriaReadOnly: Story = {
+  render: served(sales, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Exit criteria for Discovery" }),
+    );
+    await expect(
+      await canvas.findByText("Buyer confirmed the budget"),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.queryByRole("button", { name: "Add criterion" }),
+    ).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /^Remove / })).toBeNull();
+  },
+};
+
+/** One stage's criteria open at a time; adding a criterion opens its stage. */
+export const OneStageOpen: Story = {
+  render: served(sales, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table", { name: "Stages" });
+    const discovery = canvas.getByRole("button", {
+      name: "Exit criteria for Discovery",
+    });
+    const proposal = canvas.getByRole("button", {
+      name: "Exit criteria for Proposal",
+    });
+    await userEvent.click(discovery);
+    await userEvent.click(proposal);
+    await expect(proposal).toHaveAttribute("aria-expanded", "true");
+    await expect(discovery).toHaveAttribute("aria-expanded", "false");
+    const actions = canvas.getByRole("button", {
+      name: "Actions for Discovery",
+    });
+    await userEvent.click(actions);
+    const menu = canvasElement.ownerDocument.getElementById(
+      actions.getAttribute("aria-controls") ?? "",
+    );
+    if (!menu) throw new Error("the row menu named no panel");
+    await userEvent.click(
+      within(menu).getByRole("button", { name: "Add criterion" }),
+    );
+    await expect(discovery).toHaveAttribute("aria-expanded", "true");
+    await expect(proposal).toHaveAttribute("aria-expanded", "false");
   },
 };
 

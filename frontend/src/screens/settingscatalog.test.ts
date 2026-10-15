@@ -232,9 +232,8 @@ describe("what each page lets a reader change", () => {
     // No delete arm: a source is retired through its switch, never removed.
     acquisition:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
-    // No write of any kind: the templates endpoint serves them and accepts no
-    // edits, so reading them IS the action this page performs.
-    reviewtemplates: "same-as-requires",
+    // Edit questions is the one write, and the server gates it on update.
+    reviewtemplates: "all(full-seat, any(any(custom_field:update)))",
     // No delete arm either: a role is retired through its switch, because an
     // assignment that carried it has to stay resolvable.
     recordroles:
@@ -261,8 +260,7 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create)))",
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
-    usage:
-      "all(full-seat, any(any(any(ai_model_rate:update, ai_model_rate:create), any(ai_budget:update))))",
+    usage: "all(full-seat, any(any(ai_budget:update)))",
     "model-calls": "same-as-requires",
 
     privacy:
@@ -930,11 +928,6 @@ describe("what the rail carries and what it leaves behind", () => {
       "notifications",
       "connections",
       "capture-activity",
-      // The outcome-review questions. A rep holds `custom_field:read`, and this
-      // page is read-only, so it is theirs to CONSULT — they are the ones asked
-      // these questions when a deal closes, and the page is where they can see
-      // what will be asked before it is.
-      "reviewtemplates",
       // Products and offer templates: a rep authors both.
       "products",
       // Capture rules, because a rep holds `company:update` and
@@ -958,6 +951,9 @@ describe("what the rail carries and what it leaves behind", () => {
       // The acquisition-source catalog, gated on custom_field like the lead
       // vocabulary beside it: a rep reads the channels and changes none.
       "acquisition",
+      // The outcome-review questions: a rep is asked them when a deal closes
+      // and reads them here, but editing them is custom_field update.
+      "reviewtemplates",
       // The responsibility-role vocabulary, gated the same way: a rep reads
       // the roles and changes none.
       "recordroles",

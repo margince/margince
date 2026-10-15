@@ -91,17 +91,28 @@ every user.
 
 **Counters limit each passport per window**, kept in Redis where every replica reads the same number. Which counter a
 call spends comes from what the call already declares, never from a list of tool names. A tool with the egress flag
-spends `egress`. A read-only tool spends `reads` per **record** served. Anything else spends `writes`, and every call
-that gets in also spends one of `calls`.
+spends `egress`. A read-only tool spends only `calls`. Anything else spends `writes`, and every call that gets in also
+spends one of `calls`. A REST request with a passport is a call as well, a GET included, so both ways in add to the
+same count.
 
-`reads` and `writes` are **step-ups**. Margince refuses the call, and asks the human who gave the passport a question.
-It reads: "this agent has had N of its M records for this window; go on?". If that human approves, the window grows by
-one more share. Nobody else can answer it, not an admin and not the workspace owner. The limit of an agent is the
+`writes` is a **step-up**. Margince refuses the call, and asks the human who gave the passport a question. It reads:
+"this agent has made N changes against a limit of M for this window; go on?". If that human approves, the window grows
+by one more share. Nobody else can answer it, not an admin and not the workspace owner. The limit of an agent is the
 rights of the human who gave it.
 
 `egress` and `calls` are **hard stops**: no approval removes them, and only the end of the window does. One more
 counter, `cost`, is only a warning. It refuses nothing, and says on the answer when this credential has used its share
 of the AI budget of the workspace.
+
+The three limits and the window length are installation settings (`agent_allowances` on `/installation/settings`),
+read through a cache of one minute (`agentvolume.PolicyRefresh`). The defaults are 200 `writes`, 20 `egress` and
+1,000 `calls` in a 24-hour window. A changed limit binds in the running window.
+
+A changed length waits for a reset. It takes the first reset that is a minute or more later, so a save in the last
+minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that
+changed mid-window would restart every count. The passports of one OAuth grant share their counters
+(`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
+transport stay in the build (`compose/mcpedge.go`).
 
 **How a client gets a `client_id`.** There are two ways, and a client that reads the priority order of the profile
 picks the first:

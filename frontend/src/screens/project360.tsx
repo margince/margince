@@ -5,7 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { usePageAside } from "../app/pageaside";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "../components/customfields.form";
+import { EditAction } from "../components/edit";
+import { usePageAside } from "../components/pageaside";
 import { OverflowMenu } from "../design-system/atoms";
 import { QueryGate } from "../design-system/querystates";
 import {
@@ -17,6 +22,10 @@ import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
+import {
+  TaskDetailModal,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "../lib/activitykeys";
 import { useCan } from "../lib/capability";
@@ -28,11 +37,6 @@ import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "./customfields.form";
-import { EditAction } from "./edit";
 import { OpenEmailDrawer } from "./openemaildrawer";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
@@ -76,7 +80,6 @@ import {
 import { RecordEmailVerb } from "./recordemail";
 import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
-import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
 import "./projects.css";
 

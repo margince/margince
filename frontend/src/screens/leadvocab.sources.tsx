@@ -4,7 +4,6 @@
 import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
 import {
-  Badge,
   Button,
   EmptyState,
   Field,
@@ -15,7 +14,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
-import { KeyedName } from "../design-system/keyedname";
+import { KeyCode, KeyedName } from "../design-system/keyedname";
 import {
   NameDialog,
   nameRefusal,
@@ -42,7 +41,6 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Locale } from "../i18n/locale";
-import { useCanWrite } from "../lib/capability";
 import { isOption } from "../lib/options";
 import { problemMessageOf } from "../lib/problem";
 import {
@@ -57,6 +55,7 @@ import {
 import {
   leadsColumn,
   useRemovalFocus,
+  useVocabGrants,
   vocabMenuColumn,
 } from "./leadvocab.rows";
 
@@ -178,7 +177,7 @@ function sourceColumns({
   onRename: (source: LeadSource) => void;
   onRemove: (source: LeadSource) => void;
 }>): DataTableColumn<LeadSource>[] {
-  const { canEdit, canRemove } = grants;
+  const { canEdit } = grants;
   const refusal = (source: LeadSource) => {
     const count = source.lead_count ?? 0;
     if (source.system === true) return t("leadSources.builtInKept");
@@ -194,15 +193,7 @@ function sourceColumns({
       key: "name",
       header: t("leadSources.colSource"),
       grow: true,
-      render: (source) => (
-        <span className="lead-vocab-name">
-          <KeyedName name={source.label} code={source.key} />
-          {/* Only a seat that may remove reads it: built-in is why Remove is refused. */}
-          {canRemove && source.system === true && (
-            <Badge>{t("leadSources.builtIn")}</Badge>
-          )}
-        </span>
-      ),
+      render: (source) => source.label,
     },
     leadsColumn({ t, plural, locale }, (source) => source.lead_count ?? 0),
     {
@@ -227,6 +218,7 @@ function sourceColumns({
     {
       key: "active",
       header: t("leadSources.colActive"),
+      fold: "end",
       render: (source) => (
         <Switch
           label={t("leadSources.activeFor", { label: source.label })}
@@ -322,9 +314,7 @@ export function LeadSourcesCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const canCreate = useCanWrite("custom_field", "create");
-  const canEdit = useCanWrite("custom_field", "update");
-  const canRemove = useCanWrite("custom_field", "delete");
+  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants("leads");
   const query = useLeadSources();
   const { create, adopt, update, rename, remove } = useSourceMutations();
   const [adding, setAdding] = useState(false);
@@ -395,7 +385,7 @@ export function LeadSourcesCard() {
         />
       )}
       <PanelNotices
-        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        readOnly={refusal && t(refusal)}
         refused={
           failure && { title: t("leadSources.notSaved"), error: failure.error }
         }
@@ -416,6 +406,7 @@ export function LeadSourcesCard() {
         title={t("leadSources.renameTitle")}
         label={t("leadSources.labelField")}
         initial={renaming?.label ?? ""}
+        hint={renaming && <KeyCode code={renaming.key} />}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
         problem={rename.isError ? problemMessageOf(rename.error, t) : null}

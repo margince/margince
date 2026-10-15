@@ -22,7 +22,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
-  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length rls-store-path \
+  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
@@ -66,7 +66,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -147,39 +147,31 @@ check-backend:
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
-## check — the full merge gate: both halves. Spelled as recipe lines rather than
-## prerequisites because it owns the timing ledger, and a prerequisite would
-## record a phase before the reset. check-fe needs `make install` first.
+## check — the full merge gate: both halves, plus the craft bar CI's
+## craftsmanship job holds. Spelled as recipe lines rather than prerequisites
+## because it owns the timing ledger, and a prerequisite would record a phase
+## before the reset. check-fe needs `make install` first.
 check:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh report
 
-## check-all — `check` plus the integration lane, which is what a change touching
-## backend Go actually has to pass. `check` reaches the integration lane NOT AT
-## ALL: its `test` target is `go test ./...`, and every integration file carries
-## `//go:build integration`, so the lane's packages compile into nothing and a
-## green `check` says nothing about them.
+## check-all — `check` plus the integration lane. `check` reaches that lane
+## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
+## carries `//go:build integration`, so the lane's packages compile into nothing.
 ##
-## Its own target rather than folding the lane into `check`, because `check` is
-## what a docs or frontend change runs and that is most changes: the lane takes
-## minutes and needs Postgres up, so paying it on a README edit would train
-## everybody to skip the gate that also holds the security cases.
-##
-## The pre-push hook DOES run the lane, for a push that changes backend Go or
-## SQL — a migration is the likeliest thing of all to redden it.
-## It did not until 2026-09-12, and the reason it gave had expired: parallel
-## sessions were said to share one test template, so a hook would have them
-## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
-## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
-## is two weeks before that reasoning was written down.
-##
-## What is still shared: two shells in the SAME worktree, and the primary
-## checkout. The hook skips rather than blocks when pg_isready says Postgres is
-## not ready, because a push blocked on a stopped stack gets the hook disabled.
+## Optional, not the shipping loop: CI runs the whole lane, sharded, on every
+## non-draft backend PR, and a contributor runs `make test-it DIR=<pkg>` for the
+## packages a change touches. This target is for wanting the whole lane locally.
 check-all:
 	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "craft static (strict)"
+	@$(MAKE) craft-static
+	@bash scripts/phase-timer.sh stop
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
 	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
@@ -291,7 +283,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition check-static test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -724,8 +716,9 @@ fe-typecheck-composed: composition
 ## `ci` aggregate), and a type error therefore still fails the merge. What the
 ## two share is `build:bundle`, so the app this suite exercises cannot quietly
 ## become a different artefact from the one that ships.
+## E2E_ARGS reaches `playwright test`; CI passes `--shard=i/n` there.
 frontend-e2e:
-	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
+	cd frontend && pnpm install --frozen-lockfile && pnpm e2e $(E2E_ARGS)
 
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
 ## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run
@@ -917,8 +910,8 @@ fe-edge-padding:
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
 ## added since origin/main, so old comments improve as files are touched; with
-## no origin/main the gate fails instead of judging nothing. The pre-push hook
-## runs the same bar over the files a push changes.
+## no origin/main the gate fails instead of judging nothing. `make check` runs
+## it locally.
 ##
 ## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
 ## them and the bar has to name them: a first-party unit ships the same product,
@@ -933,7 +926,7 @@ craft-static: test-craft-pin
 ## this branch's diff to an external model API and get a reading of what a
 ## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
 ## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
-## enforced and it is the one that blocks a push.
+## enforced, by `make check` and CI's craftsmanship job.
 ##
 ##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
 ##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review
@@ -1278,6 +1271,18 @@ go-file-length:
 fe-file-length:
 	@./scripts/check-fe-file-length.sh
 
+## test-budget — no unit-test package takes over 120 s, read from a `go test`
+## log; slower packages keep a ceiling in scripts/test-budget-waivers.txt that
+## may shrink, never grow. CI-only: it needs a CI runner's timings, so it is not
+## in check-backend. Usage: make test-budget LOG=<file>
+test-budget:
+	@./scripts/check-test-budget.sh $(LOG)
+
+## test-test-budget — the budget gate's own test, run by check-backend because
+## the gate itself runs only on CI, where a refusal that stopped firing reads green.
+test-test-budget:
+	@bash ./scripts/check-test-budget.test.sh
+
 ## test-fe-file-length — the length gate's own test, a separate target like
 ## every other gate-plus-test pair here. The RATCHET is what it holds: a waived
 ## file that grew, one that came back under the cap with its entry standing,
@@ -1464,11 +1469,11 @@ check-extension-modules:
 pkg-freeze:
 	@./scripts/check-pkg-freeze.sh
 
-## hooks — install the repo's git hooks (the pre-push craft-static gate).
+## hooks — install the repo's git hooks (the pre-commit gofmt + license gate).
 ## Run once after cloning.
 hooks:
 	git config core.hooksPath .githooks
-	@echo "installed: core.hooksPath=.githooks (pre-push runs craft static on changed backend files)"
+	@echo "installed: core.hooksPath=.githooks (pre-commit runs gofmt + the license-header gate)"
 
 # --- Desktop build (macOS arm64) ---
 # The self-contained folder a non-technical user runs with no Docker: a

@@ -6,7 +6,10 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import type { DataTableColumn } from "../design-system/datatable";
 import { formatNumber } from "../format/format";
 import { type PluralTranslator, type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { Locale } from "../i18n/locale";
+import { useCanWrite } from "../lib/capability";
+import { usePageReadOnly } from "./settingsnav";
 import "./leadvocab.css";
 
 // Folded, the column heading is out of sight, so the count says its unit.
@@ -31,6 +34,32 @@ export function leadsColumn<Row>(
 }
 
 type VocabVerbs = Readonly<{ canEdit: boolean; canRemove: boolean }>;
+type VocabPage = "leads" | "acquisition" | "recordroles";
+
+// A page the seat only consults carries its own notice, so a card states a
+// partial posture only where the page leaves it unsaid.
+export function useVocabGrants(page: VocabPage) {
+  const readOnlyPage = usePageReadOnly(page);
+  const canCreate = useCanWrite("custom_field", "create");
+  const canEdit = useCanWrite("custom_field", "update");
+  const canRemove = useCanWrite("custom_field", "delete");
+  const refusal =
+    readOnlyPage || canEdit
+      ? undefined
+      : vocabRefusal({ canCreate, canRemove });
+  return { canCreate, canEdit, canRemove, refusal };
+}
+
+function vocabRefusal({
+  canCreate,
+  canRemove,
+}: Readonly<{
+  canCreate: boolean;
+  canRemove: boolean;
+}>): MessageKey | undefined {
+  if (canCreate) return "leadSources.addOnlyTitle";
+  return canRemove ? "leadSources.removeOnlyTitle" : undefined;
+}
 
 type VocabRow = Readonly<{
   label: string;

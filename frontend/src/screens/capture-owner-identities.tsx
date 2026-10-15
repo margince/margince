@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
   Button,
-  EmptyState,
+  Field,
   Modal,
   SegmentedControl,
   TextInput,
@@ -13,12 +13,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
@@ -32,12 +27,12 @@ import {
   throwProblem,
   unwrap,
 } from "../lib/problem";
-import { captureValueMessage } from "./capturevalue";
 import {
   type MutationOutcome,
   useRowHandoff,
   useUndoableRemoval,
-} from "./undoableremoval";
+} from "../lib/undoableremoval";
+import { captureValueMessage } from "./capturevalue";
 import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
@@ -177,37 +172,45 @@ export function OwnerIdentitiesCard() {
       <PanelBody>
         <PanelIntro>{t("ownerIdentities.sub")}</PanelIntro>
       </PanelBody>
-      <SettingList bleed="settings">
+      {/* One list, so a hairline parts the add row from the first address. The
+          add row stands while the addresses load or fail. */}
+      <SettingList bleed="settings" testId="owner-identities-list">
         <SettingRow
           label={t("ownerIdentities.addLabel")}
-          description={t("ownerIdentities.addDescription")}
+          description={
+            query.data?.data.length === 0 ? (
+              <span data-testid="owner-identities-empty">
+                {t("ownerIdentities.addDescriptionEmpty")}
+              </span>
+            ) : (
+              t("ownerIdentities.addDescription")
+            )
+          }
           control={
             <Button ref={addVerb} onClick={() => setDeclaring(true)}>
               {t("ownerIdentities.add")}
             </Button>
           }
         />
+        <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
+          {(list) =>
+            list.data.map((identity) => (
+              <IdentityRow
+                key={identity.id}
+                identity={identity}
+                pending={removing === identity.id}
+                landing={() => addVerb.current}
+                onRemove={(chosen) =>
+                  (chosen.source === "delivered_to"
+                    ? removeLearned
+                    : removeTyped
+                  ).mutate(chosen)
+                }
+              />
+            ))
+          }
+        </QueryGate>
       </SettingList>
-      <PanelGroupHead title={t("ownerIdentities.current")} level="h3" />
-      {/* Not retroactive, and the note says so where the reader is deciding. */}
-      <PanelBody>
-        <PanelIntro>{t("ownerIdentities.notRetroactive")}</PanelIntro>
-      </PanelBody>
-      <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
-        {(list) => (
-          <IdentityRows
-            list={list.data}
-            removing={removing}
-            landing={() => addVerb.current}
-            onRemove={(identity) =>
-              (identity.source === "delivered_to"
-                ? removeLearned
-                : removeTyped
-              ).mutate(identity)
-            }
-          />
-        )}
-      </QueryGate>
       {declaring && <DeclareDialog onClose={() => setDeclaring(false)} />}
     </Panel>
   );
@@ -235,46 +238,6 @@ function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
     default:
       return null;
   }
-}
-
-/**
- * One declared address per row, with its kind and date under it. The verb at
- * the end withdraws it.
- */
-function IdentityRows({
-  list,
-  removing,
-  landing,
-  onRemove,
-}: Readonly<{
-  list: OwnerIdentity[];
-  removing: string | undefined;
-  landing: () => HTMLElement | null;
-  onRemove: (identity: OwnerIdentity) => void;
-}>) {
-  const t = useT();
-  if (list.length === 0) {
-    // A reading, not a failed read: "I have declared no other addresses" is
-    // what a reader opens this card to confirm.
-    return (
-      <EmptyState>
-        <p data-testid="owner-identities-empty">{t("ownerIdentities.empty")}</p>
-      </EmptyState>
-    );
-  }
-  return (
-    <SettingList bleed="records" testId="owner-identities-list">
-      {list.map((identity) => (
-        <IdentityRow
-          key={identity.id}
-          identity={identity}
-          pending={removing === identity.id}
-          landing={landing}
-          onRemove={onRemove}
-        />
-      ))}
-    </SettingList>
-  );
 }
 
 function IdentityRow({
@@ -353,16 +316,24 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           }}
           label={t("ownerIdentities.kindLabel")}
         />
-        <TextInput
-          value={draft}
-          aria-label={t("ownerIdentities.valueLabel")}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={
-            kind === "address"
-              ? t("ownerIdentities.addressPlaceholder")
-              : t("ownerIdentities.domainPlaceholder")
-          }
-        />
+        <Field
+          label={t("ownerIdentities.valueLabel")}
+          labelHidden
+          hint={t("ownerIdentities.notRetroactive")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={
+                kind === "address"
+                  ? t("ownerIdentities.addressPlaceholder")
+                  : t("ownerIdentities.domainPlaceholder")
+              }
+            />
+          )}
+        </Field>
         {add.isError && (
           <Callout
             tone="danger"

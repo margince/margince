@@ -109,6 +109,7 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			AccountLabel: concern.AccountLabel,
 			Calendar:     slices.Contains(calendarProviders, concern.Provider),
 			FailingSince: concern.FailingSince,
+			LastSyncedAt: concern.LastSyncedAt,
 		})
 	}
 	return out, nil

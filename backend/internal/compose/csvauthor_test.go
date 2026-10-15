@@ -42,6 +42,21 @@ func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
 	if err := refuseAuthorFromNonImporter(agent, authorInAPart); !errors.As(err, &refused) {
 		t.Errorf("an agent mapped an author column in the second file of a ZIP: %v", err)
 	}
+	ownerOnActivity := migration.RunMapping{Parts: []migration.PartMapping{
+		{File: "calls.csv", Object: migration.ObjectActivity, Fields: map[string]string{"Who": csvTargetOwner}},
+	}}
+	ownerOnCompany := migration.RunMapping{Parts: []migration.PartMapping{
+		{File: "companies.csv", Object: migration.ObjectCompany, Fields: map[string]string{"Who": csvTargetOwner}},
+	}}
+	if err := refuseAuthorFromNonImporter(agent, ownerOnActivity); !errors.As(err, &refused) {
+		t.Errorf("an agent bylined a seat through an activity's owner column: %v", err)
+	}
+	if err := refuseAuthorFromNonImporter(human, ownerOnActivity); err != nil {
+		t.Errorf("the declared importer was refused an activity's owner column: %v", err)
+	}
+	if err := refuseAuthorFromNonImporter(agent, ownerOnCompany); err != nil {
+		t.Errorf("an agent's company owner column is a record owner, not a byline: %v", err)
+	}
 	if err := refuseAuthorFromNonImporter(agent, withoutAuthor); err != nil {
 		t.Errorf("an agent's import without an author column was refused: %v", err)
 	}

@@ -28,6 +28,9 @@
      than run on across its own value. */
   min-width: 0;
   overflow-wrap: anywhere;
+  /* Syllable break with a hyphen first; `anywhere` only when a syllable
+     still does not fit. Needs the document's `lang`, which the i18n provider sets. */
+  hyphens: auto;
 }
 .fieldgrid-value {
   min-width: 0;

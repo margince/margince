@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
-import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { provenanceOf } from "../design-system/provenanceof";
 import { QueryStates } from "../design-system/querystates";
 import { RecordBack } from "../design-system/recordview";
+import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -18,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { navigate, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
-import { UndoConfirm } from "./import.notices";
+import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
@@ -27,8 +27,8 @@ import {
   useImportFormat,
   useLandedRecords,
   useRecentImports,
+  useStopImportTest,
   useUndoImport,
-  wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import {
@@ -45,9 +45,8 @@ import "./import.css";
 // across several record types in one act. So nothing is written until a human
 // has read the dry run's report and pressed the button again.
 const IMPORT_HOME = settingsHref("import");
+const IMPORT_TEMPLATE = { ...IMPORT_HOME, id2: IMPORT_TEMPLATE_SUBPAGE };
 const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
-const openTemplate = () =>
-  navigate({ ...IMPORT_HOME, id2: IMPORT_TEMPLATE_SUBPAGE });
 
 export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   const t = useT();
@@ -97,8 +96,6 @@ export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   return <ImportHub />;
 }
 
-// The hub shows the two ways in (a template to fill, or a file to upload).
-// It also shows the order files land in, and the runs already made.
 function ImportHub() {
   const t = useT();
   const { locale } = useLocale();
@@ -113,30 +110,33 @@ function ImportHub() {
     <>
       <Panel title={t("import.hub.title")}>
         <PanelBody>
-          <div className="import-hub__ways">
-            <div className="import-hub__way">
-              <Heading size="small" as="h3">
-                {t("import.hub.templateTitle")}
-              </Heading>
-              <p className="import__hint t-sub">
+          <ImportDropzone
+            sizeLimitMb={format.data?.size_limit_mb}
+            onPick={start}
+          />
+        </PanelBody>
+        <SettingList bleed="settings">
+          <SettingRow
+            label={t("import.hub.templateTitle")}
+            layout="stack"
+            description={
+              <>
                 {t("import.hub.templateBody")}
-              </p>
-              <div className="import-hub__verbs">
-                <Button variant="ghost" onClick={openTemplate}>
+                {format.data ? <ImportOrder order={format.data.order} /> : null}
+              </>
+            }
+            control={
+              <span className="import-hub__verbs">
+                <a className="link-button" href={routeHash(IMPORT_TEMPLATE)}>
                   {t("import.hub.preview")}
-                </Button>
+                </a>
                 <a className="link-button" href={IMPORT_TEMPLATE_HREF} download>
                   {t("import.template.download")}
                 </a>
-              </div>
-            </div>
-            <ImportDropzone
-              sizeLimitMb={format.data?.size_limit_mb}
-              onPick={start}
-            />
-          </div>
-          {format.data ? <ImportOrder order={format.data.order} /> : null}
-        </PanelBody>
+              </span>
+            }
+          />
+        </SettingList>
       </Panel>
       <RecentImports format={format.data} />
     </>
@@ -144,19 +144,20 @@ function ImportHub() {
 }
 
 // The order the engine lands files in, read from the format. A link can only
-// name a record an earlier file made, so a reader planning a ZIP needs it.
+// name a record an earlier file made, so a reader planning a ZIP needs it. The
+// no-break space keeps each arrow on the line of the name before it.
 function ImportOrder({ order }: Readonly<{ order: ImportFormat["order"] }>) {
   const t = useT();
   return (
-    <p className="import-hub__order t-sub">
-      <span>{t("import.hub.order")}</span>
+    <span className="import-hub__order">
+      {t("import.hub.order")}
       {order.map((object, index) => (
-        <span key={object} className="import-hub__step">
-          {index > 0 ? <span aria-hidden>→</span> : null}
-          <Badge>{t(`import.object.${object}`)}</Badge>
-        </span>
+        <Fragment key={object}>
+          {index > 0 ? <span aria-hidden>{"\u00a0→"}</span> : null}{" "}
+          {t(`import.object.${object}`)}
+        </Fragment>
       ))}
-    </p>
+    </span>
   );
 }
 
@@ -190,9 +191,11 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recent = useRecentImports();
-  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
+  const recent = useRecentImports("history");
+  const drafts = useRecentImports("drafts");
+  const runs = [...(drafts.data ?? []), ...(recent.data ?? [])];
   useLandedRecords(runs.map((one) => one.status));
+  const cancel = useStopImportTest();
   const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);
@@ -200,86 +203,133 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
     setUndoing(null);
     undo.reset();
   };
+  // One state for both reads, so drafts never land above a table already drawn.
+  const reads = {
+    isPending: recent.isPending || drafts.isPending,
+    isError: recent.isError || drafts.isError,
+    error: recent.error ?? drafts.error,
+    refetch: () => Promise.all([recent.refetch(), drafts.refetch()]),
+  };
+  // Before the first run this panel could only say there is none, which the
+  // hub above already shows by offering the first one.
+  if (recent.isSuccess && drafts.isSuccess && runs.length === 0) {
+    return null;
+  }
   return (
     <Panel title={t("import.recent.title")}>
-      <PanelBody>
-        <QueryStates query={recent} pendingLabel={t("common.loading")}>
-          {runs.length === 0 ? (
-            <EmptyState>{t("import.recent.empty")}</EmptyState>
-          ) : (
-            <DataTable<ImportRun>
-              label={t("import.recent.title")}
-              rows={runs}
-              rowKey={(one) => one.id}
-              columns={[
-                {
-                  key: "date",
-                  header: t("import.recent.col.date"),
-                  render: (one) =>
-                    formatDate(one.created_at, locale, viewerZone()),
-                },
-                {
-                  key: "file",
-                  header: t("import.recent.col.file"),
-                  grow: true,
-                  render: (one) => {
-                    const files = plural(
-                      "import.recent.files",
-                      one.parts?.length ?? 0,
-                      { count: formatNumber(one.parts?.length ?? 0, locale) },
-                    );
-                    const starter = starterOf(one);
-                    const by = starter && names.get(starter);
-                    return (
-                      <>
-                        <a className="cell-link" href={runHref(one.id)}>
-                          {one.file_name || one.source_name || one.id}
-                        </a>
-                        <div className="t-caption">
-                          {by
-                            ? t("import.recent.filesBy", { files, name: by })
-                            : files}
-                        </div>
-                      </>
-                    );
-                  },
-                },
-                {
-                  key: "rows",
-                  header: t("import.recent.col.rows"),
-                  align: "end",
-                  render: (one) => formatNumber(rowsOf(one), locale),
-                },
-                {
-                  key: "status",
-                  header: t("import.recent.col.status"),
-                  render: (one) => (
-                    <Badge tone={STATUS_TONE[one.status]}>
-                      {t(`import.status.${one.status}`)}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: "actions",
-                  header: t("import.recent.col.actions"),
-                  headerHidden: true,
-                  render: (one) =>
-                    one.status === "complete" ? (
-                      <div className="cell-actions">
-                        <Button
-                          variant="ghost"
-                          onClick={() => setUndoing(one.id)}
-                        >
-                          {t("import.recent.undo")}
-                        </Button>
-                      </div>
-                    ) : null,
-                },
-              ]}
-            />
-          )}
-        </QueryStates>
-      </PanelBody>
+      {cancel.error ? (
+        <PanelBody>
+          <ImportRefusal
+            title={t("import.cancelFailed")}
+            error={cancel.error}
+          />
+        </PanelBody>
+      ) : null}
+      {reads.isPending || reads.isError ? (
+        <PanelBody>
+          <QueryStates query={reads} pendingLabel={t("common.loading")}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      ) : (
+        <DataTable<ImportRun>
+          bleed
+          fold
+          label={t("import.recent.title")}
+          rows={runs}
+          rowKey={(one) => one.id}
+          columns={[
+            {
+              key: "date",
+              header: t("import.recent.col.date"),
+              render: (one) => formatDate(one.created_at, locale, viewerZone()),
+            },
+            {
+              key: "file",
+              header: t("import.recent.col.file"),
+              grow: true,
+              fold: "title",
+              render: (one) => {
+                const files = plural(
+                  "import.recent.files",
+                  one.parts?.length ?? 0,
+                  { count: formatNumber(one.parts?.length ?? 0, locale) },
+                );
+                const starter = starterOf(one);
+                const by = starter && names.get(starter);
+                return (
+                  <>
+                    <a className="cell-link" href={runHref(one.id)}>
+                      {one.file_name || one.source_name || one.id}
+                    </a>
+                    <div className="t-caption">
+                      {by
+                        ? t("import.recent.filesBy", { files, name: by })
+                        : files}
+                    </div>
+                    {one.superseded_by ? (
+                      <a
+                        className="t-caption"
+                        href={runHref(one.superseded_by)}
+                      >
+                        {t("import.superseded")}
+                      </a>
+                    ) : null}
+                  </>
+                );
+              },
+            },
+            {
+              key: "rows",
+              header: t("import.recent.col.rows"),
+              align: "end",
+              render: (one) => formatNumber(rowsOf(one), locale),
+            },
+            {
+              key: "status",
+              header: t("import.recent.col.status"),
+              render: (one) => (
+                <Badge tone={STATUS_TONE[one.status]}>
+                  {t(`import.status.${one.status}`)}
+                </Badge>
+              ),
+            },
+            {
+              key: "actions",
+              header: t("import.recent.col.actions"),
+              headerHidden: true,
+              fold: "end",
+              render: (one) => {
+                if (one.status === "pending") {
+                  return (
+                    <div className="cell-actions">
+                      <a className="link-button" href={runHref(one.id)}>
+                        {t("import.draft.continue")}
+                      </a>
+                      <Button
+                        variant="ghost"
+                        pending={
+                          cancel.isPending && cancel.variables === one.id
+                        }
+                        onClick={() => cancel.mutate(one.id)}
+                      >
+                        {t("import.draft.cancel")}
+                      </Button>
+                    </div>
+                  );
+                }
+                return one.status === "complete" ? (
+                  <div className="cell-actions">
+                    <Button variant="ghost" onClick={() => setUndoing(one.id)}>
+                      {t("import.recent.undo")}
+                    </Button>
+                  </div>
+                ) : null;
+              },
+            },
+          ]}
+        />
+      )}
       <UndoConfirm
         open={undoing !== null}
         order={format?.order ?? []}

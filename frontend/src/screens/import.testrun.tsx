@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Download } from "lucide-react";
+import { useState } from "react";
+import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { CountLine } from "../design-system/listsurface";
+import { fitsOnePage, PAGE_SIZES } from "../design-system/listtable.paging";
+import { Pager } from "../design-system/pager";
 import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
@@ -13,7 +19,8 @@ import type { Locale } from "../i18n/locale";
 import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
-import type { ImportWizardState } from "./importflow";
+import { hasProgress, ImportProgressPanel } from "./import.progress";
+import { reasonText } from "./importreason";
 import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
@@ -23,10 +30,26 @@ import type {
   ImportRowIssue,
   ImportRun,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
-/** Where the server builds one run's problems as a spreadsheet. */
-export function problemsHref(id: string): string {
-  return `/v1/imports/${encodeURIComponent(id)}/problems.csv`;
+/**
+ * Where the server builds one run's problems as a spreadsheet, with its header
+ * and its reasons in the reader's language.
+ */
+export function problemsHref(id: string, lang: Locale): string {
+  return `/v1/imports/${encodeURIComponent(id)}/problems.csv?lang=${lang}`;
+}
+
+/** The run's problems as a spreadsheet: the full list, whatever page is shown. */
+export function ProblemsDownload({ runId }: Readonly<{ runId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <a className="btn btn-ghost" href={problemsHref(runId, locale)} download>
+      <Download aria-hidden />
+      {t("import.result.problemsFile")}
+    </a>
+  );
 }
 
 const PROBLEM_TONE = {
@@ -62,12 +85,28 @@ export function partsOf(
   );
 }
 
+/** The issue list, tolerant of a report that sends none. */
+function issuesOf(report: ImportReport): readonly ImportRowIssue[] {
+  return report.issues ?? [];
+}
+
 function countOf(
   issues: readonly ImportRowIssue[],
   ...kinds: ImportProblemKind[]
 ): number {
   return issues.filter((issue) => issue.kind && kinds.includes(issue.kind))
     .length;
+}
+
+// How many deals the parts say land already closed, by the part field named.
+function sumOf(
+  report: ImportReport,
+  field: "closed_won" | "closed_lost",
+): number {
+  return (report.parts ?? []).reduce(
+    (sum, part) => sum + (part[field] ?? 0),
+    0,
+  );
 }
 
 /**
@@ -82,7 +121,7 @@ export function TestRunStep({
   const t = useT();
   const { report, runId } = wizard;
   if (wizard.run.data?.status === "validating") {
-    return <TestingBody runId={wizard.run.data.id} />;
+    return <TestingBody run={wizard.run.data} />;
   }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
@@ -99,21 +138,109 @@ export function TestRunStep({
 }
 
 // A test can read for minutes, so the one waiting on it can stop it.
-function TestingBody({ runId }: Readonly<{ runId: string }>) {
+function TestingBody({ run }: Readonly<{ run: ImportRun }>) {
   const t = useT();
   const stop = useStopImportTest();
   return (
-    <>
-      <PendingBody visible label={t("import.test.testing")} />
+    <div className="import">
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.test.testing")} />
+      ) : (
+        <PendingBody visible label={t("import.test.testing")} />
+      )}
       <div className="import__actions">
-        <Button pending={stop.isPending} onClick={() => stop.mutate(runId)}>
+        <Button pending={stop.isPending} onClick={() => stop.mutate(run.id)}>
           {t("import.test.stop")}
         </Button>
       </div>
       {stop.error ? (
         <ImportRefusal title={t("import.test.stopFailed")} error={stop.error} />
       ) : null}
+    </div>
+  );
+}
+
+function TestRunNotices({ report }: Readonly<{ report: ImportReport }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const invalid = countOf(issuesOf(report), "invalid_value");
+  const closedWon = sumOf(report, "closed_won");
+  const closedLost = sumOf(report, "closed_lost");
+  const closed = closedWon + closedLost;
+  return (
+    <>
+      {closed > 0 ? (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={plural("import.test.closedDeals", closed, {
+            count: formatNumber(closed, locale),
+          })}
+        >
+          {t("import.test.closedDealsBody", {
+            won: formatNumber(closedWon, locale),
+            lost: formatNumber(closedLost, locale),
+          })}
+        </Callout>
+      ) : null}
+      {invalid > 0 ? (
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={plural("import.test.invalid", invalid, {
+            count: formatNumber(invalid, locale),
+          })}
+        >
+          {t("import.test.invalidBody")}
+        </Callout>
+      ) : null}
     </>
+  );
+}
+
+function PrimaryAction({
+  wizard,
+  nothingToWrite,
+  nothingLands,
+  landing,
+}: Readonly<{
+  wizard: ImportWizardState;
+  nothingToWrite: boolean;
+  nothingLands: boolean;
+  landing: number;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (nothingToWrite) {
+    return (
+      <Button
+        variant="primary"
+        pending={wizard.cancelling.isPending}
+        onClick={wizard.cancel}
+      >
+        {t("import.test.nothing.done")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      variant="primary"
+      disabled={wizard.test.isPending || nothingLands}
+      pending={wizard.approve.isPending}
+      busyLabel={t("import.importing")}
+      onClick={() => {
+        const run = wizard.run.data;
+        if (run) wizard.approve.mutate(run);
+      }}
+    >
+      {wizard.anyway
+        ? t("import.test.importAnyway")
+        : plural("import.test.import", landing, {
+            count: formatNumber(landing, locale),
+          })}
+    </Button>
   );
 }
 
@@ -131,10 +258,14 @@ function TestRunBody({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const invalid = countOf(report.issues, "invalid_value");
-  const linkless = countOf(report.issues, "broken_link", "dropped_link");
-  const restaging = wizard.retest.isPending;
+  const linkless = countOf(issuesOf(report), "broken_link", "dropped_link");
+  const restaging = wizard.test.isPending;
   const landing = report.disposition.created + report.disposition.updated;
+  // Rows with a broken link can still land, but only once the box is ticked.
+  const nothingToWrite =
+    report.rows_read > 0 && landing === 0 && (linkless === 0 || !wizard.anyway);
+  const nothingLands = landing === 0 && !wizard.anyway;
+  const skippedRows = report.disposition.skipped > 0;
   return (
     <div className="import">
       <PartCounts
@@ -150,19 +281,9 @@ function TestRunBody({
       <ImportContextTagSummary
         tagID={wizard.contextTagID || (wizard.run.data?.context_tag_id ?? "")}
       />
-      {invalid > 0 ? (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={plural("import.test.invalid", invalid, {
-            count: formatNumber(invalid, locale),
-          })}
-        >
-          {t("import.test.invalidBody")}
-        </Callout>
-      ) : null}
-      <ProblemTable issues={report.issues} />
-      {wizard.profile && linkless > 0 ? (
+      <TestRunNotices report={report} />
+      <ProblemTable issues={issuesOf(report)} />
+      {linkless > 0 ? (
         <Checkbox
           checked={wizard.anyway}
           disabled={restaging}
@@ -172,41 +293,45 @@ function TestRunBody({
           })}
         />
       ) : null}
-      <div className="import__actions">
-        {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(runId)} download>
-            {t("import.result.problemsFile")}
-          </a>
-        ) : null}
-        <Button variant="ghost" onClick={wizard.reset}>
-          {t("import.test.reupload")}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={restaging}
-          pending={wizard.approve.isPending}
-          busyLabel={t("import.importing")}
-          onClick={() => {
-            const run = wizard.run.data;
-            if (run) wizard.approve.mutate(run);
-          }}
+      {nothingToWrite ? (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("import.test.nothing.title")}
         >
-          {wizard.anyway
-            ? t("import.test.importAnyway")
-            : plural("import.test.import", landing, {
-                count: formatNumber(landing, locale),
-              })}
-        </Button>
-      </div>
+          {t("import.test.nothing.body")}
+          {skippedRows ? ` ${t("import.test.nothing.skipped")}` : null}
+        </Callout>
+      ) : null}
+      <ActionRow
+        className="import__footer"
+        primary={
+          <>
+            <Button variant="ghost" onClick={wizard.reset}>
+              {t("import.test.reupload")}
+            </Button>
+            <PrimaryAction
+              wizard={wizard}
+              nothingToWrite={nothingToWrite}
+              nothingLands={nothingLands}
+              landing={landing}
+            />
+          </>
+        }
+      >
+        {issuesOf(report).length > 0 ? (
+          <ProblemsDownload runId={runId} />
+        ) : null}
+      </ActionRow>
       {wizard.approve.error ? (
         <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
           {problemMessageOf(wizard.approve.error, t)}
         </Callout>
       ) : null}
-      {wizard.retest.error ? (
+      {wizard.test.error ? (
         <ImportRefusal
           title={t("import.map.stageFailed")}
-          error={wizard.retest.error}
+          error={wizard.test.error}
         />
       ) : null}
     </div>
@@ -258,13 +383,61 @@ export function ProblemTable({
   issues,
 }: Readonly<{ issues: readonly ImportRowIssue[] }>) {
   const t = useT();
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState<number>(PAGE_SIZES[0]);
+  // A new report is another list: its page one, not the page the last one was on.
+  const [seen, setSeen] = useState(issues);
+  if (seen !== issues) {
+    setSeen(issues);
+    setPage(1);
+  }
+  if (issues.length === 0) return null;
+  const lastPage = Math.max(1, Math.ceil(issues.length / perPage));
+  const current = Math.min(page, lastPage);
+  const from = (current - 1) * perPage;
+  const shown = issues.slice(from, from + perPage);
+  const paged = !fitsOnePage(issues, undefined, false);
+  return (
+    <div className="import__problems">
+      <ProblemRows issues={shown} total={issues.length} />
+      {paged ? (
+        <>
+          <p className="t-caption">
+            <CountLine
+              unit={t("import.test.issuesUnit")}
+              first={from + 1}
+              last={from + shown.length}
+              total={issues.length}
+            />
+          </p>
+          <Pager
+            current={current}
+            lastPage={lastPage}
+            hasMore={false}
+            perPage={perPage}
+            onGoto={setPage}
+            onPerPage={(next) => {
+              setPerPage(next);
+              setPage(1);
+            }}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function ProblemRows({
+  issues,
+  total,
+}: Readonly<{ issues: readonly ImportRowIssue[]; total: number }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (issues.length === 0) return null;
   return (
     <DataTable<ImportRowIssue>
-      label={plural("import.test.problems", issues.length, {
-        count: formatNumber(issues.length, locale),
+      label={plural("import.test.problems", total, {
+        count: formatNumber(total, locale),
       })}
       rows={[...issues]}
       rowKey={(issue) =>
@@ -292,7 +465,9 @@ export function ProblemTable({
                   {t(`import.problem.${issue.kind}`)}
                 </Badge>
               ) : null}
-              <div className="t-sub">{issue.reason}</div>
+              <div className="t-sub">
+                {reasonText(t, issue.reason, issue.reason_code, issue.params)}
+              </div>
             </>
           ),
         },

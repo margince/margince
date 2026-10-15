@@ -26,6 +26,10 @@
   display: none;
 }
 
+.audit-target {
+  color: var(--textPrimary);
+}
+
 /* The timestamp is the reading an audit trail exists to be checked against. */
 .audit-when {
   margin-left: auto;

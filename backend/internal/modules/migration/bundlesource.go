@@ -15,8 +15,9 @@ import (
 )
 
 // ImportOrder is the order a bundle's types land in. A contact names its
-// company and a lead may name a contact, so the record referred to lands first.
-var ImportOrder = []string{ObjectCompany, ObjectContact, ObjectLead}
+// company, a lead may name a contact, and a deal names both. An activity names
+// any of them, so the record named lands first.
+var ImportOrder = []string{ObjectCompany, ObjectContact, ObjectLead, ObjectDeal, ObjectActivity}
 
 // ZipPart names one file of a stored ZIP. Budget is the upload cap the upload
 // passed to OpenBundle, so a walk accepts what the upload accepted.

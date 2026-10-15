@@ -2,6 +2,10 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
+import type {
+  TeamWeeklyRep,
+  TeamWeeklyReview,
+} from "../features/worklist/teamweekly.queries";
 import { en } from "../i18n/en";
 import { TeamWeeklySection } from "./brief.teamweekly";
 import {
@@ -10,7 +14,6 @@ import {
   agendaText,
 } from "./brief.teamweeklyagenda";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
-import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
 afterEach(() => {
   cleanup();

@@ -192,6 +192,13 @@ export const NotConfigured: Story = {
   }),
 };
 
+// Off, the card is one line: webhooks wait for a signing key.
+export const NotConfiguredPhone: Story = {
+  ...NotConfigured,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 export const Empty: Story = {
   render: cardStory(baseRoutes([])),
 };

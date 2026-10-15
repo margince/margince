@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportCard } from "./import";
@@ -17,6 +17,7 @@ import {
   stubRoutes,
 } from "./import.testkit";
 import { handOverUpload } from "./importflow";
+import { IMPORT_POLL_MS } from "./importrun";
 
 // The ids each `GET /users/names` request carried, in the order sent.
 function namesAskedFor(): string[][] {
@@ -66,23 +67,60 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
-  it("the hub lists no draft or cancelled run", async () => {
-    stubRoutes({
+  it("lists a draft to continue or cancel, and leaves a replaced test out of the history", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
       "GET /imports": () =>
         jsonResponse({
           data: [
             { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
-            { ...run, id: "r2", file_name: "gone.csv", status: "cancelled" },
+            {
+              ...run,
+              id: "r2",
+              file_name: "gone.csv",
+              status: "cancelled",
+              superseded_by: "r9",
+            },
             { ...run, id: "r1", file_name: "leads.csv", status: "complete" },
           ],
         }),
     });
     render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getByText("Draft")).toBeVisible();
     expect(
-      await screen.findByRole("link", { name: "leads.csv" }),
-    ).toBeVisible();
-    expect(screen.queryByText("draft.csv")).toBeNull();
+      within(rows[1]).getByRole("link", { name: "Continue" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r3"));
     expect(screen.queryByText("gone.csv")).toBeNull();
+    // Each list is asked for on its own. A draft or a replaced test then
+    // cannot push a finished import out of the one page of history.
+    const asked = sent.filter((s) => s.path === "GET /imports").length;
+    expect(asked).toBeGreaterThanOrEqual(2);
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r3/cancel"),
+    );
+  });
+
+  it("says when a draft could not be canceled", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+          ],
+        }),
+      "POST /imports/r3/cancel": () =>
+        jsonResponse({ status: 403, code: "permission_denied" }, 403),
+    });
+    render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByText("The import was not canceled"),
+    ).toBeVisible();
   });
 
   it("names who ran an import and how many files and rows it took", async () => {
@@ -133,8 +171,53 @@ describe("the data import hub", () => {
         jsonResponse({ ...formatFixture, order: ["contact", "company"] }),
     });
     render(<ImportCard />);
-    const line = (await screen.findByText("Import order:")).parentElement;
-    expect(line).toHaveTextContent("Import order:Contacts→Companies");
+    const line = await screen.findByText("Import order: Contacts Companies");
+    expect(line).toHaveTextContent("Import order: Contacts → Companies");
+    // The arrows are drawn for the eye only; a screen reader hears the names.
+    const arrows = [...line.children].filter((one) =>
+      one.textContent?.includes("→"),
+    );
+    expect(arrows).toHaveLength(1);
+    for (const arrow of arrows) {
+      expect(arrow).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("keeps the history panel while a read is pending, and says a failed one", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({ data: [{ ...run, file_name: "crm.csv" }] }),
+    });
+    const routed = vi.mocked(fetch).getMockImplementation();
+    let answerDrafts: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://test.local",
+        );
+        if (url.searchParams.get("view") === "drafts") {
+          return new Promise<Response>((resolve) => {
+            answerDrafts = resolve;
+          });
+        }
+        return routed?.(input, init) ?? Promise.reject(new Error("unrouted"));
+      }),
+    );
+    render(<ImportCard />);
+    const panel = await screen.findByRole("region", { name: "Recent imports" });
+    expect(within(panel).queryByRole("table")).toBeNull();
+    act(() =>
+      answerDrafts(
+        jsonResponse(
+          { title: "Server error", status: 500, type: "about:blank" },
+          500,
+        ),
+      ),
+    );
+    expect(await within(panel).findByRole("alert")).toBeVisible();
+    expect(within(panel).queryByRole("table")).toBeNull();
   });
 
   it("asks before an undo, then starts it", async () => {
@@ -191,17 +274,26 @@ describe("the data import hub", () => {
         invalidated.mock.calls.filter((call) => call[0] === undefined).length;
       expect(everything()).toBe(0);
       status = "undone";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       await waitFor(() => expect(everything()).toBe(1));
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("says so when there is no import yet", async () => {
-    stubRoutes();
+  it("shows no history panel before the first import", async () => {
+    const sent = stubRoutes();
     render(<ImportCard />);
-    expect(await screen.findByText("No imports yet.")).toBeVisible();
+    expect(await screen.findByText("Upload your data")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        sent.filter((one) => one.path === "GET /imports").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    await act(async () => {});
+    expect(
+      screen.queryByRole("heading", { name: "Recent imports" }),
+    ).toBeNull();
   });
 
   it("opens the run page with the dropped file", async () => {

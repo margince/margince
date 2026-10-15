@@ -323,7 +323,6 @@ demote
 density
 deny
 depend
-derivation
 derive
 descending
 describe
@@ -838,7 +837,6 @@ partial
 participant
 particular
 partner
-partway
 pass
 passage
 passport
@@ -1259,7 +1257,6 @@ trail
 training
 transcript
 transfer
-transition
 translation
 trash
 trend

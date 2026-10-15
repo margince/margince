@@ -335,6 +335,13 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 // meter is built by the caller rather than here, because the model path needs
 // the same pointer to charge MCP-SESS-COST against — two meters would count one
 // agent's spend in two windows, neither of them the one the gate reads.
+// newVolumeMeter is the meter judged by the allowances an admin saved, counted
+// in rdb. A role whose rdb is nil gets the fail-closed meter New builds.
+func newVolumeMeter(rdb *redis.Client, pool *pgxpool.Pool) *agentvolume.Meter {
+	return agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow).
+		WithPolicySource(compose.NewAgentAllowanceSource(pool))
+}
+
 func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 	return []compose.Option{compose.WithAgentVolume(volumeMeter)}
 }
@@ -347,7 +354,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
 	if err != nil {
 		return nil, nil, err
 	}

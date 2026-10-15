@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { useUnsavedGuard } from "../app/unsaved";
+import { useUnsavedGuard } from "../components/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -14,18 +14,19 @@ import { useLocale, useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { FilesStep, ImportDropzone } from "./import.files";
 import { ImportRefusal } from "./import.notices";
+import { ImportPresetTarget } from "./import.preset";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
+import { runHref } from "./importaddress";
 import {
-  type ImportWizardState,
   takeHandedOverUpload,
   uploadObjectFor,
-  useImportWizard,
   type WizardStep,
 } from "./importflow";
 import { MapStep } from "./importmapping";
 import { useImportFormat, useRecentImports, wroteNothing } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
+import { type ImportWizardState, useImportWizard } from "./importwizard";
 import { settingsHref } from "./settingsrouting";
 
 const STEPS: readonly WizardStep[] = [
@@ -37,22 +38,26 @@ const STEPS: readonly WizardStep[] = [
   "result",
 ];
 
+function stagedHint(wizard: ImportWizardState) {
+  return wizard.step === "result"
+    ? "import.step.hintDone"
+    : "import.step.hintStaged";
+}
+
 /** The run flow's page: it owns the flow's state and draws the flow. */
 export function ImportWizardPage() {
   const wizard = useImportWizard();
   const { locale } = useLocale();
   const format = useImportFormat(locale);
   const recent = useRecentImports();
-  // A profiled file is work a reader would lose by leaving; a staged run is
-  // kept by the server. Read from the wizard, not the address: leaving drops
-  // the run from the address before the page unmounts.
-  useUnsavedGuard(
-    (wizard.profile !== null || wizard.upload.isPending) && !wizard.staged,
-  );
+  // Only the upload still on its way is work the page could lose. Once it
+  // answers, the draft is the server's and the hub lists it.
+  useUnsavedGuard(wizard.upload.isPending);
   // The file the hub's drop zone took starts here, once the format can say
   // which type a CSV's name gives. The page holds it, so a page closed before
   // then drops it rather than uploading it on a later visit.
   const { upload } = wizard;
+  const presetObject = wizard.presetContact ? "activity" : undefined;
   const handedOver = useRef<File | null>(null);
   useEffect(() => {
     handedOver.current ??= takeHandedOverUpload();
@@ -64,12 +69,12 @@ export function ImportWizardPage() {
     if (file) {
       upload.mutate({
         file,
-        object: uploadObjectFor(file.name, format.data),
+        object: uploadObjectFor(file.name, format.data, presetObject),
         recent: recent.data,
         retype: false,
       });
     }
-  }, [format.data, recent.data, upload]);
+  }, [format.data, recent.data, upload, presetObject]);
   return <ImportWizard wizard={wizard} />;
 }
 
@@ -93,12 +98,11 @@ export function ImportWizard({
         label={t("import.back")}
       />
       <StageLadder
+        wrap
         label={t("import.step.label")}
         hint={
           <span id={hintId}>
-            {wizard.editable
-              ? t("import.step.hint")
-              : t("import.step.hintStaged")}
+            {wizard.editable ? t("import.step.hint") : t(stagedHint(wizard))}
           </span>
         }
         steps={STEPS.map((step, index) => {
@@ -118,6 +122,21 @@ export function ImportWizard({
           };
         })}
       />
+      {wizard.presetContact ? (
+        <ImportPresetTarget contactId={wizard.presetContact} />
+      ) : null}
+      {wizard.conflict ? (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("import.conflictOtherTab")}
+          actions={
+            <Button variant="ghost" onClick={wizard.dismissConflict}>
+              {t("import.conflictDismiss")}
+            </Button>
+          }
+        />
+      ) : null}
       <Panel
         title={
           <span ref={title} tabIndex={-1}>
@@ -184,15 +203,25 @@ function ClosedRun({
 }: Readonly<{ wizard: ImportWizardState; run: ImportRun }>) {
   const t = useT();
   const cancelled = run.status === "cancelled";
+  const newer = run.superseded_by;
+  const title = newer
+    ? t("import.superseded")
+    : t(cancelled ? "import.closed.cancelled" : "import.closed.draft");
   return (
     <Callout
       tone={cancelled ? "info" : "warning"}
       kind="standing"
-      title={t(cancelled ? "import.closed.cancelled" : "import.closed.draft")}
+      title={title}
       actions={
-        <Button variant="primary" onClick={wizard.reset}>
-          {t("import.closed.upload")}
-        </Button>
+        newer ? (
+          <a className="link-button" href={runHref(newer)}>
+            {t("import.supersededOpen")}
+          </a>
+        ) : (
+          <Button variant="primary" onClick={wizard.reset}>
+            {t("import.closed.upload")}
+          </Button>
+        )
       }
     >
       {cancelled ? undefined : (run.error ?? t("import.closed.stopped"))}
@@ -211,10 +240,15 @@ function UploadStep({
     <div className="import">
       <ImportDropzone
         sizeLimitMb={format.size_limit_mb}
+        csvOnly={wizard.presetContact !== null}
         onPick={(file) =>
           upload.mutate({
             file,
-            object: uploadObjectFor(file.name, format),
+            object: uploadObjectFor(
+              file.name,
+              format,
+              wizard.presetContact ? "activity" : undefined,
+            ),
             recent: recent.data,
             retype: false,
           })

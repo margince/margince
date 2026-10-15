@@ -55,12 +55,12 @@ import {
   visibleGroups,
 } from "./library";
 import "./library.css";
+import { useListsAvailable } from "../lib/lists.queries";
 import {
   LibraryTable,
   type LibraryTableGroup,
   NewShortlistAction,
 } from "./listlibrary";
-import { useListsAvailable } from "./lists.queries";
 import { DEFAULT_AUDIENCE } from "./listsharing";
 
 export function FiltersLibrary({

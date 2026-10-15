@@ -64,6 +64,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		parts = append(parts, crmcontracts.ImportPartReport{
 			File: partFileOf(run, o), Object: crmcontracts.ImportObject(o.Object),
 			RowsRead: rowsRead, Disposition: d,
+			ClosedWon: countOrAbsent(o.ClosedWon), ClosedLost: countOrAbsent(o.ClosedLost),
 		})
 		appendIssues(&out.Issues, seen, issueKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
@@ -76,6 +77,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		appendIssues(&out.Issues, seenWarnings, warningKey, o, o.Warnings)
 	}
 	out.Parts = &parts
+	out.Issues = collapseUnknownOwners(out.Issues)
 	if committed && run.Error != importTagsFailedCause {
 		reportTagsCreated(out.Issues)
 	}
@@ -111,15 +113,14 @@ func rowsReachedOf(run migration.Run) []int {
 	return reached
 }
 
-// createdTagReason is the report's word for a new tag once the commit ran,
-// which creates every new tag before its first row.
-const createdTagReason = "no tag had this name, so the import created it"
-
-// reportTagsCreated rewords each new_tag issue as done.
+// reportTagsCreated rewords each new_tag issue as done: the commit creates
+// every new tag before its first row.
 func reportTagsCreated(issues []crmcontracts.ImportRowIssue) {
 	for i := range issues {
 		if kind := issues[i].Kind; kind != nil && string(*kind) == migration.ProblemNewTag {
-			issues[i].Reason = createdTagReason
+			issues[i].Reason = createdTagWhy.English()
+			issues[i].ReasonCode = reasonCodeOrAbsent(createdTagWhy.Code)
+			issues[i].Params = paramsOrAbsent(createdTagWhy.Params)
 		}
 	}
 }
@@ -214,6 +215,7 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	for _, s := range rep.AssociationsSkipped {
 		unresolved = append(unresolved, crmcontracts.ImportUnresolvedLink{
 			From: s.From, To: s.To, Reason: s.Reason,
+			ReasonCode: reasonCodeOrAbsent(s.Code), Params: paramsOrAbsent(s.Params),
 		})
 	}
 	links.Unresolved = &unresolved
@@ -273,12 +275,14 @@ func appendIssues(
 		}
 		seen[key] = true
 		*issues = append(*issues, crmcontracts.ImportRowIssue{
-			Line:   lineOrAbsent(lineOf(row)),
-			Reason: row.Reason,
-			File:   textOrAbsent(o.File),
-			Column: textOrAbsent(row.Column),
-			Kind:   kindOrAbsent(row.Kind),
-			Value:  textOrAbsent(row.Value),
+			Line:       lineOrAbsent(lineOf(row)),
+			Reason:     row.Reason,
+			ReasonCode: reasonCodeOrAbsent(row.Code),
+			Params:     paramsOrAbsent(row.Params),
+			File:       textOrAbsent(o.File),
+			Column:     textOrAbsent(row.Column),
+			Kind:       kindOrAbsent(row.Kind),
+			Value:      textOrAbsent(row.Value),
 		})
 	}
 }
@@ -338,29 +342,40 @@ func kindOrAbsent(kind string) *crmcontracts.ImportProblemKind {
 // report stored before the line was carried.
 var disclosedLine = regexp.MustCompile(`^line ([0-9]+)$`)
 
+// undoErroredRow is the generated ImportUndoReport.Errored item, declared here
+// for the slice and the literals that fill it.
+type undoErroredRow = struct {
+	Id         openapi_types.UUID             `json:"id"` //nolint:staticcheck // matches the generated item shape
+	Object     crmcontracts.ImportObject      `json:"object"`
+	Reason     string                         `json:"reason"`
+	ReasonCode *crmcontracts.ImportReasonCode `json:"reason_code,omitempty"`
+}
+
+// undoKeptRow is the generated ImportUndoReport.Kept item, declared here for
+// the slice and the literals that fill it.
+type undoKeptRow = struct {
+	Id         openapi_types.UUID             `json:"id"` //nolint:staticcheck // matches the generated item shape
+	Object     crmcontracts.ImportObject      `json:"object"`
+	Params     *map[string]string             `json:"params,omitempty"`
+	Reason     *string                        `json:"reason,omitempty"`
+	ReasonCode *crmcontracts.ImportReasonCode `json:"reason_code,omitempty"`
+}
+
 // toContractUndoReport renders the reversal outcome (IEM-WIRE-9).
 func toContractUndoReport(id migration.RunID, status string, rep migration.UndoReport) *crmcontracts.ImportUndoReport {
-	kept := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-		Object crmcontracts.ImportObject `json:"object"`
-	}, 0, len(rep.Kept))
+	kept := make([]undoKeptRow, 0, len(rep.Kept))
 	for _, k := range rep.Kept {
-		kept = append(kept, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Kept item shape
-			Object crmcontracts.ImportObject `json:"object"`
-		}{Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object)})
+		kept = append(kept, undoKeptRow{
+			Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object),
+			Reason: textOrAbsent(k.Reason), ReasonCode: reasonCodeOrAbsent(k.Code), Params: paramsOrAbsent(k.Params),
+		})
 	}
-	errored := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-		Object crmcontracts.ImportObject `json:"object"`
-		Reason string                    `json:"reason"`
-	}, 0, len(rep.Errored))
+	errored := make([]undoErroredRow, 0, len(rep.Errored))
 	for _, e := range rep.Errored {
-		errored = append(errored, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-			Object crmcontracts.ImportObject `json:"object"`
-			Reason string                    `json:"reason"`
-		}{Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object), Reason: e.Reason})
+		errored = append(errored, undoErroredRow{
+			Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object),
+			Reason: e.Reason, ReasonCode: reasonCodeOrAbsent(e.Code),
+		})
 	}
 	out := &crmcontracts.ImportUndoReport{
 		RunId:         openapi_types.UUID(id),
@@ -403,8 +418,19 @@ func withSkippedLines(report migration.Report, object string, skipped []migratio
 				ExternalID: fmt.Sprintf("line %d", s.Line),
 				Line:       s.Line,
 				Reason:     s.Reason,
+				Code:       s.Why.Code,
+				Params:     s.Why.Params,
 			})
 		}
 	}
 	return report
+}
+
+// countOrAbsent is a count the part reports only when it is not zero, so a part
+// that holds no closed deal says nothing about them.
+func countOrAbsent(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
 }

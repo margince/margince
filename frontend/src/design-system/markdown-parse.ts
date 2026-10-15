@@ -82,10 +82,11 @@ export type MarkdownDocument = {
 };
 
 const FENCE = /^ {0,3}(```|~~~)/;
-const HEADING = /^ {0,3}(#{1,6})\s+(.*)$/;
+const HEADING = /^ {0,3}(#{1,6})[ \t]+(.*)$/;
 const RULE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
 const QUOTE = /^ {0,3}>[ \t]?/;
 const BULLET = /^ {0,3}[-*+][ \t]+(.*)$/;
+const COMMENT_LINE = /^ {0,3}<!--.*-->[ \t]*$/;
 const ORDERED = /^ {0,3}\d{1,9}[.)][ \t]+(.*)$/;
 
 /** Read a document, and mark the passage `highlight` asks for if it is there. */
@@ -116,7 +117,10 @@ function parseBlocks(lines: string[], first: number): Block[] {
   const blocks: Block[] = [];
   let i = 0;
   while (i < lines.length) {
-    if (lineAt(lines, i).trim() === "") {
+    // A whole-line comment is markup for tools, as the handbook's prose
+    // markers are; it reads as a blank line, never as text.
+    const line = lineAt(lines, i);
+    if (line.trim() === "" || COMMENT_LINE.test(line)) {
       i++;
       continue;
     }

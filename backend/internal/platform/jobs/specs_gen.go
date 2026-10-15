@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "49decc36196b5cf164daeb2a162ab41e2d73991118324ca975861d6542ece139"
+const JobContractHash = "94220e0e175b6a8c296e7239331199bd345f4108b85c360223293c722b6c1225"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -799,14 +799,15 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"Blobstore"}},
 	},
 	"tag_scout": {
-		Kind:      "tag_scout",
-		GoType:    "TagScoutArgs",
-		Role:      Worker,
-		Fleet:     true,
-		Queue:     "default",
-		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
-		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 1 * time.Hour},
+		Kind:         "tag_scout",
+		GoType:       "TagScoutArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Hour},
+		Registration: Registration{When: []string{"TagSuggestBrain"}, AbsentRegistersAnyway: true},
 	},
 	"technical_enrich_backfill": {
 		Kind:         "technical_enrich_backfill",

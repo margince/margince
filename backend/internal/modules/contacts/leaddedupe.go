@@ -145,5 +145,9 @@ func leadConfidence(name, company, domain string, row leadCandidateRow) float64 
 	case domain != "" && normalizeDomain(row.domain) == domain:
 		employer = 0.8
 	}
-	return dedupeNameWeight*nameSimilarity(name, deref(row.fullName)) + dedupeCompanyDomainWeight*employer
+	other := deref(row.fullName)
+	if !namesCorroborate(name, other) {
+		employer = 0
+	}
+	return dedupeNameWeight*nameSimilarity(name, other) + dedupeCompanyDomainWeight*employer
 }

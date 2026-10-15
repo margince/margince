@@ -8,6 +8,7 @@ import {
   extensionFrontendFiles,
   filesUnder,
 } from "../../scripts/lib/source-tree";
+import { SCREEN_ROOTS, SRC_ROOT } from "../testing/screenfiles";
 
 // EVERY SURFACE THAT SENDS SAYS WHAT THE MESSAGE WOULD MEET.
 //
@@ -26,7 +27,6 @@ import {
 // who already knows this rule. A list that fails is what carries it to somebody
 // who does not.
 
-const SCREENS = __dirname;
 const EXTENSIONS = join(__dirname, "..", "..", "..", "extensions");
 
 // The three doors a send goes out of. Read as literals rather than derived from
@@ -57,9 +57,10 @@ const SAYS_SOMETHING = [
 const SILENT_SENDERS: Record<string, string> = {};
 
 function sourceFiles(): string[] {
-  return [...filesUnder(SCREENS), ...extensionFrontendFiles(EXTENSIONS)].filter(
-    (path) => !/\.(test|stories)\.tsx?$/.test(path),
-  );
+  return [
+    ...SCREEN_ROOTS.flatMap((root) => filesUnder(join(SRC_ROOT, root))),
+    ...extensionFrontendFiles(EXTENSIONS),
+  ].filter((path) => !/\.(test|stories)\.tsx?$/.test(path));
 }
 
 function postsASend(source: string): boolean {

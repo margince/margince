@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { operations } from "../api/schema";
+import { useEntityName } from "../components/entityref.queries";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useEntityName } from "./entityref.queries";
 
 // The deals list's enum-valued dials, narrowed to what the wire admits.
 //

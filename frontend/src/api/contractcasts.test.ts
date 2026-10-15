@@ -305,14 +305,14 @@ describe("a fixture is the shape the server sends", () => {
 // paragraph rather than a line.
 describe("what counts as a contract type cast", () => {
   const found = (code: string) =>
-    castsIn(parseSource(probePath, code), "src/screens/probe.ts").map(
+    castsIn(parseSource(probePath, code), "src/features/worklist/probe.ts").map(
       (one) => one.says,
     );
 
   // A real module, so the import arm resolves against a file that exists. This
   // one declares `Worklist` as a contract alias and re-exports it, which is the
   // shape the screens use.
-  const probePath = join(sourceRoot, "screens", "probe.ts");
+  const probePath = join(sourceRoot, "features", "worklist", "probe.ts");
   const aliasing = 'import type { Worklist } from "./worklist.queries";\n';
 
   it("finds a cast to a type the module declares", () => {

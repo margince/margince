@@ -260,14 +260,10 @@ var defaults = map[string]Document{
 			reportingReportEdition:    writeNoDelete,
 
 			"activity": writeNoDelete,
-			// A rep ANSWERS an assurance finding, and is usually the only one
-			// who can: the finding is about the quality of an input, and the
-			// seat that knows why a deal's numbers look the way they do is
-			// the one that entered them. Row scope already bounds what they
-			// reach, so this widens what they may say about their own work
-			// rather than what they can see. Making every finding a
-			// supervisory errand would route the question away from the only
-			// seat that can answer it.
+			// A rep answers assurance findings: the seat that entered a deal's
+			// numbers is usually the only one who knows why they look that way.
+			// assurance.Resolve bounds this to deals the rep may change, so it
+			// widens what they may say about their own work, not what they see.
 			objForecast:         readUpdate,
 			objAiModelRate:      none,
 			objAiRouting:        none,

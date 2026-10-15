@@ -16,6 +16,7 @@ package activities
 // mismatch would show up — is the honest substitute.
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,7 +35,7 @@ import (
 // that field is exclusive to the capture auto-create path, and no
 // channel_provider, since a meeting travelled on no transport.
 func TestActivityCapturedPayload_DirectLog(t *testing.T) {
-	payload := activityCapturedPayload("meeting", "")
+	payload := activityCapturedPayload(context.Background(), "meeting", "")
 
 	if !reflect.DeepEqual(payload.EventType(), "activity.captured") {
 		t.Errorf("got %v, want %v", payload.EventType(), "activity.captured")
@@ -269,5 +271,23 @@ func TestActivityUpdatedChangedFields_MeetingStatusUntouched(t *testing.T) {
 	if fields.MeetingStatus != nil {
 		t.Errorf("a rename told subscribers the meeting outcome changed: %v",
 			*fields.MeetingStatus)
+	}
+}
+
+// An activity an import wrote names the run, so a consumer that reacts to new
+// work can tell brought-in history from it. A live write carries neither member.
+func TestAnActivityCapturedPayloadNamesTheImportRunThatWroteIt(t *testing.T) {
+	run := ids.NewV7()
+	marked := activityCapturedPayload(storekit.WithImportRun(context.Background(), run), "note", "")
+	if marked.Imported == nil || !*marked.Imported ||
+		marked.ImportRunId == nil || ids.UUID(*marked.ImportRunId) != run {
+		t.Fatalf("payload = %+v, want imported with the run's id", marked)
+	}
+	raw, err := json.Marshal(activityCapturedPayload(context.Background(), "note", ""))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(string(raw), "imported") || strings.Contains(string(raw), "import_run_id") {
+		t.Errorf("a live write's payload names an import: %s", raw)
 	}
 }

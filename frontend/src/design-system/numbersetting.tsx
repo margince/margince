@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { TextInput } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { type SettingControlProps, SettingRow } from "./settingrow";
@@ -36,6 +36,7 @@ export function NumberSetting({
   reading,
   onCommit,
   disabled,
+  reason,
   testId,
 }: Readonly<{
   control: SettingControlProps;
@@ -48,6 +49,8 @@ export function NumberSetting({
   reading?: (value: number) => string;
   onCommit: (next: number) => void;
   disabled?: boolean;
+  /** Why this reader may not change it, under the box; refuses the edit alone. */
+  reason?: ReactNode;
   testId?: string;
 }>) {
   // `sent` is the number this draft already committed: the blur that follows
@@ -61,6 +64,7 @@ export function NumberSetting({
   const [refused, setRefused] = useState(false);
   const refusalId = useId();
   const readingId = useId();
+  const reasonId = useId();
   const live = draft !== null && draft.over === value ? draft : null;
   const shown = live?.text ?? String(value);
   const bounds = { min, max, lowestOn };
@@ -96,6 +100,7 @@ export function NumberSetting({
           [
             control["aria-describedby"],
             words ? readingId : null,
+            reason === undefined ? null : reasonId,
             refused ? refusalId : null,
           ]
             .filter(Boolean)
@@ -106,7 +111,7 @@ export function NumberSetting({
         data-testid={testId}
         inputMode="numeric"
         value={shown}
-        disabled={disabled}
+        disabled={disabled || reason !== undefined}
         onChange={(e) => setDraft({ text: e.target.value, over: value })}
         onBlur={() => commit("blur")}
         onKeyDown={(e) => {
@@ -120,6 +125,11 @@ export function NumberSetting({
         <span id={readingId} className="t-caption numbersetting-reading">
           {words}
         </span>
+      )}
+      {reason !== undefined && (
+        <p id={reasonId} className="t-caption numbersetting-reason">
+          {reason}
+        </p>
       )}
       <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
     </div>

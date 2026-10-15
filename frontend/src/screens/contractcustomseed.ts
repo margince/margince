@@ -10,8 +10,11 @@
 // the part of it with no JSX in it at all.
 
 import { useEffect, useRef } from "react";
-import type { CreateField } from "./create";
-import { prefillFromRecord, seedMissingFields } from "./edit.prefill";
+import type { CreateField } from "../components/create";
+import {
+  prefillFromRecord,
+  seedMissingFields,
+} from "../components/edit.prefill";
 
 export type CustomFieldSeed = Readonly<{
   open: boolean;

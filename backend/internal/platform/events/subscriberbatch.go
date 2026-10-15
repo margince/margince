@@ -74,6 +74,10 @@ func (s *Subscriber) deliverAll(ctx context.Context, stream string, entries []re
 			s.ack(ctx, stream, entry.ID)
 			continue
 		}
+		if s.leavesOut(env) {
+			s.ack(ctx, stream, entry.ID)
+			continue
+		}
 		envs = append(envs, env)
 		kept = append(kept, entry)
 	}

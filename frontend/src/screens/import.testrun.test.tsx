@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UnsavedGuard } from "../app/unsaved";
+import { UnsavedGuard } from "../components/unsaved";
 import { ImportCard } from "./import";
 import {
   dryRun,
@@ -19,6 +19,7 @@ import {
   run,
   stubRoutes,
 } from "./import.testkit";
+import { IMPORT_POLL_MS } from "./importrun";
 
 afterEach(() => {
   cleanup();
@@ -71,15 +72,25 @@ const REPORT = `GET /imports/${run.id}/report`;
 describe("the test run", () => {
   it("shows counts per type and every problem, and Import anyway patches and revalidates the same run", async () => {
     const user = userEvent.setup();
+    let tests = 0;
     const sent = stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({
+          ...run,
+          on_broken_link: tests > 1 ? "drop_link" : "skip_row",
+        }),
+      [`POST /imports/${run.id}/validate`]: () => {
+        tests += 1;
+        return jsonResponse({ ...run, status: "validating" }, 202);
+      },
     });
     await renderAtTestRun(user);
     expect(await screen.findByText("Companies")).toBeVisible();
     expect(screen.getByText("Broken link")).toBeVisible();
     expect(screen.getByRole("link", { name: "problems.csv" })).toHaveAttribute(
       "href",
-      `/v1/imports/${run.id}/problems.csv`,
+      `/v1/imports/${run.id}/problems.csv?lang=en`,
     );
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
     await waitFor(() =>
@@ -108,7 +119,120 @@ describe("the test run", () => {
         `POST /imports/${run.id}/approve`,
       ),
     );
-    expect(sent.filter((s) => s.path === "POST /imports")).toHaveLength(1);
+    expect(sent.filter((s) => s.path === "POST /imports")).toHaveLength(0);
+  });
+
+  it("says there is nothing to import when every row is unchanged, and closes the run on Done", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 3, skipped: 0 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+      [`POST /imports/${run.id}/cancel`]: () =>
+        jsonResponse({ ...run, status: "cancelled" }),
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /^Import (\d|anyway)/ }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain(
+        `POST /imports/${run.id}/cancel`,
+      ),
+    );
+    expect(sent.map((s) => s.path)).not.toContain(
+      `POST /imports/${run.id}/approve`,
+    );
+  });
+
+  it("does not say every row is in the CRM when the file held no rows", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 0,
+          disposition: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByRole("button", { name: "Import 0 rows" }),
+    ).toBeDisabled();
+    expect(screen.queryByText("Nothing to import")).toBeNull();
+  });
+
+  it("reads a report that sends no issue list as a clean one", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 3, skipped: 0 },
+          issues: null,
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+  });
+
+  it("offers no Import 0 rows while only broken-link rows remain, and imports them once the box is ticked", async () => {
+    const user = userEvent.setup();
+    let tests = 0;
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 1,
+          disposition: { created: 0, updated: 0, unchanged: 0, skipped: 1 },
+          issues: [bundleReportFixture.issues[0]],
+        }),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({
+          ...run,
+          on_broken_link: tests > 1 ? "drop_link" : "skip_row",
+        }),
+      [`POST /imports/${run.id}/validate`]: () => {
+        tests += 1;
+        return jsonResponse({ ...run, status: "validating" }, 202);
+      },
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Import 0 rows" })).toBeNull();
+    await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
+    expect(
+      await screen.findByRole("button", { name: /^Import anyway/ }),
+    ).toBeEnabled();
+  });
+
+  it("points at problems.csv before Done when rows were skipped", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...dryRun,
+          rows_read: 3,
+          disposition: { created: 0, updated: 0, unchanged: 2, skipped: 1 },
+          issues: [],
+        }),
+      [`GET /imports/${run.id}`]: () => jsonResponse(run),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText(/Download problems\.csv before/),
+    ).toBeVisible();
   });
 
   it("polls a validating run until its report arrives", async () => {
@@ -127,7 +251,7 @@ describe("the test run", () => {
         `GET /imports/${run.id}/report`,
       );
       status = "awaiting_approval";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(
         await screen.findByRole("button", { name: "Import 4 rows" }),
       ).toBeVisible();
@@ -154,7 +278,7 @@ describe("the test run", () => {
       await renderAtTestRun(user);
       expect(await screen.findByText("Testing your file…")).toBeVisible();
       refused = true;
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText(reason)).toBeVisible();
       expect(screen.getByText("Test run stopped")).toBeVisible();
       expect(screen.queryByText("Test run did not start")).toBeNull();
@@ -227,18 +351,20 @@ describe("the test run", () => {
 
   it("returns to the map with the reason when a test run of Import anyway stops", async () => {
     const user = userEvent.setup();
-    let tested = false;
+    let tests = 0;
     const refusal = "The file changed since it was uploaded.";
     const stored = "The test run stopped at row 3.";
     stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
       [`GET /imports/${run.id}`]: () =>
         jsonResponse(
-          tested ? { ...run, status: "pending", error: stored } : run,
+          tests > 1 ? { ...run, status: "pending", error: stored } : run,
         ),
       [`POST /imports/${run.id}/validate`]: () => {
-        tested = true;
-        return jsonResponse({ status: 422, detail: refusal }, 422);
+        tests += 1;
+        return tests === 1
+          ? jsonResponse({ ...run, status: "validating" }, 202)
+          : jsonResponse({ status: 422, detail: refusal }, 422);
       },
     });
     await renderAtTestRun(user);
@@ -253,7 +379,7 @@ describe("the test run", () => {
     const user = userEvent.setup();
     const stored = "The test run stopped at row 3.";
     stubRoutes({
-      "POST /imports": () =>
+      [`POST /imports/${run.id}/validate`]: () =>
         jsonResponse({ ...run, status: "pending", error: stored }, 202),
       [`GET /imports/${run.id}`]: () =>
         jsonResponse({ ...run, status: "pending", error: stored }),
@@ -307,38 +433,39 @@ describe("the test run", () => {
 
   it("reads the run again after a retest refused its mapping", async () => {
     const user = userEvent.setup();
-    let tested = false;
-    let stages = 0;
+    let tests = 0;
     const sent = stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
       [`GET /imports/${run.id}`]: () =>
-        jsonResponse(tested ? { ...run, status: "pending" } : run),
+        jsonResponse(tests > 1 ? { ...run, status: "pending" } : run),
       [`POST /imports/${run.id}/validate`]: () => {
-        tested = true;
+        tests += 1;
+        if (tests === 1) {
+          return jsonResponse({ ...run, status: "validating" }, 202);
+        }
+        if (tests === 2) {
+          return jsonResponse(
+            {
+              status: 422,
+              code: "validation_failed",
+              detail: "Two columns are mapped to Email.",
+            },
+            422,
+          );
+        }
         return jsonResponse(
-          {
-            status: 422,
-            code: "validation_failed",
-            detail: "Two columns are mapped to Email.",
-          },
-          422,
+          { status: 409, code: "conflict", detail: "The file moved on." },
+          409,
         );
-      },
-      "POST /imports": () => {
-        stages += 1;
-        return stages > 1
-          ? jsonResponse(
-              { status: 409, code: "conflict", detail: "The file moved on." },
-              409,
-            )
-          : jsonResponse(run, 202);
       },
     });
     await renderAtTestRun(user);
     await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
     await user.click(await screen.findByRole("button", { name: "Run test" }));
     expect(await screen.findByText("The file moved on.")).toBeVisible();
-    const refused = sent.map((s) => s.path).lastIndexOf("POST /imports");
+    const refused = sent
+      .map((s) => s.path)
+      .lastIndexOf(`POST /imports/${run.id}/validate`);
     await waitFor(() =>
       expect(sent.slice(refused).map((s) => s.path)).toContain(
         `GET /imports/${run.id}`,
@@ -349,7 +476,7 @@ describe("the test run", () => {
   it("names the import that holds a busy source name, with a link to it", async () => {
     const user = userEvent.setup();
     stubRoutes({
-      "POST /imports": () =>
+      [`POST /imports/${run.id}/validate`]: () =>
         jsonResponse(
           {
             status: 409,
@@ -411,6 +538,40 @@ describe("the test run", () => {
     expect(within(row).getByText("Invalid value")).toBeVisible();
   });
 
+  it("notes closed deals imported as history", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [REPORT]: () =>
+        jsonResponse({
+          ...bundleReportFixture,
+          parts: [
+            ...bundleReportFixture.parts,
+            {
+              file: "deals.csv",
+              object: "deal",
+              rows_read: 5,
+              disposition: { created: 5, updated: 0, unchanged: 0, skipped: 0 },
+              closed_won: 2,
+              closed_lost: 1,
+            },
+          ],
+        }),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText("3 deals are imported as closed history"),
+    ).toBeVisible();
+    expect(screen.getByText(/2 won and 1 lost/)).toBeVisible();
+  });
+
+  it("says nothing of closed history when no deal lands closed", async () => {
+    const user = userEvent.setup();
+    stubRoutes({ [REPORT]: () => jsonResponse(bundleReportFixture) });
+    await renderAtTestRun(user);
+    await screen.findByText("1 row has invalid values and will be skipped");
+    expect(screen.queryByText(/closed history/)).not.toBeInTheDocument();
+  });
+
   it("names the file alone for a problem of the whole file, one row per tag", async () => {
     const user = userEvent.setup();
     const consoleError = vi.spyOn(console, "error");
@@ -460,16 +621,9 @@ describe("the test run", () => {
     expect(await screen.findByText(/K5 Conference/)).toBeVisible();
   });
 
-  it("asks nothing on leaving once a run is staged, even after a failed retest", async () => {
+  it("asks nothing on leaving a draft, which the server keeps", async () => {
     const user = userEvent.setup();
-    let stages = 0;
-    stubRoutes({
-      [REPORT]: () => jsonResponse(bundleReportFixture),
-      [`PATCH /imports/${run.id}`]: () => {
-        stages += 1;
-        return jsonResponse({ title: "Unavailable" }, 503);
-      },
-    });
+    stubRoutes();
     globalThis.location.hash = "#/settings/import/run";
     render(
       <UnsavedGuard address="run" onKeep={() => undefined}>
@@ -480,10 +634,7 @@ describe("the test run", () => {
       await screen.findByLabelText("Upload your data"),
       new File(["Email\nada@x.test\n"], "leads.csv"),
     );
-    await user.click(await screen.findByRole("button", { name: /Next: map/ }));
-    await user.click(screen.getByRole("button", { name: "Run test" }));
-    await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
-    await waitFor(() => expect(stages).toBe(1));
+    await screen.findByRole("button", { name: /Next: map/ });
     const leaving = new Event("beforeunload", { cancelable: true });
     globalThis.dispatchEvent(leaving);
     expect(leaving.defaultPrevented).toBe(false);

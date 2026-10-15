@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Disclosure } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
+import { Disclosure, DisclosureGroup } from "../design-system/disclosure";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
@@ -118,46 +119,46 @@ export function CompanyRail({
         </>
       )}
       <Panel>
-        {resolved && (
+        <DisclosureGroup>
+          {resolved && (
+            <Disclosure
+              className="co-sect"
+              summary={<SectionSummary title={t("record.registration")} />}
+            >
+              <PanelBody>
+                <CompanyProfileDetails company={resolved} />
+              </PanelBody>
+            </Disclosure>
+          )}
           <Disclosure
             className="co-sect"
-            open
-            summary={<SectionSummary title={t("record.registration")} />}
+            summary={<SectionSummary title={t("assignments.title")} />}
           >
-            <PanelBody>
-              <CompanyProfileDetails company={resolved} />
-            </PanelBody>
+            <RecordTeam
+              recordType="company"
+              recordId={companyId}
+              readOnly={!canWriteCompany}
+              bare
+            />
           </Disclosure>
-        )}
-        <Disclosure
-          className="co-sect"
-          open
-          summary={<SectionSummary title={t("assignments.title")} />}
-        >
-          <RecordTeam
-            recordType="company"
-            recordId={companyId}
-            readOnly={!canWriteCompany}
-            bare
-          />
-        </Disclosure>
-        {/* Both summaries stand on EVERY tab, the open one included: the
+          {/* Both summaries stand on every tab, the open one included: the
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
-        {/* The server refuses an archived account's 360 and its lists. */}
-        {!resolved?.archived_at && (
-          <>
-            <DealsSection view={view} loading={loading} onTab={onTab} />
-            <ProjectsSection view={view} loading={loading} onTab={onTab} />
-            <ContactsSection view={view} loading={loading} onTab={onTab} />
-            <ListsSection companyId={companyId} />
-          </>
-        )}
-        <CompanyHoldSection company={resolved} />
-        {/* Beside the hold, and for the same reason: both are about the
+          {/* The server refuses an archived account's 360 and its lists. */}
+          {!resolved?.archived_at && (
+            <>
+              <DealsSection view={view} loading={loading} onTab={onTab} />
+              <ProjectsSection view={view} loading={loading} onTab={onTab} />
+              <ContactsSection view={view} loading={loading} onTab={onTab} />
+              <ListsSection companyId={companyId} />
+            </>
+          )}
+          <CompanyHoldSection company={resolved} />
+          {/* Beside the hold, and for the same reason: both are about the
             account's mail DOMAIN rather than about the work on it. */}
-        <CompanyTriageSection companyId={companyId} />
+          <CompanyTriageSection companyId={companyId} />
+        </DisclosureGroup>
       </Panel>
     </div>
   );
@@ -233,6 +234,7 @@ function ContactsSection({
   // twenty-five arrived.
   const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
+  // Starts open while the reader has opened no other section of the rail.
   return (
     <Disclosure
       className="co-sect"

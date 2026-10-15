@@ -142,10 +142,15 @@ export const ReadOnly: Story = {
   render: () => <Card grants={{ tag: ["read"] }} />,
 };
 
-/** Before the first word. It says what the feature is for rather than
- * reporting that a list is empty. */
+/** Before the first word: one empty line under the intro, in the same body,
+ * and the create verb in the head. */
 export const Empty: Story = {
   render: () => <Card words={[]} />,
+};
+
+/** The same empty list for a seat that cannot add a word. */
+export const EmptyReadOnly: Story = {
+  render: () => <Card words={[]} grants={{ tag: ["read"] }} />,
 };
 
 /**

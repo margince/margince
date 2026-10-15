@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { EntityRef } from "../components/entityref";
 import { Badge, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { StatStrip } from "../design-system/statstrip";
+import type { TeamWeeklyReview } from "../features/worklist/teamweekly.queries";
 import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isEntityKind } from "../lib/entity";
 import { checkLabel, SeverityBadge } from "./analytics.forecast.review";
-import { EntityRef } from "./entityref";
-import type { TeamWeeklyReview } from "./teamweekly.queries";
 
 import "./brief.teamweekly.css";
 

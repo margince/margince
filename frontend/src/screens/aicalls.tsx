@@ -1,20 +1,14 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
-import { Button, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Button, EmptyState, Field } from "../design-system/atoms";
+import { FilterBar } from "../design-system/filterbar";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   LoadMoreButton,
   QueryGate,
   QueryStates,
 } from "../design-system/querystates";
 import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
@@ -128,6 +122,7 @@ export const CALL_TASK_PARAM = "task";
 export const CALL_FILTER_PARAMS = [
   "provider",
   "model",
+  "served_model",
   "served_provider",
   "tier",
 ] as const;
@@ -188,9 +183,8 @@ export function AiCallsCard() {
     // claim about the data rather than about who may read it. No request either:
     // the query is disabled, because a settled denial is not a failure to retry.
     return (
-      <Panel title={t("aicalls.title")}>
+      <Panel>
         <PanelBody>
-          <PanelIntro>{t("aicalls.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aicalls.title")}>
             {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
           </QueryGate>
@@ -199,77 +193,76 @@ export function AiCallsCard() {
     );
   }
 
+  const filtered = Object.keys(filter).length > 0;
   // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
-    <Panel title={t("aicalls.title")} className="aicalls-card">
-      <PanelBody>
-        <PanelIntro>{t("aicalls.sub")}</PanelIntro>
-        {query.data === undefined && (
-          <QueryStates query={query} pendingLabel={t("aicalls.title")}>
-            {null}
-          </QueryStates>
-        )}
-      </PanelBody>
+    <>
       {query.data !== undefined && (
-        <>
-          <SettingList bleed="settings">
-            <SettingRow
-              label={t("aicalls.col.task")}
-              control={(control) => (
-                <Select
-                  {...control}
-                  className="settingrow-measure"
-                  value={task}
-                  onChange={setTask}
-                  // "All tasks" is a real option, not the placeholder: a reader
-                  // who filtered to one task has to be able to come back.
-                  options={[
-                    { value: "", label: t("aicalls.filter.all") },
-                    ...options.map((option) => ({
-                      value: option.task,
-                      label: option.display_name ?? option.task,
-                    })),
-                  ]}
-                />
-              )}
-            />
-          </SettingList>
-          {Object.keys(filter).length > 0 && (
-            <PanelBody>
-              <Callout
-                tone="info"
-                title={t("aicalls.filtered", {
-                  filter: filterWords(filter, t),
-                })}
-              >
-                <Button variant="link" onClick={clearFilter}>
-                  {t("aicalls.filtered.clear")}
-                </Button>
-              </Callout>
-            </PanelBody>
-          )}
-          <PanelGroupHead title={t("aicalls.callsLabel")} level="h3" />
-          {calls.length === 0 ? (
-            <PanelBody>
-              <EmptyState>{t("aicalls.empty")}</EmptyState>
-            </PanelBody>
-          ) : (
-            <CallTable calls={calls} captureEnabled={captureEnabled} />
-          )}
-          {query.hasNextPage && (
-            <PanelBody>
-              <LoadMoreButton query={query} />
-            </PanelBody>
-          )}
-        </>
+        <FilterBar
+          label={t("aicalls.filters")}
+          actions={
+            filtered ? (
+              <Button variant="link" onClick={clearFilter}>
+                {t("aicalls.filtered.clear")}
+              </Button>
+            ) : null
+          }
+          caption={
+            filtered
+              ? t("aicalls.filtered", { filter: filterWords(filter, t) })
+              : undefined
+          }
+        >
+          <Field label={t("aicalls.col.task")} className="aicalls-task">
+            {(field) => (
+              <Select
+                {...field}
+                value={task}
+                onChange={setTask}
+                // "All tasks" is a real option, not the placeholder: a reader
+                // who filtered to one task has to be able to come back.
+                options={[
+                  { value: "", label: t("aicalls.filter.all") },
+                  ...options.map((option) => ({
+                    value: option.task,
+                    label: option.display_name ?? option.task,
+                  })),
+                ]}
+              />
+            )}
+          </Field>
+        </FilterBar>
       )}
-    </Panel>
+      <Panel className="aicalls-card">
+        {query.data === undefined && (
+          <PanelBody>
+            <QueryStates query={query} pendingLabel={t("aicalls.title")}>
+              {null}
+            </QueryStates>
+          </PanelBody>
+        )}
+        {query.data !== undefined && calls.length === 0 && (
+          <PanelBody>
+            <EmptyState>{t("aicalls.empty")}</EmptyState>
+          </PanelBody>
+        )}
+        {calls.length > 0 && (
+          <CallTable calls={calls} captureEnabled={captureEnabled} />
+        )}
+        {query.hasNextPage && (
+          <PanelBody>
+            <LoadMoreButton query={query} />
+          </PanelBody>
+        )}
+      </Panel>
+    </>
   );
 }
 
 const FILTER_TERM = {
   provider: "aiTerms.provider",
   model: "aicalls.col.model",
+  served_model: "aicalls.filter.servedModel",
   served_provider: "aicalls.filter.servedProvider",
   tier: "aiTerms.tier",
 } as const satisfies Record<CallFilterParam, MessageKey>;

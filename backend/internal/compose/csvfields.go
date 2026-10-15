@@ -55,13 +55,17 @@ const fieldTitle = "title"
 // rows as leads rather than as contacts.
 const leadStatusNew = "new"
 
+// leadTargetStatus is the lead's status column. A file may place a lead only
+// on the open ladder; the terminal statuses go through promote and disqualify.
+const leadTargetStatus = "status"
+
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
 // honouring the file on the second upload.
 //
 // The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -71,6 +75,17 @@ var csvTargets = map[string][]string{
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
 	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	// A stage change is an advance (dealUpdateFrom); the lost reason is written once.
+	migration.ObjectDeal: {
+		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,
+		csvTargetCompanyRef, dealTargetContactRef, csvTargetOwner, csvTargetTags, descriptionField, dealTargetLostReason,
+	},
+	// The kind, direction and links are fixed when an activity lands (isCreateOnlyTarget).
+	// An activity carries no tags and no custom fields.
+	migration.ObjectActivity: {
+		activityTargetType, activityTargetSubject, activityTargetBody, activityTargetOccurredAt, activityTargetLinks,
+		activityTargetDuration, activityTargetMeetingStatus, activityTargetDirection, csvTargetAuthor, csvTargetOwner,
+	},
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -126,6 +141,10 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectLead:    fieldEmail,
 	migration.ObjectCompany: fieldDisplayName,
 	migration.ObjectContact: fieldEmail,
+	// Two deals may share a name, so a deal is known only by its ref.
+	migration.ObjectDeal: csvTargetRef,
+	// An activity has no natural key at all.
+	migration.ObjectActivity: csvTargetRef,
 }
 
 // importTargets is the closed set a mapping may name for one object: its core
@@ -136,7 +155,9 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 		return nil, fmt.Errorf("import: %q has no mappable fields", object)
 	}
 	targets := append([]string(nil), core...)
-	targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
+	if hasCustomFields(object) {
+		targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
+	}
 	if selectsByID(object) {
 		// Accepted as a column and absent from csvTargets, because those two
 		// lists answer different questions. csvTargets is what a row WRITES, and
@@ -152,6 +173,10 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 	}
 	return append(targets, csvTargetRef), nil
 }
+
+// hasCustomFields reports whether an object's store takes custom-field cells.
+// The activities store has no member for them.
+func hasCustomFields(object string) bool { return object != migration.ObjectActivity }
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
@@ -183,7 +208,7 @@ func linksEmployer(object string) bool {
 // report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
 	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
-		field == csvTargetCompanyRef || field == csvTargetTags
+		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -201,10 +226,20 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
+		// A deal's company is a column of the deal: its row carries the id its
+		// ref resolved to, and a different one is a change.
+		if field == csvTargetCompanyRef && dealCompanyChanged(current, typed) {
+			changed[field] = incoming
+		}
 		// `id`, `ref` and the employer column are not values the record holds
 		// (isNonFieldTarget). The author is written on create only
 		// (isCreateOnlyTarget).
 		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
+			continue
+		}
+		// An empty box changes nothing, so it is never an update. A lead's
+		// status would otherwise read as moved to nothing on every re-import.
+		if field == leadTargetStatus && incoming == "" {
 			continue
 		}
 		want := canonicalFor(field, incoming)
@@ -235,6 +270,15 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 // value compared as changed — which, on the update path, rewrote the whole
 // address on every re-import of an unchanged file.
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
+	if column, renamed := dealStoredColumns[field]; renamed {
+		return current[column]
+	}
+	if column, renamed := activityStoredColumns[field]; renamed {
+		return current[column]
+	}
+	if field == activityTargetOccurredAt {
+		return storedInstant(current[field])
+	}
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
 		// These targets may name a child collection, not a column. A flat
@@ -319,6 +363,9 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 		Author:       authorFrom(fields),
 		OwnerID:      ownerFrom(fields, typed),
 	}
+	if status, ok := typed[leadTargetStatus].(string); ok {
+		in.Status = status
+	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
 	in.Phone = checkedString(fields, typed, fieldPhone)
@@ -331,7 +378,14 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
+	var status *string
+	if text, ok := typed[leadTargetStatus].(string); ok {
+		if _, given := changed[leadTargetStatus]; given {
+			status = &text
+		}
+	}
 	return contacts.UpdateLeadInput{
+		Status:       status,
 		FullName:     importString(changed, fieldFullName),
 		Email:        importString(changed, fieldEmail),
 		Phone:        checkedString(changed, typed, fieldPhone),

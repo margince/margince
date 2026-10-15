@@ -14,9 +14,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
+import type { Transport } from "../features/contacts/contacttransports";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
-import type { Transport } from "./contacttransports";
 import {
   allowedPreview,
   isPreviewDoor,

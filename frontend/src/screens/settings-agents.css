@@ -37,7 +37,13 @@
   flex-wrap: wrap;
   gap: var(--space-1);
   inline-size: max-content;
-  max-inline-size: 15rem;
+  max-inline-size: 11rem;
+}
+
+/* A passport's name with this window's usage under it. */
+.agents-name-usage {
+  display: grid;
+  gap: var(--space-2);
 }
 
 /* The dates under the name, only once the row has folded and their own
@@ -85,4 +91,34 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* An allowance's figures over its bar. The figures never wrap, so a column of
+   meters lines its bars up. */
+.agent-usage-meter {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 6.5rem;
+}
+.agent-usage-figures {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Sized by the row it opens under, never the other way round: as wide as its
+   cell and no wider, so opening a row does not widen the table. */
+.agent-usage-meters {
+  display: grid;
+  inline-size: 0;
+  min-inline-size: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+.agent-usage-cell {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  inline-size: 8rem;
 }

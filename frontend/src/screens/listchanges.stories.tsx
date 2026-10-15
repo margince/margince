@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
+import type { List } from "../lib/lists.queries";
+import { changesSinceVisit } from "../testing/lists.fixtures";
 import { StoryProviders } from "../testing/story-utils";
 import { ListChangeSummary } from "./listchanges";
-import { changesSinceVisit } from "./lists.fixtures";
-import type { List } from "./lists.queries";
 
 // What changed on a Live List since the reader's last visit, as one sentence.
 // The newest records are named, and a record type with a page opens from here.

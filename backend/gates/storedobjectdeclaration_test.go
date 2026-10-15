@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -32,12 +33,16 @@ import (
 // the ledger exists to close, so the positions are compared rather than counted.
 func TestEveryStoredObjectWriterDeclaresItsIntent(t *testing.T) {
 	t.Parallel()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	puts := map[string]int{}
 	declaring := map[string]int{}
 	helperCalls := map[string]map[string]int{}
 	for _, file := range goSourceFiles(t, root) {
-		rel := strings.TrimPrefix(strings.TrimPrefix(file, root), "/")
+		rel, err := filepath.Rel(root, file)
+		if err != nil {
+			t.Fatalf("spelling %s relative to the module root: %v", file, err)
+		}
+		rel = filepath.ToSlash(rel)
 		if strings.HasSuffix(rel, "_test.go") || strings.HasPrefix(rel, "internal/platform/blobstore/") {
 			continue
 		}

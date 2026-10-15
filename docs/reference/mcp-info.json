@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 179445,
+    "tool_catalog_bytes": 179719,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45751,
+    "approx_wire_tokens_total": 45819,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 49596,
-      "input_schema_bytes": 53866,
-      "output_schema_bytes": 62244,
-      "description_plus_input_schema_bytes": 103462
+      "description_bytes": 49410,
+      "input_schema_bytes": 53902,
+      "output_schema_bytes": 62668,
+      "description_plus_input_schema_bytes": 103312
     }
   },
   "tools": {
@@ -2718,7 +2718,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and read_directory (list: pipelines) is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to the human you are acting for and to nobody else, until they publish it or correspondence with that address earns a widening verdict — attending a meeting together does not earn one. Do not tell anyone a contact you just created is on their colleagues' screens. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and read_directory (list: pipelines) is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5531,7 +5531,7 @@
           "readOnlyHint": false,
           "title": "Preview an import"
         },
-        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact or lead. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. Files that link to each other go together in `files`, at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's `company_ref` names a company's ref. read_import with view format lists each file's columns. create_record for one record you already know. Keep the run_id. The counts its report answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this checks every row against the workspace and reports what importing it would do. Writes nothing. `object` is company, contact, lead, deal or activity. Use `contact` for a file the business already knows — a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose email is already held, which is always refused, because an email is a real key. A company's Website or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops guessing from names. To link contacts to their employers, map the company column to `company_name` — import the companies FIRST, because a name that matches nothing links nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may both correct and add. Files that link to each other go together in `files`, at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's `company_ref` names a company's ref. read_import with view format lists each file's columns. create_record for one record you already know. Keep the run_id. The counts its report answers — created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a column this placed by a name they did not write is a decision they did not make. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -5562,7 +5562,9 @@
                     "enum": [
                       "company",
                       "lead",
-                      "contact"
+                      "contact",
+                      "deal",
+                      "activity"
                     ],
                     "type": "string"
                   }
@@ -5574,7 +5576,7 @@
                 ],
                 "type": "object"
               },
-              "maxItems": 3,
+              "maxItems": 5,
               "minItems": 1,
               "type": "array"
             },
@@ -5594,7 +5596,9 @@
               "enum": [
                 "company",
                 "lead",
-                "contact"
+                "contact",
+                "deal",
+                "activity"
               ],
               "type": "string"
             },
@@ -5729,7 +5733,16 @@
                           "line": {
                             "type": "integer"
                           },
+                          "params": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "type": "object"
+                          },
                           "reason": {
+                            "type": "string"
+                          },
+                          "reason_code": {
                             "type": "string"
                           },
                           "value": {
@@ -5757,7 +5770,16 @@
                               "from": {
                                 "type": "string"
                               },
+                              "params": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
                               "reason": {
+                                "type": "string"
+                              },
+                              "reason_code": {
                                 "type": "string"
                               },
                               "to": {
@@ -5789,6 +5811,12 @@
                     "parts": {
                       "items": {
                         "properties": {
+                          "closed_lost": {
+                            "type": "integer"
+                          },
+                          "closed_won": {
+                            "type": "integer"
+                          },
                           "disposition": {
                             "properties": {
                               "created": {
@@ -5862,6 +5890,9 @@
                               },
                               "reason": {
                                 "type": "string"
+                              },
+                              "reason_code": {
+                                "type": "string"
                               }
                             },
                             "required": [
@@ -5881,6 +5912,18 @@
                                 "type": "string"
                               },
                               "object": {
+                                "type": "string"
+                              },
+                              "params": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "reason_code": {
                                 "type": "string"
                               }
                             },

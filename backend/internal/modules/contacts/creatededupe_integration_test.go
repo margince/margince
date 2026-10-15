@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -531,5 +532,34 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 				t.Errorf("the candidate names %s, want the incumbent %s", pairs[0].OtherID, ids.UUID(first.Id))
 			}
 		})
+	}
+}
+
+// Twenty contacts, ten given names each shared by two contacts at one employer's
+// domain with different surnames and addresses: none is a possible duplicate.
+func TestCreatingContactsThatOnlyShareAGivenNameFilesNoCandidate(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	givenNames := []string{"Maria", "Thomas", "Sofia", "Daniel", "Laura", "Martin", "Julia", "Peter", "Nina", "Lukas"}
+	surnames := []string{"Vogel", "Brandt", "Keller", "Hartmann", "Lindner", "Schreiber", "Winter", "Albrecht", "Kaiser", "Neumann"}
+	var created []ids.UUID
+	for i, given := range givenNames {
+		for j, surname := range []string{surnames[i], surnames[(i+3)%len(surnames)] + "berg"} {
+			c, err := e.store.CreateContact(ctx, CreateContactInput{
+				FullName: given + " " + surname, Source: "manual",
+				Emails: []ContactEmailInput{{
+					Email: fmt.Sprintf("c%d-%d@acme.test", i, j), EmailType: "work", IsPrimary: true,
+				}},
+			})
+			if err != nil {
+				t.Fatalf("create %s %s: %v", given, surname, err)
+			}
+			created = append(created, ids.UUID(c.Id))
+		}
+	}
+	for _, id := range created {
+		if pairs := openCandidatePairs(ctx, t, e, "contact", id); len(pairs) != 0 {
+			t.Fatalf("contact %s filed %d candidates for a shared given name, want 0", id, len(pairs))
+		}
 	}
 }

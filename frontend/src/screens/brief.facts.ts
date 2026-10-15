@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatDateAbbrev } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import type { Locale } from "../i18n";
 import {
   loadedQueue,
   type Worklist,
   type WorklistItem,
-} from "./worklist.queries";
+} from "../features/worklist/worklist.queries";
+import { formatDateAbbrev } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import type { Locale } from "../i18n";
 
 type Source = WorklistItem["source"];
 

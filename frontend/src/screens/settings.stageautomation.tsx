@@ -6,12 +6,12 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { BusyMark, EmptyState } from "../design-system/atoms";
+import { BusyMark, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import {
   formatFinePercent,
@@ -93,10 +93,10 @@ export function StageAutomationCard() {
   const windowDays = report.data?.window_days ?? DEFAULT_WINDOW_DAYS;
   return (
     <>
-      <Panel title={t("stageAutomation.title")}>
-        <PanelBody>
-          <PanelIntro>{t("stageAutomation.intro")}</PanelIntro>
-          {(pipelines.data?.length ?? 0) > 1 && (
+      <Panel
+        title={t("stageAutomation.record")}
+        titleAction={
+          (pipelines.data?.length ?? 0) > 1 && (
             <Select
               aria-label={t("stageAutomation.pipeline")}
               value={chosen}
@@ -106,17 +106,21 @@ export function StageAutomationCard() {
                 label: pipeline.name,
               }))}
             />
-          )}
-          {rows.length === 0 && (
-            <EmptyState>{t("stageAutomation.empty")}</EmptyState>
-          )}
-        </PanelBody>
-        {rows.length > 0 && (
+          )
+        }
+      >
+        {rows.length === 0 ? (
+          <PanelBody>
+            <EmptyState plate title={t("stageAutomation.emptyTitle")}>
+              {t("stageAutomation.empty")}
+            </EmptyState>
+          </PanelBody>
+        ) : (
           <>
             <DataTable
               bleed
               stickyFirst
-              label={t("stageAutomation.title")}
+              label={t("stageAutomation.record")}
               columns={reportColumns(t, locale)}
               rows={rows}
               rowKey={(row) => `${row.from_stage_id}-${row.to_stage_id}`}
@@ -129,10 +133,12 @@ export function StageAutomationCard() {
                 render: (row) => <TransitionDetail row={row} />,
               }}
             />
-            {/* The short headings spelled out in view: a number you must hover
-                to understand is one contacts read wrong once and stop reading. */}
+            {/* The short headings spelled out one press away: a number nobody
+                can look up is one contacts read wrong once and stop reading. */}
             <PanelBody>
-              <FactList facts={glossary(t)} />
+              <Disclosure summary={t("stageAutomation.glossary")}>
+                <FactList facts={glossary(t)} />
+              </Disclosure>
             </PanelBody>
           </>
         )}
@@ -155,8 +161,10 @@ export function StageAutomationCard() {
 const GLOSSARY: readonly (readonly [string, MessageKey, MessageKey])[] = [
   ["reviewed", "stageAutomation.reviewed", "stageAutomation.reviewedHint"],
   ["clean", "stageAutomation.cleanAcceptance", "stageAutomation.acceptedHint"],
-  ["edits", "stageAutomation.edits", "stageAutomation.editedHint"],
   ["unsafe", "stageAutomation.unsafe", "stageAutomation.unsafeHint"],
+  ["edits", "stageAutomation.edits", "stageAutomation.editedHint"],
+  ["rejected", "stageAutomation.rejections", "stageAutomation.rejectedHint"],
+  ["open", "stageAutomation.open", "stageAutomation.openHint"],
   ["expired", "stageAutomation.expired", "stageAutomation.expiredHint"],
   [
     "observed",
@@ -173,7 +181,8 @@ function glossary(t: Translator): Fact[] {
   }));
 }
 
-// The counts beside the rates, and the evidence cut, behind the row's chevron.
+// The rest of the split, the counts beside the rates, and the evidence cut,
+// behind the row's chevron.
 function TransitionDetail({ row }: Readonly<{ row: TransitionRecord }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -198,6 +207,16 @@ function TransitionDetail({ row }: Readonly<{ row: TransitionRecord }>) {
     <FactList
       numeric
       facts={[
+        {
+          key: "edits",
+          term: t("stageAutomation.edits"),
+          value: rateCell(row.edit_rate, row.reviewed, locale),
+        },
+        {
+          key: "rejections",
+          term: t("stageAutomation.rejections"),
+          value: rateCell(row.rejection_rate, row.reviewed, locale),
+        },
         {
           key: "open",
           term: t("stageAutomation.open"),
@@ -240,7 +259,7 @@ function beforeTheReport(
   const { pipelines, report, chosen } = state;
   if (pipelines.isError || report.isError) {
     return (
-      <Panel title={t("stageAutomation.title")}>
+      <Panel title={t("stageAutomation.record")}>
         <PanelBody>
           <Callout
             tone="danger"
@@ -255,7 +274,7 @@ function beforeTheReport(
   }
   if (pipelines.isPending || (chosen !== "" && report.isPending)) {
     return (
-      <Panel title={t("stageAutomation.title")}>
+      <Panel title={t("stageAutomation.record")}>
         <PanelBody>
           <BusyMark />
         </PanelBody>
@@ -264,7 +283,7 @@ function beforeTheReport(
   }
   if (pipelines.data && pipelines.data.length === 0) {
     return (
-      <Panel title={t("stageAutomation.title")}>
+      <Panel title={t("stageAutomation.record")}>
         <PanelBody>
           <EmptyState>{t("stageAutomation.noPipelines")}</EmptyState>
         </PanelBody>
@@ -304,7 +323,8 @@ function unsafeCell(rate: number, reviewed: number, locale: Locale): string {
   return formatFinePercent(rate, locale);
 }
 
-// Only the volume and the rates stand in columns, so the table fits its pane at desktop width.
+// Columns hold the volume and the two rates a rule's threshold reads, so the
+// table fits its pane at desktop width. The rest of the split opens per row.
 function reportColumns(
   t: Translator,
   locale: Locale,
@@ -339,12 +359,6 @@ function reportColumns(
     ),
     figure("clean", t("stageAutomation.cleanAcceptance"), (row) =>
       rateCell(row.clean_acceptance_rate, row.reviewed, locale),
-    ),
-    figure("edits", t("stageAutomation.edits"), (row) =>
-      rateCell(row.edit_rate, row.reviewed, locale),
-    ),
-    figure("rejections", t("stageAutomation.rejections"), (row) =>
-      rateCell(row.rejection_rate, row.reviewed, locale),
     ),
     figure("unsafe", t("stageAutomation.unsafe"), (row) =>
       unsafeCell(row.unsafe_rate, row.reviewed, locale),

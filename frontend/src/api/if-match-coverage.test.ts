@@ -38,9 +38,9 @@ const srcRoot = join(apiDir, "..");
 const UNPINNED_WRITES: readonly string[] = [
   // A proposal's list entry carries no version to pin; withdrawing archives it,
   // so two withdrawals racing end in the one state either would reach alone.
-  "screens/contactmeetings.waiting.tsx DELETE /activities/{id}",
+  "features/contacts/contactmeetings.waiting.tsx DELETE /activities/{id}",
   // Relationship archives still need their record version threaded through.
-  "screens/contactemployers.tsx DELETE /relationships/{id}",
+  "features/contacts/contactemployers.tsx DELETE /relationships/{id}",
   "screens/relationshiprows.tsx DELETE /relationships/{id}",
   "screens/contractwrites.ts PATCH /contracts/{id}",
   "screens/customfields.tsx PATCH /custom-fields/{id}",

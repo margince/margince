@@ -1,39 +1,59 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { ErrorLine } from "../design-system/errorline";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ImportContextTag } from "./import.contexttag";
-import type { ImportWizardState, WizardFile } from "./importflow";
+import { ImportRefusal } from "./import.notices";
+import type { WizardFile } from "./importflow";
 import type { ImportFormat, ImportObject, ImportProfile } from "./importtypes";
 import { isImportObject } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
 /** The drop zone the hub and the wizard's first step share. */
 export function ImportDropzone({
   sizeLimitMb,
   onPick,
-}: Readonly<{ sizeLimitMb?: number; onPick: (file: File) => void }>) {
+  csvOnly = false,
+}: Readonly<{
+  sizeLimitMb?: number;
+  onPick: (file: File) => void;
+  /** A file for one contact's activities is a single CSV, never a ZIP. */
+  csvOnly?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
+  const [refused, setRefused] = useState(false);
+  // A drop skips the picker's `accept` filter, so a CSV-only zone checks here.
+  const pick = (file: File) => {
+    const isCsv = file.name.toLowerCase().endsWith(".csv");
+    setRefused(csvOnly && !isCsv);
+    if (!csvOnly || isCsv) onPick(file);
+  };
   return (
-    <FileDropzone
-      label={t("import.hub.uploadLabel")}
-      hint={
-        sizeLimitMb === undefined
-          ? undefined
-          : t("import.hub.uploadHint", {
-              mb: formatNumber(sizeLimitMb, locale),
-            })
-      }
-      emptyLabel={t("import.hub.uploadEmpty")}
-      accept=".zip,.csv"
-      onPick={onPick}
-    />
+    <>
+      <FileDropzone
+        label={t("import.hub.uploadLabel")}
+        hint={
+          sizeLimitMb === undefined
+            ? undefined
+            : t("import.hub.uploadHint", {
+                mb: formatNumber(sizeLimitMb, locale),
+              })
+        }
+        emptyLabel={t("import.hub.uploadEmpty")}
+        accept={csvOnly ? ".csv" : ".zip,.csv"}
+        onPick={pick}
+      />
+      {refused ? <ErrorLine>{t("import.hub.csvOnly")}</ErrorLine> : null}
+    </>
   );
 }
 
@@ -117,20 +137,23 @@ export function FilesStep({
           {
             key: "type",
             header: t("import.files.col.type"),
-            render: (file) => (
-              <Select
-                options={types}
-                value={wizard.objects[file.file] ?? ""}
-                disabled={wizard.upload.isPending}
-                onChange={(next) =>
-                  wizard.setFileObject(
-                    file.file,
-                    isImportObject(next) ? next : null,
-                  )
-                }
-                aria-label={t("import.files.typeFor", { file: file.file })}
-              />
-            ),
+            render: (file) =>
+              wizard.presetContact ? (
+                t("import.object.activity")
+              ) : (
+                <Select
+                  options={types}
+                  value={wizard.objects[file.file] ?? ""}
+                  disabled={wizard.upload.isPending}
+                  onChange={(next) =>
+                    wizard.setFileObject(
+                      file.file,
+                      isImportObject(next) ? next : null,
+                    )
+                  }
+                  aria-label={t("import.files.typeFor", { file: file.file })}
+                />
+              ),
           },
         ]}
       />
@@ -151,8 +174,18 @@ export function FilesStep({
         value={wizard.contextTagID}
         onChange={wizard.setContextTagID}
       />
+      {wizard.cancelling.error ? (
+        <ImportRefusal
+          title={t("import.cancelFailed")}
+          error={wizard.cancelling.error}
+        />
+      ) : null}
       <div className="import__actions">
-        <Button variant="ghost" onClick={wizard.reset}>
+        <Button
+          variant="ghost"
+          pending={wizard.cancelling.isPending}
+          onClick={wizard.cancel}
+        >
           {t("import.wizard.cancel")}
         </Button>
         <Button

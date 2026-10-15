@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
@@ -84,7 +85,7 @@ describe("TeamAct", () => {
     expect(screen.queryByLabelText(/New user's full name/)).toBeNull();
     // The form's own heading stays in the settings dialog: here the scene's
     // title has already said it.
-    expect(screen.queryByText("Invite user")).not.toBeInTheDocument();
+    expect(screen.queryByText(en["users.inviteTitle"])).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Skip for now" }),
     ).toBeInTheDocument();

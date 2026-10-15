@@ -33,6 +33,7 @@ import { rowsOf } from "../api/rows";
 import { SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { sourceUnavailableText } from "../features/worklist/worklist.copy";
 import { floorFigure } from "../format/figure";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -51,7 +52,6 @@ import {
   useMagic,
 } from "./magic.queries";
 import { MagicTimeline, spansDays } from "./magic.timeline";
-import { sourceUnavailableText } from "./worklist.copy";
 import "./brief.css";
 
 // The reading order: what waits on you, what broke, what needs restoring, and

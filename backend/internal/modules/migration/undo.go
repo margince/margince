@@ -57,6 +57,21 @@ type UndoWriters interface {
 type KeptRow struct {
 	Object string   `json:"object"`
 	ID     ids.UUID `json:"id"`
+	// Reason is Code's sentence; Code and Params let a screen say it in the
+	// reader's language. A report written before kept rows carried one has none.
+	Reason string     `json:"reason,omitempty"`
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
+}
+
+// KeptError is a refusal of one row's reversal that leaves the row in place,
+// with the reason the report shows beside it. It is not a failure of the row.
+type KeptError struct{ Why Reason }
+
+func (e *KeptError) Error() string { return e.Why.English() }
+
+func keptRow(r mapRow, why Reason) KeptRow {
+	return KeptRow{Object: r.object, ID: r.nativeID, Reason: why.English(), Code: why.Code, Params: why.Params}
 }
 
 // ErroredRow is one import-created row the reversal could not archive — a
@@ -66,6 +81,8 @@ type ErroredRow struct {
 	Object string   `json:"object"`
 	ID     ids.UUID `json:"id"`
 	Reason string   `json:"reason"`
+	// Code is Reason as a code a screen can say in the reader's language.
+	Code ReasonCode `json:"reason_code,omitempty"`
 }
 
 // UndoReport is the reversal outcome (IEM-WIRE-9). Every row this run
@@ -96,16 +113,21 @@ type mapRow struct {
 // caller must treat as fatal to the current pass rather than recording.
 func reverseOneRow(ctx context.Context, w UndoWriters, r mapRow, touched bool, rep *UndoReport) error {
 	if touched {
-		rep.Kept = append(rep.Kept, KeptRow{Object: r.object, ID: r.nativeID})
+		rep.Kept = append(rep.Kept, keptRow(r, Why(ReasonUndoEdited)))
 		return nil
 	}
 	err := w.Reverse(ctx, r.object, r.nativeID, r.createdAt)
+	var kept *KeptError
 	switch {
+	case errors.As(err, &kept):
+		rep.Kept = append(rep.Kept, keptRow(r, kept.Why))
+		return nil
 	case err == nil:
 		rep.ReversedCount++
 		return nil
 	case isRowRefusal(err):
-		rep.Errored = append(rep.Errored, ErroredRow{Object: r.object, ID: r.nativeID, Reason: reversalRefusalReason(err)})
+		why := reversalRefusalReason(err)
+		rep.Errored = append(rep.Errored, ErroredRow{Object: r.object, ID: r.nativeID, Reason: why.English(), Code: why.Code})
 		return nil
 	default:
 		return err
@@ -124,24 +146,21 @@ func isRowRefusal(err error) bool {
 		errors.Is(err, apperrors.ErrConflict)
 }
 
-// reversalRefusalReason turns a Reverse error into the operator-facing
-// sentence errored rows carry — never a database or driver message, the
-// same discipline the forward commit's SkippedRow reasons already keep.
-func reversalRefusalReason(err error) string {
+// reversalRefusalReason turns a Reverse error into the operator-facing cause
+// errored rows carry. It is never a database or driver message, the same rule
+// the forward commit's SkippedRow reasons keep.
+func reversalRefusalReason(err error) Reason {
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return "the caller's grant no longer covers this record"
+		return Why(ReasonUndoGrantLost)
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "the record is no longer visible to this caller"
+		return Why(ReasonUndoNotVisible)
 	case errors.Is(err, apperrors.ErrConflict):
-		return "the record refused the reversal (a business rule protects it)"
+		return Why(ReasonUndoRuleProtects)
 	default:
-		return "the record could not be reversed"
+		return Why(ReasonUndoFailed)
 	}
 }
-
-// ErrRunWritesHeld refuses a commit or undo slice while another holds the run.
-var ErrRunWritesHeld = fmt.Errorf("another commit or undo of this import run is under way: %w", apperrors.ErrConflict)
 
 // importRunWriteClass is the advisory-lock namespace of import run writes: the
 // two-argument form, apart from the flip's single-argument liveness key.
@@ -225,7 +244,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 			return fmt.Errorf("reading import run %s: %w", id, err)
 		}
 		if run.Connector != ConnectorCSV {
-			return fmt.Errorf("import run %s is a %s run, and undo is built for csv only: %w", id, run.Connector, apperrors.ErrConflict)
+			return RefuseRun(id, "this import came from another source, and undo is built for CSV files only")
 		}
 		before := run.Status
 		rep, err := undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
@@ -236,6 +255,17 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		if err != nil {
 			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
 		}
+		plan, err := undoPlanOf(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		// The totals are known before the first row moves, so a reader sees
+		// "0 of N" while the job waits. No phase until a worker claims it.
+		shown, _ := plan.at(run.Checkpoint)
+		progress, err := json.Marshal(shown)
+		if err != nil {
+			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
+		}
 		actor, err := encodeActorOf(ctx)
 		if err != nil {
 			return err
@@ -243,9 +273,10 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		// A new attempt for every undo request, so a job queued for an older one is fenced off.
 		if err := execHoldingName(ctx, tx, id, `
 			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now(), error = NULL,
-			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6
+			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6,
+			       progress = $7, phase = NULL, phase_object = NULL, progress_at = now(), heartbeat_at = now()
 			 WHERE id = $1`,
-			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7()); err != nil {
+			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7(), progress); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
@@ -278,14 +309,14 @@ func undoStartReport(ctx context.Context, tx pgx.Tx, run *Run, reportRaw, undoRe
 		return UndoReport{UpdatesNotReversed: updated}, nil
 	case StatusUndoing:
 		if len(undoReportRaw) == 0 {
-			return UndoReport{}, fmt.Errorf("import run %s is undoing with no recorded progress: %w", run.ID, apperrors.ErrConflict)
+			return UndoReport{}, RefuseRun(run.ID, "this import is undoing with no recorded progress, so it cannot continue")
 		}
 		if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
 			return UndoReport{}, fmt.Errorf("decoding import run %s undo progress: %w", run.ID, err)
 		}
 		return rep, nil
 	default:
-		return UndoReport{}, fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", run.ID, run.Status, apperrors.ErrConflict)
+		return UndoReport{}, RefuseRun(run.ID, "this import is %s, not complete, so it cannot be undone", statusWords(run.Status))
 	}
 }
 
@@ -321,15 +352,12 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 }
 
 // humanTouchedSince names which of the given rows a human has touched since
-// THAT ROW was created — not since the run finished (a run resumed or
-// re-entered long after its rows landed would otherwise miss an edit made
-// while it was still in flight). Joined directly against
-// import_record_map.created_at in SQL rather than a single run-level
-// instant passed from Go, one indexed scan per object class.
+// the row was created, not since the run finished. A resumed run would
+// otherwise miss an edit made while it was in flight. The join is against
+// import_record_map.created_at in SQL, one indexed scan per object class.
 //
-// "Touched" is any human-actor audit row on the entity, not only an update:
-// a human who archived an imported row is the case A93 protects. A row
-// audited under this run's own batch is the import's own write.
+// "Touched" is any human-actor audit row on the entity, including an archive.
+// A row audited under any import run's batch is an import's own write.
 func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRow) (map[ids.UUID]bool, error) {
 	touched := map[ids.UUID]bool{}
 	if len(rows) == 0 {
@@ -350,7 +378,7 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 				     SELECT 1 FROM audit_log a
 				      WHERE a.entity_type = $2 AND a.entity_id = m.native_id
 				        AND a.actor_type = 'human' AND a.occurred_at > m.created_at
-				        AND a.batch_id IS DISTINCT FROM m.import_run_id)`,
+				        AND `+storekit.AuditNotFromAnImport+`)`,
 				id, object, nativeIDs)
 			if err != nil {
 				return fmt.Errorf("checking which %s rows a human touched since import: %w", object, err)

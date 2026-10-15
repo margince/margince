@@ -298,7 +298,7 @@ func attachHeldTx(body *txBorrowing, fn *ast.FuncDecl, holders map[string][]stri
 // already failed.
 func txHoldingReceivers(t *testing.T, roots []string) (map[string]map[string][]string, map[string]map[string]map[string]bool) {
 	t.Helper()
-	tree := moduleRoot(t)
+	tree := gatekit.ModuleRoot(t)
 	out := map[string]map[string][]string{}
 	declared := map[string]map[string]map[string]bool{}
 	for _, root := range roots {

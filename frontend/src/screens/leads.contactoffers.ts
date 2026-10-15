@@ -7,9 +7,9 @@
 // splits them in two.
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { CreateField } from "../components/create";
+import type { NameOffer, NameOffers } from "../components/create.offered";
 import { unwrap } from "../lib/problem";
-import type { CreateField } from "./create";
-import type { NameOffer, NameOffers } from "./create.offered";
 
 type Contact = components["schemas"]["Contact"];
 

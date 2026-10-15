@@ -100,12 +100,6 @@ var unpinnableConfirmFirstTypes = gatekit.Waive(map[agentRecordType]string{
 		"refuse on state before any pin could speak. The residue is the diff_hash identical-call " +
 		"binding, and it is narrower here than elsewhere: the only argument is the run id, so a " +
 		"drifted call is a different run and fails the hash.",
-	"custom_field": "custom_field HAS a version column (migrations/core/0063) but nothing maintains it: " +
-		"the catalog's own writers (customfields' rename, options and retire paths) issue bare UPDATEs " +
-		"rather than storekit's guarded patch, so the column never leaves 1 and never takes an If-Match. " +
-		"A pin over it would re-check a constant and pass always. The serialization that does hold is the " +
-		"DDL engine's lock on the catalog row itself. Pinning becomes correct when those three writers " +
-		"move onto the guarded patch — not before.",
 })
 
 // Every operation that can stage against a concrete record type must have a type
@@ -208,14 +202,14 @@ func TestRedemptionCarriesThePinOntoTheForwardedRequest(t *testing.T) {
 // to, and inventing a version would refuse a legitimate redemption.
 func TestRedemptionWithoutAPinLeavesIfMatchAlone(t *testing.T) {
 	approvalID := ids.New[ids.ApprovalKind]()
-	pol := agentPolicy{Op: "createCustomField", Access: accessTool, Tool: "create_record", RecordType: recordTypeCustomField}
+	pol := agentPolicy{Op: "createProduct", Access: accessTool, Tool: "create_record", RecordType: recordTypeProduct}
 
 	var forwarded string
 	next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		forwarded = r.Header.Get("If-Match")
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/custom-fields", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v1/products", nil)
 	req.Header.Set(approvalTokenHeader, approvalID.String())
 
 	if handled, _ := redeemIfPresented(httptest.NewRecorder(), req, next, &capturingApprovals{}, pol, nil); !handled {

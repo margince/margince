@@ -4,9 +4,10 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ImportDropzone } from "./import.files";
 import {
   formatFixture,
   jsonResponse,
@@ -64,6 +65,7 @@ describe("the files step", () => {
     });
 
     cleanup();
+    globalThis.location.hash = "";
     const again = stubRoutes();
     render(<ImportWizardPage />);
     await user.upload(
@@ -129,5 +131,30 @@ describe("the files step", () => {
     expect(
       screen.getByText("Choose a record type for at least one file."),
     ).toBeVisible();
+  });
+});
+
+describe("a CSV-only drop zone", () => {
+  function drop(onPick: (file: File) => void, file: File) {
+    render(<ImportDropzone csvOnly onPick={onPick} />);
+    fireEvent.drop(screen.getByLabelText("Upload your data"), {
+      dataTransfer: { files: [file] },
+    });
+  }
+
+  it("refuses a dropped ZIP with a note and passes nothing on", () => {
+    const onPick = vi.fn();
+    drop(onPick, new File(["PK"], "crm.zip"));
+    expect(onPick).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Only a CSV file can be imported here",
+    );
+  });
+
+  it("accepts a dropped CSV", () => {
+    const onPick = vi.fn();
+    drop(onPick, new File(["a,b"], "Calls.CSV"));
+    expect(onPick).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

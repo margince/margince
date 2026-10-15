@@ -1,0 +1,32 @@
+name: interest_in_words_the_description_does_not_use
+task: tag_suggest
+site: interest
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The reason this site exists. The buyer wants what the tag describes and shares
+# no word with the description: Excel for spreadsheets, month-end close for
+# bookkeeping. A phrase match finds nothing here; a reader of meaning does.
+fixture:
+  tags:
+    - key: ledger_migration
+      name: 'Ledger migration'
+      description: 'wants to move their bookkeeping off spreadsheets'
+  items:
+    - kind: email
+      subject: 'Month-end'
+      body: |
+        Hi Jan,
+
+        We still do our whole month-end close in Excel, and it eats two days
+        of my team's time every month. Is that something you could take off
+        our hands? Happy to talk next week.
+
+        Petra
+expect:
+  outcome: accepted
+  answer: [[ledger_migration]]
+  judge: none
+  judge_none_reason: >
+    The answer is a closed set of tag keys per item, and the check requires
+    each item's set exactly. A rubric could only rank wrong sets, which the
+    check fails outright.

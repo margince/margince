@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -186,5 +187,6 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.Version = &version
 	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
+	o.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	return o, nil
 }

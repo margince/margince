@@ -426,11 +426,10 @@
      so the number belongs to the house rather than to whichever rule reaches
      for it first. Left to each caller it drifted — a head carrying a description stood
      taller than a head carrying a button, and two screens re-spaced the band
-     themselves — so the same card was a different object on two pages. Fixed
-     rather than a floor: what does not fit on one band is not header content
-     and goes in the body. One value at every viewport, the touch arm below
-     included, because the band holds no target of its own — the controls inside
-     it take the pointer rungs. */
+     themselves — so the same card was a different object on two pages. A floor:
+     a head that does not fit on one line wraps rather than cut its title. One
+     value at every viewport, the touch arm below included, because the band
+     holds no target of its own — the controls inside it take the pointer rungs. */
   --panel-head-h: 56px;
 
   /* A MENU'S FLOOR AND CEILING, and they are tokens because one option list is
@@ -477,6 +476,9 @@
   --dialogFormWidth: 600px;
   --drawerWidth: 560px;
   --drawerReadingWidth: 880px;
+  /* A drawer grown to the window stops here: past it a row is a line too long
+     to read across. */
+  --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already

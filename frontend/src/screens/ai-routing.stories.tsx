@@ -154,10 +154,13 @@ function story(
   vendors: Record<string, unknown> = VENDOR_LIST,
   aiStatus: unknown = status,
   health: components["schemas"]["AiHealth"] = HEALTH,
+  served: string[] = ["gemini", "ollama"],
 ) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
+      "GET /ai/provider-health": () =>
+        jsonResponse({ providers: [], configured: served }),
       "GET /ai/routing": () => {
         const response = jsonResponse(routing);
         response.headers.set("ETag", '"routing-v1"');
@@ -209,13 +212,13 @@ function story(
   };
 }
 
-const meta: Meta<typeof AiRoutingCard> = {
+const meta = {
   title: "Settings/AI/AI models/Model tiers",
   component: AiRoutingCard,
   subcomponents: { AdapterFields, EmbeddingWidthField, TiersTable },
-};
+} satisfies Meta<typeof AiRoutingCard>;
 export default meta;
-type Story = StoryObj<typeof AiRoutingCard>;
+type Story = StoryObj<typeof meta>;
 
 // Every rung bound, mixing a local provider on the cheapest one — the shape a
 // working installation is in, and the one where tier ORDER matters: the ladder
@@ -329,6 +332,31 @@ export const UnkeyedAndFailing: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
     await canvas.findByText("Some tiers cannot answer");
+  },
+};
+
+// The same unkeyed tiers on a process that fell back to the offline fake.
+// They answer with test text, so the note says so instead of "cannot answer".
+export const AnsweringFromTestProvider: Story = {
+  render: story(
+    {
+      ...BOUND,
+      tiers: {
+        ...BOUND.tiers,
+        frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+        local_large: { provider: "anthropic", model: "claude-opus-4-1" },
+      },
+    },
+    MANAGER,
+    VENDOR_LIST,
+    status,
+    HEALTH,
+    ["fake"],
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      "Tiers answer from the test provider",
+    );
   },
 };
 

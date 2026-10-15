@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
@@ -105,7 +106,7 @@ function reportStub(report: unknown = REPORT, pipelines: unknown = PIPELINES) {
 }
 
 describe("stage automation report", () => {
-  it("shows reviewed volume, observation days, and every rate per transition", async () => {
+  it("shows reviewed volume and the rates a threshold reads per transition", async () => {
     vi.stubGlobal("fetch", reportStub());
     render(<StageAutomationCard />);
 
@@ -121,8 +122,7 @@ describe("stage automation report", () => {
     // claims, and only the count says which this is.
     expect(cells).toContain("20");
     expect(cells).toContain("85%");
-    expect(cells).toContain("10%");
-    expect(cells).toContain("5%");
+    expect(cells).not.toContain("10%");
   });
 
   it("keeps the span watched one press away, beside the counts no rate shows", async () => {
@@ -140,7 +140,9 @@ describe("stage automation report", () => {
     const facts = Array.from(
       document.querySelectorAll("tr.datatable-detail .factlist-row"),
     ).map((row) => row.textContent);
-    expect(facts.slice(0, 3)).toEqual([
+    expect(facts.slice(0, 5)).toEqual([
+      "Edited10%",
+      "Rejected5%",
       "Still open3",
       "Expired2",
       "Days observed34",
@@ -152,7 +154,7 @@ describe("stage automation report", () => {
     render(<StageAutomationCard />);
 
     const table = await screen.findByRole("table", {
-      name: "Stage automation",
+      name: "Track record",
     });
     const headings = within(table)
       .getAllByRole("columnheader")
@@ -161,8 +163,6 @@ describe("stage automation report", () => {
     expect(headings).toEqual([
       "Reviewed",
       "Accepted",
-      "Edited",
-      "Rejected",
       "Undone or corrected",
       "Details",
     ]);
@@ -233,7 +233,9 @@ describe("stage automation report", () => {
         name: "Details for Negotiation → Contract",
       }),
     );
-    const open = await screen.findByText("Still open");
+    const detail = unanswered?.nextElementSibling;
+    if (!(detail instanceof HTMLElement)) throw new Error("no detail row");
+    const open = await within(detail).findByText("Still open");
     expect(open.closest(".factlist-row")?.textContent).toContain("4");
   });
 
@@ -241,24 +243,29 @@ describe("stage automation report", () => {
     vi.stubGlobal("fetch", reportStub());
     render(<StageAutomationCard />);
 
-    await screen.findByRole("table", { name: "Stage automation" });
+    await screen.findByRole("table", { name: "Track record" });
     const terms = Array.from(document.querySelectorAll("dl.factlist dt")).map(
       (term) => term.textContent,
     );
     expect(terms).toEqual([
       "Reviewed",
       "Accepted",
-      "Edited",
       "Undone or corrected",
+      "Edited",
+      "Rejected",
+      "Still open",
       "Expired",
       "Days observed",
     ]);
+    // Every figure heading the table shows is one the glossary explains.
+    const headings = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent ?? "")
+      .filter((heading) => !["Transition", "Details", ""].includes(heading));
+    expect(headings.length).toBeGreaterThan(0);
+    for (const heading of headings) expect(terms).toContain(heading);
   });
 
-  // The three states a reader must be able to tell apart. "Nothing proposed" is
-  // a fact somebody acts on by waiting; a refused or failed load is not, and
-  // drawing the same words for both sends them to wait for numbers that will
-  // never come.
   // The safety number is the one held to a CEILING, and the threshold below it
   // is one percent. Rounded to whole numbers, a transition sitting at 0.4%
   // undone prints "0%" and reads as flawless — a rounding that flatters,
@@ -289,6 +296,8 @@ describe("stage automation report", () => {
     expect(row?.textContent).not.toMatch(/(^|[^.\d])0%/);
   });
 
+  // "Nothing proposed" tells a reader to wait. A failed load must not, or they
+  // wait for numbers that never come.
   it("does not call a failed load an empty record", async () => {
     vi.stubGlobal(
       "fetch",
@@ -318,15 +327,17 @@ describe("stage automation report", () => {
       expect(document.body.textContent).toMatch(/error|failed|wrong/i);
     });
     // Only now is the absence a fact about a settled render.
-    expect(screen.queryByText(/has not proposed a stage move/i)).toBeNull();
+    expect(screen.queryByText(/No proposed moves yet/)).toBeNull();
   });
 
   it("says so when the pipeline has never been proposed a move", async () => {
     vi.stubGlobal("fetch", reportStub({ window_days: 30, data: [] }));
     render(<StageAutomationCard />);
 
-    expect(
-      await screen.findByText(/has not proposed a stage move/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/No proposed moves yet/)).toBeTruthy();
+    // The panel holds its name and the empty line, and no intro of its own.
+    const record = screen.getByRole("region", { name: "Track record" });
+    expect(record.querySelector(".panel-intro")).toBeNull();
+    expect(within(record).getByText(en["stageAutomation.empty"])).toBeTruthy();
   });
 });

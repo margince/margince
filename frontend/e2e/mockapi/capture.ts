@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { linkedInReachFixture } from "../../src/testing/reachfixture";
 import type { Handler } from "./server";
 
 // The mailbox-privacy surfaces live in the page's state, so a spec that flips
@@ -35,6 +36,19 @@ export const captureSettings: Handler = (
 
 export const senders: Handler = ({ json }, { captureSenders }) =>
   json({ data: captureSenders });
+
+// Nothing waits, nothing is held and nothing is reached. Each body has the
+// contract's own shape, so the outcomes card reads three empty lists.
+const noneAwaiting: components["schemas"]["CaptureAwaitingContactListResponse"] =
+  { data: [] };
+const noneHeld: components["schemas"]["HeldThreadListResponse"] = { data: [] };
+
+export const awaitingDecision: Handler = ({ json }) => json(noneAwaiting);
+
+export const heldThreads: Handler = ({ json }) => json(noneHeld);
+
+export const linkedInReach: Handler = ({ json }) =>
+  json(linkedInReachFixture());
 
 export const senderDecision: Handler = (
   { route, path, method, json },

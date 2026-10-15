@@ -21,7 +21,7 @@ type Column struct {
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
-var Columns = map[string]Column{
+var Columns = withActivityColumns(map[string]Column{
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
@@ -78,9 +78,9 @@ var Columns = map[string]Column{
 		Vi: "Người đã viết hồ sơ trong hệ thống nguồn, giữ nguyên như ở đó. Nếu là email của một thành viên Margince, hồ sơ sẽ ghi tên thành viên đó. Chỉ được ghi khi dòng tạo hồ sơ mới.",
 	}, Example: same("mai@yourcompany.com · Mai Nguyen")},
 	"owner_email": {Description: langcopy.Phrase{
-		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so.",
-		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin.",
-		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này.",
+		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so. A lead stays unassigned.",
+		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin. Ein Lead bleibt nicht zugewiesen.",
+		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này. Lead vẫn chưa giao.",
 	}, Example: same("mai@yourcompany.com")},
 	"tags": {Description: langcopy.Phrase{
 		En: "Tags, separated by semicolons. Tags that do not exist yet are created, and the import preview lists them.",
@@ -152,6 +152,11 @@ var Columns = map[string]Column{
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
 	}, Example: same("Acme")},
+	"lead.status": {Description: langcopy.Phrase{
+		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
+		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
+		Vi: "Lead đang ở giai đoạn nào: new, contacted hoặc engaged. Để trống nghĩa là new. Lead được xác nhận đủ điều kiện hoặc loại ngay trong Margince, nên tệp không thể đặt hai trạng thái này.",
+	}, Example: same("contacted")},
 	"contact.company_name": {Description: langcopy.Phrase{
 		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",
@@ -162,7 +167,62 @@ var Columns = map[string]Column{
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
 		Vi: "Công ty nơi liên hệ này làm việc: ref của công ty trong lần tải lên này hoặc lần trước, tên miền, tên chính xác, hoặc ID Margince. Nếu không khớp, bản xem trước lần nhập báo liên kết bị hỏng.",
 	}, Example: same("CO-0042 · acme.com")},
-}
+	"deal.ref": {Description: langcopy.Phrase{
+		En: "Your own key for this deal, such as the deal's ID in your old CRM. Every deal row needs one, because two deals may share a name. Upload again with the same ref and source name, and Margince updates the deal.",
+		De: "Dein eigener Schlüssel für diesen Deal, etwa die ID des Deals in deinem alten CRM. Jede Deal-Zeile braucht einen, denn zwei Deals können denselben Namen tragen. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Deal.",
+		Vi: "Khóa riêng của bạn cho deal này, chẳng hạn ID của deal trong CRM cũ. Mỗi dòng deal đều cần khóa này, vì hai deal có thể trùng tên. Tải lên lại với cùng ref và tên nguồn, Margince sẽ cập nhật deal.",
+	}, Example: same("D-1001"), RequiredOnNew: true},
+	"deal.name": {Description: langcopy.Phrase{
+		En: "The deal's name.",
+		De: "Der Name des Deals.",
+		Vi: "Tên của deal.",
+	}, Example: langcopy.Phrase{En: "Acme pumps renewal", De: "Acme Pumpen Verlängerung", Vi: "Gia hạn máy bơm Acme"}, RequiredOnNew: true},
+	"pipeline": {Description: langcopy.Phrase{
+		En: "The pipeline's name, as Margince spells it; case does not matter. Leave it empty to use the default pipeline.",
+		De: "Der Name der Pipeline, wie Margince ihn schreibt; Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
+		Vi: "Tên pipeline, đúng như Margince ghi; không phân biệt chữ hoa, chữ thường. Để trống để dùng pipeline mặc định.",
+	}, Example: same("Sales")},
+	"stage": {Description: langcopy.Phrase{
+		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
+		De: "Der Name der Phase in dieser Pipeline; Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
+		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
+	}, Example: same("Qualified")},
+	"amount": {Description: langcopy.Phrase{
+		En: "The deal's value as a plain number with a dot for decimals, with no currency sign and no thousands separator. Needs a currency.",
+		De: "Der Wert des Deals als einfache Zahl mit Punkt als Dezimaltrennzeichen, ohne Währungszeichen und ohne Tausendertrennzeichen. Braucht eine Währung.",
+		Vi: "Giá trị của deal, viết dạng số thuần với dấu chấm cho phần thập phân, không ký hiệu tiền và không dấu phân cách hàng nghìn. Cần có loại tiền.",
+	}, Example: same("12000.50")},
+	"currency": {Description: langcopy.Phrase{
+		En: "The amount's currency, as a three-letter ISO code.",
+		De: "Die Währung des Betrags als dreistelliger ISO-Code.",
+		Vi: "Loại tiền của số tiền, theo mã ISO ba chữ cái.",
+	}, Example: same("EUR")},
+	"close_date": {Description: langcopy.Phrase{
+		En: "When the deal closes or closed, as YYYY-MM-DD. An open deal's date cannot be in the past; a won or lost deal's may.",
+		De: "Wann der Deal abschließt oder abgeschlossen wurde, im Format YYYY-MM-DD. Bei einem offenen Deal darf das Datum nicht in der Vergangenheit liegen, bei einem gewonnenen oder verlorenen schon.",
+		Vi: "Ngày deal đóng hoặc đã đóng, theo dạng YYYY-MM-DD. Deal đang mở không được có ngày trong quá khứ; deal thắng hoặc thua thì được.",
+	}, Example: same("2026-09-30")},
+	"deal.company_ref": {Description: langcopy.Phrase{
+		En: "The deal's company: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
+		De: "Das Unternehmen des Deals: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
+		Vi: "Công ty của deal: ref của công ty trong lần tải lên này hoặc lần trước, tên miền, tên chính xác, hoặc ID Margince. Nếu không khớp, bản xem trước lần nhập báo liên kết bị hỏng.",
+	}, Example: same("CO-0042 · acme.com")},
+	"contact_ref": {Description: langcopy.Phrase{
+		En: "A contact on the deal: the contact's ref in this upload or an earlier one, their email, or their Margince ID. If none matches, the import preview reports a broken link.",
+		De: "Ein Kontakt am Deal: die Ref des Kontakts aus diesem oder einem früheren Import, seine E-Mail-Adresse oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
+		Vi: "Một liên hệ của deal: ref của liên hệ trong lần tải lên này hoặc lần trước, email, hoặc ID Margince. Nếu không khớp, bản xem trước lần nhập báo liên kết bị hỏng.",
+	}, Example: same("P-0007 · jo@acme.com")},
+	"deal.description": {Description: langcopy.Phrase{
+		En: "A short description of the deal.",
+		De: "Eine kurze Beschreibung des Deals.",
+		Vi: "Mô tả ngắn về deal.",
+	}, Example: langcopy.Phrase{En: "Three pumps and a service contract", De: "Drei Pumpen und ein Wartungsvertrag", Vi: "Ba máy bơm và một hợp đồng bảo trì"}},
+	"lost_reason": {Description: langcopy.Phrase{
+		En: "Why a lost deal was lost. Needed when the stage is lost; written only when the row creates the deal.",
+		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal anlegt.",
+		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
+	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
+})
 
 // Custom is the guide of a custom field, by its type. A picklist's
 // example is replaced by its first option where the caller may read them.
@@ -212,9 +272,9 @@ var KeyRules = []langcopy.Phrase{
 		Vi: "Mỗi dòng được nhận biết qua ref và tên nguồn của lần nhập. Tải lên lại tệp với cùng ref và tên nguồn, hồ sơ sẽ được cập nhật chứ không bị tạo hai lần.",
 	},
 	{
-		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email.",
-		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse.",
-		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead.",
+		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email. A deal or an activity needs a ref.",
+		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse. Ein Deal oder eine Aktivität braucht eine Ref.",
+		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead. Deal hoặc hoạt động bắt buộc có ref.",
 	},
 	{
 		En: "Files are imported in the order above, so a contact's company_ref can name a company from the same upload.",
@@ -236,7 +296,7 @@ func same(text string) langcopy.Phrase {
 
 // Template is the README's own text, beside the column guides.
 var Template = struct {
-	Title, Optional, Order, Keys, Allowed, SizeLimit, Formulas, Example, Required langcopy.Phrase
+	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required langcopy.Phrase
 }{
 	Title: langcopy.Phrase{
 		En: "Margince import template (%s)",
@@ -251,6 +311,11 @@ var Template = struct {
 	Order:   langcopy.Phrase{En: "Import order", De: "Importreihenfolge", Vi: "Thứ tự nhập"},
 	Keys:    langcopy.Phrase{En: "Keys", De: "Schlüssel", Vi: "Khóa"},
 	Allowed: langcopy.Phrase{En: "Allowed values", De: "Erlaubte Werte", Vi: "Giá trị cho phép"},
+	Pipelines: langcopy.Phrase{
+		En: "Pipelines and stages (a deal names its pipeline and stage as written here)",
+		De: "Pipelines und Phasen (ein Deal nennt Pipeline und Phase so, wie sie hier stehen)",
+		Vi: "Quy trình và giai đoạn (giao dịch ghi tên quy trình và giai đoạn đúng như ở đây)",
+	},
 	SizeLimit: langcopy.Phrase{
 		En: "Largest upload: %d MB.",
 		De: "Größte Datei zum Hochladen: %d MB.",

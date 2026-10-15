@@ -9,8 +9,8 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { throwProblem, unwrap } from "../lib/problem";
-import { worklistKey } from "./worklist.queries";
 
 // Brief's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue

@@ -138,6 +138,7 @@ func dependencyWithholders() map[string]func(*JobRunnerConfig) {
 		"SendDelivery":               func(c *JobRunnerConfig) { c.SendDelivery = nil },
 		"SendRegistry":               func(c *JobRunnerConfig) { c.SendRegistry = nil },
 		"StageEvidenceBrain":         func(c *JobRunnerConfig) { c.StageEvidenceBrain = nil },
+		"TagSuggestBrain":            func(c *JobRunnerConfig) { c.TagSuggestBrain = nil },
 		"TechnicalEnricher":          func(c *JobRunnerConfig) { c.TechnicalEnricher = nil },
 		"TranscriptProposeBrain":     func(c *JobRunnerConfig) { c.TranscriptProposeBrain = nil },
 		"VatChecker":                 func(c *JobRunnerConfig) { c.VatChecker = nil },

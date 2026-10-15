@@ -33,12 +33,3 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-
-/* The next template's head starts a new group, so a rule spans the pane above it. */
-.panel > .reviewtemplate-questions + .panel-grouphead::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: var(--borderSubtle);
-}

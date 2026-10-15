@@ -54,6 +54,10 @@ const (
 	visibilityOwner     = "owner"
 )
 
+// TypedCreateVisibility is what a typed create writes, whoever typed it. The
+// create_record text states it, held by TestCreateRecordStatesTheContactVisibility.
+const TypedCreateVisibility = visibilityWorkspace
+
 // visibilityFor answers which of the two a create path writes.
 func visibilityFor(ownerScoped bool) string {
 	if ownerScoped {

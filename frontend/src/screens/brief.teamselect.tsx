@@ -4,10 +4,13 @@
 import type { ReactNode } from "react";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
+import {
+  type TeamWeekReach,
+  useTeams,
+} from "../features/worklist/teamweekly.queries";
 import { useT } from "../i18n";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
-import { type TeamWeekReach, useTeams } from "./teamweekly.queries";
 
 /** Which teams a picker lists: every team, or the ones the reader is on. */
 export type TeamList = "every" | "mine";

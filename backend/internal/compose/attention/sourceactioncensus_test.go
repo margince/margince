@@ -32,7 +32,7 @@ import (
 )
 
 // performedBySource is what the CLIENT can actually do with each verb, per
-// source, and it is a claim about frontend/src/screens/worklist.rowverbs.tsx.
+// source, and it is a claim about frontend/src/features/worklist/worklist.rowverbs.tsx.
 //
 // Keyed by source rather than by verb alone, because the endpoint a verb posts
 // to depends on the row it sits on: `dismiss` is the contact's nudge dismissal
@@ -89,10 +89,12 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
-	"automation_run":  {"open", "retry"},
-	"bounce":          {"open"},
-	"undelivered":     {"open"},
-	"failed_approval": {"open"},
+	"automation_run": {"open", "retry"},
+	"bounce":         {"open"},
+	"undelivered":    {"open"},
+	// Drawn by FailedApprovalAnswer: `acknowledge` posts the failure
+	// acknowledgement, and `retry` approves the row once more.
+	"failed_approval": {"open", "acknowledge", "retry"},
 	// Answered IN PLACE, like an approval: `keep` makes the company from the
 	// domain's own label and `discard` writes this reader's own capture
 	// exclusion. Neither needs anything typed, which is what lets a domain
@@ -187,7 +189,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 				if !slicesContain(allowed, action) {
 					t.Errorf("source %q advertises %q and the client performs %v: "+
 						"the row reaches a reader who is shown work and given no way to do it. "+
-						"Wire the verb in frontend/src/screens/worklist.rowverbs.tsx, or stop sending it",
+						"Wire the verb in frontend/src/features/worklist/worklist.rowverbs.tsx, or stop sending it",
 						source, action, allowed)
 				}
 			}
@@ -299,7 +301,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(), Retryable: true,
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},

@@ -419,10 +419,58 @@ describe("the close date says how much it is worth believing", () => {
     expect(screen.getByText("1 day overdue")).toBeInTheDocument();
   });
 
+  it("never calls a won or lost deal overdue for a date behind it", () => {
+    // A closed deal's date is when it closed. Counting it as lateness tells a
+    // rep a finished deal is behind.
+    for (const status of ["won", "lost"] as const) {
+      const { unmount } = show(
+        <DealIdentityFacts
+          deal={{ expected_close_date: "2026-08-23", status }}
+          stages={stages}
+          locale="en"
+        />,
+      );
+      expect(screen.queryByText(/overdue/)).toBeNull();
+      expect(screen.getByText(/23/)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
   // The cell stays where a date is missing: when a deal lands is a question
   // the reader came with, and a cell that disappears answers it with silence.
   it("keeps the cell and says so when nobody has set a date", () => {
     show(<DealIdentityFacts deal={{}} stages={stages} locale="en" />);
     expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
+  });
+});
+
+describe("a deal an import wrote", () => {
+  const imported = (importedFrom: string | null) =>
+    show(
+      <DealIdentityFacts
+        deal={{
+          amount_minor: 1000,
+          currency: "EUR",
+          stage_id: "st-1",
+          captured_by: "human:admin",
+          source: "manual",
+          imported_from: importedFrom,
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+
+  it("reads as imported from its source, not typed by the administrator", () => {
+    imported("crm");
+
+    expect(screen.getByText("Imported from crm")).toBeInTheDocument();
+    expect(screen.queryByText(/Typed by/)).toBeNull();
+  });
+
+  it("a deal no import wrote carries no imported label", () => {
+    imported(null);
+
+    expect(screen.queryByText(/Imported/)).toBeNull();
   });
 });

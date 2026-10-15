@@ -7,9 +7,7 @@ import {
 import { Webhook } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
-import { subscribableEventTypeValues } from "../api/public-events";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
 import {
   Badge,
   Button,
@@ -31,8 +29,7 @@ import {
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Translator, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import {
   problemCode,
@@ -42,14 +39,7 @@ import {
 } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
-import {
-  type CreateField,
-  type CreateFieldOption,
-  CreateRecordModal,
-  joinMultiselectValue,
-  splitMultiselectValue,
-} from "./create";
-import { EditAction } from "./edit";
+import { WebhookSubscriptionDrawer } from "./webhookdrawer";
 import "./webhooks.css";
 
 // Settings → Integrations (B-E10.14): the subscription list for outbound
@@ -63,10 +53,10 @@ import "./webhooks.css";
 type WebhookSubscription = components["schemas"]["WebhookSubscription"];
 type WebhookDelivery = components["schemas"]["WebhookDelivery"];
 type WebhookDeliveryStatus = WebhookDelivery["status"];
+type WebhookSubscriptionCreated =
+  components["schemas"]["WebhookSubscriptionCreated"];
 type WebhookDeliveryListResponse =
   components["schemas"]["WebhookDeliveryListResponse"];
-type UpdateWebhookSubscriptionRequest =
-  components["schemas"]["UpdateWebhookSubscriptionRequest"];
 
 // The shared delivery-status → Badge tone mapping: kept here, next to the
 // subscription list it health-summarizes, so the deliveries panel reuses the
@@ -129,130 +119,6 @@ function useWebhookSubscriptions() {
       return { deliveryEnabled: data.delivery_enabled, data: data.data };
     },
   });
-}
-
-type WebhookSubscriptionCreated =
-  components["schemas"]["WebhookSubscriptionCreated"];
-
-// The event-type multiselect's options: the checkbox label IS the wire value
-// (there is no translated display name per event, so showing the raw type —
-// e.g. "deal.stage_changed" — is honest, and matches how SubscriptionRow
-// already renders a subscription's chosen types above). The list itself
-// comes from `subscribableEventTypeValues`, the ONE runtime array
-// `pnpm gen:events` derives straight from the backend's published
-// SubscribableEventType enum (backend/api/public-events.yaml) — never a
-// hand-maintained list here, so a catalog change can't silently drift.
-const EVENT_TYPE_OPTIONS: CreateFieldOption[] = subscribableEventTypeValues.map(
-  (eventType) => ({ value: eventType, label: eventType }),
-);
-
-const CREATE_SUBSCRIPTION_FIELDS: CreateField[] = [
-  {
-    key: "target_url",
-    label: "webhooks.field.targetUrl",
-    type: "text",
-    required: true,
-    placeholder: "https://example.test/hooks/margince",
-  },
-  {
-    key: "event_types",
-    label: "webhooks.field.eventTypes",
-    type: "multiselect",
-    required: true,
-    options: EVENT_TYPE_OPTIONS,
-  },
-];
-
-// The edit form: pause/resume (state) and re-target the subscribed event set
-// (event_types) — the only two fields `UpdateWebhookSubscriptionRequest`
-// accepts (the contract has no target_url update; re-targeting means the
-// event set, not the URL). `event_types`'s `toInput` joins the record's
-// `string[]` through the SAME multiselect delimiter the field's own
-// checkbox-toggle uses, so the edit form prefills the subscription's
-// current selection rather than falling back to Array#toString's
-// coincidentally-matching-but-unspecified comma join.
-function editSubscriptionFields(t: (key: MessageKey) => string): CreateField[] {
-  return [
-    {
-      key: "state",
-      label: "webhooks.field.state",
-      type: "select",
-      required: true,
-      options: [
-        { value: "active", label: t("webhooks.state.active") },
-        { value: "paused", label: t("webhooks.state.paused") },
-      ],
-    },
-    {
-      key: "event_types",
-      label: "webhooks.field.eventTypes",
-      type: "multiselect",
-      required: true,
-      options: EVENT_TYPE_OPTIONS,
-      toInput: (raw) =>
-        joinMultiselectValue(Array.isArray(raw) ? (raw as string[]) : []),
-    },
-  ];
-}
-
-// The PATCH body from the edit form's values — the ONE place that knows the
-// form's comma-joined `event_types` string decodes back to the wire's
-// `string[]`, so a screen mistake here can't silently drop the split.
-export function mapWebhookUpdate(
-  values: Record<string, unknown>,
-): UpdateWebhookSubscriptionRequest {
-  return {
-    state: values.state as WebhookSubscription["state"],
-    event_types: splitMultiselectValue(String(values.event_types ?? "")),
-  };
-}
-
-// Registering a subscription is registering outbound egress, not landing on
-// a record 360 — there is no webhook-subscription screen to navigate to, so
-// this is a bespoke create-in-place mutation rather than the shared
-// CreateAction choreography, whose success path always navigates. On success it hands the one-time `signing_secret` up so the
-// card can reveal it, and invalidates the list query so the refreshed list
-// (which the wire never carries the secret on) replaces it.
-function useCreateWebhookSubscription(onCreated: (secret: string) => void) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (
-      values: Record<string, string>,
-    ): Promise<WebhookSubscriptionCreated> => {
-      return unwrap(
-        await api.POST("/webhook-subscriptions", {
-          body: {
-            target_url: (values.target_url ?? "").trim(),
-            event_types: splitMultiselectValue(values.event_types ?? ""),
-          },
-        }),
-      );
-    },
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
-      onCreated(created.signing_secret);
-    },
-  });
-}
-
-// The EditAction transport: PATCH with If-Match(current version) — the
-// standard optimistic-concurrency precondition every native mutating
-// endpoint accepts. A 409 code:version_skew surfaces through EditAction's own
-// error handling (edit.tsx), never handled again here.
-function updateWebhookSubscription(
-  subscription: WebhookSubscription,
-): (values: Record<string, unknown>) => Promise<WebhookSubscription> {
-  return async (values) => {
-    return unwrap(
-      await api.PATCH("/webhook-subscriptions/{id}", {
-        params: {
-          path: { id: subscription.id },
-          ...ifMatch(subscription.version),
-        },
-        body: mapWebhookUpdate(values),
-      }),
-    );
-  };
 }
 
 // Archive stops all delivery (DELETE, no If-Match — mirrors products.tsx/
@@ -723,7 +589,9 @@ function SubscriptionRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [showDeliveries, setShowDeliveries] = useState(false);
+  const [editing, setEditing] = useState(false);
   const deliveriesId = useId();
   return (
     // Two rows, not one: the subscription is a DECISION — what it targets on
@@ -735,18 +603,77 @@ function SubscriptionRow({
     <>
       <SettingRow
         label={
-          <span className="webhook-target">{subscription.target_url}</span>
+          <span className="webhook-target" title={subscription.target_url}>
+            {subscription.target_url}
+          </span>
         }
+        // The verbs sit under the target, so a long URL keeps the row's width.
         description={
-          subscription.updated_at
-            ? t("webhooks.updated", {
-                date: formatDateTime(
-                  subscription.updated_at,
-                  locale,
-                  viewerZone(),
-                ),
-              })
-            : undefined
+          <span className="webhook-row-description">
+            {subscription.updated_at
+              ? t("webhooks.updated", {
+                  date: formatDateTime(
+                    subscription.updated_at,
+                    locale,
+                    viewerZone(),
+                  ),
+                })
+              : undefined}
+            <span className="webhook-row-actions">
+              {/* Not `Disclosure`: `<details>` renders its children
+                whether or not it is open, and the panel behind this one fetches
+                a subscription's deliveries on mount — every row on the card
+                would issue that read on page load to draw a section nobody
+                opened. The accessibility half of a disclosure is what was
+                actually missing, so the button carries it: what it controls,
+                and whether it is open. */}
+              <Button
+                data-testid="view-deliveries"
+                aria-expanded={showDeliveries}
+                aria-controls={deliveriesId}
+                onClick={() => setShowDeliveries((prev) => !prev)}
+              >
+                {showDeliveries
+                  ? t("webhooks.deliveries.hide")
+                  : t("webhooks.deliveries.show")}
+              </Button>
+              {canEdit && (
+                <Button
+                  data-testid="edit-webhook-subscription"
+                  onClick={() => setEditing(true)}
+                >
+                  {t("webhooks.edit")}
+                </Button>
+              )}
+              {/* The two irreversible verbs behind the overflow, the same
+                treatment the provider card's disconnect/delete pair gets:
+                rotating destroys the secret every receiver is verifying with,
+                archiving stops every delivery. Beside Edit they were four
+                buttons on one line at equal weight, two of them red, and the
+                row did not even wrap. */}
+              {(canEdit || canArchive) && (
+                <OverflowMenu label={t("record.moreActions")}>
+                  {canEdit && (
+                    <RotateSecretAction
+                      subscription={subscription}
+                      onRotated={onRotated}
+                    />
+                  )}
+                  {canArchive && (
+                    <ArchiveAction
+                      label={t("webhooks.archive")}
+                      confirmText={t("webhooks.archiveConfirm")}
+                      archivedMessage={t("webhooks.archiveDone")}
+                      invalidate="webhook-subscriptions"
+                      recordKey="webhook-subscription"
+                      onArchived={() => {}}
+                      archive={() => archiveWebhookSubscription(subscription)}
+                    />
+                  )}
+                </OverflowMenu>
+              )}
+            </span>
+          </span>
         }
         // The state and the subscribed event set together ARE the current
         // answer, and no control on the row shows either: Edit opens a dialog
@@ -756,6 +683,23 @@ function SubscriptionRow({
             <Badge tone={subscriptionStateTone(subscription.state)}>
               {t(`webhooks.state.${subscription.state}`)}
             </Badge>
+            {subscription.body_template && (
+              <Badge tone="default">{t("webhooks.row.customBody")}</Badge>
+            )}
+            {(subscription.custom_headers?.length ?? 0) > 0 && (
+              <Badge tone="default">
+                {plural(
+                  "webhooks.row.headers",
+                  subscription.custom_headers.length,
+                  {
+                    count: formatNumber(
+                      subscription.custom_headers?.length ?? 0,
+                      locale,
+                    ),
+                  },
+                )}
+              </Badge>
+            )}
             {subscription.event_types.map((eventType) => (
               <Badge key={eventType} tone="accent">
                 {eventType}
@@ -763,66 +707,14 @@ function SubscriptionRow({
             ))}
           </span>
         }
-        control={
-          <span className="webhook-row-actions">
-            {/* Not `Disclosure`, deliberately: `<details>` renders its children
-                whether or not it is open, and the panel behind this one fetches
-                a subscription's deliveries on mount — every row on the card
-                would issue that read on page load to draw a section nobody
-                opened. The accessibility half of a disclosure is what was
-                actually missing, so the button carries it: what it controls,
-                and whether it is open. */}
-            <Button
-              data-testid="view-deliveries"
-              aria-expanded={showDeliveries}
-              aria-controls={deliveriesId}
-              onClick={() => setShowDeliveries((prev) => !prev)}
-            >
-              {showDeliveries
-                ? t("webhooks.deliveries.hide")
-                : t("webhooks.deliveries.show")}
-            </Button>
-            {canEdit && (
-              <EditAction
-                label={t("webhooks.edit")}
-                savedMessage={t("webhooks.saveDone")}
-                invalidate="webhook-subscriptions"
-                recordKey="webhook-subscription"
-                record={{ ...subscription }}
-                update={updateWebhookSubscription(subscription)}
-                fields={editSubscriptionFields(t)}
-              />
-            )}
-            {/* The two irreversible verbs behind the overflow, the same
-                treatment the provider card's disconnect/delete pair gets:
-                rotating destroys the secret every receiver is verifying with,
-                archiving stops every delivery. Beside Edit they were four
-                buttons on one line at equal weight, two of them red, and the
-                row did not even wrap. */}
-            {(canEdit || canArchive) && (
-              <OverflowMenu label={t("record.moreActions")}>
-                {canEdit && (
-                  <RotateSecretAction
-                    subscription={subscription}
-                    onRotated={onRotated}
-                  />
-                )}
-                {canArchive && (
-                  <ArchiveAction
-                    label={t("webhooks.archive")}
-                    confirmText={t("webhooks.archiveConfirm")}
-                    archivedMessage={t("webhooks.archiveDone")}
-                    invalidate="webhook-subscriptions"
-                    recordKey="webhook-subscription"
-                    onArchived={() => {}}
-                    archive={() => archiveWebhookSubscription(subscription)}
-                  />
-                )}
-              </OverflowMenu>
-            )}
-          </span>
-        }
+        control={null}
       />
+      {editing && (
+        <WebhookSubscriptionDrawer
+          subscription={subscription}
+          onClose={() => setEditing(false)}
+        />
+      )}
       {showDeliveries && (
         <SettingRow
           label={t("webhooks.deliveries.title")}
@@ -856,10 +748,6 @@ export function WebhooksCard() {
   const query = useWebhookSubscriptions();
   const [creating, setCreating] = useState(false);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
-  const create = useCreateWebhookSubscription((secret) => {
-    setCreating(false);
-    setRevealedSecret(secret);
-  });
   // Gated on the deployment actually being configured (never on the CURRENT
   // list happening to be empty) — the button lives outside QueryGate's
   // render-prop specifically so the very first subscription (the empty-list
@@ -868,6 +756,7 @@ export function WebhooksCard() {
   // button nested inside it.
   const deliveryEnabled = query.data?.deliveryEnabled === true;
   const canCreateHere = canCreate && deliveryEnabled;
+  const deliveryOff = query.isSuccess && !deliveryEnabled;
   // Two different absences can empty this card of every write control, and
   // they are two different rows of the design-system doctrine: no deployment
   // signing key is a PRECONDITION an operator can fix, which NotConfiguredState
@@ -904,7 +793,8 @@ export function WebhooksCard() {
       }
     >
       <PanelBody>
-        <PanelIntro>{t("webhooks.sub")}</PanelIntro>
+        {/* Off, the not-enabled line says what webhooks wait for. */}
+        {!deliveryOff && <PanelIntro>{t("webhooks.sub")}</PanelIntro>}
         {/* Outside QueryGate for the same reason the create button is: its
             `empty` branch replaces `children` wholesale, and the posture is most
             needed precisely when the list is empty — a seat that can neither add
@@ -919,9 +809,7 @@ export function WebhooksCard() {
             bearing on it. Existing subscriptions still render read-only (write
             grants forced false) so their config and delivery health stay
             inspectable. */}
-        {query.isSuccess && !query.data.deliveryEnabled && (
-          <NotConfiguredState />
-        )}
+        {deliveryOff && <NotConfiguredState />}
         {/* One body, not two stacked: the roster opens under the sentence that
             introduces it rather than across a seam that reads as a missing
             element, and the interval between subscriptions belongs to the
@@ -947,15 +835,10 @@ export function WebhooksCard() {
           )}
         </QueryGate>
       </PanelBody>
-      {canCreateHere && (
-        <CreateRecordModal
-          open={creating}
+      {canCreateHere && creating && (
+        <WebhookSubscriptionDrawer
           onClose={() => setCreating(false)}
-          title={t("webhooks.new")}
-          fields={CREATE_SUBSCRIPTION_FIELDS}
-          pending={create.isPending}
-          error={create.isError ? problemMessageOf(create.error, t) : null}
-          onSubmit={(values) => create.mutate(values)}
+          onCreated={setRevealedSecret}
         />
       )}
       {revealedSecret && (

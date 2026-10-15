@@ -2,23 +2,27 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
-import { type ReactNode, useEffect, useId } from "react";
+import { ArrowUpRight, Info } from "lucide-react";
+import { type ReactNode, useEffect } from "react";
 import type { components } from "../api/schema";
 import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import { FactList } from "../design-system/factlist";
+import { KeyedName } from "../design-system/keyedname";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   QueryGate,
   type QueryLike,
   QueryStates,
 } from "../design-system/querystates";
 import { INTL_LOCALE } from "../format/format";
+import { objectLabel } from "../format/rbacobjects";
 import { useLocale, useT } from "../i18n";
 import { useCan, useCanMutate } from "../lib/capability";
 import {
   composedScreens,
   EXTENSION_SCREEN,
+  extensionTitle,
   findExtension,
 } from "../lib/extensions";
 import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
@@ -30,7 +34,12 @@ import {
   type ExtensionUnit,
   useExtensions,
 } from "./extensions.queries";
-import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
+import {
+  GrantMatrix,
+  type GrantMatrixRow,
+  type GrantMatrixSection,
+  grantOf,
+} from "./grantmatrix";
 import {
   ROLES_KEY,
   type Role,
@@ -66,9 +75,8 @@ export type ExtensionRole = Role;
 // delete.
 export type ExtensionRoute = components["schemas"]["ComposedExtensionRoute"];
 
-// What the two reads answer together. Named because the lead card and the unit
-// cards read the same merged result: the lead card renders its pending/error
-// surface, the unit cards render the units in it.
+// What the two reads answer together: the state pane renders its pending and
+// error surface, the unit cards render the units in it.
 type ComposedAccess = Readonly<{
   extensions: readonly ExtensionUnit[];
   roles: readonly ExtensionRole[];
@@ -148,37 +156,22 @@ export function ExtensionAccessCard() {
 
   return (
     <div className="ext-stack">
-      {/* tone="accent" — the one lead on this tab. Everything else here reports
-          or manages CONTACTS; this is the only surface in the product that can
-          grant an extension's RBAC objects at all, and until somebody does, a
-          shipped and enabled unit renders "you do not hold access" for every
-          seat. It used to be a bare <div> below the roster, with no card and
-          nothing saying it mattered. There is exactly one accent per page and
-          this is it. */}
-      <Panel tone="accent" title={t("extAccess.title")}>
-        <PanelBody>
-          <p className="ext-lead-sub">{t("extAccess.sub")}</p>
-          {/* Gate on the /me probe itself so the withheld notice appears only
-              once it has answered — never as a flash while it loads. */}
-          <QueryGate query={me} pendingLabel={t("extAccess.title")}>
-            {() =>
-              canSee ? (
-                <InventoryLead query={query} />
-              ) : (
+      <QueryGate query={me} pendingLabel={t("extAccess.title")}>
+        {() =>
+          canSee ? (
+            <InventoryState query={query} />
+          ) : (
+            <Panel>
+              <PanelBody>
                 <EmptyState>{t("extAccess.adminOnly")}</EmptyState>
-              )
-            }
-          </QueryGate>
-        </PanelBody>
-      </Panel>
-      {/* Each unit gets a card of its own, beside the lead card rather than
-          inside it: the inventory read's pending and error surfaces belong with
-          the heading that names the page, and a unit is a subject in its own
-          right. Only reachable with data in hand, which for a non-admin the
-          disabled reads never produce. */}
+              </PanelBody>
+            </Panel>
+          )
+        }
+      </QueryGate>
       {/* Gated on the grant as well as on the data: `enabled: false` is about
-          the next request, and a card rendered from a cache the reader may no
-          longer read is the same disclosure the notice above it refuses. */}
+          the next request, and a card drawn from a cache the reader may no
+          longer read is the disclosure the notice above refuses. */}
       {canSee &&
         composed?.extensions.map((unit) => (
           <UnitCard
@@ -192,23 +185,23 @@ export function ExtensionAccessCard() {
   );
 }
 
-// The lead card's body: the read's own pending/error surface, plus the sentence
-// that speaks for the whole inventory rather than for one unit.
-//
-// The seat ceiling used to be stated HERE, one card above the controls it
-// governs — a reader looking at a row of dead toggles had to leave the card that
-// held them to find out why. It moved to the unit card, beside them.
-function InventoryLead({
+// The read's pending, error and empty surface, in a pane of its own; with
+// units in hand the unit cards speak instead.
+function InventoryState({
   query,
 }: Readonly<{ query: QueryLike<ComposedAccess> }>) {
   const t = useT();
-  const units = query.data?.extensions;
+  if ((query.data?.extensions.length ?? 0) > 0) {
+    return null;
+  }
   return (
-    <QueryStates query={query} pendingLabel={t("extAccess.title")}>
-      {units?.length === 0 ? (
-        <EmptyState>{t("extAccess.empty")}</EmptyState>
-      ) : null}
-    </QueryStates>
+    <Panel>
+      <PanelBody>
+        <QueryStates query={query} pendingLabel={t("extAccess.title")}>
+          <EmptyState>{t("extAccess.empty")}</EmptyState>
+        </QueryStates>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -260,11 +253,11 @@ function UnitCard({
   const unread = unit.rbac_objects.filter((object) =>
     roles.every((role) => !grantOf(role, object).read),
   );
-  const badges = roleBadges(roles, t);
+  const title = extensionTitle(unit.name, locale);
   return (
     <Panel
       className="ext-unit"
-      title={unit.name}
+      title={title}
       titleAction={
         <div className="ext-unit-actions">
           <Badge>{t("extAccess.version", { version: unit.version })}</Badge>
@@ -279,7 +272,7 @@ function UnitCard({
             >
               <ArrowUpRight aria-hidden size={15} />
               <span className="ext-unit-link-text">
-                {t("extAccess.openUnit", { name: page.name })}
+                {t("extAccess.openUnit", { name: title })}
               </span>
             </a>
           ) : null}
@@ -287,18 +280,18 @@ function UnitCard({
       }
     >
       <PanelBody className="ext-unit-body">
-        <p className="t-caption">{unit.description}</p>
+        <p>{unit.description}</p>
         {/* Said only where the two registries disagree: a unit the running
             binary composed whose descriptor this bundle does not carry is a
             version skew, not a unit that simply has no page. */}
         {descriptor ? null : (
           <p className="ext-unit-nopage">
             <Info aria-hidden size={15} />
-            {t("extAccess.noPage", { name: unit.name })}
+            {t("extAccess.noPage", { name: title })}
           </p>
         )}
         {unit.rbac_objects.length === 0 ? (
-          <p>{t("extAccess.noObjects")}</p>
+          <p className="t-caption">{t("extAccess.noObjects")}</p>
         ) : null}
         {/* Every switch below also carries this as its `reason`, which is what
             puts it in the accessibility tree beside the control. */}
@@ -325,38 +318,25 @@ function UnitCard({
           </Callout>
         ) : null}
       </PanelBody>
-      {unit.rbac_objects.map((object) => (
-        <ObjectMatrix
-          key={object}
-          object={object}
-          label={objectLabel(unit.name, object)}
+      {unit.rbac_objects.length > 0 ? (
+        <UnitMatrix
+          unit={unit}
+          title={title}
           roles={roles}
-          badges={badges}
           canManage={canManage}
         />
-      ))}
+      ) : null}
       {/* Reference, not a decision: an operator opens it to check which
           object gates the route they care about. */}
       {brings > 0 ? (
-        <Disclosure summary={t("extAccess.brings.heading")}>
-          <PanelBody>
+        <PanelBody>
+          <Disclosure summary={t("extAccess.brings.heading")}>
             <UnitBrings unit={unit} />
-          </PanelBody>
-        </Disclosure>
+          </Disclosure>
+        </PanelBody>
       ) : null}
     </Panel>
   );
-}
-
-// Not translated: the contract carries no label for an extension's object, so
-// its key, less the unit's own prefix, is the only name there is.
-export function objectLabel(unit: string, object: string): string {
-  const prefix = `ext_${unit}_`;
-  const bare = object.startsWith(prefix)
-    ? object.slice(prefix.length)
-    : object.replace(/^ext_/, "");
-  const words = (bare || unit).replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 // Built-in and custom roles are told apart only where both kinds stand in the
@@ -377,136 +357,115 @@ function roleBadges(
 
 function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
   const t = useT();
+  const list = (
+    items: readonly string[],
+    show: (item: string) => ReactNode = (item) => item,
+  ) =>
+    items.length === 0 ? (
+      t("extAccess.brings.none")
+    ) : (
+      <ul className="ext-brings-list">
+        {items.map((item) => (
+          <li key={item}>{show(item)}</li>
+        ))}
+      </ul>
+    );
   return (
-    <dl className="ext-brings">
-      <BringsRow
-        icon={<KeyRound aria-hidden size={15} />}
-        label={t("extAccess.brings.objects")}
-        items={unit.rbac_objects.map((object) => ({
-          id: object,
-          content: object,
-        }))}
-      />
-      <BringsRow
-        icon={<Route aria-hidden size={15} />}
-        label={t("extAccess.brings.routes")}
-        // Keyed by method AND path: two operations on one path are two
-        // entries, and keying by path alone would collapse the pair React
-        // has to keep apart — the same collapse the server stopped doing.
-        items={unit.routes.map((route) => ({
-          id: `${route.method} ${route.path}`,
-          content: (
-            <>
-              <span className="ext-method">{route.method}</span>
-              <span>{route.path}</span>
-            </>
+    <FactList
+      facts={[
+        {
+          key: "objects",
+          term: t("extAccess.brings.objects"),
+          value: list(unit.rbac_objects, (object) => (
+            <KeyedName name={objectLabel(unit.name, object)} code={object} />
+          )),
+        },
+        {
+          key: "routes",
+          term: t("extAccess.brings.routes"),
+          // One entry per method and path: a DELETE must not hide behind the
+          // GET on the same path.
+          value: list(
+            unit.routes.map((route) => `${route.method} ${route.path}`),
           ),
-        }))}
-      />
-      <BringsRow
-        icon={<Timer aria-hidden size={15} />}
-        label={t("extAccess.brings.jobs")}
-        items={unit.jobs.map((job) => ({ id: job, content: job }))}
-      />
-    </dl>
+        },
+        {
+          key: "jobs",
+          term: t("extAccess.brings.jobs"),
+          value: list(unit.jobs),
+        },
+      ]}
+    />
   );
 }
 
-function BringsRow({
-  icon,
-  label,
-  items,
-}: Readonly<{
-  icon: ReactNode;
-  label: string;
-  // A node per chip rather than a string: a route reads as a method and a path,
-  // two pieces with different weight, and the row that lists objects and the
-  // row that lists routes are otherwise the same row.
-  items: readonly { id: string; content: ReactNode }[];
-}>) {
-  const t = useT();
-  return (
-    <div className="ext-brings-row">
-      <dt className="t-label ext-brings-term">
-        {icon}
-        {label}
-      </dt>
-      <dd className="ext-brings-def">
-        {items.length === 0 ? (
-          <span>{t("extAccess.brings.none")}</span>
-        ) : (
-          <ul className="ext-chips">
-            {items.map((item) => (
-              <li key={item.id}>
-                <Badge>{item.content}</Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </dd>
-    </div>
-  );
-}
-
-// One object's role × CRUD matrix, named by the group head above it.
-function ObjectMatrix({
-  object,
-  label,
+// The unit's role × CRUD grid, one group of role rows per object it registers.
+function UnitMatrix({
+  unit,
+  title,
   roles,
-  badges,
   canManage,
 }: Readonly<{
-  object: string;
-  label: string;
+  unit: ExtensionUnit;
+  title: string;
   roles: readonly ExtensionRole[];
-  badges: ReadonlyMap<string, string>;
   canManage: boolean;
 }>) {
   const t = useT();
-  const headId = useId();
   const setGrant = useSetRoleGrant();
+  const badges = roleBadges(roles, t);
   // Only a ProblemError carries a server code, so a rejected fetch can never be
   // mistaken for a concurrent edit.
   const skew =
     setGrant.error instanceof ProblemError &&
     isVersionSkew(setGrant.error.problem);
-  const rows = roles.map((role): GrantMatrixRow => {
-    const grant = grantOf(role, object);
+  const sections = unit.rbac_objects.map((object): GrantMatrixSection => {
+    const label = objectLabel(unit.name, object);
     return {
-      key: role.key,
-      name: role.name,
-      badge: badges.get(role.key),
-      grant,
-      cellLabel: (action) =>
-        t("extAccess.cell", {
-          role: role.name,
-          action: t(`extAccess.action.${action}`),
-          object: label,
-        }),
-      // The write carries the role's whole grant record, so every action in
-      // that row is in flight, and no other row is.
-      pending: setGrant.isPending && setGrant.variables?.roleKey === role.key,
-      onChange: (action, next) =>
-        setGrant.mutate({
-          roleKey: role.key,
-          object,
-          grant: { ...grant, [action]: next },
-          // The version this cell was read from: the server compares against
-          // what the operator saw.
-          version: role.version,
-        }),
+      key: object,
+      title: label,
+      rows: roles.map((role): GrantMatrixRow => {
+        const grant = grantOf(role, object);
+        return {
+          key: role.key,
+          name: role.name,
+          badge: badges.get(role.key),
+          grant,
+          cellLabel: (action) =>
+            t("extAccess.cell", {
+              role: role.name,
+              action: t(`extAccess.action.${action}`),
+              object: label,
+            }),
+          // The write carries this role's whole grant on this object.
+          pending:
+            setGrant.isPending &&
+            setGrant.variables?.roleKey === role.key &&
+            setGrant.variables.object === object,
+          onChange: (action, next) =>
+            setGrant.mutate({
+              roleKey: role.key,
+              object,
+              grant: { ...grant, [action]: next },
+              // The version this cell was read from: the server compares against
+              // what the operator saw.
+              version: role.version,
+            }),
+        };
+      }),
     };
   });
 
   return (
     <>
-      <PanelGroupHead title={label} level="h3" id={headId} />
+      {/* One write at a time: two on one role race its version. */}
       <GrantMatrix
         rowHeader={t("extAccess.roleColumn")}
-        rows={rows}
+        sections={sections}
         canManage={canManage}
         readOnlyReason={t("extAccess.readOnly")}
-        name={{ labelledBy: headId }}
+        busy={setGrant.isPending}
+        name={t("extAccess.matrixName", { unit: title })}
         bleed
       />
       {setGrant.isError ? (

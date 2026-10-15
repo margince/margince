@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { TaskAssigneeField } from "../components/assigneepicker";
 import {
   Button,
   Checkbox,
@@ -35,7 +36,6 @@ import {
   NO_ATTENDEES,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
-import { TaskAssigneeField } from "./assigneepicker";
 import "./logactivity.css";
 import { MeetingAttendeeFields } from "./meetingattendees";
 

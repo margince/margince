@@ -562,7 +562,7 @@ long run. See [composition-layer.md](composition-layer.md).
 | The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
 | The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
 | Data layer + cards in the right rail | `frontend/src/screens/company360.tsx`, `company360.css` |
-| The connections view to compare | `frontend/src/screens/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
+| The connections view to compare | `frontend/src/features/contacts/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
 | Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
 
 ## Where to go next

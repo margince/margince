@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -171,6 +172,24 @@ function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
 }
 
 export const Populated: Story = { render: () => <Rail view={populated} /> };
+
+export const OneSectionOpen: Story = {
+  render: () => <Rail view={populated} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const summary = (name: string) =>
+      canvas.getByText(name).closest("summary") ?? canvasElement;
+    const contacts = summary("Key contacts");
+    const registration = summary("Registration");
+    const deals = summary("Active deals");
+    await expect(contacts).toHaveAttribute("aria-expanded", "true");
+    await expect(registration).toHaveAttribute("aria-expanded", "false");
+    await expect(deals).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(deals);
+    await expect(deals).toHaveAttribute("aria-expanded", "true");
+    await expect(contacts).toHaveAttribute("aria-expanded", "false");
+  },
+};
 
 export const SectionWithheld: Story = {
   render: () => <Rail view={withheld} />,

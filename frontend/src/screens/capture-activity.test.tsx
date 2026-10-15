@@ -272,7 +272,7 @@ describe("capture activity", () => {
   it("says where the numbers start, so the funnel is not read as everything", async () => {
     renderTab(windowBody());
     expect(
-      await screen.findByText(/filtered on its own side/i),
+      await screen.findByText(/a connector filtered itself/i),
     ).toBeInTheDocument();
   });
 
@@ -661,7 +661,7 @@ describe("capture activity", () => {
         within(counters).getByTestId("capture-activity-funnel"),
       ).toBeInTheDocument();
       expect(
-        within(counters).getByText(/filtered on its own side/i),
+        within(counters).getByText(/a connector filtered itself/i),
       ).toBeInTheDocument();
     }
     // The block list a rep reaches for sits on this page.

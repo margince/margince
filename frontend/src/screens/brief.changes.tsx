@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { EntityRef } from "../components/entityref";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { listReadState } from "../features/worklist/worklist.listread";
+import { useHandledForYou } from "../features/worklist/worklist.queries";
+import { receiptSummary } from "../features/worklist/worklist.receiptcopy";
+import { ReceiptReview } from "../features/worklist/worklist.receiptreview";
 import { sameCalendarDay } from "../format/calendarday";
 import {
   formatDateTime,
@@ -12,11 +17,6 @@ import {
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
-import { EntityRef } from "./entityref";
-import { listReadState } from "./worklist.listread";
-import { useHandledForYou } from "./worklist.queries";
-import { receiptSummary } from "./worklist.receiptcopy";
-import { ReceiptReview } from "./worklist.receiptreview";
 
 // The changes made for the reader that they can still accept or take back, as
 // one group of Home's receipt. Drawn only when there is one: the group sits

@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { unwrap } from "../lib/problem";
-import { type ListedRecordType, RECORD_LIST_KEY } from "./recordlistkeys";
+import { type ListedRecordType, RECORD_LIST_KEY } from "../lib/recordlistkeys";
 
 /** The record kinds the claim endpoint accepts. */
 export type ClaimableRecordType = ListedRecordType;

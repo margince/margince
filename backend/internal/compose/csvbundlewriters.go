@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -48,13 +49,15 @@ type runOptions struct {
 	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
 	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
 	FromZip bool
+	// PresetLinks file every activity of the run under the same records.
+	PresetLinks []migration.PresetLink
 }
 
 // runOptionsOf reads the run-wide decisions off a stored mapping.
 func runOptionsOf(m migration.RunMapping) runOptions {
 	return runOptions{
 		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
-		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
+		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0, PresetLinks: m.PresetLinks,
 	}
 }
 
@@ -81,19 +84,32 @@ func newBundleWriters(
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}
+	stages, err := runDealStages(ctx, db, parts, src)
+	if err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
-		w.owners, w.tagNames = b.owners, b.tags
+		w.owners, w.tagNames, w.dealStages = b.owners, b.tags, stages
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// runDealStages reads the pipelines a run's deal rows are checked against. An
+// undo, or a run with no deals file, checks no deal row and reads nothing.
+func runDealStages(ctx context.Context, db *database.DB, parts []migration.PartMapping, src migration.Source) (dealStages, error) {
+	if src == nil || !slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return p.Object == migration.ObjectDeal }) {
+		return dealStages{}, nil
+	}
+	return readDealStages(ctx, db)
 }
 
 // resolveOwnersAndTags reads every owner and tag cell of the run in import

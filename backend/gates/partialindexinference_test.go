@@ -49,7 +49,7 @@ type uniqueIndex struct {
 // means a new partial index enrols its writers without this file changing.
 func uniqueIndexesByTable(t *testing.T) map[string][]uniqueIndex {
 	t.Helper()
-	catalog := filepath.Join(moduleRoot(t), "migrations", "testdata", "head_catalog.txt")
+	catalog := filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt")
 	body, err := os.ReadFile(catalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
@@ -331,8 +331,10 @@ type upsertStatement struct {
 // migration that creates a partial index necessarily precedes it.
 func everyUpsertInTheTree(t *testing.T) []upsertStatement {
 	t.Helper()
-	root := moduleRoot(t)
-	tree := filepath.Dir(root)
+	root := gatekit.ModuleRoot(t)
+	// Absolute, unlike root: the .sql walk compares paths across the module
+	// boundary. It reads no Go, so the parse cache never sees this spelling.
+	tree := absolutePath(t, filepath.Join(root, ".."))
 	var found []upsertStatement
 	for _, dir := range []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")} {
 		for _, path := range goSourceFiles(t, dir) {
@@ -363,7 +365,7 @@ func everyUpsertInTheTree(t *testing.T) []upsertStatement {
 // parser, and a file holding several is covered by the first mismatch it carries.
 func sqlScriptsBelow(t *testing.T, tree, root string) []upsertStatement {
 	t.Helper()
-	migrations := filepath.Join(root, "migrations")
+	migrations := absolutePath(t, filepath.Join(root, "migrations"))
 	var found []upsertStatement
 	err := filepath.WalkDir(tree, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
@@ -408,9 +410,18 @@ func sqlScriptsBelow(t *testing.T, tree, root string) []upsertStatement {
 
 func relativeToTree(t *testing.T, tree, path string) string {
 	t.Helper()
-	rel, err := filepath.Rel(tree, path)
+	rel, err := filepath.Rel(tree, absolutePath(t, path))
 	if err != nil {
 		t.Fatalf("relative path of %s: %v", path, err)
 	}
 	return rel
+}
+
+func absolutePath(t *testing.T, path string) string {
+	t.Helper()
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatalf("resolving %s against the working directory: %v", path, err)
+	}
+	return abs
 }

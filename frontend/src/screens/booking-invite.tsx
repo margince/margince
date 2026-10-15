@@ -8,6 +8,7 @@ import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
+import { contactQuery } from "../features/contacts/contact.queries";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
@@ -20,7 +21,6 @@ import {
   type BookingSlot,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
-import { contactQuery } from "./contact.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 

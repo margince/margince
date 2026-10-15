@@ -105,6 +105,40 @@ sends events that this owner may see.
 > So every matching delivery fails to sign, and becomes a dead letter. Rotate it (step 6), or create the subscription again. Both
 > mint a new `whsec_…` secret in standard base64.
 
+### Send a token or a body of your own shape
+
+Add `custom_headers` for a receiver that checks a token, and `body_template` for one that wants its
+own body. Both also work on `PATCH`, under `If-Match`:
+
+```sh
+curl -X POST http://localhost:8080/v1/webhook-subscriptions \
+  --cookie 'crm_session=<admin or ops session>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "target_url": "https://example.test/hooks/margince",
+        "event_types": ["deal.stage_changed"],
+        "custom_headers": [{ "name": "Authorization", "value": "Bearer <token>" }],
+        "body_template": "{ \"text\": \"{{ type }} on {{ entity.id }}\" }"
+      }'
+```
+
+- A header value is sealed when saved and never returned. A read shows the name and
+  `"configured": true`. To keep a value on `PATCH`, send the name with no `value`.
+- `webhook-*`, `proxy-*`, `Content-Type`, `Content-Length`, `Content-Encoding`, `Host`, `Cookie`,
+  `User-Agent`, `X-Margince-Event` and the transport headers are reserved. A name or value with a
+  line break or control character is refused.
+- In a JSON template, put `{{ path }}` inside quotes for text, and `{{ path | json }}` outside
+  quotes for a whole value. The server refuses any other place with a `422` that names the line and
+  column.
+- Each event's fields are in [reference/webhook-events.md](../reference/webhook-events.md). A
+  delivery also carries `entity.name` (a deal, company or project) and `entity.url`, a link to the
+  record when `MARGINCE_PUBLIC_BASE_URL` is set.
+- Try a template first with `POST /v1/webhook-subscriptions/body-preview`
+  (`{"event_type": "deal.stage_changed", "body_template": "…"}`). It renders a sample event and sends
+  nothing.
+
+The signature still covers the exact bytes sent, so step 3 works the same for a custom body.
+
 ## 3. Check the signature on your receiver
 
 Every delivery is a POST that carries three [Standard Webhooks](https://www.standardwebhooks.com/) headers.

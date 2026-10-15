@@ -126,10 +126,8 @@ func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 	if got := byName["Wilma Weber"][emailAt]; got != "wilma@corp.example" {
 		t.Errorf("primary_email = %q, want the primary address", got)
 	}
-	// A leading plus is a formula lead, so the cell carries the export's usual
-	// quote guard like every other text cell.
-	if got := byName["Wilma Weber"][phoneAt]; got != "'+4930123456" {
-		t.Errorf("primary_phone = %q, want the primary number behind the formula guard", got)
+	if got := byName["Wilma Weber"][phoneAt]; got != "+4930123456" {
+		t.Errorf("primary_phone = %q, want the primary number as dialled", got)
 	}
 	if bare := byName["No Channels"]; bare[emailAt] != "" || bare[phoneAt] != "" {
 		t.Errorf("a contact with no channels exported %q / %q, want both empty", bare[emailAt], bare[phoneAt])

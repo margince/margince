@@ -83,8 +83,8 @@ type Task struct {
 	// is what tells a later poll WHICH KIND of document it is holding.
 	//
 	// Set (including zero) means Result is a tool ENVELOPE that handed records
-	// over: every later poll must re-prove the caller may still see them and
-	// re-charge what the first call cost, exactly as an idempotency replay does.
+	// over. Every later poll must re-prove the caller may still see them, and
+	// spends one call.
 	// Nil means there is nothing to re-prove — a refusal, a rejection, a
 	// cancellation — and the stored bytes are served as they stand.
 	//

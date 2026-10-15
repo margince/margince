@@ -225,3 +225,14 @@ func (h Handlers) DismissCompanySuggestion(w http.ResponseWriter, r *http.Reques
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// RestoreCompanySuggestion implements
+// DELETE /companies/{id}/suggestions/dismiss.
+func (h Handlers) RestoreCompanySuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.RestoreCompanySuggestionParams) {
+	if err := h.svc.RestoreSuggestion(r.Context(),
+		ids.From[ids.CompanyKind](ids.UUID(id)), params.Fingerprint); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

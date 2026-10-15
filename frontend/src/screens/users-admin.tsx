@@ -17,9 +17,11 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useMe } from "../lib/session";
 import "./users-admin.css";
+import { PageHeadAction } from "../components/pageheadaction";
+import { useRoster } from "../components/roster";
 import { useCan, useCanWrite } from "../lib/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
-import { useRoster } from "./roster";
+import { usePageReadOnly } from "./settingsnav";
 import { InviteUserForm } from "./users-invite-form";
 import {
   memberAnchorId,
@@ -38,7 +40,6 @@ export function UsersAdminCard() {
   const administersRoster = useCan("user_admin", "read");
   const mayInvite = useCanWrite("user_admin", "create");
   const mayChangeRole = useCanWrite("user_admin", "update");
-  const maySetStatus = useCanWrite("user_admin", "delete");
   return (
     <MembersCard
       me={me.data?.user.id}
@@ -49,7 +50,7 @@ export function UsersAdminCard() {
       management={administersRoster}
       canInvite={administersRoster && mayInvite}
       canChangeRole={administersRoster && mayChangeRole}
-      canSetStatus={administersRoster && maySetStatus}
+      readOnlyPage={usePageReadOnly("members")}
     />
   );
 }
@@ -62,7 +63,7 @@ function MembersCard({
   management,
   canInvite,
   canChangeRole,
-  canSetStatus,
+  readOnlyPage,
 }: Readonly<{
   me: string | undefined;
   probeSettled: boolean;
@@ -71,71 +72,71 @@ function MembersCard({
   management: boolean;
   canInvite: boolean;
   canChangeRole: boolean;
-  canSetStatus: boolean;
+  readOnlyPage: boolean;
 }>) {
   const t = useT();
-  const postureId = useId();
   const members = useMembers();
   const read = withRoles(
     members,
     useAssignableRoles(canChangeRole),
     canChangeRole,
   );
-  // The read-only posture is stated once for the card, and the refused role
-  // pickers point at it rather than each repeating it.
-  const administers = canInvite || canChangeRole || canSetStatus;
-  let posture: string | null = null;
-  if (probeSettled && !administers) {
-    posture = t("users.adminOnly");
-  } else if (probeSettled && management && !canChangeRole) {
-    posture = t("users.role.withheld");
-  }
+  // A reader who may change nothing gets the page's read-only notice. The card
+  // speaks only for the partial posture that notice cannot see.
+  const posture =
+    probeSettled && !readOnlyPage && management && !canChangeRole
+      ? t("users.role.withheld")
+      : null;
+  const loaded = read.data !== undefined && !probing;
   return (
-    <Panel
-      title={t("users.membersTitle")}
-      titleAction={canInvite && <InviteAction canIssueLink={canIssueLink} />}
-      actions={members.hasNextPage && <LoadMoreButton query={members} />}
-    >
-      {posture && (
-        <PanelBody>
-          <PanelIntro>
-            <span id={postureId}>{posture}</span>
-          </PanelIntro>
-        </PanelBody>
+    <>
+      {loaded && canInvite && (
+        <PageHeadAction>
+          <InviteAction canIssueLink={canIssueLink} />
+        </PageHeadAction>
       )}
-      {/* Until /me answers the role picker's read is not known to be needed, and
-          drawing the roster early would drop back to pending once it is. */}
-      {read.data === undefined || probing ? (
-        <PanelBody>
-          <QueryStates
-            query={probing ? { ...read, isPending: true } : read}
-            pendingLabel={t("users.membersTitle")}
-          >
-            {null}
-          </QueryStates>
-        </PanelBody>
-      ) : read.data.list.length === 0 ? (
-        <PanelBody>
-          <EmptyState>{t("users.empty")}</EmptyState>
-        </PanelBody>
-      ) : (
-        <MembersTable
-          list={read.data.list}
-          roles={read.data.roles}
-          management={management}
-          refusalOf={(member, list, roles) =>
-            roleRefusal(member, {
-              roster: list,
-              roles,
-              canChangeRole,
-              cardReasonId: postureId,
-              meId: me,
-              t,
-            })
-          }
-        />
-      )}
-    </Panel>
+      {/* Untitled: on a one-panel page the page heading names the roster. */}
+      <Panel
+        actions={members.hasNextPage && <LoadMoreButton query={members} />}
+      >
+        {posture && (
+          <PanelBody>
+            <PanelIntro>{posture}</PanelIntro>
+          </PanelBody>
+        )}
+        {/* Until /me answers the role picker's read is not known to be needed, and
+            drawing the roster early would drop back to pending once it is. */}
+        {read.data === undefined || probing ? (
+          <PanelBody>
+            <QueryStates
+              query={probing ? { ...read, isPending: true } : read}
+              pendingLabel={t("users.membersTitle")}
+            >
+              {null}
+            </QueryStates>
+          </PanelBody>
+        ) : read.data.list.length === 0 ? (
+          <PanelBody>
+            <EmptyState>{t("users.empty")}</EmptyState>
+          </PanelBody>
+        ) : (
+          <MembersTable
+            list={read.data.list}
+            roles={read.data.roles}
+            management={management}
+            refusalOf={(member, list, roles) =>
+              roleRefusal(member, {
+                roster: list,
+                roles,
+                canChangeRole,
+                meId: me,
+                t,
+              })
+            }
+          />
+        )}
+      </Panel>
+    </>
   );
 }
 
@@ -313,12 +314,7 @@ function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!at) {
-    return (
-      <span>
-        <span aria-hidden="true">—</span>
-        <span className="sr-only">{t("users.lastActiveUnknown")}</span>
-      </span>
-    );
+    return <span className="sr-only">{t("users.lastActiveUnknown")}</span>;
   }
   return (
     <time

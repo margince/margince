@@ -191,6 +191,9 @@ func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 		}
 		if row.Connection != nil && row.Connection.ClientID == clientID {
 			connectionSeen = true
+			if row.Connection.GrantID != minted.UUID {
+				t.Errorf("the connection row carries grant %s, want %s: its usage is counted under the grant", row.Connection.GrantID, minted)
+			}
 		}
 	}
 	if !mintedSeen || !connectionSeen {

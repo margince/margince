@@ -2,10 +2,10 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import type { WeeklyPlan } from "../features/worklist/weeklyplan.queries";
 import { en } from "../i18n/en";
 import { PlanContract } from "./brief.plan.contract";
 import { jsonResponse, render, stubApi, writes } from "./brief.testkit";
-import type { WeeklyPlan } from "./weeklyplan.queries";
 
 // The contract's three states are the whole subject. `null` is a rep who has
 // written nothing, `""` is one who looked and says there is nothing to name,

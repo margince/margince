@@ -109,10 +109,10 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   ai_routing: ["read", "update"],
   automation: ["read", "create", "update"],
   ai_diagnostics: ["read"],
-  // What ModelCostsCard writes. AI usage opens on `ai_diagnostics` and is ACTED
-  // on through the rate table beside it, so a fixture meaning "every page" needs
-  // both.
+  // What the model prices panel on AI models writes.
   ai_model_rate: ["read", "create", "update"],
+  // AI usage opens on `ai_diagnostics` and is acted on through the allowance.
+  ai_budget: ["read", "update"],
   contact: ["read"],
   // What opens Privacy & retention now that `contact:read` does not.
   retention_policy: ["read", "create", "update"],
@@ -138,16 +138,11 @@ const EVERY_PAGE = [
   ...SETTINGS_PAGES.map((page) => labelOf(page.id)),
 ];
 
-// The five reads the old Data model entry unioned, now spread across five pages
-// of their own. Each still has to open its page ALONE: a page wired to one
-// object with four decorative terms passes any fixture that grants all five.
-// `custom_field` opens the field editor, lead and acquisition vocabularies,
-// outcome-review templates and responsibility roles. Revoking that read closes
-// all five; the template page needs no write because its content is read-only.
+// Each read must open its pages alone. A page wired to one object with four
+// decorative terms passes any fixture that grants all five.
 //
-// A record rather than a tuple, so the object and the pages keep their own
-// types: a tuple with a variadic tail widens both halves to their union, and
-// `readOn` would then accept a page id.
+// Not a tuple: a variadic tail widens both halves to their union, and `readOn`
+// would then accept a page id.
 const SALES_READS: readonly {
   readonly object: RbacObject;
   readonly opens: readonly SettingsPageId[];
@@ -197,10 +192,8 @@ const SEEDED_READS: GrantSpec = {
 // migration 0261 grants to admin and ops and to nobody else — is what opens
 // Seats & license.
 //
-// `ai_model_rate` opens AI usage and NOT Model calls, which is the two entries
-// differing rather than a gap in this fixture: AI usage unions the model prices
-// with `ai_diagnostics:read` because a rate-sheet author belongs on the page
-// carrying the table, and Model calls asks `ai_diagnostics:read` alone.
+// `ai_model_rate` opens AI models, where the model prices panel sits. AI usage
+// asks `ai_diagnostics:read` or `ai_budget:read`; the call log asks the first.
 const SEEDED_OPS_READS: GrantSpec = {
   ...SEEDED_READS,
   ai_model_rate: ["read"],
@@ -278,7 +271,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "capture",
   "integrations",
   "knowledge",
-  "usage",
+  "models",
   "automations",
   "privacy",
   // The installation_settings update ops holds, which also opens Company.

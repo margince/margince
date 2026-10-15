@@ -33,6 +33,7 @@ func TestDealStageChangedEmitsTypedPayload(t *testing.T) {
 	amount := int64(250000)
 	currency := "EUR"
 	current := crmcontracts.Deal{
+		Name:        "Acme Expansion",
 		StageId:     &fromStage,
 		Status:      crmcontracts.DealStatus(DealOpen),
 		AmountMinor: &amount,
@@ -70,6 +71,9 @@ func TestDealStageChangedEmitsTypedPayload(t *testing.T) {
 	}
 	if !reflect.DeepEqual(payload.WinProbability, 100) {
 		t.Errorf("got %v, want %v", payload.WinProbability, 100)
+	}
+	if payload.DealName == nil || *payload.DealName != "Acme Expansion" {
+		t.Errorf("deal_name = %v, want the deal's name so a receiver can say which deal moved", payload.DealName)
 	}
 
 	// Round-trip through JSON exactly as storekit.Emit marshals the payload
