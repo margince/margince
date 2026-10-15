@@ -10,8 +10,9 @@ package costestimate
 // inputs compose per task and degrade INDEPENDENTLY:
 //
 //   - per-UNIT cost, from this workspace's served ai_call slices, each priced at
-//     the model that WILL run it (served-if-still-bound, else the slice's own
-//     tier's current binding, else the ladder head, else unpriced);
+//     the model that WILL run it (the answered model while its binding is still
+//     bound, else that binding, else the slice's own tier's current binding,
+//     else the ladder head, else unpriced);
 //   - expected UNITS for X, from this connection's representative backfill yields
 //     (else a named work-shape floor).
 //
@@ -204,13 +205,13 @@ func (e *Estimator) priceObserved(ctx context.Context, task ai.Task, slices []ai
 		// no per-unit integer truncation. Surfaced for every slice, priced or not.
 		inputTokens += s.TokensIn * units / denom
 
-		eff, ok := effectiveModel(e.ladder, task, s)
-		if !ok {
+		candidates := pricingModels(e.ladder, task, s)
+		if len(candidates) == 0 {
 			// Empty ladder → tokens surfaced, the slice unpriced.
 			heuristic = true
 			continue
 		}
-		rate, rerr := e.rates.RateFor(ctx, eff.Provider, eff.Model, today)
+		rate, rerr := e.firstRate(ctx, candidates, today)
 		if rerr != nil {
 			// A read fault is not "unpriced" — it must never be swallowed as one.
 			return 0, 0, false, false, rerr
@@ -315,23 +316,39 @@ func observedUnitsDenom(task ai.Task, slices []ai.ServedTaskTotal, labeledCount 
 	return sumCompletedCalls(slices)
 }
 
-// effectiveModel chooses the model to price a served slice at — the model that
-// will actually RUN this task now, keyed on the slice's own recorded tier:
-// served-if-still-bound, else the slice's tier's current binding (rebind
-// reprice), else the ladder head, else unpriced (empty ladder).
-func effectiveModel(ladder LadderResolver, task ai.Task, s ai.ServedTaskTotal) (ai.ModelRef, bool) {
+// pricingModels are the models to price a served slice at, best first — the
+// model that will actually RUN this task now, keyed on the slice's own recorded
+// tier. A still-bound binding offers the model that answered it, then itself,
+// as the ai module's pricedRate does; a departed one reprices at its tier's
+// current binding, else the ladder head. None means an empty ladder: unpriced.
+func pricingModels(ladder LadderResolver, task ai.Task, s ai.ServedTaskTotal) []ai.ModelRef {
 	bound := ladder.BoundLadder(task)
-	served := ai.ModelRef{Provider: s.Provider, Model: s.ModelID}
-	if slices.Contains(bound, served) {
-		return served, true // still runs → its own current rate
+	binding := ai.ModelRef{Provider: s.Provider, Model: s.ModelID}
+	if slices.Contains(bound, binding) {
+		if s.AnsweredModel == "" || s.AnsweredModel == s.ModelID {
+			return []ai.ModelRef{binding}
+		}
+		return []ai.ModelRef{{Provider: s.Provider, Model: s.AnsweredModel}, binding}
 	}
 	if m, ok := ladder.CurrentModelForTier(s.Tier); ok {
-		return m, true // departed → repriced at the CURRENT binding of its OWN tier
+		return []ai.ModelRef{m}
 	}
 	if len(bound) > 0 {
-		return bound[0], true // its tier is now unbound → the ladder head
+		return bound[:1] // its tier is now unbound → the ladder head
 	}
-	return ai.ModelRef{}, false // empty ladder → unpriced, never index [0]
+	return nil
+}
+
+// firstRate is the rate of the first candidate the sheet prices, or nil when
+// none is priced.
+func (e *Estimator) firstRate(ctx context.Context, candidates []ai.ModelRef, today time.Time) (*ai.ModelRate, error) {
+	for _, m := range candidates {
+		rate, err := e.rates.RateFor(ctx, m.Provider, m.Model, today)
+		if err != nil || rate != nil {
+			return rate, err
+		}
+	}
+	return nil, nil //nolint:nilnil // no candidate rated IS the "unpriced" answer, RateFor's own contract
 }
 
 // usageOf narrows a served slice's aggregate int64 token buckets into the int

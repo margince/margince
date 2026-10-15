@@ -208,6 +208,40 @@ func TestEstimateRepricesDepartedSliceAtItsTiersCurrentModel(t *testing.T) {
 	}
 }
 
+// A still-bound slice the provider answered with another model prices at the
+// model that answered when the sheet prices it, and at its binding when not.
+func TestEstimatePricesAStillBoundSliceAtTheModelThatAnswered(t *testing.T) {
+	cheaper := &ai.ModelRate{InputPerMTokMicroUSD: 500_000, OutputPerMTokMicroUSD: 1_000_000}
+	for _, tc := range []struct {
+		name     string
+		answered string
+		want     *ai.ModelRate
+	}{
+		{"the answered model is priced", "flash-next", cheaper},
+		{"the answered model is not priced", "flash-001", pricedRate},
+		{"the binding answered", "flash", pricedRate},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			served := ai.ServedTaskTotal{
+				Task: ai.TaskCaptureClassify, Tier: ai.TierCheapCloud, Provider: "gemini", ModelID: "flash", AnsweredModel: tc.answered,
+				TokensIn: 1_000_000, TokensOut: 100_000, Calls: 2, CompletedCalls: 2,
+			}
+			ladder := fakeLadder{
+				tiers:   map[ai.Tier]ai.ModelRef{ai.TierCheapCloud: {Provider: "gemini", Model: "flash"}},
+				ladders: defaultLadders(),
+			}
+			rates := fakeRates{rateKey("gemini", "flash"): pricedRate, rateKey("gemini", "flash-next"): cheaper}
+			e := estimatorFor(&fakeTotals{rows: []ai.ServedTaskTotal{served}}, rates, ladder, fakeLabels(50), fakeYields{Scanned: 100, Captured: 100})
+
+			got := mustEstimate(t, e, 100)
+
+			if want := ai.PriceCall(usageOf(served), *tc.want) * 100 / 50 / microsPerMinor; got.CostMinor != want {
+				t.Fatalf("CostMinor = %d, want %d", got.CostMinor, want)
+			}
+		})
+	}
+}
+
 // Case C — denom == 0 (a classify week with slices but no labeled messages)
 // routes classify to the floor: no div-by-zero, quality heuristic.
 func TestEstimateZeroDenominatorRoutesToFloorWithoutDivByZero(t *testing.T) {
@@ -325,7 +359,7 @@ func TestEstimatePricedDenomFlooredAtOne(t *testing.T) {
 	// A huge GENUINELY-unpriced slice at the same task drives sumCalls up so that
 	// denom(=Σcalls)×pricedCalls/sumCalls truncates toward 0 before the floor. It
 	// is served on cheap_cloud, whose CURRENT binding (gemini/flash) has NO rate,
-	// so effectiveModel reprices it at an unrated model — it must not fall back to
+	// so pricingModels reprices it at an unrated model — it must not fall back to
 	// the priced local head, which would make it priced and defeat the guard.
 	unpriced := ai.ServedTaskTotal{
 		Task: ai.TaskEnrich, Tier: ai.TierCheapCloud, Provider: "gemini", ModelID: "old-flash",

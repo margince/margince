@@ -96,7 +96,7 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 	args := []any{s.now().Add(-q.Window), answeredSentinels}
 	failed := failedAttemptSQL("ac", len(args))
 	args = append(args, from, to)
-	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", len(args)-1, len(args))
+	rate := pricedRate("ac", len(args)-1, len(args))
 	// A row with no tier is a call refused before any rung ran, not an attempt.
 	where := "ac.occurred_at >= $1 AND NOT ac.cache_hit AND ac.tier <> ''"
 	var whereSb101 strings.Builder

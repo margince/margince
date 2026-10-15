@@ -81,7 +81,7 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // as-of-date rate and sums per (calendar day, task, tier) — THE one
 // money computation that runs at read time (price-on-read: the
 // router/meter/adapters never compute a cost). One SQL statement: a
-// LATERAL join picks each row's as-of-date rate (RateFor's same
+// LATERAL join picks each row's as-of-date rate through pricedRate (RateFor's
 // resolution, inlined so the whole window prices in one query instead of
 // one round-trip per call), the four-bucket arithmetic mirrors PriceCall
 // exactly (same floor, same zero-cache-price fallback to the input rate, same
@@ -113,7 +113,7 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 			  COALESCE(SUM(`+callCostMicroUSD("ac")+`), 0) AS cost_microusd,
 			  COUNT(*) FILTER (WHERE `+callUnpriced("ac")+`) AS unpriced_calls
 			FROM ai_call ac
-			LEFT JOIN LATERAL (`+rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", 3, 4)+`) r ON true
+			LEFT JOIN LATERAL (`+pricedRate("ac", 3, 4)+`) r ON true
 			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
 			GROUP BY ac.occurred_at::date, ac.task, ac.tier
 			ORDER BY day, ac.task, ac.tier`,
@@ -141,7 +141,7 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 }
 
 // callCostMicroUSD is what one ai_call row (aliased alias, joined to its rate
-// as r through rateMatch) cost, in micro-USD. Every reader that prices a call
+// as r through pricedRate) cost, in micro-USD. Every reader that prices a call
 // in SQL takes it from here, so they price alike.
 func callCostMicroUSD(alias string) string {
 	return fmt.Sprintf(`CASE
