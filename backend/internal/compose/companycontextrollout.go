@@ -3,7 +3,11 @@
 
 package compose
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/platform/config"
+)
 
 const (
 	companyContextRolloutOff        = "off"
@@ -11,6 +15,21 @@ const (
 	companyContextRolloutTasks      = "tasks"
 	companyContextRolloutOnboarding = "onboarding"
 )
+
+// CompanyContextRollout stages company knowledge: each stage includes the one
+// before it, and moving back disables surfaces without deleting confirmed data.
+var CompanyContextRollout = config.Define(config.Spec[string]{
+	Key: "company_context.rollout", Env: "MARGINCE_COMPANY_CONTEXT_ROLLOUT", Roles: []config.Role{config.RoleAPI},
+	Type:    config.Enum(companyContextRolloutOff, companyContextRolloutRead, companyContextRolloutTasks, companyContextRolloutOnboarding),
+	Default: config.Some(companyContextRolloutOnboarding),
+	Doc:     "Company-context stage: off, read (reads and settings), tasks (AI tasks receive it) or onboarding (the first-run flow too).",
+})
+
+// CompanyContextTasks reports whether declared AI tasks may receive company
+// data under the loaded rollout.
+func CompanyContextTasks(c *config.Config) bool {
+	return companyContextTasksEnabled(config.Val(c, CompanyContextRollout))
+}
 
 // WithCompanyContextRollout gives the HTTP surfaces the already-validated
 // operator capability. The composition root is the only config reader.

@@ -126,7 +126,7 @@ The guards:
 | Onboarding dossier | `/company/site-reads` start, poll, confirm; unbound `site_read` (contacts) |
 | Wizard state | `/onboarding/state`, `onboarding_wizard_state` (identity; migration `0103`) |
 | Provider + prompt block | `internal/compose/companycontextprompt.go` |
-| The switch | `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
+| The switch | `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
 | Trace provenance | `ai_call` context columns (migration `0102`); see [ai-runtime.md](ai-runtime.md) |
 | The UI | `frontend/src/features/onboarding/onboarding-conversation/` (the machine + acts), the scene modules `onboarding-gate.tsx` / `onboarding-backread.tsx`, and `company-context.tsx` (the settings screen). `onboarding.tsx` is the entry point and the shared vocabulary of the journey, not a screen |
 | Deep read (companies that exist) | `POST /companies/{id}/deep-read`: the same engine, staged for approval |

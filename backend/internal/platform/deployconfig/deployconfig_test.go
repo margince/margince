@@ -62,9 +62,6 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	if cfg.Seeds.StarterAutomations == nil || *cfg.Seeds.StarterAutomations {
 		t.Fatal("starter_automations: false did not parse")
 	}
-	if cfg.CompanyContext.EffectiveRollout() != CompanyContextTasks {
-		t.Fatalf("company-context rollout = %q", cfg.CompanyContext.EffectiveRollout())
-	}
 }
 
 func TestParseValidatesFailClosed(t *testing.T) {
@@ -80,22 +77,11 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"duplicate stage":         "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 10 }, { name: A, probability: 20 } ] } }\n",
 		"probability out of band": "version: 1\nseeds: { pipeline: { name: S, stages: [ { name: A, probability: 140 } ] } }\n",
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
-		"unknown context rollout": "version: 1\ncompany_context: { rollout: everything }\n",
 	}
 	for name, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
 			t.Errorf("%s: parsed without error", name)
 		}
-	}
-}
-
-func TestCompanyContextRolloutDefaultsToOnboarding(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if got := cfg.CompanyContext.EffectiveRollout(); got != CompanyContextOnboarding {
-		t.Fatalf("default rollout = %q, want onboarding", got)
 	}
 }
 

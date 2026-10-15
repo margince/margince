@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	CompanyContext CompanyContext  `yaml:"company_context"`
 	Analytics      Analytics       `yaml:"analytics"`
 	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
@@ -299,11 +298,6 @@ func (c Config) validate() error {
 	}
 	if err := c.Seeds.validate(); err != nil {
 		return err
-	}
-	switch c.CompanyContext.EffectiveRollout() {
-	case CompanyContextOff, CompanyContextRead, CompanyContextTasks, CompanyContextOnboarding:
-	default:
-		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
 	}
 	if err := c.Uploads.validate(); err != nil {
 		return err

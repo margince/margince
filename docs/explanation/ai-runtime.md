@@ -315,7 +315,7 @@ They also show up as `/metrics` counters per task.
 
 The whole lane sits behind the `company_context.rollout` switch in `margince.yaml`, which can turn it
 off. Its steps are ordered `off < read < tasks < onboarding` (default `onboarding` = all the way on;
-`platform/deployconfig`).
+`compose/companycontextrollout.go`).
 
 The form with no database, `ai.NewLocalRouter`, serves the same seam for each offline `fixture` and the
 certification lane. `--ai-fake` binds the offline fake *through the Router*. So dev and test run the
@@ -461,7 +461,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Monthly budget setting | `ai.budget`: `BudgetConfig` (`internal/modules/ai/budgetsettings.go`); RBAC object `ai_budget` |
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
 | Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet job `ai_budget_resume` (`internal/compose/jobs_aibudget.go`) through `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
-| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
+| Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
 | Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier |
 | The certification lane | `internal/compose/aicert`: `make e2e-ai`, `make e2e-ai-report` |
 

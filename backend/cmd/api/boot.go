@@ -384,7 +384,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 	if err != nil {
 		return nil, nil, err
 	}
-	modelPath.SetCompanyContextEnabled(deployCfg.CompanyContext.TasksEnabled())
+	modelPath.SetCompanyContextEnabled(compose.CompanyContextTasks(cfg.settings))
 	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
 	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
