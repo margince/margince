@@ -60,7 +60,7 @@ func validSecurityTxt(s *SecurityTxt) error {
 		return errors.New("web.security_txt.contact needs at least one mailto:, https: or tel: URI")
 	}
 	for _, c := range s.Contact {
-		if err := checkURI(c, "mailto", "https", "tel"); err != nil {
+		if err := checkURI(c, "mailto", schemeHTTPS, "tel"); err != nil {
 			return fmt.Errorf("web.security_txt.contact %q: %w", c, err)
 		}
 	}
@@ -68,7 +68,7 @@ func validSecurityTxt(s *SecurityTxt) error {
 		return err
 	}
 	if s.Policy != "" {
-		if err := checkURI(s.Policy, "https"); err != nil {
+		if err := checkURI(s.Policy, schemeHTTPS); err != nil {
 			return fmt.Errorf("web.security_txt.policy %q: %w", s.Policy, err)
 		}
 	}
@@ -104,10 +104,10 @@ func checkURI(raw string, schemes ...string) error {
 		if u.Scheme != scheme {
 			continue
 		}
-		if scheme == "https" && u.Host == "" {
+		if scheme == schemeHTTPS && u.Host == "" {
 			return errors.New("names no host")
 		}
-		if scheme != "https" && u.Opaque == "" {
+		if scheme != schemeHTTPS && u.Opaque == "" {
 			return errors.New("names no address")
 		}
 		if scheme == "mailto" && !strings.Contains(u.Opaque, "@") {

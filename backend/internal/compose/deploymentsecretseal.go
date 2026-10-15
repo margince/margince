@@ -12,8 +12,8 @@ package compose
 // how the credential ARRIVED rather than where it lives. Once the boot log says
 // it is sealed, the operator may delete the declaration: the whole `license:`
 // block, or the `password:` line under `email.smtp`. Deleting only what it
-// points AT is not the same thing and fails the boot — a named
-// source that yields nothing has always been an error there, not an absence.
+// points AT is not the same thing, and fails the boot. A named source that
+// yields nothing is an error, not an absence.
 // Nothing here can delete it for them: the process cannot edit its own
 // deployment.
 //

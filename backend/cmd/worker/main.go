@@ -239,9 +239,9 @@ func registerComposedExtensions() ([]extension.Extension, error) {
 	return extensions, nil
 }
 
-// workerBoot is everything decided before this process touches a network: the
-// parsed flags, the file's seeds, the composed extension set, and the
-// logger the phases after it report through.
+// workerBoot is everything decided before this process touches a network.
+// That is the parsed flags, the file's seeds, the composed extension set, and
+// the logger the phases after it report through.
 type workerBoot struct {
 	cfg        workerConfig
 	deploy     deployconfig.Bootstrap

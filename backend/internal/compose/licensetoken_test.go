@@ -37,10 +37,13 @@ func TestTheTokenFileIsReadWithoutItsTerminator(t *testing.T) {
 // container that exports the variable with nothing in it is not unlicensed.
 func TestTheVariableOutranksTheFileUnlessItIsEmpty(t *testing.T) {
 	path := writeLicenseFile(t, []byte("from.the.file"))
-	for env, want := range map[string]string{"MARGINCE_LICENSE= from.the.environment ": "from.the.environment", "MARGINCE_LICENSE=": "from.the.file"} {
-		got, err := declaredLicenseToken(licenseSettings(t, tokenFileYAML(path), env))()
-		if err != nil || got != want {
-			t.Errorf("%s: token %q, err %v; want %q", env, got, err, want)
+	for _, tc := range []struct{ env, want string }{
+		{"MARGINCE_LICENSE= from.the.environment ", "from.the.environment"},
+		{"MARGINCE_LICENSE=", "from.the.file"},
+	} {
+		got, err := declaredLicenseToken(licenseSettings(t, tokenFileYAML(path), tc.env))()
+		if err != nil || got != tc.want {
+			t.Errorf("%s: token %q, err %v; want %q", tc.env, got, err, tc.want)
 		}
 	}
 }

@@ -10,9 +10,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-// The compiled-in ceilings, written out here: this is the test that notices a
-// default moving, and one that read the default it checks would agree with any
-// value at all.
+// The compiled-in ceilings, written out here. This is the test that notices a
+// default moving; one that read the default it checks would agree with any
+// value.
 var compiledCeilings = UploadLimits{
 	Attachment: 25_000_000, CSVImport: 10_000_000, LinkedInImport: 8_000_000, KnowledgeDocument: 5_000_000,
 }
@@ -27,8 +27,8 @@ func loadUploads(t *testing.T, body string) (UploadLimits, error) {
 }
 
 // An installation that never wrote the section is still bounded, generously
-// enough to upload the paper the product is about, and the defaults a
-// composition with no file at all uses are the same numbers.
+// enough to upload the paper the product is about. A composition with no file
+// at all uses the same numbers.
 func TestAFileWithNoUploadsSectionGetsTheCompiledCeilings(t *testing.T) {
 	limits, err := loadUploads(t, "")
 	if err != nil || limits != compiledCeilings {

@@ -18,12 +18,11 @@ import (
 // under `seeds.ai_routing` — and, once an installation is running, in the
 // database — so its shape belongs where the thing it describes is written.
 //
-// Held as literals: these descriptions are hand-tuned and the key order is
-// deliberate, and round-tripping them would churn the file on every
-// regeneration for no reader's benefit. What is NOT literal is the tier enum,
-// which comes from the task contract through ai.AllTiers, and the provider
-// enums, which come from the provider registry through ai.KnownProviders and
-// ai.DecisionProviders.
+// Held as literals: the descriptions are hand-tuned and the key order is
+// chosen. Round-tripping them would churn the file on every regeneration for
+// no reader's benefit. The tier enum is not literal: it comes from the task
+// contract through ai.AllTiers. Nor are the provider enums, which come from the
+// provider registry through ai.KnownProviders and ai.DecisionProviders.
 const routingDefsTemplate = `{
   "aiRouting": {
     "description": "The tier-to-model binding a fresh installation is bootstrapped with. Consumed ONCE, at bootstrap: a running installation is rebound through Settings -> AI, and editing this afterwards changes nothing until the database is rebuilt.",

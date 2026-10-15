@@ -58,7 +58,8 @@ type apiConfig struct {
 	geocodeBaseURL        string
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
 	// (OPS-CFG-2) rather than at each of the three places that used to ask.
-	// It selects which license authorities are honoured; it decides nothing destructive — see shared/runtimeenv.
+	// It selects which license authorities are honoured, and decides nothing
+	// destructive (shared/runtimeenv says why).
 	posture        runtimeenv.Environment
 	trustedProxies httpserver.TrustedProxies
 	// settings are the loaded settings, for the reads compose makes itself.

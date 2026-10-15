@@ -56,7 +56,7 @@ func LoadBootstrap(path string) (Bootstrap, error) { return LoadBootstrapFiles(p
 
 // LoadBootstrapFiles reads the base file, then the --config-file over it. A
 // root the config file writes replaces the base's whole, so a dev stack's
-// seeds.ai_routing is the dev file's own; validation runs once, over the
+// seeds.ai_routing is the dev file's own. Validation runs once, over the
 // result. A missing file is skipped here, since config.Load refuses a missing
 // --config-file before this runs.
 func LoadBootstrapFiles(base, configFile string) (Bootstrap, error) {
@@ -84,7 +84,8 @@ func LoadBootstrapFiles(base, configFile string) (Bootstrap, error) {
 // decode returns the bootstrap roots of one document and which of them it
 // writes. A file holding only comments is an empty document.
 func decode(raw []byte) (Bootstrap, map[string]bool, error) {
-	doc := document{Bootstrap: Bootstrap{Version: 1}}
+	var doc document
+	doc.Version = 1
 	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
 	dec.KnownFields(true)
 	if err := dec.Decode(&doc); err != nil && !errors.Is(err, io.EOF) {

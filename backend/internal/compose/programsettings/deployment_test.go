@@ -71,7 +71,7 @@ func TestTheFxCandidatesAreReadAsWrittenAndHeldToISO4217(t *testing.T) {
 	}
 }
 
-// --config-file wins key by key over the base: a list it names replaces the
+// --config-file wins key by key over the base. A list it names replaces the
 // base's whole, and a key it leaves out keeps the base's value.
 func TestAConfigFileReplacesAListAndKeepsTheBasesOtherKeys(t *testing.T) {
 	t.Parallel()

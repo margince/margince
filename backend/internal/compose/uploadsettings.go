@@ -7,9 +7,9 @@ package compose
 // The operator chooses the numbers; which routes may carry a file stays in
 // uploadCeilings, so no route can claim the file bound at run time.
 //
-// Decimal megabytes: the key, the server's refusal and the upload form's hint
-// all state this number, and `25 << 20` reads as 25 MB while admitting 26.2
-// million bytes. The floor is 1 MB, below which the JSON bound governs; past
+// Decimal megabytes, since the key, the server's refusal and the upload form's
+// hint all state this number. `25 << 20` reads as 25 MB while admitting 26.2
+// million bytes. The floor is 1 MB, below which the JSON bound governs. Past
 // 100 MB the answer is an upload straight to object storage, not a bigger
 // number here.
 

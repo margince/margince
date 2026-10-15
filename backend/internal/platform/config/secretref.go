@@ -53,7 +53,7 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 	return text, "", false, nil
 }
 
-// refused stops a source that holds the absence marker: whether it means a
+// refused stops a source that holds the absence marker. Whether it means a
 // password of that spelling or a removal cannot be told, so neither is taken.
 func refused(value, file string) (string, string, bool, error) {
 	if strings.TrimSpace(value) == refNone {

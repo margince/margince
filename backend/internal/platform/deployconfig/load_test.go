@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// config.Load skips exactly these roots, and reads every other one.
+// config.Load skips these roots and no others.
 func TestTheRootsAreTheFourBootstrapKeys(t *testing.T) {
 	got := slices.Sorted(maps.Keys(Roots()))
 	if want := []string{"bootstrap_admin", "seeds", "version", "workspace"}; !slices.Equal(got, want) {

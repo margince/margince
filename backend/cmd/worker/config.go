@@ -65,8 +65,8 @@ type workerConfig struct {
 	observeAddr    string
 	observePprof   bool
 	// posture is what MARGINCE_ENV says this deployment is, read ONCE here
-	// (OPS-CFG-2). It selects which license authorities are honoured; it
-	// decides nothing destructive — see shared/runtimeenv.
+	// (OPS-CFG-2). It selects which license authorities are honoured, and
+	// decides nothing destructive (shared/runtimeenv says why).
 	posture runtimeenv.Environment
 	// settings are the loaded settings, for the reads compose makes itself.
 	settings *config.Config

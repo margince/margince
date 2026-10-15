@@ -53,8 +53,8 @@ func TestTheRelayPasswordResolvesEachConfiguredSource(t *testing.T) {
 	}
 }
 
-// The reference is the form an operator migrating forward added deliberately;
-// reading the file it replaced would keep the old credential in use.
+// The reference is the form an operator migrating forward chose to write.
+// Reading the file it replaced would keep the old credential in use.
 func TestTheReferenceWinsOverTheLegacyPath(t *testing.T) {
 	stale := filepath.Join(t.TempDir(), "stale")
 	if err := os.WriteFile(stale, []byte("the-old-credential"), 0o600); err != nil {
@@ -88,8 +88,8 @@ func TestALiteralRelayPasswordIsRefused(t *testing.T) {
 	}
 }
 
-// An enabled relay with nowhere to send, or nobody to send as, fails the boot,
-// and so does a password both declared absent and named by a file.
+// An enabled relay with nowhere to send, or nobody to send as, fails the boot.
+// So does a password both declared absent and named by a file.
 func TestTheRelayIsCheckedAsAWhole(t *testing.T) {
 	enabled := "email:\n  enabled: true\n  from_address: ops@example.test\n  smtp:\n    host: h\n    port: 587\n"
 	if _, err := loadMail(t, enabled); err != nil {

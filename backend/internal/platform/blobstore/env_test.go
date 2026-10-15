@@ -128,8 +128,6 @@ func TestFromConfigRefusesAnUnreadableTLSSwitch(t *testing.T) {
 
 // fromVars builds the store from the variables given and no others, loaded the
 // way a program loads them.
-//
-//nolint:ireturn // FromConfig returns the Store seam; this hands it on.
 func fromVars(t *testing.T, vars map[string]string) (blobstore.Store, bool, error) {
 	t.Helper()
 	environ := make([]string, 0, len(vars))

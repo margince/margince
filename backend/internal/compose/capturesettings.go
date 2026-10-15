@@ -10,7 +10,7 @@ import (
 )
 
 // The capture pipeline's deployment tuning. The consumer-mail lists moved to
-// the workspace's own settings; their keys still load, so a file that carries
+// the workspace's own settings. Their keys still load, so a file that carries
 // them boots, and a warning says they act on nothing.
 var (
 	CaptureFreemailExtra = config.Define(config.Spec[[]string]{
@@ -29,8 +29,8 @@ var (
 		Key: "capture.transactional_never", Env: "MARGINCE_CAPTURE_TRANSACTIONAL_NEVER", Type: config.List(config.String), Roles: bothRoles,
 		Doc: "Domains never suppressed as transactional, whatever the built-in rules say.",
 	})
-	// Only the deployment turns it off: a member must not be able to switch on
-	// retention of colleagues' subjects, and an operator switching it off is a
+	// Only the deployment turns it off. A member must not be able to switch on
+	// retention of colleagues' subjects. An operator who turns it off makes a
 	// decision with a name attached.
 	CaptureTracePayloads = config.Define(config.Spec[bool]{
 		Key: "capture.trace_payloads", Env: "MARGINCE_CAPTURE_TRACE_PAYLOADS", Type: config.Bool, Default: config.Some(true), Roles: bothRoles,
@@ -56,9 +56,8 @@ func captureSettings() []config.Any {
 }
 
 // CaptureConfigFromDeploy maps the capture settings onto the config the Sink
-// gates read. Every role that boots goes through here, which is why the
-// stale-key warning is logged here: a key still accepted but no longer acting
-// must say so once, at boot.
+// gates read. Every role that boots goes through here, so the stale-key
+// warning is logged here, once, at boot.
 func CaptureConfigFromDeploy(c *config.Config, log *slog.Logger) CaptureConfig {
 	if len(config.Val(c, CaptureFreemailExtra)) > 0 || len(config.Val(c, CaptureFreemailNever)) > 0 {
 		log.Warn("capture configuration: capture.freemail_extra / capture.freemail_never are ignored: the consumer-mail " +

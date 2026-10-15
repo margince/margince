@@ -4,9 +4,9 @@
 package compose
 
 // The RFC 9116 contact file. The api serves it because the api holds the
-// deployment setting it is rendered from; the web tier answers the same path with
-// a plain 404, so an ingress that leaves it on the web service publishes no
-// file rather than the app shell.
+// setting it is rendered from. The web tier answers the same path with a plain
+// 404. An ingress that leaves it on the web service then publishes no file,
+// rather than the app shell.
 
 import (
 	"io"

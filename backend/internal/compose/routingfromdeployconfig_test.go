@@ -62,8 +62,8 @@ func TestRoutingFromDeployConfigReadsTheDeclaredBinding(t *testing.T) {
 
 // A path that is not there is reported AS a missing file.
 // deployconfig.LoadBootstrap tolerates an absent file, which is right for a boot
-// and wrong here — a typo would otherwise be reported as "declares no seeds.ai_routing"
-// and send an operator to edit a file that does not exist.
+// and wrong here. A typo would otherwise read as "declares no
+// seeds.ai_routing" and send an operator to edit a file that does not exist.
 func TestRoutingFromDeployConfigNamesAMissingFile(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "not-here.yaml")
 	_, err := RoutingFromDeployConfig(missing)

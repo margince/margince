@@ -31,13 +31,13 @@ var bothRoles = []config.Role{config.RoleAPI, config.RoleWorker}
 const licenseTokenOriginNone = "none"
 
 // licenseTokenLimit bounds a token file. A licence is a JWT of a few
-// kilobytes, and everything downstream copies it whole, so a path pointed at a
+// kilobytes, and everything downstream copies it whole. So a path pointed at a
 // log or an image fails as the mistake it is.
 const licenseTokenLimit = 64 << 10
 
 // declaredLicenseToken reads the token the deployment declares, or "" for an
-// unlicensed installation. A named source that yields nothing is an error: in
-// production "no licence" and "an empty file" would otherwise refuse the boot
+// unlicensed installation. A named source that yields nothing is an error. In
+// production, "no licence" and "an empty file" would otherwise refuse the boot
 // with the wrong remedy.
 //
 // A source rather than a value because token_file is read again at each check,

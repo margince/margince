@@ -53,7 +53,7 @@ func TestBackfillCeilingDefaultsToNoCapAndReadsTheOperatorsNumber(t *testing.T) 
 }
 
 // The moved keys still load, since deleting them would refuse an upgrade's
-// boot, so the warning is the one thing that says they no longer act. It names
+// boot. So the warning is the one thing that says they no longer act. It names
 // where the list moved, and an operator who never set them hears nothing.
 func TestCaptureWarnsOnlyAboutSettingsItNoLongerActsOn(t *testing.T) {
 	for _, body := range []string{"version: 1\n", "capture:\n  transactional_extra: [esp.example]\n"} {

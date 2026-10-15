@@ -83,12 +83,11 @@ func correctTheToken(cfg *config.Config) string {
 // licenseTokenOrigin names where the token came from, for the boot log and for
 // the refusal that tells an operator what to correct.
 //
-// The declaration speaks only for the boot sources; it has never heard of the
-// vault, and an installation that sealed its token and
-// dropped the declaration would otherwise be told its token came from "none" —
-// while running on one. Naming the vault is the difference between an operator
-// who knows where to look and one who goes looking in the file that no longer
-// mentions it. A grep token rather than prose, because every other value of
+// The declaration speaks only for the boot sources and has never heard of the
+// vault. An installation that sealed its token and dropped the declaration
+// would otherwise be told its token came from "none" while running on one.
+// Naming the vault tells an operator where to look, instead of sending them to
+// a file that no longer mentions it. A grep token rather than prose, because every other value of
 // this field is one.
 func licenseTokenOrigin(cfg *config.Config, posture licensecheck.Posture) string {
 	if origin := licenseTokenDeclaredAt(cfg); origin != licenseTokenOriginNone {

@@ -25,9 +25,9 @@ const (
 )
 
 // FromConfig builds a Store from the blobstore settings. The secrets have no
-// flag, since a flag leaks into the process table. It reports configured=false with a nil Store when neither an endpoint
-// nor a path is set, so a deployment without object storage boots normally —
-// the attachment endpoints answer 501 rather than the process failing to start.
+// flag, since a flag leaks into the process table. With neither an endpoint
+// nor a path set it reports configured=false and a nil Store. A deployment
+// without object storage then boots, and the attachment endpoints answer 501.
 //
 // Two providers can be configured, and ENDPOINT wins when both are. An operator
 // who set both has named two different stores for the same bytes, and the

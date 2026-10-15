@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-// An upgrade keeps today's behaviour until an operator stages it back, so a
+// An upgrade keeps today's behaviour until an operator stages it back. So a
 // file that says nothing is at onboarding, and a stage is read as written.
 func TestTheCompanyContextRolloutDefaultsToOnboardingAndRefusesAnUnknownStage(t *testing.T) {
 	if got := config.Val(configtest.MustLoad(t, "version: 1\n", CompanyContextRollout), CompanyContextRollout); got != companyContextRolloutOnboarding {

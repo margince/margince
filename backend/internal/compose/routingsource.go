@@ -355,9 +355,9 @@ func singletonWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, erro
 // the first call.
 func RoutingFromDeployConfig(path string) (ai.RoutingConfig, error) {
 	// Stat first. LoadBootstrap tolerates an absent file, which is right for a
-	// boot and wrong here, where the path is the whole instruction: a typo would
-	// otherwise be reported as "declares no seeds.ai_routing", which sends an
-	// operator to edit a file that does not exist.
+	// boot and wrong here, where the path is the whole instruction. A typo would
+	// otherwise read as "declares no seeds.ai_routing" and send an operator to
+	// edit a file that does not exist.
 	if _, err := os.Stat(path); err != nil {
 		return ai.RoutingConfig{}, fmt.Errorf("compose: reading the deployment config %s: %w", path, err)
 	}
@@ -375,9 +375,9 @@ func RoutingFromDeployConfig(path string) (ai.RoutingConfig, error) {
 	return routing, nil
 }
 
-// RoutingKeys is the lookup the routing path resolves credentials through: the
-// vault's root key from the loaded settings, so it opens the vault the role's
-// boot opened, and each provider key from the process environment.
+// RoutingKeys is the lookup the routing path resolves credentials through. The
+// vault's root key comes from the loaded settings, so it opens the vault the
+// role's boot opened. Each provider key comes from the process environment.
 func RoutingKeys(c *config.Config) config.Lookup {
 	rootKey := keyvault.RootKey(c)
 	return func(name string) string {

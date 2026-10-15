@@ -19,14 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
-// Every case here loads its settings from an explicit environment, which is
-// what makes them tests of the code rather than of the shell they run in: an
-// engineer or CI lane exporting a real MARGINCE_LICENSE cannot turn an absent
-// posture into a valid one, or make a case that names a token FILE read a
-// variable instead.
+// Every case here loads its settings from an explicit environment, so the
+// cases test the code, not the shell they run in. A real MARGINCE_LICENSE in
+// an engineer's shell cannot turn an absent posture into a valid one. Nor can
+// it make a case that names a token file read a variable instead.
 //
-// The nil pool and nil vault are the point of a second property rather than a
-// convenience: with no vault configured there is nothing sealed to open, so the
+// The nil pool and nil vault are a second property, not a convenience. With
+// no vault configured there is nothing sealed to open, so the
 // declaration is the whole answer and resolving it must touch no database. A
 // change that made the license question need one would fail every case here by
 // dereferencing the pool — which is the failure to want, because a worker
@@ -216,11 +215,9 @@ func TestAssembledMetricsSectionsOmitTheLicenseWhenNoneWasWired(t *testing.T) {
 // the deployment file, so an installation licensed from a variable — set by
 // whoever controls the deploy pipeline rather than by whoever reviews the config
 // — should say so where somebody reads it.
-// Which source the token came from reaches the boot line.
-// TestTheTokenOriginNamesTheSettingThatWins covers the naming; what is
-// asserted here is that EnsureLicense actually puts it in the record, since a
-// posture logged without its source cannot answer "which license is this
-// installation running on".
+// TestTheTokenOriginNamesTheSettingThatWins covers the naming. This asserts
+// that EnsureLicense puts it in the record: a posture logged without its source
+// cannot answer "which license is this installation running on".
 func TestEnsureLicenseBootLineNamesTheTokenSource(t *testing.T) {
 	var log bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&log, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -233,9 +230,8 @@ func TestEnsureLicenseBootLineNamesTheTokenSource(t *testing.T) {
 }
 
 // Where the token came from is half the boot line's value, and the declaration
-// speaks only for the boot sources. Once a token can be sealed in
-// the vault, an installation running on one would be recorded as running on
-// "none" — which reads as unlicensed to whoever greps for it.
+// speaks only for the boot sources. A token sealed in the vault would otherwise
+// be recorded as "none", which reads as unlicensed to whoever greps for it.
 func TestTheTokenOriginNamesTheVaultOnlyWhenAVaultAnsweredIt(t *testing.T) {
 	declared := licenseSettings(t, "version: 1\nlicense:\n  token: ${env:A_LICENSE_TOKEN}\n", "A_LICENSE_TOKEN=a.token")
 	for _, tc := range []struct {

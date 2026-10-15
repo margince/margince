@@ -108,11 +108,11 @@ func asJSONValue(t *testing.T, path string) any {
 // key the schema accepts is one a program reads.
 //
 // The schema says additionalProperties:false, so an omission is an active lie:
-// an editor flags a key the server reads. The bootstrap roots are walked from
-// deployconfig.Bootstrap, and the settings from the program registries, rather
-// than from a list somebody remembers to extend. A flat setting key (redis,
-// dsn) is a boot flag's name, which the schema does not describe yet; every
-// dotted key is a margince.yaml section the schema must carry.
+// an editor flags a key the server reads. The bootstrap roots come from
+// deployconfig.Bootstrap and the settings from the program registries, never
+// from a list. A flat setting key (redis, dsn) is a boot flag's name, which the
+// schema does not describe yet. Every dotted key is a margince.yaml section the
+// schema must carry.
 func TestTheSchemaAndTheLoadersAgreeOnEveryKey(t *testing.T) {
 	t.Parallel()
 	raw, err := os.ReadFile(configSchemaPath)

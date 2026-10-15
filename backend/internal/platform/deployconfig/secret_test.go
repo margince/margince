@@ -23,10 +23,7 @@ import (
 // TestEveryEnvVarIsDocumented reads any MARGINCE_* literal in Go as a variable
 // the code consumes and demands a row in configuration.md; documenting these
 // would claim the product reads a variable it has never heard of.
-var (
-	smtpPasswordVar = envNamespace + "SMTP_PASSWORD"
-	absentVar       = envNamespace + "ABSENT"
-)
+var absentVar = envNamespace + "ABSENT"
 
 const envNamespace = "MARGINCE" + "_"
 
