@@ -292,12 +292,9 @@ describe("the webhook subscription drawer", () => {
     await waitFor(() =>
       expect(calls.some((c) => c.method === "PATCH")).toBe(true),
     );
+    const patch = calls.find((c) => c.method === "PATCH");
     expect(
-      (
-        calls.find((c) => c.method === "PATCH")?.body as {
-          custom_headers: unknown;
-        }
-      ).custom_headers,
+      (patch?.body as { custom_headers?: unknown })?.custom_headers,
     ).toEqual([
       { name: "X-Api-Key", value: "new-key-not-real" },
       { name: "X-Tenant" },
