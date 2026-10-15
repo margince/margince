@@ -14005,7 +14005,7 @@ export const de = {
   "legalReview.packNoOffer": "Kein Angebot zu diesem Deal.",
   "legalReview.packDocuments": "Dokumente",
   "legalReview.packNoDocuments":
-    "Kein Vertrags-, Rechts- oder Angebotsdokument, das du öffnen kannst.",
+    "Kein SOW/Vertrag, NDA/Rechtliches oder Angebot/Proposal, das du öffnen kannst.",
   "legalReview.docCategory.contract": "SOW/Vertrag",
   "legalReview.docCategory.offer": "Angebot/Proposal",
   "legalReview.docCategory.legal": "NDA/Rechtliches",

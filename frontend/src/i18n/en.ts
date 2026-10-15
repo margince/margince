@@ -14062,7 +14062,7 @@ export const en = {
   "legalReview.packNoOffer": "No offer on this deal.",
   "legalReview.packDocuments": "Documents",
   "legalReview.packNoDocuments":
-    "No contract, legal or offer document you can open.",
+    "No SOW/Contract, NDA/Legal or Proposal/Offer document you can open.",
   "legalReview.docCategory.contract": "SOW/Contract",
   "legalReview.docCategory.offer": "Proposal/Offer",
   "legalReview.docCategory.legal": "NDA/Legal",

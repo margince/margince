@@ -13655,7 +13655,7 @@ export const vi = {
   "legalReview.packNoOffer": "Deal này chưa có báo giá.",
   "legalReview.packDocuments": "Tài liệu",
   "legalReview.packNoDocuments":
-    "Không có tài liệu hợp đồng, pháp lý hay báo giá nào bạn mở được.",
+    "Không có tài liệu SOW/Hợp đồng, NDA/Pháp lý hay Đề xuất/Báo giá nào bạn mở được.",
   "legalReview.docCategory.contract": "SOW/Hợp đồng",
   "legalReview.docCategory.offer": "Đề xuất/Báo giá",
   "legalReview.docCategory.legal": "NDA/Pháp lý",
