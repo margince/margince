@@ -10,9 +10,9 @@ import (
 )
 
 // outputRetry is the loop's memory of a model that has not yet produced a step.
-// A reply that cannot be parsed is one of two different things: the model broke
-// the format, which asking again can fix, or the provider cut it off at the
-// output cap, which asking again at the same cap cannot.
+// An unparseable reply is one of two things. Either the model broke the format,
+// which asking again can fix. Or the provider cut it off at the output cap,
+// which asking again at the same cap cannot.
 type outputRetry struct {
 	invalidStreak int
 	ceiling       int

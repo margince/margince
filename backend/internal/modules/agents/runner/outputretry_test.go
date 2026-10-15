@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// cutOffBrain answers every call with a half-written final step and a length
-// stop, then, once it has been asked to be shorter at a larger cap, a whole one.
+// cutOffBrain answers its first cutOffCalls calls with a half-written final
+// step and a length stop. Every call after that gets a whole step.
 type cutOffBrain struct {
 	flooredWindow
 	cutOffCalls int // calls that stop at the cap before a whole step is returned
