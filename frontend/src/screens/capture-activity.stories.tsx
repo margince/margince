@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -158,7 +158,18 @@ type Story = StoryObj<typeof CaptureActivityTab>;
 // The DEFAULT posture, and the one most installations will ever see: the
 // pipeline stored no address and no subject, so every row says so rather than
 // showing an empty cell a reader would take for a message without a subject.
-export const Default: Story = { render: story(WINDOW) };
+export const Default: Story = {
+  render: story(WINDOW),
+  play: async ({ canvasElement }) => {
+    const funnel = await within(canvasElement).findByTestId(
+      "capture-activity-funnel",
+    );
+    await expect(funnel.closest("[data-density]")).toHaveAttribute(
+      "data-density",
+      "compact",
+    );
+  },
+};
 
 // With capture.trace_payloads on, an operator is diagnosing. The internal drop
 // is the row they turned it on for — it is the only place that content exists.

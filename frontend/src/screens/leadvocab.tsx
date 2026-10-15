@@ -76,6 +76,7 @@ export function LeadHandlingCard() {
               disabled={
                 !canEdit || !settings.first_response_enabled || update.isPending
               }
+              reason={canEdit ? undefined : t("leadSources.readOnly")}
               onCommit={(minutes) =>
                 update.mutate({ first_response_target_minutes: minutes })
               }

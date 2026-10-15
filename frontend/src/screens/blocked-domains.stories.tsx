@@ -148,7 +148,16 @@ export const WithOpenQuestions: Story = {
 
 // Nothing refused yet. It has to read as a fact about the installation rather
 // than as a table that failed to draw.
-export const Empty: Story = { render: story([], 0, OPS) };
+export const Empty: Story = {
+  render: story([], 0, OPS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const none = await canvas.findByText(/No domains refused yet/);
+    await expect(none.closest(".panel-body")?.textContent).toMatch(
+      /Domains refused as companies/,
+    );
+  },
+};
 
 // Refusals accumulate on their own from every bulk-sender verdict, so the list
 // is paged at 200 and the response says how many exist. The count line under the

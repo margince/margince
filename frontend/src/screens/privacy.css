@@ -1,6 +1,6 @@
 /* The privacy page's own layout: tokens only, every gap on the --space-* scale. */
 
-/* A subject reference or a purpose key is often one unbroken string. */
+/* A subject reference is often one unbroken string. */
 .privacy-wrap {
   overflow-wrap: anywhere;
 }

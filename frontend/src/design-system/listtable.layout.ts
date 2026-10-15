@@ -361,3 +361,31 @@ export function useFrozenEdge(
     },
   };
 }
+
+/**
+ * The presentation dials of the Display menu: which optional columns stand,
+ * and how tight the rows are. Local state, unlike the query dials.
+ */
+export function useColumnDisplay(
+  columns: readonly Readonly<{ key: string; initiallyHidden?: boolean }>[],
+) {
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(
+    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
+  );
+  const [dense, setDense] = useState(false);
+  return {
+    hidden,
+    onToggleColumn: (key: string) =>
+      setHidden((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+        return next;
+      }),
+    dense,
+    onDense: () => setDense(!dense),
+  };
+}

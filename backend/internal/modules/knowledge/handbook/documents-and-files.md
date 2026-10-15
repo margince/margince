@@ -165,11 +165,11 @@ You create document sets at **Settings → Knowledge**, and you ask them from
 **Ask your documents**.
 
 ### How do I create a knowledge base I can ask questions?
-To create a knowledge base in Margince, open **Settings → Knowledge** and fill the **New document set** form under **Document sets**.
+To create a knowledge base in Margince, open **Settings → Knowledge** and click **New document set** in the **Document sets** head.
 1. Open the account menu at the top right, choose **Settings**, then **Knowledge**.
-2. Under **New document set**, fill **Name** and **What this set covers** (both required).
+2. Click **New document set**, and fill **Name** and **What this set covers** (both required).
    Write one real sentence: it is shown to anyone whose question the set does not cover.
-3. Click **Create set**.
+3. Click **Create**.
 4. Click the new set's row to open its documents, and drop one or more files on **Add document**.
    Then click **Add document** (or **Add {count} documents**).
 Also called: knowledge base, FAQ, handbook, document library, corpus.
@@ -224,9 +224,11 @@ Each document in a set moves through a visible state as it is taken in:
 
 A document that was read shows no badge.
 
-The set shows how many documents it holds and how much of it can be searched:
-"{embedded} of {total} passages searchable". When some passages cannot be
-searched, it says why:
+The set's row shows how many documents it holds and one badge for whether it
+can be searched: **Searchable**, **Indexing**, **Not searchable** or
+**Reindexing**. Open the set to see the figures: "{embedded} of {total}
+passages searchable". When some passages cannot be searched, the open set says
+why:
 
 - **Not searchable**: "No embedding model is set up, so no passage can be
   searched."

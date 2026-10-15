@@ -5,6 +5,7 @@ import {
 } from "@composition/extensions";
 import { extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
+import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
 
@@ -146,14 +147,14 @@ export function findExtension(
   return registry.find((unit) => unit.name === name) ?? null;
 }
 
-/** What `unit` is called in `locale`: its own title, else its directory name. */
+/** What `unit` is called in `locale`: its own title, else its name read as words. */
 export function unitTitle(unit: ExtensionDescriptor, locale: Locale): string {
-  return unit.title ? translate(locale, unit.title) : unit.name;
+  return unit.title ? translate(locale, unit.title) : readableKey(unit.name);
 }
 
 /**
  * What unit `name` is called in `locale`. A unit this installation does not
- * compose has only its name.
+ * compose has only its name, read as words.
  */
 export function extensionTitle(
   name: string,
@@ -161,7 +162,7 @@ export function extensionTitle(
   registry: readonly ExtensionDescriptor[] = extensions,
 ): string {
   const unit = findExtension(name, registry);
-  return unit ? unitTitle(unit, locale) : name;
+  return unit ? unitTitle(unit, locale) : readableKey(name);
 }
 
 /**

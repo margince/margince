@@ -35,6 +35,7 @@ import {
   composedScreens,
   EXTENSION_SCREEN,
   findExtension,
+  unitTitle,
 } from "./lib/extensions";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
@@ -395,6 +396,7 @@ function CustomRoute({ name }: Readonly<{ name?: string }>) {
 
 function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const unit = findExtension(name);
   if (!unit) {
     return (
@@ -420,7 +422,7 @@ function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
       {/* level 1: the head yields to a composed unit, so this card is the only
           thing left that can name the page. A unit with no screen would
           otherwise have no page-level heading at all. */}
-      <SectionHeader title={unit.name} level={1} />
+      <SectionHeader title={unitTitle(unit, locale)} level={1} />
       <Card>
         <ul>
           {unit.verbs.map((verb) => (

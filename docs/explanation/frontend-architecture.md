@@ -60,6 +60,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
                         list query, record fields
  src/screens/           one file per surface (a directory when the surface
                         is a state machine)
+ src/features/<name>/   one folder per feature, moved from screens/
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
  src/api/               the one seam + the generated contract types
 ```
@@ -76,8 +77,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the Margince Core (`margince-core*`) and `composed.tsx`, which builds on both
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
-  once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree. No file in `design-system/` imports `app/`, `components/` or `screens/`: a part
+  once, never nothing.
+
+  `conformance.test.ts` is the drift gate over the whole
+  tree. No file in `design-system/` imports `app/`, `components/`, `screens/` or `features/`. A part
   that needs a feature, such as the record page's mail drawer, lives in `screens/`.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
@@ -91,10 +94,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
   `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
-  decoding and the session. `lib/` never imports `app/`, `components/` or `screens/`.
+  decoding and the session. `lib/` never imports `app/`, `components/`, `screens/` or `features/`.
 - **`src/components/`**: the screen parts that many surfaces share. Examples are
   the create and edit dialogs, the list query and the record fields.
-  A component never imports `app/` or `screens/`. A part used by one surface
+  A component never imports `app/`, `screens/` or `features/`. A part used by one surface
   stays with that surface.
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
@@ -104,6 +107,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   large as `companies.tsx` and `deals.tsx`, stays one file, with its
   `*.test.tsx` and `*.stories.tsx` beside it. An address that no screen answers
   shows a note that says so (`shell.unknownPage`), never an empty page.
+- **`src/features/<name>/`**: the new home of a surface, one folder for each
+  feature, with its tests and stories. Surfaces move here from `screens/` one
+  feature at a time, by the steps in
+  [move-a-frontend-feature.md](../how-to/move-a-frontend-feature.md).
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
   Two checks make every catalog hold the same keys. `MessageKey` is
   `keyof typeof en`, and the other catalogs are checked against it with

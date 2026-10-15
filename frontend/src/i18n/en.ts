@@ -2593,7 +2593,7 @@ export const en = {
   "linkedinImport.notConnectedNote":
     "Saving your profile URL attributes imported connections to you by name.",
   "linkedinImport.whichFile":
-    "LinkedIn provides Connections.csv under “Settings”, then “Data privacy”, then “Get a copy of your data”. Upload that file from the archive. Uploaded connections never become contacts: they stay out of search, lists and contact pages, and no one can write to or email them.",
+    "Connections.csv from LinkedIn’s “Get a copy of your data”. Imported connections never become contacts, and no one can email them.",
   "linkedinImport.choose": "Choose Connections.csv",
   "linkedinImport.importLabel": "Connections export",
   "linkedinImport.noMatchesYet":
@@ -2607,9 +2607,6 @@ export const en = {
   "linkedinReach.title": "Network reach",
   "linkedinReach.sub":
     "Companies on file where you know someone, most connections first.",
-  "linkedinReach.readFailed": "Network reach could not be loaded.",
-  "linkedinReach.empty":
-    "None of your connections work at a company on file yet.",
   "linkedinReach.allUnresolved":
     "All your connections work at companies not on file yet. Connections: {unresolved}.",
   "linkedinReach.accountsLabel": "Companies you reach",
@@ -6740,8 +6737,7 @@ export const en = {
   "privacy.corrections": "Correction requests",
   "privacy.correctionsSub":
     "Contacts entered these through the link they were emailed. None has changed the record yet; a correction is a request until someone accepts it.",
-  "privacy.correctionsEmpty":
-    "No corrections waiting. A contact sends one through the link they were emailed.",
+  "privacy.correctionsEmpty": "No corrections waiting.",
   "privacy.correctionContact": "Contact",
   "privacy.correctionChange": "Requested change",
   "privacy.correctionReceived": "Received",
@@ -6931,7 +6927,6 @@ export const en = {
   "privacy.kindRectify": "Correction",
   "privacy.kindErasure": "Erasure",
   "privacy.purpose": "Purpose",
-  "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
@@ -6985,12 +6980,11 @@ export const en = {
     "Releasing ERASES the record; it does not return it to use. The erasure request this obligation suspended is still open, so releasing completes it. This cannot be undone.",
   "restricted.release.confirm": "Release and erase",
   "restricted.pin.action": "Pin a record",
-  "restricted.pin.submit": "Pin",
   "restricted.pin.idHint":
     "For correspondence the automatic rule cannot recognize, such as supplier and purchasing mail under §257 HGB with no deal here. The record ID is on its audit entry.",
   "restricted.pin.idMalformed":
     "Not a valid record ID. The format is 8-4-4-4-12 hexadecimal characters, shown in full on the record’s audit entry.",
-  "restricted.pin.idPlaceholder": "Record ID",
+  "restricted.pin.idLabel": "Record ID",
   "restricted.pin.title": "Place record under legal hold?",
   "restricted.pin.body":
     "The record is held for the statutory window: hidden from every ordinary view, locked, and erased when the window closes. Its identifiers are redacted now.",
@@ -7008,7 +7002,7 @@ export const en = {
   "retention.editScope": "Edit {scope}",
   "retention.retainOnly": "Retain-only mode",
   "retention.retainOnlyHelp":
-    "While on, this installation destroys nothing: no anonymizing and no erasing, whatever a policy below says. Archiving still runs; an archived record is kept, not destroyed.",
+    "While on, no policy anonymizes or erases anything. Archiving still runs.",
   "retention.adminOnly":
     "Only an administrator or operations user can change retention.",
   "retention.withheld":
@@ -7025,7 +7019,6 @@ export const en = {
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
   "retention.enabled": "Enabled",
-  "retention.edit": "Edit",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
   "retention.deleteTitle": "Delete retention policy?",
@@ -7506,11 +7499,9 @@ export const en = {
   // the features that go empty, because "some things stop working" is not
   // something a rep can weigh.
   "overnightGrant.title": "Overnight preparation",
-  "overnightGrant.sub":
-    "Margince works through your deals overnight and has your Morning brief ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
   "overnightGrant.label": "Let Margince prepare the Morning brief overnight",
   "overnightGrant.help":
-    "It reads your deals and mail to rank today’s priorities, and writes notes back. It cannot send: the permission given here covers reading and writing only, never sending.",
+    "Ranks today’s deals and mail and writes notes for your Morning brief. It acts as you, sees only what you can see and never sends.",
   "overnightGrant.dangerTitle": "Overnight agent will not run",
   "overnightGrant.danger":
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
@@ -7610,12 +7601,25 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "connectionOutcomes.title": "What your connections found",
+  "connectionOutcomes.view": "View",
+  "connectionOutcomes.viewNamed": "View {name}",
+  "connectionOutcomes.retryNamed": "Retry {name}",
+  "connectionOutcomes.none": "None yet",
+  "connectionOutcomes.unread": "Could not load",
+  "connectionOutcomes.waitingEmpty": "No contacts are waiting on a decision.",
+  "connectionOutcomes.senders_one": "{count} sender",
+  "connectionOutcomes.senders_other": "{count} senders",
+  "connectionOutcomes.threads_one": "{count} thread",
+  "connectionOutcomes.threads_other": "{count} threads",
+  "connectionOutcomes.contacts_one": "{count} contact",
+  "connectionOutcomes.contacts_other": "{count} contacts",
+  "connectionOutcomes.companies_one": "{count} company",
+  "connectionOutcomes.companies_other": "{count} companies",
   "mailSharing.title": "Email sharing",
-  "mailSharing.sub":
-    "Captured mail is readable by every colleague who can see the contact. On by default, so deal work can be shared.",
   "mailSharing.label": "Share captured mail with the team",
   "mailSharing.help":
-    "Individual messages can be limited afterwards, and addresses or domains excluded up front.",
+    "Every colleague who can see a contact can read its captured mail. Single messages can be limited afterwards.",
   "mailSharing.danger":
     "With email sharing off, the CRM is hard to use. New mail is visible only to the people on each message.",
   "mailSharing.posture.shared":
@@ -7632,13 +7636,11 @@ export const en = {
   "mailSharing.sharedPosture.warningTitle": "This asserts a legal basis",
   "mailSharing.saveFailed": "Setting not saved",
   "mailSharing.save": "Save",
+  "mailSharing.cardTitle": "Mail sharing and sync",
   "connectors.originLabel": "Address used in emailed links",
   "connectors.originUnreachable": "Unreachable",
-  "connectors.sub":
-    "Mailboxes and calendars capturing into the CRM. Disconnecting one keeps the records already captured.",
   "connectors.loading": "Loading connectors…",
   "connectors.loadFailed": "Could not load connectors. Reload the page.",
-  "connectors.empty": "No mailbox or calendar is connected yet.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7817,7 +7819,6 @@ export const en = {
   "connectors.telegramNotConfigured":
     "Messaging channels are not configured on this installation.",
   "connectors.telegramConnectCta": "Connect Telegram bot",
-  "connectors.telegramEmpty": "No bot connected.",
   "connectors.telegramReadOnly":
     "Only an administrator or operations user can connect or change the bot.",
   "connectors.telegramEditToken": "Replace token",
@@ -7834,13 +7835,17 @@ export const en = {
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
   "connectors.openNamed": "Open {name}",
+  "connectors.emptyLabel": "No mailbox connected",
+  "connectors.emptyHint":
+    "Connect a mailbox or calendar to capture its mail and meetings.",
+  "connectors.telegramEmptyLabel": "No bot connected",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Consumer mail domains",
   "consumerMail.sub":
-    "Mail from a consumer mailbox creates the contact but never a company. Margince ships a list of these providers; add missing domains or override a wrong entry.",
+    "Mail from these domains creates the contact but never a company. Margince ships a list; add a missing domain or override a wrong one.",
   "consumerMail.addedTitle": "Added here",
   "consumerMail.addTitle": "Add domain",
   "consumerMail.domainLabel": "Domain",
@@ -7871,7 +7876,7 @@ export const en = {
 
   "blockedDomains.title": "Refused domains",
   "blockedDomains.sub":
-    "Domains refused as companies, and what decided each: a model result, a heuristic or a person. Allowing a domain reopens the question. Only unowned open questions appear here.",
+    "Domains refused as companies, and whether a model, a heuristic or a person decided. Allowing a domain reopens the question.",
   "blockedDomains.listTitle": "Recorded decisions",
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
@@ -9393,6 +9398,12 @@ export const en = {
   "privacy.dueRule": "Deadline rule",
   "privacy.dueRuleUnknown": "Typed by hand before deadlines were worked out",
   "privacy.dueOverridden": "Set earlier than the rule gives",
+  "privacy.requestsPanel": "Requests",
+  "privacy.lanesLabel": "Request lists",
+  "privacy.laneRequests": "Privacy",
+  "privacy.laneCorrections": "Corrections",
+  "privacy.laneRestricted": "Held",
+  "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
   "settings.tab.capture": "Capture rules",
   "settings.tab.knowledge": "Knowledge",
@@ -9436,6 +9447,7 @@ export const en = {
   "knowledge.sub":
     "Document collections this company can query. Answers use only filed documents, and questions they do not cover are refused.",
   "knowledge.withheld": "You do not have access to the list of document sets.",
+  "knowledge.empty": "No document sets yet.",
   "knowledge.documentCount_one": "{count} document",
   "knowledge.documentCount_other": "{count} documents",
   "knowledge.passages_one": "{embedded} of {count} passage searchable",
@@ -9452,6 +9464,9 @@ export const en = {
   "knowledge.col.added": "Added",
   "knowledge.col.status": "Status",
   "knowledge.col.actions": "Actions",
+  "knowledge.col.documents": "Documents",
+  "knowledge.col.searchable": "Searchable",
+  "knowledge.col.detail": "Detail",
   "knowledge.passageCount_one": "{count} passage",
   "knowledge.passageCount_other": "{count} passages",
   "knowledge.addedOn": "added {date}",
@@ -9490,8 +9505,8 @@ export const en = {
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
-  "knowledge.new.submit": "Create set",
-  "knowledge.new.failed": "The set was not created. Retry.",
+  "knowledge.searchable": "Searchable",
+  "knowledge.reindexingBadge": "Reindexing",
   "settings.tab.privacy": "Privacy and retention",
   "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
@@ -9510,7 +9525,7 @@ export const en = {
   "captureActivity.scope.mine": "Mine",
   "captureActivity.scope.workspace": "Shared channels",
   "captureActivity.scopeNote":
-    "Counted from when a connector hands a message to this CRM. Items a connector filtered on its own side, such as a chat reaction or a mail rule, are not included. Covers messages only; lead capture is not shown here.",
+    "Messages a connector handed to Margince. Lead capture and items a connector filtered itself are not counted.",
   "captureActivity.filtered":
     "Showing {shown} of {total} {outcome} in this window.",
   "captureActivity.openTraceFrom":
@@ -10092,15 +10107,13 @@ export const en = {
   "roles.refusal.nameTaken":
     "Another role already has this name. Choose a different one.",
   "extAccess.title": "Extensions and access",
-  "extAccess.sub":
-    "What each extension unit adds to this installation, and which roles may use it. Administrators only.",
   "extAccess.adminOnly":
     "This page requires permission to read installation extensions and roles. Your role lacks one or both.",
   "extAccess.readOnly":
     "Your role can read this page. Changing a grant requires a full seat.",
   "extAccess.empty": "No extension units are installed.",
   "extAccess.version": "Version {version}",
-  "extAccess.openUnit": "Open {name} page",
+  "extAccess.openUnit": "Go to {name}",
   "extAccess.noPage":
     "{name} is installed on the API, but this app build has no page for it. The app is probably older than the server.",
   "extAccess.brings.heading": "What this unit adds",
@@ -10125,6 +10138,7 @@ export const en = {
   "extAccess.grantFailed": "Grant not changed",
   "extAccess.nobodyReads":
     "No role has read access to {object}, so every member sees an empty screen for this extension. Grant read to at least one role below.",
+  "extAccess.matrixName": "Role access to {unit}",
   "users.empty": "No users yet.",
   "users.adminOnly": "Your role cannot manage users.",
   "users.inviteTitle": "Invite user",
@@ -10504,6 +10518,7 @@ export const en = {
   "aicalls.outcome.failed": "Failed",
   "aicalls.model.afterDecision": "Decision model, then {tier}",
   "aicalls.filter.servedProvider": "Served by",
+  "aicalls.filter.servedModel": "Answered by",
   "aicalls.sentinel.provider_quota": "Out of quota",
   "aicalls.sentinel.provider_throttled": "Throttled",
   "aicalls.sentinel.provider_refused": "Refused by provider",
@@ -11001,21 +11016,17 @@ export const en = {
   "autonomy.kind.lifecycle_change.help":
     "Moves a company to another lifecycle stage based on activity. Turn off to review these proposals yourself. Stage changes can affect who sees the company and which automations run.",
   "captureSettings.title": "Enrichment",
-  "captureSettings.sub":
-    "How captured companies and contacts are enriched after they are created.",
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "Each new company created from captured mail gets an automatic web profile built from its site. Runs within a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "When on, Margince reads what a person states under their own name in mail they sent you: a signature, or a business card attached to it, with title, phone number, address or company. This happens within minutes of arrival. Nothing is inferred; a detail the mail does not state is not written. This is the company default; a mailbox with its own setting keeps it.",
+    "Reads the title, phone, address or company a person states in their own signature or business card. Nothing is inferred. A mailbox’s own setting wins.",
   "captureSettings.addFailed": "Exclusion not added",
   "captureSettings.adminOnly":
     "Only an administrator or operations user can change this.",
   "captureSettings.updateFailed": "Setting not changed",
   "captureReading.title": "Website reads",
-  "captureReading.sub":
-    "How much Margince reads from company websites. A change applies to the next read.",
   "captureReading.dailyCap.label": "Daily automatic reads",
   "captureReading.dailyCap.help":
     "Reads nobody asked for, across all companies, 1 to 20,000 a day.",
@@ -11167,9 +11178,6 @@ export const en = {
     "Enter 0 to switch it off, or whole seconds from {min} to {max}.",
   "operations.refusal.hours": "Enter whole hours from {min} to {max}.",
   "operations.refusal.count": "Enter a whole number from {min} to {max}.",
-  "captureMailSync.title": "Mail sync",
-  "captureMailSync.sub":
-    "How often each connected mailbox is checked for new mail.",
   "captureMailSync.interval.label": "Sync interval (seconds)",
   "captureMailSync.interval.help":
     "Time between one mailbox’s syncs, 30 to 3,600. Applies from each mailbox’s next sync.",
@@ -11182,7 +11190,6 @@ export const en = {
     "Addresses and domains whose messages never enter the CRM. Your rules apply only to mailboxes you connected; company rules apply to everyone.",
   "captureExclusions.notRetroactive":
     "Applies from the next message. Messages already captured stay.",
-  "captureExclusions.current": "Rules in effect",
   "captureExclusions.empty": "No exclusions.",
   "ownerIdentities.title": "Your other addresses",
   "ownerIdentities.sub":
@@ -11191,10 +11198,8 @@ export const en = {
   "ownerIdentities.addLabel": "Add your own address",
   "ownerIdentities.addDescription":
     "Private to you. Colleagues never see this list.",
-  "ownerIdentities.current": "Declared",
   "ownerIdentities.notRetroactive":
     "Applies from the next message. Mail already captured stays, and a contact already created from an alias stays until you merge or remove it.",
-  "ownerIdentities.empty": "No other addresses added.",
   "ownerIdentities.remove": "Remove {value}",
   "ownerIdentities.added": "Address added",
   "ownerIdentities.confirm": "Add",
@@ -11219,6 +11224,8 @@ export const en = {
     "This address was removed again since. Undo the newer removal instead.",
   "ownerIdentities.restoreDeclaredAgain":
     "This address is already back in your list.",
+  "ownerIdentities.addDescriptionEmpty":
+    "None added yet. Colleagues never see this list.",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -11298,7 +11305,6 @@ export const en = {
   "ownDomains.curatedTitle": "Managed here",
   "ownDomains.irreversible":
     "Adding a domain applies from the next message; removing it resumes capture from then on. Mail skipped while registered is never offered again by any mailbox. Captured mail stays.",
-  "ownDomains.fromCompany": "From the company profile. Change them there:",
   "ownDomains.openCompany": "Open the company profile",
   "ownDomains.empty":
     "No additional domains registered. Add one if your company also sends from another domain.",
@@ -11319,7 +11325,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Outbound webhooks are not enabled on this installation. Configure a signing key first.",
+    "Webhooks are not enabled on this installation until a signing key is configured.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",
@@ -12022,9 +12028,7 @@ export const en = {
   "provider.deleteDataConfirm.typed": "Enter the provider name to confirm",
   "provider.automaticLookup": "Look up contacts automatically",
   "provider.automaticLookupHint":
-    "Each contact is looked up once for the details this connection selects that the provider charges nothing for, typically the professional profile link, current role and employer, and work history. Email addresses and mobile numbers are never bought this way; they cost credits and remain a per-contact decision.",
-  "provider.automaticLookupJurisdiction":
-    "Switch this off if the contacts in your CRM fall under a law that forbids trading personal data, such as Vietnam’s. The button on each contact still works, so the decision stays with the person making it.",
+    "New contacts get the details the provider gives for free, such as role and work history. Email addresses and mobile numbers are never bought automatically, and the button on each contact still works. Switch this off where the law forbids trading personal data.",
   "provider.buyable": "Allow buying {category}",
   "provider.buyableWriteFailed": "Category not changed",
   "provider.postureReadFailed": "Current setting unknown",
@@ -12121,10 +12125,6 @@ export const en = {
   "provider.profile.buy_other": "Buy {category} · {credits} credits",
   "provider.profile.buyRebuys":
     "The price includes the {categories} again: the provider requires it for this search and charges for everything it returns.",
-  "provider.freeTier.hint":
-    "LinkedIn profile, current role and work history cost no credits. Leave this on so every new contact gets them automatically.",
-  "provider.pricedTier.hint":
-    "Never bought automatically. Bought one contact at a time, with the price on the button.",
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · {answered} of {asked} details returned.",
@@ -13572,7 +13572,7 @@ export const en = {
   "aiRates.refresh.keptCount_one": "{count} hand-set price kept",
   "aiRates.refresh.keptCount_other": "{count} hand-set prices kept",
   "aiProviders.setByHand": "Hand-set",
-  "aiRates.refresh.unlisted": "Not in the broker’s list: {ids}",
+  "aiRates.refresh.unlisted": "Not in the price list: {ids}",
   "aiRates.refresh.updatedCount_one": "{count} price written",
   "aiRates.refresh.updatedCount_other": "{count} prices written",
   "aiRates.refresh.unchangedCount_one": "{count} price already current",
@@ -14012,6 +14012,11 @@ export const en = {
   "aiFigures.line.timeoutCount_one": "{count} timeout",
   "aiFigures.line.timeoutCount_other": "{count} timeouts",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
+  "aiFigures.switched_other":
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
+  "aiFigures.switchedBadge": "Model switched",
   "aiFigures.line.sort": "sort: {sort}",
   "aiFigures.line.week": "7 d: {figures}",
   "aiFigures.line.prefix": "7 d: {sentence}",

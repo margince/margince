@@ -127,3 +127,10 @@ export const Phone: Story = {
     }
   },
 };
+
+// Grouped at 390px: each run's name stays over its rows while the verbs scroll.
+export const GroupedPhone: Story = {
+  ...Grouped,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

@@ -179,6 +179,20 @@ export const OwedPhone: Story = {
   play: verbsFit,
 };
 
+/** The facet is a pair of pills: owed duties first, every duty one press away. */
+export const Facets: Story = {
+  render: duties([OVERDUE, CLAIMED, EXCUSED]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const owed = await canvas.findByRole("button", { name: "Still owed" });
+    await expect(owed).toHaveAttribute("aria-pressed", "true");
+    const all = canvas.getByRole("button", { name: "All" });
+    await userEvent.click(all);
+    await expect(all).toHaveAttribute("aria-pressed", "true");
+    await expect(owed).toHaveAttribute("aria-pressed", "false");
+  },
+};
+
 /** Every duty discharged — which is a different sentence from "none found". */
 export const NothingOwed: Story = { render: duties([]) };
 

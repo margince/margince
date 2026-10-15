@@ -22,6 +22,9 @@ type PriceSources struct {
 	Usable map[string]bool
 	// Listed is what each usable vendor's key lists; absent when the listing failed.
 	Listed map[string][]model.Info
+	// Switched is, by provider, the models it named as answering calls bound to
+	// another model. A model an alias moved to gets a price of its own.
+	Switched map[string][]string
 }
 
 type pricePlan struct {
@@ -118,8 +121,9 @@ func (p *pricePlan) broker(src PriceSources, sheet []ModelRateRow, inForce map[[
 	}
 }
 
-// vendor prices one models.dev provider: its sheet rows, plus each model its key
-// lists that the catalogue prices. Out of scope or unreadable, it writes nothing.
+// vendor prices one models.dev provider: its sheet rows, each model its key lists
+// that the catalogue prices, and each model it switched calls to. Out of scope
+// or unreadable, it writes nothing.
 func (p *pricePlan) vendor(src PriceSources, provider string, sheet []ModelRateRow, inForce map[[2]string]ModelRateRow) {
 	line := p.line(provider)
 	key, _ := modelsDevKeyFor(provider)
@@ -141,8 +145,9 @@ func (p *pricePlan) vendor(src PriceSources, provider string, sheet []ModelRateR
 	}
 }
 
-// vendorTargets is one vendor's scope in id order: its sheet rows filed where
-// they are, and the listed models the catalogue prices, in the lane both agree on.
+// vendorTargets is one vendor's scope in id order. It holds its sheet rows filed
+// where they are, and the listed models the catalogue prices in the lane both
+// agree on. It also holds the models the vendor switched calls to.
 func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow) []catalogueTarget {
 	byID := map[string]catalogueTarget{}
 	for _, row := range sheet {
@@ -158,6 +163,21 @@ func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow)
 		if lane, ok := syncLane(info, entry); ok {
 			byID[info.ID] = catalogueTarget{provider: provider, modelID: info.ID, lane: lane}
 		}
+	}
+	for _, id := range src.Switched[provider] {
+		if _, known := byID[id]; known {
+			continue
+		}
+		// One the catalogue does not price stays laneless and is reported unlisted.
+		target := catalogueTarget{provider: provider, modelID: id}
+		if entry, priced := src.ModelsDev.entry(key, id); priced {
+			lane, ok := entry.lane()
+			if !ok {
+				continue
+			}
+			target.lane = lane
+		}
+		byID[id] = target
 	}
 	out := slices.Collect(maps.Values(byID))
 	slices.SortFunc(out, func(a, b catalogueTarget) int { return cmp.Compare(a.modelID, b.modelID) })

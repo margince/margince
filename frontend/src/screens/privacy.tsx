@@ -6,19 +6,12 @@ import {
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Button,
-  EmptyState,
-  Field,
-  Modal,
-  SegmentedControl,
-  TextInput,
-} from "../design-system/atoms";
+import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { FilterPills } from "../design-system/filterpills";
+import { PanelBody, PanelIntro } from "../design-system/panel";
 import {
   LoadMoreButton,
   QueryGate,
@@ -32,7 +25,7 @@ import { Select } from "../design-system/select";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
-import { useCan, useCanWrite } from "../lib/capability";
+import { useCan } from "../lib/capability";
 import { isOption } from "../lib/options";
 import {
   ProblemError,
@@ -108,7 +101,7 @@ const EMPTY_DSR: DsrDraft = {
 
 // Kind flips the subject field's shape: an erasure locks onto a picked contact,
 // so the form cannot produce the free-text erasure the server refuses.
-function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
+export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<DsrDraft>(EMPTY_DSR);
@@ -340,14 +333,13 @@ function FulfilErasureModal({
   );
 }
 
+// The subject-request lane of the Requests panel: its bands, not a panel.
 export function PrivacyInboxCard() {
   const t = useT();
   // The only clock touching rendering; isOverdue stays pure.
   const nowMs = useNow(60_000);
   const [facet, setFacet] = useState<DsrStatusFacet>("all");
-  const createTitleId = useId();
   const detailTitleId = useId();
-  const [creating, setCreating] = useState(false);
   // One erasure confirm at the card root, carrying the answer the drawer drafted.
   const [fulfilling, setFulfilling] = useState<{
     dsr: DataSubjectRequest;
@@ -357,8 +349,6 @@ export function PrivacyInboxCard() {
   // `privacy_request:read`: the rows name whoever exercised an Art. 15/17
   // right, so the read is gated and never issued without the grant.
   const canSee = useCan("privacy_request", "read");
-  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
-  const canOpenRequest = useCanWrite("contact", "update");
   // The probe itself: every grant reads false while /me is in flight.
   const me = useMe();
 
@@ -397,14 +387,13 @@ export function PrivacyInboxCard() {
     query.fetchNextPage,
   );
   const open = rows.find((dsr) => dsr.id === expandedId) ?? null;
-  const facetLabels = useMemo(
-    (): Record<DsrStatusFacet, string> => ({
-      all: t("privacy.facetAll"),
-      open: t(DSR_STATUS_LABEL.open),
-      in_progress: t(DSR_STATUS_LABEL.in_progress),
-      fulfilled: t(DSR_STATUS_LABEL.fulfilled),
-      rejected: t(DSR_STATUS_LABEL.rejected),
-    }),
+  const facetPills = useMemo(
+    () =>
+      DSR_STATUS_FACETS.map((value) => ({
+        value,
+        label:
+          value === "all" ? t("privacy.facetAll") : t(DSR_STATUS_LABEL[value]),
+      })),
     [t],
   );
 
@@ -419,32 +408,24 @@ export function PrivacyInboxCard() {
   } else if (!query.isSuccess || rows.length === 0) {
     body = (
       <QueryStates query={query} pendingLabel={t("privacy.loading")}>
-        <EmptyState>{t("common.empty")}</EmptyState>
+        <EmptyState>
+          {facet === "all" ? t("privacy.requestsEmpty") : t("common.empty")}
+        </EmptyState>
       </QueryStates>
     );
   }
 
   return (
-    <Panel
-      title={t("settings.privacy")}
-      // Opening a request asks `contact:update`, not the queue's grant.
-      titleAction={
-        canOpenRequest ? (
-          <Button aria-haspopup="dialog" onClick={() => setCreating(true)}>
-            {t("privacy.newRequest")}
-          </Button>
-        ) : null
-      }
-    >
+    <>
       <PanelBody>
         <PanelIntro>{t("settings.privacySub")}</PanelIntro>
-        {canSee && (
+        {/* Once a cut is chosen it stays, so an empty cut can be left again. */}
+        {canSee && (facet !== "all" || rows.length > 0) && (
           <div className="filter-tabs">
-            <SegmentedControl
-              options={DSR_STATUS_FACETS}
+            <FilterPills
+              pills={facetPills}
               value={facet}
               onChange={setFacet}
-              labels={facetLabels}
               label={t("privacy.facetLabel")}
             />
           </div>
@@ -476,17 +457,6 @@ export function PrivacyInboxCard() {
           />
         )}
       </CardBoundary>
-      <Modal
-        open={creating}
-        onClose={() => setCreating(false)}
-        labelledBy={createTitleId}
-        intent="form"
-      >
-        <Heading size="large" id={createTitleId} className="t-h2 modal-title">
-          {t("privacy.newRequest")}
-        </Heading>
-        <NewDsrForm onDone={() => setCreating(false)} />
-      </Modal>
       <FulfilErasureModal
         dsr={fulfilling?.dsr ?? null}
         resolution={fulfilling?.resolution ?? ""}
@@ -494,6 +464,6 @@ export function PrivacyInboxCard() {
         // The fulfil verb is gone once the request closes; the drawer's title stays.
         returnFocusTo={() => document.getElementById(detailTitleId)}
       />
-    </Panel>
+    </>
   );
 }

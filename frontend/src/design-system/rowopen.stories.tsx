@@ -19,7 +19,9 @@ const TEMPLATES: Template[] = [
   },
 ];
 
-function OpeningTable() {
+function OpeningTable({
+  opensDialog = false,
+}: Readonly<{ opensDialog?: boolean }>) {
   const [opened, setOpened] = useState("nothing yet");
   const open = (row: Template) => setOpened(row.name);
   return (
@@ -42,6 +44,7 @@ function OpeningTable() {
               <RowOpen
                 label={`Open ${row.name}`}
                 refusal={row.refusal}
+                opensDialog={opensDialog}
                 onOpen={() => open(row)}
               />
             ),
@@ -79,4 +82,16 @@ export const Phone: Story = {
   ...Default,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// A verb that opens an editor in a dialog says so before it is pressed.
+export const OpensADialog: Story = {
+  args: { opensDialog: true },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByRole("button", {
+        name: "Open Renewal reminder",
+      }),
+    ).toHaveAttribute("aria-haspopup", "dialog");
+  },
 };

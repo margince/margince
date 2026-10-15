@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
@@ -13,10 +13,8 @@ import { CardBoundary } from "../design-system/cardboundary";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { ErrorLine } from "../design-system/errorline";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate, QueryStates } from "../design-system/querystates";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -25,27 +23,16 @@ import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { humanizeToken } from "./audit";
-import "./retention.css";
 
-// Settings → Privacy → Restricted records (A165/ADR-0114 §4): what a
-// statutory obligation is holding after an erasure — which record, why, and
-// until when — stated without the correspondence itself. The audit log proves
-// what happened; this answers what is being held right now, which is the
-// question a supervisory authority asks the controller.
-//
-// It reads through the same authority as the retention ladder above it, so a
-// role that may not see how long records are kept may not see which are being
-// kept either.
+// The Held lane reads through the retention ladder's authority. A role that may
+// not see how long records are kept may not see which are kept either.
 
 export type RestrictedRecord = components["schemas"]["RestrictedRecord"];
 
 export const RESTRICTED_RECORDS_KEY = ["retention", "restrictions"] as const;
 
-// A pin names its record by id, and the id has to be well-formed BEFORE the
-// confirm opens: the dialog behind it warns about an irreversible act on a
-// record the controller cannot otherwise see, so letting a typo through means
-// reading that warning, typing a reason, and only then learning they named
-// nothing. Shape only — whether the record exists is the server's answer.
+// A pin names its record by id, and a malformed one keeps the irreversible
+// confirm shut. Shape only: whether the record exists is the server's answer.
 const RECORD_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,24 +67,24 @@ const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
 // are one component with the words swapped rather than two.
 type Override = "release" | "pin";
 
-// What an override acts on: a row from the list for a release, a record id
-// typed in for a pin. A pin is BY DEFINITION about a record this list does not
-// hold — the derivation missed it — so there is no row to hang the action off,
-// and the id is how a controller names it. They reach it from the audit trail
-// or the record page, where the id is on screen.
+// A release acts on a row of the list. A pin names a record the derivation
+// missed, so no row holds it: the controller types its id from the audit trail.
 type OverrideTarget = Readonly<{ activityId: string }>;
 
 type OverrideDecision = Readonly<{
-  target: OverrideTarget | null;
+  activityId: string;
   kind: Override;
   reason: string;
 }>;
 
 function OverrideModal({
+  open,
   target,
   kind,
   onClose,
 }: Readonly<{
+  open: boolean;
+  // The row a release acts on; a pin asks for its record in the dialog.
   target: OverrideTarget | null;
   kind: Override;
   onClose: () => void;
@@ -105,20 +92,21 @@ function OverrideModal({
   const t = useT();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
+  const [typedId, setTypedId] = useState("");
+  const activityId = kind === "pin" ? typedId.trim() : target?.activityId;
+  const idIsWellFormed = RECORD_ID_RE.test(typedId.trim());
+  const idIsMalformed =
+    kind === "pin" && typedId.trim() !== "" && !idIsWellFormed;
 
   const decide = useMutation({
     mutationFn: async (decision: OverrideDecision) => {
-      // A decision about nothing is a failure, never a success that closes the dialog.
-      if (!decision.target) {
-        throw new Error("no record chosen for this decision");
-      }
       const path =
         decision.kind === "release"
           ? ("/retention/restrictions/{activityId}/release" as const)
           : ("/retention/restrictions/{activityId}/pin" as const);
       unwrap(
         await api.POST(path, {
-          params: { path: { activityId: decision.target.activityId } },
+          params: { path: { activityId: decision.activityId } },
           body: { reason: decision.reason },
         }),
       );
@@ -126,29 +114,51 @@ function OverrideModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RESTRICTED_RECORDS_KEY });
       setReason("");
+      setTypedId("");
       onClose();
     },
   });
 
   // The reason is what makes this a decision rather than a toggle, so the
-  // confirm stays disabled until one is actually typed — the server refuses a
-  // blank one, and a button that fires into that refusal teaches nothing.
+  // confirm waits for one: the server refuses a blank one.
   return (
     <ConfirmModal
-      open={target !== null}
+      open={open}
       onClose={() => {
         setReason("");
+        setTypedId("");
+        decide.reset();
         onClose();
       }}
       title={t(`restricted.${kind}.title`)}
       confirmLabel={t(`restricted.${kind}.confirm`)}
       confirmVariant="danger"
-      confirmDisabled={reason.trim() === ""}
-      onConfirm={() => decide.mutate({ target, kind, reason })}
+      confirmDisabled={
+        reason.trim() === "" || (kind === "pin" && !idIsWellFormed)
+      }
+      onConfirm={() =>
+        activityId && decide.mutate({ activityId, kind, reason })
+      }
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
       <p>{t(`restricted.${kind}.body`)}</p>
+      {kind === "pin" && (
+        <Field
+          label={t("restricted.pin.idLabel")}
+          hint={t("restricted.pin.idHint")}
+          error={idIsMalformed ? t("restricted.pin.idMalformed") : undefined}
+          required
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={typedId}
+              onChange={(event) => setTypedId(event.target.value)}
+            />
+          )}
+        </Field>
+      )}
       <Field
         label={t("restricted.reasonLabel")}
         hint={t("restricted.reasonHint")}
@@ -167,6 +177,42 @@ function OverrideModal({
   );
 }
 
+// Shared by the lane and the Requests panel's count, so both read one cache entry.
+export function useRestrictedRecords(enabled: boolean) {
+  return useQuery({
+    queryKey: RESTRICTED_RECORDS_KEY,
+    enabled,
+    queryFn: async () => {
+      return unwrap(await api.GET("/retention/restrictions"));
+    },
+  });
+}
+
+// The pin verb for the Requests panel's head, shown to the authority that can carry it out.
+export function PinRecordAction() {
+  const t = useT();
+  const canRead = useCan("retention_policy", "read");
+  const canDecide = useCanWrite("retention_policy", "update");
+  const [pinning, setPinning] = useState(false);
+  if (!canRead || !canDecide) {
+    return null;
+  }
+  return (
+    <>
+      <Button aria-haspopup="dialog" onClick={() => setPinning(true)}>
+        {t("restricted.pin.action")}
+      </Button>
+      <OverrideModal
+        open={pinning}
+        target={null}
+        kind="pin"
+        onClose={() => setPinning(false)}
+      />
+    </>
+  );
+}
+
+// The restricted-records lane of the Requests panel: its bands, not a panel.
 export function RestrictedRecordsCard() {
   const t = useT();
   const plural = usePlural();
@@ -178,30 +224,16 @@ export function RestrictedRecordsCard() {
   // row action appears only for the authority that can carry it out.
   const canDecide = useCanWrite("retention_policy", "update");
   const [releasing, setReleasing] = useState<OverrideTarget | null>(null);
-  const [pinning, setPinning] = useState<OverrideTarget | null>(null);
-  const [pinId, setPinId] = useState("");
-  const pinErrorId = useId();
-  const pinIdIsWellFormed = RECORD_ID_RE.test(pinId.trim());
-  const pinIdIsMalformed = pinId.trim() !== "" && !pinIdIsWellFormed;
-
-  const records = useQuery({
-    queryKey: RESTRICTED_RECORDS_KEY,
-    enabled: canRead,
-    queryFn: async () => {
-      return unwrap(await api.GET("/retention/restrictions"));
-    },
-  });
+  const records = useRestrictedRecords(canRead);
 
   if (!canRead) {
     return (
-      <Panel title={t("restricted.title")}>
-        <PanelBody>
-          <PanelIntro>{t("restricted.sub")}</PanelIntro>
-          <QueryGate query={me} pendingLabel={t("restricted.title")}>
-            {() => <EmptyState>{t("restricted.withheld")}</EmptyState>}
-          </QueryGate>
-        </PanelBody>
-      </Panel>
+      <PanelBody>
+        <PanelIntro>{t("restricted.sub")}</PanelIntro>
+        <QueryGate query={me} pendingLabel={t("restricted.title")}>
+          {() => <EmptyState>{t("restricted.withheld")}</EmptyState>}
+        </QueryGate>
+      </PanelBody>
     );
   }
 
@@ -305,13 +337,19 @@ export function RestrictedRecordsCard() {
   }
 
   const held = records.data?.data ?? [];
+  const shown = records.isSuccess && held.length > 0;
   return (
-    <Panel title={t("restricted.title")}>
+    <>
       <PanelBody>
         <PanelIntro>{t("restricted.sub")}</PanelIntro>
+        {!shown && (
+          <QueryStates query={records} pendingLabel={t("restricted.title")}>
+            <EmptyState>{t("restricted.empty")}</EmptyState>
+          </QueryStates>
+        )}
       </PanelBody>
       <CardBoundary>
-        {records.isSuccess && held.length > 0 ? (
+        {shown && (
           <DataTable
             label={t("restricted.heldLabel")}
             bleed
@@ -320,78 +358,14 @@ export function RestrictedRecordsCard() {
             rows={held}
             rowKey={(row) => row.activity_id}
           />
-        ) : (
-          <PanelBody>
-            <QueryStates query={records} pendingLabel={t("restricted.title")}>
-              <EmptyState>{t("restricted.empty")}</EmptyState>
-            </QueryStates>
-          </PanelBody>
-        )}
-        {/* One input and its verb, so a row; the reason and its warning are the
-            confirm dialog behind it. In a body, whose seam parts it from the table. */}
-        {canDecide && (
-          <PanelBody>
-            <SettingList>
-              <SettingRow
-                label={t("restricted.pin.action")}
-                description={t("restricted.pin.idHint")}
-                control={(control) => (
-                  <form
-                    className="restricted-pin"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      // The disabled button is a hint; the submit itself refuses a malformed id.
-                      if (pinIdIsWellFormed) {
-                        setPinning({ activityId: pinId.trim() });
-                      }
-                    }}
-                  >
-                    <TextInput
-                      {...control}
-                      // A malformed id adds the refusal to the row's description,
-                      // so a reader hears the rule and how they broke it.
-                      aria-describedby={
-                        [
-                          control["aria-describedby"],
-                          pinIdIsMalformed ? pinErrorId : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" ") || undefined
-                      }
-                      aria-invalid={pinIdIsMalformed || undefined}
-                      value={pinId}
-                      onChange={(event) => setPinId(event.target.value)}
-                      placeholder={t("restricted.pin.idPlaceholder")}
-                    />
-                    <Button type="submit" disabled={!pinIdIsWellFormed}>
-                      {t("restricted.pin.submit")}
-                    </Button>
-                    {/* Re-announced on each keystroke, it would drown the field being typed. */}
-                    {pinIdIsMalformed && (
-                      <ErrorLine id={pinErrorId} standing>
-                        {t("restricted.pin.idMalformed")}
-                      </ErrorLine>
-                    )}
-                  </form>
-                )}
-              />
-            </SettingList>
-          </PanelBody>
         )}
         <OverrideModal
+          open={releasing !== null}
           target={releasing}
           kind="release"
           onClose={() => setReleasing(null)}
         />
-        <OverrideModal
-          target={pinning}
-          kind="pin"
-          onClose={() => {
-            setPinning(null);
-            setPinId("");
-          }}
-        />
       </CardBoundary>
-    </Panel>
+    </>
   );
 }

@@ -868,6 +868,7 @@ export function WebhooksCard() {
   // button nested inside it.
   const deliveryEnabled = query.data?.deliveryEnabled === true;
   const canCreateHere = canCreate && deliveryEnabled;
+  const deliveryOff = query.isSuccess && !deliveryEnabled;
   // Two different absences can empty this card of every write control, and
   // they are two different rows of the design-system doctrine: no deployment
   // signing key is a PRECONDITION an operator can fix, which NotConfiguredState
@@ -904,7 +905,8 @@ export function WebhooksCard() {
       }
     >
       <PanelBody>
-        <PanelIntro>{t("webhooks.sub")}</PanelIntro>
+        {/* Off, the not-enabled line says what webhooks wait for. */}
+        {!deliveryOff && <PanelIntro>{t("webhooks.sub")}</PanelIntro>}
         {/* Outside QueryGate for the same reason the create button is: its
             `empty` branch replaces `children` wholesale, and the posture is most
             needed precisely when the list is empty — a seat that can neither add
@@ -919,9 +921,7 @@ export function WebhooksCard() {
             bearing on it. Existing subscriptions still render read-only (write
             grants forced false) so their config and delivery health stay
             inspectable. */}
-        {query.isSuccess && !query.data.deliveryEnabled && (
-          <NotConfiguredState />
-        )}
+        {deliveryOff && <NotConfiguredState />}
         {/* One body, not two stacked: the roster opens under the sentence that
             introduces it rather than across a seam that reads as a missing
             element, and the interval between subscriptions belongs to the

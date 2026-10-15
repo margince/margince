@@ -30,7 +30,7 @@ func (h Handlers) ListAiCalls(
 ) {
 	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, CallListFilter{
 		Task: deref(params.Task), Provider: deref(params.Provider), Model: deref(params.Model),
-		ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
+		ServedModel: deref(params.ServedModel), ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -187,6 +187,7 @@ func (h Handlers) GetAiCallStats(w http.ResponseWriter, r *http.Request, params 
 		out.Rows = append(out.Rows, crmcontracts.AiCallStatsRow{
 			Key: row.Key, Calls: row.Calls, Failed: row.Failed, Timeouts: row.Timeouts, P50Ms: row.P50Ms, P95Ms: row.P95Ms,
 			TokensIn: row.TokensIn, TokensOut: row.TokensOut, CostMicrousd: row.CostMicroUSD, Unpriced: row.Unpriced,
+			Switched: row.Switched, SwitchedTo: optionalText(row.SwitchedTo),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -213,6 +214,7 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 		out.Steps = append(out.Steps, crmcontracts.AiFlowStep{
 			Decision: step.Decision, Tier: string(step.Tier), Provider: step.Provider, Model: step.Model,
 			Attempts: step.Attempts, Answered: step.Answered, P50Ms: step.P50Ms, GaveUp: step.GaveUp,
+			Switched: step.Switched, SwitchedTo: optionalText(step.SwitchedTo),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

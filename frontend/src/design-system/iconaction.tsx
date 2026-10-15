@@ -42,6 +42,7 @@ export function IconAction({
   pending,
   pressed,
   disclosure,
+  opensDialog,
   inline,
   onClick,
   testId,
@@ -97,6 +98,8 @@ export function IconAction({
    * appeared and where; `pressed` would claim a setting that stays on.
    */
   disclosure?: Readonly<{ expanded: boolean; controls: string }>;
+  /** For a glyph whose press opens a dialog, so a reader hears that first. */
+  opensDialog?: boolean;
   /**
    * For a glyph that sits IN a line of text (a table cell, a reading's label
    * row) rather than in a row of verbs: the square keeps its whole target but
@@ -129,6 +132,7 @@ export function IconAction({
         aria-pressed={pressed}
         aria-expanded={disclosure?.expanded}
         aria-controls={disclosure?.controls}
+        aria-haspopup={opensDialog ? "dialog" : undefined}
         data-testid={testId}
         onClick={onClick}
       >

@@ -44,9 +44,11 @@ export function AddConnectionDialog({
   connectError,
   onConnect,
   onImap,
+  returnFocusTo,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
+  returnFocusTo?: () => HTMLElement | null;
   addable: readonly Provider[];
   pendingProvider: Provider | null;
   notConfigured501: Provider | null;
@@ -57,7 +59,13 @@ export function AddConnectionDialog({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="form"
+      returnFocusTo={returnFocusTo}
+    >
       <div className="form-stack">
         <Heading size="large" id={headingId} className="t-h2">
           {t("connectors.addConnection")}

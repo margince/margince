@@ -131,7 +131,7 @@ describe("extension routes (composed screen registry)", () => {
     window.location.hash = "#/ext/constructor";
     renderApp();
     expect(
-      await screen.findByRole("heading", { level: 1, name: "constructor" }),
+      await screen.findByRole("heading", { level: 1, name: "Constructor" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });

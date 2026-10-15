@@ -183,6 +183,15 @@ func seedRateFor(provider, servedModel string, day time.Time) (ai.ModelRate, boo
 	return ai.ModelRate{}, false
 }
 
+// servedRateFor is the seeded rate of the model that served, else of the bound
+// one. The product's own cost readers price a call in that order.
+func servedRateFor(provider, servedModel, boundModel string, day time.Time) (ai.ModelRate, bool) {
+	if rate, ok := seedRateFor(provider, servedModel, day); ok {
+		return rate, true
+	}
+	return seedRateFor(provider, boundModel, day)
+}
+
 // percentile returns the nearest-rank pth percentile (p in [0,1]) of
 // sorted, which must already be sorted ascending.
 func percentile(sorted []int64, p float64) int64 {

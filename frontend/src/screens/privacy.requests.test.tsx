@@ -19,8 +19,8 @@ import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
-import { PrivacyInboxCard } from "./privacy";
 import { type DataSubjectRequest, DsrDetail } from "./privacy.requests";
+import { RequestsPanel } from "./settings.privacy";
 
 const NAMED: DataSubjectRequest = {
   id: "d1",
@@ -117,7 +117,7 @@ function stub(create?: () => Response, patched: Patched[] = []) {
   );
 }
 
-function render(ui: ReactNode = <PrivacyInboxCard />) {
+function render(ui: ReactNode = <RequestsPanel />) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

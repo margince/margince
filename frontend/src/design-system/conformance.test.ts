@@ -3,13 +3,17 @@
 // a template literal the sweep has to recognize, not one this file meant to
 // interpolate.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
-import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  extensionFilesMatching,
+  parseSource,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
@@ -38,16 +42,10 @@ function sourceFiles(dir: string): string[] {
 // and visible only here. Leaving the tier out of THIS corpus is the census that
 // fails short — it reads a smaller tree, reports PASS, and nothing asserts.
 function extensionFrontends(): string[] {
-  const root = join(frontendRoot, "..", "extensions");
-  if (!existsSync(root)) {
-    return [];
-  }
-  return readdirSync(root, { withFileTypes: true }).flatMap((unit) => {
-    const frontend = join(root, unit.name, "frontend");
-    return unit.isDirectory() && existsSync(frontend)
-      ? sourceFiles(frontend)
-      : [];
-  });
+  return extensionFilesMatching(
+    join(frontendRoot, "..", "extensions"),
+    /\.(css|tsx?|html)$/,
+  );
 }
 
 const files = sourceFiles(join(frontendRoot, "src"))

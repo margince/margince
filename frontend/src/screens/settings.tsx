@@ -36,21 +36,16 @@ import { BlockedDomainsCard } from "./blocked-domains";
 import { BriefDeliveryRows } from "./briefdelivery";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { CaptureSendersCard } from "./capture-senders";
-import {
-  CaptureSettingsCard,
-  MailSyncCard,
-  WebsiteReadingCard,
-} from "./capture-settings";
+import { CaptureSettingsCard } from "./capture-settings";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { ConnectorsCard } from "./connectors";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
 import { FollowUpSettingsCard } from "./followupsettings";
-import { HeldThreadsCard } from "./held-threads";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
@@ -62,7 +57,6 @@ import {
 } from "./leadvocab";
 import { LicenseCard } from "./license";
 import { LinkedInImportCard } from "./linkedin-import";
-import { LinkedInReachCard } from "./linkedin-reach";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
 import { MfaSettingRow } from "./mfacard";
@@ -244,24 +238,12 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "capture":
       return (
         <>
-          {/* The sharing rule first, because it is the widest thing on the page:
-              whether captured mail is one seat's or the whole workspace's. It
-              used to sit on the reader's own Connections page, where "Only you"
-              was written over a switch that binds everybody. */}
+          {/* The rules in the order mail meets them, then their outcome:
+              which domains ended up refused a company. */}
           <MailSharingCard />
-          {/* How often the mailboxes under that rule are read, before what is
-              done with what they bring in. */}
-          <MailSyncCard />
-          {/* Then which domains are OURS, then what to do with mail from the
-              rest, then which of the rest are consumer mailboxes — the posture,
-              then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
-          <WebsiteReadingCard />
           <ConsumerMailDomainsCard />
-          {/* Last, because it is the OUTCOME of the three above rather than a
-              fourth rule: which domains ended up refused a company, and whether
-              a machine or a human decided it. */}
           <BlockedDomainsCard />
         </>
       );
@@ -340,36 +322,12 @@ function ConnectionsTab() {
           everybody's captured mail is shared does not belong among them. */}
       <MailSharingPostureRow />
       <ConnectorsCard />
-      {/* Directly under the mailboxes and before what they brought in, because
-          it changes what COUNTS as correspondence: an address declared here is
-          the same contact, so mail among them is not a conversation with anybody
-          and never becomes one. Per-seat rather than per-connection, which is
-          why it is a card of its own and not a row inside connectors.tsx —
-          those rows render once per mailbox and a seat's own addresses are one
-          list however many mailboxes they connect. */}
+      {/* Per seat, not per connection: an address declared here is the same
+          contact, so mail among them never becomes a conversation. */}
       <OwnerIdentitiesCard />
-      {/* Under the mailboxes, because it is what those mailboxes DID: every
-          address they brought in, and what the classifier concluded about each.
-          The posture rows above say what may be read; this says what was
-          decided, which is the half a reader audits. */}
-      <CaptureSendersCard />
-      {/* And what those decisions are currently WITHHOLDING. The senders card
-          above says what was decided about each correspondent; this says which
-          threads are held back from the team right now, which is the question
-          an outage makes urgent — every new thread lands pending and stays
-          there until the classifier answers again. */}
-      <HeldThreadsCard />
-      {/* Directly under the mailboxes, because it is the same decision seen
-          from the other side: those cards say what Margince may READ, this one
-          says whether it may act on it overnight while nobody is watching. The
-          rep was asked this once beside the very same connectors during
-          onboarding — this is where that answer is found again. */}
       <OvernightGrantCard />
       <LinkedInImportCard />
-      {/* No review queue here: a match a human must judge is a proposal, and
-          proposals live in the approvals inbox. This shows what the import
-          bought — which accounts the network reaches. */}
-      <LinkedInReachCard />
+      <ConnectionOutcomesCard />
       {/* Last, and only when the installation composed a unit whose credential
           is the member's OWN — that is what a `user`-scoped secret is, and it
           is the same thing every card above it holds. A unit is offered here

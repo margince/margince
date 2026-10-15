@@ -90,7 +90,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("connections");
     // Every surface here reads a per-user seam: the connector list is scoped to
-    // the calling human server-side, and both LinkedIn cards read /me.
+    // the calling human server-side, and the LinkedIn reads go through /me.
     expect(
       await screen.findByRole("heading", {
         name: "Connected mailboxes and calendars",
@@ -99,7 +99,9 @@ describe("SettingsScreen connections and integrations tabs", () => {
     expect(
       screen.getByRole("heading", { name: "LinkedIn connections" }),
     ).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Network reach" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "What your connections found" }),
+    ).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from and the
     // subscriptions everybody's writes fire.
     for (const heading of ["Contact data", "Webhooks"]) {
@@ -120,7 +122,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     for (const heading of [
       "Connected mailboxes and calendars",
       "LinkedIn connections",
-      "Network reach",
+      "What your connections found",
     ]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }

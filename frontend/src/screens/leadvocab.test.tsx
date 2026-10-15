@@ -676,6 +676,10 @@ describe("LeadHandlingCard", () => {
       "lead-first-response-switch",
     )) as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
-    expect(screen.getByText(en["leadSources.readOnly"])).toBeTruthy();
+    // The minutes row says the same, so neither control is dimmed without a reason.
+    expect(screen.getAllByText(en["leadSources.readOnly"])).toHaveLength(2);
+    expect(
+      screen.getByTestId("lead-first-response-target"),
+    ).toHaveAccessibleDescription(new RegExp(en["leadSources.readOnly"]));
   });
 });

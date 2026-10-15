@@ -54,24 +54,23 @@ afterEach(() => {
 });
 
 describe("the units offered on a settings page", () => {
-  it("names the unit by its title, with its key under it, and links to its own screen", () => {
+  it("names the unit by its title alone and links to its own screen", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
     // The whole row is the link, named with the verb and the unit it opens.
     const link = screen.getByRole("link", { name: "Settings for Dispact" });
     expect(link.getAttribute("href")).toBe("#/ext/dispact-connector");
     // The name is visible text, not only part of the link's accessible name.
-    expect(screen.getByText("Dispact")).toBeTruthy();
-    expect(screen.getByText("dispact-connector").tagName).toBe("CODE");
+    expect(link.textContent).toBe("Dispact");
   });
 
-  it("shows a unit with no title by its key, once", () => {
+  it("reads a unit with no title by its key, as the extensions page does", () => {
     unitsForSecretScope.mockReturnValue([
-      { name: "notes", title: "", secretScope: "user", verbs: [] },
+      { name: "open_notes", title: "", secretScope: "user", verbs: [] },
     ]);
     renderCard("user");
-    const link = screen.getByRole("link", { name: "Settings for notes" });
-    expect(link.textContent).toBe("notes");
+    const link = screen.getByRole("link", { name: "Settings for Open notes" });
+    expect(link.textContent).toBe("Open notes");
   });
 
   it("asks for the scope of the page it was placed on", () => {
@@ -98,7 +97,7 @@ describe("the units offered on a settings page", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
     expect(
       screen
-        .getByRole("link", { name: "Settings for notes" })
+        .getByRole("link", { name: "Settings for Notes" })
         .getAttribute("href"),
     ).toBe("#/ext/notes");
   });
