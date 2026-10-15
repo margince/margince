@@ -39,8 +39,8 @@ func familiesAgree(a, b string) bool {
 	if jaroWinkler(a, b) >= familyNameAgreement {
 		return true
 	}
-	for _, partA := range strings.Split(a, "-") {
-		for _, partB := range strings.Split(b, "-") {
+	for partA := range strings.SplitSeq(a, "-") {
+		for partB := range strings.SplitSeq(b, "-") {
 			if (partA != a || partB != b) && jaroWinkler(partA, partB) >= familyNameAgreement {
 				return true
 			}
@@ -79,7 +79,7 @@ func splitContactName(full string) (given, family string) {
 		name = after + " " + before
 	}
 	var fields []string
-	for _, field := range strings.Fields(strings.NewReplacer(".", " ", ",", " ").Replace(name)) {
+	for field := range strings.FieldsSeq(strings.NewReplacer(".", " ", ",", " ").Replace(name)) {
 		if !nameTitles[field] {
 			fields = append(fields, field)
 		}
