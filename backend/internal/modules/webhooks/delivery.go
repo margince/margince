@@ -106,7 +106,7 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: matching subscriptions for %s: %w", env.Type, err)
 	}
-	visible := make([]ids.UUID, 0, len(cands))
+	visible := make([]subCandidate, 0, len(cands))
 	var visErr error
 	for _, c := range cands {
 		ok, err := d.ownerCanSee(wsCtx, env, c.ownerID)
@@ -123,10 +123,17 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 			continue
 		}
 		if ok {
-			visible = append(visible, c.id)
+			visible = append(visible, c)
 		}
 	}
-	targets, err := d.store.enqueueForSubscriptions(wsCtx, visible, env.Type, env.EventID, body,
+	rows := renderFor(visible, body)
+	for _, r := range rows {
+		if r.renderError != "" {
+			d.log.Warn("webhooks: parking a delivery whose body could not be rendered",
+				"subscription", r.subID, "event", env.EventID, "reason", r.renderError)
+		}
+	}
+	targets, err := d.store.enqueueForSubscriptions(wsCtx, rows, env.Type, env.EventID,
 		env.Entity.Type, env.Entity.ID)
 	if err != nil {
 		return fmt.Errorf("webhooks: enqueue for %s: %w", env.Type, err)
@@ -235,16 +242,22 @@ func (d *Deliverer) SweepOnce(ctx context.Context) error {
 		return fmt.Errorf("webhooks: resolving the workspace to sweep: %w", err)
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	due, err := d.store.dueRetries(ctx, d.clock(), sweepBatch)
-	if err != nil {
-		return fmt.Errorf("webhooks: scanning due retries: %w", err)
-	}
-	for _, deliveryID := range due {
+	// One claim per send: a lease taken for the whole batch would run out
+	// before the later rows were sent.
+	for range sweepBatch {
+		deliveryID, claim, ok, err := d.store.claimDueRetry(ctx, d.clock())
+		if err != nil {
+			return fmt.Errorf("webhooks: claiming a due retry: %w", err)
+		}
+		if !ok {
+			return nil
+		}
 		t, err := d.store.loadTarget(ctx, deliveryID)
 		if err != nil {
 			d.log.Warn("webhooks: loading due delivery", "delivery", deliveryID, "err", err)
 			continue
 		}
+		t.claim = &claim
 		authorized, err := d.attemptStillAuthorized(ctx, t)
 		if err != nil {
 			d.spendUncheckedAttempt(ctx, t, err)
@@ -322,12 +335,14 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 	if !authorized {
 		return d.store.getDelivery(ctx, deliveryID)
 	}
-	if err := d.store.resetForReplay(ctx, deliveryID); err != nil {
+	claim, err := d.store.resetForReplay(ctx, deliveryID)
+	if err != nil {
 		return Delivery{}, err
 	}
 	// A replay resets attempts to a fresh budget: the operator is
 	// asserting the endpoint is fixed, so the exponential clock restarts.
 	t.priorAttempts = 0
+	t.claim = &claim
 	d.deliverOnce(ctx, t)
 	return d.store.getDelivery(ctx, deliveryID)
 }
@@ -370,7 +385,20 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
 		d.log.Error("webhooks: signing delivery", "subscription", t.subID, "delivery", t.deliveryID, "err", err)
 		return outcome{failure: "signing delivery: " + err.Error()}
 	}
-	req.Header.Set("Content-Type", "application/json")
+	headers, err := d.store.cipher.openHeaders(t.subID, t.headers)
+	if err != nil {
+		d.log.Error("webhooks: unsealing custom headers", "subscription", t.subID, "err", err)
+		return outcome{failure: err.Error()}
+	}
+	// Custom headers first, so the fixed ones below always have the last word.
+	for _, h := range headers {
+		req.Header.Set(h.Name, h.Value)
+	}
+	contentType := t.contentType
+	if contentType == "" {
+		contentType = contentTypeJSON
+	}
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("User-Agent", outbound.WebhooksHeader)
 	req.Header.Set(HeaderEvent, t.eventType)
 	req.Header.Set(HeaderWebhookID, t.deliveryID.String())

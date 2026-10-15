@@ -18526,6 +18526,27 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 	}
 }
 
+// Defines values for WebhookBodyContentType.
+const (
+	WebhookBodyContentTypeApplicationjson               WebhookBodyContentType = "application/json"
+	WebhookBodyContentTypeApplicationxWwwFormUrlencoded WebhookBodyContentType = "application/x-www-form-urlencoded"
+	WebhookBodyContentTypeTextplain                     WebhookBodyContentType = "text/plain"
+)
+
+// Valid indicates whether the value is a known member of the WebhookBodyContentType enum.
+func (e WebhookBodyContentType) Valid() bool {
+	switch e {
+	case WebhookBodyContentTypeApplicationjson:
+		return true
+	case WebhookBodyContentTypeApplicationxWwwFormUrlencoded:
+		return true
+	case WebhookBodyContentTypeTextplain:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebhookDeliveryStatus.
 const (
 	WebhookDeliveryStatusDeadLettered      WebhookDeliveryStatus = "dead_lettered"
@@ -34039,6 +34060,15 @@ type CreateVoiceProfileRequest struct {
 
 // CreateWebhookSubscriptionRequest defines model for CreateWebhookSubscriptionRequest.
 type CreateWebhookSubscriptionRequest struct {
+	// BodyContentType The Content-Type of a templated body; null means application/json.
+	BodyContentType *WebhookBodyContentType `json:"body_content_type,omitempty"`
+
+	// BodyTemplate A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+	BodyTemplate *string `json:"body_template,omitempty"`
+
+	// CustomHeaders Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
+
 	// EventTypes At least one event type from the published catalog; a true set — duplicates are rejected.
 	EventTypes []string `json:"event_types"`
 
@@ -48879,10 +48909,18 @@ type UpdateVoiceProfileRequest struct {
 	PersonalityMd       *string `json:"personality_md,omitempty"`
 }
 
-// UpdateWebhookSubscriptionRequest A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set.
+// UpdateWebhookSubscriptionRequest A partial update; omitted fields keep their stored value. `custom_headers` replaces the whole set; `body_template: null` returns to the standard envelope.
 type UpdateWebhookSubscriptionRequest struct {
-	EventTypes *[]string                              `json:"event_types,omitempty"`
-	State      *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
+	// BodyContentType The Content-Type of a templated body; null means application/json.
+	BodyContentType *WebhookBodyContentType `json:"body_content_type,omitempty"`
+
+	// BodyTemplate A `{{ path }}` template over the public event envelope. Inside a JSON string use `{{ path }}`; for a whole JSON value use `{{ path | json }}`. Null sends the standard envelope.
+	BodyTemplate *string `json:"body_template,omitempty"`
+
+	// CustomHeaders Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
+	CustomHeaders *[]WebhookCustomHeaderInput            `json:"custom_headers,omitempty"`
+	EventTypes    *[]string                              `json:"event_types,omitempty"`
+	State         *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
 }
 
 // UpdateWebhookSubscriptionRequestState defines model for UpdateWebhookSubscriptionRequest.State.
@@ -49300,6 +49338,39 @@ type VoiceProfileVersionReason string
 // VoiceProfileVersionStatus defines model for VoiceProfileVersion.Status.
 type VoiceProfileVersionStatus string
 
+// WebhookBodyContentType The Content-Type of a templated body; null means application/json.
+type WebhookBodyContentType string
+
+// WebhookBodyPreview defines model for WebhookBodyPreview.
+type WebhookBodyPreview struct {
+	// Body The exact bytes a delivery of the sample event would send.
+	Body        string `json:"body"`
+	ByteLength  int    `json:"byte_length"`
+	ContentType string `json:"content_type"`
+}
+
+// WebhookBodyPreviewRequest defines model for WebhookBodyPreviewRequest.
+type WebhookBodyPreviewRequest struct {
+	// BodyContentType The Content-Type of a templated body; null means application/json.
+	BodyContentType *WebhookBodyContentType `json:"body_content_type,omitempty"`
+	BodyTemplate    string                  `json:"body_template"`
+
+	// EventType The event type whose sample the template is rendered against.
+	EventType string `json:"event_type"`
+}
+
+// WebhookCustomHeader A custom header as a read shows it. The value stays sealed; `configured` says one is stored.
+type WebhookCustomHeader struct {
+	Configured bool   `json:"configured"`
+	Name       string `json:"name"`
+}
+
+// WebhookCustomHeaderInput A custom header to store. `value` is required for a new name. On update, a row that omits `value` keeps the value already stored under that name.
+type WebhookCustomHeaderInput struct {
+	Name  string  `json:"name"`
+	Value *string `json:"value,omitempty"`
+}
+
 // WebhookDelivery One delivery attempt log (`webhook_delivery`) — the inspectable dead-letter surface. At-least-once with idempotency: exactly one row per (subscription, event).
 type WebhookDelivery struct {
 	Attempts       int                   `json:"attempts"`
@@ -49329,7 +49400,16 @@ type WebhookDeliveryListResponse struct {
 // WebhookSubscription An outbound webhook subscription (`webhook_subscription`): a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`.
 type WebhookSubscription struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// BodyContentType The Content-Type of a templated body; null means application/json.
+	BodyContentType *WebhookBodyContentType `json:"body_content_type,omitempty"`
+
+	// BodyTemplate The body template every delivery is rendered from; null sends the standard envelope.
+	BodyTemplate *string    `json:"body_template,omitempty"`
+	CreatedAt    *time.Time `json:"created_at,omitempty"`
+
+	// CustomHeaders The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part.
+	CustomHeaders []WebhookCustomHeader `json:"custom_headers"`
 
 	// EventTypes The subscribed event types, each from the published event catalog.
 	EventTypes []string                 `json:"event_types"`
@@ -58905,6 +58985,9 @@ type UpdateVoiceCorpusSourceJSONRequestBody = UpdateVoiceCorpusSourceRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
+
+// PreviewWebhookBodyJSONRequestBody defines body for PreviewWebhookBody for application/json ContentType.
+type PreviewWebhookBodyJSONRequestBody = WebhookBodyPreviewRequest
 
 // UpdateWebhookSubscriptionJSONRequestBody defines body for UpdateWebhookSubscription for application/json ContentType.
 type UpdateWebhookSubscriptionJSONRequestBody = UpdateWebhookSubscriptionRequest
@@ -71902,13 +71985,16 @@ type ServerInterface interface {
 	// Register an outbound webhook subscription (returns the signing secret once).
 	// (POST /webhook-subscriptions)
 	CreateWebhookSubscription(w http.ResponseWriter, r *http.Request)
+	// Render a body template against a sample event, without sending anything.
+	// (POST /webhook-subscriptions/body-preview)
+	PreviewWebhookBody(w http.ResponseWriter, r *http.Request)
 	// Archive a webhook subscription (stops all delivery).
 	// (DELETE /webhook-subscriptions/{id})
 	ArchiveWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id)
 	// Get one webhook subscription by id.
 	// (GET /webhook-subscriptions/{id})
 	GetWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id)
-	// Pause/resume a subscription or re-target its event set.
+	// Pause/resume a subscription, re-target its event set, or change its headers or body template.
 	// (PATCH /webhook-subscriptions/{id})
 	UpdateWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebhookSubscriptionParams)
 	// List a subscription's delivery attempts (the dead-letter inspection surface).
@@ -76873,6 +76959,12 @@ func (_ Unimplemented) CreateWebhookSubscription(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Render a body template against a sample event, without sending anything.
+// (POST /webhook-subscriptions/body-preview)
+func (_ Unimplemented) PreviewWebhookBody(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Archive a webhook subscription (stops all delivery).
 // (DELETE /webhook-subscriptions/{id})
 func (_ Unimplemented) ArchiveWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id) {
@@ -76885,7 +76977,7 @@ func (_ Unimplemented) GetWebhookSubscription(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Pause/resume a subscription or re-target its event set.
+// Pause/resume a subscription, re-target its event set, or change its headers or body template.
 // (PATCH /webhook-subscriptions/{id})
 func (_ Unimplemented) UpdateWebhookSubscription(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebhookSubscriptionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -111755,6 +111847,26 @@ func (siw *ServerInterfaceWrapper) CreateWebhookSubscription(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewWebhookBody operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebhookBody(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebhookBody(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchiveWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveWebhookSubscription(w http.ResponseWriter, r *http.Request) {
 
@@ -115325,6 +115437,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/webhook-subscriptions", wrapper.CreateWebhookSubscription)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/webhook-subscriptions/body-preview", wrapper.PreviewWebhookBody)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/webhook-subscriptions/{id}", wrapper.ArchiveWebhookSubscription)

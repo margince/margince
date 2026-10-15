@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 311 |
-| Columns | 3676 |
+| Columns | 3681 |
 | Foreign keys | 514 |
 | Owning areas | 36 |
 
@@ -421,8 +421,8 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 16 | 0 |
-| [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 10 | 1 |
+| [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
+| [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 17 | 0 |
 | [`weekly_review`](compose.md#weekly_review) | compose | 35 | 7 |
