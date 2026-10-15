@@ -161,7 +161,7 @@ An activity's `links` name a record the same way, by `ref` or Margince ID, or fo
 Also called: missing company, link not found.
 
 ### What happens to a company I already have?
-A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. A contact whose email address is already held is skipped.
+A company that Margince already holds, and that no import made, is not matched by its name. The import creates a second company and files the two for review as a possible duplicate. A contact whose email address is already held is skipped. Two contacts that only share a given name, or an employer, are not filed as a possible duplicate: the family names must agree and the given names must be close.
 To change companies you already have, correct them by their ID. A company you cannot see is not counted or named in the test run.
 Also called: duplicates on import, import made copies.
 
