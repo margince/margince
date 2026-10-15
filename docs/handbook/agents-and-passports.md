@@ -292,10 +292,10 @@ shown once and never again: "Passport created. It is shown only once, so copy it
 Margince keeps no copy it can read, so nobody, including an administrator, can
 get it back for you.
 
-Passports are for AI tools and your own code. The page says: "An MCP client
-gets its own credential when you connect it, so it does not need a passport. It
-is listed under Connected MCP clients." That credential renews itself until you
-choose **Disconnect**.
+A passport does the same through the REST API as through MCP: the same records,
+filters, permissions and approvals, and an MCP page holds at most 50 rows. Some
+reads are for humans only either way: installation, capture and integration
+settings, the digest, backfill progress, rates, AI prices, access and consent.
 
 Revoking takes effect at the agent's next call. So does moving the colleague
 behind it to a lower role. Margince checks the colleague's rights on every call,
