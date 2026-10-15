@@ -170,7 +170,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The account page's email drawer must date a message in the record zone, so the test pins one fourteen hours off UTC that a drawer dated in the viewer's zone cannot match.",
   },
   {
-    file: "screens/contactmeetings.test.tsx",
+    file: "features/contacts/contactmeetings.test.tsx",
     why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },
   {
@@ -450,7 +450,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {
-    file: "screens/contactfiles.test.tsx",
+    file: "features/contacts/contactfiles.test.tsx",
     why: "Installation-settings fixture backing the contact-files read.",
   },
   {

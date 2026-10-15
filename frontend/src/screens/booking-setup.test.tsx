@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { mount, view } from "../features/contacts/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,7 +26,6 @@ import { BookingGuestScreen } from "./booking-guest";
 import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";
 import { BookingProfileScreen } from "./booking-profile";
-import { mount, view } from "./contactpage.testkit";
 
 afterEach(() => {
   cleanup();

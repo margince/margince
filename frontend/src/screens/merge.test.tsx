@@ -10,9 +10,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { ToastProvider } from "../design-system/toast";
+import { ContactRecordActions } from "../features/contacts/contactrecordactions";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
-import { ContactRecordActions } from "./contactrecordactions";
 
 // The merge picker names more than a contact's name, because two contacts may
 // share one and a wrong pick folds two different contacts together.

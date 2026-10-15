@@ -16,9 +16,9 @@ import {
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival
 // animation for the panel that actually changed and for nothing else.
 //
-// It is asserted here rather than in screens/contactpage.test.tsx because the key
-// lives above every screen: that suite mounts the page with a `tab` prop and can
-// never see the router decide.
+// It is asserted here, not in features/contacts/contactpage.test.tsx, because
+// the key lives above every screen. That suite mounts the page with a `tab`
+// prop and can never see the router decide.
 //
 // A second mount is a case of its own below. It was written for a cache leak —
 // the contact page sat at "Loading…" whenever another App suite had mounted

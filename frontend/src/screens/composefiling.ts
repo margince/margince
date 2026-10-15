@@ -10,13 +10,13 @@ import {
   type PickableProject,
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
+import { useContact360 } from "../features/contacts/contact360";
 import { unwrap } from "../lib/problem";
 import { useCompany360 } from "./company360";
 import { useThreadProject } from "./composeanchor";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
-import { useContact360 } from "./contact360";
 import {
   stripSubjectTag,
   subjectTag,

@@ -33,7 +33,7 @@ const namespaces = [
   { prefix: "book-", home: "screens/book.css" },
   { prefix: "clientsurface-", home: "screens/client.css" },
   { prefix: "companydeepread-", home: "screens/companydeepread.css" },
-  { prefix: "corrections-", home: "screens/contactcorrections.css" },
+  { prefix: "corrections-", home: "features/contacts/contactcorrections.css" },
   { prefix: "create-", home: "components/create.css" },
   { prefix: "datefield-", home: "screens/automations.datefield.css" },
   { prefix: "errorboundary-", home: "app/errorboundary.css" },

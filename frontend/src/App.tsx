@@ -29,6 +29,7 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
+import { isContactTab } from "./features/contacts/contacttab";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
@@ -55,7 +56,6 @@ import {
   RESET_ROUTE,
 } from "./screens/auth";
 import { ConfinedAccountScreen, useConfinement } from "./screens/confinement";
-import { isContactTab } from "./screens/contacttab";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -186,12 +186,16 @@ const PartnersScreen = lazy(
 );
 const ContactsScreen = lazy(
   routed(() =>
-    import("./screens/contacts").then((m) => ({ default: m.ContactsScreen })),
+    import("./features/contacts/contacts").then((m) => ({
+      default: m.ContactsScreen,
+    })),
   ),
 );
 const ContactPageV2 = lazy(
   routed(() =>
-    import("./screens/contactpage").then((m) => ({ default: m.ContactPageV2 })),
+    import("./features/contacts/contactpage").then((m) => ({
+      default: m.ContactPageV2,
+    })),
   ),
 );
 const BuyerRoomScreen = lazy(() =>

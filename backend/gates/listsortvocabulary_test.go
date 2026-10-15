@@ -46,7 +46,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// listSurface pairs a screen with the resource it lists.
+// listSurface pairs a screen, by its path under frontend/src, with the resource
+// it lists.
 //
 // Declared because nothing in either tree names the other: a screen fetches a
 // path and the vocabulary belongs to a store, and no import, type or route
@@ -54,13 +55,13 @@ import (
 // renamed file or a retired vocabulary fails here rather than dropping a
 // surface out of the census quietly.
 var listSurfaces = map[string]struct{ vocabulary, source string }{
-	"deals.tsx":          {"dealListFields", "internal/modules/deals/deal_read.go"},
-	"contacts.tsx":       {"contactListFields", "internal/modules/contacts/contact_list.go"},
-	"leads.list.tsx":     {"leadListFields", "internal/modules/contacts/lead_list.go"},
-	"companies.tsx":      {"companyListFields", "internal/modules/contacts/company_list.go"},
-	"projects.tsx":       {"projectListFields", "internal/modules/projects/read.go"},
-	"products.tsx":       {"productListFields", "internal/modules/deals/product.go"},
-	"offertemplates.tsx": {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
+	"screens/deals.tsx":              {"dealListFields", "internal/modules/deals/deal_read.go"},
+	"features/contacts/contacts.tsx": {"contactListFields", "internal/modules/contacts/contact_list.go"},
+	"screens/leads.list.tsx":         {"leadListFields", "internal/modules/contacts/lead_list.go"},
+	"screens/companies.tsx":          {"companyListFields", "internal/modules/contacts/company_list.go"},
+	"screens/projects.tsx":           {"projectListFields", "internal/modules/projects/read.go"},
+	"screens/products.tsx":           {"productListFields", "internal/modules/deals/product.go"},
+	"screens/offertemplates.tsx":     {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
 }
 
 const screenDir = "../frontend/src/screens/"
@@ -136,9 +137,10 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 // since a header declared in `leads.columns.tsx` is the leads screen's header.
 func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 	t.Helper()
-	screen := readSource(t, screenDir+name)
+	path := filepath.Join(frontendSrc, name)
+	screen := readSource(t, path)
 	for _, m := range tsColumnsModule.FindAllStringSubmatch(screen, -1) {
-		screen += "\n" + readSource(t, screenDir+m[1]+".tsx")
+		screen += "\n" + readSource(t, filepath.Join(filepath.Dir(path), m[1]+".tsx"))
 		read[m[1]+".tsx"] = true
 	}
 	return screen
