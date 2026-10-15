@@ -293,8 +293,8 @@ export const RowSlotsInANarrowRail: Story = {
 };
 
 // The compact row a record page puts above its brief: five readings on one
-// line at a work column's width, a long value cut with its full text on the
-// tooltip.
+// line at a work column's width. A long value wraps, and the row's cards grow
+// to the tallest together.
 export const Compact: Story = {
   render: () => (
     <div style={{ maxWidth: "52rem" }}>

@@ -88,12 +88,9 @@ export const ReadingsWithADoor: Story = {
 };
 
 // Every shape a reading takes, at the ONE size and in the ONE face they all
-// draw in — read down the column and no tile is bigger than its neighbour.
-//
-// The two clamps are what keeps that true when the copy does not cooperate: a
-// label runs to one line and a detail to two, so a reading whose basis is a
-// paragraph cannot make its own card the tallest in the row. Both are visible
-// here, cut mid-sentence on purpose.
+// draw in. A long label wraps whole; only a detail is clamped, to two lines,
+// so a basis that is a paragraph cannot set the row's height. It is cut here
+// mid-sentence on purpose.
 export const ReadingsAtOneSize: Story = {
   name: "Readings — tones, clamps and the alert tile",
   render: () => (
@@ -111,8 +108,7 @@ export const ReadingsAtOneSize: Story = {
         detail="Last inbound 12 Jun · last outbound 3 Jul · nobody here has replied since the renewal was raised, and the champion left in April"
       />
       {/* A label longer than the card is wide, with the source badge and the
-          receipt chip beside it: the NAME clamps to one line and the two chips
-          keep their place at the end of the row. */}
+          receipt chip beside it: the name wraps and the chips keep their place. */}
       <StatCard
         label="Net invoiced across every subsidiary, last twelve months"
         value="€1.2m"
@@ -148,6 +144,26 @@ export const ReadingsAtOneSize: Story = {
         detail="Across 14 closed deals"
         meter={{ filled: 11, total: 14 }}
       />
+    </div>
+  ),
+};
+
+// German at a compact record strip's width: compounds break at a syllable with
+// a hyphen, and a figure in words wraps balanced. Nothing is cut.
+export const LongGermanReadings: Story = {
+  render: () => (
+    <div lang="de" style={{ ...row, gridTemplateColumns: "repeat(3, 8rem)" }}>
+      <StatCard
+        label="Wahrscheinlichkeitsbereinigter Wert"
+        value="8.500 €"
+        detail="E-Mail · 13. Okt. 2026"
+      />
+      <StatCard
+        label="Umsatz · 12 Monate"
+        value="Kein Wert"
+        detail="Wird synchronisiert"
+      />
+      <StatCard label="Nächster Termin" value="Kein Termin geplant" />
     </div>
   ),
 };

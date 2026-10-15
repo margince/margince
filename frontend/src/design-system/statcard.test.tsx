@@ -240,6 +240,60 @@ describe("a toned figure is read, so it takes the ink that clears contrast", () 
   });
 });
 
+// A long correct reading is fixed in the layout, never shortened: the name and
+// the figure wrap inside the tile, in every sheet the app ships.
+const CUT =
+  /(?:-webkit-)?line-clamp\s*:|text-overflow\s*:\s*ellipsis|white-space\s*:\s*nowrap|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
+const WHOLE = [
+  "stat-card",
+  "stat-card-label",
+  "stat-card-label-text",
+  "stat-card-value",
+];
+
+function cutsOfWholeText(all: readonly Rule[]) {
+  return all.flatMap((rule) =>
+    alternativesOf(rule.selector)
+      .filter((selector) => {
+        const classes = classesOf(subjectOf(selector));
+        return WHOLE.some((one) => classes.has(one)) && CUT.test(rule.body);
+      })
+      .map((selector) => `${basename(rule.file)} ${selector}`),
+  );
+}
+
+describe("a reading's name and figure are never cut", () => {
+  const all = rulesOf(appStylesheets(join(here, "..", "..")));
+  const at = (file: string, selector: string, body: string): Rule[] => [
+    { file: join(here, file), selector, body },
+  ];
+
+  it("finds no clamp, ellipsis, nowrap or hidden overflow on them anywhere", () => {
+    expect(all.length).toBeGreaterThan(0);
+    expect(cutsOfWholeText(all)).toEqual([]);
+  });
+
+  it.each([
+    ["atoms.css", ".stat-card-value", "white-space: nowrap;"],
+    ["atoms.css", ".stat-card-label-text", "-webkit-line-clamp: 1;"],
+    ["brief.css", ".brief .stat-card-value", "text-overflow: ellipsis;"],
+    ["statstrip.css", ".stat-strip > * > .stat-card", "overflow: clip;"],
+  ])("refuses %s %s { %s }", (file, selector, body) => {
+    expect(cutsOfWholeText(at(file, selector, body))).toHaveLength(1);
+  });
+
+  it("breaks a long compound at a syllable before anywhere", () => {
+    const rule = all.find(
+      (one) =>
+        basename(one.file) === "atoms.css" &&
+        one.selector === ".stat-card-label-text" &&
+        /hyphens/.test(one.body),
+    );
+    expect(rule?.body).toMatch(/hyphens:\s*auto;/);
+    expect(rule?.body).toMatch(/hyphenate-limit-chars:\s*7 3 3;/);
+  });
+});
+
 describe("the foot speaks once", () => {
   it("writes exactly one message into the card's foot", () => {
     const path = join(here, "statcard.tsx");
