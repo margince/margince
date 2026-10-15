@@ -3,7 +3,17 @@
 
 package ai
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+)
+
+// switchedModelWindow is how far back a price sync looks for models a provider
+// switched calls to.
+const switchedModelWindow = 30 * 24 * time.Hour
 
 // gradedServedModel is the model a provider itself named as the one that
 // answered, or "" when the trace only echoed or assumed the binding. Only a
@@ -27,4 +37,32 @@ func switchedModelSQL(alias string) string {
 func answeredModelSQL(alias string) string {
 	return fmt.Sprintf(`CASE WHEN %[1]s.served_identity_source = '%[2]s' AND %[1]s.served_model <> ''
 	        THEN %[1]s.served_model ELSE %[1]s.model_id END`, alias, servedIdentitySourceResponse)
+}
+
+// switchedServedModels is, by provider, every chat model the provider named as
+// answering a call bound to another model since the given instant.
+func (s *RateStore) switchedServedModels(ctx context.Context, since time.Time) (map[string][]string, error) {
+	out := map[string][]string{}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT ac.provider, ac.served_model FROM ai_call ac
+			 WHERE ac.occurred_at >= $1 AND ac.kind = '`+callKindCompletion+`' AND `+switchedModelSQL("ac")+`
+			 ORDER BY 1, 2`, since)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var provider, served string
+			if err := rows.Scan(&provider, &served); err != nil {
+				return err
+			}
+			out[provider] = append(out[provider], served)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ai: reading the models providers switched to: %w", err)
+	}
+	return out, nil
 }

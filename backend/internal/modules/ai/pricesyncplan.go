@@ -22,6 +22,9 @@ type PriceSources struct {
 	Usable map[string]bool
 	// Listed is what each usable vendor's key lists; absent when the listing failed.
 	Listed map[string][]model.Info
+	// Switched is, by provider, the models it named as answering calls bound to
+	// another model, so a model an alias moved to gets a price of its own.
+	Switched map[string][]string
 }
 
 type pricePlan struct {
@@ -104,7 +107,7 @@ func (p *pricePlan) broker(src PriceSources, sheet []ModelRateRow, inForce map[[
 	for _, m := range src.Broker.Models {
 		listed[m.ID] = m
 	}
-	for _, t := range catalogueTargets(src.Routing, sheet) {
+	for _, t := range withSwitched(catalogueTargets(src.Routing, sheet), src.Switched) {
 		entry, ok := listed[t.modelID]
 		if !ok {
 			if line := p.line(t.provider); t.lane != "" && src.Broker.Unavailable == "" {
@@ -159,8 +162,45 @@ func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow)
 			byID[info.ID] = catalogueTarget{provider: provider, modelID: info.ID, lane: lane}
 		}
 	}
+	for _, id := range src.Switched[provider] {
+		if _, known := byID[id]; known {
+			continue
+		}
+		// One the catalogue does not price stays laneless and is reported unlisted.
+		target := catalogueTarget{provider: provider, modelID: id}
+		if entry, priced := src.ModelsDev.entry(key, id); priced {
+			lane, ok := entry.lane()
+			if !ok {
+				continue
+			}
+			target.lane = lane
+		}
+		byID[id] = target
+	}
 	out := slices.Collect(maps.Values(byID))
 	slices.SortFunc(out, func(a, b catalogueTarget) int { return cmp.Compare(a.modelID, b.modelID) })
+	return out
+}
+
+// withSwitched adds to the broker's targets the chat models each of their
+// providers switched calls to.
+func withSwitched(targets []catalogueTarget, switched map[string][]string) []catalogueTarget {
+	known := map[[2]string]bool{}
+	for _, t := range targets {
+		known[[2]string{t.provider, t.modelID}] = true
+	}
+	out := targets
+	for _, provider := range slices.Sorted(maps.Keys(switched)) {
+		if !slices.ContainsFunc(targets, func(t catalogueTarget) bool { return t.provider == provider }) {
+			continue
+		}
+		for _, id := range switched[provider] {
+			if !known[[2]string{provider, id}] {
+				known[[2]string{provider, id}] = true
+				out = append(out, catalogueTarget{provider: provider, modelID: id, lane: LaneChat})
+			}
+		}
+	}
 	return out
 }
 

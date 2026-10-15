@@ -11,6 +11,7 @@ package ai
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -190,5 +191,17 @@ func TestTheCallListNarrowsToTheModelThatAnswered(t *testing.T) {
 	// The echoed call reflected the same id but did not answer as it.
 	if len(page.Items) != 1 || page.Items[0].Task != string(f.tasks[0]) {
 		t.Fatalf("listed %+v, want only the call the provider answered as %s", page.Items, answeredGemini)
+	}
+}
+
+func TestAPriceSyncReadsOnlyTheModelsAProviderSwitchedTo(t *testing.T) {
+	f := seedAnsweredCalls(t)
+	got, err := NewRateStore(f.db).switchedServedModels(f.ctx, time.Now().Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{answeredGemini, answeredGemini + "-001"}
+	if len(got) != 1 || !slices.Equal(got[providerGemini], want) {
+		t.Errorf("switched models = %v, want gemini: %v and no echoed or assumed model", got, want)
 	}
 }

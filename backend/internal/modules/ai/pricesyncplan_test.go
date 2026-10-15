@@ -218,3 +218,39 @@ func TestAWriteThatYieldedIsReportedKept(t *testing.T) {
 		t.Errorf("line = %+v, want the add turned into a kept price", line)
 	}
 }
+
+func TestAModelTheVendorSwitchedCallsToIsPricedEvenUnlisted(t *testing.T) {
+	src := vendorSources(t, providerGemini)
+	src.Switched = map[string][]string{providerGemini: {"gemini-3.5-flash", "gemini-3.5-flash-001"}}
+	plan := planPriceSync(src, nil)
+
+	if got := writesOf(plan)["gemini/gemini-3.5-flash"]; got.Lane != LaneChat || got.InputUsd != "1.500000" {
+		t.Errorf("switched-to write = %+v, want the catalogue's chat price", got)
+	}
+	if got := plan.lines[providerGemini].Unlisted; !slices.Equal(got, []string{"gemini-3.5-flash-001"}) {
+		t.Errorf("unlisted = %v, want the switched-to model the catalogue does not price", got)
+	}
+}
+
+func TestAModelTheBrokerSwitchedCallsToIsPriced(t *testing.T) {
+	src := PriceSources{
+		Routing: RoutingConfig{Tiers: map[Tier]ProviderConfig{"premium": openRouterBinding("a/bound")}},
+		Broker: AvailableModels{Models: []AvailableModel{
+			{ID: "a/bound", InputPerMtok: new("5"), OutputPerMtok: new("25")},
+			{ID: "a/next", InputPerMtok: new("2"), OutputPerMtok: new("10")},
+		}},
+		Switched: map[string][]string{providerOpenAICompatible: {"a/next", "a/gone"}, providerGemini: {"gemini-3.5-flash"}},
+	}
+	plan := planPriceSync(src, nil)
+
+	got := writesOf(plan)
+	if next := got[providerOpenAICompatible+"/a/next"]; next.Lane != LaneChat || next.InputUsd != "2" {
+		t.Errorf("switched-to write = %+v, want the broker's chat price", next)
+	}
+	if _, wrote := got["gemini/gemini-3.5-flash"]; wrote {
+		t.Error("the broker priced a model of a provider it does not carry")
+	}
+	if unlisted := plan.lines[providerOpenAICompatible].Unlisted; !slices.Equal(unlisted, []string{"a/gone"}) {
+		t.Errorf("unlisted = %v, want the switched-to model the broker does not list", unlisted)
+	}
+}
