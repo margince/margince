@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import { EmptyState, SegmentedControl } from "../design-system/atoms";
+import { Badge, EmptyState, SegmentedControl } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { formatDecimal, formatMoney, formatNumber } from "../format/format";
@@ -155,11 +155,78 @@ export function TierCallsLine({
   );
 }
 
+/** How many of total calls the provider answered with another model than the binding. */
+export function switchedSentence(
+  switched: number,
+  total: number,
+  model: string,
+  plural: PluralTranslator,
+  locale: Locale,
+): string {
+  return plural("aiFigures.switched", switched, {
+    count: formatNumber(switched, locale),
+    total: plural("aiFigures.line.calls", total, {
+      count: formatNumber(total, locale),
+    }),
+    model,
+  });
+}
+
+/** This week's figures for one tier, from the read every tier line shares. */
+function useTierWeek(tier: string): StatsRow | undefined {
+  const canSee = useCan("ai_diagnostics", "read");
+  const stats = useCallStats({ window: "7d", group: "tier" }, canSee);
+  return canSee ? stats.data?.rows.find((r) => r.key === tier) : undefined;
+}
+
+/** A tier the provider answered with another model this week, as a badge. */
+export function TierSwitchedBadge({ tier }: Readonly<{ tier: string }>) {
+  const t = useT();
+  const row = useTierWeek(tier);
+  if (!row?.switched) return null;
+  return <Badge tone="warning">{t("aiFigures.switchedBadge")}</Badge>;
+}
+
+/** Which model the provider answered a tier's calls with this week, if not the bound one. */
+export function TierSwitchedLine({
+  tier,
+  linked,
+}: Readonly<{ tier: string; linked?: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const row = useTierWeek(tier);
+  if (!row?.switched || !row.switched_to) return null;
+  return (
+    <span className="t-caption" role="status">
+      {switchedSentence(
+        row.switched,
+        row.calls,
+        row.switched_to,
+        plural,
+        locale,
+      )}
+      {linked && (
+        <>
+          {" "}
+          <a
+            className="link-button"
+            href={callsHrefFor({ tier, served_model: row.switched_to })}
+          >
+            {t("aiTasks.viewCalls")}
+          </a>
+        </>
+      )}
+    </span>
+  );
+}
+
 type Grouping = "host" | "model" | "tier";
 
+// "By model" is the model that answered, so a provider's switch shows as its own row.
 const GROUP_OF: Record<Grouping, Group> = {
   host: "served_provider",
-  model: "model",
+  model: "served_model",
   tier: "tier",
 };
 
@@ -221,7 +288,7 @@ export function ProviderRecentCalls({
             ...(by === "host"
               ? { served_provider: row.key }
               : by === "model"
-                ? { model: row.key }
+                ? { served_model: row.key }
                 : { tier: row.key }),
           })
         }
@@ -260,6 +327,9 @@ export function TierRecentCalls({
           </a>
         </span>
       </div>
+      <p>
+        <TierSwitchedLine tier={tier} linked />
+      </p>
       <FiguresTable
         rows={stats.data?.rows}
         failed={stats.isError}
@@ -270,7 +340,7 @@ export function TierRecentCalls({
           callsHrefFor(
             by === "host"
               ? { tier, served_provider: row.key }
-              : { tier, model: row.key },
+              : { tier, served_model: row.key },
           )
         }
       />

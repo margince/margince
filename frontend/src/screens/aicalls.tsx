@@ -128,6 +128,7 @@ export const CALL_TASK_PARAM = "task";
 export const CALL_FILTER_PARAMS = [
   "provider",
   "model",
+  "served_model",
   "served_provider",
   "tier",
 ] as const;
@@ -270,6 +271,7 @@ export function AiCallsCard() {
 const FILTER_TERM = {
   provider: "aiTerms.provider",
   model: "aicalls.col.model",
+  served_model: "aicalls.filter.servedModel",
   served_provider: "aicalls.filter.servedProvider",
   tier: "aiTerms.tier",
 } as const satisfies Record<CallFilterParam, MessageKey>;

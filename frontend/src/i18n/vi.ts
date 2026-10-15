@@ -9940,6 +9940,7 @@ export const vi = {
   "aicalls.outcome.failed": "Không thành công",
   "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
   "aicalls.filter.servedProvider": "Nhà cung cấp phục vụ",
+  "aicalls.filter.servedModel": "Mô hình trả lời",
   "aicalls.sentinel.provider_quota": "Hết hạn mức",
   "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
   "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
@@ -13368,6 +13369,11 @@ export const vi = {
   "aiFigures.line.timeoutCount_one": "{count} lần hết thời gian",
   "aiFigures.line.timeoutCount_other": "{count} lần hết thời gian",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Nhà cung cấp đã trả lời {count} trong {total} bằng {model}, không phải mô hình đã gán.",
+  "aiFigures.switched_other":
+    "Nhà cung cấp đã trả lời {count} trong {total} bằng {model}, không phải mô hình đã gán.",
+  "aiFigures.switchedBadge": "Đã đổi mô hình",
   "aiFigures.line.sort": "sắp xếp: {sort}",
   "aiFigures.line.week": "7 ngày: {figures}",
   "aiFigures.line.prefix": "7 ngày: {sentence}",

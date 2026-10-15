@@ -10187,6 +10187,7 @@ export const de = {
   "aicalls.outcome.failed": "Fehlgeschlagen",
   "aicalls.model.afterDecision": "Entscheidungsmodell, dann {tier}",
   "aicalls.filter.servedProvider": "Ausgeliefert von",
+  "aicalls.filter.servedModel": "Beantwortet von",
   "aicalls.sentinel.provider_quota": "Kontingent erschöpft",
   "aicalls.sentinel.provider_throttled": "Gedrosselt",
   "aicalls.sentinel.provider_refused": "Vom Anbieter abgelehnt",
@@ -13707,6 +13708,11 @@ export const de = {
   "aiFigures.line.timeoutCount_one": "{count} Zeitüberschreitung",
   "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Der Anbieter hat {count} von {total} mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+  "aiFigures.switched_other":
+    "Der Anbieter hat {count} von {total} mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+  "aiFigures.switchedBadge": "Modell gewechselt",
   "aiFigures.line.sort": "Sortierung: {sort}",
   "aiFigures.line.week": "7 T: {figures}",
   "aiFigures.line.prefix": "7 T: {sentence}",
