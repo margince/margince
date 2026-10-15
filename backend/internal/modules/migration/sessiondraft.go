@@ -214,7 +214,7 @@ func writeDraft(
 	}
 	if stepChanged {
 		if state.status == StatusAwaitingApproval && !choiceChanged {
-			return fmt.Errorf("import run %s holds a report; only a changed choice returns it to draft: %w", id, apperrors.ErrConflict)
+			return RefuseRun(id, "this import holds a report; only a changed choice returns it to draft")
 		}
 		change.before["draft_step"], change.after["draft_step"] = state.draftStep, *step
 		change.values = append(change.values, runValue{"draft_step", *step})

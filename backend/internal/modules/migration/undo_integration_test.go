@@ -484,3 +484,40 @@ func TestAReplayedUndoPageCountsEachRowOnce(t *testing.T) {
 		t.Errorf("the undo reports %d reversed, want each of the %d rows once", reversed, len(rows))
 	}
 }
+
+// An undo reports its rows per object from the moment it is queued.
+// A reader sees "0 of 2" before a worker has claimed it.
+func TestUndoReportsRowsReversedPerObject(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	run := completeCSVRun(ctx, t, s)
+	landLead(ctx, t, s, run.ID, "row-1")
+	landLead(ctx, t, s, run.ID, "row-2")
+
+	queued, err := s.ClaimUndo(ctx, run.ID, queueNothing)
+	if err != nil {
+		t.Fatalf("ClaimUndo: %v", err)
+	}
+	if queued.Progress == nil || len(queued.Progress.Objects) != 1 ||
+		queued.Progress.Objects[0].RowsTotal != 2 || queued.Progress.Objects[0].RowsDone != 0 {
+		t.Fatalf("queued undo progress = %+v, want 0 of 2 leads", queued.Progress)
+	}
+	if queued.Phase != "" {
+		t.Errorf("a queued undo has phase %q, want none until a worker claims it", queued.Phase)
+	}
+
+	l := Lease{Run: run.ID, Status: StatusUndoing, Attempt: queued.JobAttempt}
+	if _, err := s.Claim(ctx, l); err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+	if done, err := s.UndoSlice(ctx, l, &fakeUndoWriters{}, Budget{Rows: 1}); err != nil || done {
+		t.Fatalf("a one-row undo slice = done %v, %v; want it stopped after one row", done, err)
+	}
+	got := mustGetStaged(ctx, t, s, run.ID)
+	if got.Progress == nil || got.Progress.Objects[0].RowsDone != 1 {
+		t.Fatalf("progress after one row = %+v, want 1 of 2", got.Progress)
+	}
+	if got.Phase != PhaseUndoing || got.PhaseObject != "lead" {
+		t.Errorf("phase = %q on %q, want undoing on lead", got.Phase, got.PhaseObject)
+	}
+}

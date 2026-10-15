@@ -17,6 +17,9 @@ import (
 const (
 	ReasonUndoEdited          ReasonCode = "undo_edited"
 	ReasonUndoStillReferenced ReasonCode = "undo_still_referenced"
+	// ReasonRunInFlight is not a row's reason: it answers a press on a run
+	// another attempt already holds.
+	ReasonRunInFlight ReasonCode = "run_in_flight"
 )
 
 // Parameter names of the still-referenced reason.
@@ -33,6 +36,11 @@ func withUndoReasons(catalog map[ReasonCode]reasonEntry) map[ReasonCode]reasonEn
 }
 
 var undoReasons = map[ReasonCode]reasonEntry{
+	ReasonRunInFlight: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "This import is already running. It finishes on its own and this page updates.",
+		textlang.German:     "Dieser Import läuft bereits. Er endet von selbst und diese Seite aktualisiert sich.",
+		textlang.Vietnamese: "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
+	}},
 	ReasonUndoEdited: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Someone changed this record after the import, so it was left in place.",
 		textlang.German:     "Jemand hat diesen Datensatz nach dem Import geändert, daher blieb er bestehen.",

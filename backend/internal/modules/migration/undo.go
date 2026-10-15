@@ -162,9 +162,6 @@ func reversalRefusalReason(err error) Reason {
 	}
 }
 
-// ErrRunWritesHeld refuses a commit or undo slice while another holds the run.
-var ErrRunWritesHeld = fmt.Errorf("another commit or undo of this import run is under way: %w", apperrors.ErrConflict)
-
 // importRunWriteClass is the advisory-lock namespace of import run writes: the
 // two-argument form, apart from the flip's single-argument liveness key.
 const importRunWriteClass = 723
@@ -247,7 +244,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 			return fmt.Errorf("reading import run %s: %w", id, err)
 		}
 		if run.Connector != ConnectorCSV {
-			return fmt.Errorf("import run %s is a %s run, and undo is built for csv only: %w", id, run.Connector, apperrors.ErrConflict)
+			return RefuseRun(id, "this import came from another source, and undo is built for CSV files only")
 		}
 		before := run.Status
 		rep, err := undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
@@ -258,6 +255,17 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		if err != nil {
 			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
 		}
+		plan, err := undoPlanOf(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		// The totals are known before the first row moves, so a reader sees
+		// "0 of N" while the job waits. No phase until a worker claims it.
+		shown, _ := plan.at(run.Checkpoint)
+		progress, err := json.Marshal(shown)
+		if err != nil {
+			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
+		}
 		actor, err := encodeActorOf(ctx)
 		if err != nil {
 			return err
@@ -265,9 +273,10 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		// A new attempt for every undo request, so a job queued for an older one is fenced off.
 		if err := execHoldingName(ctx, tx, id, `
 			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now(), error = NULL,
-			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6
+			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6,
+			       progress = $7, phase = NULL, phase_object = NULL, progress_at = now(), heartbeat_at = now()
 			 WHERE id = $1`,
-			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7()); err != nil {
+			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7(), progress); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
@@ -300,14 +309,14 @@ func undoStartReport(ctx context.Context, tx pgx.Tx, run *Run, reportRaw, undoRe
 		return UndoReport{UpdatesNotReversed: updated}, nil
 	case StatusUndoing:
 		if len(undoReportRaw) == 0 {
-			return UndoReport{}, fmt.Errorf("import run %s is undoing with no recorded progress: %w", run.ID, apperrors.ErrConflict)
+			return UndoReport{}, RefuseRun(run.ID, "this import is undoing with no recorded progress, so it cannot continue")
 		}
 		if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
 			return UndoReport{}, fmt.Errorf("decoding import run %s undo progress: %w", run.ID, err)
 		}
 		return rep, nil
 	default:
-		return UndoReport{}, fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", run.ID, run.Status, apperrors.ErrConflict)
+		return UndoReport{}, RefuseRun(run.ID, "this import is %s, not complete, so it cannot be undone", statusWords(run.Status))
 	}
 }
 

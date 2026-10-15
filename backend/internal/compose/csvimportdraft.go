@@ -76,8 +76,8 @@ func (h importHandlers) draftOfSource(ctx context.Context, req crmcontracts.Crea
 		return migration.Run{}, err
 	}
 	if run.SourceReleased {
-		return migration.Run{}, fmt.Errorf(
-			"import run %s has released this upload; upload the file again to import it: %w", run.ID, apperrors.ErrConflict)
+		return migration.Run{}, migration.RefuseRun(run.ID,
+			"this import has released its upload; upload the file again to import it")
 	}
 	return run, nil
 }

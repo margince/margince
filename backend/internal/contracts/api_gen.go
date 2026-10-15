@@ -10578,6 +10578,7 @@ const (
 	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
 	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
+	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
@@ -10785,6 +10786,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeRowKeyEmpty:
 		return true
 	case ImportReasonCodeRowKeyRepeated:
+		return true
+	case ImportReasonCodeRunInFlight:
 		return true
 	case ImportReasonCodeSizeBandInvalid:
 		return true
@@ -37644,7 +37647,7 @@ type ImportRun struct {
 	// Profile What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.
 	Profile *ImportSourceProfile `json:"profile,omitempty"`
 
-	// Progress What a run has done so far, per object and in total. Absent on a run that never moved.
+	// Progress What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero.
 	Progress *ImportRunProgress `json:"progress,omitempty"`
 
 	// RateRowsPerSecond Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.
@@ -37788,7 +37791,7 @@ type ImportRunPart struct {
 // ImportRunPhase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
 type ImportRunPhase string
 
-// ImportRunProgress What a run has done so far, per object and in total. Absent on a run that never moved.
+// ImportRunProgress What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero.
 type ImportRunProgress struct {
 	Counts struct {
 		Created int `json:"created"`

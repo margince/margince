@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -65,8 +64,9 @@ func TestUndoKeepsAHumanEditedLeadAndItsSourceKey(t *testing.T) {
 	}
 	w := &csvWriters{pool: e.DB().Pool(), contacts: e.Contacts}
 	err = w.Reverse(e.Admin(), migration.ObjectLead, ids.UUID(lead.Id), clocktest.Now(t).Add(-time.Hour))
-	if !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("undo of an edited lead = %v, want a conflict", err)
+	kept, isKept := errors.AsType[*migration.KeptError](err)
+	if !isKept || kept.Why.Code != migration.ReasonUndoEdited {
+		t.Fatalf("undo of an edited lead = %v, want a kept row with reason %s", err, migration.ReasonUndoEdited)
 	}
 	got, err := e.Contacts.GetLead(e.Admin(), id, storekit.IncludeArchived)
 	if err != nil || got.ArchivedAt != nil || got.SourceId == nil || *got.SourceId != ref {
