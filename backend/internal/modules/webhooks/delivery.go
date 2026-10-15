@@ -62,6 +62,15 @@ type Deliverer struct {
 	clock    func() time.Time
 	resolver authz.Resolver
 	log      *slog.Logger
+	// publicBaseURL is the app's origin for record links; empty sends none.
+	publicBaseURL string
+}
+
+// WithPublicBaseURL sets the origin that record links in a delivery start
+// from. Without it a delivery carries no link.
+func (d *Deliverer) WithPublicBaseURL(baseURL string) *Deliverer {
+	d.publicBaseURL = baseURL
+	return d
 }
 
 // NewDeliverer wires the delivery engine. A nil clock defaults to the wall
@@ -91,10 +100,6 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: mapping envelope %s to the public wire shape: %w", env.EventID, err)
 	}
-	body, err := json.Marshal(wire)
-	if err != nil {
-		return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
-	}
 	// The tenant is this deliverer's own: the fan-out builds one per workspace
 	// it sweeps, and the envelope carries none (ADR-0091 §6).
 	ws, err := d.store.db.Workspace(ctx)
@@ -102,6 +107,11 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 		return err
 	}
 	wsCtx := d.systemContext(ctx, ws.UUID)
+	d.humanize(wsCtx, &wire)
+	body, err := json.Marshal(wire)
+	if err != nil {
+		return fmt.Errorf("webhooks: marshaling envelope %s: %w", env.EventID, err)
+	}
 	cands, err := d.store.matchingSubscriptions(wsCtx, env.Type)
 	if err != nil {
 		return fmt.Errorf("webhooks: matching subscriptions for %s: %w", env.Type, err)

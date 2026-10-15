@@ -1723,8 +1723,14 @@ type PublicEventEntityRef struct {
 	// Id Stable identifier of the entity.
 	Id openapi_types.UUID `json:"id"`
 
+	// Name The record's name when the event was delivered, for a record that is not a person (a deal, company or project). Absent for a contact or lead; open the link to see who it is.
+	Name *string `json:"name,omitempty"`
+
 	// Type Entity kind (e.g. deal, contact, company).
 	Type string `json:"type"`
+
+	// Url A link to the record in the app, when the record has a page and the installation has a public base URL.
+	Url *string `json:"url,omitempty"`
 }
 
 // PublicEventEnvelope The public wrapper around every delivered event payload. This is the exact JSON shape a subscriber receives; it carries no internal metadata.

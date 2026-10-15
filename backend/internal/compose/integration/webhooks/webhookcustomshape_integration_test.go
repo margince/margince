@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -301,5 +302,59 @@ func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
 	assertDeliveryStatus(t, we, sub.ID, "retrying", 1)
 	if reason := we.deliveryError(t, sub.ID); !strings.Contains(reason, "request failed") {
 		t.Errorf("after the replay the row says %q, want the replay's own failed request", reason)
+	}
+}
+
+func TestADeliveryNamesItsRecordAndLinksToItsPage(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusOK)
+	now := clocktest.Now(t)
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client()).WithPublicBaseURL("https://crm.example.test/")
+	we.createShaped(t, integration.AnyMap{
+		"target_url": rcv.server.URL + "/hook", "event_types": []string{"deal.created"},
+		"body_template": `{"text": "{{ entity.name }}", "link": "{{ entity.url }}"}`,
+	})
+	dealID := apptest.CreateOpenDeal(t, we.AppEnv, apptest.DiscoverSeededPipeline(t, we.AppEnv))
+	var deal struct {
+		Name string `json:"name"`
+	}
+	we.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &deal)
+	env := makeEnvelope(we.wsID, "deal.created")
+	env.Entity.ID = mustParseUUID(t, dealID)
+	if err := deliverer.HandleEvent(context.Background(), env); err != nil {
+		t.Fatal(err)
+	}
+	hits := rcv.snapshot()
+	if len(hits) != 1 {
+		t.Fatalf("got %d POSTs, want 1", len(hits))
+	}
+	want := fmt.Sprintf(`{"text": "%s", "link": "https://crm.example.test/#/deals/%s"}`, deal.Name, dealID)
+	if string(hits[0].body) != want {
+		t.Errorf("body = %s, want %s", hits[0].body, want)
+	}
+}
+
+func TestAPersonIsLinkedButNotNamed(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusOK)
+	now := clocktest.Now(t)
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client()).WithPublicBaseURL("https://crm.example.test")
+	we.createShaped(t, integration.AnyMap{
+		"target_url": rcv.server.URL + "/hook", "event_types": []string{"contact.created"},
+		"body_template": `{"name": "{{ entity.name }}", "link": "{{ entity.url }}"}`,
+	})
+	contactID := we.seedContact(t, "Ada Lovelace")
+	env := makeEnvelopeFor(we.wsID, "contact.created", "contact")
+	env.Entity.ID = contactID
+	if err := deliverer.HandleEvent(context.Background(), env); err != nil {
+		t.Fatal(err)
+	}
+	hits := rcv.snapshot()
+	if len(hits) != 1 {
+		t.Fatalf("got %d POSTs, want 1", len(hits))
+	}
+	want := fmt.Sprintf(`{"name": "", "link": "https://crm.example.test/#/contacts/%s"}`, contactID)
+	if string(hits[0].body) != want {
+		t.Errorf("body = %s, want %s: a person's name stays out of stored deliveries", hits[0].body, want)
 	}
 }

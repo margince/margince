@@ -26,6 +26,13 @@ export interface components {
              * @description Stable identifier of the entity.
              */
             id: string;
+            /** @description The record's name when the event was delivered, for a record that is not a person (a deal, company or project). Absent for a contact or lead; open the link to see who it is. */
+            name?: string;
+            /**
+             * Format: uri
+             * @description A link to the record in the app, when the record has a page and the installation has a public base URL.
+             */
+            url?: string;
         };
         /** @description The public wrapper around every delivered event payload. This is the exact JSON shape a subscriber receives; it carries no internal metadata. */
         PublicEventEnvelope: {
