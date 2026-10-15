@@ -1801,7 +1801,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactConsentGuard
-      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: May we write to this contact right now — per purpose and channel, with the reason.
       description: |
         The readable half of the send gate (ADR-0098 D6). It answers `allowed | blocked |
@@ -2476,6 +2477,8 @@ paths:
     get:
       tags: [Contacts]
       operationId: getContactAccess
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Who can open this contact and who can change it, and why.
       description: |
         Every live member who can open this contact, with whether they can also change it and the
@@ -2525,6 +2528,7 @@ paths:
       tags: [Integrations]
       operationId: getIntegrationsSettings
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The installation's provider-lookup posture.
       description: |
         Whether a provider run may be queued without a human pressing anything. Every role may
@@ -4430,6 +4434,8 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyAccess
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Who can open this company and who can change it, and why.
       description: |
         Every live member who can open this company, with whether they can also change it and the
@@ -9142,6 +9148,7 @@ paths:
       tags: [Public]
       operationId: getBuyerRoom
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The room as its buyer sees it — the room itself, never the live deal.
       description: |
         What the session admits the caller to. `access` says whether content is
@@ -9165,6 +9172,7 @@ paths:
       tags: [Public]
       operationId: listBuyerRoomDocuments
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The documents as published, grouped.
       description: |
         The manifest frozen in the latest release. A document the seller added or
@@ -9188,6 +9196,7 @@ paths:
       tags: [Public]
       operationId: downloadBuyerRoomDocument
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The bytes of one published document.
       description: |
         Served only for a document named in the latest release of the session's room,
@@ -9209,6 +9218,7 @@ paths:
       tags: [Public]
       operationId: listBuyerRoomThreads
       security: [{ dealRoomSession: [] }]
+      x-agent-access: human-only
       summary: The room's conversation as the buyer sees it.
       description: Optionally narrowed to one published document. Empty while the room serves no content.
       parameters:
@@ -15797,6 +15807,7 @@ paths:
       tags: [Capture]
       operationId: getConnectorBackfillStatus
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Backfill progress — the activation read.
       description: |
         The single-row progress read behind the activation screen (CAP-PARAM-2: < 150 ms, never
@@ -16585,6 +16596,7 @@ paths:
       tags: [Capture]
       operationId: getMorningDigest
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The calling user's morning digest — what capture did overnight.
       description: |
         Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
@@ -16664,6 +16676,8 @@ paths:
     get:
       tags: [Identity]
       operationId: getInstallationSettings
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The installation's own settings.
       description: |
         Reads the installation's identity and reporting basis (ADR-0090): its name, the
@@ -17099,6 +17113,7 @@ paths:
       tags: [Capture]
       operationId: getCaptureSettings
       security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: The workspace's capture settings.
       description: |
         Reads the workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Every role
@@ -20624,6 +20639,8 @@ paths:
     get:
       tags: [Compliance]
       operationId: getContactConsent
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
       summary: Read a contact's per-purpose consent state plus the append-only proof log.
       description: |
         Returns the current `granted/withdrawn/unknown` state for every tracked purpose and the
@@ -28517,6 +28534,7 @@ paths:
       tags: [Rates]
       operationId: listFxRates
       security: [ { cookieAuth: [] } ]   # human session only — the sheet is an admin view, not an agent surface
+      x-agent-access: human-only
       summary: List current FX rates (latest per currency), or one pair's history.
       description: |
         Admin/ops-only view. Without `from`, returns the latest effective rate per
@@ -28568,6 +28586,7 @@ paths:
       tags: [Rates]
       operationId: listAiModelRates
       security: [ { cookieAuth: [] } ]   # human session only — internal cost data is an admin view, not an agent surface
+      x-agent-access: human-only
       summary: List current AI model prices (latest per model), or one model's history.
       description: |
         Admin/ops-only view. Prices are USD per 1M tokens (strings). Without

@@ -82,6 +82,10 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"openBuyerRoomThread":        "the buyer's own room, authenticated by dealRoomSession — the scheme that room mints for somebody who holds no seat here",
 	"replyBuyerRoomThread":       "the same room's reply, under the same scheme",
 	"signOutBuyerRoom":           "ending that session, which cannot require the session it ends to still be valid",
+	"getBuyerRoom":               "the buyer reading their own room, under the scheme that room mints",
+	"listBuyerRoomThreads":       "the buyer reading their room's threads, under the same scheme",
+	"listBuyerRoomDocuments":     "the buyer listing their room's documents, under the same scheme",
+	"downloadBuyerRoomDocument":  "the buyer downloading one of those documents, under the same scheme",
 
 	// The login screen and the way back into it. Every one of these is reached
 	// by somebody who by definition cannot present a session cookie.
