@@ -240,8 +240,8 @@ describe("a toned figure is read, so it takes the ink that clears contrast", () 
   });
 });
 
-// A long correct reading is fixed in the layout, never shortened: the name and
-// the figure wrap inside the tile, in every sheet the app ships.
+// A long correct reading is fixed in the layout, never shortened. The name and
+// the figure wrap inside the tile in every sheet the app ships.
 const CUT =
   /(?:-webkit-)?line-clamp\s*:|text-overflow\s*:\s*ellipsis|white-space\s*:\s*nowrap|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
 const WHOLE = [

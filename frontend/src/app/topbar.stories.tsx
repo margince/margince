@@ -28,10 +28,10 @@ import { TopBar } from "./topbar";
  *
  * Every frame renders the REAL frame — the `.app` grid, the sidebar beside it,
  * the bar as the first row of `<main>`. Nothing here is decoration. The bar is
- * three tracks, the outer two equal while the trail fits its half, and the
- * search stands IN that row rather than being taken out of it: the field
- * therefore lands on the centre of the CONTENT column — not of the window — and
- * the trail beside it has an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
+ * three tracks, the outer two equal while the trail fits its half. The search
+ * stands IN that row, so it lands on the centre of the CONTENT column, not of
+ * the window. The trail beside it has
+ * an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
  * picture of geometry the product does not use, and the one thing it would get
  * wrong is the thing worth looking at.
  *
@@ -371,8 +371,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * once, which left nothing bounding `.topbar-lead` but the row itself — the last
  * crumb grew to the full width of the bar, ran UNDER the centred field and came
  * out the other side, unclipped and with no tooltip. The bar is a three-track
- * grid now and `.topbar-lead` carries a cap, so the trail has a bound to shrink
- * against and this frame shows the rule rather than the bug.
+ * grid now. `.topbar-lead` carries a cap, which is the bound the trail shrinks
+ * against, so this frame shows the rule rather than the bug.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",

@@ -89,8 +89,7 @@ export const ReadingsWithADoor: Story = {
 
 // Every shape a reading takes, at the ONE size and in the ONE face they all
 // draw in. A long label wraps whole; only a detail is clamped, to two lines,
-// so a basis that is a paragraph cannot set the row's height. It is cut here
-// mid-sentence on purpose.
+// so a basis that is a paragraph cannot set the row's height.
 export const ReadingsAtOneSize: Story = {
   name: "Readings — tones, clamps and the alert tile",
   render: () => (

@@ -570,8 +570,7 @@ describe("the panel head stands at the height every panel shares, and grows only
   const head = () =>
     bandRules(panelCss()).find((rule) => rule.selector === ".panel-head");
 
-  // A floor rather than a height: a title that does not fit wraps and a verb
-  // that does not fit drops under it, so no word is cut.
+  // A floor rather than a height, so a long title wraps and no word is cut.
   it("takes its floor from the house token and wraps what does not fit", () => {
     expect(head()).toBeDefined();
     expect(declaredValue(head()?.block ?? "", "min-height")).toBe(
@@ -584,9 +583,8 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(tokenValue("--panel-head-h")).toBe("56px");
   });
 
-  // The floor only holds a one-line head at 56px if the padding leaves room
-  // for its tallest content: a control on a mouse, a 44px target on touch.
-  // The band's own 1px rule is inside that height.
+  // A one-line head holds 56px only if the padding leaves room for its tallest
+  // content: a control on a mouse, a 44px target on touch. The 1px rule counts.
   it("pads the band so a one-line head stays exactly at the floor", () => {
     const floor = tokenPx("--panel-head-h");
     const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
@@ -610,8 +608,8 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(armPadding("max-width: 720px")).toBe("var(--space-3)");
   });
 
-  // The band grows by wrapping and in no other way: a `:has()` rule would grow
-  // it for one kind of content, and a page of panels would go ragged.
+  // The band grows only by wrapping. A `:has()` rule would grow it for one kind
+  // of content, and a page of panels would go ragged.
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });
@@ -625,10 +623,8 @@ describe("the panel head stands at the height every panel shares, and grows only
     ]);
   });
 
-  // A long title keeps every word: German runs half again as long as English,
-  // and an ellipsis cuts the name a reader finds the zone by. Nothing else
-  // gives way: a badge or a button squeezed by a long title reads as a
-  // different control, or loses its label outright.
+  // An ellipsis cuts the name a reader finds the zone by. A squeezed badge or
+  // button reads as a different control, so nothing else gives way.
   it("wraps the title whole and lets nothing else give way", () => {
     const selector = ".panel-head .panel-title";
     const declared = titleRules(panelCss())

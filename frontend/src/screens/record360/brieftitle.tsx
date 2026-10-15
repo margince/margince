@@ -4,8 +4,8 @@
 // The head of the card a machine wrote: the mark that says WHO produced this
 // reading, and WHAT it is a reading of.
 //
-// The mark leads the row, so a reader has the authorship before they weigh a
-// word of it; the name follows as the subject and may wrap beside it.
+// The mark leads the row, so the authorship comes before any word of it. The
+// name follows as the subject and may wrap beside it.
 //
 // The mark carries the claim ALONE. Indigo on its own tile means "a machine
 // wrote what is under this" everywhere in the product, so the sentence that

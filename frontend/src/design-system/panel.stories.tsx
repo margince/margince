@@ -177,11 +177,8 @@ export const NestedTitleLevel: Story = {
   },
 };
 
-// The band under pressure: a name longer than the panel is wide, and two things
-// at the far end that must keep their own size. The verbs drop under the title
-// and the title wraps whole, so the band grows rather than cutting a word; the
-// badge and the button are not squeezed to buy the title room. Narrowed to
-// 320px on purpose; widen the frame and the band returns to one 56px line.
+// A name longer than the pane at 320px: the verbs drop under it unsqueezed, and
+// the title wraps whole. Wider, the band returns to one 56px line.
 export const LongTitleWraps: Story = {
   decorators: [
     (Story) => (

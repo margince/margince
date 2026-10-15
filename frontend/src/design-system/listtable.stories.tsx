@@ -598,8 +598,8 @@ const longHeaderColumns: ListColumn<Company>[] = [
   },
 ];
 
-// A header longer than its column takes more lines and keeps the column's
-// width; its sort arrow stays inside the cell once the column is sorted.
+// A header longer than its column wraps, and the column keeps its width.
+// Once the column is sorted, its arrow stays inside the cell.
 export const LongHeadersWrap: Story = {
   render: () => (
     <div style={{ maxWidth: "54rem" }}>

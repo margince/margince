@@ -8,10 +8,10 @@ import { Breadcrumb } from "./breadcrumb";
 /**
  * The trail that says where the reader is and how they got here.
  *
- * Its main caller is the TOP BAR (app/topbar.tsx): the trail is chrome that says
- * where the session is, and the page's own name is a heading in the content
- * column below it. The booking page's head (screens/booking-invite.tsx) draws one
- * too, over its own heading. The frames here render the
+ * Its main caller is the TOP BAR (app/topbar.tsx); the booking page's head
+ * (screens/booking-invite.tsx) draws one too. It is chrome that says where the
+ * session is, and the page's own
+ * name is a heading in the content column below it. The frames here render the
  * primitive on its own ground at `layout: "padded"`, because what they are about
  * is the rules rather than the strip — the strip itself is framed under
  * Shell/Top bar, where the trail can be seen shrinking against a real track edge.
@@ -22,8 +22,9 @@ import { Breadcrumb } from "./breadcrumb";
  * the row runs out of room while the ancestors keep their full width
  * (LongRecordName — read the ellipsis, then hover or tab to it for the whole
  * name), a middle stop that is user data is capped so the page keeps the row
- * (LongMiddleStop), a glyph rides with the label rather than replacing it
- * (WithIcon), and below 1024px only the current page shows (OnAPhone).
+ * (LongMiddleStop), and a glyph rides with the label rather than replacing it
+ * (WithIcon).
+ * Below 1024px only the current page shows (OnAPhone).
  *
  * Flip the Theme toolbar to check both renderings; every colour is a token.
  */
@@ -66,8 +67,8 @@ export const ListToRecord: Story = {
  * The 420px box is the one hand-set width in this file, and it is here because
  * the pressure IS the story: the trail has to be given less room than it wants
  * before there is anything to look at, and the canvas at any reviewer's window
- * width would not do that reliably. In the product the same bound arrives as the
- * bar's grid track and the cap on its lead rather than as a wrapper, which is the
+ * width would not do that reliably. In the product the same bound arrives as a
+ * grid track and a cap on the bar's lead rather than as a wrapper. That is the
  * version Shell/Top bar frames.
  */
 export const LongRecordName: Story = {

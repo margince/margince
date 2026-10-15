@@ -603,8 +603,8 @@ export const SectionLevel: Story = {
   ),
 };
 
-// German, on an entry wider than its row: that row wraps and grows, the rows
-// around it keep their height, and the trail above carries the name whole.
+// German, on an entry wider than its row. That row wraps and grows; the rows
+// around it keep their height and the trail carries the name whole.
 export const SectionLevelGerman: Story = {
   name: "second level — a German entry that wraps",
   render: () => (
