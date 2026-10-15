@@ -50,19 +50,42 @@ func newFlagSet(r *Registry, out *flagValues) *flag.FlagSet {
 	fs.StringVar(&out.envFile, "env-file", "", ".env file to read")
 	fs.BoolVar(&out.trace, "config-trace", false, "log every configuration source and each setting's origin")
 	for _, s := range r.All() {
-		name := s.Flag()
-		if name == "" {
-			continue
-		}
-		record := func(v string) error {
-			out.raw[name] = v
-			return nil
-		}
-		if s.TypeName() == "bool" {
-			fs.BoolFunc(name, s.Doc(), record)
-		} else {
-			fs.Func(name, s.Doc(), record)
-		}
+		addFlag(fs, s, func(v string) { out.raw[s.Flag()] = v })
 	}
 	return fs
 }
+
+// addFlag registers s's flag with no default, so no value can reach usage text.
+// A bool flag may stand alone: a bare --inline-relay means true.
+func addFlag(fs *flag.FlagSet, s Any, record func(string)) {
+	name := s.Flag()
+	if name == "" {
+		return
+	}
+	set := func(v string) error {
+		record(v)
+		return nil
+	}
+	if s.TypeName() == Bool.Name() {
+		fs.BoolFunc(name, s.Doc(), set)
+	} else {
+		fs.Func(name, s.Doc(), set)
+	}
+}
+
+// CommandFlags carries a registry's flags on a command's own flag set. The
+// command also takes flags Load does not know, such as migrate's --steps.
+type CommandFlags struct{ given []string }
+
+// AddFlags registers r's flags on fs, without defaults, as PrintUsage does.
+func AddFlags(fs *flag.FlagSet, r *Registry) *CommandFlags {
+	c := &CommandFlags{}
+	for _, s := range r.All() {
+		addFlag(fs, s, func(v string) { c.given = append(c.given, "--"+s.Flag()+"="+v) })
+	}
+	return c
+}
+
+// Args are the registry flags the command line gave, as Load's Args, so Load
+// still parses each value and ranks it against the environment.
+func (c *CommandFlags) Args() []string { return c.given }

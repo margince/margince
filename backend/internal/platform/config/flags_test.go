@@ -4,6 +4,7 @@
 package config
 
 import (
+	"flag"
 	"strings"
 	"testing"
 )
@@ -59,5 +60,24 @@ func TestUsageNamesEveryFlagAndNoDefault(t *testing.T) {
 	}
 	if strings.Contains(out.String(), ":8080") {
 		t.Errorf("usage prints a default:\n%s", out.String())
+	}
+}
+
+func TestACommandsOwnFlagsLeaveTheSettingsToLoad(t *testing.T) {
+	dsn := Define(Spec[string]{Key: "dsn", Env: "X_DSN", Flag: "dsn", Type: String, Doc: "d"})
+	fake := Define(Spec[bool]{Key: "fake", Env: "X_FAKE", Flag: "fake", Type: Bool, Doc: "d"})
+	reg := mustRegistry(t, dsn, fake)
+	fs := flag.NewFlagSet("cmd", flag.ContinueOnError)
+	steps := fs.Int("steps", 1, "own flag")
+	settings := AddFlags(fs, reg)
+	if err := fs.Parse([]string{"--steps", "3", "--dsn", "from-flag", "--fake"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(reg, Sources{Args: settings.Args(), Environ: []string{"X_DSN=from-env"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *steps != 3 || Val(cfg, dsn) != "from-flag" || !Val(cfg, fake) {
+		t.Fatalf("steps %d, settings %v", *steps, cfg.TraceLines())
 	}
 }

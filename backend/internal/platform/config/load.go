@@ -117,6 +117,10 @@ func environMap(environ []string) map[string]string {
 	return out
 }
 
+// EnvironValue is name's value in environ, read as os.Getenv reads a repeat.
+// A program reads the posture this way before Load, for its Faults hook.
+func EnvironValue(environ []string, name string) string { return environMap(environ)[name] }
+
 // Warnings names the MARGINCE_* variables that no program reads, never their values.
 func (c *Config) Warnings() []string { return c.warnings }
 
