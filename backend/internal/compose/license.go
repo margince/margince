@@ -21,7 +21,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -44,7 +43,7 @@ import (
 // Both serving roles ask this question, and neither serves without an answer: an
 // api that refuses to boot beside a worker that shrugs would be a licensing
 // posture nobody could describe.
-func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, env runtimeenv.Environment, lookup config.Lookup) (*licensecheck.Watcher, error) {
+func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it, so a
 	// license the operator renews in place takes effect on the next re-check
 	// instead of waiting for a restart.
@@ -53,17 +52,17 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 	// where there is none, so an installation that has sealed its token and
 	// dropped the variable keeps booting — and one whose vault it cannot open
 	// is told THAT, rather than being told it has no license.
-	source := SealedLicenseTokenSource(ctx, pool, vault, cfg, lookup, log)
+	source := SealedLicenseTokenSource(ctx, pool, vault, cfg, log)
 	watcher, err := licensecheck.NewWatcher(ctx, source, time.Now, log, env)
 	if err != nil {
 		// The setting to correct is named HERE, where the token's source is
 		// known: platform's check is handed a token, not a configuration file.
-		return nil, fmt.Errorf("%w — %s", err, correctTheToken(cfg, lookup))
+		return nil, fmt.Errorf("%w — %s", err, correctTheToken(cfg))
 	}
 	if err := refuseUnlicensedProduction(watcher.Posture(), env); err != nil {
 		return nil, err
 	}
-	logLicensePosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, lookup, watcher.Posture()))
+	logLicensePosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()))
 	return watcher, nil
 }
 
@@ -73,8 +72,8 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 // again" — which naming the origin uniformly would produce — is advice that
 // destroys the only copy of the license along with every connector credential
 // the installation holds, to fix a token the operator can simply re-declare.
-func correctTheToken(cfg deployconfig.Config, lookup config.Lookup) string {
-	if origin := cfg.License.TokenOrigin(lookup); origin != deployconfig.TokenOriginNone {
+func correctTheToken(cfg *config.Config) string {
+	if origin := licenseTokenDeclaredAt(cfg); origin != licenseTokenOriginNone {
 		return "correct or remove " + origin + " and start again"
 	}
 	return "this token came from the key vault, where it was sealed from a declaration since deleted: " +
@@ -84,21 +83,21 @@ func correctTheToken(cfg deployconfig.Config, lookup config.Lookup) string {
 // licenseTokenOrigin names where the token came from, for the boot log and for
 // the refusal that tells an operator what to correct.
 //
-// deployconfig can only speak for the deployment file and the environment; it
-// has never heard of the vault, and an installation that sealed its token and
+// The declaration speaks only for the boot sources; it has never heard of the
+// vault, and an installation that sealed its token and
 // dropped the declaration would otherwise be told its token came from "none" —
 // while running on one. Naming the vault is the difference between an operator
 // who knows where to look and one who goes looking in the file that no longer
 // mentions it. A grep token rather than prose, because every other value of
 // this field is one.
-func licenseTokenOrigin(cfg deployconfig.Config, lookup config.Lookup, posture licensecheck.Posture) string {
-	if origin := cfg.License.TokenOrigin(lookup); origin != deployconfig.TokenOriginNone {
+func licenseTokenOrigin(cfg *config.Config, posture licensecheck.Posture) string {
+	if origin := licenseTokenDeclaredAt(cfg); origin != licenseTokenOriginNone {
 		return origin
 	}
 	if posture.State == licensecheck.StateAbsent {
 		// Nothing declared and nothing sealed. Naming the vault here would
 		// describe an installation that had a token, which this one does not.
-		return deployconfig.TokenOriginNone
+		return licenseTokenOriginNone
 	}
 	return "keyvault"
 }
@@ -117,7 +116,7 @@ func refuseUnlicensedProduction(posture licensecheck.Posture, env runtimeenv.Env
 	return fmt.Errorf("no license is configured and this installation is production: "+
 		"point license.token (or %s) at the license token issued for this installation, "+
 		"or, if this is a development or test installation, set %s=%s",
-		deployconfig.LicenseTokenEnvVar, runtimeenv.EnvVar, runtimeenv.Development)
+		LicenseToken.Env(), runtimeenv.EnvVar, runtimeenv.Development)
 }
 
 // logLicensePosture writes the one boot line an operator greps for. The module

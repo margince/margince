@@ -70,6 +70,8 @@ type workerConfig struct {
 	// authorities are honoured; it decides nothing destructive — see
 	// shared/runtimeenv.
 	posture runtimeenv.Environment
+	// settings are the loaded settings, for the reads compose makes itself.
+	settings *config.Config
 }
 
 // loadWorkerConfig resolves the boot settings from args and environ, and
@@ -113,7 +115,7 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerC
 		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow),
 		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
 		observeAddr: config.Val(loaded, ps.ObserveAddr), observePprof: config.Val(loaded, ps.ObservePprof),
-		posture: posture,
+		posture: posture, settings: loaded,
 	}
 }
 

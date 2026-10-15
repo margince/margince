@@ -12,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -27,9 +26,8 @@ func allSettings() []config.Any {
 		dbsettings.Settings(),
 		keyvault.Settings(),
 		blobstore.Settings(),
-		deployconfig.Settings(),
 		ai.Settings(),
-		[]config.Any{providerModeSetting},
+		[]config.Any{providerModeSetting, LicenseToken, LicenseTokenFile},
 	)
 }
 

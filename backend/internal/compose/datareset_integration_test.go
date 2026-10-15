@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -455,12 +454,8 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 	// license:update — that is the point of the entry — so a hand-written row
 	// would need a principal the product never uses, and would prove nothing
 	// about the row the product actually writes.
-	cfg, err := deployconfig.Parse([]byte("version: 1\nlicense:\n  token: ${env:LICENSE_TOKEN}\n"))
-	if err != nil {
-		t.Fatalf("parsing the deployment file: %v", err)
-	}
+	cfg := licenseSettings(t, "version: 1\nlicense:\n  token: ${env:LICENSE_TOKEN}\n", "LICENSE_TOKEN=a license token")
 	source := SealedLicenseTokenSource(context.Background(), e.Pool, vault, cfg,
-		config.Static(map[string]string{"LICENSE_TOKEN": "a license token"}),
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if _, err := source(); err != nil {
 		t.Fatalf("sealing the credential under test: %v", err)

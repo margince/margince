@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -61,16 +62,17 @@ func relayPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault
 	return relay.Password, err
 }
 
-// licenseConfig is a deployment that names its license token in a variable.
-func licenseConfig(t *testing.T, tokenVar string) deployconfig.Config {
+// licenseConfig is a deployment that names its license token in a variable,
+// loaded with environ as the whole environment.
+func licenseConfig(t *testing.T, tokenVar string, environ ...string) *config.Config {
 	t.Helper()
 	body := "version: 1\n"
 	if tokenVar != "" {
 		body += "license:\n  token: ${env:" + tokenVar + "}\n"
 	}
-	cfg, err := deployconfig.Parse([]byte(body))
+	cfg, err := configtest.Load(t, body, environ, nil, compose.LicenseToken, compose.LicenseTokenFile)
 	if err != nil {
-		t.Fatalf("parsing the deployment file: %v", err)
+		t.Fatalf("loading the deployment file: %v", err)
 	}
 	return cfg
 }
@@ -250,18 +252,17 @@ func TestARotatedDeclarationIsResealed(t *testing.T) {
 func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) {
 	e := Setup(t)
 	log := slog.New(slog.DiscardHandler)
-	cfg := licenseConfig(t, "LICENSE_TOKEN")
+	cfg := licenseConfig(t, "LICENSE_TOKEN", "LICENSE_TOKEN=a-license-token")
 
 	sealed := realVault(t, e)
-	source := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, sealed, cfg,
-		config.Static(map[string]string{"LICENSE_TOKEN": "a-license-token"}), log)
+	source := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, sealed, cfg, log)
 	if _, err := source(); err != nil {
 		t.Fatalf("sealing the license token: %v", err)
 	}
 
 	// A different vault is what a rotated or dropped root key looks like from
 	// here: the ref is recorded and refers to nothing this process can open.
-	lost := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, differentVault(t, e), licenseConfig(t, ""), config.Static(nil), log)
+	lost := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, differentVault(t, e), licenseConfig(t, ""), log)
 	_, err := lost()
 	if err == nil {
 		t.Fatal("a vault that cannot open the sealed license reported no license at all")

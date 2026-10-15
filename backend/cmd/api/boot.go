@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
@@ -181,7 +180,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
 		return deployconfig.Config{}, nil, err
 	}
-	license, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture, config.FromOS)
+	license, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
 	if err != nil {
 		return deployconfig.Config{}, nil, err
 	}

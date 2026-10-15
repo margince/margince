@@ -82,6 +82,8 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | Env | Default | Key |
 |---|---|---|
 | `MARGINCE_AUTH_PASSWORD_ENABLED` | `true` | `auth.password.enabled` |
+| `MARGINCE_LICENSE` | — | `license.token` (secret) |
+| `MARGINCE_LICENSE_TOKEN_FILE` | — | `license.token_file` |
 
 ## Common log flags (api, worker)
 

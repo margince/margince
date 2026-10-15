@@ -41,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -399,7 +398,7 @@ func admitBoot(
 	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
 		return nil, err
 	}
-	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
+	if err := ensureLicense(ctx, logger, pool, vault, cfg); err != nil {
 		return nil, err
 	}
 	return vault, requireUsablePublicOrigin(cfg, deployCfg)
@@ -431,8 +430,8 @@ func requireUsablePublicOrigin(cfg workerConfig, deployCfg deployconfig.Config) 
 	return nil
 }
 
-func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
-	_, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
+func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg workerConfig) error {
+	_, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
 	return err
 }
 

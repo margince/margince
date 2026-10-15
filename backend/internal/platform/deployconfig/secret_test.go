@@ -183,7 +183,6 @@ func TestEverySecretFieldRefusesALiteral(t *testing.T) {
 	for name, doc := range map[string]string{
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: hunter2-literal\n",
 		"email.smtp.password":      "version: 1\nemail:\n  smtp:\n    host: mail\n    password: hunter2-literal\n",
-		"license.token":            "version: 1\nlicense:\n  token: hunter2-literal\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			var cfg Config
@@ -204,7 +203,6 @@ func TestEverySecretFieldAcceptsAReference(t *testing.T) {
 	for name, doc := range map[string]string{
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: ${env:X}\n",
 		"email.smtp.password":      "version: 1\nemail:\n  smtp:\n    host: mail\n    password: ${env:X}\n",
-		"license.token":            "version: 1\nlicense:\n  token: ${file:/run/secrets/l}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			var cfg Config

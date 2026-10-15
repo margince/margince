@@ -12,7 +12,7 @@ package compose
 // how the credential ARRIVED rather than where it lives. Once the boot log says
 // it is sealed, the operator may delete the declaration: the whole `license:`
 // block, or the `password:` line under `email.smtp`. Deleting only what it
-// points AT is not the same thing and fails the boot in deployconfig — a named
+// points AT is not the same thing and fails the boot — a named
 // source that yields nothing has always been an error there, not an absence.
 // Nothing here can delete it for them: the process cannot edit its own
 // deployment.
@@ -286,8 +286,8 @@ func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.
 // operator renews in place takes effect on the next re-check instead of waiting
 // for a restart, and re-reading is also what keeps the sealed mirror current
 // when they renew it that way.
-func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg deployconfig.Config, lookup config.Lookup, log *slog.Logger) func() (string, error) {
-	declared := cfg.License.TokenSource(lookup)
+func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) func() (string, error) {
+	declared := declaredLicenseToken(cfg)
 	return func() (string, error) {
 		token, err := declared()
 		if err != nil {

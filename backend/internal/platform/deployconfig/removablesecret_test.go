@@ -45,7 +45,6 @@ func TestAnAbsentRelayPasswordIsNotARemovedOne(t *testing.T) {
 // it at decode, so an operator who writes it there learns that at boot.
 func TestTheRemovalSentinelIsRefusedWhereItIsNotAccepted(t *testing.T) {
 	for name, doc := range map[string]string{
-		"the license token": "version: 1\nlicense:\n  token: ${none}\n",
 		"the bootstrap admin password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n" +
 			"  display_name: A\n  password: ${none}\n",
 		"the relay password beside password_file": strings.Replace(relayWithRemovedPassword,

@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	License        License         `yaml:"license"`
 	Email          Email           `yaml:"email"`
 	AI             AIConfig        `yaml:"ai"`
 	Rates          RatesConfig     `yaml:"rates"`
