@@ -74,6 +74,15 @@ Without a binding or `--ai-fake`, the worker does not start its AI runner or its
 Sealed copies of the SMTP password and the license are in
 [The vault also holds the two deployment credentials](#the-vault-also-holds-the-two-deployment-credentials).
 
+### Variables for the keys of `margince.yaml`
+
+Each key below is also read from a variable. A variable wins over the file, and a value in either
+must pass the same check. A secret key takes a `${file:...}` or `${env:...}` reference in the file.
+
+| Env | Default | Key |
+|---|---|---|
+| `MARGINCE_AUTH_PASSWORD_ENABLED` | `true` | `auth.password.enabled` |
+
 ## Common log flags (api, worker)
 
 | Flag | Env | Default | Values |

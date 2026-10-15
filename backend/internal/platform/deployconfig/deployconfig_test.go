@@ -62,20 +62,11 @@ func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
 	if cfg.Seeds.StarterAutomations == nil || *cfg.Seeds.StarterAutomations {
 		t.Fatal("starter_automations: false did not parse")
 	}
-	if !cfg.Auth.PasswordEnabled() || !cfg.Email.Enabled {
-		t.Fatalf("auth/email switches lost: %+v %+v", cfg.Auth, cfg.Email)
+	if !cfg.Email.Enabled {
+		t.Fatalf("email switch lost: %+v", cfg.Email)
 	}
 	if cfg.CompanyContext.EffectiveRollout() != CompanyContextTasks {
 		t.Fatalf("company-context rollout = %q", cfg.CompanyContext.EffectiveRollout())
-	}
-}
-
-func TestParseRejectsUnknownKeys(t *testing.T) {
-	// A typo must never silently disable authentication: strict decoding
-	// makes `auth.passwrd` a boot error, not an ignored key.
-	_, err := Parse([]byte("version: 1\nauth:\n  passwrd:\n    enabled: false\n"))
-	if err == nil || !strings.Contains(err.Error(), "passwrd") {
-		t.Fatalf("unknown key parsed silently: %v", err)
 	}
 }
 
@@ -103,20 +94,6 @@ func TestParseValidatesFailClosed(t *testing.T) {
 	}
 }
 
-// A deployment may close the password door. This file cannot check that
-// something else opens one — which providers are mounted is decided by the
-// credentials and URLs the composition root composes, not by this document —
-// so it parses, and cmd/api refuses the combination that leaves no way in.
-func TestPasswordAuthMayBeTurnedOff(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nauth: { password: { enabled: false } }\n"))
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if cfg.Auth.PasswordEnabled() {
-		t.Fatal("auth.password.enabled=false parsed as enabled — the switch would be inert")
-	}
-}
-
 func TestCompanyContextRolloutDefaultsToOnboarding(t *testing.T) {
 	cfg, err := Parse([]byte("version: 1\n"))
 	if err != nil {
@@ -132,8 +109,8 @@ func TestLoadMissingFileBootsExistingInstallation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing file must not be an error (it cannot bootstrap, only bind): %v", err)
 	}
-	if cfg.BootstrapAdmin != nil || !cfg.Auth.PasswordEnabled() {
-		t.Fatalf("zero config = %+v, want no bootstrap admin + password auth on", cfg)
+	if cfg.BootstrapAdmin != nil {
+		t.Fatalf("zero config = %+v, want no bootstrap admin", cfg)
 	}
 }
 

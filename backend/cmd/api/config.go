@@ -63,6 +63,9 @@ type apiConfig struct {
 	// honoured; it decides nothing destructive — see shared/runtimeenv.
 	posture        runtimeenv.Environment
 	trustedProxies httpserver.TrustedProxies
+	// passwordLogin is auth.password.enabled: whether the email+password
+	// method is offered and served.
+	passwordLogin bool
 }
 
 // loadAPIConfig resolves the boot settings from args and environ and checks the
@@ -112,7 +115,8 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 		microsoftSignInTenant: config.Val(loaded, ps.MicrosoftSignInTenant), connectorStateKey: config.Val(loaded, ps.ConnectorStateKey),
 		webhookKey: config.Val(loaded, ps.WebhookKey), metricsToken: config.Val(loaded, ps.MetricsToken), metricsAccess: config.Val(loaded, ps.MetricsAccess),
 		vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL), geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL),
-		posture: posture,
+		passwordLogin: config.Val(loaded, ps.PasswordLogin),
+		posture:       posture,
 	}
 	trusted, err := httpserver.ParseTrustedProxies(config.Val(loaded, ps.TrustedProxies))
 	if err != nil {

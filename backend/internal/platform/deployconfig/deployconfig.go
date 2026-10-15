@@ -11,9 +11,10 @@
 package deployconfig
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
 
 	"gopkg.in/yaml.v3"
 
@@ -32,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Auth           Auth            `yaml:"auth"`
 	License        License         `yaml:"license"`
 	Email          Email           `yaml:"email"`
 	AI             AIConfig        `yaml:"ai"`
@@ -224,29 +224,6 @@ type ConsentPurpose struct {
 	DoubleOptIn bool   `yaml:"double_opt_in"`
 }
 
-// Auth selects the enabled authentication methods. Password login defaults to
-// enabled, and an installation that puts an identity provider in front of
-// Margince turns it off here.
-//
-// Federated sign-in has no block of its own: which providers a deployment
-// mounts is decided by the credentials and URLs it composes, not by this file,
-// and strict decoding makes a premature `oidc:` block a boot error rather than
-// a silent no-op.
-type Auth struct {
-	Password PasswordAuth `yaml:"password"`
-}
-
-// PasswordAuth is the email+password method's switch.
-type PasswordAuth struct {
-	Enabled *bool `yaml:"enabled"`
-}
-
-// PasswordEnabled defaults to true: an installation without an `auth`
-// section authenticates by email + password.
-func (a Auth) PasswordEnabled() bool {
-	return a.Password.Enabled == nil || *a.Password.Enabled
-}
-
 // Email configures the outbound transactional-email transport
 // (A74/ADR-0056). Its first consumer is password-reset delivery; when
 // disabled the forgot-password flow is absent rather than broken.
@@ -316,15 +293,44 @@ type MCP struct {
 // posture's overlay, which is Load in layers.go.
 func Parse(raw []byte) (Config, error) {
 	cfg := compiledDefaults()
-	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
-	dec.KnownFields(true)
-	if err := dec.Decode(&cfg); err != nil {
+	if err := decodeRoots(raw, &cfg); err != nil && !errors.Is(err, io.EOF) {
 		return Config{}, fmt.Errorf("deployconfig: %w", err)
 	}
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// decodeRoots strictly decodes the roots this package owns and leaves every
+// other root to config.Load, which owns the settings.
+func decodeRoots(raw []byte, cfg *Config) error {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return err
+	}
+	if len(doc.Content) == 0 {
+		return io.EOF
+	}
+	// An anchor may sit in a root this drops, so aliases resolve first.
+	resolveSeedAliases(&doc)
+	if root := doc.Content[0]; root.Kind == yaml.MappingNode {
+		owned := Sections()
+		kept := root.Content[:0]
+		for i := 0; i+1 < len(root.Content); i += 2 {
+			if owned[root.Content[i].Value] {
+				kept = append(kept, root.Content[i], root.Content[i+1])
+			}
+		}
+		root.Content = kept
+	}
+	var buf bytes.Buffer
+	if err := yaml.NewEncoder(&buf).Encode(&doc); err != nil {
+		return err
+	}
+	dec := yaml.NewDecoder(&buf)
+	dec.KnownFields(true)
+	return dec.Decode(cfg)
 }
 
 // compiledDefaults is the layer under every file: what an installation runs

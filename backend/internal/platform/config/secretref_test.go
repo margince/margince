@@ -59,13 +59,13 @@ func TestYAMLRefusesALiteralSecret(t *testing.T) {
 }
 
 var relayPassword = config.Define(config.Spec[string]{
-	Key: "smtp.password", Env: "MARGINCE_SMTP_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Doc: "d",
+	Key: "smtp.password", Env: "TEST_RELAY_PASSWORD", Type: config.String, Secret: true, AllowNone: true, Doc: "d",
 })
 
 func TestNoneDeclaresASecretAbsentWhereTheSettingAcceptsIt(t *testing.T) {
 	for name, f := range map[string]fixture{
 		"yaml": {files: map[string]string{"margince.yaml": "smtp:\n  password: ${none}\n"}},
-		"env":  {env: []string{"MARGINCE_SMTP_PASSWORD=${none}"}},
+		"env":  {env: []string{"TEST_RELAY_PASSWORD=${none}"}},
 	} {
 		cfg, err := load(t, f, relayPassword)
 		if err != nil {

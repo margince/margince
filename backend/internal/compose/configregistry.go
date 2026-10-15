@@ -23,6 +23,7 @@ var programRoles = []config.Role{config.RoleAPI, config.RoleWorker, config.RoleM
 func allSettings() []config.Any {
 	return slices.Concat(
 		programsettings.Settings(),
+		programsettings.FileSettings(),
 		dbsettings.Settings(),
 		keyvault.Settings(),
 		blobstore.Settings(),

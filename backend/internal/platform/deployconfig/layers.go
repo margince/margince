@@ -45,8 +45,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -86,12 +84,10 @@ func applyLayer(path string, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("deployconfig: reading %s: %w", path, err)
 	}
-	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
-	dec.KnownFields(true)
 	// A file holding only comments decodes to EOF rather than to nothing,
 	// and that is a real file an operator writes: an overlay committed as a
 	// placeholder for the posture, with the keys still commented out.
-	if err := dec.Decode(cfg); err != nil && !errors.Is(err, io.EOF) {
+	if err := decodeRoots(raw, cfg); err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("deployconfig: %s: %w", path, err)
 	}
 	return nil

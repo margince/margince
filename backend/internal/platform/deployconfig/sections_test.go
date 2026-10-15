@@ -12,10 +12,13 @@ import (
 func TestSectionsAreTheFileRootKeys(t *testing.T) {
 	t.Parallel()
 	got := deployconfig.Sections()
-	for _, want := range []string{"version", "workspace", "bootstrap_admin", "seeds", "auth", "web"} {
+	for _, want := range []string{"version", "workspace", "bootstrap_admin", "seeds"} {
 		if !got[want] {
 			t.Errorf("Sections() lacks %q: %v", want, got)
 		}
+	}
+	if got["auth"] {
+		t.Errorf("Sections() holds auth, whose settings config.Load reads: %v", got)
 	}
 	if got["Workspace"] || got[""] {
 		t.Errorf("Sections() holds a Go field name or an empty key: %v", got)
