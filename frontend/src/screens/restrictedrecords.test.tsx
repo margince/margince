@@ -323,8 +323,10 @@ describe("RestrictedRecordsCard", () => {
           page: { next_cursor: "next", has_more: true },
         }),
     });
-    render(<RequestsPanel />);
-    expect(await screen.findByRole("button", { name: /^Held$/ })).toBeVisible();
+    await renderHeld();
+    // The read has landed: its row is on screen, and still no count is claimed.
+    expect(await screen.findByText("Acme rollout, Acme renewal")).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Held$/ })).toBeVisible();
   });
 
   it("releases a row whatever shape its id has, since the server named it", async () => {

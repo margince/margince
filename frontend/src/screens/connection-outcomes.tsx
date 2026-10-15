@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { UseQueryResult } from "@tanstack/react-query";
+import {
+  type UseQueryResult,
+  useIsFetching,
+  useIsMutating,
+} from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
@@ -37,12 +41,23 @@ export function ConnectionOutcomesCard() {
   const titleId = useId();
   const viewBase = useId();
   const viewId = (outcome: Outcome) => `${viewBase}-${outcome}`;
-  // Emptied from inside the drawer, the row loses its View button.
-  const backTo = (outcome: Outcome) => () =>
-    document.getElementById(viewId(outcome)) ??
-    document.getElementById(titleId);
   const waitingCount = waiting.data?.data.length ?? 0;
   const reachCount = reach.data?.accounts_total;
+  const counts: Record<Outcome, number | undefined> = {
+    senders: senders.data?.data.length,
+    waiting: waitingCount,
+    held: held.data?.data.length,
+    reach: reachCount,
+  };
+  // A list emptied in the drawer, or about to re-read, may take its row's View
+  // button away. Focus then goes to the card instead.
+  const writing = useIsMutating();
+  const reading = useIsFetching();
+  const settling = writing + reading > 0;
+  const backTo = (outcome: Outcome) => () =>
+    (!settling && (counts[outcome] ?? 0) > 0
+      ? document.getElementById(viewId(outcome))
+      : null) ?? document.getElementById(titleId);
   // With nothing reached, the caveat is the one fact the reader can act on.
   const reachNote =
     reach.data && reachCount === 0
@@ -62,7 +77,7 @@ export function ConnectionOutcomesCard() {
           label={t("senders.title")}
           description={t("senders.sub")}
           query={senders}
-          count={senders.data?.data.length}
+          count={counts.senders}
           unit="connectionOutcomes.senders"
           viewId={viewId("senders")}
           onView={() => setOpen("senders")}
@@ -83,7 +98,7 @@ export function ConnectionOutcomesCard() {
           label={t("heldThreads.title")}
           description={t("heldThreads.sub")}
           query={held}
-          count={held.data?.data.length}
+          count={counts.held}
           unit="connectionOutcomes.threads"
           viewId={viewId("held")}
           onView={() => setOpen("held")}

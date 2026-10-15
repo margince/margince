@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { linkedInReachFixture } from "../testing/reachfixture";
@@ -22,7 +23,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const HELD = {
+const HELD: components["schemas"]["HeldThread"] = {
   thread_key: "t-1",
   status: "held",
   pending: false,
@@ -131,6 +132,35 @@ it("returns focus to the card when the drawer's list empties before it closes", 
       screen.queryByRole("button", { name: "View Held threads" }),
     ).not.toBeInTheDocument(),
   );
+  await user.keyboard("{Escape}");
+
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByText("What your connections found"),
+    ),
+  );
+});
+
+it("returns focus to the card while the drawer's list is still re-reading", async () => {
+  let reads = 0;
+  installFetchStub(
+    routes({
+      "GET /capture/held-threads": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse({ data: [HELD] })
+          : new Promise<Response>(() => {});
+      },
+    }),
+  );
+  const user = userEvent.setup();
+  const client = renderCard();
+
+  await user.click(
+    await screen.findByRole("button", { name: "View Held threads" }),
+  );
+  void client.invalidateQueries({ queryKey: ["held-threads"] });
+  await waitFor(() => expect(reads).toBe(2));
   await user.keyboard("{Escape}");
 
   await waitFor(() =>

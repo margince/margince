@@ -305,6 +305,7 @@ function OpenVerb({
     return (
       <RowOpen
         label={t("aiRouting.decisions.add")}
+        opensDialog
         refusal={canManage ? undefined : t("aiRouting.adminOnly")}
         onOpen={onAdd}
       />
@@ -314,6 +315,7 @@ function OpenVerb({
   return (
     <RowOpen
       label={t("aiRouting.editNamed", { name: tierLabel(row.lane.name, t) })}
+      opensDialog
       onOpen={row.lane.onEdit}
     />
   );

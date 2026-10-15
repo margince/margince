@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -267,6 +267,8 @@ function MailConnectorsPanel() {
     null,
   );
   const [imapConnectOpen, setImapConnectOpen] = useState(false);
+  // Opened from the add dialog, the IMAP form has no live opener to return to.
+  const imapFromAdd = useRef(false);
   const [addOpen, setAddOpen] = useState(false);
   const [notConfigured501, setNotConfigured501] = useState<Provider | null>(
     null,
@@ -329,11 +331,14 @@ function MailConnectorsPanel() {
         connectFailure={connectFailure}
         addId={rowAddId}
         onAdd={offerAdd ? () => setAddOpen(true) : undefined}
-        onReconnect={(provider) =>
-          OAUTH_PROVIDERS.has(provider)
-            ? connect.mutate(provider)
-            : setImapConnectOpen(true)
-        }
+        onReconnect={(provider) => {
+          if (OAUTH_PROVIDERS.has(provider)) {
+            connect.mutate(provider);
+            return;
+          }
+          imapFromAdd.current = false;
+          setImapConnectOpen(true);
+        }}
         onDisconnect={setPendingDisconnect}
       />
       <AddConnectionDialog
@@ -350,6 +355,7 @@ function MailConnectorsPanel() {
           // Closed before the IMAP form opens: two overlays deep, Escape and
           // the focus restore answer to the wrong layer.
           setAddOpen(false);
+          imapFromAdd.current = true;
           setImapConnectOpen(true);
         }}
       />
@@ -378,6 +384,7 @@ function MailConnectorsPanel() {
         open={imapConnectOpen}
         onClose={() => setImapConnectOpen(false)}
         onConnected={() => setImapConnectOpen(false)}
+        returnFocusTo={() => (imapFromAdd.current ? backToAdd() : null)}
       />
     </Panel>
   );

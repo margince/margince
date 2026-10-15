@@ -105,6 +105,13 @@ describe("FollowUpSettingsCard", () => {
     const days = (await screen.findByTestId(
       "follow-up-after-days",
     )) as HTMLInputElement;
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Only an administrator or operations user can change this.",
+        ),
+      ).toBeTruthy(),
+    );
     expect(days.disabled).toBe(true);
   });
 });

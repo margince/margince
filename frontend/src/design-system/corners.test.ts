@@ -41,7 +41,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
-import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
+import { extensionFilesMatching } from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 
 const frontendRoot = resolve(__dirname, "..", "..");
@@ -62,8 +62,9 @@ function cssFiles(dir: string): string[] {
 // A unit ships CSS into the same page from the same tokens, so it is held to
 // the same ladder. Leaving the tier out is the census that fails short.
 function extensionStylesheets(): string[] {
-  return extensionLayers(join(frontendRoot, "..", "extensions")).flatMap(
-    (layer) => filesMatching(layer, /\.css$/),
+  return extensionFilesMatching(
+    join(frontendRoot, "..", "extensions"),
+    /\.css$/,
   );
 }
 

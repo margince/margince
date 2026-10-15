@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -118,9 +118,9 @@ export const SettingsSwitchedOff: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByTestId("overnight-grant-toggle"));
-    await expect(
-      await canvas.findByText("Overnight agent will not run"),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(canvas.getByText("Overnight agent will not run")).toBeVisible(),
+    );
   },
 };
 

@@ -24,10 +24,8 @@ import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { humanizeToken } from "./audit";
 
-// The Held lane of Settings → Privacy → Requests: what a statutory obligation
-// holds after an erasure, why, and until when, never the correspondence itself.
-// It reads through the retention ladder's authority: a role that may not see
-// how long records are kept may not see which are kept either.
+// The Held lane reads through the retention ladder's authority. A role that may
+// not see how long records are kept may not see which are kept either.
 
 export type RestrictedRecord = components["schemas"]["RestrictedRecord"];
 

@@ -74,6 +74,7 @@ export function FollowUpSettingsCard() {
                 {...FOLLOW_UP_BOUNDS.follow_up_after_days}
                 refusal={t("followUpSettings.outOfRange")}
                 disabled={!canEdit || update.isPending}
+                reason={canEdit ? undefined : t("operations.adminOnly")}
                 onCommit={(days) =>
                   update.mutate({ follow_up_after_days: days })
                 }

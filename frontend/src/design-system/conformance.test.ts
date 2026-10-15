@@ -10,8 +10,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
 import {
-  extensionLayers,
-  filesMatching,
+  extensionFilesMatching,
   parseSource,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
@@ -43,8 +42,9 @@ function sourceFiles(dir: string): string[] {
 // and visible only here. Leaving the tier out of THIS corpus is the census that
 // fails short — it reads a smaller tree, reports PASS, and nothing asserts.
 function extensionFrontends(): string[] {
-  return extensionLayers(join(frontendRoot, "..", "extensions")).flatMap(
-    (layer) => filesMatching(layer, /\.(css|tsx?|html)$/),
+  return extensionFilesMatching(
+    join(frontendRoot, "..", "extensions"),
+    /\.(css|tsx?|html)$/,
   );
 }
 

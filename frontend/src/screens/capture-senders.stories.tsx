@@ -218,11 +218,12 @@ export const RowMenu: Story = {
     await userEvent.click(
       drawer.getByRole("button", { name: "Actions for news@substack.com" }),
     );
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByRole("button", {
-        name: "Withdraw my answer",
-      }),
-    ).toBeVisible();
+    const page = within(canvasElement.ownerDocument.body);
+    await waitFor(() =>
+      expect(
+        page.getByRole("button", { name: "Withdraw my answer" }),
+      ).toBeVisible(),
+    );
   },
 };
 

@@ -17,7 +17,7 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 // Every extension a bundler resolves. Not just the two a well-behaved unit
@@ -124,6 +124,19 @@ export function extensionLayers(
 export function extensionPackageLayers(root: string): string[] {
   return extensionLayers(root).filter((layer) =>
     existsSync(join(layer, "package.json")),
+  );
+}
+
+// The files of every extension layer that match `pattern`, less a built
+// `dist/`: output a gate on source would judge twice, once as its source.
+export function extensionFilesMatching(
+  root: string,
+  pattern: RegExp,
+): string[] {
+  return extensionLayers(root).flatMap((layer) =>
+    filesMatching(layer, pattern).filter(
+      (file) => !relative(layer, file).split(sep).includes("dist"),
+    ),
   );
 }
 

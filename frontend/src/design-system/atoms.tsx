@@ -1249,12 +1249,10 @@ function isSetting(item: Element): boolean {
 // record page was paying for them without ever opening the menu. Once opened
 // they STAY mounted, so a dialog survives the panel being hidden again.
 //
-// The PANEL is portalled to the body and positioned against the trigger. A
-// menu that opened inside its own container was clipped by whatever that
-// container clips — a Panel hides its overflow so full-bleed rows respect its
-// radius — and a row near the bottom edge of a card lost the actions the menu
-// exists to offer. Positioning against the trigger keeps it under the button
-// it belongs to wherever that button has moved to.
+// The PANEL is portalled to its layer: the dialog's overlay, or the body. In
+// its own container a Panel's hidden overflow clipped it, so a row near a
+// card's bottom edge lost its actions. Positioned against the trigger, it
+// stays under its button wherever that button has moved to.
 export function OverflowMenu({
   label,
   keepMounted = false,
@@ -1345,15 +1343,14 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog or a panel this menu opened is portalled to the body, so every
+      // A dialog or a panel this menu opened is portalled out of it, so every
       // click inside it looks like a click outside the menu. Closing on those
       // would hide the item it has to give focus back to when it closes.
       if (pressedInLayerAbove(event.target, layer, panel.current)) {
         return;
       }
-      // The panel lives at the body, not inside the wrapper, so "outside" is
-      // outside BOTH — without the second test every click on an item would
-      // read as a click away from the menu.
+      // The panel lives in its layer, not inside the wrapper, so "outside" is
+      // outside both. Without the second test, a click on an item would close it.
       if (
         !wrap.current?.contains(event.target) &&
         !panel.current?.contains(event.target)

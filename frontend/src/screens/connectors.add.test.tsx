@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -27,41 +28,82 @@ const gmail: CaptureConnection = {
   last_synced_at: "2026-07-23T09:30:00Z",
 };
 
-const openers: readonly [string, CaptureConnection[]][] = [
-  ["the empty roster's row", []],
-  ["the panel head", [gmail]],
-];
+const imap: CaptureConnection = {
+  ...gmail,
+  id: "018f3a1b-0000-7000-8000-0000000000c9",
+  provider: "imap",
+};
 
-// The add verb moves between the empty row and the panel head as mailboxes
-// arrive. So the dialog names where focus lands, not its opener.
-it.each(openers)(
-  "hands focus back to the add verb in %s when the dialog closes",
-  async (_, rows) => {
-    stubWithSession(
-      {
-        "GET /connectors": () => jsonResponse({ data: rows }),
-        "GET /channel-connections": () => jsonResponse({ data: [] }),
+// The roster the card reads, which a test changes to what a connect leaves.
+function serve(initial: CaptureConnection[]) {
+  const roster = { rows: initial };
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ data: roster.rows }),
+      "GET /channel-connections": () => jsonResponse({ data: [] }),
+      "POST /connectors/imap/connect": () => {
+        roster.rows = [imap];
+        return jsonResponse(imap);
       },
-      {},
-    );
-    const user = userEvent.setup();
-    render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <ConnectorsCard />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
+    },
+    {},
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ConnectorsCard />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { roster, client };
+}
 
-    const verb = await screen.findByRole("button", { name: "Add connector" });
-    await user.click(verb);
-    await screen.findByRole("dialog", { name: "Add connector" });
-    await user.keyboard("{Escape}");
+// The add verb moves from the empty row to the head once a mailbox arrives. So
+// the dialog names where focus lands, because its opener is gone by then.
+it("lands on the head's add verb once the empty row that opened the dialog is gone", async () => {
+  const user = userEvent.setup();
+  const { roster, client } = serve([]);
 
-    await waitFor(() => expect(document.activeElement).toBe(verb));
-  },
-);
+  await user.click(
+    await screen.findByRole("button", { name: "Add connector" }),
+  );
+  await screen.findByRole("dialog", { name: "Add connector" });
+  roster.rows = [gmail];
+  await client.invalidateQueries({ queryKey: ["connectors"] });
+  await user.keyboard("{Escape}");
+
+  const head = await screen.findByRole("button", { name: "Add connector" });
+  await waitFor(() => expect(document.activeElement).toBe(head));
+});
+
+it("lands on the head's add verb once an IMAP mailbox connects", async () => {
+  const user = userEvent.setup();
+  serve([]);
+
+  await user.click(
+    await screen.findByRole("button", { name: "Add connector" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Connect IMAP mailbox" }),
+  );
+  const form = await screen.findByRole("dialog", {
+    name: "Connect IMAP mailbox",
+  });
+  await user.type(
+    screen.getByRole("textbox", { name: /IMAP server/ }),
+    "imap.example.com",
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: /Email address/ }),
+    "me@example.com",
+  );
+  await user.type(screen.getByLabelText(/App password/), "secret");
+  await user.click(screen.getByRole("button", { name: "Connect" }));
+
+  await waitFor(() => expect(form).not.toBeInTheDocument());
+  const head = await screen.findByRole("button", { name: "Add connector" });
+  await waitFor(() => expect(document.activeElement).toBe(head));
+});

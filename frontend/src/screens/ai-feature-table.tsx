@@ -119,6 +119,7 @@ export function AiFeatureTable({
                   ? t("aiTasks.embeddingsEdit")
                   : undefined
               }
+              opensDialog
               onOpen={() => onEdit(row)}
             />
           ),

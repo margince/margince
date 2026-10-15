@@ -118,6 +118,7 @@ export function ProviderTable({
                   name: row.name,
                 },
               )}
+              opensDialog
               onOpen={() => onOpen(row.status.provider)}
             />
           ),

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   emptyPage,
@@ -114,12 +114,13 @@ export const ShortWithArchivedSwitch: Story = {
   render: renderCatalogue,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const archived = await canvas.findByRole("checkbox", {
-      name: "Show archived",
+    await canvas.findByRole("row", { name: /Support Plan/ });
+    await waitFor(() => {
+      const tools = canvas
+        .getByRole("checkbox", { name: "Show archived" })
+        .closest<HTMLElement>(".lt-tools");
+      expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
     });
-    const tools = archived.closest<HTMLElement>(".lt-tools");
-    await expect(tools).not.toBeNull();
-    await expect(tools && getComputedStyle(tools).paddingTop).toBe("0px");
   },
 };
 
