@@ -28,6 +28,14 @@ func TestEmployerSignalNeedsCorroboratingNames(t *testing.T) {
 		{"same surname, unrelated given name, same employer", "Anna Smith", "Peter Smith", true, false},
 		{"reversed name order, same employer", "Doe, Jon", "John Doe", true, true},
 		{"initial against a full given name, same employer", "J. Doe", "John Doe", true, true},
+		{"Vietnamese name against its ASCII spelling", "Nguyễn Văn Đức", "Nguyen Van Duc", true, true},
+		{"Vietnamese name against its ASCII spelling, no signal", "Nguyễn Văn Đức", "Nguyen Van Duc", false, false},
+		{"Polish l-stroke against ASCII", "Łukasz Kowalski", "Lukasz Kowalski", true, true},
+		{"generational suffix", "John Smith Jr", "John Smith", true, true},
+		{"honorific", "Dr. Jon Doe", "John Doe", true, true},
+		{"academic suffix after a comma", "John Smith, PhD", "John Smith", true, true},
+		{"hyphenated family name against one half", "John Doe-Smith", "John Doe", true, true},
+		{"one-word name against a full name is not enough", "Alex", "Alex Johnson", true, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

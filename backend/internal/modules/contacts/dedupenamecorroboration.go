@@ -11,6 +11,7 @@ import "strings"
 const (
 	familyNameAgreement = 0.9
 	givenNameAgreement  = 0.78
+	wholeNameAgreement  = 0.9
 	// A nickname or a respelling ("Lee", "Leigh") keeps the start of the name.
 	givenNameSharedPrefix = 2
 )
@@ -24,10 +25,35 @@ func namesCorroborate(a, b string) bool {
 	if familyA == "" || familyB == "" {
 		return false
 	}
-	if jaroWinkler(familyA, familyB) < familyNameAgreement {
+	if familiesAgree(familyA, familyB) {
+		return givenNamesAgree(givenA, givenB)
+	}
+	// A suffix or a title kept by one source can push the family name out of
+	// reach while the whole name still reads as one person.
+	return wholeNamesAgree(givenA, familyA, givenB, familyB)
+}
+
+// familiesAgree also compares the halves of a hyphenated family name, because
+// "Doe-Smith" and "Doe" name one family where a register keeps only one half.
+func familiesAgree(a, b string) bool {
+	if jaroWinkler(a, b) >= familyNameAgreement {
+		return true
+	}
+	for _, partA := range strings.Split(a, "-") {
+		for _, partB := range strings.Split(b, "-") {
+			if (partA != a || partB != b) && jaroWinkler(partA, partB) >= familyNameAgreement {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func wholeNamesAgree(givenA, familyA, givenB, familyB string) bool {
+	if givenA == "" || givenB == "" {
 		return false
 	}
-	return givenNamesAgree(givenA, givenB)
+	return jaroWinkler(givenA+" "+familyA, givenB+" "+familyB) >= wholeNameAgreement
 }
 
 // givenNamesAgree treats a missing given name or an initial as compatible, and a
@@ -48,15 +74,31 @@ func givenNamesAgree(a, b string) bool {
 // splitContactName returns the folded given part and family name. "Doe, Jon" is
 // read as "Jon Doe".
 func splitContactName(full string) (given, family string) {
-	name := normalizeName(full)
+	name := letterFold.Replace(normalizeName(full))
 	if before, after, ok := strings.Cut(name, ","); ok {
 		name = after + " " + before
 	}
-	fields := strings.Fields(strings.NewReplacer(".", " ").Replace(name))
+	var fields []string
+	for _, field := range strings.Fields(strings.NewReplacer(".", " ", ",", " ").Replace(name)) {
+		if !nameTitles[field] {
+			fields = append(fields, field)
+		}
+	}
 	if len(fields) == 0 {
 		return "", ""
 	}
 	return strings.Join(fields[:len(fields)-1], " "), fields[len(fields)-1]
+}
+
+// letterFold maps the letters that have no Unicode decomposition to the ASCII
+// a register without them would write: "Đức" and "Duc" are one name.
+var letterFold = strings.NewReplacer("đ", "d", "ł", "l", "ø", "o", "ħ", "h")
+
+// nameTitles are honorifics and generational or academic suffixes, which a
+// source may add or drop without naming a different person.
+var nameTitles = map[string]bool{
+	"dr": true, "mr": true, "mrs": true, "ms": true, "prof": true,
+	"jr": true, "sr": true, "ii": true, "iii": true, "phd": true, "md": true,
 }
 
 func sharedPrefixRunes(a, b string) int {
