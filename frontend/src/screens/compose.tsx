@@ -11,6 +11,7 @@ import {
 import { RichText } from "../design-system/richtext";
 import { Select } from "../design-system/select";
 import type { TokenSuggestion } from "../design-system/tokeninput";
+import type { Transport } from "../features/contacts/contacttransports";
 import { INTL_LOCALE } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -79,7 +80,6 @@ import {
 } from "./composetarget";
 import { ConversationChoices, ThreadPane } from "./composethread";
 import { useVoiceDraft, type VoiceDraft } from "./composevoicedraft";
-import type { Transport } from "./contacttransports";
 import { useProjectRecord } from "./projectrecord";
 import { SendMark, SendPermission } from "./sendpermission";
 import { SendRefusal } from "./sendrefusal";

@@ -47,7 +47,7 @@
 1 react-hooks/set-state-in-effect src/design-system/tokenspecimen.ts
 1 react-hooks/set-state-in-effect src/design-system/tooltip.tsx
 1 react-hooks/set-state-in-effect src/design-system/waited.ts
-1 react-hooks/set-state-in-effect src/screens/addemploymentmodal.tsx
+1 react-hooks/set-state-in-effect src/features/contacts/addemploymentmodal.tsx
 1 react-hooks/set-state-in-effect src/screens/ai-routing-fields.tsx
 1 react-hooks/refs src/screens/analytics.forecast.review.tsx
 1 react-hooks/set-state-in-effect src/screens/automations.instances.tsx
@@ -69,9 +69,9 @@
 5 react-hooks/refs src/screens/composetarget.ts
 1 react-hooks/set-state-in-effect src/screens/composetarget.ts
 1 react-hooks/set-state-in-effect src/screens/connected-agents.tsx
-1 react-hooks/set-state-in-effect src/screens/contactdrawers.tsx
-1 react-hooks/preserve-manual-memoization src/screens/contactemployers.tsx
-2 react-hooks/refs src/screens/contactpage.tsx
+1 react-hooks/set-state-in-effect src/features/contacts/contactdrawers.tsx
+1 react-hooks/preserve-manual-memoization src/features/contacts/contactemployers.tsx
+2 react-hooks/refs src/features/contacts/contactpage.tsx
 1 react-hooks/refs src/screens/contractcustomseed.ts
 1 react-hooks/set-state-in-effect src/screens/contractform.tsx
 3 react-hooks/set-state-in-effect src/screens/contractlifecycle.tsx

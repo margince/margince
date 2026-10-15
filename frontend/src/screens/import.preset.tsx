@@ -3,8 +3,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Callout } from "../design-system/callout";
+import { contactQuery } from "../features/contacts/contact.queries";
 import { useT } from "../i18n";
-import { contactQuery } from "./contact.queries";
 
 /**
  * Where a file of activities goes, said before the reader chooses anything.

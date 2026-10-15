@@ -15,20 +15,20 @@
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
 980 frontend/src/app/shell.tsx
-989 frontend/src/App.tsx
+993 frontend/src/App.tsx
 921 frontend/src/screens/installation-setup.tsx
 922 frontend/src/screens/auth.tsx
 1086 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1037 frontend/src/features/worklist/worklist.test.tsx
-1100 frontend/src/screens/contactpage.test.tsx
+1100 frontend/src/features/contacts/contactpage.test.tsx
 1059 frontend/src/design-system/listsurface.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
 1104 frontend/src/design-system/conformance.test.ts
 1182 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-903 frontend/src/screens/contactpage.tsx
+903 frontend/src/features/contacts/contactpage.tsx
 1181 frontend/src/screens/privacy.test.tsx
-1171 frontend/src/screens/contactprovider.test.tsx
+1171 frontend/src/features/contacts/contactprovider.test.tsx
 932 frontend/src/features/worklist/worklist.row.tsx
 1072 frontend/src/screens/analytics.test.tsx
 1030 frontend/src/screens/company-context.tsx
@@ -41,7 +41,7 @@
 1343 frontend/src/app/agentrail.tsx
 1173 frontend/src/design-system/listtable.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
-1902 frontend/src/screens/contactpage.stories.tsx
+1902 frontend/src/features/contacts/contactpage.stories.tsx
 1122 frontend/src/screens/analytics.tsx
 1434 frontend/src/design-system/atoms.tsx
 1524 frontend/src/screens/company360.tsx
@@ -88,7 +88,8 @@
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 845 frontend/src/screens/settingscatalog.ts
 592 frontend/src/screens/customfields.tsx
-922 frontend/src/screens/contactprovider.tsx
+925 frontend/src/features/contacts/contactprovider.tsx
+503 frontend/src/features/contacts/contactmemory.tsx
 888 frontend/src/screens/share.tsx
 798 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx

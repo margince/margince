@@ -26,10 +26,10 @@ import {
   useObjectCustomFields,
 } from "../components/customfields.form";
 import { pickOption, toggleOptions } from "../design-system/select-testing";
+import { ContactsScreen } from "../features/contacts/contacts";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompaniesScreen } from "./companies";
-import { ContactsScreen } from "./contacts";
 import { DealsScreen } from "./deals";
 
 // Create flows (the "you can actually add a record" acceptance): the list

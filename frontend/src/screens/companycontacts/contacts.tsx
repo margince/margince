@@ -10,11 +10,11 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import { Badge } from "../../design-system/atoms";
+import { CoverageExplorer } from "../../features/contacts/coverageexplorer";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { CoverageExplorer } from "../coverageexplorer";
 
 // The company's contacts, as a list a rep works from rather than a roster they
 // read.

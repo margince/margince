@@ -16,6 +16,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { ContactTagsSection } from "../features/contacts/contactrail";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -24,7 +25,6 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { CompanyTagsSection } from "./companyrailtags";
-import { ContactTagsSection } from "./contactrail";
 import { TagsPanel } from "./tagspanel";
 
 // What the panel SAYS in each state. Three of them answer 200 with a list, so

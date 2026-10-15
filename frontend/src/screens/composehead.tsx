@@ -14,8 +14,8 @@ import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { TokenInput, type TokenSuggestion } from "../design-system/tokeninput";
+import type { Transport } from "../features/contacts/contacttransports";
 import { useT } from "../i18n";
-import type { Transport } from "./contacttransports";
 import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];

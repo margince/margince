@@ -5,7 +5,7 @@ import { type BriefViewState, MeetingBriefView } from "./view";
 // `.pe-disclosure` in the foot belongs to the contact record's sheet, which the
 // drawer reaches through the page around it. A story mounting the body alone
 // reaches neither, and the assembled-now line then draws at body size.
-import "../contact360.css";
+import "../../features/contacts/contact360.css";
 
 // The brief's body as a pure component: state in, prose out, no fetching. The
 // connected drawer's stories (meetingbrief.stories.tsx) cover the read; these

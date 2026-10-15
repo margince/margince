@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
+import type { Transport } from "../features/contacts/contacttransports";
 import type { ChosenFile } from "./composeattachments";
 import {
   type ComposeFields,
@@ -10,7 +11,6 @@ import {
   type FieldsSnapshot,
 } from "./composefields";
 import type { OfferSnapshot, RecipientOffer } from "./composerecipientoffer";
-import type { Transport } from "./contacttransports";
 
 type Activity = components["schemas"]["Activity"];
 

@@ -18,7 +18,7 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { type ContactTab, contactTabRoute } from "../../screens/contacttab";
+import { type ContactTab, contactTabRoute } from "../contacts/contacttab";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 // The way back from a record to the Worklist drawer it was opened from.
