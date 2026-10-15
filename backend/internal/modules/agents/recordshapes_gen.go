@@ -77,6 +77,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "captured_by_kind", Type: "string", Enum: []string{"human", "agent", "connector", "system"}},
 		{Name: "domain", Type: "string"},
 		{Name: "id", Type: "array"},
+		{Name: "include_anchor", Type: "boolean"},
 		{Name: "include_archived", Type: "boolean"},
 		{Name: "industry", Type: "string"},
 		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},

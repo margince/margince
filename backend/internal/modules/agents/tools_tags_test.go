@@ -99,9 +99,9 @@ func TestTheTaggingSchemasAdvertiseTheSeamsVocabulary(t *testing.T) {
 	}
 }
 
-func (s stubTags) ListTags(_ context.Context, includeArchived bool) ([]Tag, bool, error) {
+func (s stubTags) ListTags(_ context.Context, q TagQuery) ([]Tag, bool, error) {
 	if s.listedArchived != nil {
-		*s.listedArchived = includeArchived
+		*s.listedArchived = q.IncludeArchived
 	}
 	return s.vocabulary, s.capped, nil
 }

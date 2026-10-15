@@ -39,6 +39,15 @@ type Tag struct {
 	// name whose only holder is archived is a conflict, not a match — so a
 	// caller that cannot see this would read a refusal as a bug.
 	Archived bool `json:"archived,omitempty"`
+	// CarriedBy counts the records the caller can see carrying the word, when
+	// with_carried_by asked for it.
+	CarriedBy *int `json:"carried_by,omitempty"`
+}
+
+// TagQuery is list_tags' arguments: retired words, and per-word record counts.
+type TagQuery struct {
+	IncludeArchived bool `json:"include_archived"`
+	WithCarriedBy   bool `json:"with_carried_by"`
 }
 
 // TagDetail is one word with its weight: how many records of each advertised
@@ -82,7 +91,7 @@ type Tags interface {
 	// ListTags answers the workspace's vocabulary. Read before applying:
 	// apply_tag REFUSES a word the workspace does not hold, so a caller who
 	// cannot see the existing ones asks for a near-duplicate.
-	ListTags(ctx context.Context, includeArchived bool) (tags []Tag, truncated bool, err error)
+	ListTags(ctx context.Context, q TagQuery) (tags []Tag, truncated bool, err error)
 	// GetTag answers one word with how much of the workspace carries it.
 	GetTag(ctx context.Context, tagID ids.UUID) (TagDetail, error)
 	// RecordTags answers the tags on one record, with who applied each.
@@ -213,20 +222,19 @@ func (t listTags) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listTags",
 		InputSchema: schema(`{"type":"object","properties":{
-			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"}},
+			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"},
+			"with_carried_by":{"type":"boolean","description":"Also count the records you can see carrying each word"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListTagsResult](),
 	}
 }
 
 func (t listTags) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		IncludeArchived bool `json:"include_archived"`
-	}
+	var args TagQuery
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	tags, truncated, err := t.tags.ListTags(ctx, args.IncludeArchived)
+	tags, truncated, err := t.tags.ListTags(ctx, args)
 	if err != nil {
 		return nil, err
 	}

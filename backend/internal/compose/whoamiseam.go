@@ -70,8 +70,11 @@ func proseLanguage(ctx context.Context, pool *pgxpool.Pool, locale string) strin
 // answer to any authenticated reader.
 func colleagueLister(pool *pgxpool.Pool) agents.ColleagueLister {
 	service := identity.NewService(pool)
-	return func(ctx context.Context, q string) ([]agents.Colleague, bool, error) {
-		seats, truncated, err := service.Colleagues(ctx, q)
+	return func(ctx context.Context, q agents.ColleagueQuery) ([]agents.Colleague, bool, error) {
+		if q.IncludeInactive || q.IncludeInvited {
+			return widenedRoster(ctx, service, q)
+		}
+		seats, truncated, err := service.Colleagues(ctx, q.Q)
 		if err != nil {
 			return nil, false, err
 		}
@@ -84,4 +87,25 @@ func colleagueLister(pool *pgxpool.Pool) agents.ColleagueLister {
 		}
 		return out, truncated, nil
 	}
+}
+
+// widenedRoster answers a roster widened past who can receive work, through
+// GET /users' own read, so the widening is authorized as the route's is.
+func widenedRoster(ctx context.Context, service *identity.Service, q agents.ColleagueQuery) ([]agents.Colleague, bool, error) {
+	in := identity.ListUsersInput{IncludeInactive: q.IncludeInactive, IncludeInvited: q.IncludeInvited}
+	if q.Q != "" {
+		in.Q = &q.Q
+	}
+	roster, err := service.ListUsers(ctx, in)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]agents.Colleague, 0, len(roster.Users))
+	for _, u := range roster.Users {
+		out = append(out, agents.Colleague{
+			UserID: u.ID, DisplayName: u.DisplayName, Email: u.Email,
+			SeatType: string(u.SeatType), IsAgent: u.IsAgent, Status: u.Status,
+		})
+	}
+	return out, roster.Page.HasMore, nil
 }

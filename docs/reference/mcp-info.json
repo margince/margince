@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 187645,
+    "tool_catalog_bytes": 188761,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 47801,
+    "approx_wire_tokens_total": 48080,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 50338,
-      "input_schema_bytes": 58963,
+      "input_schema_bytes": 60079,
       "output_schema_bytes": 64136,
-      "description_plus_input_schema_bytes": 109301
+      "description_plus_input_schema_bytes": 110417
     }
   },
   "tools": {
@@ -3876,6 +3876,11 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "bundle_id": {
+              "description": "The approvals staged together as one bundle.",
+              "format": "uuid",
+              "type": "string"
+            },
             "cursor": {
               "description": "next_cursor from a previous page.",
               "type": "string"
@@ -3896,6 +3901,14 @@
                 "approved",
                 "rejected"
               ],
+              "type": "string"
+            },
+            "target_entity_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "target_entity_type": {
+              "description": "With target_entity_id, the approvals staged against one record.",
               "type": "string"
             }
           },
@@ -4347,6 +4360,9 @@
                 "from_contact_id": {
                   "type": "string"
                 },
+                "include_anchor": {
+                  "type": "string"
+                },
                 "include_archived": {
                   "type": "string"
                 },
@@ -4456,6 +4472,10 @@
               "maximum": 50,
               "minimum": 1,
               "type": "integer"
+            },
+            "q": {
+              "description": "Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it.",
+              "type": "string"
             },
             "record_type": {
               "enum": [
@@ -7283,6 +7303,18 @@
         "description": "Read how this workspace is set up. colleagues: who works HERE, the seats that can receive work, not the contacts stored as records; `q` narrows by name. pipelines: every pipeline with its live stages, each open, won or lost. channel_providers: the messaging transports this installation composed. A `q` matching nobody answers with `all_colleagues` and a warning, which decides whether someone truly has no seat. A deal cannot be created, or moved anywhere new, without pipelines: a deal you read carries only its current stage, and a stage's semantic, not its name, says whether it closes the deal. supplies_transport=false means a reply on that transport will be refused. search_records finds a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep the pipeline_id and stage_id: create_record for a deal needs both, and progress_deal takes the stage_id as to_stage_id. Carry `provider` verbatim: log_activity takes it as channel_provider when kind is \"message\".",
         "inputSchema": {
           "properties": {
+            "include_archived": {
+              "description": "pipelines only: Also list retired pipelines; a deal cannot be moved into one",
+              "type": "boolean"
+            },
+            "include_inactive": {
+              "description": "colleagues only: Also list deactivated and suspended seats, for a member administrator only",
+              "type": "boolean"
+            },
+            "include_invited": {
+              "description": "colleagues only: Also list invited seats that have not signed in yet",
+              "type": "boolean"
+            },
             "list": {
               "description": "colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports",
               "enum": [
@@ -8275,6 +8307,10 @@
               "description": "get only",
               "format": "uuid",
               "type": "string"
+            },
+            "with_carried_by": {
+              "description": "list only: Also count the records you can see carrying each word",
+              "type": "boolean"
             }
           },
           "required": [
@@ -8365,7 +8401,13 @@
             "limit": {
               "type": "string"
             },
+            "list_type": {
+              "type": "string"
+            },
             "metrics": {
+              "type": "string"
+            },
+            "object": {
               "type": "string"
             },
             "period": {
@@ -8417,6 +8459,9 @@
             "scope_kind": {
               "type": "string"
             },
+            "sharing": {
+              "type": "string"
+            },
             "sort": {
               "type": "string"
             },
@@ -8456,6 +8501,7 @@
                 "contact_graph",
                 "contact_strength",
                 "custom_field_live_lists",
+                "custom_fields",
                 "deal_commitments",
                 "deal_outcome_reviews",
                 "deal_stakeholders",
@@ -8477,6 +8523,8 @@
                 "lead_disqualify_reasons",
                 "lead_settings",
                 "lead_sources",
+                "list_members",
+                "lists",
                 "meeting_brief",
                 "meeting_invitation",
                 "name_seats",

@@ -178,7 +178,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil, nil)
 	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) { return ReportingAnswer{}, nil })
 	RegisterMeetingInvitationTool(r, nil, nil)
-	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, nil })
+	RegisterPipelineTool(r, func(context.Context, bool) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, nil)
 	RegisterAnalyticsQueryTool(r, nil)
@@ -237,7 +237,7 @@ func fullRegistry(t *testing.T) *Registry {
 		return nil, nil
 	})
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
-	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
+	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
 	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})

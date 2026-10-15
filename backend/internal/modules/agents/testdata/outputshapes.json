@@ -506,6 +506,9 @@
           "archived": {
             "type": "boolean"
           },
+          "carried_by": {
+            "type": "integer"
+          },
           "color": {
             "type": "string"
           },
@@ -2317,6 +2320,9 @@
         "properties": {
           "archived": {
             "type": "boolean"
+          },
+          "carried_by": {
+            "type": "integer"
           },
           "color": {
             "type": "string"
@@ -4959,6 +4965,9 @@
           "archived": {
             "type": "boolean"
           },
+          "carried_by": {
+            "type": "integer"
+          },
           "color": {
             "type": "string"
           },
@@ -5648,6 +5657,9 @@
                 "seat_type": {
                   "type": "string"
                 },
+                "status": {
+                  "type": "string"
+                },
                 "user_id": {
                   "type": "string",
                   "format": "uuid"
@@ -5680,6 +5692,9 @@
                   "type": "boolean"
                 },
                 "seat_type": {
+                  "type": "string"
+                },
+                "status": {
                   "type": "string"
                 },
                 "user_id": {
@@ -6075,6 +6090,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "archived": {
+                  "type": "boolean"
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -6363,6 +6381,9 @@
               "properties": {
                 "archived": {
                   "type": "boolean"
+                },
+                "carried_by": {
+                  "type": "integer"
                 },
                 "color": {
                   "type": "string"
@@ -12647,6 +12668,9 @@
         "properties": {
           "archived": {
             "type": "boolean"
+          },
+          "carried_by": {
+            "type": "integer"
           },
           "color": {
             "type": "string"

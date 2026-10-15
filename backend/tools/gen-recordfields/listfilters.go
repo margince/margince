@@ -48,14 +48,8 @@ var listOperations = []struct{ recordType, operationID string }{
 // rather than in the tool so the exclusion is one list with one rationale,
 // visible beside the derivation it modifies.
 var notAFieldFilter = map[string]string{
-	// `q` is a text query, and search_records is the verb that owns it. #576
-	// exists because the two were conflated; carrying `q` here would rebuild
-	// that conflation inside the tool meant to end it.
-	"q": "text search is search_records' verb",
-	// `include_anchor` toggles the discovery narrowing every read of an
-	// company carries. It widens what is visible rather than filtering it,
-	// which is a governance question and not a caller's filter.
-	"include_anchor": "widens discovery rather than filtering",
+	// `q` is list_records' own top-level argument, not a filter on a field.
+	"q": "text is a top-level argument",
 }
 
 // listFilter is one derived filter: the parameter name, the JSON type its

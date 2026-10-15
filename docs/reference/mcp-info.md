@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 183.2 KB |
+| Tool catalog | 184.3 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 47801 |
+| Approx. wire tokens | 48080 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 62.6 KB | 34% | **No**: a result's shape, never listed to a model |
+| Output schemas | 62.6 KB | 33% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 49.2 KB | 26% | Yes, every step |
-| Input schemas | 57.6 KB | 31% | Yes, every step |
+| Input schemas | 58.7 KB | 31% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
-| **Description + input schema** | **106.7 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **107.8 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -81,9 +81,9 @@ descriptions and input schemas are what each step pays for.
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 396 |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 338 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 778 |
+| [`list_records`](#list_records) | List records | yes |  | 827 |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 205 |
-| [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 361 |
+| [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 461 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 677 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 185 |
 | [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
@@ -101,8 +101,8 @@ descriptions and input schemas are what each step pays for.
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 566 |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
-| [`read_view`](#read_view) | Read a view | yes |  | 847 |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
+| [`read_view`](#read_view) | Read a view | yes |  | 878 |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
@@ -4410,6 +4410,11 @@ bundle_id when one act staged several, and next_cursor.
 {
   "additionalProperties": false,
   "properties": {
+    "bundle_id": {
+      "description": "The approvals staged together as one bundle.",
+      "format": "uuid",
+      "type": "string"
+    },
     "cursor": {
       "description": "next_cursor from a previous page.",
       "type": "string"
@@ -4430,6 +4435,14 @@ bundle_id when one act staged several, and next_cursor.
         "approved",
         "rejected"
       ],
+      "type": "string"
+    },
+    "target_entity_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "target_entity_type": {
+      "description": "With target_entity_id, the approvals staged against one record.",
       "type": "string"
     }
   },
@@ -4901,6 +4914,9 @@ advising an approach as though the record were unowned.
         "from_contact_id": {
           "type": "string"
         },
+        "include_anchor": {
+          "type": "string"
+        },
         "include_archived": {
           "type": "string"
         },
@@ -5010,6 +5026,10 @@ advising an approach as though the record were unowned.
       "maximum": 50,
       "minimum": 1,
       "type": "integer"
+    },
+    "q": {
+      "description": "Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it.",
+      "type": "string"
     },
     "record_type": {
       "enum": [
@@ -7968,6 +7988,18 @@ it as channel_provider when kind is "message".
 ```json
 {
   "properties": {
+    "include_archived": {
+      "description": "pipelines only: Also list retired pipelines; a deal cannot be moved into one",
+      "type": "boolean"
+    },
+    "include_inactive": {
+      "description": "colleagues only: Also list deactivated and suspended seats, for a member administrator only",
+      "type": "boolean"
+    },
+    "include_invited": {
+      "description": "colleagues only: Also list invited seats that have not signed in yet",
+      "type": "boolean"
+    },
     "list": {
       "description": "colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports",
       "enum": [
@@ -9044,6 +9076,10 @@ offers it without applying it.
       "description": "get only",
       "format": "uuid",
       "type": "string"
+    },
+    "with_carried_by": {
+      "description": "list only: Also count the records you can see carrying each word",
+      "type": "boolean"
     }
   },
   "required": [
@@ -9136,7 +9172,13 @@ view refuses an argument it does not take and names the ones it does.
     "limit": {
       "type": "string"
     },
+    "list_type": {
+      "type": "string"
+    },
     "metrics": {
+      "type": "string"
+    },
+    "object": {
       "type": "string"
     },
     "period": {
@@ -9188,6 +9230,9 @@ view refuses an argument it does not take and names the ones it does.
     "scope_kind": {
       "type": "string"
     },
+    "sharing": {
+      "type": "string"
+    },
     "sort": {
       "type": "string"
     },
@@ -9227,6 +9272,7 @@ view refuses an argument it does not take and names the ones it does.
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
+        "custom_fields",
         "deal_commitments",
         "deal_outcome_reviews",
         "deal_stakeholders",
@@ -9248,6 +9294,8 @@ view refuses an argument it does not take and names the ones it does.
         "lead_disqualify_reasons",
         "lead_settings",
         "lead_sources",
+        "list_members",
+        "lists",
         "meeting_brief",
         "meeting_invitation",
         "name_seats",

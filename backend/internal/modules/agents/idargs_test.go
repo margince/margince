@@ -281,7 +281,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return ReportingAnswer{}, errSeamReached
 	})
 	RegisterMeetingInvitationTool(r, seamProbeInviter{}, seamProbeProvider{})
-	RegisterPipelineTool(r, func(context.Context) ([]Pipeline, error) { return nil, errSeamReached })
+	RegisterPipelineTool(r, func(context.Context, bool) ([]Pipeline, error) { return nil, errSeamReached })
 	RegisterReportTool(r, func(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
 	}, probeReportCatalog, probeReportPlan)
@@ -348,7 +348,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		return nil, errSeamReached
 	})
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
-	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
+	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
 	RegisterDocumentTools(r, seamProbeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})

@@ -51,7 +51,7 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 // with them, rather than refusing the boot.
 func TestARouterIsAbsentWhereATargetsSeamIs(t *testing.T) {
 	r := NewRegistry(nil, nil)
-	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
+	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	registerWhereServed(r, readDirectory{})
 	if _, served := r.Spec("read_directory"); served {
 		t.Error("read_directory registered without list_pipelines or list_channel_providers behind it")

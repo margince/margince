@@ -116,6 +116,7 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant"]},` +
 			t.filtersProperty() + `
+			"q":{"type":"string","description":"Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
@@ -192,6 +193,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	var args struct {
 		RecordType string            `json:"record_type"`
 		Filters    map[string]string `json:"filters"`
+		Q          string            `json:"q"`
 		Limit      json.RawMessage   `json:"limit"`
 		Cursor     string            `json:"cursor"`
 	}
@@ -212,6 +214,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	res, err := t.p.Search(ctx, datasource.SearchQuery{
 		EntityTypes: []datasource.EntityType{datasource.EntityType(args.RecordType)},
 		Filters:     args.Filters,
+		Text:        args.Q,
 		Limit:       limit,
 		Cursor:      args.Cursor,
 	})

@@ -11183,7 +11183,7 @@ paths:
     get:
       tags: [Lists]
       operationId: listLists
-      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Find the lists this caller may see, by name.
       description: |
         A list is found by its sharing: every seat finds a workspace list, the members of its team
@@ -11327,7 +11327,7 @@ paths:
     get:
       tags: [Lists]
       operationId: listListMembers
-      x-mcp-tool: { verb: read_lists, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Page through the members of a list this caller may see.
       description: |
         A Shortlist's chosen members, with who added each, when and why; or a Live List's filter
@@ -19929,7 +19929,7 @@ paths:
         CUSTOM-FIELDS-WIRE-1. Unlike a normal resource list, this admin view returns both
         active and retired fields by default — `status` narrows to one lifecycle state.
         Backs the custom-fields admin field table.
-      x-mcp-tool: { verb: describe_query_vocabulary, record_type: custom_field, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'

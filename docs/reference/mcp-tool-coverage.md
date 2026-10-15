@@ -96,7 +96,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 16 |
 | … of those, permitted somewhere but never required | 11 |
-| Prompt tokens spent on tools no case requires | 6370 |
+| Prompt tokens spent on tools no case requires | 6450 |
 | Use cases | 35 |
 | Acceptance criteria the cases declare, each with a statement | 83 |
 
@@ -346,17 +346,17 @@ Every run of every case requiring this tool passed, for the model named.
 | `attach_document` | 1.00 | 4 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
+| `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `read_input_checks` | 1.00 | 2 | `case22_can_i_trust_the_numbers` |
 | `book_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
-| `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `relink_activity` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `archive_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
 | `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
-| `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `relink_activities` | 1.00 | 4 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -384,22 +384,22 @@ Every run of every case requiring this tool passed, for the model named.
 | `run_analytics_query` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `change_lead_state` | 1.00 | 4 | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
+| `read_directory` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `advance_project_phase` | 1.00 | 2 | `case41_close_the_project` |
 | `attach_document` | 1.00 | 4 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `read_directory` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
+| `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `read_input_checks` | 1.00 | 2 | `case22_can_i_trust_the_numbers` |
 | `book_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `search_context` | 1.00 | 2 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
-| `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `relink_activity` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `archive_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
 | `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
-| `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `merge_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
@@ -473,8 +473,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 847 | - | - | - |
-| `list_records` | 778 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
+| `read_view` | 878 | - | - | - |
+| `list_records` | 827 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `change_record_parts` | 569 | - | - | - |
 | `resolve_entities` | 494 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one` | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |

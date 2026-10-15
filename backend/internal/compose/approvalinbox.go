@@ -75,6 +75,12 @@ func (i approvalInbox) ListApprovals(ctx context.Context, q agents.ApprovalQuery
 	if q.Kind != "" {
 		in.Kind = &q.Kind
 	}
+	if !q.TargetEntityID.IsZero() {
+		in.TargetType, in.TargetID = &q.TargetEntityType, &q.TargetEntityID
+	}
+	if !q.BundleID.IsZero() {
+		in.BundleID = &q.BundleID
+	}
 	rows, page, err := i.svc.ListWire(ctx, in)
 	if err != nil {
 		return agents.ApprovalPage{}, err

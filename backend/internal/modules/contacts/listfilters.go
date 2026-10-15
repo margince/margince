@@ -61,6 +61,7 @@ const (
 	filterSource           = "source"
 	filterSLAState         = "sla_state"
 	filterListID           = "list_id"
+	filterIncludeAnchor    = "include_anchor"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -90,6 +91,7 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterOwnerTeamID:     storekit.FilterID(func(in *ListCompaniesInput, id *ids.TeamID) { in.OwnerTeamID = id }),
 	filterUnassigned:      storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.Unassigned = v }),
 	filterIncludeArchived: storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.IncludeArchived = *v }),
+	filterIncludeAnchor:   storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.IncludeAnchor = *v }),
 	filterSort:            storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Sort = v }),
 	filterCapturedByKind:  storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.CapturedByKind = v }),
 	filterAiWritten:       storekit.FilterFlag(func(in *ListCompaniesInput, v *bool) { in.AiWritten = v }),

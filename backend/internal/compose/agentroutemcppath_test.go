@@ -123,11 +123,15 @@ var pagingParameters = []string{"cursor", "limit"}
 
 // argumentsFor names the arguments a route parameter may be asked through. A
 // query parameter keeps its name. A route's own {id} is the record it acts on,
-// and every verb names that record through an id argument (list_id). A nested
-// path parameter ({lineItemId}) must be an argument of its own name.
+// and every verb names that record through an id argument (list_id). A path's
+// {entity_type}/{entity_id} is a record the tools call record_type/record_id.
+// Any other nested path parameter ({lineItemId}) must be an argument of its own name.
 func argumentsFor(p routeParameter, args map[string]bool) []string {
 	if p.in != "path" {
 		return []string{p.name}
+	}
+	if spelled, ok := recordPathParameters[p.name]; ok {
+		return []string{p.name, spelled}
 	}
 	if p.name == "id" {
 		var addresses []string
@@ -140,6 +144,10 @@ func argumentsFor(p routeParameter, args map[string]bool) []string {
 	}
 	return []string{p.name, snakeCase(p.name)}
 }
+
+// recordPathParameters are the polymorphic record a path names, by the
+// argument every tool takes it as.
+var recordPathParameters = map[string]string{"entity_type": "record_type", "entity_id": "record_id"}
 
 func snakeCase(name string) string {
 	var b strings.Builder
@@ -262,7 +270,6 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 // "METHOD /v1/route#parameter". The list only shrinks: an entry that stops
 // being a gap fails the test above.
 var parameterGapsPendingParity = []string{
-	"GET /v1/activities#q",
 	"GET /v1/analytics/editions/compare#left_id",
 	"GET /v1/analytics/evaluate#end_at",
 	"GET /v1/analytics/evaluate#scope_id",
@@ -273,41 +280,18 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/analytics/evidence#scope_kind",
 	"GET /v1/analytics/evidence#start_at",
 	"GET /v1/analytics/reports/{id}/evaluation#revision",
-	"GET /v1/approvals#bundle_id",
-	"GET /v1/approvals#target_entity_id",
-	"GET /v1/approvals#target_entity_type",
-	"GET /v1/companies#include_anchor",
-	"GET /v1/companies#q",
 	"GET /v1/companies/{id}/documents#category",
 	"GET /v1/companies/{id}/documents#contract_id",
 	"GET /v1/companies/{id}/documents#doc_state",
 	"GET /v1/companies/{id}/documents#pinned_only",
-	"GET /v1/contacts#q",
-	"GET /v1/custom-fields#object",
-	"GET /v1/custom-fields#sort",
-	"GET /v1/custom-fields#status",
-	"GET /v1/deals#q",
 	"GET /v1/deals/{id}/documents#category",
 	"GET /v1/deals/{id}/documents#include_hidden",
 	"GET /v1/imports/format#lang",
-	"GET /v1/leads#q",
-	"GET /v1/lists#include_archived",
-	"GET /v1/lists#list_type",
-	"GET /v1/lists#q",
-	"GET /v1/lists/{id}/members#entity_id",
 	"GET /v1/partners#cert_status",
 	"GET /v1/partners#partner_role",
 	"GET /v1/partners#sort",
-	"GET /v1/pipelines#include_archived",
-	"GET /v1/products#q",
-	"GET /v1/projects#q",
-	"GET /v1/records/{entity_type}/{entity_id}/tags#entity_id",
-	"GET /v1/records/{entity_type}/{entity_id}/tags#entity_type",
 	"GET /v1/search#per_type",
 	"GET /v1/search#types",
 	"GET /v1/search#with_employees",
-	"GET /v1/tags#with_carried_by",
-	"GET /v1/users#include_inactive",
-	"GET /v1/users#include_invited",
 	"POST /v1/deal-rooms/{id}/threads/{threadId}/comments#threadId",
 }

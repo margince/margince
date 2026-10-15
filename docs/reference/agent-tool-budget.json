@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 58,
     "system_frame_tokens": 597,
-    "tokens": 26193,
-    "median_tool_tokens": 395,
-    "mean_tool_tokens": 451
+    "tokens": 26472,
+    "median_tool_tokens": 397,
+    "mean_tool_tokens": 456
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 58,
-      "tokens": 3854,
-      "listing_tokens": 1914,
-      "step_schema_tokens": 1343,
-      "percent_of_ceiling": 11,
-      "headroom_tokens": 19356,
+      "tokens": 3952,
+      "listing_tokens": 1963,
+      "step_schema_tokens": 1392,
+      "percent_of_ceiling": 12,
+      "headroom_tokens": 19258,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 58,
-      "tokens": 5522,
-      "listing_tokens": 2912,
-      "step_schema_tokens": 2013,
-      "percent_of_ceiling": 16,
-      "headroom_tokens": 17688,
+      "tokens": 5620,
+      "listing_tokens": 2961,
+      "step_schema_tokens": 2062,
+      "percent_of_ceiling": 17,
+      "headroom_tokens": 17590,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -98,7 +98,11 @@
     },
     {
       "name": "read_view",
-      "tokens": 847
+      "tokens": 878
+    },
+    {
+      "name": "list_records",
+      "tokens": 827
     },
     {
       "name": "bulk_update_records",
@@ -111,10 +115,6 @@
     {
       "name": "compose_analytics_report",
       "tokens": 786
-    },
-    {
-      "name": "list_records",
-      "tokens": 778
     },
     {
       "name": "read_lists",
@@ -173,6 +173,10 @@
       "tokens": 494
     },
     {
+      "name": "read_directory",
+      "tokens": 461
+    },
+    {
       "name": "search_records",
       "tokens": 456
     },
@@ -209,12 +213,12 @@
       "tokens": 393
     },
     {
-      "name": "read_directory",
-      "tokens": 361
-    },
-    {
       "name": "read_relationships",
       "tokens": 359
+    },
+    {
+      "name": "read_tags",
+      "tokens": 351
     },
     {
       "name": "describe_vocabulary",
@@ -241,12 +245,12 @@
       "tokens": 342
     },
     {
-      "name": "search_report_evidence",
-      "tokens": 335
+      "name": "list_approvals",
+      "tokens": 338
     },
     {
-      "name": "read_tags",
-      "tokens": 322
+      "name": "search_report_evidence",
+      "tokens": 335
     },
     {
       "name": "read_record",
@@ -271,10 +275,6 @@
     {
       "name": "whats_slipping_this_week",
       "tokens": 273
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 268
     },
     {
       "name": "invite_meeting",
