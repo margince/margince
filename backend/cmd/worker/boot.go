@@ -413,7 +413,7 @@ func startWebhookLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool,
 	if cfg.webhookKey == "" {
 		return nil
 	}
-	deliverer, err := compose.NewWebhookDeliverer(pool, cfg.webhookKey, logger)
+	deliverer, err := compose.NewWebhookDeliverer(pool, cfg.webhookKey, cfg.publicBaseURL, logger)
 	if err != nil {
 		return fmt.Errorf("worker: %w", err)
 	}

@@ -146,6 +146,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
+- [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
+  Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
