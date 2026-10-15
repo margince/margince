@@ -2615,6 +2615,13 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "activity.detail.loading": "Đang tải hoạt động…",
+  "activity.detail.none": "Hoạt động này",
+  "activity.detail.withheldReason": "Hoạt động này không được chia sẻ với bạn",
+  "activity.detail.when": "Thời gian",
+  "activity.detail.attendees": "Người tham dự",
+  "activity.detail.colleagues": "Đồng nghiệp",
+  "activity.detail.filedUnder": "Xếp vào",
   "email.detail.bccWithheld":
     "Một số người nhận ở Bcc nên không được hiển thị.",
   "compose.audienceWorkspace": "Mọi thành viên trong công ty",

@@ -45,7 +45,7 @@
 1122 frontend/src/screens/analytics.tsx
 1453 frontend/src/design-system/atoms.tsx
 1521 frontend/src/screens/company360.tsx
-1581 frontend/src/design-system/composed.tsx
+1577 frontend/src/design-system/composed.tsx
 1509 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx

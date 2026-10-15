@@ -2732,6 +2732,13 @@ export const en = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
+  "activity.detail.loading": "Loading activity…",
+  "activity.detail.none": "This activity",
+  "activity.detail.withheldReason": "This activity is not shared with you",
+  "activity.detail.when": "When",
+  "activity.detail.attendees": "Attendees",
+  "activity.detail.colleagues": "Colleagues",
+  "activity.detail.filedUnder": "Filed under",
   "email.detail.bccWithheld":
     "Some recipients were blind-copied and are not shown.",
   "compose.audienceWorkspace": "Everyone in the company",

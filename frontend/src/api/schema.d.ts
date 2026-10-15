@@ -32082,6 +32082,8 @@ export interface components {
              * @description Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
              */
             readonly host_user_id?: string | null;
+            /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
+            readonly colleague_ids?: string[];
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
