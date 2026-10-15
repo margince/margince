@@ -31,7 +31,7 @@
 1171 frontend/src/screens/contactprovider.test.tsx
 932 frontend/src/screens/worklist.row.tsx
 1125 frontend/src/screens/analytics.test.tsx
-1031 frontend/src/screens/company-context.tsx
+1030 frontend/src/screens/company-context.tsx
 1278 frontend/src/components/listquery.test.tsx
 1384 frontend/src/components/listquery.tsx
 1279 frontend/src/screens/offers.tsx

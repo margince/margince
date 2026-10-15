@@ -129,11 +129,8 @@ export function ManualCompanySetup() {
     },
   });
   return (
-    // One Panel, in the ONE lead tone, where a gradient with a decorative
-    // circle and two bespoke boxes used to be. The heading is the panel's own
-    // title rather than a bare h2: preflight leaves an unclassed heading at
-    // body size, so the page's lead sentence used to render as body text
-    // inside a gradient.
+    // The heading is the panel's own title rather than a bare h2: preflight
+    // leaves an unclassed heading at body size.
     <div className="wrap narrow">
       <Panel
         tone="accent"
