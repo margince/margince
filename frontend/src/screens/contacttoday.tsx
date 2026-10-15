@@ -21,7 +21,7 @@ import {
   WithheldNotice,
 } from "./record360";
 import "./record360/record360.css";
-import { openContactTab } from "./worklist.return";
+import { openContactTab } from "../features/worklist/worklist.return";
 
 // WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the
 // server selected at the top of the panel, and the record's own open tasks

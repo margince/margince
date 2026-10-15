@@ -294,7 +294,7 @@ The old parts stay in two places, both by design:
 - **Inside the mark.** The `EvidenceMark` panel renders `ProvenanceTag` itself,
   and states its trust as text, not as a bar.
 - **On the staging surfaces**, whose job is to set a proposal beside what is
-  stored. The first is the approvals lane of the Worklist (`screens/worklist.tsx`,
+  stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
   `screens/approvalrow.tsx`). Then the confirm step of onboarding
   (`screens/onboarding-conversation/confirm-card.tsx`,
   `screens/onboarding-company-form.tsx`) and the Company-context settings
@@ -385,7 +385,7 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
 | light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
-| a staging or approval surface | `src/design-system/trust.tsx` and `src/screens/worklist.tsx` |
+| a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
 | money, dates and time | `src/format/format.ts`, apart from which calendar day a point in time falls on, and the point in time where the day the user set ends: those are in `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; generate the types again with `pnpm gen:api` |

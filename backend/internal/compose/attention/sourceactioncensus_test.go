@@ -32,7 +32,7 @@ import (
 )
 
 // performedBySource is what the CLIENT can actually do with each verb, per
-// source, and it is a claim about frontend/src/screens/worklist.rowverbs.tsx.
+// source, and it is a claim about frontend/src/features/worklist/worklist.rowverbs.tsx.
 //
 // Keyed by source rather than by verb alone, because the endpoint a verb posts
 // to depends on the row it sits on: `dismiss` is the contact's nudge dismissal
@@ -189,7 +189,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 				if !slicesContain(allowed, action) {
 					t.Errorf("source %q advertises %q and the client performs %v: "+
 						"the row reaches a reader who is shown work and given no way to do it. "+
-						"Wire the verb in frontend/src/screens/worklist.rowverbs.tsx, or stop sending it",
+						"Wire the verb in frontend/src/features/worklist/worklist.rowverbs.tsx, or stop sending it",
 						source, action, allowed)
 				}
 			}

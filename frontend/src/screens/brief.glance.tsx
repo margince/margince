@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { Heading } from "../design-system/heading";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { middayInstant } from "../format/calendarday";
 import { formatDate, formatDayLong, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -17,7 +18,6 @@ import {
 } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
-import type { Worklist } from "./worklist.queries";
 
 const TODAY_SECTION = "brief-today";
 

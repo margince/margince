@@ -41,7 +41,8 @@ import rules are in [frontend-architecture.md](../explanation/frontend-architect
    test, stories and CSS with it.
 
 3. Read the list the script prints at the end. It names text outside imports that still holds an old
-   path. That may be a list of size limits, a gate or a doc. Change each path by hand.
+   path. That may be a list of size limits, a gate or a doc. Change each path by hand. If you
+   change an import by hand, run `pnpm exec biome check --write` on that file to sort it.
 
 4. Search for the bare name too:
 
@@ -52,14 +53,18 @@ import rules are in [frontend-architecture.md](../explanation/frontend-architect
    Some guards name a file by its name alone. The script searches for `screens/<name>`, so it misses
    them.
 
-5. If a path changed inside a comment, read the whole comment again. `make craft-static` judges
+5. Search the moved tests for a path they build from their own folder, such as
+   `join(__dirname, "../..")`. The folder is now one level deeper, so the path needs one more
+   `..`. A test that builds a path to a moved file from another folder needs the new path too.
+
+6. If a path changed inside a comment, read the whole comment again. `make craft-static` judges
    every sentence of a line you touch by the
    [comment rules](../reference/docs-prose-style.md#comments-in-code).
 
-6. Check `scripts/fe-file-length-waivers.txt`. For each moved file it lists, change the path. Then
+7. Check `scripts/fe-file-length-waivers.txt`. For each moved file it lists, change the path. Then
    add the import lines the move added to its count, and nothing else.
 
-7. Run the checks:
+8. Run the checks:
 
    ```sh
    make craft-static
@@ -69,7 +74,7 @@ import rules are in [frontend-architecture.md](../explanation/frontend-architect
    `make craft-static` takes a short time, so run it first. Do not change the tree while `make check` runs. If
    you changed a file under `backend/`, also run `make test-it DIR=<pkg>` for that package.
 
-8. Push and open the PR. The PR body lists the files that moved and the paths you changed by
+9. Push and open the PR. The PR body lists the files that moved and the paths you changed by
    hand. It also lists each line count you changed there.
 
 ## Guards that scan the screens

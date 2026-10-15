@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Worklist } from "./worklist.queries";
+import type { Worklist } from "../features/worklist/worklist.queries";
 
 // What the readings strip is allowed to CLAIM, separated from how it draws.
 //

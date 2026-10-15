@@ -46,7 +46,7 @@ import (
 const whereReasonsAreMinted = "internal/compose/attention"
 
 const (
-	frontendReasonCensus  = "../frontend/src/screens/worklist.reasoncensus.ts"
+	frontendReasonCensus  = "../frontend/src/features/worklist/worklist.reasoncensus.ts"
 	frontendReasonCatalog = "../frontend/src/i18n/en.ts"
 )
 

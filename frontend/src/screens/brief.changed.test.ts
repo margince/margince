@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
-import type { Worklist } from "./worklist.queries";
 
 // What has happened since the night looked.
 //

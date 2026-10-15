@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { TeamBoard } from "../features/worklist/worklist.board";
+import { UNASSIGNED } from "../features/worklist/worklist.queries";
 import { navigate } from "../lib/router";
-import { TeamBoard } from "./worklist.board";
-import { UNASSIGNED } from "./worklist.queries";
 
 // Who on the team is carrying what, on the page a lead opens first.
 //

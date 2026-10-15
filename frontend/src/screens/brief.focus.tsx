@@ -8,6 +8,21 @@
 
 import { Avatar, Badge, Button, Card } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
+import {
+  itemTitle,
+  phrasedReasons,
+  reasonText,
+  subjectHref,
+  whenText,
+} from "../features/worklist/worklist.copy";
+import { eyebrowKeyFor } from "../features/worklist/worklist.eyebrow";
+import { hasPane, lastTouch } from "../features/worklist/worklist.pane";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
+import { WorklistRow } from "../features/worklist/worklist.row";
+import {
+  contactHref,
+  rowTouch,
+} from "../features/worklist/worklist.row.captions";
 import { openingCase } from "../format/collate";
 import {
   formatDayMonth,
@@ -18,18 +33,6 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useRecordZone } from "../lib/recordzone";
 import { navigate } from "../lib/router";
-import {
-  itemTitle,
-  phrasedReasons,
-  reasonText,
-  subjectHref,
-  whenText,
-} from "./worklist.copy";
-import { eyebrowKeyFor } from "./worklist.eyebrow";
-import { hasPane, lastTouch } from "./worklist.pane";
-import type { WorklistItem } from "./worklist.queries";
-import { WorklistRow } from "./worklist.row";
-import { contactHref, rowTouch } from "./worklist.row.captions";
 
 import "./brief.feed.css";
 

@@ -4,11 +4,14 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import {
+  useClaimSettle,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
+import { useCompleteTask } from "../features/worklist/taskcomplete";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { useSetAside } from "./record360";
-import { useClaimSettle, useTaskUpdate } from "./taskactions";
-import { useCompleteTask } from "./taskcomplete";
 
 // The verbs of a promise card that asks whether our last email kept it. The
 // server never closes the promise itself: Done is the reader's word for it,

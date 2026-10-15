@@ -193,9 +193,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // reading their OWN queue under that colleague's address, with no error and
   // nothing on screen to say so.
   //
-  // Held by screens/worklist.identity.test.tsx. Selecting a row here is local
-  // state and never touches the address, which is what makes lowering this look
-  // free — the pane is not what the depth is protecting.
+  // Held by features/worklist/worklist.identity.test.tsx. Selecting a row is
+  // local state and never touches the address. That makes lowering this look
+  // free, but the depth protects the address, not the pane.
   worklist: WHOLE_ADDRESS,
   // #/analytics/<section> — the picker chooses a view of one screen, so
   // switching sections re-renders the panel instead of throwing the screen away.

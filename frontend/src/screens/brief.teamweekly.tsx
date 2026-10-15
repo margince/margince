@@ -10,6 +10,11 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
+import {
+  type TeamWeeklyReview,
+  type TeamWeekReach,
+  useTeamWeeklyReview,
+} from "../features/worklist/teamweekly.queries";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
@@ -39,11 +44,6 @@ import {
   TeamSummary,
 } from "./brief.teamweeklyattention";
 import { OutlookPanel } from "./brief.waterfall";
-import {
-  type TeamWeeklyReview,
-  type TeamWeekReach,
-  useTeamWeeklyReview,
-} from "./teamweekly.queries";
 
 import "./brief.weekly.css";
 import "./brief.teamweekly.css";

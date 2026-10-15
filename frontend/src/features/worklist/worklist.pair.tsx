@@ -1,0 +1,224 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Deciding a duplicate pair where it is shown.
+//
+// The contract has always sent both records on a `dedupe_candidate` row, and
+// says why in as many words: "so the decision can be MADE where it is shown —
+// a card that named neither record could only ask a reader to go and look,
+// which is the hand-off this surface exists to remove." The Worklist showed
+// the row, dropped the payload, and asked the reader to go and look.
+//
+// Two answers, and they are not symmetrical. Merging KEEPS one record and
+// archives the other, so the reader has to say which survives — there is no
+// sensible default, and picking one for them would be the product choosing
+// which of a customer's two records is the real one. Saying they are not the
+// same needs no such choice and settles the pair for everybody, for good.
+//
+// The asymmetry reaches the OFFER too, which is why the two verbs are guarded
+// apart. Two companies each running live projects cannot be combined by
+// anybody — nothing in the data says which body of work is which — and the
+// lane withholds `merge` on a pair like that however much authority the reader
+// holds. The dismissal is still theirs: a false positive is exactly what this
+// pair is, and clearing it changes neither record. Guarding both on `merge` is
+// what left such a pair on the page as a question nobody could answer here.
+
+import { Button, Card } from "../../design-system/atoms";
+import { useToast } from "../../design-system/toast";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { problemCodeOf } from "../../lib/problem";
+import { useDedupeDisposition } from "../../screens/dedupe.queries";
+// The review's own sheet: the two columns, the recessed cards and the trailing
+// line of verbs. It travels with the component because two hosts draw it.
+import "./worklist.pair.css";
+import type { WorklistItem } from "./worklist.queries";
+
+/**
+ * The pair, and the verbs that answer it.
+ *
+ * Drawn only where the server sent the payload. A row that arrives without it
+ * is one whose reader may not see both sides, and the lane already withheld
+ * every verb for exactly that reason — so there is nothing here to draw and
+ * no decision to offer.
+ *
+ * Each verb is drawn only where the server OFFERED that verb, and they are
+ * asked for separately. Deciding a pair either way archives or rewrites
+ * records, so both belong to whoever could change both — the owner, or a
+ * workspace-wide seat — and the merge needs one thing more, which is a pair
+ * the merge would actually take. A reader without the authority still sees the
+ * pair, because knowing a duplicate is waiting is not the same as being able
+ * to settle it, and is told who can. Rendering the buttons for everybody is
+ * what produced a control that refused every press a rep made on a colleague's
+ * records, then advised trying again.
+ */
+// keepLabel is what the Keep button is CALLED, which is not always what it says.
+//
+// The visible text names the record. When the pair's two records share a name —
+// and an identical name is one of the things that makes two records look like
+// duplicates in the first place — that leaves two buttons over an irreversible
+// merge with one accessible name between them.
+//
+// So the side's own detail joins the name where they collide. The visible text
+// stays the prefix of the spoken one, which is what keeps the two from coming
+// apart for somebody reading the screen and hearing it at once.
+function keepLabel(
+  pair: NonNullable<WorklistItem["pair"]>,
+  side: NonNullable<WorklistItem["pair"]>["left"],
+  t: ReturnType<typeof useT>,
+): string {
+  const visible = t("worklist.pair.keep", { name: side.label });
+  if (pair.left.label !== pair.right.label || !side.detail) {
+    return visible;
+  }
+  return `${visible} — ${side.detail}`;
+}
+
+export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const toast = useToast();
+  const decide = useDedupeDisposition();
+  const pair = item.pair;
+  if (!pair) {
+    return null;
+  }
+  const mayMerge = item.actions?.includes("merge") ?? false;
+  const mayDismiss = item.actions?.includes("dismiss") ?? false;
+  const answer = (
+    disposition: "merge" | "not_a_duplicate",
+    winnerId?: string,
+  ) =>
+    decide.mutate(
+      { id: item.id, disposition, winnerId },
+      {
+        // A refused decision leaves the row exactly as an unpressed one looks.
+        // Without this the reader believes the pair is settled and it is not.
+        //
+        // THREE outcomes, not one. A refusal will refuse again however many
+        // times it is pressed, so "try again" is the wrong instruction — the
+        // reader needs a steward. A conflict means somebody settled the pair
+        // first, and the row is already gone. Only the rest is worth a retry.
+        onError: (error) => {
+          const code = problemCodeOf(error);
+          const message =
+            code === "permission_denied"
+              ? "worklist.pair.refused"
+              : code === "conflict"
+                ? "worklist.pair.alreadySettled"
+                : "worklist.pair.failed";
+          // The two REASONED refusals stay until the reader dismisses them;
+          // only the unexplained failure withdraws itself.
+          //
+          // Neither of the first two is retryable, and both say something a
+          // reader has to act on somewhere else — hand the pair to an admin,
+          // or reload to see where it stands. A sentence like that shown for
+          // three and a half seconds is a sentence the reader is invited to
+          // miss, and the press that follows fails identically. "Try again"
+          // is the only one of the three that means it.
+          toast.show(t(message), {
+            tone: "danger",
+            sticky: code === "permission_denied" || code === "conflict",
+          });
+        },
+      },
+    );
+  return (
+    <div className="worklist-pair-review">
+      {/* THE QUESTION, as the block's lead line. What follows it is the two
+          records it is about and the one answer that is about neither.
+
+          Which question it is depends on what can be done. "Which record
+          should survive?" over a card with no Keep button asks for an answer
+          the page will not take; where the merge is off the table, what is
+          actually being asked is whether these two are the same at all. */}
+      <p className="t-body worklist-pair-ask">
+        {t(
+          mayDismiss && !mayMerge
+            ? "worklist.pair.mergeBlocked"
+            : "worklist.pair.ask",
+        )}
+      </p>
+      <ul className="worklist-pair-cards">
+        {[pair.left, pair.right].map((side) => (
+          // ONE CANDIDATE, on the catalog's recessed card. `Card inset` rather
+          // than `PanelPlate`, which the catalog reserves for context and says
+          // so in as many words — "it holds context, never a control" — and
+          // each of these cards carries the verb that keeps its record.
+          // A list ITEM, so the two stay one list of two: the card is the
+          // chrome and the `<ul>` is still what says there are two of them.
+          <Card as="li" inset key={side.id} className="worklist-pair-card">
+            <span>{side.label}</span>
+            {side.detail && <span className="t-caption">{side.detail}</span>}
+            {/* The reader's best single signal for which side is the real
+                one, where the record type carries such a count. */}
+            {side.related_count !== undefined && (
+              <span className="t-caption">
+                {t("worklist.pair.related", {
+                  count: formatNumber(side.related_count, locale),
+                })}
+              </span>
+            )}
+            {/* The RECORD'S OWN NAME in the verb, not "Keep this one" twice.
+                Two identically named buttons over an irreversible merge leave
+                a reader who is not looking at the layout — a screen reader,
+                a keyboard walking the controls — no way to tell which record
+                they are about to archive.
+
+                Which is exactly what a pair whose two records share a name
+                left them with, and that pair is not the rare case: an
+                identical name is one of the things that MAKES two records
+                look like duplicates. So where the labels collide the side's
+                own detail — the line the card already draws under the name —
+                joins the accessible name. The visible text is unchanged and
+                is still its prefix, so the spoken name and the seen one do
+                not come apart. */}
+            {mayMerge && (
+              // At the card's own FOOT, on its trailing edge: the verb belongs
+              // to the record above it, and `.card-actions` is the catalog's
+              // trailing row for exactly that — the air above the verbs rides
+              // on the row rather than on whatever body the card has.
+              <div className="card-actions">
+                <Button
+                  variant="primary"
+                  pending={decide.isPending}
+                  aria-label={keepLabel(pair, side, t)}
+                  onClick={() => answer("merge", side.id)}
+                >
+                  {t("worklist.pair.keep", { name: side.label })}
+                </Button>
+              </div>
+            )}
+          </Card>
+        ))}
+      </ul>
+      {mayDismiss && (
+        // ONE LINE UNDER BOTH CARDS, on the trailing edge every other line of
+        // verbs in the queue stands on, and nothing on it is filled: the two
+        // Keep verbs are the answers to the question, and a fill here would
+        // offer "not the same" as the expected one of three.
+        //
+        // Where the merge is withheld this is the only verb left, and it is
+        // still ghost: the pair being unmergeable is not a reason to press
+        // harder for the answer that says it was never a pair.
+        <div className="worklist-pair-actions">
+          <Button
+            variant="ghost"
+            pending={decide.isPending}
+            onClick={() => answer("not_a_duplicate")}
+          >
+            {t("worklist.pair.notDuplicate")}
+          </Button>
+        </div>
+      )}
+      {!mayMerge && !mayDismiss && (
+        // Said in words rather than shown as disabled buttons. A greyed-out
+        // control asks the reader to work out why it is grey; a sentence tells
+        // them the pair is real, that they cannot settle it, and who can.
+        <p className="worklist-pair-steward">
+          {t("worklist.pair.stewardOnly")}
+        </p>
+      )}
+    </div>
+  );
+}

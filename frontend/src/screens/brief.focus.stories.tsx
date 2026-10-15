@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { Badge } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -14,7 +15,6 @@ import {
 } from "../testing/story-utils";
 import { taskRow, waitingEmailRow } from "./brief.fixtures";
 import { Triage } from "./brief.focus";
-import type { WorklistItem } from "./worklist.queries";
 
 // THE FOCUS PANEL'S INSIDE: the card in hand on the stack of what is still
 // behind it, and the ranked column beside it.

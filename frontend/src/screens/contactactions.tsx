@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { useId } from "react";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
+import { openContactTab } from "../features/worklist/worklist.return";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { navigate } from "../lib/router";
@@ -18,7 +19,6 @@ import type { Transport, TransportSource } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
-import { openContactTab } from "./worklist.return";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
 // calling, meeting, logging, and the menu that holds everything else.

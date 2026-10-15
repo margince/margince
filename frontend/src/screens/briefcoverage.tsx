@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../design-system/atoms";
+import { sourceUnavailableText } from "../features/worklist/worklist.copy";
+import type { Worklist } from "../features/worklist/worklist.queries";
 import { useLocale, useT } from "../i18n";
 import { omittedFactorsText } from "./brief.factors";
 import type { MorningBrief } from "./brief.queries";
-import { sourceUnavailableText } from "./worklist.copy";
-import type { Worklist } from "./worklist.queries";
 
 // The strip's footnotes: what the page could not read, under the figures they
 // qualify.

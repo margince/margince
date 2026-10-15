@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { navigateKeepingReturn } from "../features/worklist/worklist.return";
 import { useRoute } from "../lib/router";
-import { navigateKeepingReturn } from "./worklist.return";
 
 /**
  * A record's tab, read off the address rather than held beside it, so it
