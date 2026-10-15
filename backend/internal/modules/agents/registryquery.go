@@ -14,8 +14,10 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -158,6 +160,99 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if !spec.Unlisted && invocableByCaller(ctx, spec) {
+			out = append(out, r.Listed(spec))
+		}
+	}
+	return out
+}
+
+// Listed is a spec as the external listing words it. A verb only a router
+// reaches is named by that router and action, the call a client can make. A
+// Surface-B run is offered the verbs themselves and reads their own names.
+func (r *Registry) Listed(spec mcp.ToolSpec) mcp.ToolSpec {
+	calls := r.routedCalls()
+	for word := range calls {
+		// A word the tool takes as one of its own values names that value,
+		// not the verb spelled alike.
+		if strings.Contains(string(spec.InputSchema), strconv.Quote(word)) {
+			delete(calls, word)
+		}
+	}
+	reword := func(text string) string {
+		for word, call := range calls {
+			text = routedWord(word).ReplaceAllString(text, call)
+		}
+		return text
+	}
+	spec.Description = reword(spec.Description)
+	spec.InputSchema = rewordDescriptions(spec.InputSchema, reword)
+	return spec
+}
+
+// rewordDescriptions rewrites the descriptions in a schema, at any depth, and
+// leaves every other member as it is.
+func rewordDescriptions(schema json.RawMessage, reword func(string) string) json.RawMessage {
+	var doc any
+	if len(schema) == 0 || json.Unmarshal(schema, &doc) != nil {
+		return schema
+	}
+	changed := false
+	var walk func(any)
+	walk = func(node any) {
+		switch n := node.(type) {
+		case map[string]any:
+			if d, ok := n["description"].(string); ok {
+				if r := reword(d); r != d {
+					n["description"], changed = r, true
+				}
+			}
+			for _, v := range n {
+				walk(v)
+			}
+		case []any:
+			for _, v := range n {
+				walk(v)
+			}
+		}
+	}
+	walk(doc)
+	if !changed {
+		return schema
+	}
+	out, err := json.Marshal(doc)
+	if err != nil {
+		return schema
+	}
+	return out
+}
+
+func routedWord(verb string) *regexp.Regexp {
+	return regexp.MustCompile(`\b` + regexp.QuoteMeta(verb) + `\b`)
+}
+
+// routedCalls maps each verb a field router fronts to the call that reaches
+// it, as `router with field=action`.
+func (r *Registry) routedCalls() map[string]string {
+	out := map[string]string{}
+	for _, spec := range r.Specs() {
+		if spec.Unlisted || spec.ActionField == "" {
+			continue
+		}
+		for _, a := range spec.Actions {
+			out[a.Verb] = spec.Name + " with " + spec.ActionField + "=" + a.Action
+		}
+	}
+	return out
+}
+
+// Runnable is what a Surface-B run may choose among: every tool this caller may
+// invoke, offered on the external listing or not. A scheduled agent's allowlist
+// narrows it to the verbs that agent names, each with its own full copy.
+func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
+	all := r.Specs()
+	out := make([]mcp.ToolSpec, 0, len(all))
+	for _, spec := range all {
+		if invocableByCaller(ctx, spec) {
 			out = append(out, spec)
 		}
 	}

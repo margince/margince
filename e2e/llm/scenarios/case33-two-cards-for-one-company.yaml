@@ -73,7 +73,7 @@ prompt: |
 must_call:
   - resolve_duplicates
   - archive_record
-  - read_directory
+  - list_colleagues
   - update_record
 
 # record_type on every write verb. Each serves several record types from one
@@ -87,7 +87,6 @@ must_call:
 # user asked for it.
 must_call_with:
   - resolve_duplicates.record_type=company
-  - read_directory.list=colleagues
   - archive_record.record_type=company
   # CRITERION 3, AND THE HALF THE NAME ALONE CANNOT HOLD. "Lena Fischer" below
   # is satisfied by the sentence that says the handover did NOT happen — "handing

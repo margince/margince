@@ -36,6 +36,7 @@ var inviteMeetingCopy = toolCopy{Purpose: "Create a real calendar invitation for
 func (t inviteMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "invite_meeting", Title: "Send a calendar invitation", Version: toolVersionV1, RequiredScope: principal.ScopeSend, Tier: mcp.TierConfirmationRequired, Egress: true, OpenAPIOp: "createMeetingInvitation",
+		Unlisted:    true,
 		Description: inviteMeetingCopy.render(),
 		Instead:     inviteMeetingCopy.Instead,
 		InputSchema: schemaFor[crmcontracts.MeetingInvitationRequest](), OutputSchema: schemaFor[crmcontracts.MeetingInvitation](),

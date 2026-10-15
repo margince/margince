@@ -368,15 +368,15 @@ def _field_problem(session, want, record_id):
 
 
 def _stage_name(session, stage_id, want):
-    """The name read_directory gives the deal's stage: a stage id is minted per seed."""
-    pipelines = _data(session, "read_directory", {"list": "pipelines"}).get("pipelines")
+    """The name read_workspace gives the deal's stage: a stage id is minted per seed."""
+    pipelines = _data(session, "read_workspace", {"topic": "pipelines"}).get("pipelines")
     if not isinstance(pipelines, list):
-        raise Unreadable("read_directory answered with no pipelines list")
+        raise Unreadable("read_workspace answered with no pipelines list")
     for pipeline in pipelines:
         for stage in pipeline.get("stages") or ():
             if stage.get("id") == stage_id:
                 return str(stage.get("name"))
-    raise Unreadable(f"read_directory lists no stage {stage_id!r} for {_where(want)}")
+    raise Unreadable(f"read_workspace lists no stage {stage_id!r} for {_where(want)}")
 
 
 def _tags_problem(session, want, record_id):

@@ -107,6 +107,7 @@ func (t attachDocument) Spec() mcp.ToolSpec {
 		Description:   attachDocumentCopy.render(),
 		Instead:       attachDocumentCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:     true,
 		OpenAPIOp:    "uploadAttachment",
 		MaxArgsBytes: MaxMCPRequestBytes,
 		InputSchema: schema(`{"type":"object",

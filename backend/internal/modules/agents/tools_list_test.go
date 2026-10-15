@@ -219,7 +219,7 @@ func TestTheListFilterDocumentCarriesThePerTypeVocabulary(t *testing.T) {
 // stores bind nothing still reads as listed whole in a refusal.
 func TestTheFilterDescriptionNamesTheDocument(t *testing.T) {
 	described := listRecords{filters: bindableFilters(probeVocabulary{})}.describeFilters()
-	if !strings.Contains(described, "describe_vocabulary (topic: list_filters)") {
+	if !strings.Contains(described, "describe_list_filters") {
 		t.Errorf("the filter description does not name where the per-type vocabulary is:\n%s", described)
 	}
 	if got := describeNames(nil); !strings.Contains(got, "it can only be listed whole") {

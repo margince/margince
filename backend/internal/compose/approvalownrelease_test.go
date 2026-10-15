@@ -172,7 +172,8 @@ func TestEveryDynamicToolIsJudgedByItsCallOrStaysHumanReleased(t *testing.T) {
 	humanReleased := map[string]bool{"advance_deal": true, "progress_deal": true, "relink_thread": true}
 	dynamic := 0
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
-		if spec.Tier != mcp.TierDynamic {
+		// A router never stages: its action stages under its own verb's kind.
+		if spec.Tier != mcp.TierDynamic || len(spec.Actions) > 0 {
 			continue
 		}
 		dynamic++

@@ -182,6 +182,11 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 	if err != nil {
 		return datasource.SearchResult{}, err
 	}
+	// A sweep walks only the searchable types, so a position in a stream it
+	// never visits (a listed timeline, say) was minted elsewhere.
+	if len(q.EntityTypes) == 0 && position.Stream != "" && !slices.Contains(searchable, datasource.EntityType(position.Stream)) {
+		return datasource.SearchResult{}, &storekit.MalformedCursorError{}
+	}
 	text := &q.Text
 	if q.Text == "" {
 		text = nil

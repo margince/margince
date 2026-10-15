@@ -14,18 +14,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A scheduled agent's run is offered what the registry offers, so an Unlisted
-// tool leaves the run without it. A router is refused too: the runner allows
-// the name called, so a router would allow every action behind it.
-func TestNoScheduledAgentIsGivenAnUnlistedToolOrARouter(t *testing.T) {
-	unlisted := unlistedTools(t)
+// A scheduled agent's run is offered the verbs its allowlist names, listed
+// externally or not. A router is refused: the runner allows the name called,
+// so a router would allow every action behind it.
+func TestNoScheduledAgentIsGivenARouter(t *testing.T) {
 	registry := servedSurface(t)
 	for _, agent := range mustScheduledAgents() {
 		for _, name := range agent.Tools {
-			_, isRouter := registry.RouteTargets(name)
-			if unlisted[name] || isRouter {
+			if _, isRouter := registry.RouteTargets(name); isRouter {
 				t.Errorf("%s is allowed %s, which a scheduled run cannot hold to one action; "+
-					"leave it out until the allowlist can name an action", agent.Name, name)
+					"name the verbs behind it instead", agent.Name, name)
 			}
 		}
 	}
@@ -36,10 +34,12 @@ func TestNoScheduledAgentIsGivenAnUnlistedToolOrARouter(t *testing.T) {
 func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 	defer namesAnApprovalKind.AssertAllMatched(t)
 	unlisted := unlistedTools(t)
-	for _, spec := range servedSurface(t).Specs() {
+	registry := servedSurface(t)
+	for _, spec := range registry.Specs() {
 		if spec.Unlisted {
 			continue
 		}
+		spec = registry.Listed(spec)
 		text := spec.Description + " " + strings.Join(argumentDescriptions(t, spec.InputSchema), " ")
 		for _, word := range strings.FieldsFunc(text, func(c rune) bool {
 			return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
@@ -55,9 +55,9 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 // namesAnApprovalKind ratifies a word in a description that is spelled like an
 // unlisted tool and names something else: a staged action's kind, or a verb.
 var namesAnApprovalKind = gatekit.Waive(map[string]string{
-	"list_approvals:advance_deal":    "the kind filter's example is an approval kind, and a deal move stages under advance_deal",
-	"list_approvals:send_email":      "the kind filter's example is an approval kind, and a reply stages under send_email",
-	"bulk_update_records:remove_tag": "one of its own bulk verbs, spelled like the tool and not naming it",
+	"list_approvals:advance_deal":     "the kind filter's example is an approval kind, and a deal move stages under advance_deal",
+	"bulk_update_records:remove_tag":  "one of its own bulk verbs, spelled like the tool and not naming it",
+	"bulk_update_records:create_task": "one of its own bulk verbs, spelled like the tool and not naming it",
 })
 
 // argumentDescriptions collects the descriptions in an input schema, at any depth.

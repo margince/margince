@@ -5,8 +5,8 @@ package agents
 
 import "github.com/margince/margince/backend/internal/shared/ports/mcp"
 
-// readTags and changeTags front the tag verbs, split by scope. merge_tags stays
-// apart: it alone asks a human first, and a router fronts one tier.
+// readTags and changeTags front the tag verbs, split by scope. merge asks a
+// human first; the other changes run at once.
 type readTags struct{ routed }
 
 func (readTags) Spec() mcp.ToolSpec {
@@ -41,6 +41,6 @@ func (changeTags) routeField() string { return "action" }
 func (changeTags) routeTargets() map[string]string {
 	return map[string]string{
 		"apply": "apply_tag", "remove": "remove_tag", "create": "create_tag", "update": "update_tag",
-		"archive": "archive_tag",
+		"archive": "archive_tag", "merge": "merge_tags",
 	}
 }

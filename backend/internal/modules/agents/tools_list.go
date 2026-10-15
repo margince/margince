@@ -113,6 +113,7 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		Description:   listRecordsCopy.render(),
 		Instead:       listRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities/listDealOffers/listCommissionEntries/listDealRooms/listDealRoomThreads/listDealRoomDocuments/listDealRoomParticipants/listPartners",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant","partner"]},` +
@@ -167,7 +168,7 @@ func (t listRecords) publishedFilterNames() []string {
 // recited, it rode in every prompt and grew with each type a list serves.
 func (t listRecords) describeFilters() string {
 	lines := []string{"Narrow the list. Every operand is a string. Which filters each record_type takes, " +
-		"and the values each takes, is in describe_vocabulary (topic: list_filters)."}
+		"and the values each takes, is in describe_list_filters."}
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
 }
 

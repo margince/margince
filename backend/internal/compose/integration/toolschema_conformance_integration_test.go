@@ -362,6 +362,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
+		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +
 		"TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination (modules/agents) holds the refusal itself",
 	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +

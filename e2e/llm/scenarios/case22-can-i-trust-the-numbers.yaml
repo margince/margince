@@ -42,10 +42,7 @@ prompt: |
 # questions — a clean set of findings over a source nobody opened is the exact
 # pairing that reads as good news and is not.
 must_call:
-  - read_input_checks
-
-must_call_with:
-  - read_input_checks.view=sources
+  - data_coverage
 
 may_call:
   # The nightly run's own record and its open findings, both legitimate

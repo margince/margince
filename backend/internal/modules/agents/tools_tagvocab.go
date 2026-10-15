@@ -202,6 +202,7 @@ func (t mergeTags) Spec() mcp.ToolSpec {
 		Description:   mergeTagsCopy.render(),
 		Instead:       mergeTagsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,
+		Unlisted:  true,
 		OpenAPIOp: "mergeTags",
 		InputSchema: schema(`{"type":"object","required":["tag_id","into_tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid","description":"The word to retire"},

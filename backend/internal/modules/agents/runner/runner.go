@@ -30,11 +30,11 @@ import (
 // surface. agents.Registry satisfies it; nothing else may.
 type Invoker interface {
 	Invoke(ctx context.Context, name string, args json.RawMessage) (json.RawMessage, error)
-	// Offered is the catalog THIS caller may invoke — the scope-filtered set,
-	// which is what the run is shown. A run offered a verb its passport cannot
-	// spend is being asked to choose among names it will be refused for, and
-	// the whole listing rides in the system prompt, which elision never touches.
-	Offered(ctx context.Context) []mcp.ToolSpec
+	// Runnable is the catalog this caller may invoke: the scope-filtered set,
+	// listed externally or not. The job's allowlist narrows it to what the run
+	// is shown. A verb the passport cannot spend would only be refused, and the
+	// whole listing rides in the system prompt, which elision never touches.
+	Runnable(ctx context.Context) []mcp.ToolSpec
 	// Specs is the WHOLE catalog, and it is a separate question. It names which
 	// tools an observation may be attributed to, which is about what already
 	// happened rather than what may be chosen next — see sourceVocabulary.
@@ -157,7 +157,7 @@ func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{}, unscopedJobReason), nil
 	}
-	admitted := r.tools.Offered(ctx)
+	admitted := r.tools.Runnable(ctx)
 	if missing := unfundedTools(job, admitted); len(missing) > 0 {
 		// Before the first completion, so a misconfigured agent costs no
 		// model spend on its way to failing.
@@ -184,7 +184,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
 			unscopedJobReason), nil
 	}
-	admitted := r.tools.Offered(ctx)
+	admitted := r.tools.Runnable(ctx)
 	// The same shortfall check Run makes, at the same strength. A resumed run
 	// whose entry the passport can no longer fund is as misconfigured as a
 	// fresh one, and a half-authorised resume is the worse of the two: it

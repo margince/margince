@@ -64,7 +64,7 @@ var reportingReadCopy = toolCopy{
 }
 
 func (t readReporting) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"},"commission_summary":{"type":"object"}},"additionalProperties":false}`)}
+	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"},"commission_summary":{"type":"object"}},"additionalProperties":false}`)}
 }
 
 func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

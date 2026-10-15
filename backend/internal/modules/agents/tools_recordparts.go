@@ -73,7 +73,7 @@ const (
 	partField      = "field"
 	partValue      = "value"
 	partRole       = "role"
-	partAction     = "action"
+	actionArg      = "action"
 )
 
 // recordPartActions names what each action needs, in the order a refusal says it.
@@ -144,7 +144,7 @@ func (t changeRecordParts) Handle(ctx context.Context, in json.RawMessage) (json
 	}
 	needs, known := recordPartActions[a.Action]
 	if !known {
-		return nil, &BadArgsError{Field: partAction, Cause: fmt.Errorf("%q is not an action", a.Action)}
+		return nil, &BadArgsError{Field: actionArg, Cause: fmt.Errorf("%q is not an action", a.Action)}
 	}
 	for _, need := range needs {
 		if !a.names(need) {

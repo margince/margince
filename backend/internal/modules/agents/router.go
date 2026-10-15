@@ -95,6 +95,7 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
+	spec.ActionField = field
 	spec.InputSchema = routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
 	spec.OutputSchema = nil
 	return spec
@@ -148,6 +149,8 @@ type routedObject struct {
 const (
 	schemaDescription = "description"
 	schemaEnum        = "enum"
+	schemaMinimum     = "minimum"
+	schemaMaximum     = "maximum"
 )
 
 // argument is one property of a JSON schema, member by member.
@@ -254,18 +257,39 @@ func uniteArgument(seen, next argument) (argument, bool) {
 		out := maps.Clone(arg)
 		delete(out, schemaDescription)
 		delete(out, schemaEnum)
+		delete(out, schemaMinimum)
+		delete(out, schemaMaximum)
 		return out
 	}
 	if !maps.EqualFunc(shape(seen), shape(next), func(a, b json.RawMessage) bool { return string(a) == string(b) }) {
 		return nil, false
 	}
+	united := maps.Clone(seen)
+	// A bound is the tightest the targets set, so every target takes every
+	// value the router advertises. A smaller page still reaches every record
+	// by cursor.
+	tightest(united, next, schemaMinimum, func(a, b float64) float64 { return max(a, b) })
+	tightest(united, next, schemaMaximum, func(a, b float64) float64 { return min(a, b) })
 	var words, more []string
 	if json.Unmarshal(seen[schemaEnum], &words) != nil || json.Unmarshal(next[schemaEnum], &more) != nil {
-		return seen, string(seen[schemaEnum]) == string(next[schemaEnum])
+		return united, string(seen[schemaEnum]) == string(next[schemaEnum])
 	}
-	united := maps.Clone(seen)
 	united[schemaEnum] = mustMarshal(slices.Compact(slices.Sorted(slices.Values(append(words, more...)))))
 	return united, true
+}
+
+// tightest sets a numeric bound to the stricter of two targets' values, keeping
+// whichever one target sets alone.
+func tightest(united, next argument, bound string, stricter func(float64, float64) float64) {
+	var mine, theirs float64
+	hasMine := united[bound] != nil && json.Unmarshal(united[bound], &mine) == nil
+	hasTheirs := next[bound] != nil && json.Unmarshal(next[bound], &theirs) == nil
+	switch {
+	case hasMine && hasTheirs:
+		united[bound] = mustMarshal(stricter(mine, theirs))
+	case hasTheirs:
+		united[bound] = next[bound]
+	}
 }
 
 func mustMarshal[T any](v T) json.RawMessage {

@@ -121,6 +121,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		Description:   searchRecordsCopy.render(),
 		Instead:       searchRecordsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted: true,
 		// The cross-object search operation, not the per-type list ones: those
 		// declare list_records now, and naming them here would leave the two
 		// tools claiming one operation family between them.
@@ -401,6 +402,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		Description:   logActivityCopy.render(),
 		Instead:       logActivityCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "logActivity",
 		// The two vocabularies are SPLICED from the contract, never spelled
 		// here: this tool's body IS crm.yaml's CreateActivityRequest, and both
@@ -416,7 +418,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider read_directory (list: channel_providers) names."},
+			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider the workspace's channel provider list names."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
@@ -425,9 +427,9 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from read_directory (list: colleagues). The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

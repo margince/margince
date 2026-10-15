@@ -47,6 +47,7 @@ func (t createTask) Spec() mcp.ToolSpec {
 		Description:   createTaskCopy.render(),
 		Instead:       createTaskCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "createTask",
 		// Terse on purpose: the listing rides every run under a token ceiling,
 		// and log_activity's schema already explains links and timestamps.

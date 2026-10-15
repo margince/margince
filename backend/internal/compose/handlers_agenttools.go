@@ -16,8 +16,17 @@ import (
 // compose-level method (not a module handler) because the registry is a
 // cross-module composition artifact — no single module owns the full surface.
 func (s Server) ListAgentTools(w http.ResponseWriter, _ *http.Request) {
-	body := crmcontracts.AgentToolListResponse{Data: agentToolsFromSpecs(s.toolRegistry.Specs())}
+	body := crmcontracts.AgentToolListResponse{Data: listedAgentTools(s.toolRegistry)}
 	httperr.WriteJSON(w, http.StatusOK, body)
+}
+
+// listedAgentTools is the catalog worded as tools/list words it.
+func listedAgentTools(registry *agents.Registry) []crmcontracts.AgentTool {
+	specs := registry.Specs()
+	for i := range specs {
+		specs[i] = registry.Listed(specs[i])
+	}
+	return agentToolsFromSpecs(specs)
 }
 
 func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {

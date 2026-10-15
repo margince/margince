@@ -79,7 +79,7 @@ may_call:
   # The doors, when a name is wanted rather than guessed. Optional on purpose:
   # a run that guesses `direction` correctly and never opens one has done the
   # better thing, and requiring the call would score the cheap path as a failure.
-  - describe_vocabulary
+  - read_workspace
   - query_workspace
   - search_records
   - list_records

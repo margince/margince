@@ -56,7 +56,7 @@ may_call:
   # workspace's nightly check ran before any deal existed, so neither has
   # anything to add here — and a run that opens them anyway has done the
   # careful thing rather than the wrong one.
-  - read_input_checks
+  - read_forecast
   - run_report
   - run_analytics_query
   - list_records

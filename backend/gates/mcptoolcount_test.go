@@ -94,9 +94,11 @@ const clientToolCeiling = 100
 // explicit maintainer decision.
 //
 // change_record_parts and read_view raise it to 58, by that decision. With them
-// a passport writes a record's parts and reads every REST view on MCP. The
-// resource routers bring the count back down.
-const publishedToolCeiling = 58
+// a passport writes a record's parts and reads every REST view on MCP.
+//
+// Routers that may front actions of different tiers then bring it to 37: one
+// per family of verbs (find_records, read_context, change_state and the rest).
+const publishedToolCeiling = 37
 
 type mcpInfoFile struct {
 	Totals struct {

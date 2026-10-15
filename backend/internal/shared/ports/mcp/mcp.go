@@ -147,7 +147,10 @@ type ToolSpec struct {
 	MaxArgsBytes int64
 	// Actions are a router's choices, each with the verb it runs and that
 	// verb's tier. A call is admitted at its action's tier, never the router's.
-	Actions []ToolAction
+	// ActionField is the argument naming the choice, empty for a router that
+	// chooses by which arguments a call names.
+	Actions     []ToolAction
+	ActionField string
 }
 
 // ToolAction is one choice a router offers.

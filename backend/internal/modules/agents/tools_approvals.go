@@ -159,7 +159,7 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listApprovals",
 		InputSchema: schema(`{"type":"object","properties":{
 			"status":{"type":"string","enum":["pending","approved","rejected"],"description":"Defaults to pending — what is still waiting."},
-			"kind":{"type":"string","description":"One staged action, e.g. send_email or advance_deal."},
+			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
 			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},
 			"target_entity_id":{"type":"string","format":"uuid"},
 			"bundle_id":{"type":"string","format":"uuid","description":"The approvals staged together as one bundle."},
