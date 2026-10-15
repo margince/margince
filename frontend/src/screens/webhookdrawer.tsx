@@ -10,6 +10,7 @@ import {
   DrawerFoot,
   DrawerHead,
 } from "../design-system/drawerbands";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { Select } from "../design-system/select";
@@ -20,6 +21,7 @@ import {
   type HeaderRow,
   headerInputsOf,
   headerRowsFrom,
+  headersChanged,
   WebhookHeaderRows,
 } from "./webhookheaders";
 import { WEBHOOK_BODY_CONTENT_TYPES } from "./webhookpresets";
@@ -58,15 +60,28 @@ export function formFor(subscription?: WebhookSubscription): WebhookForm {
 
 // The request body shared by create and update: the body format is sent
 // whole, so switching back to the standard envelope clears the template.
-export function webhookBodyOf(form: WebhookForm) {
+export function webhookBodyOf(
+  form: WebhookForm,
+  storedHeaders?: readonly string[],
+) {
   const custom = form.format === "custom";
+  const sendHeaders =
+    storedHeaders === undefined || headersChanged(form.headers, storedHeaders);
   return {
     event_types: form.eventTypes,
-    custom_headers: headerInputsOf(form.headers),
+    ...(sendHeaders ? { custom_headers: headerInputsOf(form.headers) } : {}),
     body_template: custom ? form.template : null,
     body_content_type: custom ? form.contentType : null,
   };
 }
+
+const FIELDS_WITH_A_SLOT = new Set([
+  "target_url",
+  "event_types",
+  "custom_headers",
+  "body_template",
+  "body_content_type",
+]);
 
 type SaveVariables = Readonly<{
   form: WebhookForm;
@@ -84,7 +99,13 @@ async function saveSubscription({
           path: { id: subscription.id },
           ...ifMatch(subscription.version),
         },
-        body: { state: form.state, ...webhookBodyOf(form) },
+        body: {
+          state: form.state,
+          ...webhookBodyOf(
+            form,
+            subscription.custom_headers.map((header) => header.name),
+          ),
+        },
       }),
     );
   }
@@ -123,7 +144,7 @@ export function WebhookSubscriptionDrawer({
 }: Readonly<{
   subscription?: WebhookSubscription;
   onClose: () => void;
-  onCreated: (secret: string) => void;
+  onCreated?: (secret: string) => void;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -136,7 +157,7 @@ export function WebhookSubscriptionDrawer({
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
       if ("signing_secret" in saved) {
-        onCreated(saved.signing_secret);
+        onCreated?.(saved.signing_secret);
       }
       onClose();
     },
@@ -148,10 +169,15 @@ export function WebhookSubscriptionDrawer({
     ]),
   );
   const fieldError = (name: string) => fieldErrors.get(name);
-  const generalError =
-    save.isError && fieldErrors.size === 0
+  // A refusal on a field the drawer has no slot for is said once, at the foot.
+  const unplaced = [...fieldErrors.entries()].filter(
+    ([field]) => !FIELDS_WITH_A_SLOT.has(field),
+  );
+  const generalError = !save.isError
+    ? null
+    : fieldErrors.size === 0
       ? problemMessageOf(save.error, t)
-      : null;
+      : (unplaced[0]?.[1] ?? null);
   const editing = subscription !== undefined;
   const eventsMissing = form.eventTypes.length === 0;
   return (
@@ -186,7 +212,7 @@ export function WebhookSubscriptionDrawer({
                 type="url"
                 value={form.targetUrl}
                 readOnly={editing}
-                placeholder="https://example.test/hooks/margince"
+                placeholder={t("webhooks.field.targetUrlPlaceholder")}
                 onChange={(event) => set({ targetUrl: event.target.value })}
               />
             )}
@@ -282,11 +308,7 @@ export function WebhookSubscriptionDrawer({
             onChange={(next) => set(next)}
           />
         )}
-        {generalError && (
-          <p className="field-error" role="alert">
-            {generalError}
-          </p>
-        )}
+        {generalError && <ErrorLine>{generalError}</ErrorLine>}
       </DrawerBody>
       <DrawerFoot className="actions">
         <Button onClick={onClose} disabled={save.isPending}>

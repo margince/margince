@@ -30,10 +30,9 @@ const (
 	maxResponseBytes = 8 << 10
 )
 
-// NewGuardedClient builds the production delivery client: a tenant-
-// supplied target URL is dialed only if it resolves to a public address,
-// checked post-DNS on the concrete IP so a rebind cannot bypass the guard
-// (netguard.RefusePrivate).
+// NewGuardedClient builds the production delivery client. A tenant's target
+// URL is dialed only if it resolves to a public address. The check runs after
+// DNS on the concrete IP, so a rebind cannot bypass it (netguard.RefusePrivate).
 func NewGuardedClient() *http.Client {
 	dialer := &net.Dialer{Timeout: deliveryTimeout, Control: netguard.RefusePrivate}
 	return &http.Client{
@@ -42,9 +41,9 @@ func NewGuardedClient() *http.Client {
 			DialContext:         dialer.DialContext,
 			TLSHandshakeTimeout: deliveryTimeout,
 		},
-		// A redirect is never followed: Go would turn the POST into a GET with
-		// no body, and carry custom headers to a host the subscription never
-		// named. The 3xx is recorded as the failed attempt it is.
+		// A redirect is never followed. Go would turn the POST into a GET with
+		// no body, and carry custom headers to a host nobody named. The 3xx is
+		// recorded as the failed attempt it is.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 }

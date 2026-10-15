@@ -1,6 +1,7 @@
 import { Braces, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button, Field, SegmentedControl } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { JsonField } from "../design-system/jsonfield";
 import { Popover } from "../design-system/popover";
 import { Select } from "../design-system/select";
@@ -57,9 +58,9 @@ function TemplatePreview({
   if (preview.isError) {
     const fieldError = problemFieldErrorsOf(preview.error)[0];
     return (
-      <p className="field-error" role="alert">
+      <ErrorLine>
         {fieldError?.message ?? problemMessageOf(preview.error, t)}
-      </p>
+      </ErrorLine>
     );
   }
   if (!preview.data) {

@@ -266,13 +266,15 @@ A receiver such as Slack, Microsoft Teams or a partner API wants a token in a he
 its own shape. A subscription can carry both. The code is in `customheaders.go`,
 `bodytemplate.go`, `subscriptionbody.go` and `deliveryenqueue.go`.
 
-**Custom headers.** Names are checked with `httpguts`, so a line break or control character is a
-422. The signature, event, content and transport headers are reserved, and so is any name that
+**Custom headers.** Names and values are checked with `httpguts`, so a line break or control
+character in either is a 422. The signature, event, content and transport headers are reserved, and so is any name that
 starts with `webhook-` or `proxy-`. Each value is sealed under the webhook key, with the
 subscription id and the header name as additional data, so a value moved to another subscription or
 another name does not open. A header write never goes through `storekit.Patch`, which copies values
-into the audit image. It has its own `UPDATE`, under the same row lock and version check, and the
-audit row holds the names only. A `PATCH` replaces the whole set; a row that names a stored header
+into the audit image. It has its own `UPDATE`, under the same row lock and version check. The
+audit row holds the names, and `custom_headers_replaced` names each header given a new value, never
+the value. A save that changes other fields and the headers bumps `version` twice, once per
+`UPDATE`; the response carries the final one. The UI sends `custom_headers` only when a row changed. A `PATCH` replaces the whole set; a row that names a stored header
 and sends no value keeps the stored value. An attempt reads the headers of the *current*
 subscription, like the URL and secret (§4), so a new token reaches the retries already waiting.
 

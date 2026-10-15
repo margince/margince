@@ -126,7 +126,14 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 			visible = append(visible, c)
 		}
 	}
-	targets, err := d.store.enqueueForSubscriptions(wsCtx, renderFor(visible, body), env.Type, env.EventID,
+	rows := renderFor(visible, body)
+	for _, r := range rows {
+		if r.renderError != "" {
+			d.log.Warn("webhooks: parking a delivery whose body could not be rendered",
+				"subscription", r.subID, "event", env.EventID, "reason", r.renderError)
+		}
+	}
+	targets, err := d.store.enqueueForSubscriptions(wsCtx, rows, env.Type, env.EventID,
 		env.Entity.Type, env.Entity.ID)
 	if err != nil {
 		return fmt.Errorf("webhooks: enqueue for %s: %w", env.Type, err)

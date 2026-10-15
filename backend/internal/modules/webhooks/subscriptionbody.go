@@ -70,33 +70,45 @@ func equalOptional(a, b *string) bool {
 	return (a == nil && b == nil) || (a != nil && b != nil && *a == *b)
 }
 
-// replaceHeaders writes the sealed header set outside the patch, because
-// the patch copies every value it sets into the audit image; the caller
-// audits the returned names instead.
-func (s *Store) replaceHeaders(ctx context.Context, tx pgx.Tx, id ids.UUID, in []CustomHeaderInput) ([]string, error) {
+// replaceHeaders writes the sealed header set outside the patch. The patch
+// copies every value it sets into the audit image, so the caller audits the
+// returned names instead.
+func (s *Store) replaceHeaders(ctx context.Context, tx pgx.Tx, id ids.UUID, in []CustomHeaderInput) (names, replaced []string, err error) {
 	var raw []byte
 	var version int64
 	if err := tx.QueryRow(ctx,
 		"SELECT custom_headers, version FROM webhook_subscription WHERE id = $1 AND archived_at IS NULL", id).
 		Scan(&raw, &version); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var existing []storedHeader
 	if err := json.Unmarshal(raw, &existing); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sealed, err := s.cipher.sealHeaders(id, in, existing)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tag, err := tx.Exec(ctx,
 		"UPDATE webhook_subscription SET custom_headers = $2 WHERE id = $1 AND archived_at IS NULL AND version = $3",
 		id, sealed, version)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if tag.RowsAffected() != 1 {
-		return nil, apperrors.ErrVersionSkew
+		return nil, nil, apperrors.ErrVersionSkew
 	}
-	return headerNames(sealed), nil
+	return headerNames(sealed), namesWithNewValues(sealed, in), nil
+}
+
+// namesWithNewValues names each stored header the request gave a value, so
+// the audit says a credential changed without saying what it became.
+func namesWithNewValues(sealed []storedHeader, in []CustomHeaderInput) []string {
+	replaced := []string{}
+	for i, h := range in {
+		if h.Value != nil {
+			replaced = append(replaced, sealed[i].Name)
+		}
+	}
+	return replaced
 }

@@ -20301,7 +20301,7 @@ export interface components {
             /** @enum {string} */
             state: "active" | "paused";
             /** @description The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part. */
-            custom_headers?: components["schemas"]["WebhookCustomHeader"][];
+            custom_headers: components["schemas"]["WebhookCustomHeader"][];
             /** @description The body template every delivery is rendered from; null sends the standard envelope. */
             body_template?: string | null;
             body_content_type?: components["schemas"]["WebhookBodyContentType"];

@@ -25,19 +25,23 @@ async function renderPreview(
   );
 }
 
-// The body a delivery of a sample event would send, rendered by the server's
-// own engine once typing pauses, so the preview and the delivery cannot differ.
+// The body a delivery of a sample event would send. The server's own engine
+// renders it once typing pauses, so the preview and the delivery agree.
 export function useBodyPreview(
   eventType: string,
   template: string,
   contentType: WebhookBodyContentType,
 ) {
-  const settled = useSettledValue({ eventType, template, contentType });
+  // One primitive, so the settle effect sees a change only when a value does.
+  const settled = JSON.parse(
+    useSettledValue(JSON.stringify([eventType, template, contentType])),
+  ) as [string, string, WebhookBodyContentType];
+  const [settledType, settledTemplate, settledContentType] = settled;
   return useQuery({
-    queryKey: ["webhook-body-preview", settled],
+    queryKey: ["webhook-body-preview", ...settled],
     queryFn: () =>
-      renderPreview(settled.eventType, settled.template, settled.contentType),
-    enabled: settled.eventType !== "" && settled.template.trim() !== "",
+      renderPreview(settledType, settledTemplate, settledContentType),
+    enabled: settledType !== "" && settledTemplate.trim() !== "",
     retry: false,
   });
 }

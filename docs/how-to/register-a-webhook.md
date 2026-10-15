@@ -124,8 +124,9 @@ curl -X POST http://localhost:8080/v1/webhook-subscriptions \
 
 - A header value is sealed when saved and never returned. A read shows the name and
   `"configured": true`. To keep a value on `PATCH`, send the name with no `value`.
-- `webhook-*`, `Content-Type`, `Host`, `User-Agent`, `X-Margince-Event` and the transport headers
-  are reserved, and a header with a line break is refused.
+- `webhook-*`, `proxy-*`, `Content-Type`, `Content-Length`, `Content-Encoding`, `Host`, `Cookie`,
+  `User-Agent`, `X-Margince-Event` and the transport headers are reserved. A name or value with a
+  line break or control character is refused.
 - In a JSON template, put `{{ path }}` inside quotes for text, and `{{ path | json }}` outside
   quotes for a whole value. The server refuses any other place with a `422` that names the line and
   column.

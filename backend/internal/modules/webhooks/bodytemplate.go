@@ -32,9 +32,9 @@ var templateRoots = []string{"event_id", "type", "version", "occurred_at", "acto
 
 var errBodyTooLarge = fmt.Errorf("the rendered body exceeds %d KiB", maxBodyBytes>>10)
 
-// bodyTemplate is a parsed `{{ path }}` template. In JSON mode every
-// placeholder's position is fixed at parse time — `{{ x }}` inside a JSON
-// string, `{{ x | json }}` outside one — so any event renders valid JSON.
+// bodyTemplate is a parsed `{{ path }}` template. In JSON mode the parser
+// fixes where each placeholder may sit: `{{ x }}` inside a JSON string,
+// `{{ x | json }}` outside one. So any event renders valid JSON.
 type bodyTemplate struct {
 	contentType string
 	parts       []templatePart
@@ -123,17 +123,25 @@ func parsePlaceholder(inner string) (templatePart, error) {
 }
 
 // checkJSONPositions walks the literal text as a JSON lexer would, so it
-// knows whether each placeholder sits inside a string, and then proves the
-// literal skeleton is JSON with every placeholder standing in for a value.
+// knows whether each placeholder sits inside a string. It then proves the
+// skeleton is JSON, with every placeholder standing in for a value.
 func (t *bodyTemplate) checkJSONPositions(src string) error {
 	var skeleton strings.Builder
 	inString, escaped, offset := false, false, 0
+	// hexLeft counts the digits a \u escape still needs; a placeholder there
+	// would put its value inside the escape.
+	hexLeft := 0
 	for _, p := range t.parts {
 		if p.path == nil {
 			for i := 0; i < len(p.literal); i++ {
 				switch c := p.literal[i]; {
+				case hexLeft > 0:
+					hexLeft--
 				case escaped:
 					escaped = false
+					if c == 'u' {
+						hexLeft = 4
+					}
 				case inString && c == '\\':
 					escaped = true
 				case c == '"':
@@ -148,6 +156,8 @@ func (t *bodyTemplate) checkJSONPositions(src string) error {
 		switch {
 		case escaped:
 			return templateErrorAt(src, at, "a backslash escapes the start of the placeholder; remove it")
+		case hexLeft > 0:
+			return templateErrorAt(src, at, "the placeholder sits inside a \\u escape; finish the four hex digits first")
 		case inString && p.asJSON:
 			return templateErrorAt(src, at, "| json writes a whole JSON value, so it cannot sit inside a JSON string; drop | json or the quotes")
 		case !inString && !p.asJSON:

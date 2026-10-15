@@ -130,6 +130,8 @@ func TestATemplateTheEngineCannotRenderSafelyIsRefusedAtSave(t *testing.T) {
 		{"unclosed placeholder", `{"x": "{{ data.name"}`, contentTypeJSON, "is never closed"},
 		{"invalid JSON around the placeholders", `{"x": "{{ data.name }}",}`, contentTypeJSON, "is not valid JSON"},
 		{"escape running into a placeholder", `{"x": "\{{ data.name }}"}`, contentTypeJSON, "backslash"},
+		{"unicode escape split by a placeholder", `{"a": "\u00{{ type }}41"}`, contentTypeJSON, "\\u escape"},
+		{"unicode escape cut at its start", `{"a": "\u{{ type }}0041"}`, contentTypeJSON, "\\u escape"},
 		{"empty template", "  ", contentTypeText, "is empty"},
 		{"too large", strings.Repeat("x", maxTemplateBytes+1), contentTypeText, "16 KiB"},
 	} {

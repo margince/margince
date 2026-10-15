@@ -186,9 +186,12 @@ func (s *Store) requireReplay(ctx context.Context, subID, deliveryID ids.UUID) e
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A render failure is parked before any attempt with nothing stored; an
+		// empty body that was rendered and sent replays like any other.
 		var hasBody bool
-		err := tx.QueryRow(ctx,
-			"SELECT payload <> '' FROM webhook_delivery WHERE id = $1 AND subscription_id = $2",
+		err := tx.QueryRow(ctx, `
+			SELECT NOT (status = 'dead_lettered' AND attempts = 0 AND payload = '')
+			FROM webhook_delivery WHERE id = $1 AND subscription_id = $2`,
 			deliveryID, subID).Scan(&hasBody)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

@@ -17,8 +17,8 @@ import (
 const maxSampleDepth = 6
 
 // eventSamples renders samplesVar: each event type's payload schema as a
-// sample `data` object, built from the schema alone so every subscribable
-// type has one and none can drift from the contract.
+// sample `data` object. It is built from the schema alone, so every type has
+// one and none can drift from the contract.
 func eventSamples(spec *openapi3.T, samplesVar string) (string, error) {
 	samples := map[string]string{}
 	for name, ref := range spec.Components.Schemas {
@@ -31,6 +31,9 @@ func eventSamples(spec *openapi3.T, samplesVar string) (string, error) {
 		}
 		if !ok {
 			continue
+		}
+		if _, dup := samples[eventType]; dup {
+			return "", fmt.Errorf("two schemas declare x-event-type %q", eventType)
 		}
 		raw, err := json.Marshal(sampleValue(ref.Value, "", 0))
 		if err != nil {
@@ -54,6 +57,7 @@ func eventSamples(spec *openapi3.T, samplesVar string) (string, error) {
 	return b.String(), nil
 }
 
+//craft:ignore naked-any a sample mirrors any JSON shape a schema can declare, and json.Marshal takes it as is
 func sampleValue(s *openapi3.Schema, name string, depth int) any {
 	if len(s.Enum) > 0 {
 		for _, v := range s.Enum {
@@ -68,7 +72,7 @@ func sampleValue(s *openapi3.Schema, name string, depth int) any {
 		}
 	}
 	switch {
-	case s.Type.Is(openapi3.TypeObject) || len(s.Properties) > 0:
+	case s.Type.Includes(openapi3.TypeObject) || len(s.Properties) > 0:
 		obj := map[string]any{}
 		if depth >= maxSampleDepth {
 			return obj
@@ -79,16 +83,16 @@ func sampleValue(s *openapi3.Schema, name string, depth int) any {
 			}
 		}
 		return obj
-	case s.Type.Is(openapi3.TypeArray):
+	case s.Type.Includes(openapi3.TypeArray):
 		if s.Items == nil || s.Items.Value == nil || depth >= maxSampleDepth {
 			return []any{}
 		}
 		return []any{sampleValue(s.Items.Value, name, depth+1)}
-	case s.Type.Is(openapi3.TypeInteger):
+	case s.Type.Includes(openapi3.TypeInteger):
 		return 1
-	case s.Type.Is(openapi3.TypeNumber):
+	case s.Type.Includes(openapi3.TypeNumber):
 		return 1.5
-	case s.Type.Is(openapi3.TypeBoolean):
+	case s.Type.Includes(openapi3.TypeBoolean):
 		return true
 	}
 	switch s.Format {

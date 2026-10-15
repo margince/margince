@@ -352,11 +352,12 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 		}
 		before, after := p.Before(), p.After()
 		if in.CustomHeaders != nil {
-			names, err := s.replaceHeaders(ctx, tx, id, *in.CustomHeaders)
+			names, replaced, err := s.replaceHeaders(ctx, tx, id, *in.CustomHeaders)
 			if err != nil {
 				return err
 			}
 			before[fieldCustomHeaders], after[fieldCustomHeaders] = current.HeaderNames, names
+			after["custom_headers_replaced"] = replaced
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id, before, after); err != nil {
 			return err

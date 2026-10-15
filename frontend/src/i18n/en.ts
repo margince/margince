@@ -11093,7 +11093,6 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.edit": "Edit",
-  "webhooks.saveDone": "Webhook saved",
   "webhooks.archiveDone": "Webhook archived",
   "webhooks.archive": "Archive",
   "webhooks.archiveConfirm":
@@ -11136,7 +11135,6 @@ export const en = {
     "Retries delivery now with the current secret and a new timestamp, without waiting for the next scheduled retry.",
   "webhooks.drawer.editTitle": "Edit subscription",
   "webhooks.drawer.sub": "Changes apply to events that happen after you save.",
-  "webhooks.drawer.save": "Save",
   "webhooks.drawer.create": "Create subscription",
   "webhooks.drawer.cancel": "Cancel",
   "webhooks.field.targetUrlHint": "HTTPS only.",
@@ -11145,18 +11143,23 @@ export const en = {
   "webhooks.field.stateHint":
     "A paused subscription keeps its settings and receives nothing.",
   "webhooks.events.add": "Add events",
-  "webhooks.events.selected": "{count} of {total} selected",
-  "webhooks.events.groupCount": "{count} of {total}",
+  "webhooks.field.targetUrlPlaceholder": "https://example.test/hooks/margince",
+  "webhooks.headers.namePlaceholder": "X-Api-Key",
+  "webhooks.events.selected_one": "{count} of {total} selected",
+  "webhooks.events.selected_other": "{count} of {total} selected",
+  "webhooks.events.groupCount_one": "{count} of {total}",
+  "webhooks.events.groupCount_other": "{count} of {total}",
   "webhooks.events.appliesAtOnce": "Each tick applies at once.",
   "webhooks.drawer.saveSubscription": "Save subscription",
   "webhooks.events.helpLabel": "About event types",
   "webhooks.events.help":
     "Margince sends one delivery each time a chosen event happens. Add events opens the full list, grouped by record, with what each event carries.",
-  "webhooks.events.count": "{count} selected",
+  "webhooks.events.count_one": "{count} selected",
+  "webhooks.events.count_other": "{count} selected",
   "webhooks.events.none": "No events chosen yet.",
   "webhooks.events.clear": "Clear",
   "webhooks.events.done": "Done",
-  "webhooks.events.search": "Search events, e.g. stage or merged",
+  "webhooks.events.search": "Search events, for example stage or merged",
   "webhooks.events.noMatch": "No event type matches.",
   "webhooks.events.selectAll": "Select all",
   "webhooks.events.remove": "Remove {event}",
@@ -11167,7 +11170,7 @@ export const en = {
   "webhooks.events.fieldsFailed":
     "The fields could not be loaded. Close this and open it again.",
   "webhooks.events.visibility":
-    "Sent only for records the subscription's owner can see.",
+    "Sent only for records the subscription’s owner can see.",
   "webhooks.events.required": "Choose at least one event.",
   "webhooks.headers.title": "Custom headers",
   "webhooks.headers.hint":
@@ -11210,13 +11213,14 @@ export const en = {
   "webhooks.body.size": "Size: {size} bytes",
   "webhooks.body.previewEmpty": "Choose an event type to preview.",
   "webhooks.row.customBody": "Custom body",
-  "webhooks.row.headers": "Headers: {count}",
+  "webhooks.row.headers_one": "Header: {count}",
+  "webhooks.row.headers_other": "Headers: {count}",
   "webhooks.eventGroup.deals": "Deals",
   "webhooks.event.deal.created.label": "Deal created",
   "webhooks.event.deal.created.when": "A deal is opened.",
   "webhooks.event.deal.updated.label": "Deal details changed",
   "webhooks.event.deal.updated.when":
-    "A deal's fields change, other than its stage or owner.",
+    "A deal’s fields change, other than its stage or owner.",
   "webhooks.event.deal.stage_changed.label": "Deal moved to another stage",
   "webhooks.event.deal.stage_changed.when":
     "A deal moves to a new stage, won and lost included.",
@@ -11255,7 +11259,7 @@ export const en = {
   "webhooks.event.stage.created.when": "A stage is added to a pipeline.",
   "webhooks.event.stage.updated.label": "Stage changed",
   "webhooks.event.stage.updated.when":
-    "A stage's name, semantic or win probability changes.",
+    "A stage’s name, semantic or win probability changes.",
   "webhooks.event.stage.archived.label": "Stage removed",
   "webhooks.event.stage.archived.when": "A stage is removed from a pipeline.",
   "webhooks.eventGroup.contacts": "Contacts",
@@ -11264,7 +11268,7 @@ export const en = {
     "A contact is created by hand, from captured email, or by promoting a lead.",
   "webhooks.event.contact.updated.label": "Contact details changed",
   "webhooks.event.contact.updated.when":
-    "A contact's fields or relationships change.",
+    "A contact’s fields or relationships change.",
   "webhooks.event.contact.merged.label": "Contacts merged",
   "webhooks.event.contact.merged.when": "Two contacts are merged into one.",
   "webhooks.event.contact.archived.label": "Contact archived",
@@ -11273,13 +11277,13 @@ export const en = {
   "webhooks.event.contact.restored.when":
     "An archived contact is brought back.",
   "webhooks.event.conversation_claim.captured.label":
-    "Promise or request captured",
+    "Commitment or request captured",
   "webhooks.event.conversation_claim.captured.when":
     "Something a contact promised, asked or decided in a conversation is written to their record.",
   "webhooks.event.conversation_claim.changed.label":
-    "Captured promise corrected",
+    "Captured commitment corrected",
   "webhooks.event.conversation_claim.changed.when":
-    "Someone edits or dismisses a captured promise, request or decision.",
+    "Someone edits or dismisses a captured commitment, request or decision.",
   "webhooks.event.relationship_nudge.decided.label": "Lapsed contact set aside",
   "webhooks.event.relationship_nudge.decided.when":
     "A rep sets a lapsed contact aside on their Worklist, or puts them back.",
@@ -11289,7 +11293,7 @@ export const en = {
     "A company is created by hand, by a data import, from captured email or from a website read.",
   "webhooks.event.company.updated.label": "Company details changed",
   "webhooks.event.company.updated.when":
-    "A company's fields or relationships change, enrichment included.",
+    "A company’s fields or relationships change, enrichment included.",
   "webhooks.event.company.merged.label": "Companies merged",
   "webhooks.event.company.merged.when": "Two companies are merged into one.",
   "webhooks.event.company.archived.label": "Company archived",
@@ -11303,7 +11307,7 @@ export const en = {
     "A lead is created by hand, from capture, or by a data import.",
   "webhooks.event.lead.updated.label": "Lead details changed",
   "webhooks.event.lead.updated.when":
-    "A lead's fields change, custom fields included, or its routing is recomputed.",
+    "A lead’s fields change, custom fields included, or its routing is recomputed.",
   "webhooks.event.lead.disqualified.label": "Lead disqualified",
   "webhooks.event.lead.disqualified.when": "A lead is disqualified.",
   "webhooks.event.lead.promoted.label": "Lead promoted to contact",
@@ -11317,7 +11321,7 @@ export const en = {
     "Two leads judged to be one prospect are merged.",
   "webhooks.event.lead.sla_breached.label": "First response overdue",
   "webhooks.event.lead.sla_breached.when":
-    "A check finds a lead's first-response deadline passed with no answer.",
+    "A check finds a lead’s first-response deadline passed with no answer.",
   "webhooks.event.lead_source.changed.label": "Lead source list changed",
   "webhooks.event.lead_source.changed.when":
     "A lead source is added, edited or removed in Settings.",
@@ -11352,14 +11356,14 @@ export const en = {
   "webhooks.event.attachment.created.when": "A file is uploaded to a record.",
   "webhooks.event.attachment.updated.label": "File details changed",
   "webhooks.event.attachment.updated.when":
-    "A file's category, title, state, pinning or the file it replaces changes.",
+    "A file’s category, title, state, pinning or the file it replaces changes.",
   "webhooks.event.attachment.archived.label": "File archived",
   "webhooks.event.attachment.archived.when": "A file is archived off a record.",
   "webhooks.eventGroup.projects": "Projects",
   "webhooks.event.project.created.label": "Project created",
   "webhooks.event.project.created.when": "A project is opened on a company.",
   "webhooks.event.project.updated.label": "Project details changed",
-  "webhooks.event.project.updated.when": "A project's fields change.",
+  "webhooks.event.project.updated.when": "A project’s fields change.",
   "webhooks.event.project.phase_changed.label":
     "Project moved to another phase",
   "webhooks.event.project.phase_changed.when":
@@ -11371,7 +11375,7 @@ export const en = {
   "webhooks.event.contract.created.when":
     "An agreement is recorded against a company.",
   "webhooks.event.contract.updated.label": "Contract details changed",
-  "webhooks.event.contract.updated.when": "A contract's fields change.",
+  "webhooks.event.contract.updated.when": "A contract’s fields change.",
   "webhooks.event.contract.status_changed.label": "Contract status changed",
   "webhooks.event.contract.status_changed.when":
     "A member, or an approved proposal, sets a new status.",
@@ -11390,7 +11394,7 @@ export const en = {
     "Someone makes a Live List or a Shortlist.",
   "webhooks.event.list.updated.label": "List settings changed",
   "webhooks.event.list.updated.when":
-    "A list's name, purpose, filter, sharing, team or steward changes.",
+    "A list’s name, purpose, filter, sharing, team or steward changes.",
   "webhooks.event.list.archived.label": "List archived",
   "webhooks.event.list.archived.when": "A list is archived.",
   "webhooks.event.list.restored.label": "List restored",
@@ -11416,7 +11420,7 @@ export const en = {
   "webhooks.event.deal_room.resumed.label": "Deal room resumed",
   "webhooks.event.deal_room.resumed.when": "A paused room serves buyers again.",
   "webhooks.event.deal_room.closed.label": "Deal room closed",
-  "webhooks.event.deal_room.closed.when": "A room's content is frozen.",
+  "webhooks.event.deal_room.closed.when": "A room’s content is frozen.",
   "webhooks.event.deal_room.archived.label": "Deal room archived",
   "webhooks.event.deal_room.archived.when":
     "A room ends and buyer access is revoked.",
@@ -11425,17 +11429,17 @@ export const en = {
     "An outside contact is admitted to a deal room.",
   "webhooks.event.deal_room.participant_revoked.label": "Buyer access removed",
   "webhooks.event.deal_room.participant_revoked.when":
-    "An outside contact's access to a room is taken away.",
+    "An outside contact’s access to a room is taken away.",
   "webhooks.event.deal_room.participant_credential_reissued.label":
     "Buyer link reissued",
   "webhooks.event.deal_room.participant_credential_reissued.when":
-    "A participant's link is resent, or the address it went to is corrected.",
+    "A participant’s link is resent, or the address it went to is corrected.",
   "webhooks.event.deal_room.comment_posted.label": "Comment posted in a room",
   "webhooks.event.deal_room.comment_posted.when":
     "Someone on either side comments in a room thread.",
   "webhooks.event.deal_room.thread_resolved.label": "Room thread resolved",
   "webhooks.event.deal_room.thread_resolved.when":
-    "The seller's side closes a thread.",
+    "The seller’s side closes a thread.",
   "webhooks.event.deal_room.decision_recorded.label":
     "Buyer decision on a document",
   "webhooks.event.deal_room.decision_recorded.when":
@@ -11460,10 +11464,10 @@ export const en = {
   "webhooks.eventGroup.consent_privacy": "Consent and privacy",
   "webhooks.event.consent.changed.label": "Consent recorded",
   "webhooks.event.consent.changed.when":
-    "A contact's or lead's consent for a purpose is recorded.",
-  "webhooks.event.consent.suppressed.label": "Contact asked us to stop",
+    "A contact’s or lead’s consent for a purpose is recorded.",
+  "webhooks.event.consent.suppressed.label": "Contact opted out of messages",
   "webhooks.event.consent.suppressed.when":
-    "Someone records that we may not write to a contact.",
+    "Someone records that a contact must not be written to.",
   "webhooks.event.consent.suppression_lifted.label": "Stop lifted",
   "webhooks.event.consent.suppression_lifted.when":
     "Someone with the authority takes back one stop.",
@@ -11508,7 +11512,7 @@ export const en = {
     "A share link is closed before it expires.",
   "webhooks.event.weekly_plan.updated.label": "Weekly plan changed",
   "webhooks.event.weekly_plan.updated.when":
-    "A rep's weekly plan is opened, or a commitment is added, edited or settled.",
+    "A rep’s weekly plan is opened, or a commitment is added, edited or settled.",
   "webhooks.event.weekly_plan.help_requested.label":
     "Help asked on a commitment",
   "webhooks.event.weekly_plan.help_requested.when":
@@ -11536,12 +11540,12 @@ export const en = {
     "An administrator creates a set-password link to pass on outside Margince, where no outbound email is set up.",
   "webhooks.event.user.deactivated.label": "Member deactivated",
   "webhooks.event.user.deactivated.when":
-    "A member's sessions and agent passports are revoked.",
+    "A member’s sessions and agent passports are revoked.",
   "webhooks.event.user.reactivated.label": "Member reactivated",
   "webhooks.event.user.reactivated.when":
     "A deactivated member is brought back.",
   "webhooks.event.role.changed.label": "Member role changed",
-  "webhooks.event.role.changed.when": "A member's role is replaced.",
+  "webhooks.event.role.changed.when": "A member’s role is replaced.",
   "webhooks.event.team.changed.label": "Team changed",
   "webhooks.event.team.changed.when":
     "A team is created, renamed, archived or restored, or a member joins or leaves it.",
@@ -11549,7 +11553,7 @@ export const en = {
   "webhooks.event.passport.revoked.when": "An agent passport is revoked.",
   "webhooks.event.onboarding.state_changed.label": "Onboarding step reached",
   "webhooks.event.onboarding.state_changed.when":
-    "A user's setup wizard is started or moves to the next step.",
+    "A user’s setup wizard is started or moves to the next step.",
   "webhooks.eventGroup.member_settings_linkedin":
     "Member settings and LinkedIn",
   "webhooks.event.user_display_name.changed.label": "Display name changed",
@@ -11557,7 +11561,7 @@ export const en = {
     "A member changes the name colleagues see.",
   "webhooks.event.user_greeting_name.changed.label": "Greeting name changed",
   "webhooks.event.user_greeting_name.changed.when":
-    "A member's greeting name is saved, or filled at their first provider sign-in.",
+    "A member’s greeting name is saved, or filled at their first provider sign-in.",
   "webhooks.event.user_locale.changed.label": "Interface language changed",
   "webhooks.event.user_locale.changed.when":
     "A member chooses the language of their own interface.",
@@ -11594,7 +11598,7 @@ export const en = {
   "webhooks.event.voice.draft_outcome_recorded.label":
     "Voice draft outcome recorded",
   "webhooks.event.voice.draft_outcome_recorded.when":
-    "The outcome of a draft written in the member's voice is recorded.",
+    "The outcome of a draft written in the member’s voice is recorded.",
   "webhooks.eventGroup.approvals_audit": "Approvals and audit",
   "webhooks.event.approval.requested.label": "Approval requested",
   "webhooks.event.approval.requested.when":

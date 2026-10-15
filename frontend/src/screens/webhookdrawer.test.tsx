@@ -17,9 +17,9 @@ import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
-// The subscription drawer: what a create and an edit put on the wire, how the
-// event picker and the header rows read, and the template preview, all driven
-// through the card the way an operator reaches them.
+// The subscription drawer, driven through the card the way an operator reaches
+// it. The tests pin what a create and an edit send, how the picker and header
+// rows read, and the template preview.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -251,13 +251,86 @@ describe("the webhook subscription drawer", () => {
     );
     const patch = calls.find((c) => c.method === "PATCH");
     expect(patch?.ifMatch).toBe("3");
+    // The headers were left alone, so the edit names none and the server keeps them.
     expect(patch?.body).toEqual({
       state: "paused",
       event_types: ["deal.stage_changed"],
-      custom_headers: [{ name: "X-Api-Key" }],
       body_template: null,
       body_content_type: null,
     });
+  });
+
+  it("sends a replaced value, keeps an abandoned Replace, and drops a removed header", async () => {
+    const user = userEvent.setup();
+    const calls = backend([
+      {
+        ...SUBSCRIPTION,
+        custom_headers: [
+          { name: "X-Api-Key", configured: true },
+          { name: "X-Tenant", configured: true },
+          { name: "X-Old", configured: true },
+        ],
+      },
+    ]);
+    render(<WebhooksCard />);
+
+    await user.click(await screen.findByTestId("edit-webhook-subscription"));
+    const replaces = screen.getAllByRole("button", {
+      name: en["webhooks.headers.replace"],
+    });
+    await user.click(replaces[0]);
+    await user.type(
+      screen.getByLabelText(en["webhooks.headers.value"]),
+      "new-key-not-real",
+    );
+    await user.click(replaces[1]);
+    await user.click(
+      screen.getByRole("button", { name: "Remove header X-Old" }),
+    );
+    await user.click(screen.getByTestId("save-webhook-subscription"));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "PATCH")).toBe(true),
+    );
+    expect(
+      (
+        calls.find((c) => c.method === "PATCH")?.body as {
+          custom_headers: unknown;
+        }
+      ).custom_headers,
+    ).toEqual([
+      { name: "X-Api-Key", value: "new-key-not-real" },
+      { name: "X-Tenant" },
+    ]);
+  });
+
+  it("says a refusal on a field the drawer has no place for at its foot", async () => {
+    const user = userEvent.setup();
+    backend([SUBSCRIPTION], (call) =>
+      call.method === "PATCH"
+        ? jsonResponse(
+            {
+              title: "Unprocessable Entity",
+              code: "validation_error",
+              details: {
+                errors: [
+                  {
+                    field: "state",
+                    code: "invalid",
+                    message: "must be active or paused",
+                  },
+                ],
+              },
+            },
+            422,
+          )
+        : undefined,
+    );
+    render(<WebhooksCard />);
+
+    await user.click(await screen.findByTestId("edit-webhook-subscription"));
+    await user.click(screen.getByTestId("save-webhook-subscription"));
+    expect(await screen.findByText("must be active or paused")).toBeTruthy();
   });
 
   it("shows the server's refusal at the field it names", async () => {

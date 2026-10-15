@@ -157,6 +157,9 @@ func TestAReplacedHeaderReachesTheRetryAndAKeptOneStays(t *testing.T) {
 	if we.auditMentions(t, "new-key") || we.auditMentions(t, "old-key") {
 		t.Error("the audit log carries a header value")
 	}
+	if !we.auditMentions(t, "custom_headers_replaced") {
+		t.Error("the audit log does not say which header value was replaced")
+	}
 }
 
 func TestInputThatCouldMisdirectADeliveryIsRefused(t *testing.T) {
@@ -268,4 +271,27 @@ func TestPreviewRendersASampleOfTheEventWithTheDeliveryEngine(t *testing.T) {
 	if count != 0 {
 		t.Errorf("a preview stored %d deliveries", count)
 	}
+}
+
+func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
+	we := setupWebhooks(t)
+	rcv := newReceiver(t, http.StatusOK)
+	now := clocktest.Now(t)
+	deliverer := newTestDeliverer(we, &now, rcv.server.Client())
+	sub, _ := we.createShaped(t, integration.AnyMap{
+		"target_url": rcv.server.URL + "/hook", "event_types": []string{"activity.captured"},
+		"body_template": "{{ data.absent }}", "body_content_type": "text/plain",
+	})
+	// A real record, so the replay's visibility check finds its subject.
+	if err := deliverer.HandleEvent(context.Background(), activityEnvelope(we.wsID, we.seedOpenActivity(t))); err != nil {
+		t.Fatal(err)
+	}
+	assertDeliveryStatus(t, we, sub.ID, "delivered", 1)
+	path := fmt.Sprintf("/v1/webhook-subscriptions/%s/deliveries/%s/replay", sub.ID, we.deliveryID(t, sub.ID))
+	if status := we.Call(t, "POST", path, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("replaying a delivered empty body → %d, want 200", status)
+	}
+	// The API's replay dials through the production client, which refuses this
+	// loopback receiver, so the replay shows as a fresh attempt that failed.
+	assertDeliveryStatus(t, we, sub.ID, "retrying", 1)
 }

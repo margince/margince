@@ -236,10 +236,6 @@
   margin-inline-start: auto;
 }
 
-.webhook-sealed-dots {
-  letter-spacing: 0.1em;
-}
-
 .webhook-insert-panel {
   max-height: 320px;
   overflow: auto;

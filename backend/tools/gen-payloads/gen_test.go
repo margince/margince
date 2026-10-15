@@ -211,3 +211,16 @@ func TestEveryEventSchemaGetsASampleBuiltFromItsProperties(t *testing.T) {
 		t.Fatalf("generated source lacks the expected sample:\n%s", src)
 	}
 }
+
+func TestTwoSchemasForOneEventTypeAreRefused(t *testing.T) {
+	spec := sampleFixtureSpec + `    PublicEventS2:
+      type: object
+      x-event-type: s.happened
+      x-entity-type: widget
+      properties:
+        other: { type: string }
+`
+	if _, err := generateSource([]byte(spec), "testpkg", "", "Samples"); err == nil || !strings.Contains(err.Error(), "two schemas declare") {
+		t.Fatal("a second schema for one event type must fail the generator, not overwrite its sample")
+	}
+}

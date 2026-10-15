@@ -29822,7 +29822,7 @@ components:
         target URL that receives signed HTTP POSTs for a chosen subset of the published
         event catalog. The signing secret is NEVER returned here — it is surfaced once,
         at create/rotate, in `WebhookSubscriptionCreated`.
-      required: [id, owner_id, target_url, event_types, state, version]
+      required: [id, owner_id, target_url, event_types, state, custom_headers, version]
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }

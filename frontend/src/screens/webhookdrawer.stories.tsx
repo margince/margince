@@ -8,9 +8,9 @@ import {
 } from "../testing/story-utils";
 import { WebhooksCard } from "./webhooks";
 
-// The subscription drawer, opened from the card the way an operator opens it:
-// a new subscription, an edit carrying sealed headers and a custom template,
-// the event picker, and the server's refusal shown at its field.
+// The subscription drawer, opened from the card the way an operator opens it.
+// The stories cover a new subscription, an edit with sealed headers and a
+// custom template, the event picker, and a refusal shown at its field.
 
 const shaped = {
   id: "sub-shaped",
@@ -69,7 +69,7 @@ function cardStory(extra?: Record<string, () => Response>) {
 }
 
 const meta: Meta<typeof WebhooksCard> = {
-  title: "Settings/Data/Integrations/Webhooks/Subscription drawer",
+  title: "Settings/Data/Integrations/Webhook subscription drawer",
   component: WebhooksCard,
 };
 export default meta;

@@ -1,10 +1,11 @@
 import { Info, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button, Checkbox, SearchField } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Popover } from "../design-system/popover";
 import { TokenList } from "../design-system/tokeninput";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import {
   eventGroupLabelKey,
   eventLabelKey,
@@ -97,6 +98,7 @@ function PickerPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [query, setQuery] = useState("");
   const chosen = new Set(value);
   const toggle = (types: readonly string[], on: boolean) => {
@@ -131,7 +133,7 @@ function PickerPanel({
       />
       <div className="webhook-picker-count">
         <span className="t-caption">
-          {t("webhooks.events.selected", {
+          {plural("webhooks.events.selected", value.length, {
             count: formatNumber(value.length, locale),
             total: formatNumber(TOTAL_EVENTS, locale),
           })}
@@ -154,13 +156,17 @@ function PickerPanel({
                 <span className="webhook-picker-group-name">
                   <span className="t-label">{group.label}</span>
                   <span className="t-caption">
-                    {t("webhooks.events.groupCount", {
-                      count: formatNumber(
-                        group.all.filter((type) => chosen.has(type)).length,
-                        locale,
-                      ),
-                      total: formatNumber(group.all.length, locale),
-                    })}
+                    {plural(
+                      "webhooks.events.groupCount",
+                      group.all.filter((type) => chosen.has(type)).length,
+                      {
+                        count: formatNumber(
+                          group.all.filter((type) => chosen.has(type)).length,
+                          locale,
+                        ),
+                        total: formatNumber(group.all.length, locale),
+                      },
+                    )}
                   </span>
                 </span>
                 <Button
@@ -223,6 +229,7 @@ export function WebhookEventPicker({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [open, setOpen] = useState(false);
   return (
     <div className="webhook-events">
@@ -246,7 +253,7 @@ export function WebhookEventPicker({
         {value.length > 0 && (
           <span className="webhook-events-count">
             <span className="t-caption">
-              {t("webhooks.events.count", {
+              {plural("webhooks.events.count", value.length, {
                 count: formatNumber(value.length, locale),
               })}
             </span>
@@ -293,11 +300,7 @@ export function WebhookEventPicker({
           />
         </Popover>
       </div>
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorLine>{error}</ErrorLine>}
       <p className="t-caption">{t("webhooks.events.visibility")}</p>
     </div>
   );

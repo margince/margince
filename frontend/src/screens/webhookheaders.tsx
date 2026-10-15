@@ -1,5 +1,7 @@
 import { Info, KeyRound, Lock, Plus, Trash2 } from "lucide-react";
+import { useId } from "react";
 import { Button, TextInput } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { Popover } from "../design-system/popover";
@@ -33,14 +35,34 @@ export function headerRowsFrom(names: readonly string[]): HeaderRow[] {
 
 // The PATCH and POST shape: a row with no new value names only its header,
 // which the server reads as "keep the stored value".
+// A stored row whose Replace was opened but left empty still keeps its value.
+function keepsStoredValue(row: HeaderRow): boolean {
+  return row.stored && (row.value === null || row.value === "");
+}
+
 export function headerInputsOf(rows: readonly HeaderRow[]): HeaderInput[] {
   return rows
     .filter((row) => row.name.trim() !== "")
     .map((row) =>
-      row.value === null
+      keepsStoredValue(row) || row.value === null
         ? { name: row.name.trim() }
         : { name: row.name.trim(), value: row.value },
     );
+}
+
+// Whether the rows say anything the stored set does not. An edit that leaves
+// the headers alone sends none, and the server keeps them as they are.
+export function headersChanged(
+  rows: readonly HeaderRow[],
+  storedNames: readonly string[],
+): boolean {
+  const named = rows.filter((row) => row.name.trim() !== "");
+  return (
+    named.length !== storedNames.length ||
+    named.some(
+      (row, i) => !keepsStoredValue(row) || row.name !== storedNames[i],
+    )
+  );
 }
 
 export function WebhookHeaderRows({
@@ -53,6 +75,7 @@ export function WebhookHeaderRows({
   error?: string;
 }>) {
   const t = useT();
+  const titleId = useId();
   const update = (key: string, patch: Partial<HeaderRow>) =>
     onChange(rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   const add = (name: string, value: string) =>
@@ -61,13 +84,10 @@ export function WebhookHeaderRows({
     (row) => row.name.trim().toLowerCase() === "authorization",
   );
   return (
-    <section
-      className="webhook-section"
-      aria-labelledby="webhook-headers-title"
-    >
+    <section className="webhook-section" aria-labelledby={titleId}>
       <div className="webhook-section-head">
         <span className="webhook-section-title">
-          <Heading size="small" id="webhook-headers-title">
+          <Heading size="small" id={titleId}>
             {t("webhooks.headers.title")}
           </Heading>
           <Popover
@@ -106,7 +126,7 @@ export function WebhookHeaderRows({
                 aria-label={t("webhooks.headers.name")}
                 value={row.name}
                 readOnly={row.stored}
-                placeholder="X-Api-Key"
+                placeholder={t("webhooks.headers.namePlaceholder")}
                 onChange={(event) =>
                   update(row.key, { name: event.target.value })
                 }
@@ -144,11 +164,7 @@ export function WebhookHeaderRows({
           ))}
         </ul>
       )}
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorLine>{error}</ErrorLine>}
     </section>
   );
 }

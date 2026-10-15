@@ -49279,7 +49279,7 @@ type WebhookSubscription struct {
 	CreatedAt    *time.Time `json:"created_at,omitempty"`
 
 	// CustomHeaders The headers sent with every delivery, by name. A value is sealed when saved and never returned, not even in part.
-	CustomHeaders *[]WebhookCustomHeader `json:"custom_headers,omitempty"`
+	CustomHeaders []WebhookCustomHeader `json:"custom_headers"`
 
 	// EventTypes The subscribed event types, each from the published event catalog.
 	EventTypes []string                 `json:"event_types"`

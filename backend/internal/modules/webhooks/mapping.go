@@ -30,12 +30,12 @@ func wireSubscription(s Subscription) crmcontracts.WebhookSubscription {
 	}
 }
 
-func wireHeaders(names []string) *[]crmcontracts.WebhookCustomHeader {
+func wireHeaders(names []string) []crmcontracts.WebhookCustomHeader {
 	out := make([]crmcontracts.WebhookCustomHeader, len(names))
 	for i, n := range names {
 		out[i] = crmcontracts.WebhookCustomHeader{Name: n, Configured: true}
 	}
-	return &out
+	return out
 }
 
 func wireContentType(ct *string) *crmcontracts.WebhookBodyContentType {

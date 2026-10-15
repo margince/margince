@@ -6,7 +6,7 @@ export type SubscribableEventType =
 
 // The subscribable catalog grouped by the record each event is about, in the
 // order a reader looks for them. webhookevents.test.ts holds that every
-// subscribable type sits in exactly one group.
+// subscribable type sits in one group and no other.
 export type WebhookEventGroup = Readonly<{
   key: string;
   types: readonly SubscribableEventType[];
