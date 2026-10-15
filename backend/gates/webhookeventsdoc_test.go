@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//go:build !integration
+
 package gates
 
 import (
@@ -232,7 +234,12 @@ func versionOf(s eventSchema) int {
 	return s.Version
 }
 
-func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
+// oneLine flattens a contract description for a table cell; the contract's
+// em dashes become commas, as the docs prose bar asks.
+func oneLine(s string) string {
+	flat := strings.Join(strings.Fields(s), " ")
+	return strings.ReplaceAll(strings.ReplaceAll(flat, " — ", ", "), "—", ", ")
+}
 
 // anchor is the heading id a renderer gives "### `deal.stage_changed`".
 func anchor(eventType string) string {

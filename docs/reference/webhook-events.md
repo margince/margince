@@ -19,7 +19,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 |---|---|---|---|
 | `actor` | PublicEventActor | yes |  |
 | `correlation_id` | string (uuid) | yes | Correlates all events emitted for one originating request. |
-| `data` | object | yes | The typed event payload (one of the PublicEvent* schemas), carried as raw JSON so it is delivered byte-for-byte — large int64 fields (e.g. amount_minor_at_change) are never round-tripped through a float64 that would lose precision. |
+| `data` | object | yes | The typed event payload (one of the PublicEvent* schemas), carried as raw JSON so it is delivered byte-for-byte, large int64 fields (e.g. amount_minor_at_change) are never round-tripped through a float64 that would lose precision. |
 | `entity` | PublicEventEntityRef | yes |  |
 | `event_id` | string (uuid) | yes | Unique id of this event occurrence. |
 | `occurred_at` | string (date-time) | yes | When the event occurred (RFC 3339). |
@@ -180,7 +180,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 
 Record: `activity` · version 1
 
-Payload for activity.archived — an activity was archived. Carries no data.
+Payload for activity.archived, an activity was archived. Carries no data.
 
 `data` is an empty object.
 
@@ -188,12 +188,12 @@ Payload for activity.archived — an activity was archived. Carries no data.
 
 Record: `activity` · version 1
 
-Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system.
+Payload for activity.captured, the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.channel_provider` | string | no | Which transport carried the message — present exactly when kind is `message`, absent otherwise. Without this field a consumer could no longer tell a Telegram message from any other, which the pre-ADR-0107 `kind` told them for free; the envelope is additionalProperties:false, so it has to be named here to be sayable at all. |
-| `data.kind` | string | yes | The activity kind (email \| call \| meeting \| note \| task \| message). Decoded by automation/handlers_event.go's post_meeting_recap trigger — this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. |
+| `data.channel_provider` | string | no | Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. |
+| `data.kind` | string | yes | The activity kind (email \| call \| meeting \| note \| task \| message). Decoded by automation/handlers_event.go's post_meeting_recap trigger, this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. |
 | `data.source_system` | string | no | The originating source system (capture ingestion only; absent on a direct log). |
 
 ### `activity.disposition_recorded`
@@ -221,7 +221,7 @@ Payload for activity.marked_handled. One reader marked an activity on their Work
 
 Record: `activity` · version 1
 
-Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
+Payload for activity.updated, a bounded delta. The contact, company, deal and lead events carry an open patch instead. UpdateActivity and RelinkActivity together cover a fixed, known set of inner keys. So changed_fields is a typed struct here, not an open map.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -231,17 +231,17 @@ Payload for activity.updated — a BOUNDED delta (unlike the contact/company/dea
 
 Record: `approval` · version 1
 
-Payload for approval.decided — a staged approval reached a verdict (approvals/decide.go, approvals/expiresweep.go). kind, verdict and edited_change are decoded BY NAME outside this module — automation's run consumer matches BOTH verdict and kind (automation/engine_blocked.go), the Surface-B runner's resume consumer reads edited_change (compose/runnerservice.go) — see the JSON-tag regression tests in internal/modules/webhooks. edited/diff_hash/edited_change are present only on the ADR-0036 §4 modify-then-approve arm, where the human's edited payload replaced the staged change under a freshly computed diff_hash.
+Payload for approval.decided. A staged approval reached a verdict (approvals/decide.go, approvals/expiresweep.go). The kind, verdict and edited_change fields are decoded by name outside this module. Automation's run consumer matches both verdict and kind (automation/engine_blocked.go). The Surface-B runner's resume consumer reads edited_change (compose/runnerservice.go). The JSON-tag regression tests in internal/modules/webhooks cover these names. The edited, diff_hash and edited_change fields are present only on the ADR-0036 modify-then-approve arm. There the human's edited payload replaced the staged change under a freshly computed diff_hash.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.decided_by` | string (uuid) | no | The deciding human's user id. ABSENT on the `expired` verdict, and that absence is the payload's own statement that nobody decided this — a zero or placeholder id here would put a phantom user's name on a refusal no contact made. |
-| `data.decided_by_system` | boolean | no | True when the product applied this itself under a governing policy rather than putting it to a contact. It is NOT the complement of `decided_by`: the `expired` verdict also carries no decider, and those two are opposite facts — one is the product acting, the other is nobody acting. A consumer measuring whether contacts agree with what is proposed must exclude an automatic apply from its denominator, because the autopilot agreeing with itself is not evidence that anyone agreed. |
+| `data.decided_by` | string (uuid) | no | The deciding human's user id. ABSENT on the `expired` verdict, and that absence is the payload's own statement that nobody decided this, a zero or placeholder id here would put a phantom user's name on a refusal no contact made. |
+| `data.decided_by_system` | boolean | no | True when the product applied this itself under a governing policy rather than putting it to a contact. It is not the complement of `decided_by`. The `expired` verdict also carries no decider, and those two are opposite facts. One is the product acting; the other is nobody acting. A consumer measuring whether contacts agree with proposals must exclude an automatic apply from its denominator. The autopilot agreeing with itself is no evidence that anyone agreed. |
 | `data.diff_hash` | string | no | The edited change's freshly computed diff_hash (present only on the modify-then-approve arm). |
 | `data.edited` | boolean | no | True when the human edited the proposed change before approving (present only on the modify-then-approve arm). |
-| `data.edited_change` | object | no | The human's edited version of the proposed change (present only on the modify-then-approve arm) — an OPEN object: its shape is whatever the staged kind's proposed_change carries, so it stays a raw map rather than a narrowly typed struct (the runner's resume consumer decodes it as json.RawMessage off the wire; a fixed struct here would drop fields a future staging kind adds). |
+| `data.edited_change` | object | no | The human's edited version of the proposed change (present only on the modify-then-approve arm). It is an open object: its shape is whatever the staged kind's proposed_change carries. So it stays a raw map rather than a narrowly typed struct. The runner's resume consumer decodes it as json.RawMessage off the wire. A fixed struct here would drop fields a future staging kind adds. |
 | `data.kind` | string | yes | The decided staging's kind. |
-| `data.verdict` | string: `approved`, `rejected`, `expired` | yes | The decision outcome. `expired` is the window closing on a staging nobody answered (APPR-PARAM-1's "unactioned means rejected"): it is a real verdict written by the expiry sweep, not a rendering, and it is the one verdict with no deciding human — consumers that treat a refusal as a refusal must handle it alongside `rejected`. |
+| `data.verdict` | string: `approved`, `rejected`, `expired` | yes | The decision outcome. The `expired` verdict is the window closing on a staging nobody answered (APPR-PARAM-1's "unactioned means rejected"). It is a real verdict written by the expiry sweep, not a rendering. It is the one verdict with no deciding human. Consumers that treat a refusal as a refusal must handle it alongside `rejected`. |
 
 ### `approval.failure_acknowledged`
 
@@ -258,7 +258,7 @@ Payload for approval.failure_acknowledged: the human who approved a decision has
 
 Record: `approval` · version 1
 
-Payload for approval.requested — an agent's 🟡 call was staged pending a human decision (ADR-0036, approvals/staging.go's StageInTx). The staged approval row's own id is the event's entity ref; this payload names what was staged, its polymorphic target, and when the staging lapses into expired if undecided.
+Payload for approval.requested, an agent's 🟡 call was staged pending a human decision (ADR-0036, approvals/staging.go's StageInTx). The staged approval row's own id is the event's entity ref; this payload names what was staged, its polymorphic target, and when the staging lapses into expired if undecided.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -311,7 +311,7 @@ Payload for attachment.updated. A file's metadata was edited: its category, titl
 
 Record: `audit` · version 1
 
-Payload for audit.appended — not currently delivered: there is no emit site for this type, and none is planned for V1. It exists so the §5 catalog (events.Types()) is completely covered by a payload schema (the whole-catalog coverage gate), never carrying a subscribable type with no contract. An empty payload by design — the audit ledger row it would announce is workspace-level (its subject is resolved back under the receiver's own scope), so no record detail rides the event.
+Payload for audit.appended, not currently delivered: there is no emit site for this type, and none is planned for V1. It exists so the §5 catalog (events.Types()) is completely covered by a payload schema (the whole-catalog coverage gate), never carrying a subscribable type with no contract. An empty payload by design, the audit ledger row it would announce is workspace-level (its subject is resolved back under the receiver's own scope), so no record detail rides the event.
 
 `data` is an empty object.
 
@@ -319,7 +319,7 @@ Payload for audit.appended — not currently delivered: there is no emit site fo
 
 Record: `approval` · version 1
 
-Payload for coldstart.accepted — a human accepted a staged cold-start read-back (approvals/decide.go's kind-decided echo, emitted on the same audit row as approval.decided).
+Payload for coldstart.accepted, a human accepted a staged cold-start read-back (approvals/decide.go's kind-decided echo, emitted on the same audit row as approval.decided).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -330,7 +330,7 @@ Payload for coldstart.accepted — a human accepted a staged cold-start read-bac
 
 Record: `approval` · version 1
 
-Payload for coldstart.read_back_proposed — a cold-start read-back was staged as a "coldstart" approval (compose/coldstart.go's stage, carried through approvals/staging.go's Announce alongside approval.requested on the same audit row). Carries only the read-back's shape, never the extracted field values or the pasted source text/statement — tenant data never rides an announced event.
+Payload for coldstart.read_back_proposed, a cold-start read-back was staged as a "coldstart" approval (compose/coldstart.go's stage, carried through approvals/staging.go's Announce alongside approval.requested on the same audit row). Carries only the read-back's shape, never the extracted field values or the pasted source text/statement, tenant data never rides an announced event.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -342,7 +342,7 @@ Payload for coldstart.read_back_proposed — a cold-start read-back was staged a
 
 Record: `approval` · version 1
 
-Payload for coldstart.rejected — a human rejected a staged cold-start read-back (approvals/decide.go's kind-decided echo, emitted on the same audit row as approval.decided).
+Payload for coldstart.rejected, a human rejected a staged cold-start read-back (approvals/decide.go's kind-decided echo, emitted on the same audit row as approval.decided).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -353,7 +353,7 @@ Payload for coldstart.rejected — a human rejected a staged cold-start read-bac
 
 Record: `commission` · version 1
 
-Payload for commission.accrued — a won deal earned its partner a commission.
+Payload for commission.accrued, a won deal earned its partner a commission.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -367,7 +367,7 @@ Payload for commission.accrued — a won deal earned its partner a commission.
 
 Record: `commission` · version 1
 
-Payload for commission.decided — an entry was approved, paid, or voided.
+Payload for commission.decided, an entry was approved, paid, or voided.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -380,19 +380,19 @@ Payload for commission.decided — an entry was approved, paid, or voided.
 
 Record: `activity` · version 1
 
-Payload for comms.delivery_bounced — the receiving mail system returned a sent message (comms/store.go's RecordBounce). The entity is the sent message's timeline activity. kind separates the two facts a consumer can act on: `hard` — the address does not accept mail and retrying is sending to nobody; `soft` — a temporary refusal (full mailbox, greylisting) that says nothing durable about the address.
+Payload for comms.delivery_bounced. The receiving mail system returned a sent message (comms/store.go's RecordBounce). The entity is the sent message's timeline activity. The kind separates the two facts a consumer can act on. A `hard` bounce means the address does not accept mail, and retrying sends to nobody. A `soft` bounce is a temporary refusal, such as a full mailbox or greylisting, and says nothing lasting about the address.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.kind` | string: `hard`, `soft` | yes | Whether the refusal is durable (`hard`) or temporary (`soft`). |
-| `data.message_id` | string | yes | The bounced message's own RFC 5322 Message-ID — the identity the delivery report named, and the key the outbound record was matched on. |
+| `data.message_id` | string | yes | The bounced message's own RFC 5322 Message-ID, the identity the delivery report named, and the key the outbound record was matched on. |
 | `data.reason` | string | no | The delivery report's stated reason, bounded and safe to show an operator; empty when the report carried none. |
 
 ### `company.archived`
 
 Record: `company` · version 1
 
-Payload for company.archived — a company was archived. Carries no data.
+Payload for company.archived, a company was archived. Carries no data.
 
 `data` is an empty object.
 
@@ -400,7 +400,7 @@ Payload for company.archived — a company was archived. Carries no data.
 
 Record: `company` · version 1
 
-Payload for company.created — a UNION across five emit sites (a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply), each of which sets only its own subset; every field is therefore optional.
+Payload for company.created, a union across five emit sites. They are a direct create, the capture auto-create engine, the anchor company save, the site-read confirmation, and the cold-start profile apply. Each sets only its own subset, so every field is optional.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -417,7 +417,7 @@ Payload for company.created — a UNION across five emit sites (a direct create,
 
 Record: `company` · version 1
 
-Payload for company.merged — two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
+Payload for company.merged, two company records collapsed into one (the §1.3 merge); neither company.updated nor company.archived can say this, so it is its own verb.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -428,7 +428,7 @@ Payload for company.merged — two company records collapsed into one (the §1.3
 
 Record: `company` · version 1
 
-Payload for company.restored — an archived company was brought back, with the domains, relationship types, partner programme, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
+Payload for company.restored, an archived company was brought back, with the domains, relationship types, partner programme, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 
 `data` is an empty object.
 
@@ -436,7 +436,7 @@ Payload for company.restored — an archived company was brought back, with the 
 
 Record: `company` · version 1
 
-Payload for company.updated — an OPEN envelope: eight emit sites carry divergent shapes (a flat column patch, the anchor company save's field delta, the partner extension's nested delta, enrichment/deep-read applies, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
+Payload for company.updated, an open envelope. Eight emit sites carry different shapes. They include a flat column patch, the anchor company save's field delta and the partner extension's nested delta. Others are enrichment and deep-read applies, and a relationship delta. So the payload is a change-set map rather than a fixed field list.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -446,7 +446,7 @@ Payload for company.updated — an OPEN envelope: eight emit sites carry diverge
 
 Record: `dynamic` · version 1
 
-Payload for consent.changed — a subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a contact XOR a lead (data-model §7, before promotion) — a RUNTIME choice Record resolves via consentSubject, not a fixed type this schema can name, so this is the first dynamic-entity event (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
+Payload for consent.changed. A subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a contact or a lead, never both (a lead before promotion). Record resolves that choice at runtime via consentSubject, so this schema cannot name a fixed type. This makes it the first dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -458,7 +458,7 @@ Payload for consent.changed — a subject's per-purpose consent state was record
 
 Record: `contact` · version 1
 
-Payload for consent.override_lifted — somebody with the authority to do so took back ONE standing override (consent/override.go's RevokeOverride). That is not the same as "the refusal now applies again for every category" — a contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event. ONE PER ROW TAKEN BACK, and the entity says which. A merge COPIES a vouch onto the survivor under a new id and announces the copy with its own consent.override_recorded on the survivor's stream; revoking the original takes back every copy, and each gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it is holding rather than about one it was never given. It carries BOTH levels: the one the override was recorded at and the one that revoked it, the same pairing consent.suppression_lifted carries and for the same reason — an auditor needs to see that the second was allowed to take back the first without joining a row that no longer says so. Allowed, not outranked: a vouch is the one decision an admin may take back from a peer admin, because admin is the top human authority and nothing higher exists to reach an admin-recorded override. It never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail; the reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to.
+Payload for consent.override_lifted. Somebody with the authority to do so took back a single standing override (consent/override.go's RevokeOverride). That does not mean the refusal now applies again for every category. A contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event. One event is emitted per row taken back, and the entity says which. A merge copies a vouch onto the survivor under a new id. It announces the copy with its own consent.override_recorded on the survivor's stream. Revoking the original takes back every copy. Each copy gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it holds rather than one it was never given. The event carries both levels: the one the override was recorded at and the one that revoked it. This is the same pairing consent.suppression_lifted carries, for the same reason. An auditor needs to see that the second was allowed to take back the first, without joining a row that no longer says so. The revoking level needs permission to take back the first, and need not outrank it. A vouch is the one decision an admin may take back from a peer admin. Admin is the top human authority, and nothing higher exists to reach an admin-recorded override. The event never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail. The reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -470,19 +470,19 @@ Payload for consent.override_lifted — somebody with the authority to do so too
 
 Record: `contact` · version 1
 
-Payload for consent.override_recorded — a rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). Its own event rather than a consent.changed: an override is not consent and not a lawful basis, it outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification. It names WHAT category was vouched for and at WHICH authority, never the reason the rep gave: that explanation belongs to the audit trail a rep reviewing the contact reads, not to every subscriber the event reaches.
+Payload for consent.override_recorded. A rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). It is its own event rather than a consent.changed. An override is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what category was vouched for and at which authority. It never names the reason the rep gave. That explanation belongs to the audit trail a rep reviewing the contact reads, and not to every subscriber the event reaches.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.category` | string | yes | Which category of send this vouch covers. The engine resolves every send to exactly one category, and the override applies to that one only. |
-| `data.decided_by_level` | string | yes | Whose decision it is (user \| admin) — always the recording seat's own authority, never a value the request body could name. |
-| `data.override_id` | string (uuid) | yes | Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes. |
+| `data.category` | string | yes | Which category of send this vouch covers. The engine resolves every send to a single category, and the override applies to that one only. |
+| `data.decided_by_level` | string | yes | Whose decision it is (user \| admin), always the recording seat's own authority, never a value the request body could name. |
+| `data.override_id` | string (uuid) | yes | Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes. |
 
 ### `consent.suppressed`
 
 Record: `contact` · version 1
 
-Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop. The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification. It names WHAT was recorded and at WHICH authority, never the reason the subject gave: that is their words about themselves, and an event fans out further than the record it describes.
+Payload for consent.suppressed. Somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). It is its own event rather than a consent.changed, because a suppression differs from absent consent. It outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what was recorded and at which authority. It never names the reason the subject gave. Those are their words about themselves, and an event fans out further than the record it describes.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -493,7 +493,7 @@ Payload for consent.suppressed — somebody recorded that we may not write to a 
 
 Record: `contact` · version 1
 
-Payload for consent.suppression_lifted — somebody with the authority to do so took back ONE stop. That is not the same as "mail may resume", and a consumer must not read it that way. A contact can carry several stops at once — their own objection and a rep's separate note — and lifting one says nothing about the others. `remaining_suppressions` is the field that answers the question a consumer actually has, and `still_suppressed` is that answer stated plainly: true means this contact is STILL not writable, however many stops were just taken back. Margince itself never relied on this event to decide a send — the engine re-reads the strongest live stop inside the sending transaction — so these fields exist for the readers outside it. It carries BOTH levels: the one the stop was recorded at and the one that lifted it. A reader auditing this later needs to see that the second outranked the first, and a single "lifted_by" would leave that unanswerable without joining the row that no longer says it. It never carries the reason either party gave. Those words belong to the contacts who wrote them, and an event reaches readers the explanation was not given to.
+Payload for consent.suppression_lifted. Somebody with the authority to do so took back a single stop. That does not mean mail may resume, and a consumer must not read it that way. A contact can carry several stops at once, such as their own objection and a rep's separate note. Lifting one says nothing about the others. The `remaining_suppressions` field answers the question a consumer has. The `still_suppressed` field states that answer plainly. True means this contact is still not writable, however many stops were just taken back. Margince never relied on this event to decide a send. The engine re-reads the strongest live stop inside the sending transaction. So these fields exist for readers outside it. The event carries both levels: the one the stop was recorded at and the one that lifted it. A reader auditing this later needs to see that the second outranked the first. A single "lifted_by" would leave that unanswerable without joining a row that no longer says it. The event never carries the reason either party gave. Those words belong to the contacts who wrote them, and an event reaches readers they were not given to.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -507,7 +507,7 @@ Payload for consent.suppression_lifted — somebody with the authority to do so 
 
 Record: `contact` · version 1
 
-Payload for contact.archived — a contact was archived. Carries no data.
+Payload for contact.archived, a contact was archived. Carries no data.
 
 `data` is an empty object.
 
@@ -515,7 +515,7 @@ Payload for contact.archived — a contact was archived. Carries no data.
 
 Record: `contact` · version 1
 
-Payload for contact.created — a contact was created.
+Payload for contact.created, a contact was created.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -525,7 +525,7 @@ Payload for contact.created — a contact was created.
 
 Record: `contact` · version 1
 
-Payload for contact.merged — two contact records collapsed into one (the §1.3 merge); neither contact.updated nor contact.archived can say this, so it is its own verb.
+Payload for contact.merged, two contact records collapsed into one (the §1.3 merge); neither contact.updated nor contact.archived can say this, so it is its own verb.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -537,7 +537,7 @@ Payload for contact.merged — two contact records collapsed into one (the §1.3
 
 Record: `contact` · version 1
 
-Payload for contact.restored — an archived contact was brought back, with the emails, phones, channel identities, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
+Payload for contact.restored, an archived contact was brought back, with the emails, phones, channel identities, relationships, list memberships and tags its archive took down where they can still come back. Carries no data.
 
 `data` is an empty object.
 
@@ -545,7 +545,7 @@ Payload for contact.restored — an archived contact was brought back, with the 
 
 Record: `contact` · version 1
 
-Payload for contact.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
+Payload for contact.updated, an open envelope. Its emit sites carry different shapes: a flat column patch, a lead-promotion conversion note, a signature-enrichment fill, or a relationship delta. So the payload is a change-set map rather than a fixed field list.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -555,7 +555,7 @@ Payload for contact.updated — an OPEN envelope: its emit sites carry divergent
 
 Record: `contract` · version 1
 
-Payload for contract.archived — the agreement left the surfaces that count it.
+Payload for contract.archived, the agreement left the surfaces that count it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -565,22 +565,22 @@ Payload for contract.archived — the agreement left the surfaces that count it.
 
 Record: `contract` · version 1
 
-Payload for contract.created — an agreement was recorded against a company.
+Payload for contract.created, an agreement was recorded against a company.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.company_id` | string (uuid) | yes | The counterparty. A company holds many contracts. |
 | `data.contract_number` | string | no | The counterparty's own number for the agreement, when one was given. |
 | `data.deal_id` | string (uuid) | no | The deal this agreement came from, when it came from one. |
-| `data.status` | string | yes | Always `draft` — an agreement is recorded before it is asserted active. |
+| `data.status` | string | yes | Always `draft`, an agreement is recorded before it is asserted active. |
 | `data.title` | string | yes |  |
-| `data.value_basis` | string | yes | What the recorded value measures — a total, or twelve months of an open-ended agreement. |
+| `data.value_basis` | string | yes | What the recorded value measures, a total, or twelve months of an open-ended agreement. |
 
 ### `contract.status_changed`
 
 Record: `contract` · version 1
 
-Payload for contract.status_changed — a human or an approved proposal asserted a new status. No date ever produces this event.
+Payload for contract.status_changed, a human or an approved proposal asserted a new status. No date ever produces this event.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -593,7 +593,7 @@ Payload for contract.status_changed — a human or an approved proposal asserted
 
 Record: `contract` · version 1
 
-Payload for contract.updated — a column patch on the contract row. Deliberately NOT emitted for a status move: that carries its own contract.status_changed, so a consumer never reconstructs a transition from a diff.
+Payload for contract.updated, a column patch on the contract row. It is not emitted for a status move. A status move carries its own contract.status_changed, so a consumer never rebuilds a transition from a diff.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -603,23 +603,23 @@ Payload for contract.updated — a column patch on the contract row. Deliberatel
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.captured — something promised, asked or decided in a captured conversation was written to the record (ADR-0097 D1). The entity is the CONTACT the claim is about: a subscriber reacting to what a contact said wants the contact, and the claim id rides the payload for the reader that needs the row itself.
+Payload for conversation_claim.captured, something promised, asked or decided in a captured conversation was written to the record (ADR-0097 D1). The entity is the CONTACT the claim is about: a subscriber reacting to what a contact said wants the contact, and the claim id rides the payload for the reader that needs the row itself.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.claim_id` | string (uuid) | yes |  |
-| `data.kind` | string | yes | Which of the eight claim kinds this is — the ConversationClaimKind vocabulary of the CRM contract. Carried as a plain string rather than a second copy of that enum: the two documents generate into one Go package, and a duplicated enum there is two spellings of one vocabulary that can drift apart. |
+| `data.kind` | string | yes | Which of the eight claim kinds this is, the ConversationClaimKind vocabulary of the CRM contract. Carried as a plain string rather than a second copy of that enum: the two documents generate into one Go package, and a duplicated enum there is two spellings of one vocabulary that can drift apart. |
 
 ### `conversation_claim.changed`
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.changed — a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands.
+Payload for conversation_claim.changed, a human typed over the machine, or dismissed a claim outright. Published because a correction is SHARED truth, unlike a moment dismissal: a downstream reader holding the old claim needs to know it no longer stands.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.claim_id` | string (uuid) | yes |  |
-| `data.status` | string | yes | The claim's status after the correction — open, done or dismissed. A plain string for the same reason as `kind` above. |
+| `data.status` | string | yes | The claim's status after the correction, open, done or dismissed. A plain string for the same reason as `kind` above. |
 
 ### `deal.archived`
 
@@ -636,7 +636,7 @@ Payload for deal.archived: a deal was archived. Carries only the import mark, wh
 
 Record: `deal` · version 1
 
-Payload for deal.created — a deal was opened.
+Payload for deal.created, a deal was opened.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -648,7 +648,7 @@ Payload for deal.created — a deal was opened.
 
 Record: `deal` · version 1
 
-Payload for deal.owner_changed — the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3).
+Payload for deal.owner_changed, the deal's owner was reassigned. Emitted instead of (never alongside) deal.updated for the owner_id field (events.md §5.3).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -672,31 +672,31 @@ Payload for deal.restored: an archived deal was brought back. Its archive took d
 
 Record: `deal` · version 1
 
-Payload for deal.stage_changed — a deal advanced between stages. Carries the amount/win-probability snapshot frozen at the moment of the move so consumers (the trajectory view, the overnight stalled/forecast sweep, the automation trigger keyed on to_status) never need a read-back.
+Payload for deal.stage_changed, a deal advanced between stages. Carries the amount/win-probability snapshot frozen at the moment of the move so consumers (the trajectory view, the overnight stalled/forecast sweep, the automation trigger keyed on to_status) never need a read-back.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.amount_minor_at_change` | integer (int64) | no | The deal's amount, frozen at the moment of the move. |
 | `data.currency_at_change` | string | no | The deal's currency, frozen at the moment of the move. |
-| `data.deal_name` | string | no | The deal's name at the moment of the move, so a receiver such as a chat channel can say which deal moved without reading it back. |
+| `data.deal_name` | string | no | The deal's name at the moment of the move. A receiver can say which deal moved without reading it back. |
 | `data.from_stage_id` | string (uuid) | no | Stage the deal left (absent on first placement). |
 | `data.from_stage_name` | string | no | The stage name when the move happened, when available. |
 | `data.from_status` | string | yes | Deal status before the move (open \| won \| lost). |
 | `data.fx_rate_to_base` | string | no | The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at. |
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise. |
-| `data.partner_attribution` | string | no | What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only. |
+| `data.partner_attribution` | string | no | What that partner did, sourced or influenced, at the moment of the move. Commission accrues on sourced only. |
 | `data.partner_company_id` | string (uuid) | no | The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards. |
 | `data.to_stage_id` | string (uuid) | yes | Stage the deal entered. |
 | `data.to_stage_name` | string | no | The destination name when the move happened, when available. |
-| `data.to_status` | string | yes | Deal status after the move (open \| won \| lost) — the field the automation trigger keys on (automation/handlers_event.go). |
+| `data.to_status` | string | yes | Deal status after the move (open \| won \| lost), the field the automation trigger keys on (automation/handlers_event.go). |
 | `data.win_probability` | integer | yes | The target stage's win probability, frozen at the moment of the move. |
 
 ### `deal.updated`
 
 Record: `deal` · version 1
 
-Payload for deal.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat column patch, an accepted-offer amount sync, a close-date-correction note, a relationship delta), so the honest shape is a change-set map rather than a fixed field list.
+Payload for deal.updated, an open envelope. Its emit sites carry different shapes: a flat column patch, an accepted-offer amount sync, a close-date-correction note, or a relationship delta. So the payload is a change-set map rather than a fixed field list.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -708,7 +708,7 @@ Payload for deal.updated — an OPEN envelope: its emit sites carry divergent sh
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.archived — the room ended and buyer access is revoked. Its releases survive, so what a buyer was shown stays answerable.
+Payload for deal_room.archived, the room ended and buyer access is revoked. Its releases survive, so what a buyer was shown stays answerable.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -718,7 +718,7 @@ Payload for deal_room.archived — the room ended and buyer access is revoked. I
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.closed — the room's CONTENT is frozen while buyer ACCESS continues. The buyer keeps reading; nobody writes.
+Payload for deal_room.closed, the room's CONTENT is frozen while buyer ACCESS continues. The buyer keeps reading; nobody writes.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -728,25 +728,25 @@ Payload for deal_room.closed — the room's CONTENT is frozen while buyer ACCESS
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.comment_posted — somebody on either side said something in a room thread, on a document or on the room as a whole. The comment's text is deliberately absent: a subscriber reads it through the room, under the room's own authority, not off the bus.
+Payload for deal_room.comment_posted. Somebody on either side said something in a room thread, on a document or on the room as a whole. The comment's text is left out. A subscriber reads it through the room, under the room's own authority, not off the bus.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.author_name` | string | no | Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none. The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text — it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies. |
+| `data.author_name` | string | no | Who spoke, by name, as the room recorded them at that moment. Additive and optional: an event minted before this field existed carries none. The comment's TEXT stays off the bus for the reason above, and a name is a different thing from the text, it is who acted, which is what any record of an act has to say. A timeline entry reading "the buyer said something" names no buyer and is not worth the row it occupies. |
 | `data.comment_id` | string (uuid) | yes |  |
 | `data.deal_id` | string (uuid) | yes |  |
 | `data.document_id` | string (uuid) | no | The room document the thread is about; null for a room-level exchange. |
 | `data.document_title` | string | no | The document the thread is about, titled as it stood at that moment. Absent for a room-level exchange, and absent on an event minted before this field existed. Carried rather than resolved later, for the reason every other field here is: a document can be retitled or removed afterwards, and a timeline entry means what was true when it happened. |
-| `data.opens_thread` | boolean | yes | True when this comment is the thread's first — a new question, not a reply. |
+| `data.opens_thread` | boolean | yes | True when this comment is the thread's first, a new question, not a reply. |
 | `data.required_change` | boolean | no | True when the thread, as opened, blocks confirming the document until resolved. |
-| `data.side` | string | yes | Who spoke — `seller` or `buyer`. |
+| `data.side` | string | yes | Who spoke, `seller` or `buyer`. |
 | `data.thread_id` | string (uuid) | yes |  |
 
 ### `deal_room.decision_recorded`
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.decision_recorded — a buyer asked for changes to a document version, or confirmed it. HISTORICAL ONLY. Deciding on a document version is retired: sharing a document with a buyer is sharing it, and what they want to say about one they say in the thread under it. Nothing emits this any more, and the rows it named are gone. It stays declared because a subscriber may still be reading events emitted before the retirement off the bus.
+Payload for deal_room.decision_recorded, a buyer asked for changes to a document version, or confirmed it. HISTORICAL ONLY. Deciding on a document version is retired: sharing a document with a buyer is sharing it, and what they want to say about one they say in the thread under it. Nothing emits this any more, and the rows it named are gone. It stays declared because a subscriber may still be reading events emitted before the retirement off the bus.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -760,7 +760,7 @@ Payload for deal_room.decision_recorded — a buyer asked for changes to a docum
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.opened — a Deal Room was created on a deal. Nothing is buyer-visible yet: the room starts in draft and stays private until a human publishes it.
+Payload for deal_room.opened, a Deal Room was created on a deal. Nothing is buyer-visible yet: the room starts in draft and stays private until a human publishes it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -772,19 +772,19 @@ Payload for deal_room.opened — a Deal Room was created on a deal. Nothing is b
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.participant_credential_reissued — the credential that admits one participant changed, so whatever they were holding no longer works. Two acts raise it: a resend, and a correction to the address a link was sent to. Both retire the previous credential, which is the fact a subscriber needs; `reason` says which happened. Like every participant event it names nobody's token — a subscriber able to read one off the bus would hold what it grants.
+Payload for deal_room.participant_credential_reissued, the credential that admits one participant changed, so whatever they were holding no longer works. Two acts raise it: a resend, and a correction to the address a link was sent to. Both retire the previous credential, which is the fact a subscriber needs; `reason` says which happened. Like every participant event it names nobody's token, a subscriber able to read one off the bus would hold what it grants.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.deal_id` | string (uuid) | yes |  |
 | `data.participant_id` | string (uuid) | yes |  |
-| `data.reason` | string | yes | `resent` — a fresh credential was issued on request. `address_corrected` — the address changed, so the link already sent was retired; no new credential exists until somebody resends. |
+| `data.reason` | string | yes | `resent`, a fresh credential was issued on request. `address_corrected`, the address changed, so the link already sent was retired; no new credential exists until somebody resends. |
 
 ### `deal_room.participant_invited`
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.participant_invited — an outside contact was admitted to a Deal Room. The event names the participant and the room, never the credential or its hash: a subscriber that could read the token off the bus would hold everything the invitation grants.
+Payload for deal_room.participant_invited, an outside contact was admitted to a Deal Room. The event names the participant and the room, never the credential or its hash: a subscriber that could read the token off the bus would hold everything the invitation grants.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -796,7 +796,7 @@ Payload for deal_room.participant_invited — an outside contact was admitted to
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.participant_revoked — an outside contact's access to a Deal Room was taken away. Their live session ended and any unconsumed credential was retired at the same moment.
+Payload for deal_room.participant_revoked, an outside contact's access to a Deal Room was taken away. Their live session ended and any unconsumed credential was retired at the same moment.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -807,7 +807,7 @@ Payload for deal_room.participant_revoked — an outside contact's access to a D
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.paused — buyer reads are refused while every credential stays valid, so resuming needs no re-invitation.
+Payload for deal_room.paused, buyer reads are refused while every credential stays valid, so resuming needs no re-invitation.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -817,7 +817,7 @@ Payload for deal_room.paused — buyer reads are refused while every credential 
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.resumed — a paused room serves its existing release again.
+Payload for deal_room.resumed, a paused room serves its existing release again.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -827,7 +827,7 @@ Payload for deal_room.resumed — a paused room serves its existing release agai
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.thread_resolved — a thread was closed by the seller's side.
+Payload for deal_room.thread_resolved, a thread was closed by the seller's side.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -839,33 +839,33 @@ Payload for deal_room.thread_resolved — a thread was closed by the seller's si
 
 Record: `deal_room` · version 1
 
-Payload for deal_room.updated — something a buyer reads changed: the room's title or welcome message, or the documents in it. A room is live from creation, so there is no staging step between this event and what an invited buyer sees on their next read.
+Payload for deal_room.updated, something a buyer reads changed: the room's title or welcome message, or the documents in it. A room is live from creation, so there is no staging step between this event and what an invited buyer sees on their next read.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | array of string | yes | Which editorial fields moved. Names only — the text itself is not published. Typed as a plain string rather than an inline enum: an inline enum here generates package-scope Go constants named `Title`, `ExpiresAt` and the like in the shared contracts package, which collide with, and silently rename, the constants of any other schema that later declares the same value. The closed set is stated here and held by the writer. |
+| `data.changed_fields` | array of string | yes | Which editorial fields moved. Only the names are published, never the text. The field is typed as a plain string rather than an inline enum. An inline enum here generates package-scope Go constants such as `Title` and `ExpiresAt` in the shared contracts package. Those collide with, and silently rename, the constants of any other schema that declares the same value. The closed set is stated here and held by the writer. |
 | `data.deal_id` | string (uuid) | yes |  |
 
 ### `email_signature.changed`
 
 Record: `user` · version 1
 
-Payload for email_signature.changed — a member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later, so the change is audited and published rather than written quietly. The signature TEXT is NOT in the payload: it is the member's own words about themselves, often carrying a direct line or an address, and a subscriber needs to know the sign-off moved rather than what it says.
+Payload for email_signature.changed. A member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later. So the change is audited and published rather than written silently. The payload leaves out the signature text. That text is the member's own words about themselves, often with a direct line or an address. A subscriber needs to know the sign-off moved, not what it says.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.has_signature` | boolean | yes | Whether mail from this member now carries a sign-off. False after a member empties the field, which is a deliberate "send unsigned". |
+| `data.has_signature` | boolean | yes | Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned". |
 
 ### `engagement.reply`
 
 Record: `activity` · version 1
 
-Payload for engagement.reply — CAP-FORMULA-1: an inbound message in a thread we previously wrote outbound in is a reply, feeding the engagement signal scoring (capture/sinkreply.go's emitReply).
+Payload for engagement.reply (CAP-FORMULA-1). An inbound message in a thread where we already wrote outbound is a reply. It feeds the engagement signal scoring (capture/sinkreply.go's emitReply).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.channel` | string | yes | The medium the reply arrived on and must be answered on: `email` for the mail connectors (gmail, imap, graph all reach one inbox), the channel provider itself for a messaging connector (e.g. `telegram`). |
-| `data.contact_id` | string (uuid) | no | The already-known contact behind the counterparty — resolved from the address on the mail path and from the channel identity on a messaging one (absent when the counterparty resolves only in a follow-up ensure). |
+| `data.contact_id` | string (uuid) | no | The already-known contact behind the counterparty, resolved from the address on the mail path and from the channel identity on a messaging one (absent when the counterparty resolves only in a follow-up ensure). |
 | `data.idempotency_key` | string | yes | The capture natural key (source_system:source_id) this reply was detected from. |
 | `data.matched_outbound_activity_id` | string (uuid) | yes | The prior outbound activity this inbound message replies to. |
 | `data.occurred_at` | string (date-time) | yes | When the reply activity occurred. |
@@ -874,7 +874,7 @@ Payload for engagement.reply — CAP-FORMULA-1: an inbound message in a thread w
 
 Record: `assurance_run` · version 1
 
-Payload for forecast.assurance_created — a nightly input check finished, and the forecast's inputs have been examined. The Morning Brief waits on this: a brief assembled before the night's check has nothing to say about whether the numbers in it were verified. `readiness` is the verdict, and `checks_incomplete` is NOT a worse `needs_review`. One says the pipeline has problems; the other says we could not look, and a consumer that treats them alike will tell somebody their pipeline is sound when nobody read the mailbox. The counts ride along because they say how much of the pipeline the run covered. The findings do not: they are a read away, and a subscriber acting on a list that arrived on a bus is acting on a list somebody may already have resolved.
+Payload for forecast.assurance_created. A nightly input check finished, and the forecast's inputs have been examined. The Morning Brief waits on this event. A brief assembled before the night's check cannot say whether its numbers were verified. The verdict is `readiness`. A value of `checks_incomplete` is a different fact from `needs_review`, and not a worse one. One says the pipeline has problems; the other says the check could not look. A consumer that treats them alike will call a pipeline sound when nobody read the mailbox. The counts ride along because they say how much of the pipeline the run covered. The findings do not. They are a read away, and a list that arrived on a bus may already be resolved.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -882,13 +882,13 @@ Payload for forecast.assurance_created — a nightly input check finished, and t
 | `data.eligible_signals` | integer | no |  |
 | `data.readiness` | string: `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete` | no |  |
 | `data.run_id` | string (uuid) | yes |  |
-| `data.status` | string: `complete`, `incomplete` | yes | `incomplete` means an upstream was unavailable. The run still happened and still recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting. |
+| `data.status` | string: `complete`, `incomplete` | yes | `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach. Refusing to run would leave no record in the case most worth reporting. |
 
 ### `forecast.created`
 
 Record: `user` · version 1
 
-Payload for forecast.created — somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a contact and that contact is who it is attributable to. A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
+Payload for forecast.created, somebody accountable for a number said what they believe will close. The entity is the AUTHOR rather than a deal or a team, because a call is an assertion by a contact and that contact is who it is attributable to. A call supersedes rather than overwrites, so `supersedes_id` names the one it replaces and is absent for the first call of a period. The amount rides along because a consumer reacting to a forecast change needs the figure that changed; the note does not, since a subscriber acting on prose is acting on something the author may edit for a human reader.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -898,26 +898,26 @@ Payload for forecast.created — somebody accountable for a number said what the
 | `data.currency` | string | yes |  |
 | `data.period_end` | string (date) | yes |  |
 | `data.period_start` | string (date) | yes |  |
-| `data.supersedes_id` | string (uuid) | no | The call this one replaces. Absent on the first call of a period — which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart. |
+| `data.supersedes_id` | string (uuid) | no | The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing, and a consumer tracking revisions needs to tell them apart. |
 
 ### `forecast.exception_resolved`
 
 Record: `user` · version 1
 
-Payload for forecast.exception_resolved — somebody answered a finding from the nightly input check. The entity is the AUTHOR, because an answer is attributable to whoever gave it. `outcome` says what KIND of answer it was, and consumers must not treat the six alike. `value_correct` and `not_relevant` HIDE the finding from the screens a revenue commitment is made from, so a surface counting open findings has to drop them; `remind_later` leaves the finding open and it comes back. The reason does not ride along. It is prose a contact wrote for another contact, and a subscriber acting on it is acting on something the author may edit.
+Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the six alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one contact wrote for another, and a subscriber acting on it acts on text the author may edit.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.actor_user_id` | string (uuid) | yes |  |
 | `data.exception_id` | string (uuid) | yes |  |
-| `data.expires_at` | string (date-time) | no | When a suppressing answer stops holding. Present only for the two outcomes that hide a finding — a consumer that re-surfaces findings needs the date. |
+| `data.expires_at` | string (date-time) | no | When a suppressing answer stops holding. Present only for the two outcomes that hide a finding, a consumer that re-surfaces findings needs the date. |
 | `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared` | yes |  |
 
 ### `forecast.share_issued`
 
 Record: `user` · version 1
 
-Payload for forecast.share_issued — somebody created a link that shows a forecast reading to a recipient who is not signed in as them. The entity is the ISSUER, because a link is attributable to whoever made it and the issuer's standing is what keeps it serving. `kind` says which promise the link makes: `live` re-runs the reading under the recipient's own grants, `snapshot` serves a frozen state filtered by their row scope. A consumer auditing what left the installation needs the two apart. The token does not ride along, in any form. It is returned once to the caller that asked for it, and a bus is a place other systems keep copies of.
+Payload for forecast.share_issued. Somebody created a link that shows a forecast reading to a recipient who is not signed in as them. The entity is the issuer. A link is attributable to whoever made it, and the issuer's standing is what keeps it serving. The `kind` field says which promise the link makes. A `live` link re-runs the reading under the recipient's own grants. A `snapshot` link serves a frozen state filtered by their row scope. A consumer auditing what left the installation needs the two apart. The token does not ride along, in any form. It is returned once to the caller that asked for it, and other systems keep copies of what a bus carries.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -930,7 +930,7 @@ Payload for forecast.share_issued — somebody created a link that shows a forec
 
 Record: `user` · version 1
 
-Payload for forecast.share_revoked — a share link was closed before its expiry. The entity is the contact who revoked it. A consumer that recorded the issue must record this too: the two together are the window during which a number was reachable by whoever held the link, and that window is what an access review asks for.
+Payload for forecast.share_revoked, a share link was closed before its expiry. The entity is the contact who revoked it. A consumer that recorded the issue must record this too: the two together are the window during which a number was reachable by whoever held the link, and that window is what an access review asks for.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -941,7 +941,7 @@ Payload for forecast.share_revoked — a share link was closed before its expiry
 
 Record: `forecast_snapshot` · version 1
 
-Payload for forecast.snapshot_created — a set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this: the difference between two snapshots is only answerable once the second exists. The COUNTS ride along and the money does not. How many deals a run considered says whether it ran completely, which is what a consumer needs to decide whether to trust the state; the totals are a read away and putting them on a bus makes two places to correct when a definition changes.
+Payload for forecast.snapshot_created. A set of readings was frozen, with the per-deal rows behind them. A subscriber watching for movement waits on this event. The difference between two snapshots is only answerable once the second exists. The counts ride along and the money does not. How many deals a run considered says whether it ran completely. A consumer needs that to decide whether to trust the state. The totals are a read away. Putting them on a bus makes two places to correct when a definition changes.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -955,7 +955,7 @@ Payload for forecast.snapshot_created — a set of readings was frozen, with the
 
 Record: `contact` · version 1
 
-Payload for intro_request.closed — the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
+Payload for intro_request.closed, the ask ended without a handshake: withdrawn by the requester, or run out of time. `reason` says which, because a rep withdrawing and a queue timing out call for different follow-ups.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -967,7 +967,7 @@ Payload for intro_request.closed — the ask ended without a handshake: withdraw
 
 Record: `contact` · version 1
 
-Payload for intro_request.completed — the handshake happened, or the rep used the name they were lent. `outcome` keeps the two apart: an introduction and a name-drop are different events, and a consumer that collapsed them would report doors opened that nobody opened.
+Payload for intro_request.completed. The handshake happened, or the rep used the name they were lent. The `outcome` field keeps the two apart. An introduction and a name-drop are different events. A consumer that merged them would report doors opened that nobody opened.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -979,7 +979,7 @@ Payload for intro_request.completed — the handshake happened, or the rep used 
 
 Record: `contact` · version 1
 
-Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a contact's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
+Payload for intro_request.created, a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a contact's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -992,7 +992,7 @@ Payload for intro_request.created — a rep asked a colleague to open a door to 
 
 Record: `contact` · version 1
 
-Payload for intro_request.decided — the colleague gave one of the four bounded answers. `decision` carries which, because a consumer that had to re-read the row to tell an acceptance from a refusal would be deciding on state that may already have moved.
+Payload for intro_request.decided. The colleague gave one of the four bounded answers, and `decision` carries which. A consumer that re-read the row to tell an acceptance from a refusal would decide on state that may have moved.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1005,7 +1005,7 @@ Payload for intro_request.decided — the colleague gave one of the four bounded
 
 Record: `contact` · version 1
 
-Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
+Payload for intro_request.replied, the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1017,7 +1017,7 @@ Payload for intro_request.replied — the contact answered, observed from captur
 
 Record: `lead` · version 1
 
-Payload for lead.created — a lead was created. Two emit sites: a direct create (contacts/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
+Payload for lead.created, a lead was created. Two emit sites: a direct create (contacts/lead.go) that sets no fields, and the capture auto-create engine (capture/sink.go) that names its originating source system; source_system is therefore optional.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1027,7 +1027,7 @@ Payload for lead.created — a lead was created. Two emit sites: a direct create
 
 Record: `lead` · version 1
 
-Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
+Payload for lead.demoted, the audited reverse of lead.promoted (formulas §26): the lead is back in the segregated pool and the contact-side lineage is nulled. Its own verb, because a lead.updated cannot say a contact node lost its lineage.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1038,7 +1038,7 @@ Payload for lead.demoted — the audited reverse of lead.promoted (formulas §26
 
 Record: `lead` · version 1
 
-Payload for lead.disqualified — a lead was disqualified. Carries no data.
+Payload for lead.disqualified, a lead was disqualified. Carries no data.
 
 `data` is an empty object.
 
@@ -1046,7 +1046,7 @@ Payload for lead.disqualified — a lead was disqualified. Carries no data.
 
 Record: `lead` · version 1
 
-Payload for lead.merged — two leads the review queue judged one prospect (ADR-0118/A169 §2) collapsed into the survivor. The merged-away lead is archived and carries merged_into_id; its activities and consent now sit on the survivor. Its own verb, because neither lead.updated nor a disqualification says two prospects became one.
+Payload for lead.merged, two leads the review queue judged one prospect (ADR-0118/A169 §2) collapsed into the survivor. The merged-away lead is archived and carries merged_into_id; its activities and consent now sit on the survivor. Its own verb, because neither lead.updated nor a disqualification says two prospects became one.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1057,21 +1057,21 @@ Payload for lead.merged — two leads the review queue judged one prospect (ADR-
 
 Record: `lead` · version 1
 
-Payload for lead.promoted — the lead's genuine-engagement promotion into the context graph (events.md §5.5); its own verb, never a lead.updated, since neither contact.created nor contact.updated on its own says a lead crossed this line.
+Payload for lead.promoted: the lead's promotion into the context graph after real engagement. It has its own verb and is never a lead.updated. Neither contact.created nor contact.updated on its own says a lead crossed this line.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.carried_activity_ids` | array of string | no | The activities whose link this promotion moved from the lead onto the contact — what carryLeadActivities re-pointed, which is the lead's own timeline and nothing the survivor already had. It names them because the contact id cannot. A promotion that MERGES lands the lead's follow-up task on a contact that may already carry its own unrelated reminders, so "the open system tasks on this contact" is not the same set as "the tasks this promotion carried" — and a consumer completing the first would tick off work the promotion never touched. Absent on an event written before this field existed, and a consumer replaying one has no worse an answer than it had then: for a freshly created contact the two sets coincide, which is why that case worked without it. |
+| `data.carried_activity_ids` | array of string | no | The activities whose link this promotion moved from the lead onto the contact. These are what carryLeadActivities re-pointed: the lead's own timeline, and nothing the survivor already had. The event names them because the contact id cannot. A promotion that merges lands the lead's follow-up task on a contact that may already carry unrelated reminders of its own. So the open system tasks on this contact differ from the tasks this promotion carried. A consumer completing the first set would tick off work the promotion never touched. The field is absent on an event written before it existed. A consumer replaying such an event has no worse an answer than it had then. For a freshly created contact the two sets are the same, so that case worked without the field. |
 | `data.dedupe_outcome` | string | yes | Whether promotion created a new contact or merged into an existing one: created or merged. |
 | `data.evidence_ref` | string (uuid) | no | The inbound activity that evidenced the trigger (absent for a human_qualify with no linked activity). |
 | `data.promoted_contact_id` | string (uuid) | yes | The contact this lead promoted into (fresh or an existing survivor). |
-| `data.trigger` | string | yes | The genuine-engagement trigger that authorized promotion: inbound_reply, meeting_booked, meeting_held, or human_qualify. |
+| `data.trigger` | string | yes | The engagement trigger that authorized promotion: inbound_reply, meeting_booked, meeting_held, or human_qualify. |
 
 ### `lead.sla_breached`
 
 Record: `lead` · version 1
 
-Payload for lead.sla_breached (formulas §18.2) — the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
+Payload for lead.sla_breached (formulas §18.2), the first scan on which a lead's first-response deadline passed unanswered. Emitted at most once per breach occurrence; the escalation hangs off it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1083,7 +1083,7 @@ Payload for lead.sla_breached (formulas §18.2) — the first scan on which a le
 
 Record: `lead` · version 1
 
-Payload for lead.updated — an OPEN envelope: emit sites carry divergent shapes (a flat column patch that includes runtime cf_* custom-field columns, and behavioral-recompute/routing deltas), so the honest shape is a change-set map rather than a fixed field list.
+Payload for lead.updated, an open envelope. Its emit sites carry different shapes. One is a flat column patch that includes runtime cf_* custom-field columns; others are behavioral-recompute and routing deltas. So the payload is a change-set map rather than a fixed field list.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1093,7 +1093,7 @@ Payload for lead.updated — an OPEN envelope: emit sites carry divergent shapes
 
 Record: `lead_disqualify_reason` · version 1
 
-Payload for lead_disqualify_reason.changed — a disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the reason its source sibling does: a subscriber reporting on why leads were disqualified re-reads the catalog on this. It carries `label` where the source carries `key`, because a reason has no key — the label IS its identity, and after `deleted` it is the only thing naming what went away.
+Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the same reason lead_source.changed does. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` where the source event carries `key`, because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1105,7 +1105,7 @@ Payload for lead_disqualify_reason.changed — a disqualification reason was add
 
 Record: `lead_source` · version 1
 
-Payload for lead_source.changed — a lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because the source is a value every lead carries, so a subscriber that renders or groups by source re-reads the catalog on this. `key` and not `label`: the key is what leads carry and what a subscriber keys its own cache by, and it is the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists, so publishing it here would invite a subscriber to trust a copy that can go stale.
+Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1117,28 +1117,28 @@ Payload for lead_source.changed — a lead source was added, edited or removed (
 
 Record: `user` · version 1
 
-Payload for linkedin_account.changed — a member recorded or corrected their OWN LinkedIn authorization (contacts/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed, so it is auditable and published rather than written quietly. The profile URL itself is NOT in the payload: it is the member's own identifier and a subscriber needs to know that the authorization moved, not what their LinkedIn address is.
+Payload for linkedin_account.changed. A member recorded or corrected their own LinkedIn authorization (contacts/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed. So it is audited and published rather than written silently. The payload leaves out the profile URL, which is the member's own identifier. A subscriber needs to know that the authorization moved, not what their LinkedIn address is.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.connected` | boolean | yes | Whether an authorization is on record after this change. |
-| `data.has_profile_url` | boolean | yes | Whether a profile URL is now stored. False after a member clears the field, which is a deliberate "do not record this". |
+| `data.connected` | boolean | yes | Whether an authorization is on record after this event. |
+| `data.has_profile_url` | boolean | yes | Whether a profile URL is now stored. False after a member clears the field, which is a chosen "do not record this". |
 
 ### `linkedin_match.decided`
 
 Record: `user` · version 1
 
-Payload for linkedin_match.decided — a connection was linked to a contact on file, either by an exact-name match or by a member approving the proposal. It carries NO verdict: a refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The connection is NOT named: it is a third party who never consented to being in this CRM, and the whole point of keeping the imported rows invisible is defeated if their names travel through the outbox. The verdict and whether a profile URL reached the contact are the auditable facts; the records themselves are reachable through the audit row this event is linked to.
+Payload for linkedin_match.decided. A connection was linked to a contact on file, by an exact-name match or by a member approving the proposal. It carries no verdict. A refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The payload does not name the connection, a third party who never consented to being in this CRM. The imported rows are kept invisible, and their names travelling through the outbox would defeat that. The verdict and whether a profile URL reached the contact are the auditable facts. The records themselves are reachable through the audit row this event is linked to.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.profile_url_written` | boolean | yes | Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten. |
+| `data.profile_url_written` | boolean | yes | Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one, a value on a record is somebody's statement and is never overwritten. |
 
 ### `linkedin_network.imported`
 
 Record: `user` · version 1
 
-Payload for linkedin_network.imported — a member uploaded their own LinkedIn connections export. ONE event for the import act, never one per row: an export is thousands of rows, a per-row event would bury every other event in the stream, and the auditable fact is that a member imported their network at all. No connection is named in the payload: the imported rows are third parties who never consented to being in this CRM, and publishing their names would defeat the point of keeping them invisible everywhere else.
+Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1150,7 +1150,7 @@ Payload for linkedin_network.imported — a member uploaded their own LinkedIn c
 
 Record: `list` · version 1
 
-Payload for list.archived — a list was archived. Carries no data.
+Payload for list.archived, a list was archived. Carries no data.
 
 `data` is an empty object.
 
@@ -1158,7 +1158,7 @@ Payload for list.archived — a list was archived. Carries no data.
 
 Record: `list` · version 1
 
-Payload for list.created — somebody made a Live List (list_type dynamic) or a Shortlist (static). Delivered to a subscriber who may find the list by its sharing.
+Payload for list.created, somebody made a Live List (list_type dynamic) or a Shortlist (static). Delivered to a subscriber who may find the list by its sharing.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1170,7 +1170,7 @@ Payload for list.created — somebody made a Live List (list_type dynamic) or a 
 
 Record: `list` · version 1
 
-Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted once per check that saw a change, never per record. It carries no counts: the check sees every record, and a count would tell a subscriber how many records they cannot see. Who joined and left is on the list's history, read under the reader's own row scope.
+Payload for list.evaluated, a check of a Live List saw records join or leave it. Emitted once per check that saw a change, never per record. It carries no counts: the check sees every record, and a count would tell a subscriber how many records they cannot see. Who joined and left is on the list's history, read under the reader's own row scope.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1182,7 +1182,7 @@ Payload for list.evaluated — a check of a Live List saw records join or leave 
 
 Record: `dynamic` · version 1
 
-Payload for list.member_added — a record was added to a Shortlist by hand, in a bulk change or by an automation rule. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
+Payload for list.member_added, a record was added to a Shortlist by hand, in a bulk change or by an automation rule. The subject is the RECORD (contact, company, deal, lead or project), so the event reaches only a subscriber who may see that record. It names no list: delivery is decided by the record, and a list its subscriber cannot find must not be named to them. Which list, and the note, stay on the list's history, which is read under the list's own sharing.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1192,7 +1192,7 @@ Payload for list.member_added — a record was added to a Shortlist by hand, in 
 
 Record: `dynamic` · version 1
 
-Payload for list.member_removed — a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added.
+Payload for list.member_removed, a record was taken off a Shortlist by hand or in a bulk change. The subject is the record, as for list.member_added.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1202,7 +1202,7 @@ Payload for list.member_removed — a record was taken off a Shortlist by hand o
 
 Record: `list` · version 1
 
-Payload for list.restored — an archived list was brought back. Carries no data.
+Payload for list.restored, an archived list was brought back. Carries no data.
 
 `data` is an empty object.
 
@@ -1210,7 +1210,7 @@ Payload for list.restored — an archived list was brought back. Carries no data
 
 Record: `list` · version 1
 
-Payload for list.updated — a list's name, purpose, filter, sharing, team or steward changed. The version is the list's new one.
+Payload for list.updated, a list's name, purpose, filter, sharing, team or steward changed. The version is the list's new one.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1221,7 +1221,7 @@ Payload for list.updated — a list's name, purpose, filter, sharing, team or st
 
 Record: `user` · version 1
 
-Payload for notice.created — a durable informational notice was recorded for one contact (notices/store.go's Create). Recording the row IS the delivery on this transport; the entity is the recipient. The content stays on the row: an event fan-out of subject and body would put the same prose on two wires to drift.
+Payload for notice.created. A durable informational notice was recorded for one contact (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1233,7 +1233,7 @@ Payload for notice.created — a durable informational notice was recorded for o
 
 Record: `user` · version 1
 
-Payload for notice.read — the recipient settled the notice (notices/store.go's MarkRead). Emitted once: a replayed mark is a no-op and announces nothing.
+Payload for notice.read, the recipient settled the notice (notices/store.go's MarkRead). Emitted once: a replayed mark is a no-op and announces nothing.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1243,7 +1243,7 @@ Payload for notice.read — the recipient settled the notice (notices/store.go's
 
 Record: `user` · version 1
 
-Payload for notification.preference_changed — one seat decided how a class of notification reaches them (notices/preference.go's SaveNotificationPreference). The entity is that seat. The CLASS is on the wire and the choice is not: what somebody decided about their own interruptions is theirs, and a fan-out carrying the value would tell every subscription owner who had switched their mail off.
+Payload for notification.preference_changed, one seat decided how a class of notification reaches them (notices/preference.go's SaveNotificationPreference). The entity is that seat. The CLASS is on the wire and the choice is not: what somebody decided about their own interruptions is theirs, and a fan-out carrying the value would tell every subscription owner who had switched their mail off.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1253,7 +1253,7 @@ Payload for notification.preference_changed — one seat decided how a class of 
 
 Record: `offer` · version 1
 
-Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+Payload for offer.accepted, a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1267,7 +1267,7 @@ Payload for offer.accepted — a sent offer was accepted. The deal's headline am
 
 Record: `offer` · version 1
 
-Payload for offer.created — a new Angebot revision was opened (either the first revision, via CreateOffer, or a fresh draft revision minted by RegenerateOffer).
+Payload for offer.created, a new Angebot revision was opened (either the first revision, via CreateOffer, or a fresh draft revision minted by RegenerateOffer).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1282,7 +1282,7 @@ Payload for offer.created — a new Angebot revision was opened (either the firs
 
 Record: `offer` · version 1
 
-Payload for offer.rejected — a sent offer was rejected.
+Payload for offer.rejected, a sent offer was rejected.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1295,7 +1295,7 @@ Payload for offer.rejected — a sent offer was rejected.
 
 Record: `offer` · version 1
 
-Payload for offer.sent — a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion.
+Payload for offer.sent, a draft offer moved to `sent` and its commercial terms were frozen. Nothing was delivered to a counterparty: delivery is a separate capability that does not exist yet, so a subscriber must not read this as an offer having reached anybody. Carries the FX rate frozen at send time (RT-PR-C2) so consumers never need a read-back for the native-currency-to-base conversion.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1311,7 +1311,7 @@ Payload for offer.sent — a draft offer moved to `sent` and its commercial term
 
 Record: `offer` · version 1
 
-Payload for offer.superseded — a sent offer was regenerated into a fresh draft revision (B-E03.19) and marked superseded; the new revision arrives as its own offer.created event.
+Payload for offer.superseded, a sent offer was regenerated into a fresh draft revision (B-E03.19) and marked superseded; the new revision arrives as its own offer.created event.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1324,7 +1324,7 @@ Payload for offer.superseded — a sent offer was regenerated into a fresh draft
 
 Record: `onboarding_wizard_state` · version 1
 
-Payload for onboarding.state_changed — the admitted human's wizard checkpoint was created or advanced (identity/onboarding.go's auditOnboardingState).
+Payload for onboarding.state_changed, the admitted human's wizard checkpoint was created or advanced (identity/onboarding.go's auditOnboardingState).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1340,7 +1340,7 @@ Payload for onboarding.state_changed — the admitted human's wizard checkpoint 
 
 Record: `passport` · version 1
 
-Payload for passport.revoked — an agent passport was hard-revoked (identity/passport.go's RevokePassport), so long-lived consumers drop it within one bus cycle.
+Payload for passport.revoked, an agent passport was hard-revoked (identity/passport.go's RevokePassport), so long-lived consumers drop it within one bus cycle.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1351,7 +1351,7 @@ Payload for passport.revoked — an agent passport was hard-revoked (identity/pa
 
 Record: `pipeline` · version 1
 
-Payload for pipeline.archived — a pipeline was retired as a choice. It leaves the pickers and the new-deal flows; the deals on it keep their stage, their history and their forecast contribution, so a subscriber acting on this must not treat it as work moving. The payload is empty because the entity id is the whole fact.
+Payload for pipeline.archived, a pipeline was retired as a choice. It leaves the pickers and the new-deal flows; the deals on it keep their stage, their history and their forecast contribution, so a subscriber acting on this must not treat it as work moving. The payload is empty because the entity id is the whole fact.
 
 `data` is an empty object.
 
@@ -1359,7 +1359,7 @@ Payload for pipeline.archived — a pipeline was retired as a choice. It leaves 
 
 Record: `pipeline` · version 1
 
-Payload for pipeline.created — a pipeline was created with its initial stage set in the same transaction.
+Payload for pipeline.created, a pipeline was created with its initial stage set in the same transaction.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1371,7 +1371,7 @@ Payload for pipeline.created — a pipeline was created with its initial stage s
 
 Record: `pipeline` · version 1
 
-Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergent shapes (a flat name/is_default/position patch from UpdatePipeline or reorderPipelines, or a stage_positions reorder map from UpdateStage, reorderStages or a stage removal when stage positions change), so the honest shape is a change-set map rather than a fixed field list.
+Payload for pipeline.updated, an open envelope. Its emit sites carry different shapes. One is a flat name, is_default or position patch from UpdatePipeline or reorderPipelines. The other is a stage_positions reorder map from UpdateStage, reorderStages, or a stage removal that changes stage positions. So the payload is a change-set map rather than a fixed field list.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1381,7 +1381,7 @@ Payload for pipeline.updated — an OPEN envelope: its emit sites carry divergen
 
 Record: `project` · version 1
 
-Payload for project.archived — a project was archived. Carries no data.
+Payload for project.archived, a project was archived. Carries no data.
 
 `data` is an empty object.
 
@@ -1389,21 +1389,21 @@ Payload for project.archived — a project was archived. Carries no data.
 
 Record: `project` · version 1
 
-Payload for project.created — a body of work was opened on a company.
+Payload for project.created, a body of work was opened on a company.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.company_id` | string (uuid) | yes | The anchor company. A project has exactly one. |
+| `data.company_id` | string (uuid) | yes | The project's single anchor company. |
 | `data.key` | string | no | The short handle inbound mail is matched against, when one was given. |
 | `data.name` | string | yes | The project's name at creation. |
 | `data.owner_id` | string (uuid) | no |  |
-| `data.phase` | string | yes | Always `initiative` — a project is born at the head of the ladder. |
+| `data.phase` | string | yes | Always `initiative`, a project is born at the head of the ladder. |
 
 ### `project.phase_changed`
 
 Record: `project` · version 1
 
-Payload for project.phase_changed — a project moved along the phase ladder. Emitted INSTEAD of project.updated, and written from the same transaction as its phase-history row, so "where does this stand" and "how did it get there" can never disagree.
+Payload for project.phase_changed, a project moved along the phase ladder. Emitted INSTEAD of project.updated, and written from the same transaction as its phase-history row, so "where does this stand" and "how did it get there" can never disagree.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1415,7 +1415,7 @@ Payload for project.phase_changed — a project moved along the phase ladder. Em
 
 Record: `project` · version 1
 
-Payload for project.updated — a column patch on the project row. Deliberately NOT emitted for a phase move: that carries its own first-class project.phase_changed, so a consumer never has to reconstruct a transition from a diff.
+Payload for project.updated, a column patch on the project row. It is not emitted for a phase move. A phase move carries its own project.phase_changed, so a consumer never has to rebuild a transition from a diff.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1425,11 +1425,11 @@ Payload for project.updated — a column patch on the project row. Deliberately 
 
 Record: `contact` · version 1
 
-Payload for relationship_nudge.decided — a rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (contacts's nudge dismissal). The entity is the CONTACT, which is what the judgement is about. WHOSE morning it was is not on the wire, and the omission is the same one activity.disposition_recorded makes: a dismissal binds ONE reader, and a consumer reading this as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
+Payload for relationship_nudge.decided. A rep set a lapsed contact aside so their own Worklist stops raising them, or put them back (the contacts module's nudge dismissal). The entity is the contact, which is what the judgement is about. Whose morning it was is not on the wire, for the same reason as in activity.disposition_recorded. A dismissal binds a single reader. A consumer reading it as a workspace-wide fact would report one rep's private decision as the contact's own state. The reader stays on the row, for a caller entitled to it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.action` | string: `dismissed`, `restored` | yes | What was decided. `restored` is the undo, carried rather than left to be inferred from a row going quiet: a decision withdrawn is itself a decision, and a consumer counting how often reps put relationships down has to see it happen. |
+| `data.action` | string: `dismissed`, `restored` | yes | What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen. |
 | `data.contact_id` | string (uuid) | yes |  |
 | `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have. |
 
@@ -1437,23 +1437,23 @@ Payload for relationship_nudge.decided — a rep set a lapsed contact aside so t
 
 Record: `dynamic` · version 1
 
-Payload for retention.applied — a retention/erasure action ran against one record. Four emit sites, four different runtime subjects: the embed-call sweep (ai_call), the voice-learning-signal content sweep (voice_learning_signal), a workspace's configured retention policy's object type (activity | deal | lead | contact | ai_call_payload), and Art. 17 erasure (contact) — none fixed enough for this schema to name, so this is dynamic-entity (contract `x-entity-type: dynamic`): the generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. policy/reason are a union across the sites — both telemetry sweeps set neither, the policy-driven sweep sets policy only, Art. 17 erasure sets reason only.
+Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.action` | string: `archive`, `anonymize`, `erase` | yes | The action that ran. A CLOSED set, so a subscriber can switch on it exhaustively — which is the whole reason for closing it: an open field leaves a consumer to either branch on values nobody has defined or drop what it does not recognise, and a silent drop looks exactly like no event. `retention_policy.action` carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is NOT a fourth action here: it emits retention.restricted, whose own action is a different closed set. |
+| `data.action` | string: `archive`, `anonymize`, `erase` | yes | The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set. |
 | `data.policy` | string (uuid) | no | The retention policy that drove this action (absent for the fixed embed-call sweep and for Art. 17 erasure, neither of which is policy-configured). |
-| `data.reason` | string | no | Why this action ran (Art. 17 erasure only — e.g. dsr_request; absent for both retention-sweep sites). |
+| `data.reason` | string | no | Why this action ran (Art. 17 erasure only, e.g. dsr_request; absent for both retention-sweep sites). |
 
 ### `retention.restricted`
 
 Record: `activity` · version 1
 
-Payload for retention.restricted — a statutory retention obligation changed what may be done with one record (A165/ADR-0114). Its own event type rather than a widening of retention.applied, because `restrict` carries an obligation on the SUBSCRIBER that no existing action does: the record survives in storage and must not survive in a projection. Adding it to retention.applied would have changed the meaning of a field subscribers already parse, which the versioning rule forbids within a major.
+Payload for retention.restricted, a statutory retention obligation changed what may be done with one record (A165/ADR-0114). Its own event type rather than a widening of retention.applied, because `restrict` carries an obligation on the SUBSCRIBER that no existing action does: the record survives in storage and must not survive in a projection. Adding it to retention.applied would have changed the meaning of a field subscribers already parse, which the versioning rule forbids within a major.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.action` | string: `restrict`, `release`, `pin` | yes | `restrict` — the record leaves every ordinary read path for its statutory window; a subscriber projecting activity content MUST remove it. `release` — an administrator ended the restriction with an audited reason and the record was erased; treat as an erasure. `pin` — an administrator placed a record under the floor that the classification missed; treat as a restriction. |
+| `data.action` | string: `restrict`, `release`, `pin` | yes | The `restrict` action takes the record out of every ordinary read path for its statutory window. A subscriber projecting activity content must remove it. The `release` action means an administrator ended the restriction with an audited reason and the record was erased. Treat it as an erasure. The `pin` action means an administrator placed a record under the floor that the classification missed. Treat it as a restriction. |
 | `data.activity_id` | string (uuid) | yes | The record whose availability changed. |
 | `data.restricted_until` | string (date-time) | no | When the obligation ends and the suspended erasure completes. Present for restrict and pin, absent for release. Pinned at restriction time, so it never moves once stated. |
 | `data.retention_class` | string | no | The statutory class that holds it (e.g. commercial_correspondence). No free text and no reason string: the administrator's reason is audit-log material, and a public event is not the place to publish why a named contact decided something about a named record. |
@@ -1462,12 +1462,12 @@ Payload for retention.restricted — a statutory retention obligation changed wh
 
 Record: `user` · version 1
 
-Payload for role.changed — a member's role assignments were replaced with the single target system role (identity/users.go's ChangeUserRole). from_role rides the payload only when the previous state was a single role — a multi-role history has no one "from".
+Payload for role.changed. A member's role assignments were replaced with the single target system role (identity/users.go's ChangeUserRole). The from_role field rides the payload only when the previous state was a single role. A multi-role history has no single "from".
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.by` | string (uuid) | yes | The admin who changed the role. |
-| `data.from_role` | string | no | The single prior role key (absent when the member held more than one role before this change). |
+| `data.from_role` | string | no | The single prior role key (absent when the member held more than one role before this event). |
 | `data.to_role` | string | yes | The role key assigned. |
 | `data.user_id` | string (uuid) | yes | The member whose role changed. |
 
@@ -1475,12 +1475,12 @@ Payload for role.changed — a member's role assignments were replaced with the 
 
 Record: `signal` · version 1
 
-Payload for signal.detected — a signal was created (signals/signal.go's CreateSignal). entity_type/entity_id are DATA fields naming the signal's subject (deal | company | contact) when one is already known at creation time — not the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver; resolution_confidence is set only when the signal was created already resolved.
+Payload for signal.detected. A signal was created (signals/signal.go's CreateSignal). The entity_type and entity_id data fields name the signal's subject (deal | company | contact) when it is known at creation time. They differ from the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver. The resolution_confidence field is set only when the signal was created already resolved.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.entity_id` | string (uuid) | no | The subject record's id — a payload data field, absent until a raw signal resolves. |
-| `data.entity_type` | string | no | The subject record's type (deal \| company \| contact) — a payload data field, absent until a raw signal resolves (both entity fields set together). x-go-name avoids colliding with the generated EntityType() method, which names the ENVELOPE'S entity (always "signal"), not this data field. |
+| `data.entity_id` | string (uuid) | no | The subject record's id, a payload data field, absent until a raw signal resolves. |
+| `data.entity_type` | string | no | The subject record's type (deal \| company \| contact), a payload data field. It is absent until a raw signal resolves, and both entity fields are set together. The x-go-name avoids a clash with the generated EntityType() method. That method names the envelope's entity (always "signal"), not this data field. |
 | `data.kind` | string | yes | The signal kind (stalled_deal \| champion_left \| reengagement \| buying_intent \| risk \| other). |
 | `data.resolution_confidence` | number | no | The match confidence (0–1), set only when created already resolved. |
 | `data.resolution_state` | string | yes | The raw→entity match outcome at creation time (resolved \| low_confidence \| unresolved \| dropped). |
@@ -1492,7 +1492,7 @@ Payload for signal.detected — a signal was created (signals/signal.go's Create
 
 Record: `signal` · version 1
 
-Payload for signal.resolved — the resolver ran over a signal (signals/resolver.go's Resolve). The verdict IS the candidate count (P12): zero candidates drops the signal (resolved_company_id, resolved_contact_id, matched_on, match_confidence all absent); exactly one resolves it to that company (resolved_company_id set, resolved_contact_id set only under a recorded consent grant); several flags it low_confidence for review (matched_on/ match_confidence describe the top candidate, resolved_company_id stays absent).
+Payload for signal.resolved. The resolver ran over a signal (signals/resolver.go's Resolve). The verdict is the candidate count (P12). Zero candidates drops the signal, and resolved_company_id, resolved_contact_id, matched_on and match_confidence are all absent. A single candidate resolves it to that company. Then resolved_company_id is set, and resolved_contact_id is set only under a recorded consent grant. Several candidates flag it low_confidence for review. Then matched_on and match_confidence describe the top candidate, and resolved_company_id stays absent.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1507,7 +1507,7 @@ Payload for signal.resolved — the resolver ran over a signal (signals/resolver
 
 Record: `stage` · version 1
 
-Payload for stage.archived — a stage was removed from a pipeline (archiveStage; archive is the removal, so the stage-change history referencing it stays readable). The pipeline is named here, as it is on stage.created, because a subscriber holding only the envelope's stage id cannot tell which pipeline reshaped; the shift that closes the vacated position rides its own pipeline.updated.
+Payload for stage.archived, a stage was removed from a pipeline (archiveStage; archive is the removal, so the stage-change history referencing it stays readable). The pipeline is named here, as it is on stage.created, because a subscriber holding only the envelope's stage id cannot tell which pipeline reshaped; the shift that closes the vacated position rides its own pipeline.updated.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1517,7 +1517,7 @@ Payload for stage.archived — a stage was removed from a pipeline (archiveStage
 
 Record: `stage` · version 1
 
-Payload for stage.created — a stage was added to a pipeline.
+Payload for stage.created, a stage was added to a pipeline.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1531,7 +1531,7 @@ Payload for stage.created — a stage was added to a pipeline.
 
 Record: `stage` · version 1
 
-Payload for stage.updated — a BOUNDED delta: UpdateStage's known mutable fields (name, semantic, win_probability) each carried only when this update touched them. A position change is instead published as ONE pipeline.updated with a stage_positions delta (never an N-way stage.updated), so position never appears here.
+Payload for stage.updated, a bounded delta. It carries UpdateStage's known mutable fields (name, semantic, win_probability), each only when this update touched them. A position change is published instead as a single pipeline.updated with a stage_positions delta, never as N stage.updated events. So position never appears here.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1544,7 +1544,7 @@ Payload for stage.updated — a BOUNDED delta: UpdateStage's known mutable field
 
 Record: `team` · version 1
 
-Payload for team.changed — a team was created, renamed, archived or restored, or a member was put on or taken off it (identity/teams.go). Membership is what resolves `row_scope: team` and team shares, so a subscriber that caches who-sees-what re-reads on this.
+Payload for team.changed, a team was created, renamed, archived or restored, or a member was put on or taken off it (identity/teams.go). Membership is what resolves `row_scope: team` and team shares, so a subscriber that caches who-sees-what re-reads on this.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1557,7 +1557,7 @@ Payload for team.changed — a team was created, renamed, archived or restored, 
 
 Record: `user` · version 1
 
-Payload for user.activated — an invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This is the completion of `user.invited`: until it arrives the seat exists and holds its licence, but nobody can sign in as it. There is no `by`. Possession of the single-use token IS the authority on this path, so the member activated themselves and there is no admin actor to name — unlike user.reactivated, which an admin performs. A member resetting a FORGOTTEN password does not emit this: they were already active, and nothing transitioned.
+Payload for user.activated. An invited member redeemed their set-password link and became active (identity/reset.go's RedeemPasswordReset). This completes `user.invited`. Until it arrives the seat exists and holds its licence, but nobody can sign in as it. There is no `by`. On this path, possession of the single-use token is the authority. So the member activated themselves, and there is no admin actor to name. By contrast, an admin performs user.reactivated. A member resetting a forgotten password does not emit this event: they were already active, and nothing transitioned.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1567,7 +1567,7 @@ Payload for user.activated — an invited member redeemed their set-password lin
 
 Record: `user` · version 1
 
-Payload for user.deactivated — a member's sessions and passports were hard-revoked (identity/users.go's DeactivateUser). reason is the operator-supplied free text, absent when none was given.
+Payload for user.deactivated, a member's sessions and passports were hard-revoked (identity/users.go's DeactivateUser). reason is the operator-supplied free text, absent when none was given.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1579,7 +1579,7 @@ Payload for user.deactivated — a member's sessions and passports were hard-rev
 
 Record: `user` · version 1
 
-Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
+Payload for user.invited, an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1592,7 +1592,7 @@ Payload for user.invited — an admin provisioned a new active member with a sin
 
 Record: `user` · version 1
 
-Payload for user.password_link_issued — on an installation with no outbound-email channel, an admin minted a single-use set-password link for a member and will deliver it out-of-band (ADR-0061 Amendment 1). Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password, which is an account takeover an admin is trusted to perform; this event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is NEVER a property here, and must never be added — the raw value is returned to the issuing admin exactly once, over the response body, and reaches no ledger, log, or bus.
+Payload for user.password_link_issued. On an installation with no outbound-email channel, an admin minted a single-use set-password link for a member (ADR-0061). The admin delivers it out-of-band. Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password. That is an account takeover an admin is trusted to perform. This event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is never a property here, and must never be added. The raw value is returned to the issuing admin once, over the response body, and reaches no ledger, log or bus.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1604,7 +1604,7 @@ Payload for user.password_link_issued — on an installation with no outbound-em
 
 Record: `user` · version 1
 
-Payload for user.reactivated — a deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser). `status` says what they were returned TO, and it is not always `active`: a member deactivated before redeeming their invitation comes back `invited`, because they still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate exactly the falsehood the invited status exists to remove.
+Payload for user.reactivated. A deactivated member was lifted out of deactivation (identity/users.go's ReactivateUser). The `status` field says what they were returned to, and it is not always `active`. A member deactivated before redeeming their invitation comes back `invited`. They still hold no password and still sign in nowhere. A subscriber that assumed "reactivated means active" would restate the falsehood the invited status exists to remove.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1616,7 +1616,7 @@ Payload for user.reactivated — a deactivated member was lifted out of deactiva
 
 Record: `user` · version 1
 
-Payload for user_delivery.changed — a member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way; this is about the nudge toward them, which is the one part a contact is entitled to switch off. It names WHAT moved and not what it moved to. What somebody chose about their own inbox is theirs, and a fan-out carrying the values would tell every subscription owner who had turned their mail off — so the values stay on the row, which only that contact and the job reads.
+Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a contact may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that contact and the job read.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1626,7 +1626,7 @@ Payload for user_delivery.changed — a member chose what the product may send t
 
 Record: `user` · version 1
 
-Payload for user_display_name.changed — a member changed the name their colleagues see them by (identity/userdisplayname.go's SaveMyDisplayName). Always their own: this API offers no way to rename somebody else. A subscriber holding a copy of the roster needs it, because the name is read from app_user wherever it is shown and a cached copy would keep addressing the contact by a name they have corrected.
+Payload for user_display_name.changed, a member changed the name their colleagues see them by (identity/userdisplayname.go's SaveMyDisplayName). Always their own: this API offers no way to rename somebody else. A subscriber holding a copy of the roster needs it, because the name is read from app_user wherever it is shown and a cached copy would keep addressing the contact by a name they have corrected.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1636,7 +1636,7 @@ Payload for user_display_name.changed — a member changed the name their collea
 
 Record: `user` · version 1
 
-Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+Payload for user_greeting_name.changed, the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1646,17 +1646,17 @@ Payload for user_greeting_name.changed — the name a member's colleagues greet 
 
 Record: `user` · version 1
 
-Payload for user_locale.changed — a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this contact needs to know which catalog to reach for.
+Payload for user_locale.changed, a member chose the language their own interface is rendered in (identity/userlocale.go's SaveMyLocale). It is a change to the member's own seat rather than to anything the installation is measured in: the language AI writes for the whole team is the installation's base_language, which is an admin setting and publishes separately. A subscriber that renders anything for this contact needs to know which catalog to reach for.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.locale` | string | yes | The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. |
+| `data.locale` | string | yes | The language now chosen, one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. |
 
 ### `voice.build_changed`
 
 Record: `voice_profile` · version 1
 
-Payload for voice.build_changed — a Voice DNA build was queued or an already-pending one was returned in place of a duplicate request (ai/voice_lifecycle.go's RequestBuild). stage/result_version/ status_code/next_attempt_at describe an in-flight or deferred build and are therefore absent on a freshly-queued one.
+Payload for voice.build_changed. A Voice DNA build was queued, or an already-pending one was returned in place of a duplicate request (ai/voice_lifecycle.go's RequestBuild). The stage, result_version, status_code and next_attempt_at fields describe an in-flight or deferred build. So they are absent on a freshly queued one.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1669,31 +1669,31 @@ Payload for voice.build_changed — a Voice DNA build was queued or an already-p
 | `data.source_count` | integer | yes | The corpus's eligible source count this build was requested against. |
 | `data.source_hash` | string | yes | The corpus content hash this build was requested against. |
 | `data.stage` | string | no | The build's current pipeline stage (absent before it starts running). |
-| `data.status` | string | yes | The build's status, one of queued \| deferred \| running \| succeeded \| failed — exactly the values voice_build_run.go persists and emits ("succeeded" is the success terminal, not "completed"). |
+| `data.status` | string | yes | The build's status, one of queued \| deferred \| running \| succeeded \| failed. These are the values voice_build_run.go persists and emits. The success terminal is "succeeded", not "completed". |
 | `data.status_code` | string | no | A machine-readable status detail code (absent unless the build failed or deferred). |
 
 ### `voice.corpus_changed`
 
 Record: `voice_profile` · version 1
 
-Payload for voice.corpus_changed — a UNION across four emit sites that all mutate the corpus feeding a profile's build: a source's inclusion/weight was updated (voice_source_mutations.go's recordSourceUpdate), a source was removed (RemoveSource), a source was ingested/re-ingested (voice_source_store.go's recordSourceIngest), or the whole corpus was cleared (voice_source_mutations.go's ClearCorpus). source_id/origin/register name the touched source and are therefore absent on the clear site, which acts on the corpus as a whole.
+Payload for voice.corpus_changed. It is a union across four emit sites that all mutate the corpus feeding a profile's build. A source's inclusion or weight was updated (voice_source_mutations.go's recordSourceUpdate). A source was removed (RemoveSource). A source was ingested or re-ingested (voice_source_store.go's recordSourceIngest). Or the whole corpus was cleared (voice_source_mutations.go's ClearCorpus). The source_id, origin and register fields name the touched source. So they are absent on the clear site, which acts on the corpus as a whole.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.action` | string | yes | What happened to the corpus, one of: ingested (a new source was added) \| replaced (an existing source was re-ingested) \| included \| excluded \| removed \| cleared. These are exactly the values the emit sites stamp (voice_source_store.go sourceIngestChange, voice_source_mutations.go sourceInclusionChange / ClearCorpus). |
+| `data.action` | string | yes | What happened to the corpus. It is ingested (a new source was added) or replaced (an existing source was re-ingested). The other values are included, excluded, removed and cleared. These are the values the emit sites stamp (voice_source_store.go sourceIngestChange, voice_source_mutations.go sourceInclusionChange / ClearCorpus). |
 | `data.origin` | string | no | The touched source's origin (manual \| capture) (absent on the clear site). |
 | `data.profile_id` | string (uuid) | yes | The profile whose corpus changed. |
 | `data.register` | string | no | The touched source's register (email \| social \| long_form \| spoken \| general) (absent on the clear site). |
-| `data.source_count` | integer | yes | The corpus's eligible source count after this change. |
-| `data.source_hash` | string | yes | The corpus's content hash after this change. |
-| `data.source_id` | string (uuid) | no | The source this change touched (absent on the clear site, which has no single source). |
+| `data.source_count` | integer | yes | The corpus's eligible source count after this event. |
+| `data.source_hash` | string | yes | The corpus's content hash after this event. |
+| `data.source_id` | string (uuid) | no | The source this event touched (absent on the clear site, which has no single source). |
 | `data.word_delta` | integer | yes | The eligible-word-count change this action caused (may be negative). |
 
 ### `voice.draft_outcome_recorded`
 
 Record: `voice_profile` · version 1
 
-Payload for voice.draft_outcome_recorded — a drafted-with-voice signal's outcome was recorded (ai/voice_history.go's RecordDraftOutcome), feeding the automatic-learning corpus.
+Payload for voice.draft_outcome_recorded, a drafted-with-voice signal's outcome was recorded (ai/voice_history.go's RecordDraftOutcome), feeding the automatic-learning corpus.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1706,7 +1706,7 @@ Payload for voice.draft_outcome_recorded — a drafted-with-voice signal's outco
 
 Record: `voice_profile` · version 1
 
-Payload for voice.profile_archived — the owner's profile was soft-deleted (ai/voice.go's ArchiveProfile).
+Payload for voice.profile_archived, the owner's profile was soft-deleted (ai/voice.go's ArchiveProfile).
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1718,7 +1718,7 @@ Payload for voice.profile_archived — the owner's profile was soft-deleted (ai/
 
 Record: `voice_profile` · version 1
 
-Payload for voice.profile_created — the admitted human opened their one personal Voice DNA profile (ai/voice.go's CreateProfile). Always starts collecting, at maturity zero, with automatic learning off.
+Payload for voice.profile_created, the admitted human opened their one personal Voice DNA profile (ai/voice.go's CreateProfile). Always starts collecting, at maturity zero, with automatic learning off.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1731,7 +1731,7 @@ Payload for voice.profile_created — the admitted human opened their one person
 
 Record: `voice_profile` · version 1
 
-Payload for voice.profile_updated — the owner replaced their human-authored preferences and/or their automatic-learning opt-in (ai/voice.go's UpdateProfile). action names which of the two (or both) this update touched.
+Payload for voice.profile_updated, the owner replaced their human-authored preferences and/or their automatic-learning opt-in (ai/voice.go's UpdateProfile). action names which of the two (or both) this update touched.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1744,7 +1744,7 @@ Payload for voice.profile_updated — the owner replaced their human-authored pr
 
 Record: `voice_profile` · version 1
 
-Payload for voice.version_changed — a derived Voice DNA version's status changed: minted as a candidate, manually activated, rejected, or restored by rollback (ai/voice_versions.go). predecessor_version is absent for a profile's first version, which has none.
+Payload for voice.version_changed, a derived Voice DNA version's status changed: minted as a candidate, manually activated, rejected, or restored by rollback (ai/voice_versions.go). predecessor_version is absent for a profile's first version, which has none.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1754,13 +1754,13 @@ Payload for voice.version_changed — a derived Voice DNA version's status chang
 | `data.profile_id` | string (uuid) | yes | The profile this version belongs to. |
 | `data.profile_version` | integer | yes | This version's number. |
 | `data.reason` | string | yes | Why this version was produced (e.g. build \| rollback). |
-| `data.status` | string | yes | The version's status after this change (candidate \| active \| superseded \| rejected). |
+| `data.status` | string | yes | The version's status after this event (candidate \| active \| superseded \| rejected). |
 
 ### `weekly_plan.help_requested`
 
 Record: `user` · version 1
 
-Payload for weekly_plan.help_requested — a rep asked their lead for help on one commitment. Its own type rather than another weekly_plan.updated, because this is the one change somebody else is meant to act on: an automation notifying a lead subscribes to this and not to every edit of a checkbox. The request text is NOT here. It stays on the row the lead opens, so what a rep says about being stuck does not ride a fan-out.
+Payload for weekly_plan.help_requested. A rep asked their lead for help on one commitment. It is its own type rather than another weekly_plan.updated. This is the one change somebody else is meant to act on. An automation notifying a lead subscribes to this event and not to every checkbox edit. The request text is not here. It stays on the row the lead opens, so what a rep says about being stuck does not ride a fan-out.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1772,11 +1772,11 @@ Payload for weekly_plan.help_requested — a rep asked their lead for help on on
 
 Record: `user` · version 1
 
-Payload for weekly_plan.updated — a rep's plan for the week changed: opened, a commitment added, edited or settled. The entity is the rep whose week it is, because that is who the record belongs to. `changed_fields` names WHAT moved rather than carrying it; the labels and the help text stay on the row, since prose on two wires drifts.
+Payload for weekly_plan.updated. A rep's plan for the week changed: opened, or a commitment added, edited or settled. The entity is the rep whose week it is, because the record belongs to them. The `changed_fields` list names what moved rather than carrying it. The labels and the help text stay on the row, since prose on two wires drifts.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | array of string | yes | Which parts of the plan moved — status, commitments. |
+| `data.changed_fields` | array of string | yes | Which parts of the plan moved, status, commitments. |
 | `data.owner_user_id` | string (uuid) | yes |  |
 | `data.plan_id` | string (uuid) | yes |  |
 
