@@ -5825,7 +5825,6 @@ export const vi = {
     "Mọi dòng được gắn vào liên hệ này, nên tệp không cần cột links.",
   "import.files.ignoredTitle": "Tệp bị bỏ qua",
   "import.files.ignored.unknown_name": "tên tệp không khớp loại hồ sơ nào",
-  "import.files.ignored.not_yet_importable": "loại hồ sơ này chưa nhập được",
   "import.files.sourceName": "Tên nguồn",
   "import.files.sourceNameHint":
     "Dùng cùng tên ở lần tải lên sau để cập nhật các hồ sơ này thay vì thêm lại.",

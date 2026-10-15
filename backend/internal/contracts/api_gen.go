@@ -10356,15 +10356,12 @@ func (e ImportFormatVersion) Valid() bool {
 
 // Defines values for ImportIgnoredEntryReason.
 const (
-	ImportIgnoredEntryReasonNotYetImportable ImportIgnoredEntryReason = "not_yet_importable"
-	ImportIgnoredEntryReasonUnknownName      ImportIgnoredEntryReason = "unknown_name"
+	ImportIgnoredEntryReasonUnknownName ImportIgnoredEntryReason = "unknown_name"
 )
 
 // Valid indicates whether the value is a known member of the ImportIgnoredEntryReason enum.
 func (e ImportIgnoredEntryReason) Valid() bool {
 	switch e {
-	case ImportIgnoredEntryReasonNotYetImportable:
-		return true
 	case ImportIgnoredEntryReasonUnknownName:
 		return true
 	default:
@@ -37253,11 +37250,11 @@ type ImportIgnoredEntry struct {
 	// File The entry's path inside the ZIP.
 	File string `json:"file"`
 
-	// Reason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+	// Reason `unknown_name`: the file name names no type this CRM knows.
 	Reason ImportIgnoredEntryReason `json:"reason"`
 }
 
-// ImportIgnoredEntryReason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+// ImportIgnoredEntryReason `unknown_name`: the file name names no type this CRM knows.
 type ImportIgnoredEntryReason string
 
 // ImportObject What the file's rows are, and therefore what the run creates.

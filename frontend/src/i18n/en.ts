@@ -6098,8 +6098,6 @@ export const en = {
     "Every row is filed under this contact, so the file needs no links column.",
   "import.files.ignoredTitle": "Files left out",
   "import.files.ignored.unknown_name": "the name matches no record type",
-  "import.files.ignored.not_yet_importable":
-    "this record type cannot be imported yet",
   "import.files.sourceName": "Source name",
   "import.files.sourceNameHint":
     "Use the same name on a later upload to update these records, not add them again.",

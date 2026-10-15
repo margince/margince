@@ -34287,8 +34287,8 @@ components:
         file:   { type: string, description: 'The entry''s path inside the ZIP.' }
         reason:
           type: string
-          enum: [unknown_name, not_yet_importable]
-          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
+          enum: [unknown_name]
+          description: '`unknown_name`: the file name names no type this CRM knows.'
 
     ImportPartRequest:
       type: object

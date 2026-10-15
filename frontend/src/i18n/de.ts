@@ -5969,8 +5969,6 @@ export const de = {
   "import.files.ignoredTitle": "Ausgelassene Dateien",
   "import.files.ignored.unknown_name":
     "der Name entspricht keinem Datensatztyp",
-  "import.files.ignored.not_yet_importable":
-    "dieser Datensatztyp kann noch nicht importiert werden",
   "import.files.sourceName": "Quellname",
   "import.files.sourceNameHint":
     "Mit demselben Namen aktualisiert ein späterer Upload diese Datensätze, statt sie erneut hinzuzufügen.",

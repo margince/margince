@@ -24137,10 +24137,10 @@ export interface components {
             /** @description The entry's path inside the ZIP. */
             file: string;
             /**
-             * @description `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+             * @description `unknown_name`: the file name names no type this CRM knows.
              * @enum {string}
              */
-            reason: "unknown_name" | "not_yet_importable";
+            reason: "unknown_name";
         };
         /** @description One file of a ZIP run, with the type and mapping the human settled for it. */
         ImportPartRequest: {
