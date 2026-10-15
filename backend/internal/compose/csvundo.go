@@ -46,7 +46,8 @@ func (w *csvWriters) Reverse(
 	}
 	switch object {
 	case migration.ObjectLead:
-		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched)
+		// The retired lead gives its ref back, so the same file imports again.
+		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched, contacts.ReleasingSourceKey())
 	case migration.ObjectCompany:
 		// A live deal or contact that still names the company keeps it.
 		// Archiving would leave that record pointing at a hidden company.
