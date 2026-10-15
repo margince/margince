@@ -33,7 +33,6 @@ type Config struct {
 	Workspace      Workspace       `yaml:"workspace"`
 	BootstrapAdmin *BootstrapAdmin `yaml:"bootstrap_admin"`
 	Seeds          Seeds           `yaml:"seeds"`
-	Analytics      Analytics       `yaml:"analytics"`
 	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
@@ -72,11 +71,6 @@ type Operations struct {
 	// also holds a real gmail/graph grant still sends through that one —
 	// SendableMailProvider picks the first alphabetically capable provider.
 	AllowTestMailbox bool `yaml:"allow_test_mailbox"`
-}
-
-// Analytics accepts the inert retired key so existing configuration files still load.
-type Analytics struct {
-	PerformanceEnabled bool `yaml:"performance_enabled"`
 }
 
 // Lists switches Live Lists and Shortlists. They are on unless an operator

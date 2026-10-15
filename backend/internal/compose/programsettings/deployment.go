@@ -26,6 +26,10 @@ var (
 		Key: "mcp.connector_enabled", Env: "MARGINCE_MCP_CONNECTOR_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: apiOnly,
 		Doc: "Serve /mcp and the OAuth authorization server to outside agent clients; needs --public-base-url.",
 	})
+	AnalyticsPerformance = config.Define(config.Spec[bool]{
+		Key: "analytics.performance_enabled", Env: "MARGINCE_ANALYTICS_PERFORMANCE_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: both,
+		Doc: "Ignored; kept so existing files load.",
+	})
 	RatesFxSource = config.Define(config.Spec[string]{
 		Key: "rates.fx_source", Env: "MARGINCE_RATES_FX_SOURCE", Type: config.String, Roles: workerOnly,
 		Doc: "Page the FX refresh reads rates from; unset reads api.frankfurter.dev.",
@@ -56,5 +60,5 @@ func distinctCurrencies(codes []string) error {
 
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, AnalyticsPerformance, RatesFxSource, RatesFxCurrencies}
 }

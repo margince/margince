@@ -104,6 +104,7 @@ must pass the same check. A secret key takes a `${file:...}` or `${env:...}` ref
 | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | `0` (= no cap) | `capture.max_backfill_months` |
 | `MARGINCE_CAPTURE_SKIP_RESERVED_DOMAIN_PROPOSALS` | `true` | `capture.skip_reserved_domain_proposals` |
 | `MARGINCE_COMPANY_CONTEXT_ROLLOUT` | `onboarding` | `company_context.rollout` |
+| `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | `false` | `analytics.performance_enabled` (ignored) |
 
 ## Common log flags (api, worker)
 

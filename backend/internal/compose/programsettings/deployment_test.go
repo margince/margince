@@ -111,3 +111,12 @@ func TestTheMCPConnectorIsOffUnlessTheFileTurnsItOn(t *testing.T) {
 		t.Fatal("mcp.connector_enabled: true read as off")
 	}
 }
+
+// The retired reporting switch acts on nothing, and a file carrying it still
+// loads.
+func TestRetiredReportingConfigurationStillLoads(t *testing.T) {
+	t.Parallel()
+	if _, err := configtest.Load(t, "version: 1\nanalytics:\n  performance_enabled: true\n", nil, nil, ps.FileSettings()...); err != nil {
+		t.Fatalf("a file carrying analytics.performance_enabled must still load: %v", err)
+	}
+}
