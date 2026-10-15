@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
@@ -87,4 +88,13 @@ func TestATypoInTheUploadsSectionIsABootError(t *testing.T) {
 	if _, err := loadUploads(t, "uploads:\n  attachment_mp: 40\n"); err == nil {
 		t.Fatal("an unknown uploads key was ignored rather than refused")
 	}
+}
+
+func TestAnUploadCeilingWithNoDefaultFailsLoudly(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("a ceiling with no default read as zero, which refuses every upload")
+		}
+	}()
+	defaultOf(config.Define(config.Spec[int]{Key: "uploads.test_mb", Env: "TEST_UPLOADS_MB", Type: config.Int, Doc: "d"}))
 }

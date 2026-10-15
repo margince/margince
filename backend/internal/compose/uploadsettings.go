@@ -80,7 +80,12 @@ func UploadSettings() []config.Any {
 
 func megabytes(mb int) int64 { return int64(mb) * bytesPerMB }
 
+// defaultOf panics on a ceiling with no default: a zero would refuse every
+// upload, and the missing default is a wiring fault the first boot reports.
 func defaultOf(s *config.Setting[int]) int {
-	v, _ := s.Spec().Default.Get()
+	v, ok := s.Spec().Default.Get()
+	if !ok {
+		panic("compose: upload ceiling " + s.Key() + " declares no default")
+	}
 	return v
 }
