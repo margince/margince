@@ -16,8 +16,9 @@ import (
 
 func TestADealsFileIsAPartThatStagesAndTestRuns(t *testing.T) {
 	e := setupImportApp(t)
+	pipeline, open, _ := seededStageNames(t, e)
 	profile := uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
-		"deals.csv":     "ref,name,company_ref\nD-1,Pumps for Acme,CO-1\n",
+		"deals.csv":     fmt.Sprintf("ref,name,pipeline,stage,company_ref\nD-1,Pumps for Acme,%s,%s,CO-1\n", pipeline, open),
 		"companies.csv": "ref,name\nCO-1,Acme Deals GmbH\n",
 	}))
 	if len(profile.Parts) != 2 || profile.Parts[1].Object != "deal" || len(profile.Ignored) != 0 {
@@ -25,7 +26,7 @@ func TestADealsFileIsAPartThatStagesAndTestRuns(t *testing.T) {
 	}
 	run := stageBundle(t, e, profile.SourceRef, "crm", []AnyMap{
 		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name"}},
-		{"file": "deals.csv", "object": "deal", "mapping": AnyMap{"ref": "ref", "name": "name", "company_ref": "company_ref"}},
+		{"file": "deals.csv", "object": "deal", "mapping": AnyMap{"ref": "ref", "name": "name", "pipeline": "pipeline", "stage": "stage", "company_ref": "company_ref"}},
 	})
 	var report importReportDTO
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
