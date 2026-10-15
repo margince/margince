@@ -91,7 +91,7 @@ func requireAnchorRenamer(ctx context.Context) error {
 	if _, human := principal.HumanUserID(by); !human {
 		return &AnchorProtectedError{
 			Field:  fieldDisplayName,
-			Action: "its name is the installation's name, so only an administrator renames it, on the company profile",
+			Action: values.AnchorRenameRefusal,
 		}
 	}
 	err = requireAnchorAdministrator(ctx)

@@ -51,6 +51,9 @@ export function storeCompany(
   void client.invalidateQueries({ queryKey: ["me"] });
 }
 
+// A site-read confirm nests the profile, so its name is `profile.display_name`.
+const COMPANY_NAME_FIELDS = new Set(["display_name", "profile.display_name"]);
+
 // The name is the installation's too, so the server caps its length. That
 // refusal reads in the reader's language; any other keeps the server's words.
 export function companySaveMessage(
@@ -58,7 +61,8 @@ export function companySaveMessage(
   t: (key: MessageKey) => string,
 ): string {
   const tooLong = problemFieldErrorsOf(error).some(
-    (fault) => fault.field === "display_name" && fault.code === "too_long",
+    (fault) =>
+      COMPANY_NAME_FIELDS.has(fault.field) && fault.code === "too_long",
   );
   return tooLong
     ? t("settings.companyNameTooLong")

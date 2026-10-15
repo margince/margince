@@ -8,6 +8,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { invalidateCompany } from "../lib/recordwritekeys";
 import { useRecordZone } from "../lib/recordzone";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
@@ -150,9 +151,16 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
 
 export function EvidenceVerdict({
   companyId,
+  anchor,
   claim,
   canEdit,
-}: Readonly<{ companyId: string; claim: EvidenceClaim; canEdit: boolean }>) {
+}: Readonly<{
+  companyId: string;
+  // The record's `is_anchor`: its claims are also the settings company profile.
+  anchor: boolean;
+  claim: EvidenceClaim;
+  canEdit: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -166,11 +174,10 @@ export function EvidenceVerdict({
   const settle = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["companies"] }),
-      queryClient.invalidateQueries({ queryKey: ["company360", companyId] }),
+      invalidateCompany(queryClient, { id: companyId, is_anchor: anchor }),
       // The keys below are the ones the CONSUMERS register. React Query matches
       // key segments exactly, so a near-miss spelling invalidates nothing and
       // the page keeps offering a verdict on a claim the human already settled.
-      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
       queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
     ]);

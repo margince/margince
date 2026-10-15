@@ -122,39 +122,41 @@ func TestAHumanRenamingTheAnchorRecordRenamesTheInstallation(t *testing.T) {
 	}
 
 	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor+"/profile-fields/display_name",
-		AnyMap{"value": "Corrected Field SE"}, nil, nil); status != http.StatusOK {
+		AnyMap{"value": "  Corrected Field SE  "}, nil, nil); status != http.StatusOK {
 		t.Fatalf("PATCH the anchor's display_name field = %d, want 200", status)
+	}
+	if got := anchorName(t, e, anchor); got != "Corrected Field SE" {
+		t.Errorf("after a field correction the anchor is %q, want the trimmed %q", got, "Corrected Field SE")
 	}
 	if got := settingsName(t, e); got != "Corrected Field SE" {
 		t.Errorf("after a field correction the installation is %q, want %q", got, "Corrected Field SE")
 	}
 }
 
-func TestAnAgentCannotRenameTheAnchorEvenWithApproval(t *testing.T) {
+// The store would refuse the rename on release, so the agent hears it before a
+// human is asked to approve it.
+func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	agent := apptest.PassportBearer(t, e, "renaming agent", "read", "write")
-	rename := AnyMap{"display_name": "Agent Picked Ltd"}
 
-	var staged companyProblem
-	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor, rename, agent, &staged); status != http.StatusForbidden {
-		t.Fatalf("an agent's first PATCH /v1/companies/{anchor} = %d, want 403 approval_required", status)
-	}
-	approval := ExtractStagedApprovalID(t, staged.Detail)
-	if status := e.Call(t, http.MethodPost, "/v1/approvals/"+approval+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve = %d, want 200", status)
-	}
-	agent["X-Approval-Token"] = approval
 	var refused companyProblem
-	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor, rename, agent, &refused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("the approved agent PATCH = %d, want 422", status)
+	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
+		AnyMap{"display_name": "Agent Picked Ltd"}, agent, &refused); status != http.StatusUnprocessableEntity {
+		t.Fatalf("an agent's PATCH /v1/companies/{anchor} = %d, want 422", status)
 	}
 	wantNameFault(t, refused, "anchor_protected")
+	var inbox struct {
+		Data []struct{} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/approvals?status=pending", nil, nil, &inbox); status != http.StatusOK {
+		t.Fatalf("GET /v1/approvals = %d, want 200", status)
+	}
+	if len(inbox.Data) != 0 {
+		t.Errorf("the refused rename staged %d approvals, want none", len(inbox.Data))
+	}
 	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
 		t.Errorf("the refused rename left the anchor named %q, want %q", got, "Profile Name AG")
-	}
-	if got := settingsName(t, e); got != "Profile Name AG" {
-		t.Errorf("an agent's rename moved the installation to %q, want %q", got, "Profile Name AG")
 	}
 }
 
@@ -165,15 +167,14 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	tooLong := strings.Repeat("a", 201)
 
-	body := wellFormedCompany()
-	body["display_name"] = tooLong
-	var problem companyProblem
-	if status := e.Call(t, http.MethodPut, "/v1/company", body, nil, &problem); status != http.StatusUnprocessableEntity {
-		t.Fatalf("PUT /v1/company with a 201-character name = %d, want 422", status)
-	}
-	wantNameFault(t, problem, "too_long")
-
 	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
+		body := wellFormedCompany()
+		body["display_name"] = name
+		var problem companyProblem
+		if status := e.Call(t, http.MethodPut, "/v1/company", body, nil, &problem); status != http.StatusUnprocessableEntity {
+			t.Fatalf("PUT /v1/company with a %d-rune name = %d, want 422", len(name), status)
+		}
+		wantNameFault(t, problem, code)
 		var patched companyProblem
 		if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
 			AnyMap{"display_name": name}, nil, &patched); status != http.StatusUnprocessableEntity {

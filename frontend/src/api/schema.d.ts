@@ -19872,7 +19872,7 @@ export interface paths {
          *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
          *
-         *     A `display_name` correction is refused with `422 required` when blank. Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
          *     transaction, so only an administrator may: another human gets `403`, an agent `422
          *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
          *     past 200 characters (`too_long`); other companies' names have no length cap.
@@ -38470,7 +38470,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
-            /** @description The installation's name too, so it carries the installation name's bound: `422 too_long` past 200 characters. */
+            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;

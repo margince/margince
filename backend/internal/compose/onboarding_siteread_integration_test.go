@@ -275,6 +275,25 @@ func TestOnboardingSiteReadPollKeepsTheDossierWhenOptionalRuntimeTelemetryFails(
 // a real store miss and the broken-queue 500 needs the real wire; splitting the
 // pure arms into the unit lane would scatter one specification across two files
 // to save milliseconds.
+func wantBlankNameRequired(t *testing.T, body []byte) {
+	t.Helper()
+	var problem struct {
+		Details struct {
+			Errors []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	if err := json.Unmarshal(body, &problem); err != nil {
+		t.Fatalf("decoding the refusal: %v", err)
+	}
+	errs := problem.Details.Errors
+	if len(errs) != 1 || errs[0].Field != "profile.display_name" || errs[0].Code != "required" {
+		t.Errorf("a blank name was refused as %+v, want required on profile.display_name", errs)
+	}
+}
+
 func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -290,7 +309,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 
 	offer, icp, badWebsite := "Employee onboarding software", "Growing RevOps teams", "http://"
 	cases := []crmcontracts.CompanyProfileInput{
-		{DisplayName: "", OfferSummary: &offer, Icp: &icp},
+		{DisplayName: " \u200b ", OfferSummary: &offer, Icp: &icp},
 		{DisplayName: "Acme", Icp: &icp},
 		{DisplayName: "Acme", OfferSummary: &offer},
 		{DisplayName: "Acme", OfferSummary: &offer, Icp: &icp, Website: &badWebsite},
@@ -304,6 +323,9 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 		engine.confirmCompanySiteRead(rec, req, openapi_types.UUID(ids.NewV7()))
 		if rec.Code != http.StatusUnprocessableEntity {
 			t.Fatalf("invalid confirmation %d → %d, want 422", i, rec.Code)
+		}
+		if i == 0 {
+			wantBlankNameRequired(t, rec.Body.Bytes())
 		}
 	}
 

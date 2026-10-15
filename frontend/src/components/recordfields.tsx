@@ -172,7 +172,7 @@ function RecordField({
     onSuccess: async () => {
       await Promise.all([
         invalidateRecord(qc, props.kind, props.record.id, {
-          anchor: props.record.is_anchor === true,
+          anchor: rawRecord(props.record).is_anchor === true,
         }),
         qc.invalidateQueries({
           queryKey: [props.kind === "company" ? "companies" : `${props.kind}s`],

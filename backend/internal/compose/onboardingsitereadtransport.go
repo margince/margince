@@ -105,10 +105,6 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if strings.TrimSpace(req.Profile.DisplayName) == "" {
-		httperr.Write(w, r, httperr.Validation("profile.display_name", "empty", "a company needs a name"))
-		return
-	}
 	if code, why := values.CompanyNameFault(req.Profile.DisplayName); code != "" {
 		httperr.Write(w, r, httperr.Validation("profile.display_name", code, why))
 		return

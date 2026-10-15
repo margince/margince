@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const installationNameMigration = "core/1791994619_the_installation_carries_its_companys_name.up.sql"
@@ -98,10 +100,18 @@ func migrationAudits(ctx context.Context, t *testing.T, conn *pgx.Conn) int {
 	return audits
 }
 
-func TestAnAnchorNameTheSettingRefusesLeavesTheConfiguredName(t *testing.T) {
+// The migration copies only the names the Go rule accepts, so a name spelled
+// with invisible characters alone stays behind, as a blank one does.
+func TestTheMigrationCopiesOnlyANameTheSettingAccepts(t *testing.T) {
 	for label, name := range map[string]string{
-		"blank":    "   ",
-		"too long": strings.Repeat("a", 201),
+		"blank":              "   ",
+		"no-break spaces":    "\u00a0\u00a0",
+		"zero-width space":   "\u200b",
+		"byte order mark":    " \ufeff ",
+		"hangul filler":      "\u3164",
+		"lone accent":        "\u0301",
+		"too long":           strings.Repeat("a", 201),
+		"visible after a ZW": "\u200bAcme",
 	} {
 		t.Run(label, func(t *testing.T) {
 			dsn, _ := dsns(t)
@@ -117,11 +127,15 @@ func TestAnAnchorNameTheSettingRefusesLeavesTheConfiguredName(t *testing.T) {
 
 			runFile(ctx, t, conn, installationNameMigration)
 
-			if got := storedInstallationName(ctx, t, conn); got != "Configured GmbH" {
-				t.Errorf("installation name = %q, want the configured name kept", got)
+			want, audits := "Configured GmbH", 0
+			if code, _ := values.CompanyNameFault(name); code == "" {
+				want, audits = name, 1
 			}
-			if n := migrationAudits(ctx, t, conn); n != 0 {
-				t.Errorf("a name left alone was audited %d times", n)
+			if got := storedInstallationName(ctx, t, conn); got != want {
+				t.Errorf("installation name = %q, want %q", got, want)
+			}
+			if n := migrationAudits(ctx, t, conn); n != audits {
+				t.Errorf("the copy was audited %d times, want %d", n, audits)
 			}
 		})
 	}

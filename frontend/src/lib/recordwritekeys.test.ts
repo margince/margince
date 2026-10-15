@@ -4,11 +4,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { QueryClient } from "@tanstack/react-query";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { ENTITY_KINDS } from "./entity";
-import { recordWriteKeys } from "./recordwritekeys";
+import { invalidateCompany, recordWriteKeys } from "./recordwritekeys";
 
 describe("recordWriteKeys", () => {
   it("answers for every record kind the history panel can be opened on", () => {
@@ -28,18 +29,37 @@ describe("recordWriteKeys", () => {
     ]);
   });
 
-  it("adds the settings company profile and /me for the anchor company only", () => {
-    expect(recordWriteKeys("company", "c-1", { anchor: true })).toEqual([
-      ...recordWriteKeys("company", "c-1"),
-      ["company"],
-      ["me"],
-    ]);
-    expect(recordWriteKeys("company", "c-1")).not.toContainEqual(["me"]);
-  });
-
   it("carries the lead's board and list, which its detail key does not reach", () => {
     expect(recordWriteKeys("lead", "l-1")).toContainEqual(["leads"]);
   });
+});
+
+describe("invalidateCompany", () => {
+  it.each([
+    { is_anchor: true, stale: true },
+    { is_anchor: false, stale: false },
+  ])(
+    "stales the company profile and /me only when is_anchor is $is_anchor",
+    async ({ is_anchor, stale }) => {
+      const client = new QueryClient();
+      const keys = [
+        ["me"],
+        ["company"],
+        ["company", "c-1"],
+        ["company", "c-2"],
+      ];
+      for (const queryKey of keys) client.setQueryData(queryKey, {});
+
+      await invalidateCompany(client, { id: "c-1", is_anchor });
+
+      const staled = (queryKey: string[]) =>
+        client.getQueryState(queryKey)?.isInvalidated;
+      expect(staled(["company", "c-1"])).toBe(true);
+      expect(staled(["me"])).toBe(stale);
+      expect(staled(["company"])).toBe(stale);
+      expect(staled(["company", "c-2"])).toBe(false);
+    },
+  );
 });
 
 // The defect is invisible to a test of the module itself: it is a call site

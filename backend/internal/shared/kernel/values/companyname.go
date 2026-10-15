@@ -10,8 +10,12 @@ import (
 )
 
 // MaxCompanyNameRunes bounds the name the installation and its own company
-// share. Registered German names with the legal form spelled out run past 63.
+// share, with room for a registered name whose legal form is spelled out.
 const MaxCompanyNameRunes = 200
+
+// AnchorRenameRefusal is why only a human administrator renames the anchor
+// company, in every place that refuses anyone else.
+const AnchorRenameRefusal = "its name is the installation's name, so only an administrator renames it, on the company profile"
 
 // CompanyNameFault answers the contract code and the sentence refusing name, or
 // an empty code when the installation may carry it. Counted in runes.

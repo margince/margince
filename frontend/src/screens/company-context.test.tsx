@@ -16,7 +16,7 @@ import { SLOWEST_MEASURED_TEST_MS } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { createQueryClient } from "../app/queryclient";
 import { LocaleProvider } from "../i18n";
-import { CompanyContextCard } from "./company-context";
+import { CompanyContextCard, ManualCompanySetup } from "./company-context";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -886,4 +886,53 @@ describe("CompanyContextCard save refusals", () => {
     },
     DIALOG_MS,
   );
+});
+
+describe("ManualCompanySetup save refusals", () => {
+  it("says in the reader's words that the company name is too long", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        const path = new URL(request.url).pathname;
+        if (request.method === "PUT" && path === "/v1/company") {
+          return Response.json(
+            {
+              title: "Unprocessable Entity",
+              status: 422,
+              code: "validation_error",
+              detail: "the request failed validation",
+              details: {
+                errors: [
+                  {
+                    field: "display_name",
+                    code: "too_long",
+                    message: "a company name is at most 200 characters",
+                  },
+                ],
+              },
+            },
+            { status: 422 },
+          );
+        }
+        return Response.json(routeBody(path));
+      }),
+    );
+    render(
+      <Providers>
+        <ManualCompanySetup />
+      </Providers>,
+    );
+    for (const box of screen.getAllByRole("textbox")) {
+      await user.type(box, "Acme");
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Create company context" }),
+    );
+
+    expect(await screen.findByText("Shorten the company name.")).toBeTruthy();
+    expect(screen.queryByText(/at most 200|failed validation/)).toBeNull();
+  });
 });

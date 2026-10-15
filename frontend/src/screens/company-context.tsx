@@ -183,7 +183,7 @@ export function ManualCompanySetup() {
           {save.isError && (
             <WriteRefused
               titleKey="settings.companySaveFailed"
-              error={save.error}
+              message={companySaveMessage(save.error, t)}
             />
           )}
         </PanelBody>
@@ -534,7 +534,9 @@ export function CompanyContextCard() {
           }
           canApply={canEdit}
           confirming={confirm.isPending}
-          error={confirm.error ? problemMessageOf(confirm.error, t) : undefined}
+          error={
+            confirm.error ? companySaveMessage(confirm.error, t) : undefined
+          }
         />
       )}
     </div>

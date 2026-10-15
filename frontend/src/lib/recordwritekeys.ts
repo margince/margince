@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import type {
+  InvalidateQueryFilters,
+  QueryClient,
+  QueryKey,
+} from "@tanstack/react-query";
 import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
 import type { EntityKind } from "./entity";
 import { leadWriteKeys } from "./leadkeys";
@@ -20,20 +24,19 @@ import { leadWriteKeys } from "./leadkeys";
 // already does it for a record's timeline and `leadkeys.ts` for a lead's.
 // The map is total over EntityKind so a new record kind cannot be added
 // without deciding what its write invalidates.
-export function recordWriteKeys(
-  kind: EntityKind,
-  id: string,
-  { anchor = false }: RecordWriteScope = {},
-): QueryKey[] {
-  const keys = RECORD_WRITE_KEYS[kind](id);
-  return anchor ? [...keys, ...ANCHOR_WRITE_KEYS] : keys;
+export function recordWriteKeys(kind: EntityKind, id: string): QueryKey[] {
+  return RECORD_WRITE_KEYS[kind](id);
 }
 
 // `anchor` is the record's `is_anchor`: the installation's own company.
 type RecordWriteScope = Readonly<{ anchor?: boolean }>;
 
 // The anchor is also read as the settings company profile and as /me's brand.
-const ANCHOR_WRITE_KEYS: QueryKey[] = [["company"], ["me"]];
+// Not a ["company"] prefix: it would also stale every company record read.
+const ANCHOR_WRITE_FILTERS: readonly InvalidateQueryFilters[] = [
+  { queryKey: ["company"], exact: true },
+  { queryKey: ["me"] },
+];
 
 const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
   contact: (id) => [
@@ -65,10 +68,12 @@ export function invalidateRecord(
   id: string,
   scope: RecordWriteScope = {},
 ): Promise<void> {
+  const filters: InvalidateQueryFilters[] = recordWriteKeys(kind, id).map(
+    (queryKey) => ({ queryKey }),
+  );
+  if (scope.anchor) filters.push(...ANCHOR_WRITE_FILTERS);
   return Promise.all(
-    recordWriteKeys(kind, id, scope).map((queryKey) =>
-      client.invalidateQueries({ queryKey }),
-    ),
+    filters.map((filter) => client.invalidateQueries(filter)),
   ).then(() => undefined);
 }
 

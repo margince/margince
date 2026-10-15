@@ -187,7 +187,8 @@ func (s *Store) writeProfileField(
 			if column != fieldDisplayName {
 				return writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value)
 			}
-			if _, err := httperr.RequireNonBlank(fieldDisplayName, *in.Value); err != nil {
+			name, err := httperr.RequireNonBlank(fieldDisplayName, *in.Value)
+			if err != nil {
 				return err
 			}
 			// Read under the name lock every renamer takes, so the installation
@@ -200,10 +201,10 @@ func (s *Store) writeProfileField(
 				companyID).Scan(&current); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("contacts: reading company %s before its name correction: %w", companyID, err)
 			}
-			if err := writeCanonicalCompanyColumn(ctx, tx, companyID, column, *in.Value); err != nil {
+			if err := writeCanonicalCompanyColumn(ctx, tx, companyID, column, name); err != nil {
 				return err
 			}
-			if current == *in.Value {
+			if current == name {
 				return nil
 			}
 			return s.followAnchorNameTx(ctx, tx, companyID)

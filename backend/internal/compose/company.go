@@ -104,10 +104,6 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if strings.TrimSpace(req.DisplayName) == "" {
-		httperr.Write(w, r, httperr.Validation("display_name", "empty", "a company needs a name"))
-		return
-	}
 	if code, why := values.CompanyNameFault(req.DisplayName); code != "" {
 		httperr.Write(w, r, httperr.Validation("display_name", code, why))
 		return
