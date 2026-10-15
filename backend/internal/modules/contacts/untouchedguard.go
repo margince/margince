@@ -39,6 +39,9 @@ type writeOptions struct {
 	// caller has one: ColleagueWorkedOnSince orders by it as well as by time.
 	untouchedAfter ids.UUID
 	atVersion      *int64
+	// keepWhileReferenced refuses an archive of a company a live deal or a
+	// live contact's employment still names.
+	keepWhileReferenced bool
 }
 
 // NotTouchedByHumanSince refuses the write when a HUMAN has acted on the record
@@ -67,6 +70,13 @@ func NotWorkedOnByAColleagueSince(at time.Time, entry ids.UUID) WriteOption {
 // against, and an unapproved call at a static tier carries none.
 func OnlyAtVersion(v *int64) WriteOption {
 	return func(o *writeOptions) { o.atVersion = v }
+}
+
+// KeepWhileReferenced refuses a company's archive while a live deal names it
+// as its company or its partner, or a live contact is employed by it. Without
+// it the archive would leave those records pointing at an archived company.
+func KeepWhileReferenced() WriteOption {
+	return func(o *writeOptions) { o.keepWhileReferenced = true }
 }
 
 func collectWriteOptions(opts []WriteOption) writeOptions {
@@ -117,6 +127,10 @@ type HumanTouchedError struct {
 func (e *HumanTouchedError) Error() string {
 	return fmt.Sprintf("a contact has changed this %s since it was imported, so it was left alone", e.EntityType)
 }
+
+// Is makes the refusal a conflict for errors.Is, so an undo records the row as
+// one it left alone instead of stopping.
+func (e *HumanTouchedError) Is(target error) bool { return target == apperrors.ErrConflict }
 
 // refuseIfHumanTouched enforces the precondition inside the caller's own
 // transaction, which is the whole point: the archive that follows takes the
