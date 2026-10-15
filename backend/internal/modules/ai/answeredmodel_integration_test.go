@@ -73,6 +73,14 @@ func seedAnsweredCalls(t *testing.T) answeredFixture {
 			t.Fatalf("%s: %v", c.name, err)
 		}
 	}
+	// The test provider is bound with no model id and names itself as the model.
+	if err := NewCallMeter(db).Record(ctx, []Call{{
+		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskSummarize,
+		Tier: TierCheapCloud, Provider: "fake", RequestFingerprint: "fp-" + ids.NewV7().String(),
+		TokensIn: 10, TokensOut: 2, ServedModel: "fake", ServedIdentitySource: servedIdentitySourceResponse,
+	}}); err != nil {
+		t.Fatal(err)
+	}
 	return f
 }
 
@@ -159,8 +167,15 @@ func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tiers) != 1 || tiers[0].Switched != 3 || tiers[0].SwitchedTo != answeredGemini {
-		t.Errorf("tier figures = %+v, want 3 of 5 calls switched, most to %s", tiers, answeredGemini)
+	byTier := map[string]CallStatsRow{}
+	for _, row := range tiers {
+		byTier[row.Key] = row
+	}
+	if premium := byTier[string(TierPremium)]; premium.Switched != 3 || premium.SwitchedTo != answeredGemini {
+		t.Errorf("premium figures = %+v, want 3 of 5 calls switched, most to %s", premium, answeredGemini)
+	}
+	if fake := byTier[string(TierCheapCloud)]; fake.Calls != 1 || fake.Switched != 0 {
+		t.Errorf("test provider figures = %+v, want its call counted and not switched", fake)
 	}
 }
 

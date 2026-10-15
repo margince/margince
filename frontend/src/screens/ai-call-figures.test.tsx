@@ -242,7 +242,7 @@ describe("TierRecentCalls", () => {
     render(<TierRecentCalls tier="premium" broker={false} />);
     const line = await screen.findByRole("status");
     expect(line.textContent).toContain(
-      "The provider answered 41 of 61 calls with gemini-3.6-flash, not the bound model.",
+      "The provider answered 41 of 61 calls with another model than the bound one, most often gemini-3.6-flash.",
     );
     expect(
       within(line)

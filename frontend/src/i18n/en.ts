@@ -13897,9 +13897,9 @@ export const en = {
   "aiFigures.line.timeoutCount_other": "{count} timeouts",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "The provider answered {count} of {total} calls with {model}, not the bound model.",
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
   "aiFigures.switched_other":
-    "The provider answered {count} of {total} calls with {model}, not the bound model.",
+    "The provider answered {count} of {total} calls with another model than the bound one, most often {model}.",
   "aiFigures.switchedBadge": "Model switched",
   "aiFigures.line.sort": "sort: {sort}",
   "aiFigures.line.week": "7 d: {figures}",

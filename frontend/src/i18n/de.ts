@@ -13828,9 +13828,9 @@ export const de = {
   "aiFigures.line.timeoutCount_other": "{count} Zeitüberschreitungen",
   "aiFigures.line.p50": "p50 {latency}",
   "aiFigures.switched_one":
-    "Der Anbieter hat {count} von {total} Aufrufen mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
   "aiFigures.switched_other":
-    "Der Anbieter hat {count} von {total} Aufrufen mit {model} beantwortet, nicht mit dem zugeordneten Modell.",
+    "Der Anbieter hat {count} von {total} Aufrufen mit einem anderen als dem zugeordneten Modell beantwortet, meist mit {model}.",
   "aiFigures.switchedBadge": "Modell gewechselt",
   "aiFigures.line.sort": "Sortierung: {sort}",
   "aiFigures.line.week": "7 T: {figures}",

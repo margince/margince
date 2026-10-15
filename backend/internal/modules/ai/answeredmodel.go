@@ -26,9 +26,10 @@ func gradedServedModel(servedModel, servedIdentitySource string) string {
 }
 
 // switchedModelSQL is whether the provider named another model than the binding
-// as the one that answered the ai_call row aliased alias.
+// as the one that answered the ai_call row aliased alias. A binding that names
+// no model, such as the test provider's, has nothing to switch away from.
 func switchedModelSQL(alias string) string {
-	return fmt.Sprintf(`(%[1]s.served_identity_source = '%[2]s' AND %[1]s.served_model <> '' AND %[1]s.served_model <> %[1]s.model_id)`,
+	return fmt.Sprintf(`(%[1]s.served_identity_source = '%[2]s' AND %[1]s.model_id <> '' AND %[1]s.served_model <> '' AND %[1]s.served_model <> %[1]s.model_id)`,
 		alias, servedIdentitySourceResponse)
 }
 
