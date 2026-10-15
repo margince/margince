@@ -11,7 +11,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
-import { ConfirmSubmissionsPanel } from "./privacy.corrections";
+import { RequestsPanel } from "./settings.privacy";
 
 // WHAT CONTACTS TYPED INTO THE LINK WE MAILED THEM, and who decides it.
 //
@@ -72,20 +72,32 @@ function panel(
     });
     return (
       <StoryProviders>
-        <ConfirmSubmissionsPanel />
+        <RequestsPanel />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof ConfirmSubmissionsPanel> = {
+// The lane lives in the Requests panel, behind its switch.
+async function openCorrections({
+  canvasElement,
+}: {
+  canvasElement: HTMLElement;
+}) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: /^Corrections/ }),
+  );
+}
+
+const meta = {
   title: "Settings/Governance/Privacy and retention/Corrections",
-  component: ConfirmSubmissionsPanel,
+  component: RequestsPanel,
   parameters: { layout: "padded" },
-};
+  play: openCorrections,
+} satisfies Meta<typeof RequestsPanel>;
 export default meta;
 
-type Story = StoryObj<typeof ConfirmSubmissionsPanel>;
+type Story = StoryObj<typeof meta>;
 
 /** The queue: a correction beside a removal, each with its own verb waiting. */
 export const WaitingToBeDecided: Story = {
@@ -101,8 +113,9 @@ export const WaitingToBeDecided: Story = {
  */
 export const DecidingOne: Story = {
   render: panel([MISSPELT_NAME, ASKED_TO_BE_REMOVED]),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async (context) => {
+    await openCorrections(context);
+    const canvas = within(context.canvasElement);
     // Every waiting row carries the verb, so the press names WHICH one: the
     // correction, because the pair of answers it opens is the subject here and
     // the removal's read differently. A bare role lookup finds two and rejects.
@@ -122,7 +135,7 @@ export const ReadSeatDecidesNothing: Story = {
   render: panel([MISSPELT_NAME, ASKED_TO_BE_REMOVED], {}, "read"),
 };
 
-/** Nothing waiting: one sentence in the panel, as every privacy panel says it. */
+/** Nothing waiting: one line under the lane's intro. */
 export const NothingWaiting: Story = { render: panel([]) };
 
 /**
@@ -192,8 +205,9 @@ export const DecisionRefused: Story = {
         403,
       ),
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async (context) => {
+    await openCorrections(context);
+    const canvas = within(context.canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", { name: /^Decide on request from/ }),
     );

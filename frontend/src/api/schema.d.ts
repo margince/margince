@@ -23587,7 +23587,7 @@ export interface components {
             rows: components["schemas"]["AiCallStatsRow"][];
         };
         AiCallStatsRow: {
-            /** @description The group value: a provider, model id, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
+            /** @description The group value: a provider, model id, model that answered, upstream host, tier or task. Empty when the attempts carried none (a host a direct vendor does not report). */
             key: string;
             /** Format: int64 */
             calls: number;
@@ -23613,6 +23613,13 @@ export interface components {
              * @description Calls that spent tokens no rate prices; their cost is not in cost_microusd.
              */
             unpriced: number;
+            /**
+             * Format: int64
+             * @description Answered calls the provider answered with another model than the one bound, by its own report; failed attempts are not counted.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiTaskFlow: {
             task: string;
@@ -23648,6 +23655,13 @@ export interface components {
             gave_up: {
                 [key: string]: number;
             };
+            /**
+             * Format: int64
+             * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
+             */
+            switched: number;
+            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            switched_to?: string;
         };
         AiDeferredWork: {
             carrier: string;
@@ -65390,6 +65404,8 @@ export interface operations {
                 provider?: string;
                 /** @description Filter to calls that ended on one configured model id. */
                 model?: string;
+                /** @description Filter to calls one model answered: the model the provider named, else the configured one. */
+                served_model?: string;
                 /** @description Filter to calls a broker served from one upstream host. */
                 served_provider?: string;
                 /** @description Filter to calls that ended on one tier. */
@@ -65419,7 +65435,8 @@ export interface operations {
         parameters: {
             query?: {
                 window?: "24h" | "7d" | "30d";
-                group?: "provider" | "model" | "served_provider" | "tier" | "task";
+                /** @description served_model groups by the model that answered: the model the provider named, else the configured one. */
+                group?: "provider" | "model" | "served_model" | "served_provider" | "tier" | "task";
                 provider?: string;
                 model?: string;
                 tier?: string;

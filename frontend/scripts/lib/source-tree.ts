@@ -17,7 +17,7 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 // Every extension a bundler resolves. Not just the two a well-behaved unit
@@ -117,6 +117,27 @@ export function extensionLayers(
     visited.emitted.add(real);
     return [full];
   });
+}
+
+// The layers gen-composition mounts (collectUnitFrontend): a `frontend/` with a
+// package.json. A unit shipping copy alone (frontend/i18n) holds no source.
+export function extensionPackageLayers(root: string): string[] {
+  return extensionLayers(root).filter((layer) =>
+    existsSync(join(layer, "package.json")),
+  );
+}
+
+// The files of every extension layer that match `pattern`, less a built
+// `dist/`: output a gate on source would judge twice, once as its source.
+export function extensionFilesMatching(
+  root: string,
+  pattern: RegExp,
+): string[] {
+  return extensionLayers(root).flatMap((layer) =>
+    filesMatching(layer, pattern).filter(
+      (file) => !relative(layer, file).split(sep).includes("dist"),
+    ),
+  );
 }
 
 // scriptKindFor picks the dialect to parse a file as. ONE answer, because there

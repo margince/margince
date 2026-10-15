@@ -15,10 +15,10 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
-import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { CellStrip } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
@@ -184,25 +184,20 @@ export function ConsentPurposesCard() {
 
 function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
   const t = useT();
+  // The key is the API's handle, read where the purposes are wired, not here.
   const columns: DataTableColumn<ConsentPurpose>[] = [
     {
       key: "purpose",
       header: t("privacy.purpose"),
-      render: (purpose) => (
-        <CellStack>
-          <span>{purpose.label}</span>
-          <span className="t-caption privacy-wrap">{purpose.key}</span>
-        </CellStack>
-      ),
-    },
-    {
-      key: "doi",
-      header: t("privacy.purposeDoiColumn"),
-      fold: "end",
       render: (purpose) =>
         purpose.requires_double_opt_in ? (
-          <Badge tone="info">{t("privacy.purposeDoiBadge")}</Badge>
-        ) : null,
+          <CellStrip>
+            <span>{purpose.label}</span>
+            <Badge tone="info">{t("privacy.purposeDoiBadge")}</Badge>
+          </CellStrip>
+        ) : (
+          purpose.label
+        ),
     },
   ];
   return (

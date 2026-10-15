@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect } from "storybook/test";
 import { Badge, StatCard } from "./atoms";
 import { StatStrip } from "./statstrip";
 
@@ -330,4 +331,70 @@ export const Compact: Story = {
       </StatStrip>
     </div>
   ),
+};
+
+// At 40rem, a tablet's work column beside the open rail, row slots stand one
+// under the other. Two-up, each name would wrap beside its figure.
+export const RowSlotsAtFortyRem: Story = {
+  render: () => (
+    <div style={{ maxWidth: "40rem" }}>
+      <StatStrip>
+        <StatCard
+          narrow="row"
+          label="Leads owed a reply"
+          value="19+"
+          detail="owed a first answer"
+          onOpen={() => {}}
+        />
+        <StatCard
+          narrow="row"
+          label="Pending approvals"
+          value="4+"
+          detail="waiting on your answer"
+          onOpen={() => {}}
+        />
+        <StatCard
+          narrow="row"
+          label="Meetings today"
+          value="0"
+          detail="on today's calendar"
+          onOpen={() => {}}
+        />
+      </StatStrip>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const cards = [...canvasElement.querySelectorAll(".stat-card")];
+    const starts = new Set(
+      cards.map((card) => Math.round(card.getBoundingClientRect().left)),
+    );
+    await expect(cards).toHaveLength(3);
+    await expect(starts.size).toBe(1);
+  },
+};
+
+// A compact name too long for its tile runs to a second line and stops there.
+// The reading keeps its whole name, and the figures in the row stay level.
+export const CompactLongNamesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <StatStrip density="compact">
+      <StatCard label="No contact in the last ninety days" value="12" />
+      <StatCard label="Open deals" value="€240k" />
+      <StatCard label="Contacts without a decision maker" value="3" />
+    </StatStrip>
+  ),
+  play: async ({ canvasElement }) => {
+    const names = [
+      ...canvasElement.querySelectorAll<HTMLElement>(".stat-card-label-text"),
+    ];
+    await expect(names).toHaveLength(3);
+    for (const name of names) {
+      const lines =
+        name.getBoundingClientRect().height /
+        Number.parseFloat(getComputedStyle(name).lineHeight);
+      await expect(Math.round(lines)).toBeLessThanOrEqual(2);
+    }
+  },
 };

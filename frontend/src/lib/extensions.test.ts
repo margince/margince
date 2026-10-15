@@ -199,12 +199,12 @@ describe("naming a unit", () => {
     );
   });
 
-  it("falls back to the unit name when it carries no title", () => {
-    expect(extensionTitle("notes", "en", REGISTRY)).toBe("notes");
+  it("reads the unit name as words when it carries no title", () => {
+    expect(extensionTitle("notes", "en", REGISTRY)).toBe("Notes");
   });
 
-  it("falls back to the unit name for a unit this installation does not compose", () => {
-    expect(extensionTitle("retired-unit", "en", REGISTRY)).toBe("retired-unit");
-    expect(extensionTitle("dispact-connector", "en")).toBe("dispact-connector");
+  it("reads the name as words for a unit this installation does not compose", () => {
+    expect(extensionTitle("retired-unit", "en", REGISTRY)).toBe("Retired unit");
+    expect(extensionTitle("dispact-connector", "en")).toBe("Dispact connector");
   });
 });

@@ -5,7 +5,13 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +19,8 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
-import { HeldThreadsCard } from "./held-threads";
+import { linkedInReachFixture } from "../testing/reachfixture";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What this card must never do is state a fact it does not have. A thread whose
 // opening message was erased has no subject; a thread nobody has judged has no
@@ -65,7 +72,8 @@ const WITHHELD: HeldThread = {
 
 type Clock = components["schemas"]["CaptureVerdictClock"];
 
-function renderCard(
+// The list opens from the outcomes card's held-threads row, in a drawer.
+async function renderCard(
   rows: HeldThread[],
   share?: Record<string, unknown>,
   threadVerdict?: Clock,
@@ -138,6 +146,21 @@ function renderCard(
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
+      if (
+        key === "GET /capture/senders" ||
+        key === "GET /capture/contacts-awaiting-decision"
+      ) {
+        return new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (key === "GET /me/linkedin-reach") {
+        return new Response(JSON.stringify(linkedInReachFixture()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       if (key.startsWith("POST /activities/threads/")) {
         return new Response(JSON.stringify(share ?? { shared: true }), {
           status: 200,
@@ -156,11 +179,19 @@ function renderCard(
   const ui: ReactNode = (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <HeldThreadsCard />
+        <ConnectionOutcomesCard />
       </LocaleProvider>
     </QueryClientProvider>
   );
-  return render(ui);
+  const user = userEvent.setup();
+  render(ui);
+  if (rows.length > 0) {
+    await user.click(
+      await screen.findByRole("button", { name: "View Held threads" }),
+    );
+    await screen.findByRole("dialog", { name: "Held threads" });
+  }
+  return user;
 }
 
 afterEach(() => {
@@ -174,7 +205,7 @@ describe("held threads", () => {
     // as a classifier that judged nothing rather than one that has not
     // answered, and the attempts count is what tells a stalled model from a
     // slow one.
-    renderCard([PENDING]);
+    await renderCard([PENDING]);
     expect(
       await screen.findByText(/awaiting classification/i),
     ).toBeInTheDocument();
@@ -182,7 +213,7 @@ describe("held threads", () => {
   });
 
   it("counts a single attempt in the singular", async () => {
-    renderCard([{ ...PENDING, attempts: 1 }]);
+    await renderCard([{ ...PENDING, attempts: 1 }]);
     expect(await screen.findByText("Asked 1 time")).toBeInTheDocument();
   });
 
@@ -196,13 +227,13 @@ describe("held threads", () => {
         ...PENDING,
         thread_key: `t-stalled-${index}`,
       }));
-      renderCard(rows);
+      await renderCard(rows);
       expect(await screen.findByText(line)).toBeInTheDocument();
     },
   );
 
   it("names why a judged thread is held", async () => {
-    renderCard([JUDGED]);
+    await renderCard([JUDGED]);
     expect(await screen.findByText("Legal")).toBeInTheDocument();
     expect(
       screen.queryByText(/awaiting classification/i),
@@ -212,7 +243,7 @@ describe("held threads", () => {
   it("says the opening message is gone rather than drawing an empty subject", async () => {
     // The verdict outlives its evidence on purpose — losing it would re-open a
     // thread a classifier already held — so this row is normal, not broken.
-    renderCard([
+    await renderCard([
       {
         ...JUDGED,
         has_message: false,
@@ -230,7 +261,7 @@ describe("held threads", () => {
     // evidence was destroyed when it is sitting there unnamed. This one keeps
     // its id: the content clause admitted the message, and the sender simply
     // left the subject line empty.
-    renderCard([{ ...JUDGED, subject: undefined }]);
+    await renderCard([{ ...JUDGED, subject: undefined }]);
     expect(await screen.findByText(/^no subject$/i)).toBeInTheDocument();
     expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
     // And not the withheld reading either: a blank subject is a fact about the
@@ -243,14 +274,14 @@ describe("held threads", () => {
     // may not open still EXISTS, so telling them the evidence they are holding
     // is gone would be false — and it is the release they would stop asking
     // for.
-    renderCard([WITHHELD]);
+    await renderCard([WITHHELD]);
     expect(await screen.findByText(/not shared with you/i)).toBeInTheDocument();
     expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
   });
 
   // Every row's verb reads the same, so each carries its thread's subject.
   it("describes each share verb by the thread it releases", async () => {
-    renderCard([
+    await renderCard([
       JUDGED,
       {
         ...JUDGED,
@@ -270,7 +301,7 @@ describe("held threads", () => {
     // The release works on the seat's own messages on the thread, so with none
     // left it answers not-found. A control whose only outcome is an error is
     // worse than one that says why it cannot run.
-    renderCard([{ ...JUDGED, has_message: false, subject: undefined }]);
+    await renderCard([{ ...JUDGED, has_message: false, subject: undefined }]);
     const button = await screen.findByRole("button", {
       name: /share with the team/i,
     });
@@ -287,8 +318,10 @@ describe("held threads", () => {
   ])(
     "reports a release the other holders kept closed (%i)",
     async (owners, line) => {
-      const user = userEvent.setup();
-      renderCard([JUDGED], { shared: false, held_by_others: owners });
+      const user = await renderCard([JUDGED], {
+        shared: false,
+        held_by_others: owners,
+      });
       await user.click(
         await screen.findByRole("button", { name: /share with the team/i }),
       );
@@ -297,10 +330,15 @@ describe("held threads", () => {
   );
 
   it("reports an empty list as nothing held rather than as a failure", async () => {
-    renderCard([]);
+    await renderCard([]);
+    const row = (
+      await screen.findByText(en["heldThreads.title"])
+    ).closest<HTMLElement>(".settingrow");
+    if (row === null) throw new Error("the held-threads row is missing");
     expect(
-      await screen.findByText(/withholding no threads/i),
+      await within(row).findByText(en["connectionOutcomes.none"]),
     ).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).toBeNull();
   });
 });
 
@@ -313,7 +351,7 @@ it("opens the message a held thread is about", async () => {
     thread_key: "t-openable",
     activity_id: "01a05500-0000-7000-8000-0000000000b1",
   };
-  renderCard([openable]);
+  const user = await renderCard([openable]);
 
   const button = await screen.findByRole("button", {
     name: "Entwurf Aufhebungsvertrag",
@@ -321,7 +359,7 @@ it("opens the message a held thread is about", async () => {
   expect(button.getAttribute("aria-haspopup")).toBe("dialog");
   // Pressing it asks for THIS message's presentation — the screen's half of
   // the job. What the drawer then draws is emaildetail's own contract.
-  await userEvent.click(button);
+  await user.click(button);
   await waitFor(() => {
     const asked = (
       globalThis.fetch as ReturnType<typeof vi.fn>
@@ -343,7 +381,7 @@ it("opens the message a held thread is about", async () => {
 // printing words it was refused, and does not become a control — a button that
 // opened nothing would be worse than the plain text it replaced.
 it("says a thread is not the reader's without offering to open it", async () => {
-  renderCard([WITHHELD]);
+  await renderCard([WITHHELD]);
 
   expect(await screen.findByText(/not shared with you/i)).toBeTruthy();
   // The row is still LISTED: they are holding it and must be able to release
@@ -356,7 +394,7 @@ it("says a thread is not the reader's without offering to open it", async () => 
 // counters had: the classifier runs every ten minutes, the screen never said
 // so, and an owner watching an unchanged row can only read it as broken.
 it("says when the thread pass runs while a row is pending", async () => {
-  renderCard([PENDING], undefined, {
+  await renderCard([PENDING], undefined, {
     every_seconds: 600,
     running: false,
     queued: false,
@@ -372,7 +410,7 @@ it("says when the thread pass runs while a row is pending", async () => {
 // anything. Telling its owner when the next pass runs would promise a change
 // that is not coming.
 it("says nothing about the pass when no row is waiting on it", async () => {
-  renderCard([JUDGED], undefined, {
+  await renderCard([JUDGED], undefined, {
     every_seconds: 600,
     running: false,
     queued: false,
@@ -386,14 +424,16 @@ it("says nothing about the pass when no row is waiting on it", async () => {
 // A kind this build has no word for reads as words: never the raw token, and
 // never a blank badge that looks like "judged nothing".
 it("names a kind it has no translation for in words", async () => {
-  renderCard([{ ...JUDGED, thread_key: "t-unknown", kind: "export_control" }]);
+  await renderCard([
+    { ...JUDGED, thread_key: "t-unknown", kind: "export_control" },
+  ]);
 
   await screen.findByText(en["heldThreads.kind.other"]);
   expect(screen.queryByText("export_control")).toBeNull();
 });
 
 it("says a row with no kind is held for another reason", async () => {
-  renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
+  await renderCard([{ ...JUDGED, thread_key: "t-nokind", kind: undefined }]);
 
   await screen.findByText(en["heldThreads.kind.other"]);
   expect(screen.queryByText("held")).toBeNull();
@@ -401,7 +441,7 @@ it("says a row with no kind is held for another reason", async () => {
 
 // `unsure` is the classifier passing the call to the owner, not a kind.
 it("names a thread the classifier was unsure about", async () => {
-  renderCard([
+  await renderCard([
     { ...JUDGED, thread_key: "t-unsure", status: "unsure", kind: undefined },
   ]);
 
@@ -411,7 +451,7 @@ it("names a thread the classifier was unsure about", async () => {
 
 // Who a thread is with tells two held threads apart; a contact on file is a link.
 it("names who a held thread is with, and counts the ones it leaves out", async () => {
-  renderCard([
+  await renderCard([
     {
       ...JUDGED,
       participants: [
@@ -461,10 +501,12 @@ it.each([
   ["a withheld message", WITHHELD],
   ["a thread only with colleagues", JUDGED],
 ])("draws no participant line for %s", async (_, row) => {
-  const { container } = renderCard([row]);
+  await renderCard([row]);
 
   expect(await screen.findByText(en["heldThreads.kind.legal"])).toBeTruthy();
   expect(
-    container.querySelector(".held-threads-parties, .held-threads-parties-all"),
+    document.body.querySelector(
+      ".held-threads-parties, .held-threads-parties-all",
+    ),
   ).toBeNull();
 });

@@ -79,19 +79,7 @@ export function LookupPostureRow({ canEdit }: Readonly<{ canEdit: boolean }>) {
     <>
       <SettingRow
         label={t("provider.automaticLookup")}
-        // Two paragraphs, not one string with a blank line in it: HTML collapses
-        // the break, and the half that would have been glued on is the one an
-        // operator in the wrong jurisdiction has to read.
-        description={
-          <>
-            <span className="provider-hint-para">
-              {t("provider.automaticLookupHint")}
-            </span>
-            <span className="provider-hint-para">
-              {t("provider.automaticLookupJurisdiction")}
-            </span>
-          </>
-        }
+        description={t("provider.automaticLookupHint")}
         control={(control) => (
           <Switch
             // The row's description reaches the switch: what the lookup DOES

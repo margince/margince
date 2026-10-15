@@ -14,7 +14,7 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { Button, Checkbox, useScrollRegion } from "./atoms";
+import { Button, Checkbox, EmptyState, useScrollRegion } from "./atoms";
 import {
   CountLine,
   type ListChip,
@@ -28,10 +28,16 @@ import {
   type ColumnLayout,
   type ColumnResize,
   floorStyle,
+  useColumnDisplay,
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
-import { PAGE_SIZES, pagerSlots, usePaging } from "./listtable.paging";
+import {
+  fitsOnePage,
+  PAGE_SIZES,
+  pagerSlots,
+  usePaging,
+} from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -246,7 +252,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
-  hideShortPager = false,
+  hideShortChrome = false,
   total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
@@ -373,8 +379,11 @@ export function ListTable<Row>({
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
-  /** No pager while every row fits the smallest page size, so a size the reader picked can always be undone. */
-  hideShortPager?: boolean;
+  /**
+   * No count, dials or pager while every row fits the smallest page and nothing
+   * narrows the list. A dial the reader set can then always be undone.
+   */
+  hideShortChrome?: boolean;
   /**
    * How many rows match on the server, when it counts them — the difference
    * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
@@ -484,6 +493,21 @@ export function ListTable<Row>({
     scroller,
   );
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
+  const short =
+    hideShortChrome &&
+    !pending &&
+    !narrowedBy(dials) &&
+    archived?.checked !== true &&
+    fitsOnePage(rows, serverTotal, hasMore);
+  const emptyLine = (
+    <EmptyRow
+      unit={unit}
+      narrowed={narrowedBy(dials)}
+      filtered={filteredBy(dials)}
+      onClear={() => clearAll(dials)}
+      emptyNote={emptyNote}
+    />
+  );
 
   return (
     <ListSurface
@@ -491,6 +515,7 @@ export function ListTable<Row>({
       views={views}
       activeView={activeView}
       onViewChange={(index) => applyView(dials, index)}
+      bare={short}
       count={
         bodyOwnsPaging
           ? bodyCount
@@ -539,87 +564,58 @@ export function ListTable<Row>({
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}
-          {!bodyOwnsPaging &&
-            !(hideShortPager && fitsOnePage(rows, serverTotal, hasMore)) && (
-              <Pager
-                current={paging.current}
-                lastPage={paging.lastPage}
-                hasMore={hasMore}
-                perPage={paging.perPage}
-                onGoto={paging.goto}
-                onPerPage={paging.setPerPage}
-              />
-            )}
+          {!bodyOwnsPaging && !short && (
+            <Pager
+              current={paging.current}
+              lastPage={paging.lastPage}
+              hasMore={hasMore}
+              perPage={paging.perPage}
+              onGoto={paging.goto}
+              onPerPage={paging.setPerPage}
+            />
+          )}
         </>
       }
     >
       <BulkBar selection={selection} />
-      {body ?? (
-        <ListGrid
-          scrollerRef={(node) => {
-            scroller.current = node;
-            if (bodyRef) {
-              bodyRef.current = node;
-            }
-          }}
-          region={region}
-          frozen={frozen}
-          head={head}
-          dense={display.dense}
-          layout={layout}
-          shown={shown}
-          sort={sort}
-        >
-          <GridBody
-            rows={rows}
-            pageRows={paging.pageRows}
+      {short && !problem && rows.length === 0 ? (
+        <div className="lt-emptyline">
+          <EmptyState>{emptyLine}</EmptyState>
+        </div>
+      ) : (
+        (body ?? (
+          <ListGrid
+            scrollerRef={(node) => {
+              scroller.current = node;
+              if (bodyRef) {
+                bodyRef.current = node;
+              }
+            }}
+            region={region}
+            frozen={frozen}
+            head={head}
+            dense={display.dense}
+            layout={layout}
             shown={shown}
-            rowKey={rowKey}
-            onRowClick={onRowClick}
-            rowHref={rowHref}
-            selection={selection}
-            pending={pending}
-            problem={problem}
-            empty={
-              <EmptyRow
-                unit={unit}
-                narrowed={narrowedBy(dials)}
-                filtered={filteredBy(dials)}
-                onClear={() => clearAll(dials)}
-                emptyNote={emptyNote}
-              />
-            }
-          />
-        </ListGrid>
+            sort={sort}
+          >
+            <GridBody
+              rows={rows}
+              pageRows={paging.pageRows}
+              shown={shown}
+              rowKey={rowKey}
+              onRowClick={onRowClick}
+              rowHref={rowHref}
+              selection={selection}
+              pending={pending}
+              problem={problem}
+              empty={emptyLine}
+            />
+          </ListGrid>
+        ))
       )}
     </ListSurface>
   );
-}
-
-/**
- * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
- */
-function useColumnDisplay<Row>(columns: readonly ListColumn<Row>[]) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(
-    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
-  );
-  const [dense, setDense] = useState(false);
-  return {
-    hidden,
-    onToggleColumn: (key: string) =>
-      setHidden((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        return next;
-      }),
-    dense,
-    onDense: () => setDense(!dense),
-  };
 }
 
 /**
@@ -1088,14 +1084,6 @@ function DisplayMenu<Row>({
       </Menu>
     </span>
   );
-}
-
-function fitsOnePage(
-  rows: readonly unknown[],
-  total: number | undefined,
-  hasMore: boolean,
-): boolean {
-  return !hasMore && (total ?? rows.length) <= PAGE_SIZES[0];
 }
 
 /**

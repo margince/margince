@@ -132,7 +132,14 @@ type Story = StoryObj<typeof LeadSourcesCard>;
 
 export const Admin: Story = { render: story(ADMIN, false) };
 export const AdminWithTargetOn: Story = { render: story(ADMIN, true) };
-export const Reader: Story = { render: story(READER, false) };
+export const Reader: Story = {
+  render: story(READER, false),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByTestId("lead-first-response-target"),
+    ).toHaveAccessibleDescription(/Only an administrator or operations user/);
+  },
+};
 
 export const AdminDark: Story = {
   globals: { theme: "dark" },

@@ -11,10 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ServedTaskTotal is one (task, tier, provider, model) slice of served
-// ai_call history — the token buckets summed and the call count, conditioned
-// on the model that ACTUALLY ran. The cost estimator prices each slice at the
-// model that will run it and scales it by expected units.
+// ServedTaskTotal is one (task, tier, provider, model, answered model) slice of
+// served ai_call history: the token buckets summed and the call count. The cost
+// estimator prices each slice at the model that will run it and scales it by
+// expected units.
 //
 // "Served" means the provider actually ran the model and spent tokens: NOT
 // cache_hit AND tokens_in > 0 AND the terminal was not a provider failure. A
@@ -39,6 +39,9 @@ type ServedTaskTotal struct {
 	Tier     Tier
 	Provider string
 	ModelID  string
+	// AnsweredModel is the model that answered the slice's calls, which is
+	// ModelID unless the provider named another one.
+	AnsweredModel string
 
 	TokensIn         int64
 	CachedTokens     int64
@@ -49,10 +52,9 @@ type ServedTaskTotal struct {
 }
 
 // ServedTaskTotals returns the served ai_call slices for tasks since the given
-// instant, grouped by (task, tier, provider, model). The query's own
-// workspace predicate keeps it to the bound workspace's calls — this feeds a
-// per-message cost, so another tenant's traffic in the numerator would price
-// this one's work wrong. An empty task set returns no rows.
+// instant, one per ServedTaskTotal key. It reads only the bound workspace's
+// calls, because another tenant's traffic would price this one's work wrong.
+// An empty task set returns no rows.
 func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, since time.Time) ([]ServedTaskTotal, error) {
 	// Decision rows are left out: a decision is priced on its own lane, and
 	// these totals price what a re-run of the task's LLM ladder would cost.
@@ -60,16 +62,16 @@ func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, sinc
 	// binding of its OWN tier (recorded since migration 0088), not the ladder
 	// head — a routine cheap_cloud swap must not reprice the departed cloud
 	// slice at the $0 local head.
-	const q = `
-		SELECT task, tier, provider, model_id,
+	q := `
+		SELECT task, tier, provider, model_id, ` + answeredModelSQL("ac") + `,
 		       sum(tokens_in), sum(cached_tokens), sum(cache_write_tokens),
 		       sum(tokens_out), count(*),
 		       count(*) FILTER (WHERE error_sentinel IS NULL)
-		FROM ai_call
+		FROM ai_call ac
 		WHERE occurred_at >= $1 AND NOT cache_hit
 		      AND (error_sentinel IS NULL OR error_sentinel = 'metering_failed')
 		      AND tokens_in > 0 AND task = ANY($2) AND kind <> 'decision'
-		GROUP BY task, tier, provider, model_id`
+		GROUP BY 1, 2, 3, 4, 5`
 
 	taskStrings := make([]string, len(tasks))
 	for i, t := range tasks {
@@ -85,7 +87,7 @@ func (s *CallReadStore) ServedTaskTotals(ctx context.Context, tasks []Task, sinc
 		defer rows.Close()
 		for rows.Next() {
 			var t ServedTaskTotal
-			if err := rows.Scan(&t.Task, &t.Tier, &t.Provider, &t.ModelID,
+			if err := rows.Scan(&t.Task, &t.Tier, &t.Provider, &t.ModelID, &t.AnsweredModel,
 				&t.TokensIn, &t.CachedTokens, &t.CacheWriteTokens, &t.TokensOut,
 				&t.Calls, &t.CompletedCalls); err != nil {
 				return err

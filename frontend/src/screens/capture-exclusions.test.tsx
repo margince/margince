@@ -186,10 +186,16 @@ describe("CaptureExclusionsCard", () => {
     await user.click(
       screen.getByRole("button", { name: en["captureExclusions.kind.domain"] }),
     );
-    await user.type(
-      screen.getByRole("textbox", { name: en["captureExclusions.addLabel"] }),
-      "  jobs.test  ",
-    );
+    const box = screen.getByRole("textbox", {
+      name: en["captureExclusions.addLabel"],
+    });
+    // The rule holds from the next message, said on the field it governs.
+    expect(box.getAttribute("aria-describedby")).toBeTruthy();
+    expect(
+      document.getElementById(box.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(en["captureExclusions.notRetroactive"]);
+    await user.type(box, "  jobs.test  ");
     await user.click(
       screen.getByRole("button", { name: en["captureExclusions.add"] }),
     );

@@ -5,22 +5,17 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import {
-  CaptureSettingsCard,
-  MailSyncCard,
-  WebsiteReadingCard,
-} from "./capture-settings";
+import { CaptureSettingsCard } from "./capture-settings";
 
-// The Settings → Integrations capture-settings toggle: reads the auto-enrich
-// posture for every role, but only admin/ops can change it — the server stays
-// the RBAC authority and the client mirrors it by disabling (never hiding) the
-// toggle for other roles.
+// Every role reads the enrichment card and only admin or ops may change it, so
+// a refusal disables the controls and never hides them.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -32,6 +27,16 @@ function jsonResponse(body: unknown, status = 200) {
 // The toggle is capture_settings:update server-side. Naming the grant rather
 // than a role keeps the fixture honest about what the screen actually asks.
 const CAPTURE_EDITOR: GrantSpec = { capture_settings: ["update"] };
+
+const SETTINGS = {
+  auto_enrich: true,
+  mail_sharing: true,
+  shared_posture_allowed: false,
+  signature_enrich: true,
+  auto_enrich_daily_cap: 500,
+  site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
+  mail_sync_interval_seconds: 120,
+};
 
 // backendFor answers /me with the given grants and /capture/settings with the
 // given auto_enrich, capturing any PATCH body so the wire shape is assertable.
@@ -50,7 +55,7 @@ function backendFor(allow: GrantSpec, autoEnrich = true) {
           capturedPatch = await req.json();
           autoState = (capturedPatch as { auto_enrich: boolean }).auto_enrich;
         }
-        return jsonResponse({ auto_enrich: autoState });
+        return jsonResponse({ ...SETTINGS, auto_enrich: autoState });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -172,18 +177,9 @@ describe("a settings read refused without a problem body", () => {
   });
 });
 
-// The full capture-settings record, which the website-reads card reads more of
-// than the posture card does.
+// The full capture-settings record, saving what each limit row writes.
 function readingBackend(allow: GrantSpec) {
-  let state = {
-    auto_enrich: true,
-    mail_sharing: true,
-    shared_posture_allowed: false,
-    signature_enrich: true,
-    auto_enrich_daily_cap: 500,
-    site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
-    mail_sync_interval_seconds: 120,
-  };
+  let state = SETTINGS;
   const patches: unknown[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -219,12 +215,12 @@ function readingBackend(allow: GrantSpec) {
   return { fetchMock, patches };
 }
 
-describe("WebsiteReadingCard", () => {
+describe("the website-read limits on the enrichment card", () => {
   it("saves a new daily cap on Enter", async () => {
     const backend = readingBackend(CAPTURE_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
-    render(<WebsiteReadingCard />);
+    render(<CaptureSettingsCard />);
 
     const cap =
       await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
@@ -241,7 +237,7 @@ describe("WebsiteReadingCard", () => {
     const backend = readingBackend(CAPTURE_EDITOR);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
-    render(<WebsiteReadingCard />);
+    render(<CaptureSettingsCard />);
 
     const cap =
       await screen.findByTestId<HTMLInputElement>("capture-daily-cap");
@@ -258,7 +254,7 @@ describe("WebsiteReadingCard", () => {
 
   it("shows the limits read-only to a seat without the update grant", async () => {
     vi.stubGlobal("fetch", readingBackend({}).fetchMock);
-    render(<WebsiteReadingCard />);
+    render(<CaptureSettingsCard />);
 
     const pages = await screen.findByTestId<HTMLInputElement>(
       "capture-read-max-pages",
@@ -266,8 +262,10 @@ describe("WebsiteReadingCard", () => {
     expect(pages.value).toBe("60");
     expect(pages.disabled).toBe(true);
     expect(
-      screen.getByText(translate("en", "captureSettings.adminOnly")),
-    ).toBeTruthy();
+      within(screen.getByTestId("capture-website-reads")).getAllByText(
+        translate("en", "captureSettings.adminOnly"),
+      ),
+    ).toHaveLength(4);
   });
 
   // Each row writes its own wire field and refuses on its own bounds: a row
@@ -282,7 +280,7 @@ describe("WebsiteReadingCard", () => {
       const backend = readingBackend(CAPTURE_EDITOR);
       vi.stubGlobal("fetch", backend.fetchMock);
       const user = userEvent.setup();
-      render(<WebsiteReadingCard />);
+      render(<CaptureSettingsCard />);
 
       const box = await screen.findByTestId<HTMLInputElement>(testId);
       await user.clear(box);
@@ -301,31 +299,4 @@ describe("WebsiteReadingCard", () => {
       );
     },
   );
-});
-
-describe("MailSyncCard", () => {
-  it("saves a new sync interval and refuses one under 30 seconds", async () => {
-    const backend = readingBackend(CAPTURE_EDITOR);
-    vi.stubGlobal("fetch", backend.fetchMock);
-    const user = userEvent.setup();
-    render(<MailSyncCard />);
-
-    const box =
-      await screen.findByTestId<HTMLInputElement>("capture-mail-sync");
-    expect(box.value).toBe("120");
-    await user.clear(box);
-    await user.type(box, "29{Enter}");
-    expect(
-      await screen.findByText(
-        translate("en", "captureMailSync.interval.refusal"),
-      ),
-    ).toBeTruthy();
-    expect(backend.patches).toEqual([]);
-
-    await user.clear(box);
-    await user.type(box, "60{Enter}");
-    await waitFor(() =>
-      expect(backend.patches).toEqual([{ mail_sync_interval_seconds: 60 }]),
-    );
-  });
 });

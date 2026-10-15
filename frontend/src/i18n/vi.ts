@@ -2489,7 +2489,7 @@ export const vi = {
   "linkedinImport.notConnectedNote":
     "Khi lưu URL hồ sơ, các kết nối đã nhập sẽ được gắn với tên của bạn.",
   "linkedinImport.whichFile":
-    "LinkedIn cung cấp tệp Connections.csv trong “Settings”, rồi “Data privacy”, rồi “Get a copy of your data”. Tải lên tệp đó từ tệp nén. Kết nối đã tải lên không bao giờ trở thành liên hệ: các kết nối này nằm ngoài tìm kiếm, danh sách và trang liên hệ, và không ai có thể nhắn tin hay gửi email cho họ.",
+    "Tệp Connections.csv từ mục “Get a copy of your data” của LinkedIn. Kết nối đã nhập không bao giờ trở thành liên hệ, và không ai gửi email cho họ được.",
   "linkedinImport.choose": "Chọn tệp Connections.csv",
   "linkedinImport.importLabel": "Tệp xuất danh sách kết nối",
   "linkedinImport.noMatchesYet":
@@ -2503,9 +2503,6 @@ export const vi = {
   "linkedinReach.title": "Phạm vi mạng lưới",
   "linkedinReach.sub":
     "Các công ty đã có trong CRM mà bạn có người quen, công ty nhiều kết nối nhất xếp trước.",
-  "linkedinReach.readFailed": "Không thể tải phạm vi mạng lưới.",
-  "linkedinReach.empty":
-    "Chưa có kết nối nào làm việc tại công ty đã có trong CRM.",
   "linkedinReach.allUnresolved":
     "Mọi kết nối đều làm việc tại công ty chưa có trong CRM. Số kết nối: {unresolved}.",
   "linkedinReach.accountsLabel": "Công ty bạn tiếp cận được",
@@ -6460,8 +6457,7 @@ export const vi = {
   "privacy.corrections": "Yêu cầu chỉnh sửa",
   "privacy.correctionsSub":
     "Người liên hệ đã nhập các nội dung này qua liên kết được gửi cho họ qua email. Chưa có nội dung nào làm thay đổi hồ sơ; yêu cầu sửa chỉ là yêu cầu cho đến khi được chấp nhận.",
-  "privacy.correctionsEmpty":
-    "Không có yêu cầu sửa nào đang chờ. Người liên hệ gửi yêu cầu qua liên kết nhận được trong email.",
+  "privacy.correctionsEmpty": "Không có yêu cầu sửa nào đang chờ.",
   "privacy.correctionContact": "Liên hệ",
   "privacy.correctionChange": "Nội dung cần sửa",
   "privacy.correctionReceived": "Ngày nhận",
@@ -6656,7 +6652,6 @@ export const vi = {
   "privacy.kindRectify": "Chỉnh sửa",
   "privacy.kindErasure": "Xóa",
   "privacy.purpose": "Mục đích",
-  "privacy.purposeDoiColumn": "Xác nhận",
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
   "privacy.purposesEmpty": "Chưa có mục đích nào.",
@@ -6710,12 +6705,11 @@ export const vi = {
     "Gỡ lưu trữ pháp lý sẽ XÓA mục này, không đưa mục này trở lại sử dụng. Yêu cầu xóa mà nghĩa vụ này đã tạm hoãn vẫn còn mở, nên gỡ lưu trữ pháp lý sẽ hoàn tất yêu cầu đó. Không thể hoàn tác.",
   "restricted.release.confirm": "Gỡ lưu trữ pháp lý và xóa",
   "restricted.pin.action": "Ghim một mục",
-  "restricted.pin.submit": "Ghim",
   "restricted.pin.idHint":
     "Dành cho thư từ mà quy tắc tự động không nhận ra, ví dụ thư nhà cung cấp và thư mua hàng thuộc §257 HGB nhưng không có deal ở đây. Mã của mục có trong nhật ký hoạt động.",
   "restricted.pin.idMalformed":
     "Mã mục không hợp lệ. Định dạng gồm 8-4-4-4-12 ký tự thập lục phân, hiển thị đầy đủ trong nhật ký hoạt động của mục đó.",
-  "restricted.pin.idPlaceholder": "Mã mục",
+  "restricted.pin.idLabel": "Mã mục",
   "restricted.pin.title": "Đưa mục này vào lưu trữ pháp lý?",
   "restricted.pin.body":
     "Mục này được giữ trong thời hạn luật định: bị ẩn khỏi mọi chế độ xem thông thường, bị khóa và sẽ bị xóa khi hết thời hạn. Mã định danh của mục này bị che ngay từ bây giờ.",
@@ -6733,7 +6727,7 @@ export const vi = {
   "retention.editScope": "Sửa {scope}",
   "retention.retainOnly": "Chế độ chỉ lưu trữ",
   "retention.retainOnlyHelp":
-    "Khi bật, bản cài đặt này không hủy gì: không ẩn danh hóa và không xóa, bất kể chính sách bên dưới quy định gì. Tác vụ chuyển vào kho lưu trữ vẫn chạy; hồ sơ trong kho lưu trữ được giữ lại, không bị hủy.",
+    "Khi bật, không chính sách nào ẩn danh hóa hay xóa dữ liệu. Tác vụ chuyển vào kho lưu trữ vẫn chạy.",
   "retention.adminOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được cài đặt lưu trữ.",
   "retention.withheld":
@@ -6750,7 +6744,6 @@ export const vi = {
   "retention.lawfulBasisHint":
     "Không bắt buộc. Cơ sở theo Điều 6 mà thời hạn này dựa vào, dành cho kiểm toán viên đọc chính sách.",
   "retention.enabled": "Đang bật",
-  "retention.edit": "Sửa",
   "retention.save": "Lưu chính sách",
   "retention.delete": "Xóa chính sách",
   "retention.deleteTitle": "Xóa chính sách lưu trữ?",
@@ -7222,11 +7215,9 @@ export const vi = {
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
-  "overnightGrant.sub":
-    "Margince xử lý deal của bạn qua đêm và chuẩn bị sẵn Bản tin sáng khi bạn bắt đầu làm việc. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
   "overnightGrant.label": "Cho phép Margince chuẩn bị Bản tin sáng qua đêm",
   "overnightGrant.help":
-    "Margince đọc deal và thư của bạn để xếp hạng ưu tiên hôm nay, và ghi lại ghi chú. Margince không thể gửi: quyền cấp ở đây chỉ gồm đọc và ghi, không bao giờ gồm quyền gửi.",
+    "Xếp hạng deal và thư hôm nay, rồi ghi chú cho Bản tin sáng của bạn. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy và không bao giờ gửi thư.",
   "overnightGrant.dangerTitle": "Trợ lý AI qua đêm sẽ không chạy",
   "overnightGrant.danger":
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
@@ -7326,12 +7317,26 @@ export const vi = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
+  "connectionOutcomes.view": "Xem",
+  "connectionOutcomes.viewNamed": "Xem {name}",
+  "connectionOutcomes.retryNamed": "Tải lại {name}",
+  "connectionOutcomes.none": "Chưa có",
+  "connectionOutcomes.unread": "Không tải được",
+  "connectionOutcomes.waitingEmpty":
+    "Không có liên hệ nào đang chờ quyết định.",
+  "connectionOutcomes.senders_one": "{count} địa chỉ",
+  "connectionOutcomes.senders_other": "{count} địa chỉ",
+  "connectionOutcomes.threads_one": "{count} chuỗi thư",
+  "connectionOutcomes.threads_other": "{count} chuỗi thư",
+  "connectionOutcomes.contacts_one": "{count} liên hệ",
+  "connectionOutcomes.contacts_other": "{count} liên hệ",
+  "connectionOutcomes.companies_one": "{count} công ty",
+  "connectionOutcomes.companies_other": "{count} công ty",
   "mailSharing.title": "Chia sẻ email",
-  "mailSharing.sub":
-    "Mọi đồng nghiệp xem được liên hệ đều đọc được email đã thu thập. Mặc định bật, để công việc về deal được chia sẻ.",
   "mailSharing.label": "Chia sẻ email đã thu thập với nhóm",
   "mailSharing.help":
-    "Có thể giới hạn từng email sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
+    "Mọi đồng nghiệp xem được liên hệ đều đọc được thư đã thu thập của liên hệ đó. Có thể giới hạn từng thư sau đó.",
   "mailSharing.danger":
     "Khi tắt chia sẻ email, CRM khó sử dụng. Email mới chỉ hiển thị với những người có trong từng email.",
   "mailSharing.posture.shared":
@@ -7349,14 +7354,12 @@ export const vi = {
     "Mục này khẳng định có cơ sở pháp lý",
   "mailSharing.saveFailed": "Không thể lưu cài đặt",
   "mailSharing.save": "Lưu",
+  "mailSharing.cardTitle": "Chia sẻ và đồng bộ thư",
   "connectors.originLabel":
     "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
   "connectors.originUnreachable": "Không thể truy cập",
-  "connectors.sub":
-    "Hộp thư và lịch đang thu thập dữ liệu vào CRM. Khi ngắt kết nối một mục, các hồ sơ đã thu thập vẫn được giữ nguyên.",
   "connectors.loading": "Đang tải trình kết nối…",
   "connectors.loadFailed": "Không thể tải trình kết nối. Tải lại trang.",
-  "connectors.empty": "Chưa kết nối hộp thư hay lịch nào.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7528,7 +7531,6 @@ export const vi = {
   "connectors.telegramNotConfigured":
     "Bản cài đặt này chưa cấu hình kênh nhắn tin.",
   "connectors.telegramConnectCta": "Kết nối bot Telegram",
-  "connectors.telegramEmpty": "Chưa kết nối bot nào.",
   "connectors.telegramReadOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể kết nối hoặc đổi bot.",
   "connectors.telegramEditToken": "Thay token",
@@ -7545,13 +7547,17 @@ export const vi = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
   "connectors.openNamed": "Mở {name}",
+  "connectors.emptyLabel": "Chưa kết nối hộp thư",
+  "connectors.emptyHint":
+    "Kết nối hộp thư hoặc lịch để thu thập thư và cuộc họp.",
+  "connectors.telegramEmptyLabel": "Chưa kết nối bot",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Tên miền thư cá nhân",
   "consumerMail.sub":
-    "Thư gửi từ hộp thư cá nhân tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách các nhà cung cấp này; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
+    "Thư từ các tên miền này tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
   "consumerMail.addedTitle": "Đã thêm tại đây",
   "consumerMail.addTitle": "Thêm tên miền",
   "consumerMail.domainLabel": "Tên miền",
@@ -7580,7 +7586,7 @@ export const vi = {
 
   "blockedDomains.title": "Tên miền bị từ chối",
   "blockedDomains.sub":
-    "Tên miền bị từ chối làm công ty, và điều đã quyết định từng trường hợp: kết quả của mô hình, quy tắc suy đoán hoặc một thành viên. Cho phép một tên miền sẽ mở lại câu hỏi. Chỉ câu hỏi đang mở chưa có ai phụ trách mới hiển thị ở đây.",
+    "Tên miền bị từ chối làm công ty, và việc quyết định do mô hình, quy tắc suy đoán hay một thành viên đưa ra. Cho phép một tên miền sẽ mở lại câu hỏi.",
   "blockedDomains.listTitle": "Quyết định đã ghi nhận",
   "blockedDomains.record": "Ghi nhận quyết định",
   "blockedDomains.recordOpen": "Ghi nhận quyết định",
@@ -8979,6 +8985,12 @@ export const vi = {
   "privacy.dueRule": "Quy tắc thời hạn",
   "privacy.dueRuleUnknown": "Nhập tay trước khi thời hạn được tính tự động",
   "privacy.dueOverridden": "Đặt sớm hơn quy tắc",
+  "privacy.requestsPanel": "Yêu cầu",
+  "privacy.lanesLabel": "Danh sách yêu cầu",
+  "privacy.laneRequests": "Quyền riêng tư",
+  "privacy.laneCorrections": "Chỉnh sửa",
+  "privacy.laneRestricted": "Bị giữ",
+  "privacy.requestsEmpty": "Chưa có yêu cầu nào về quyền riêng tư.",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.knowledge": "Tài liệu",
@@ -9021,6 +9033,7 @@ export const vi = {
   "knowledge.sub":
     "Các bộ tài liệu công ty có thể truy vấn. Câu trả lời chỉ dùng tài liệu đã lưu, và câu hỏi nằm ngoài phạm vi sẽ bị từ chối.",
   "knowledge.withheld": "Bạn không có quyền xem danh sách bộ tài liệu.",
+  "knowledge.empty": "Chưa có bộ tài liệu nào.",
   "knowledge.documentCount_one": "{count} tài liệu",
   "knowledge.documentCount_other": "{count} tài liệu",
   "knowledge.passages_one": "{embedded} trên {count} đoạn tìm kiếm được",
@@ -9037,6 +9050,9 @@ export const vi = {
   "knowledge.col.added": "Ngày thêm",
   "knowledge.col.status": "Trạng thái",
   "knowledge.col.actions": "Thao tác",
+  "knowledge.col.documents": "Tài liệu",
+  "knowledge.col.searchable": "Tìm kiếm được",
+  "knowledge.col.detail": "Chi tiết",
   "knowledge.passageCount_one": "{count} đoạn",
   "knowledge.passageCount_other": "{count} đoạn",
   "knowledge.addedOn": "thêm ngày {date}",
@@ -9074,8 +9090,8 @@ export const vi = {
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
-  "knowledge.new.submit": "Tạo bộ",
-  "knowledge.new.failed": "Không thể tạo bộ tài liệu. Thử lại.",
+  "knowledge.searchable": "Tìm kiếm được",
+  "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "verdictPass.subject.senders": "Người gửi",
@@ -9094,7 +9110,7 @@ export const vi = {
   "captureActivity.scope.mine": "Của tôi",
   "captureActivity.scope.workspace": "Kênh dùng chung",
   "captureActivity.scopeNote":
-    "Tính từ lúc trình kết nối chuyển tin nhắn cho CRM này. Không tính các mục đã bị lọc ngay tại trình kết nối, ví dụ một biểu tượng cảm xúc trong chat hay một quy tắc thư. Chỉ gồm tin nhắn; thu thập lead không hiển thị ở đây.",
+    "Tin nhắn do trình kết nối chuyển cho Margince. Không tính thu thập lead và các mục trình kết nối tự lọc.",
   "captureActivity.filtered":
     "Đang hiển thị {shown} trên {total} {outcome} trong khoảng thời gian này.",
   "captureActivity.openTraceFrom":
@@ -9682,15 +9698,13 @@ export const vi = {
     "Vai trò quản trị luôn giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn có thể được quản trị.",
   "roles.refusal.nameTaken": "Đã có vai trò khác mang tên này. Chọn tên khác.",
   "extAccess.title": "Tiện ích và quyền truy cập",
-  "extAccess.sub":
-    "Mỗi đơn vị tiện ích bổ sung gì cho bản cài đặt này, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
     "Trang này cần quyền đọc tiện ích mở rộng và vai trò của bản cài đặt. Vai trò hiện tại thiếu một hoặc cả hai quyền.",
   "extAccess.readOnly":
     "Vai trò của bạn xem được trang này. Cần tài khoản đầy đủ quyền để thay đổi phân quyền.",
   "extAccess.empty": "Chưa cài đơn vị tiện ích nào.",
   "extAccess.version": "Phiên bản {version}",
-  "extAccess.openUnit": "Mở trang {name}",
+  "extAccess.openUnit": "Đi tới {name}",
   "extAccess.noPage":
     "{name} đã được cài trên API, nhưng bản dựng ứng dụng này không có trang cho tiện ích đó. Có thể ứng dụng cũ hơn máy chủ.",
   "extAccess.brings.heading": "Đơn vị này bổ sung gì",
@@ -9715,6 +9729,7 @@ export const vi = {
   "extAccess.grantFailed": "Không thể thay đổi quyền",
   "extAccess.nobodyReads":
     "Không vai trò nào có quyền đọc {object}, nên mọi thành viên sẽ thấy màn hình trống ở tiện ích này. Cấp quyền đọc cho ít nhất một vai trò bên dưới.",
+  "extAccess.matrixName": "Quyền của các vai trò với {unit}",
   "users.empty": "Chưa có người dùng nào.",
   "users.adminOnly": "Vai trò hiện tại không có quyền quản lý người dùng.",
   "users.inviteTitle": "Mời người dùng",
@@ -10101,6 +10116,7 @@ export const vi = {
   "aicalls.outcome.failed": "Không thành công",
   "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
   "aicalls.filter.servedProvider": "Nhà cung cấp phục vụ",
+  "aicalls.filter.servedModel": "Mô hình trả lời",
   "aicalls.sentinel.provider_quota": "Hết hạn mức",
   "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
   "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
@@ -10594,19 +10610,15 @@ export const vi = {
   "autonomy.kind.lifecycle_change.help":
     "Chuyển công ty sang giai đoạn vòng đời khác dựa trên hoạt động. Tắt để tự xem lại các đề xuất này. Thay đổi giai đoạn có thể ảnh hưởng đến ai thấy công ty và tự động hóa nào chạy.",
   "captureSettings.title": "Bổ sung dữ liệu",
-  "captureSettings.sub":
-    "Cách bổ sung dữ liệu cho công ty và liên hệ đã thu thập sau khi tạo.",
   "captureSettings.autoEnrich.label": "Tự bổ sung dữ liệu công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Mỗi công ty mới tạo từ thư đã thu thập sẽ có hồ sơ web tự động, lập từ trang web của công ty. Chạy trong giới hạn hằng ngày.",
   "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
   "captureSettings.signatureEnrich.help":
-    "Khi bật, Margince đọc những gì một người tự ghi dưới tên của họ trong thư họ gửi cho bạn: chữ ký, hoặc danh thiếp đính kèm, gồm chức danh, số điện thoại, địa chỉ hoặc công ty. Việc này diễn ra trong vài phút sau khi thư đến. Không suy đoán gì; thông tin thư không nêu thì không được ghi. Đây là mặc định của công ty; hộp thư có cài đặt riêng thì giữ cài đặt đó.",
+    "Đọc chức danh, số điện thoại, địa chỉ hoặc công ty mà một người tự ghi trong chữ ký hoặc danh thiếp của họ. Không suy đoán gì. Cài đặt riêng của hộp thư được ưu tiên.",
   "captureSettings.addFailed": "Không thể thêm mục loại trừ",
   "captureSettings.updateFailed": "Không thể thay đổi cài đặt",
   "captureReading.title": "Đọc trang web",
-  "captureReading.sub":
-    "Lượng nội dung Margince đọc từ trang web công ty. Thay đổi áp dụng cho lần đọc tiếp theo.",
   "captureReading.dailyCap.label": "Số lượt đọc tự động mỗi ngày",
   "captureReading.dailyCap.help":
     "Số lượt đọc không do ai yêu cầu, trên mọi công ty, từ 1 đến 20.000 mỗi ngày.",
@@ -10756,9 +10768,6 @@ export const vi = {
     "Nhập 0 để tắt, hoặc số giây nguyên từ {min} đến {max}.",
   "operations.refusal.hours": "Nhập số giờ nguyên từ {min} đến {max}.",
   "operations.refusal.count": "Nhập một số nguyên từ {min} đến {max}.",
-  "captureMailSync.title": "Đồng bộ thư",
-  "captureMailSync.sub":
-    "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
   "captureMailSync.interval.label": "Khoảng đồng bộ (giây)",
   "captureMailSync.interval.help":
     "Khoảng thời gian giữa hai lần đồng bộ của một hộp thư, từ 30 đến 3.600. Áp dụng từ lần đồng bộ tiếp theo của mỗi hộp thư.",
@@ -10773,7 +10782,6 @@ export const vi = {
     "Địa chỉ và tên miền có tin nhắn không bao giờ vào CRM. Quy tắc của bạn chỉ áp dụng cho hộp thư bạn đã kết nối; quy tắc của công ty áp dụng cho mọi thành viên.",
   "captureExclusions.notRetroactive":
     "Có hiệu lực từ tin nhắn tiếp theo. Tin nhắn đã thu thập vẫn giữ nguyên.",
-  "captureExclusions.current": "Quy tắc đang áp dụng",
   "captureExclusions.empty": "Chưa có loại trừ nào.",
   "ownerIdentities.title": "Địa chỉ khác của bạn",
   "ownerIdentities.sub":
@@ -10782,10 +10790,8 @@ export const vi = {
   "ownerIdentities.addLabel": "Thêm địa chỉ của bạn",
   "ownerIdentities.addDescription":
     "Chỉ riêng bạn thấy. Đồng nghiệp không bao giờ thấy danh sách này.",
-  "ownerIdentities.current": "Đã khai báo",
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư tiếp theo. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ bí danh vẫn còn cho đến khi bạn gộp hoặc gỡ liên hệ đó.",
-  "ownerIdentities.empty": "Chưa thêm địa chỉ nào khác.",
   "ownerIdentities.remove": "Gỡ {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ",
   "ownerIdentities.confirm": "Thêm",
@@ -10810,6 +10816,8 @@ export const vi = {
     "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Chưa thêm địa chỉ nào. Đồng nghiệp không bao giờ thấy danh sách này.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -10889,7 +10897,6 @@ export const vi = {
   "ownDomains.curatedTitle": "Quản lý tại đây",
   "ownDomains.irreversible":
     "Thêm tên miền có hiệu lực từ thư tiếp theo; gỡ tên miền thì thu thập tiếp tục từ lúc đó. Thư đã bỏ qua trong thời gian tên miền được đăng ký sẽ không bao giờ được hộp thư nào đưa lại. Thư đã thu thập vẫn giữ nguyên.",
-  "ownDomains.fromCompany": "Từ hồ sơ công ty. Sửa tại đó:",
   "ownDomains.openCompany": "Mở hồ sơ công ty",
   "ownDomains.empty":
     "Chưa đăng ký thêm tên miền nào. Thêm tên miền nếu công ty còn gửi thư từ tên miền khác.",
@@ -10910,7 +10917,7 @@ export const vi = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook gửi đi chưa được bật trên bản cài đặt này. Cấu hình khóa ký trước.",
+    "Webhook chưa được bật trên bản cài đặt này cho đến khi cấu hình khóa ký.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",
@@ -11579,9 +11586,7 @@ export const vi = {
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
-    "Mỗi liên hệ được tra cứu một lần cho các thông tin mà kết nối này chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này; các thông tin này tốn credit và vẫn được quyết định riêng cho từng liên hệ.",
-  "provider.automaticLookupJurisdiction":
-    "Tắt mục này nếu liên hệ trong CRM thuộc phạm vi một đạo luật cấm mua bán dữ liệu cá nhân, như luật Việt Nam. Nút trên từng liên hệ vẫn hoạt động, nên quyết định vẫn thuộc về người đưa ra quyết định đó.",
+    "Liên hệ mới được bổ sung các thông tin miễn phí từ nhà cung cấp, như vai trò và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua tự động, và nút trên từng liên hệ vẫn dùng được. Tắt mục này nếu luật cấm mua bán dữ liệu cá nhân.",
   "provider.buyable": "Cho phép mua {category}",
   "provider.buyableWriteFailed": "Không thể đổi hạng mục",
   "provider.postureReadFailed": "Không rõ cài đặt hiện tại",
@@ -11670,10 +11675,6 @@ export const vi = {
   "provider.profile.buy_other": "Mua {category} · {credits} credit",
   "provider.profile.buyRebuys":
     "Giá đã bao gồm mua lại {categories}: nhà cung cấp yêu cầu mục đó cho lần tìm kiếm này và tính phí mọi thông tin trả về.",
-  "provider.freeTier.hint":
-    "Hồ sơ LinkedIn, vai trò hiện tại và lịch sử công tác không tốn credit. Giữ bật để mọi liên hệ mới tự động có các thông tin này.",
-  "provider.pricedTier.hint":
-    "Không bao giờ mua tự động. Mua cho từng liên hệ một, giá hiện trên nút.",
   "provider.profile.receiptAt": "Tra cứu ngày {at}.",
   "provider.profile.receipt":
     "Tra cứu ngày {at} · trả về {answered} trên {asked} thông tin.",
@@ -13097,7 +13098,7 @@ export const vi = {
   "aiRates.refresh.keptCount_one": "Đã giữ {count} giá nhập thủ công",
   "aiRates.refresh.keptCount_other": "Đã giữ {count} giá nhập thủ công",
   "aiProviders.setByHand": "Nhập thủ công",
-  "aiRates.refresh.unlisted": "Không có trong danh sách của broker: {ids}",
+  "aiRates.refresh.unlisted": "Không có trong bảng giá: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
@@ -13524,6 +13525,11 @@ export const vi = {
   "aiFigures.line.timeoutCount_one": "{count} lần hết thời gian",
   "aiFigures.line.timeoutCount_other": "{count} lần hết thời gian",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
+  "aiFigures.switched_other":
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
+  "aiFigures.switchedBadge": "Đã đổi mô hình",
   "aiFigures.line.sort": "sắp xếp: {sort}",
   "aiFigures.line.week": "7 ngày: {figures}",
   "aiFigures.line.prefix": "7 ngày: {sentence}",

@@ -12,8 +12,9 @@ import { viewerZone } from "../format/timezone";
 import { translate, translatePlural } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import { openRowMenu } from "../testing/tablerow.testkit";
-import { CaptureSendersCard } from "./capture-senders";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 import { jsonResponse, render } from "./settings.testkit";
 
 type Sent = { method: string; path: string; body: unknown };
@@ -45,6 +46,9 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
       if (path === "/capture/contacts-awaiting-decision")
         return jsonResponse({ data: waiting });
       if (path === "/me") return jsonResponse(meFixture({ roles: ["rep"] }));
+      if (path === "/capture/held-threads") return jsonResponse({ data: [] });
+      if (path === "/me/linkedin-reach")
+        return jsonResponse(linkedInReachFixture());
       return jsonResponse({});
     }),
   );
@@ -69,6 +73,26 @@ const WAITING = {
   captured_at: "2026-09-10T14:40:00Z",
 };
 
+// The lists open from the outcomes card, one drawer each.
+async function openList(
+  user: ReturnType<typeof userEvent.setup>,
+  list: string,
+) {
+  render(<ConnectionOutcomesCard />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: translate("en", "connectionOutcomes.viewNamed", { name: list }),
+    }),
+  );
+  return within(await screen.findByRole("dialog", { name: list }));
+}
+
+function settingRowOf(label: HTMLElement): HTMLElement {
+  const row = label.closest<HTMLElement>(".settingrow");
+  if (row === null) throw new Error("the label sits in no settings row");
+  return row;
+}
+
 function rowOf(cell: HTMLElement): HTMLTableRowElement {
   const row = cell.closest("tr");
   if (row === null) throw new Error("the cell sits in no table row");
@@ -90,26 +114,25 @@ it("lists a waiting contact whose sender never reached the senders list", async 
     },
   ]);
 
-  render(<CaptureSendersCard />);
+  const user = userEvent.setup();
+  const drawer = await openList(user, "Waiting on a decision");
 
-  expect(await screen.findByText("Waiting on a decision")).toBeInTheDocument();
-  expect(await screen.findByText("Marta Ortiz")).toBeInTheDocument();
+  expect(drawer.getByText("Marta Ortiz")).toBeInTheDocument();
   // The first address names the sender; the rest are counted, not listed.
   const more = translatePlural("en", "senders.waiting.moreAddresses", 2, {
     count: "2",
   });
-  expect(screen.getByText(`m.ortiz@steireif.de ${more}`)).toBeInTheDocument();
-  expect(screen.getByText(en["senders.emptyBody"])).toBeInTheDocument();
+  expect(drawer.getByText(`m.ortiz@steireif.de ${more}`)).toBeInTheDocument();
 });
 
 it("opens the waiting contact from its row", async () => {
   const user = userEvent.setup();
   stubRoutes([WAITING]);
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(user, "Waiting on a decision");
 
   await user.click(
-    await screen.findByRole("button", {
+    drawer.getByRole("button", {
       name: translate("en", "senders.waiting.openNamed", {
         name: "Marta Ortiz",
       }),
@@ -120,23 +143,26 @@ it("opens the waiting contact from its row", async () => {
 
 // A contact with no name and no address still needs a verb that says something.
 it("names the open verb generically when the contact has no name", async () => {
+  const user = userEvent.setup();
   stubRoutes([{ ...WAITING, display_name: undefined, emails: [] }]);
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(user, "Waiting on a decision");
 
   expect(
-    await screen.findByRole("button", {
-      name: en["senders.waiting.openUnnamed"],
-    }),
+    drawer.getByRole("button", { name: en["senders.waiting.openUnnamed"] }),
   ).toBeInTheDocument();
 });
 
-it("draws no waiting group when nothing waits", async () => {
+it("draws no waiting row when nothing waits, and offers no empty list", async () => {
   stubRoutes([]);
 
-  const { client } = render(<CaptureSendersCard />);
+  const { client } = render(<ConnectionOutcomesCard />);
 
-  expect(await screen.findByText(en["senders.emptyBody"])).toBeInTheDocument();
+  const senders = settingRowOf(await screen.findByText(en["senders.title"]));
+  expect(
+    await within(senders).findByText(en["connectionOutcomes.none"]),
+  ).toBeInTheDocument();
+  expect(within(senders).queryByRole("button")).toBeNull();
   // Settled first, so the absence below is the empty answer and not a read
   // still in flight.
   await waitFor(() =>
@@ -150,19 +176,20 @@ it("draws no waiting group when nothing waits", async () => {
 // The classifier's vocabulary moves on its own. A kind this build has no word
 // for still reads as words, never as the server's token.
 it("names a kind it has no word for in words", async () => {
+  const user = userEvent.setup();
   stubRoutes([], [{ ...NEWSLETTER, kind: "export_control" }]);
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(user, en["senders.title"]);
 
-  expect(await screen.findByText(en["senders.kind.other"])).toBeVisible();
-  expect(screen.queryByText("export_control")).toBeNull();
+  expect(drawer.getByText(en["senders.kind.other"])).toBeVisible();
+  expect(drawer.queryByText("export_control")).toBeNull();
 });
 
 it("marks a sender as business from its row's menu", async () => {
   const user = userEvent.setup();
   const sent = stubRoutes([], [NEWSLETTER]);
 
-  render(<CaptureSendersCard />);
+  await openList(user, en["senders.title"]);
 
   const menu = await openRowMenu(user, NEWSLETTER.address);
   await user.click(
@@ -177,6 +204,12 @@ it("marks a sender as business from its row's menu", async () => {
       },
     ]),
   );
+  // The contacts that waited on this sender are settled with it.
+  await waitFor(() =>
+    expect(
+      read.filter((path) => path === "/capture/contacts-awaiting-decision"),
+    ).toHaveLength(2),
+  );
 });
 
 // Excluding destroys mail already brought in, so it asks before it writes.
@@ -184,11 +217,13 @@ it("asks before excluding a sender", async () => {
   const user = userEvent.setup();
   const sent = stubRoutes([], [NEWSLETTER]);
 
-  render(<CaptureSendersCard />);
+  await openList(user, en["senders.title"]);
 
   const menu = await openRowMenu(user, NEWSLETTER.address);
   await user.click(menu.getByRole("button", { name: en["senders.keepOut"] }));
-  const dialog = await screen.findByRole("dialog");
+  const dialog = await screen.findByRole("dialog", {
+    name: en["senders.keepOutTitle"],
+  });
   expect(sent).toEqual([]);
   await user.click(
     within(dialog).getByRole("button", { name: en["senders.keepOutConfirm"] }),
@@ -207,9 +242,9 @@ it("lets the owner withdraw their own answer, and says it is theirs", async () =
     [{ ...NEWSLETTER, decision: "business", overruled: true }],
   );
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(user, en["senders.title"]);
 
-  expect(await screen.findByText(en["senders.byYou"])).toBeVisible();
+  expect(drawer.getByText(en["senders.byYou"])).toBeVisible();
   const menu = await openRowMenu(user, NEWSLETTER.address);
   await user.click(menu.getByRole("button", { name: en["senders.withdraw"] }));
   await waitFor(() =>
@@ -236,9 +271,9 @@ it("links a sender to its contact beside its mail count and newest message", asy
     ],
   );
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(userEvent.setup(), en["senders.title"]);
 
-  const link = await screen.findByRole("link", { name: "Marta Ortiz" });
+  const link = drawer.getByRole("link", { name: "Marta Ortiz" });
   expect(link.getAttribute("href")).toContain(CONTACT_ID);
   const row = within(rowOf(link));
   expect(row.getByText("1,204")).toBeVisible();
@@ -251,9 +286,9 @@ it("links a sender to its contact beside its mail count and newest message", asy
 it("names no contact and no date for a sender with neither", async () => {
   stubRoutes([], [NEWSLETTER]);
 
-  render(<CaptureSendersCard />);
+  const drawer = await openList(userEvent.setup(), en["senders.title"]);
 
-  const row = within(rowOf(await screen.findByText(NEWSLETTER.address)));
+  const row = within(rowOf(drawer.getByText(NEWSLETTER.address)));
   expect(row.queryByRole("link")).toBeNull();
   expect(row.getAllByText("—")).toHaveLength(2);
   expect(row.getByText("0")).toBeVisible();

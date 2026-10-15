@@ -33,6 +33,7 @@ const FLOW: components["schemas"]["AiTaskFlow"] = {
       answered: 8,
       p50_ms: 500,
       gave_up: { timeout: 2 },
+      switched: 0,
     },
     {
       decision: false,
@@ -43,6 +44,7 @@ const FLOW: components["schemas"]["AiTaskFlow"] = {
       answered: 1,
       p50_ms: 1100,
       gave_up: { provider_error: 1 },
+      switched: 0,
     },
   ],
 };
@@ -66,4 +68,29 @@ export const InTheSheet: Story = {
 export const InTheSheetDark: Story = {
   ...InTheSheet,
   globals: { theme: "dark" },
+};
+
+/** The provider answered the tier step with another model than the binding. */
+export const AProviderSwitchedTheModel: Story = {
+  render: () => (
+    <StoryProviders>
+      <TaskOutcome
+        flow={{
+          ...FLOW,
+          steps: FLOW.steps.map((step) =>
+            step.decision
+              ? step
+              : {
+                  ...step,
+                  switched: 2,
+                  switched_to: "openai/gpt-oss-120b-0925",
+                },
+          ),
+        }}
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await screen.findByText(/openai\/gpt-oss-120b-0925/);
+  },
 };

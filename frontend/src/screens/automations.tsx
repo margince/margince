@@ -295,6 +295,7 @@ function libraryColumns(
       render: (entry) => (
         <RowOpen
           label={t("auto.useNamed", { name: entry.name })}
+          opensDialog
           onOpen={() => onUse(entry)}
         />
       ),

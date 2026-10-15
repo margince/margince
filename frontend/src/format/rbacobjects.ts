@@ -168,6 +168,11 @@ export function objectLabel(unit: string, object: string): string {
   const bare = object.startsWith(prefix)
     ? object.slice(prefix.length)
     : object.replace(/^ext_/, "");
-  const words = (bare || unit).replaceAll("_", " ");
+  return readableKey(bare || unit);
+}
+
+/** A key read as words: separators as spaces, the first letter capital. */
+export function readableKey(key: string): string {
+  const words = key.replaceAll(/[_-]/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

@@ -15,6 +15,14 @@ import { type RefObject, useEffect, useRef, useState } from "react";
  */
 export const PAGE_SIZES = [25, 50, 100] as const;
 
+export function fitsOnePage(
+  rows: readonly unknown[],
+  total: number | undefined,
+  hasMore: boolean,
+): boolean {
+  return !hasMore && (total ?? rows.length) <= PAGE_SIZES[0];
+}
+
 /** Everything that narrows or reorders a list, read off its dials. */
 export type Narrowing = Readonly<{
   search?: string;

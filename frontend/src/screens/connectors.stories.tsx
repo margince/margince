@@ -150,7 +150,14 @@ export const ImapPolled: Story = {
   render: cardStory([imapPolled]),
 };
 
+// Nothing connected: one row says so and carries the add verb.
 export const Empty: Story = {
+  render: cardStory([]),
+};
+
+export const EmptyPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   render: cardStory([]),
 };
 

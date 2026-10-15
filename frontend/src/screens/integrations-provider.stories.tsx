@@ -130,7 +130,15 @@ export const OperatorConnected: Story = {
   render: cardStory(OPERATOR, [connected]),
 };
 
+// Before a key: the provider is one row with Connect beside it, and nothing it
+// would read through a key is drawn yet.
 export const OperatorNotYetConnected: Story = {
+  render: cardStory(OPERATOR, [unconnected]),
+};
+
+export const OperatorNotYetConnectedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
   render: cardStory(OPERATOR, [unconnected]),
 };
 

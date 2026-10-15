@@ -2,15 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { linkedInReachFixture } from "../testing/reachfixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { HeldThreadsCard } from "./held-threads";
+import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // What a mailbox is holding back from the team. The states worth a picture are
 // the two a reader must tell apart at a glance: a thread a classifier JUDGED,
@@ -113,43 +114,70 @@ function story(rows: HeldThread[]) {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /capture/held-threads": () => jsonResponse({ data: rows }),
+      "GET /capture/senders": () => jsonResponse({ data: [] }),
+      "GET /capture/contacts-awaiting-decision": () =>
+        jsonResponse({ data: [] }),
+      "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     });
     return (
       <StoryProviders>
-        <HeldThreadsCard />
+        <ConnectionOutcomesCard />
       </StoryProviders>
     );
   };
 }
 
-const meta: Meta<typeof HeldThreadsCard> = {
+// The list opens from its row, in a drawer portalled to the body.
+async function openHeld(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "View Held threads",
+    }),
+  );
+  return within(canvasElement.ownerDocument.body).findByRole("dialog", {
+    name: "Held threads",
+  });
+}
+
+const meta = {
   title: "Settings/You/Connections/Held threads",
-  component: HeldThreadsCard,
-};
+  component: ConnectionOutcomesCard,
+} satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
 
-type Story = StoryObj<typeof HeldThreadsCard>;
+type Story = StoryObj<typeof meta>;
 
-// Wide, who a thread is with sits under its subject: no column of its own.
+// The drawer is narrower than the fold width, so who a thread is with sits
+// on its own line under line one.
 export const Mixed: Story = {
   render: story(MIXED),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findByRole("button", { name: "Entwurf Aufhebungsvertrag" });
-    const drawn = [...canvasElement.querySelectorAll("th")].filter(
-      (heading) => heading.getBoundingClientRect().width > 0,
-    );
-    await expect(drawn.map((heading) => heading.textContent)).not.toContain(
-      "Participants",
-    );
-    const line = canvasElement.querySelector(".held-threads-parties");
-    await expect(line?.getBoundingClientRect().height).toBeGreaterThan(0);
+    const drawer = await openHeld(canvasElement);
+    await within(drawer).findByRole("button", {
+      name: "Entwurf Aufhebungsvertrag",
+    });
+    await waitFor(() => {
+      const beside = drawer.querySelector(".held-threads-parties");
+      expect(beside?.getBoundingClientRect().height).toBe(0);
+      const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
+      expect(cell?.getBoundingClientRect().height).toBeGreaterThan(0);
+    });
   },
 };
 
-// Nothing held is a READING, not an absent list: "my mailbox is withholding
-// nothing right now" is what an owner opens this card to confirm.
-export const NothingHeld: Story = { render: story([]) };
+// Nothing held is a READING, not an absent list: the row says so, with no
+// list to open.
+export const NothingHeld: Story = {
+  render: story([]),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findAllByText("None yet");
+    await expect(
+      within(canvasElement).queryByRole("button", {
+        name: "View Held threads",
+      }),
+    ).toBeNull();
+  },
+};
 
 // Every row pending, which is what a classifier outage looks like from the
 // owner's side — and the state the attempts count exists for.
@@ -163,6 +191,9 @@ export const Outage: Story = {
       attempts: i + 1,
     })),
   ),
+  play: async ({ canvasElement }) => {
+    await openHeld(canvasElement);
+  },
 };
 
 // A long subject truncates inside its column. A kind this build has no word
@@ -187,7 +218,12 @@ const EDGES: HeldThread[] = [
   },
 ];
 
-export const Edges: Story = { render: story([...MIXED, ...EDGES]) };
+export const Edges: Story = {
+  render: story([...MIXED, ...EDGES]),
+  play: async ({ canvasElement }) => {
+    await openHeld(canvasElement);
+  },
+};
 
 // Folded, the same addresses are a caption line of their own under line one.
 export const MixedPhone: Story = {
@@ -195,15 +231,13 @@ export const MixedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await canvas.findAllByRole("button", {
+    const drawer = await openHeld(canvasElement);
+    await within(drawer).findAllByRole("button", {
       name: "Entwurf Aufhebungsvertrag",
     });
-    const beside = canvasElement.querySelector(".held-threads-parties");
+    const beside = drawer.querySelector(".held-threads-parties");
     await expect(beside?.getBoundingClientRect().height).toBe(0);
-    const cell = canvasElement.querySelector(
-      'td[data-fold="only"]:not(:empty)',
-    );
+    const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
     const row = cell?.closest("tr")?.getBoundingClientRect();
     const box = cell?.getBoundingClientRect();
     await expect(box?.height).toBeGreaterThan(0);

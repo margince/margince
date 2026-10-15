@@ -16,7 +16,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
 	},
 	"GET /v1/ai/call-stats": {
-		{Name: "group", Values: []string{"provider", "model", "served_provider", "tier", "task"}, Array: false, Explode: true},
+		{Name: "group", Values: []string{"provider", "model", "served_model", "served_provider", "tier", "task"}, Array: false, Explode: true},
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
 	},
 	"GET /v1/ai/call-stats/flow": {

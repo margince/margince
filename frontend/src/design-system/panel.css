@@ -138,6 +138,11 @@
 .panel-grouphead + .panel-body::before {
   content: none;
 }
+/* The head's bottom interval is the whole gap to what it labels. The body's top
+   padding as well would set the label a seam's distance from its rows. */
+.panel-grouphead + .panel-body:not(.panel-grouphead) {
+  padding-block-start: 0;
+}
 /* Two bleeding blocks meet edge to edge, so a border serves; a pseudo-element
    inside the table's scroll box would scroll away with the table. */
 .panel > .settinglist-bleed + .table-scroll-bleed,

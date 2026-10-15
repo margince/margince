@@ -55,7 +55,17 @@ export const Populated: Story = {
   render: story([ADDED, CARVED_OUT], OPS),
 };
 
-export const Empty: Story = { render: story([], OPS) };
+export const Empty: Story = {
+  render: story([], OPS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const none = await canvas.findByText(/No domains added/);
+    await expect(none.closest(".panel-body")?.textContent).toMatch(
+      /Mail from these domains creates the contact/,
+    );
+    await expect(canvas.queryByText("Added here")).toBeNull();
+  },
+};
 
 // Create without update: the seat may add a domain the baseline missed and may
 // not carve one out or remove one. A single "can you manage this" flag could not

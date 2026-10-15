@@ -14,6 +14,7 @@ import {
   ProviderRecentCalls,
   TierCallsLine,
   TierRecentCalls,
+  TierSwitchedBadge,
 } from "./ai-call-figures";
 import {
   draftOf,
@@ -39,6 +40,7 @@ const row = (key: string, extra: Partial<Row> = {}): Row => ({
   tokens_out: 500,
   cost_microusd: 20000,
   unpriced: 0,
+  switched: 0,
   ...extra,
 });
 
@@ -76,6 +78,13 @@ function statsServer(
     }),
   );
   return { asked, puts };
+}
+
+/** The table's own read, beside the tier week every switch line shares. */
+function figuresAsked(asked: URL[]): URL {
+  const url = asked.find((u) => u.searchParams.get("group") !== "tier");
+  if (!url) throw new Error("the figures table asked for nothing");
+  return url;
 }
 
 afterEach(() => {
@@ -136,6 +145,22 @@ describe("TierCallsLine", () => {
   });
 });
 
+describe("TierSwitchedBadge", () => {
+  it("marks a tier the provider answered with another model this week", async () => {
+    statsServer(() => [
+      row("premium", { switched: 3, switched_to: "gemini-3.6-flash" }),
+      row("cheap_cloud"),
+    ]);
+    render(
+      <>
+        <TierSwitchedBadge tier="premium" />
+        <TierSwitchedBadge tier="cheap_cloud" />
+      </>,
+    );
+    expect(await screen.findAllByText("Model switched")).toHaveLength(1);
+  });
+});
+
 describe("ProviderRecentCalls", () => {
   it("groups a broker's calls by host and opens the calls behind each row", async () => {
     const { asked } = statsServer((url) =>
@@ -180,7 +205,7 @@ describe("TierRecentCalls", () => {
     const { asked } = statsServer(() => [row("Cerebras")]);
     render(<TierRecentCalls tier="local_small" broker />);
     expect(await screen.findByRole("link", { name: "Cerebras" })).toBeTruthy();
-    expect(asked[0].searchParams.get("tier")).toBe("local_small");
+    expect(figuresAsked(asked).searchParams.get("tier")).toBe("local_small");
     expect(
       screen.getByRole("link", { name: "View calls" }).getAttribute("href"),
     ).toBe("#/settings/model-calls?tier=local_small");
@@ -193,9 +218,37 @@ describe("TierRecentCalls", () => {
       name: "gemini-3.1-flash-lite",
     });
     expect(link.getAttribute("href")).toBe(
-      "#/settings/model-calls?model=gemini-3.1-flash-lite&tier=premium",
+      "#/settings/model-calls?served_model=gemini-3.1-flash-lite&tier=premium",
     );
-    expect(asked[0].searchParams.get("group")).toBe("model");
+    expect(figuresAsked(asked).searchParams.get("group")).toBe("served_model");
+  });
+
+  it("says which model answered how many of the answered calls, and links them", async () => {
+    statsServer((url) =>
+      url.searchParams.get("group") === "tier"
+        ? [
+            row("premium", {
+              calls: 63,
+              failed: 2,
+              switched: 41,
+              switched_to: "gemini-3.6-flash",
+            }),
+          ]
+        : [
+            row("gemini-3.6-flash", { calls: 41 }),
+            row("gemini-3.5-flash", { calls: 22 }),
+          ],
+    );
+    render(<TierRecentCalls tier="premium" broker={false} />);
+    const line = await screen.findByRole("status");
+    expect(line.textContent).toContain(
+      "The provider answered 41 of 61 calls with another model than the bound one, most often gemini-3.6-flash.",
+    );
+    expect(
+      within(line)
+        .getByRole("link", { name: "View calls" })
+        .getAttribute("href"),
+    ).toBe("#/settings/model-calls?served_model=gemini-3.6-flash&tier=premium");
   });
 
   it("floors a partly priced cost, so the figure stays a lower bound", async () => {

@@ -1,45 +1,118 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { type ReactNode, useId, useMemo, useState } from "react";
+import { Button, Modal, SegmentedControl } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { NoticeCasesCard } from "./noticecases";
-import { PrivacyInboxCard } from "./privacy";
-import { ConfirmSubmissionsPanel } from "./privacy.corrections";
+import { NewDsrForm, PrivacyInboxCard } from "./privacy";
+import { ConfirmSubmissionsPanel, useCorrections } from "./privacy.corrections";
 import { ConsentPurposesCard } from "./privacy.purposes";
-import { RestrictedRecordsCard } from "./restrictedrecords";
+import {
+  PinRecordAction,
+  RestrictedRecordsCard,
+  useRestrictedRecords,
+} from "./restrictedrecords";
 import { RetentionCard } from "./retention";
 
-/**
- * The governance page's lanes, in the order somebody works them.
- *
- * Extracted from settings.tsx, which is frozen at its length: the privacy page
- * grows a lane roughly every slice, and each one was costing that file two
- * lines it is not allowed to spend. Here they cost nothing, and the ordering
- * argument lives next to the thing it orders.
- */
+/** The governance page's panels in working order: defaults, the requests
+ * that override them, then the duties nobody asked for. */
 export function PrivacyLanes() {
   return (
     <>
       <ConsentPurposesCard />
-      {/* The retention ladder sits under the purpose catalogue and above the
-          DSR inbox: what the installation keeps by default, before the requests
-          that override it case by case. */}
       <RetentionCard />
-      {/* What the ladder's statutory floor is holding right now, under the
-          ladder that explains why: an erasure that met a Handelsbrief
-          restricted it rather than destroying it, and the controller has to be
-          able to see that without opening the audit trail. */}
-      <RestrictedRecordsCard />
-      <PrivacyInboxCard />
-      {/* Beneath the formal requests, because a correction is the same act
-          arriving informally: somebody typed it into the link we mailed them
-          rather than filing a rights request, and the officer answering one is
-          the officer answering the other. */}
-      <ConfirmSubmissionsPanel />
-      {/* The disclosure duties last, under the requests somebody sent us: a
-          subject-request queue is work that was asked for, and this is the work
-          nobody asked for because they do not yet know we hold their data. Same
-          grant, same officer, different question. */}
+      <RequestsPanel />
       <NoticeCasesCard />
+    </>
+  );
+}
+
+const LANES = ["requests", "corrections", "restricted"] as const;
+type Lane = (typeof LANES)[number];
+
+/** The work a contact asked for, one list at a time. One officer works all
+ * three lists, so they share one panel. */
+export function RequestsPanel() {
+  const t = useT();
+  const [lane, setLane] = useState<Lane>("requests");
+  const corrections = useCorrections();
+  const restricted = useRestrictedRecords(useCan("retention_policy", "read"));
+  const labels = useMemo(
+    (): Record<Lane, string> => ({
+      requests: t("privacy.laneRequests"),
+      corrections: t("privacy.laneCorrections"),
+      restricted: t("privacy.laneRestricted"),
+    }),
+    [t],
+  );
+  // A paged queue with more to load knows only a floor, so it shows no count.
+  const counts: Partial<Record<Lane, number>> = {};
+  if (corrections.isSuccess && !corrections.hasNextPage) {
+    counts.corrections = corrections.data.pages.reduce(
+      (sum, page) => sum + page.data.length,
+      0,
+    );
+  }
+  if (restricted.isSuccess && !restricted.data.page.has_more) {
+    counts.restricted = restricted.data.data.length;
+  }
+
+  let verb: ReactNode = null;
+  if (lane === "requests") {
+    verb = <NewRequestAction />;
+  } else if (lane === "restricted") {
+    verb = <PinRecordAction />;
+  }
+  return (
+    <Panel title={t("privacy.requestsPanel")} titleAction={verb}>
+      {/* Its own band, so the switch keeps focus while the lane under it changes. */}
+      <PanelBody>
+        <SegmentedControl
+          options={LANES}
+          value={lane}
+          onChange={setLane}
+          labels={labels}
+          counts={counts}
+          label={t("privacy.lanesLabel")}
+        />
+      </PanelBody>
+      {lane === "requests" && <PrivacyInboxCard />}
+      {lane === "corrections" && <ConfirmSubmissionsPanel />}
+      {lane === "restricted" && <RestrictedRecordsCard />}
+    </Panel>
+  );
+}
+
+// The subject-request lane's verb, in the panel head.
+function NewRequestAction() {
+  const t = useT();
+  const titleId = useId();
+  const [creating, setCreating] = useState(false);
+  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
+  const canOpenRequest = useCanWrite("contact", "update");
+  if (!canOpenRequest) {
+    return null;
+  }
+  return (
+    <>
+      <Button aria-haspopup="dialog" onClick={() => setCreating(true)}>
+        {t("privacy.newRequest")}
+      </Button>
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        labelledBy={titleId}
+        intent="form"
+      >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {t("privacy.newRequest")}
+        </Heading>
+        <NewDsrForm onDone={() => setCreating(false)} />
+      </Modal>
     </>
   );
 }
