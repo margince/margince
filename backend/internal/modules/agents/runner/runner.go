@@ -253,13 +253,18 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 // (ai-operational-spec §5.2 — never a partial fabrication).
 const consecutiveInvalidLimit = 3
 
+// raisedOutputCeiling is the one larger cap a step cut off at the ordinary
+// ceiling is retried with. It mirrors the reasoning-output size the AI module
+// uses for its own long answers; a module may not import that sibling.
+const raisedOutputCeiling = 8192
+
 // maxToolNameLen bounds a proposed tool name. Generous next to the longest
 // registered name, short enough that the field cannot carry prose.
 const maxToolNameLen = 64
 
 func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Result, error) {
 	budget := job.Budget.withDefaults()
-	invalidStreak := 0
+	retry := newOutputRetry()
 	for {
 		if err := ctx.Err(); err != nil {
 			// Wall clock is the third guarantee (§4): the scheduler cancels
@@ -275,7 +280,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		acc.StepsUsed++
 
 		resp, meta, err := r.brain.Complete(ctx,
-			win.asRequest(budget.MaxOutputTokens-acc.OutputTokens, r.brain.PromptWindow()))
+			win.asRequest(min(budget.MaxOutputTokens-acc.OutputTokens, retry.ceiling), r.brain.PromptWindow()))
 		if err != nil {
 			return r.degradeFromCause(acc, job, modelCallReason(err), err), nil
 		}
@@ -286,14 +291,12 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			if meta.Reject != nil {
 				meta.Reject()
 			}
-			invalidStreak++
-			if invalidStreak >= consecutiveInvalidLimit {
-				return r.degradeFromCause(acc, job, invalidOutputReason(invalidStreak), parseErr), nil
+			if reason, giveUp := retry.refuse(win, resp, parseErr); giveUp {
+				return r.degradeFromCause(acc, job, reason, parseErr), nil
 			}
-			win.observeThen(outputValidatorSource, "your previous output failed validation: "+parseErr.Error(), "Return ONLY the step JSON.")
 			continue
 		}
-		invalidStreak = 0
+		retry.accepted()
 
 		if step.Final != nil {
 			acc.Outcome = OutcomeCompleted
