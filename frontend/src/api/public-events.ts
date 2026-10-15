@@ -1074,7 +1074,7 @@ export interface components {
             eligible_deals: number;
             eligible_signals?: number;
         };
-        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the six alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one contact wrote for another, and a subscriber acting on it acts on text the author may edit. */
+        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
         PublicEventForecastExceptionResolved: {
             /** Format: uuid */
             exception_id: string;
@@ -1146,7 +1146,7 @@ export interface components {
             /** Format: uuid */
             owner_user_id: string;
         };
-        /** @description Payload for notice.created. A durable informational notice was recorded for one contact (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift. */
+        /** @description Payload for notice.created. A durable informational notice was recorded for one member (notices/store.go's Create). On this transport, recording the row is the delivery, and the entity is the recipient. The content stays on the row. Fanning out the subject and body would put the same prose on two wires to drift. */
         PublicEventNoticeCreated: {
             /** Format: uuid */
             notice_id: string;
@@ -1342,7 +1342,7 @@ export interface components {
             /** @description Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned". */
             has_signature: boolean;
         };
-        /** @description Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a contact may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that contact and the job read. */
+        /** @description Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a member may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that member and the job read. */
         PublicEventUserDeliveryChanged: {
             /** @description Which settings moved. Never empty: this event fires on a change, and a save that moved nothing writes nothing and publishes nothing. */
             changed_fields: string[];
