@@ -294,7 +294,7 @@ const SIZING: readonly Measure[] = [
   { token: "--inputPaddingY", usage: "Block inset inside a text input." },
   {
     token: "--panel-head-h",
-    usage: "A panel's header band. Fixed: what does not fit goes in the body.",
+    usage: "A panel's header band. A floor: a longer head wraps.",
   },
   {
     token: "--menuMinInlineSize",

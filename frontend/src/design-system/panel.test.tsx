@@ -538,20 +538,63 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-describe("the panel head is one band at the height every panel shares, wider than a phone", () => {
-  it("takes its height from the house token rather than a floor of its own", () => {
-    const head = bandRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head",
+// The coarse-pointer floor every touch target stands at (`.segmented button`,
+// `.stat-card-open`); no token carries it.
+const TOUCH_TARGET_PX = 44;
+
+// A px value from tokens.css, followed through `var()` to the number.
+function tokenPx(name: string): number {
+  const value = tokenValue(name);
+  const alias = /^var\((--[\w-]+)\)$/.exec(value);
+  if (alias) return tokenPx(alias[1]);
+  expect(value, `${name} resolves to px`).toMatch(/^\d+px$/);
+  return Number.parseFloat(value);
+}
+
+// The padding-block one arm of the band declares, read from the arm's own
+// `.panel-head` block inside the named query.
+function armPadding(query: string): string | undefined {
+  const arm = new RegExp(
+    `@media \\(${query}\\)\\s*\\{\\s*\\.panel-head\\s*\\{([^}]*)\\}`,
+  ).exec(stripComments(panelCss()))?.[1];
+  return arm === undefined ? undefined : declaredValue(arm, "padding-block");
+}
+
+function spaceToken(value: string | undefined): string {
+  const name = /^var\((--space-\d+)\)/.exec(value ?? "")?.[1];
+  expect(name, `${value} is a --space-N token`).toBeDefined();
+  return name ?? "";
+}
+
+describe("the panel head stands at the height every panel shares, and grows only to keep its words", () => {
+  const head = () =>
+    bandRules(panelCss()).find((rule) => rule.selector === ".panel-head");
+
+  // A floor rather than a height: a title that does not fit wraps and a verb
+  // that does not fit drops under it, so no word is cut.
+  it("takes its floor from the house token and wraps what does not fit", () => {
+    expect(head()).toBeDefined();
+    expect(declaredValue(head()?.block ?? "", "min-height")).toBe(
+      "var(--panel-head-h)",
     );
-    expect(head).toBeDefined();
-    expect(head?.block).toMatch(/height:\s*var\(--panel-head-h\)/);
-    // A floor is an invitation: a description raised the band, a screen then
-    // re-spaced it, and the same card stood at three heights across one page.
-    expect(head?.properties).not.toContain("min-height");
-    expect(head?.block).toMatch(/align-items:\s*center/);
-    expect(head?.block).toMatch(/flex-wrap:\s*nowrap/);
-    expect(head?.block).toMatch(/padding:\s*0 var\(--padPanel\)/);
+    expect(head()?.properties).not.toContain("height");
+    expect(head()?.properties).not.toContain("max-height");
+    expect(declaredValue(head()?.block ?? "", "align-items")).toBe("center");
+    expect(declaredValue(head()?.block ?? "", "flex-wrap")).toBe("wrap");
     expect(tokenValue("--panel-head-h")).toBe("56px");
+  });
+
+  // The floor only holds a one-line head at 56px if the padding leaves room
+  // for its tallest content: a control on a mouse, a 44px target on touch.
+  // The band's own 1px rule is inside that height.
+  it("pads the band so a one-line head stays exactly at the floor", () => {
+    const floor = tokenPx("--panel-head-h");
+    const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
+    expect(padding).toMatch(/^var\(--space-\d+\) var\(--padPanel\)$/);
+    const fine = tokenPx(spaceToken(padding));
+    expect(2 * fine + tokenPx("--controlHeight") + 1).toBeLessThanOrEqual(floor);
+    const coarse = tokenPx(spaceToken(armPadding("pointer: coarse")));
+    expect(2 * coarse + TOUCH_TARGET_PX + 1).toBeLessThanOrEqual(floor);
   });
 
   // One value at every viewport, like the band it is. A touch arm that raised
@@ -561,22 +604,12 @@ describe("the panel head is one band at the height every panel shares, wider tha
     expect(declarations).toHaveLength(1);
   });
 
-  it("drops a verb under the title on a phone, and wraps a title too long to fit", () => {
-    const phone =
-      /@media \(max-width: 720px\)\s*\{\s*\.panel-head\s*\{([^}]*)\}/.exec(
-        stripComments(panelCss()),
-      )?.[1] ?? "";
-    expect(declaredValue(phone, "flex-wrap")).toBe("wrap");
-    expect(declaredValue(phone, "min-height")).toBe("var(--panel-head-h)");
-    const phoneTitle =
-      /@media \(max-width: 720px\)\s*\{[^@]*?\.panel-head \.panel-title\s*\{([^}]*)\}/.exec(
-        stripComments(panelCss()),
-      )?.[1] ?? "";
-    expect(declaredValue(phoneTitle, "white-space")).toBe("normal");
+  it("keeps a phone's wider air around a head", () => {
+    expect(armPadding("max-width: 720px")).toBe("var(--space-3)");
   });
 
-  // The band's height is constant: a `:has()` rule would grow it for one kind
-  // of content, and a page of panels would go ragged.
+  // The band grows by wrapping and in no other way: a `:has()` rule would grow
+  // it for one kind of content, and a page of panels would go ragged.
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });
@@ -590,31 +623,37 @@ describe("the panel head is one band at the height every panel shares, wider tha
     ]);
   });
 
-  // The title does not wrap, because a second line is a second height. It ends
-  // in an ellipsis instead, and it is the only thing that gives way: a badge or
-  // a button squeezed by a long title reads as a different control, or loses
-  // its label outright.
-  it("truncates the title and lets nothing else give way", () => {
+  // A long title keeps every word: German runs half again as long as English,
+  // and an ellipsis cuts the name a reader finds the zone by. Nothing else
+  // gives way: a badge or a button squeezed by a long title reads as a
+  // different control, or loses its label outright.
+  it("wraps the title whole and lets nothing else give way", () => {
     const selector = ".panel-head .panel-title";
-    const declared = cssRules(panelCss())
-      .filter((rule) => rule.selector === selector)
+    const declared = titleRules(panelCss())
       .map((rule) => rule.block)
       .join(";");
-    expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
-    expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
-    expect(declaredValue(declared, "text-overflow"), selector).toBe("ellipsis");
+    expect(declaredValue(declared, "white-space"), selector).toBeUndefined();
+    expect(declaredValue(declared, "text-overflow"), selector).toBeUndefined();
+    expect(declaredValue(declared, "overflow"), selector).toBeUndefined();
+    expect(declaredValue(declared, "-webkit-line-clamp"), selector).toBeUndefined();
+    expect(declaredValue(declared, "hyphens"), selector).toBe("auto");
     expect(declaredValue(declared, "min-width"), selector).toBe("0");
     // The push that keeps an action at the far end rides on the title, so a
     // pair of actions cannot split around it the way a `:last-child` push lets
     // them.
     expect(declaredValue(declared, "margin-right"), selector).toBe("auto");
 
+    const beside = cssRules(panelCss()).find(
+      (rule) => rule.selector === ".panel-head > :where(:not(.panel-title))",
+    );
+    expect(declaredValue(beside?.block ?? "", "flex-shrink")).toBe("0");
+    // Capped at the band, so a control that wraps does so inside the head
+    // rather than under the pane's clipped edge.
+    expect(declaredValue(beside?.block ?? "", "max-width")).toBe("100%");
+
     // The band itself does not clip: a menu or a tooltip opened from a button
     // in the head has to be able to leave it.
-    const head = bandRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head",
-    );
-    expect(head?.properties).not.toContain("overflow");
+    expect(head()?.properties).not.toContain("overflow");
   });
 });
 
@@ -771,7 +810,7 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     });
     expect(
       offences,
-      "the head band is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
+      "the head band's floor is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
     ).toEqual([]);
   });
 });
