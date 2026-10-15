@@ -20,8 +20,8 @@ import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
  * Sized to its content, a name column with an avatar and a badge takes half
  * the page. So each column takes a share weighted by what it holds.
  *
- * The minimum binds per column, not as a sum, so a narrow share never cuts a
- * header off. A `share` of null takes its minimum in pixels, which suits a
+ * The minimum binds per column, not as a sum, and a header longer than its
+ * column wraps. A `share` of null takes its minimum in pixels, which suits a
  * column of buttons whose width is its translated labels.
  */
 type ColumnSize = Readonly<{ share: number | null; min: number }>;

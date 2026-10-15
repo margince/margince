@@ -31,6 +31,7 @@
  * than each row picking its own. */
 .settingrow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
@@ -45,15 +46,14 @@
   gap: var(--space-3);
 }
 
-/* The naming half. `min-width: 0` so a long description wraps instead of
- * pushing the control off the right edge — a flex item's default
- * `min-width: auto` is the reason a description ever did that. */
+/* Takes what the control leaves, down to a field's floor; below that the control
+ * wraps under it, so a long answer never squeezes the naming to a word per line. */
 .settingrow-naming {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  min-width: 0;
-  flex: 1 1 auto;
+  min-width: min(12rem, 100%);
+  flex: 1 1 0;
 }
 
 /* The description under the label. Not `.t-caption`'s bottom margin: this
@@ -69,16 +69,18 @@
   overflow-wrap: anywhere;
 }
 
-/* The control half, held to the right. `flex: 0 0 auto` rather than a width:
+/* The control half, held to the right. Content-wide rather than a width:
  * a switch is switch-wide and a button is as wide as its label, and a fixed
  * column would make the two disagree about where the row's right edge is —
- * the edge is the CARD's, which both of them reach on their own. */
+ * the edge is the CARD's, which both of them reach on their own. It shrinks
+ * only on a line of its own, where it is wider than the row. */
 .settingrow-control {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* A stacked row's control fills the row instead of hugging the right edge — and
@@ -188,8 +190,8 @@
   overflow-wrap: anywhere;
   /* A measure, for the same reason the field below has one: a value that is a
    * SENTENCE rather than a token — what a company sells, who it sells to —
-   * otherwise takes the row's whole width, and since the control column does
-   * not shrink it squeezes the naming beside it down to one word per line.
+   * otherwise takes the row's whole width and pushes the control under the
+   * naming on a screen where the two would fit side by side.
    * Every short answer this row was built for (an address, a currency, a
    * timezone) sits far inside the ceiling and is unaffected. */
   max-width: 22rem;
