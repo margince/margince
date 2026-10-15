@@ -2673,6 +2673,13 @@ export const de = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Abgelegt unter",
   "email.detail.when": "Gesendet",
+  "activity.detail.loading": "Aktivität wird geladen…",
+  "activity.detail.none": "Diese Aktivität",
+  "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
+  "activity.detail.when": "Wann",
+  "activity.detail.attendees": "Teilnehmende",
+  "activity.detail.colleagues": "Teammitglieder",
+  "activity.detail.filedUnder": "Abgelegt unter",
   "email.detail.bccWithheld":
     "Einige Empfangende stehen in Blindkopie und werden nicht angezeigt.",
   "compose.audienceWorkspace": "Alle im Unternehmen",

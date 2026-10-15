@@ -14,6 +14,21 @@ const jonasThroughBrandt = {
   works_at: { company_id: "o-brandt", company_name: "Brandt Automotive" },
 };
 
+// A meeting search finds, as the activity panel reads it back.
+export const quarterlyReview = {
+  id: "a-quarterly",
+  kind: "meeting",
+  subject: "Quarterly review with Brandt Automotive",
+  body: "We **agreed** on the rollout.",
+  occurred_at: "2026-03-02T09:00:00Z",
+  source: "manual",
+  captured_by: "human:u-1",
+  created_at: "2026-03-02T09:00:00Z",
+  updated_at: "2026-03-02T09:00:00Z",
+  content_state: "available",
+  links: [{ entity_type: "contact", entity_id: "p-anna" }],
+};
+
 // Cross-object: the relink picker finds projects by name beside the seeded
 // contact. One hit of every other kind rides along, because the results
 // screen groups and filters by kind and is swept for axe and at 390px.
@@ -54,6 +69,13 @@ export const search: Handler = ({ url, json }, { projectState }) => {
       score: 0.66,
     },
     { type: "lead", id: "l-1", title: "Bettina Krause", score: 0.6 },
+    {
+      type: "activity",
+      id: quarterlyReview.id,
+      title: quarterlyReview.subject,
+      snippet: "agreed on the rollout",
+      score: 0.55,
+    },
     { type: "tag", id: "t-1", title: "Key account", carried_by: 4 },
   ];
   // The kind pills narrow on the wire, as the server does.

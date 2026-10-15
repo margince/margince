@@ -314,6 +314,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := attachLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	return one[0], nil
 }
 
