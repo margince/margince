@@ -176,9 +176,9 @@ func apiFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	// A fake model left on in a deployment's environment or files would serve
 	// canned answers in production. A flag is typed per command, as the desktop
 	// launcher does, and a stored binding outranks the fake anyway.
-	if fake, origin := config.ValWithSource(c, apiAIFake); fake && origin.Source != config.SourceFlag && posture == runtimeenv.Production {
-		faults = append(faults, fmt.Errorf("%s (%s) turns on the offline fake model, and %s is production: "+
-			"unset it, or pass --ai-fake on the command line", origin.Name, origin.Source, runtimeenv.EnvVar))
+	if fake, origin := config.ValWithSource(c, apiAIFake); fake && !origin.FromFlag() && posture == runtimeenv.Production {
+		faults = append(faults, fmt.Errorf("ai_fake from %s turns on the offline fake model, and %s is production: "+
+			"unset it, or pass --ai-fake on the command line", origin, runtimeenv.EnvVar))
 	}
 	return faults
 }

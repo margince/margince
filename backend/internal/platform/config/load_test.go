@@ -251,3 +251,9 @@ func TestCrossSettingFaultsJoinTheLoadFaults(t *testing.T) {
 		t.Errorf("a faulted setting read from %q, want unset", dsnOrigin)
 	}
 }
+
+func TestOnlyAFlagOriginIsFromTheFlag(t *testing.T) {
+	if !(config.Origin{Source: config.SourceFlag}).FromFlag() || (config.Origin{Source: config.SourceEnv}).FromFlag() {
+		t.Fatal("FromFlag must hold for a flag origin and only for it")
+	}
+}

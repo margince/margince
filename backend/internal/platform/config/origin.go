@@ -27,6 +27,12 @@ type Origin struct {
 	File   string
 }
 
+// FromFlag is true when the command line set the value.
+func (o Origin) FromFlag() bool { return o.Source == SourceFlag }
+
+// String names the source, the flag or variable, and the file, as a trace does.
+func (o Origin) String() string { return originText(o) }
+
 // FromBoot is true when an operator set the value outside the product.
 // A stored setting with such an origin is read-only in the UI and API.
 func (o Origin) FromBoot() bool {
