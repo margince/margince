@@ -74,7 +74,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		}
 	}
 
-	svc := identity.NewService(pool)
+	svc := identity.NewService(pool).WithConfig(StoredConfig(pool))
 	// Its own slice rather than identity's: createInstallation ASSIGNS the
 	// identity discards, so anything appended to that one from inside the seed
 	// callback is overwritten. Merged below.

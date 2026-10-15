@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // AgentWritesPerWindow is the changing calls one passport may make per window.
@@ -61,32 +62,19 @@ var AgentWindowHours = config.DefineStored(config.Spec[int]{
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // AgentWindowNextHours is a saved length still waiting for its reset; 0 when
-// none is.
-var AgentWindowNextHours = config.DefineStored(config.Spec[int]{
-	Key:     "installation.agent_window_next_hours",
-	Env:     "MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_HOURS",
-	Type:    config.Int,
-	Default: config.Some(0),
-	Min:     config.Some(0),
-	Max:     config.Some(168),
-	Doc:     "The window length an administrator saved for the next reset, 0 when none waits. The product writes it.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+// none is. It and AgentWindowNextFrom are pending state the product writes,
+// not configuration, so no boot source sets them.
+var AgentWindowNextHours = settings.Define[int]("installation.agent_window_next_hours", installationSettingsObject, installationAuditVerb,
+	0, settings.Between("hours", 0, 168)).MachineryApplied()
 
 // AgentWindowNextFrom is when AgentWindowNextHours takes over, in Unix seconds;
 // 0 when no change is waiting.
-var AgentWindowNextFrom = config.DefineStored(config.Spec[int]{
-	Key:     "installation.agent_window_next_from",
-	Env:     "MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_FROM",
-	Type:    config.Int,
-	Default: config.Some(0),
-	Min:     config.Some(0),
-	Max:     config.Some(math.MaxInt),
-	Doc:     "When the saved window length takes over, in Unix seconds, 0 when none waits. The product writes it.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+var AgentWindowNextFrom = settings.Define[int]("installation.agent_window_next_from", installationSettingsObject, installationAuditVerb,
+	0, settings.Between("seconds", 0, math.MaxInt)).MachineryApplied()
 
 func agentAllowanceSettings() []config.Any {
 	return []config.Any{
 		AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
-		AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
+		AgentWindowHours,
 	}
 }

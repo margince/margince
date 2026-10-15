@@ -46,13 +46,14 @@ func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 	return out, nil
 }
 
-// agentAllowanceEntries is the order both readers fill allowanceValues in.
+// agentAllowanceEntries is the order both readers fill allowanceValues in; the
+// pending window change follows them.
 var agentAllowanceEntries = []*config.Setting[int]{
-	AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
-	AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
+	AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow, AgentWindowHours,
 }
 
-// allowanceValues holds the settings in agentAllowanceEntries order.
+// allowanceValues holds the settings in agentAllowanceEntries order, then
+// AgentWindowNextHours and AgentWindowNextFrom.
 type allowanceValues [6]int
 
 // policy is the one reading of the six values, for the meter and the page
@@ -89,10 +90,10 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 	if values[3], err = config.StoredApplyTx(ctx, tx, c, AgentWindowHours); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[4], err = config.StoredApplyTx(ctx, tx, c, AgentWindowNextHours); err != nil {
+	if values[4], err = settings.ApplyTx(ctx, tx, AgentWindowNextHours); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[5], err = config.StoredApplyTx(ctx, tx, c, AgentWindowNextFrom); err != nil {
+	if values[5], err = settings.ApplyTx(ctx, tx, AgentWindowNextFrom); err != nil {
 		return agentvolume.Policy{}, err
 	}
 	return values.policy(c), nil
@@ -110,7 +111,12 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 			}
 			values[i] = value
 		}
-		return nil
+		var err error
+		if values[4], err = settings.GetTx(ctx, tx, AgentWindowNextHours); err != nil {
+			return err
+		}
+		values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom)
+		return err
 	})
 	if err != nil {
 		return agentvolume.Policy{}, fmt.Errorf("identity: reading the agent allowances: %w", err)
@@ -149,19 +155,13 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 	if plan.Next > 0 {
 		nextHours, nextFrom = int(plan.Next.Hours()), int(plan.NextFrom.Unix())
 	}
-	for _, w := range []struct {
-		setting *config.Setting[int]
-		value   int
-	}{
-		{AgentWindowHours, int(plan.Length.Hours())},
-		{AgentWindowNextHours, nextHours},
-		{AgentWindowNextFrom, nextFrom},
-	} {
-		if err := config.SaveTx(ctx, s.config, tx, w.setting, w.value); err != nil {
-			return err
-		}
+	if err := config.SaveTx(ctx, s.config, tx, AgentWindowHours, int(plan.Length.Hours())); err != nil {
+		return err
 	}
-	return nil
+	if err := settings.SetTx(ctx, s.settings, tx, AgentWindowNextHours, nextHours); err != nil {
+		return err
+	}
+	return settings.SetTx(ctx, s.settings, tx, AgentWindowNextFrom, nextFrom)
 }
 
 // PassportConnectionTx answers the connection a passport was minted under, or

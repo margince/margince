@@ -79,6 +79,10 @@ var Name = config.DefineStored(config.Spec[string]{
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which
 // only affects how times are displayed to them.
+//
+// Database-only, unlike the settings beside it. SQL reads this row directly
+// (the brief-run local day, the share frame). A boot value would split Go from
+// SQL.
 var Timezone = settings.Define[string](
 	"installation.timezone",
 	installationSettingsObject,
@@ -114,6 +118,9 @@ var Timezone = settings.Define[string](
 // injects the probe, the way every cross-module edge is wired (ADR-0054).
 // Until it does, this setting is changeable — which is why the injection is
 // asserted by a fitness test rather than left to wiring discipline.
+//
+// Database-only like Timezone: rollup views and the freeze probe read this row
+// in SQL, so a boot value would split Go from SQL.
 var BaseCurrency = settings.Define[string](
 	"installation.base_currency",
 	installationSettingsObject,
@@ -209,7 +216,7 @@ var Country = config.DefineStored(config.Spec[string]{
 // Definitions is identity's share of the settings registry that the
 // configuration registry does not hold.
 func Definitions() []settings.Definition {
-	return []settings.Definition{Timezone, BaseCurrency, SMTPPasswordRef, LicenseTokenRef}
+	return []settings.Definition{Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef}
 }
 
 // Settings is identity's contribution to the configuration registry.

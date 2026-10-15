@@ -42,13 +42,7 @@ func StoredConfig(pool *pgxpool.Pool) *config.Config {
 // unsetConfig holds every stored setting with no boot source. It is also where
 // the settings catalog finds their rows, which every program registers alike.
 var unsetConfig = sync.OnceValue(func() *config.Config {
-	var stored []config.Any
-	for _, s := range allSettings() {
-		if s.Stored() {
-			stored = append(stored, s)
-		}
-	}
-	reg, err := config.NewRegistry(stored)
+	reg, err := config.NewRegistry(StoredSettings())
 	if err != nil {
 		panic(err)
 	}
@@ -58,6 +52,18 @@ var unsetConfig = sync.OnceValue(func() *config.Config {
 	}
 	return cfg
 })
+
+// StoredSettings are the settings an administrator may also change at run
+// time, for a program lane whose registry must lock them as the worker's does.
+func StoredSettings() []config.Any {
+	var stored []config.Any
+	for _, s := range allSettings() {
+		if s.Stored() {
+			stored = append(stored, s)
+		}
+	}
+	return stored
+}
 
 // storedDefinitions are the rows of the stored settings, for the settings catalog.
 func storedDefinitions() []settings.Definition { return unsetConfig().StoredDefinitions() }

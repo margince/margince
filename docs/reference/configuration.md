@@ -155,15 +155,16 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | `20` (1 to 200) | `installation.agent_egress_per_window` |
 | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | `1000` (50 to 20000) | `installation.agent_calls_per_window` |
 | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | `24` (1 to 168) | `installation.agent_window_hours` |
-| `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_HOURS` | `0` | `installation.agent_window_next_hours` |
-| `MARGINCE_INSTALLATION_AGENT_WINDOW_NEXT_FROM` | `0` | `installation.agent_window_next_from` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
-`identity.oidc_group_role_map`, and deletes the rest. A boot-set `installation.name` refuses a different name on the
-company profile.
+`identity.oidc_group_role_map`, and deletes the rest.
+
+A boot-set `installation.name`, `installation.country` or `installation.base_language` wins over
+the `workspace.*` value bootstrap would seed. A boot-set `installation.name` also refuses a different
+name on the company profile.
 
 A boot-set `installation.agent_window_hours` also keeps a window length an admin saved for the next
-reset from taking over. The product writes the two `agent_window_next_*` settings itself; do not set them.
+reset from taking over.
 
 ## Common log flags (api, worker)
 

@@ -400,7 +400,7 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := refuseRenameTx(ctx, tx, in.Name); err != nil {
+		if err := refuseRenameTx(ctx, tx, s.config, in.Name); err != nil {
 			return err
 		}
 		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
@@ -428,14 +428,14 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 // refuseRenameTx admits only the name the installation already holds. The
 // anchor company's display name is that name, and a rename here would drift
 // from it. An older client resending the name it read still saves.
-func refuseRenameTx(ctx context.Context, tx pgx.Tx, next *string) error {
+func refuseRenameTx(ctx context.Context, tx pgx.Tx, c *config.Config, next *string) error {
 	if next == nil {
 		return nil
 	}
 	if err := settings.LockForWrite(ctx, tx, Name.Key()); err != nil {
 		return err
 	}
-	current, err := config.StoredValTx(ctx, tx, config.Bound(), Name)
+	current, err := config.StoredValTx(ctx, tx, c, Name)
 	if err != nil {
 		return err
 	}

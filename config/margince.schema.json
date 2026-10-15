@@ -542,14 +542,6 @@
           "description": "Hours in the window the agent allowances count over. Set at boot, it also keeps a length an administrator saved for the next reset from taking over.",
           "type": "integer"
         },
-        "agent_window_next_hours": {
-          "description": "The window length an administrator saved for the next reset, 0 when none waits. The product writes it.",
-          "type": "integer"
-        },
-        "agent_window_next_from": {
-          "description": "When the saved window length takes over, in Unix seconds, 0 when none waits. The product writes it.",
-          "type": "integer"
-        },
         "name": {
           "description": "The company's name. Set at boot, it also refuses a different name on the company profile.",
           "type": "string"

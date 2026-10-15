@@ -18,8 +18,10 @@ type laneSettings struct {
 	given *config.CommandFlags
 }
 
+// The stored settings join the lane's own, so what a boot source sets is
+// locked in a lane as in the worker.
 func addLaneSettings(fs *flag.FlagSet, settings ...config.Any) (*laneSettings, error) {
-	reg, err := config.NewRegistry(settings)
+	reg, err := config.NewRegistry(settings, compose.StoredSettings())
 	if err != nil {
 		return nil, err
 	}
@@ -27,13 +29,19 @@ func addLaneSettings(fs *flag.FlagSet, settings ...config.Any) (*laneSettings, e
 }
 
 // load resolves the settings after the flag set parsed, so a flag still beats
-// the environment and the files, as at boot.
+// the environment and the files, as at boot. It hands compose the result, as
+// the worker's own load does.
 func (l *laneSettings) load() (*config.Config, error) {
-	return config.Load(l.reg, config.Sources{
+	loaded, err := config.Load(l.reg, config.Sources{
 		Args:           l.given.Args(),
 		Environ:        config.Environ(),
 		KnownKey:       compose.AllSettingKeys,
 		KnownEnv:       compose.AllSettingEnvs,
 		BootstrapRoots: deployconfig.Roots(),
 	})
+	if err != nil {
+		return nil, err
+	}
+	compose.UseConfig(loaded)
+	return loaded, nil
 }

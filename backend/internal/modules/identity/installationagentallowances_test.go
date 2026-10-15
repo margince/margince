@@ -4,8 +4,14 @@
 package identity
 
 import (
+	"context"
+	"errors"
 	"strconv"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func filledAgentAllowancePatch() AgentAllowancePatch {
@@ -47,5 +53,38 @@ func TestAnEmptyAgentAllowancePatchWritesNothing(t *testing.T) {
 		if write.raw != nil {
 			t.Errorf("%s encoded %s from an absent field", write.key, write.raw)
 		}
+	}
+}
+
+// A window length a boot source sets has no change waiting. A length an admin
+// saved earlier would otherwise take over from it at the next reset.
+func TestABootSetWindowLengthSetsAsideAWaitingChange(t *testing.T) {
+	waiting := allowanceValues{200, 20, 1000, 24, 12, 1_800_000_000}
+	if got := waiting.policy(nil); got.Window.Next != 12*time.Hour {
+		t.Fatalf("with nothing set at boot the waiting change is %s, want 12h", got.Window.Next)
+	}
+	locked := environConfig(t, "MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS=24")
+	if got := waiting.policy(locked); got.Window.Next != 0 || got.Window.Length != 24*time.Hour {
+		t.Fatalf("under a boot-set length the plan is %+v, want 24h and nothing waiting", got.Window)
+	}
+}
+
+// Under a boot-set length a request for another length is refused, and the
+// same length is a no-op, before anything reaches the database.
+func TestAWindowChangeUnderABootSetLengthIsAConflict(t *testing.T) {
+	store := &InstallationSettingsStore{config: environConfig(t, "MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS=24")}
+	admin := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test",
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"fixture"},
+			Objects:  map[string]principal.ObjectGrant{installationSettingsObject: {Read: true, Update: true}},
+		},
+	})
+	other, same := 12, 24
+	if err := store.scheduleAgentWindowTx(admin, nil, &other); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a different length = %v, want a conflict", err)
+	}
+	if err := store.scheduleAgentWindowTx(admin, nil, &same); err != nil {
+		t.Fatalf("the boot-set length itself = %v, want a no-op", err)
 	}
 }

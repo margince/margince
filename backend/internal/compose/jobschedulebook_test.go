@@ -5,7 +5,6 @@ package compose
 
 import (
 	"errors"
-	"io/fs"
 	"slices"
 	"testing"
 	"time"
@@ -137,19 +136,7 @@ func TestApplyRetriesARefusedScheduleEvenOnceTheValueIsBack(t *testing.T) {
 // schedule a boot source sets, and the default for the others.
 func TestTheScheduleFallbackKeepsABootValue(t *testing.T) {
 	t.Parallel()
-	reg, err := ProgramRegistry(config.RoleWorker)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := config.Load(reg, config.Sources{
-		Environ:  []string{"MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS=120"},
-		KnownKey: AllSettingKeys, KnownEnv: AllSettingEnvs,
-		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	book := schedulesWithoutDatabase(cfg)
+	book := schedulesWithoutDatabase(bootConfigForTest(t, config.RoleWorker, "MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS=120"))
 	if got := book.intervals[identity.TimeScanIntervalSeconds.Key()].get(); got != 2*time.Minute {
 		t.Errorf("the boot-set time scan runs every %s, want 2m0s", got)
 	}
