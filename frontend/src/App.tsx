@@ -54,8 +54,8 @@ import {
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
+import { ConfinedAccountScreen, useConfinement } from "./screens/confinement";
 import { isContactTab } from "./screens/contacttab";
-import { ConfinedAccountScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -822,6 +822,7 @@ function AuthedApp({
     }
   }, [authed, described, progress.unfinished, route.screen]);
 
+  const confinement = useConfinement(me.error, me.refetch);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
@@ -833,19 +834,17 @@ function AuthedApp({
       </RaillessFrame>
     );
   }
+  if (confinement) {
+    return (
+      <RaillessFrame>
+        <ConfinedAccountScreen {...confinement} />
+      </RaillessFrame>
+    );
+  }
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // An account confined to the one act that lifts its refusal: the login
-    // screen would loop, since the same correct credentials meet the same refusal.
-    if (kind === "must-change-password" || kind === "must-enrol-mfa") {
-      return (
-        <RaillessFrame>
-          <ConfinedAccountScreen kind={kind} onResolved={() => me.refetch()} />
-        </RaillessFrame>
-      );
-    }
-    if (kind !== "unauthorized") {
+    if (kind === "connection" || kind === "installation") {
       const retry = () => me.refetch({ cancelRefetch: false });
       return (
         <RaillessFrame>

@@ -10546,7 +10546,7 @@ export const de = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Wie sich Mitglieder anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Ein Admin kann einen Anbieter deaktivieren, aber keinen hinzufügen.",
+    "Wie sich Mitglieder anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Admins können einen Anbieter deaktivieren, aber keinen hinzufügen.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",

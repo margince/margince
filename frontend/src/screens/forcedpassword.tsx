@@ -1,7 +1,4 @@
-import { lazy, Suspense } from "react";
-import { AuthSplash } from "../app/bootsplash";
 import { useT } from "../i18n";
-import type { AuthProbeKind } from "../lib/session";
 import { usePageTitle, Wordmark } from "./auth";
 import { AuthCardTitle, AuthExperience } from "./auth-core";
 import { ChangePasswordCard } from "./passwordcard";
@@ -32,28 +29,5 @@ export function ForcedPasswordChangeScreen({
       </section>
       <ChangePasswordCard onChanged={onChanged} />
     </AuthExperience>
-  );
-}
-
-// Split off: the setup carries the QR encoder, which the sign-in surface must not download.
-const ForcedMfaScreen = lazy(() =>
-  import("./forcedmfa").then((m) => ({ default: m.ForcedMfaScreen })),
-);
-
-/** The boundary's answer to an account confined until it does one thing. */
-export function ConfinedAccountScreen({
-  kind,
-  onResolved,
-}: Readonly<{
-  kind: Extract<AuthProbeKind, "must-change-password" | "must-enrol-mfa">;
-  onResolved: () => void;
-}>) {
-  if (kind === "must-change-password") {
-    return <ForcedPasswordChangeScreen onChanged={onResolved} />;
-  }
-  return (
-    <Suspense fallback={<AuthSplash />}>
-      <ForcedMfaScreen onEnrolled={onResolved} />
-    </Suspense>
   );
 }

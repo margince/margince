@@ -74,9 +74,11 @@ describe("the forced two-step setup", () => {
       screen.getByRole("textbox", { name: /code from the app/i }),
       "123 456{Enter}",
     );
-    expect(
-      await screen.findByRole("textbox", { name: "Recovery codes" }),
-    ).toHaveTextContent(CODES[0]);
+    const codes = await screen.findByRole("textbox", {
+      name: "Recovery codes",
+    });
+    expect(codes).toHaveTextContent(CODES[0]);
+    await waitFor(() => expect(codes).toHaveFocus());
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Done" }));

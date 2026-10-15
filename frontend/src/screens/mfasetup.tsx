@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation } from "@tanstack/react-query";
-import { type ReactNode, useId, useMemo, useState } from "react";
+import { type ReactNode, type Ref, useId, useMemo, useState } from "react";
 import { encode } from "uqr";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
@@ -71,17 +72,19 @@ function CopyRow({
   label,
   labels,
   testId,
+  ref,
 }: Readonly<{
   text: string;
   label: string;
   labels: Parameters<typeof useClipboardCopy>[1];
   testId?: string;
+  ref?: Ref<HTMLDivElement>;
 }>) {
   const copy = useClipboardCopy(text, labels);
   return (
     <>
       <div className="mfa-copy-row">
-        <CopyableText text={text} label={label} testId={testId} />
+        <CopyableText ref={ref} text={text} label={label} testId={testId} />
         <Button onClick={copy.copy}>{copy.label}</Button>
       </div>
       {copy.notice}
@@ -107,8 +110,10 @@ function SecretKey({ secret }: Readonly<{ secret: string }>) {
   );
 }
 
+// Turn on unmounts as the codes arrive, so focus lands on them, not <body>.
 function RecoveryCodes({ codes }: Readonly<{ codes: readonly string[] }>) {
   const t = useT();
+  const arrival = useArrivalFocus<HTMLDivElement>();
   return (
     <div className="form-stack">
       <Callout kind="outcome" tone="success" title={t("mfa.onTitle")}>
@@ -118,6 +123,7 @@ function RecoveryCodes({ codes }: Readonly<{ codes: readonly string[] }>) {
         {t("mfa.saveCodes")}
       </Callout>
       <CopyRow
+        ref={arrival}
         text={codes.join("\n")}
         label={t("mfa.codesLabel")}
         testId="mfa-recovery-codes"
@@ -159,7 +165,10 @@ function StartState({
   );
 }
 
-/** Starts or restarts an enrolment; the secret it returns never reaches a cache. */
+/**
+ * Starts or restarts an enrolment. The secret is kept by no query and is
+ * dropped when the setup closes.
+ */
 export function useTotpStart() {
   const t = useT();
   return useMutation({

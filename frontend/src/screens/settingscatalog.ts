@@ -354,10 +354,8 @@ export const SETTINGS_PAGES = [
     // direction — a card narrower than its page withholds itself — and it
     // closes when they move to `oauth_application`.
     requires: reads("authentication_policy"),
-    // The switches save `installation_settings:update`; the group→role map
-    // saves the admin-only `authentication_policy:update`, as it grants roles.
-    // The OAuth cards save through `capture_settings:update`. Any one of them
-    // makes the page the reader's to work in.
+    // Each card saves on its own grant below, and any one of them makes the
+    // page the reader's to work in.
     changes: acts(
       writes("installation_settings", ["update"]),
       writes("authentication_policy", ["update"]),

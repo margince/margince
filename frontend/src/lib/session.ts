@@ -168,12 +168,13 @@ export function useViewerId(enabled = true): string | undefined {
 }
 
 // A 403 means the session snapshot is stale: grants changed, or the account is
-// now confined. So /me is asked again at once, not at the next focus.
+// now confined. A 401 may be a wrong code or a lapsed session, and the contract
+// gives both one answer. So /me is asked again at once, not at the next focus.
 export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
   return {
     onResponse({ request, response }) {
       if (
-        response.status === 403 &&
+        (response.status === 401 || response.status === 403) &&
         !new URL(request.url).pathname.endsWith("/me")
       ) {
         // Exact, and never cancelling: a prefix match re-asks the ["me", …] read

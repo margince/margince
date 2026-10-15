@@ -177,8 +177,8 @@ describe("the sign-in methods card", () => {
   });
 });
 
-// Turning the requirement on can shut members out, so it asks first. Turning it
-// off takes nothing from anyone, so it saves at once.
+// Turning the requirement on sends members without a factor to set one up, so
+// it asks first. Turning it off takes nothing from anyone, so it saves at once.
 describe("the second-factor requirement", () => {
   const requireSwitch = () =>
     screen.findByRole("switch", { name: /require second factor/i });
@@ -219,7 +219,7 @@ describe("the second-factor requirement", () => {
     expect(calls).toEqual([]);
   });
 
-  it("warns an admin with no factor of their own that it shuts them out too", async () => {
+  it("tells an admin with no factor of their own that they are asked to set one up too", async () => {
     mount([], {}, fullSignInGrants, { ownConfirmed: false });
     const user = userEvent.setup();
     await user.click(await requireSwitch());

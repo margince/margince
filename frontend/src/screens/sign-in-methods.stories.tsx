@@ -151,7 +151,7 @@ export const SecondFactorRequired: Story = {
 };
 
 /** Turning the requirement on asks first. This admin holds no factor of their
- * own, so the dialog says the change shuts them out too. */
+ * own, so the dialog says they are asked to set one up too. */
 export const SecondFactorConfirm: Story = {
   render: () => (
     <Served

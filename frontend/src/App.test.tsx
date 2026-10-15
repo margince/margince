@@ -1,5 +1,9 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -287,19 +291,20 @@ describe("locale switch", () => {
   });
 });
 
+function mount() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <App />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe("auth boundary states (login spec §4)", () => {
-  const mount = () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <App />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-  };
   const probe = (status: number) =>
     vi.fn(async (input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
@@ -595,19 +600,6 @@ describe("password-reset deep link", () => {
     return null;
   };
 
-  const mount = () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <App />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-  };
-
   it("opens the reset form for an already-signed-in browser, not the pending screen", async () => {
     vi.stubGlobal(
       "fetch",
@@ -832,6 +824,131 @@ describe("a session confined while it is open", () => {
         await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
       ).toBeTruthy();
       expect(meReads - readsBefore).toBe(1);
+    } finally {
+      api.eject(watch);
+    }
+  });
+});
+
+describe("the forced two-step setup, held at the boundary", () => {
+  const SECRET = "JBSWY3DPEHPK3PXP";
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+
+  // /me refuses until the factor is confirmed, then answers as the server
+  // does: the refusal is lifted for the same session at once.
+  function serveEnrolment({ lapsed = false } = {}) {
+    let confirmed = false;
+    let signedOut = false;
+    let meReads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const request = input instanceof Request ? input : null;
+        const path = new URL(String(request?.url ?? input), "http://localhost")
+          .pathname;
+        if (path === "/v1/me") {
+          meReads += 1;
+          if (signedOut) return json({ code: "unauthorized" }, 401);
+          return confirmed
+            ? json(meFixture())
+            : json({ code: "mfa_enrolment_required" }, 403);
+        }
+        if (path === "/v1/me/mfa/totp") {
+          return json({
+            secret: SECRET,
+            otpauth_uri: `otpauth://totp/Margince:a%40b.test?secret=${SECRET}`,
+          });
+        }
+        if (path === "/v1/me/mfa/totp/confirm") {
+          if (lapsed) {
+            signedOut = true;
+            return json({ code: "unauthorized" }, 401);
+          }
+          confirmed = true;
+          return json({ recovery_codes: ["aB3-dEf_ghIJkl"] });
+        }
+        if (path === "/v1/auth/logout") {
+          signedOut = true;
+          return new Response(null, { status: 204 });
+        }
+        if (path === "/v1/company") {
+          return json({ company_id: "o1", display_name: "Acme" });
+        }
+        return json({ data: [], page: {} });
+      }),
+    );
+    return { meReads: () => meReads };
+  }
+
+  it("keeps the recovery codes on screen through a focus refetch, until Done", async () => {
+    const user = userEvent.setup();
+    const server = serveEnrolment();
+    window.location.hash = "#/settings/account";
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Set up" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: /code from the app/i }),
+      "123 456{Enter}",
+    );
+    await screen.findByRole("textbox", { name: "Recovery codes" });
+
+    const readsBefore = server.meReads();
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(server.meReads()).toBeGreaterThan(readsBefore));
+    focusManager.setFocused(undefined);
+
+    expect(
+      screen.getByRole("textbox", { name: "Recovery codes" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Set up two-step sign-in" }),
+      ).toBeNull(),
+    );
+  });
+
+  it("lets go of the setup when the account signs out instead", async () => {
+    const user = userEvent.setup();
+    serveEnrolment();
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+    expect(
+      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeTruthy();
+  });
+
+  it("sends a session that lapsed mid-setup to sign-in, not to a wrong code", async () => {
+    const user = userEvent.setup();
+    serveEnrolment({ lapsed: true });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const watch = sessionRefusalWatch(client);
+    api.use(watch);
+    try {
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <App />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await user.click(await screen.findByRole("button", { name: "Set up" }));
+      await user.type(
+        await screen.findByRole("textbox", { name: /code from the app/i }),
+        "123 456{Enter}",
+      );
+      expect(
+        await screen.findByRole("heading", { name: "Sign in to Margince" }),
+      ).toBeTruthy();
     } finally {
       api.eject(watch);
     }
