@@ -78,8 +78,7 @@ const (
 )
 
 // agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,
-// which admits the call. rest_only: the gate admits it, and no MCP tool serves the type. The
-// zero value means the gate admits a call the tool also serves.
+// which admits the call. The zero value means the gate admits a call the tool also serves.
 //
 // Values are the closed set declared by components.schemas.AgentAdmissionPolicy in
 // api/crm.yaml; a value outside it fails generation.
@@ -87,7 +86,6 @@ type agentServedBy string
 
 const (
 	servedByRegistry agentServedBy = "registry"
-	servedByRestOnly agentServedBy = "rest_only"
 )
 
 // agentPolicy is one contract operation's admission class for AGENT
@@ -106,7 +104,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
-	ServedBy   agentServedBy   // registry: the handler's tool call admits it; rest_only: no MCP tool serves the type
+	ServedBy   agentServedBy   // registry: the handler's tool call admits it
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated

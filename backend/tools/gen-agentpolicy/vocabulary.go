@@ -181,7 +181,7 @@ func renderVocabulary(v vocabulary) string {
 		{"agentScope", "scope",
 			"agentScope is the passport cap an operation consumes. Unlike the others it has no zero\n// value in practice: every tool operation declares one, so the gate never has to invent it.", v.scope},
 		{"agentServedBy", "servedBy",
-			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. rest_only: the gate admits it, and no MCP tool serves the type. The\n// zero value means the gate admits a call the tool also serves.", v.servedBy},
+			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. The zero value means the gate admits a call the tool also serves.", v.servedBy},
 	} {
 		fmt.Fprintf(&b, "\n// %s\n//\n// Values are the closed set declared by components.schemas.%s in\n"+
 			"// api/crm.yaml; a value outside it fails generation.\ntype %s string\n\nconst (\n",

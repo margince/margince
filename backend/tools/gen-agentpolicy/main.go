@@ -46,7 +46,7 @@ type policy struct {
 	RecordType string // x-mcp-tool record_type ("" when the tool is not record-typed)
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
-	ServedBy   string // x-mcp-tool served_by: "registry" (the handler runs the tool) or "rest_only" (no MCP tool serves the type)
+	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool
 }
 
 func main() {
@@ -220,7 +220,7 @@ type agentPolicy struct {
 	RecordType agentRecordType // the record the operation targets; zero when it declares none
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
-	ServedBy   agentServedBy   // registry: the handler's tool call admits it; rest_only: no MCP tool serves the type
+	ServedBy   agentServedBy   // registry: the handler's tool call admits it
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated

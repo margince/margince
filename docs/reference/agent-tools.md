@@ -186,25 +186,15 @@ An intent tool built over many operations, such as `catch_me_up_on` or `progress
 route runs the tool through the registry (`served_by: registry`), so the verb is declared like any other. Its
 `OpenAPIOp` names that route.
 
-## Operations a passport reaches on REST only
+## One passport, the same functions on REST and MCP
 
-Some operations name a tool verb whose `record_type` that tool does not accept, so no MCP tool serves them yet. They
-carry `served_by: rest_only` in `x-mcp-tool`. A passport still calls them over `/v1`, under the verb's tier, scope and
-budget; on `/mcp` the verb refuses the type. `TestEveryPolicyRecordTypeIsOneItsToolCanSend` fails a route whose tool
-refuses its type without the marker, and a marker the tool no longer needs.
+Every operation a passport may call on `/v1` names, in `x-mcp-tool`, the MCP verb that does the same thing.
+That verb takes the route's record type and every one of its query and path parameters.
 
-| Record type | Operations |
-|---|---|
-| `product` | list, read, create, update, archive |
-| `offer_template` | list, read, create, update, archive |
-| `offer` | list for a deal, read, create, update, archive, line items |
-| `deal_room` | list, read, create |
-| `deal_room_thread` | list, open a thread |
-| `deal_room_comment` | reply to a thread |
-| `deal_room_document`, `deal_room_participant` | list |
-| `commission` | list, read |
-| `activity` | the list (`GET /v1/activities`); one activity is served by the record tools |
-| `tag` | archive (`DELETE /v1/tags/{id}`) |
+Two gates hold this. `TestEveryPolicyRecordTypeIsOneItsToolCanSend` fails a route whose verb refuses its record type.
+`TestEveryAgentRouteParameterIsAnArgumentOfItsVerb` fails a route parameter the verb has no argument for,
+apart from the page size, which MCP keeps smaller. A nested route, such as `/deals/{id}/offers`, names its
+parent in the path. The record tools take the same parent as a filter or a field (`deal_id`).
 
 ## What a live server can show differently
 
