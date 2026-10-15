@@ -71139,6 +71139,9 @@ type ServerInterface interface {
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
+	// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+	// (GET /openapi.json)
+	GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request)
 	// List partner companies (companies with a partner row), filterable by role/cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
@@ -75483,6 +75486,12 @@ func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request
 // Create or replace the acting user's resumable onboarding state.
 // (PUT /onboarding/state)
 func (_ Unimplemented) PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+// (GET /openapi.json)
+func (_ Unimplemented) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102175,6 +102184,28 @@ func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetAgentOpenAPIDocument operation middleware
+func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAgentOpenAPIDocument(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPartners operation middleware
 func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.Request) {
 
@@ -114518,6 +114549,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/onboarding/state", wrapper.PutOnboardingState)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/openapi.json", wrapper.GetAgentOpenAPIDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)

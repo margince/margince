@@ -73,6 +73,23 @@ paths:
               schema: {$ref: '#/components/schemas/ActingIdentity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /openapi.json:
+    get:
+      tags: [Identity]
+      operationId: getAgentOpenAPIDocument
+      summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+      description: |-
+        The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+        Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+        address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+        both read it: the document says what a passport may call and holds no record data.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /contacts/{id}/employment-import:
     parameters:
       - $ref: '#/components/parameters/Id'

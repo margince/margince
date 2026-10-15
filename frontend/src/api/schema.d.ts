@@ -520,6 +520,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/openapi.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+         * @description The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+         *     Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+         *     address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+         *     both read it: the document says what a passport may call and holds no record data.
+         */
+        get: operations["getAgentOpenAPIDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/consent-request": {
         parameters: {
             query?: never;
@@ -47244,6 +47267,29 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAgentOpenAPIDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The OpenAPI 3.1 document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     getConsentRequest: {

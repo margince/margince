@@ -6,8 +6,10 @@ package agentbundle
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -249,4 +251,58 @@ func storageTables(t *testing.T) *regexp.Regexp {
 		t.Fatalf("read %d table names from the catalog; it holds hundreds, so the pattern no longer matches", len(names))
 	}
 	return regexp.MustCompile(`\b(` + strings.Join(names, "|") + `)\b`)
+}
+
+func TestTheJSONContractIsTheBundlesYAMLContract(t *testing.T) {
+	specJSON, err := (&Builder{}).SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	if !json.Valid(specJSON) {
+		t.Fatal("SpecJSON is not valid JSON")
+	}
+	if !bytes.HasPrefix(specJSON, []byte(`{"openapi":"3.1`)) {
+		t.Errorf("the JSON does not open with the openapi version, as a reader expects: %.40s", specJSON)
+	}
+	// JSON is YAML, so one decoder reads both and the two trees must be equal.
+	var fromYAML, fromJSON map[string]any
+	if err := yaml.Unmarshal([]byte(unzip(t)["margince/openapi.yaml"]), &fromYAML); err != nil {
+		t.Fatalf("openapi.yaml: %v", err)
+	}
+	if err := yaml.Unmarshal(specJSON, &fromJSON); err != nil {
+		t.Fatalf("the JSON: %v", err)
+	}
+	if !reflect.DeepEqual(fromYAML, fromJSON) {
+		t.Error("the JSON contract differs from the bundle's openapi.yaml")
+	}
+}
+
+// asJSON parses src as YAML and writes it back as JSON.
+func asJSON(t *testing.T, src string) (string, error) {
+	t.Helper()
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
+		t.Fatalf("the test input is not YAML: %v", err)
+	}
+	var out bytes.Buffer
+	err := writeJSON(&out, &doc)
+	return out.String(), err
+}
+
+func TestWriteJSONKeepsEachScalarsYAMLType(t *testing.T) {
+	src := "quoted: '200'\nnumber: 200\nratio: 0.5\nflag: true\nnothing: null\nday: 2026-01-02\nlist: [a, 1]\n"
+	got, err := asJSON(t, src)
+	if err != nil {
+		t.Fatalf("writeJSON: %v", err)
+	}
+	want := `{"quoted":"200","number":200,"ratio":0.5,"flag":true,"nothing":null,"day":"2026-01-02","list":["a",1]}`
+	if got != want {
+		t.Errorf("writeJSON =\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestWriteJSONRefusesANumberJSONCannotCarry(t *testing.T) {
+	if _, err := asJSON(t, "limit: .inf\n"); err == nil {
+		t.Error("writeJSON accepted .inf, which has no JSON form")
+	}
 }

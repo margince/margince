@@ -8,7 +8,7 @@ openapi: 3.1.0
 # mirrors into this file from anywhere else: change the wire here, and the
 # generated code follows.
 #
-# Conventions (full text in ./README.md):
+# Conventions (for a client: docs/reference/rest-api.md):
 #   - Resources are plural nouns (/contacts, /companies, /deals, ...).
 #   - Pagination is cursor-based: ?cursor=&limit= -> { data, page: {next_cursor, has_more} }.
 #   - Errors are RFC 7807 problem+json with a stable machine `code`, plus `details`.
@@ -976,6 +976,24 @@ paths:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /openapi.json:
+    get:
+      tags: [Identity]
+      operationId: getAgentOpenAPIDocument
+      summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+      description: |
+        The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+        Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+        address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+        both read it: the document says what a passport may call and holds no record data.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /oauth/consent-request:
     get:
