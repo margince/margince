@@ -431,20 +431,22 @@ func (s *Store) PromoteCompanyNameTx(ctx context.Context, tx pgx.Tx, companyID i
 		return false, err
 	}
 	var current, source string
+	var anchor bool
 	// The row lock serializes this against a concurrent human edit: whoever
 	// commits first is read by the other, so the CAS below cannot be decided
 	// against a name that has already been replaced.
 	err := tx.QueryRow(ctx, `
-		SELECT display_name, name_source FROM company
+		SELECT display_name, name_source, is_anchor FROM company
 		WHERE id = $1 AND archived_at IS NULL
-		FOR UPDATE`, companyID).Scan(&current, &source)
+		FOR UPDATE`, companyID).Scan(&current, &source, &anchor)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
 		return false, fmt.Errorf("contacts: reading the company to promote: %w", err)
 	}
-	if source != nameSourceDomain || current == name {
+	// The anchor's name is the installation's, set on the company profile alone.
+	if anchor || source != nameSourceDomain || current == name {
 		return false, nil
 	}
 	tag, err := tx.Exec(ctx, `

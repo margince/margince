@@ -4,7 +4,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import {
@@ -48,16 +49,27 @@ const COMPANY: Company = {
 };
 
 function mount(company: Company) {
+  const calls = { me: 0, patch: 0 };
+  const session = meRoute({ company: ["update"] });
   installFetchStub({
-    "GET /me": meRoute({ company: ["update"] }),
+    "GET /me": () => {
+      calls.me += 1;
+      return session();
+    },
     "GET /records/company/co-1/tags": () =>
       jsonResponse({ data: [], withheld: false }),
+    "GET /companies/co-1": () => jsonResponse(company),
+    "PATCH /companies/co-1": () => {
+      calls.patch += 1;
+      return jsonResponse({ ...company, version: (company.version ?? 0) + 1 });
+    },
   });
   render(
     <StoryProviders>
       <CompanyDetails company={company} />
     </StoryProviders>,
   );
+  return calls;
 }
 
 afterEach(() => {
@@ -70,4 +82,33 @@ describe("CompanyDetails' address row", () => {
     const value = (await screen.findByText("Address")).nextElementSibling;
     expect(value?.textContent).toBe("Leopoldstrasse 154\n80804 Munich\nDE");
   });
+});
+
+describe("CompanyDetails' rename", () => {
+  it.each([
+    { is_anchor: true, refetched: true },
+    { is_anchor: false, refetched: false },
+  ])(
+    "reads /me again after a save only when is_anchor is $is_anchor",
+    async ({ is_anchor, refetched }) => {
+      const user = userEvent.setup();
+      const calls = mount({ ...COMPANY, is_anchor });
+      await user.click(
+        await screen.findByRole("button", { name: "Change Company name" }),
+      );
+      const before = calls.me;
+      await user.type(
+        screen.getByRole("textbox", { name: "Company name" }),
+        "!{Enter}",
+      );
+
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("textbox", { name: "Company name" }),
+        ).toBeNull(),
+      );
+      expect(calls.patch).toBe(1);
+      expect(calls.me > before).toBe(refetched);
+    },
+  );
 });

@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { viewerZone } from "../format/timezone";
@@ -20,10 +20,6 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { memberCounts, RolesSettings } from "./roles-settings";
-
-// The role editor over a stubbed transport: the list and its archived toggle,
-// a new role made by copying one, a grant flip carrying If-Match, the server's
-// refusals in the catalog's words, and the access preview of the open role.
 
 type Role = components["schemas"]["Role"];
 type User = components["schemas"]["User"];
@@ -57,13 +53,14 @@ const RENAMED_REP: Role = {
   row_scope: "own",
   objects: { contact: GRANT, deal: GRANT },
 };
+const ARCHIVED_AT = "2026-09-01T09:00:00Z";
 const OLD: Role = {
   key: "custom_old",
   name: "Old role",
   is_system: false,
   version: 2,
   row_scope: "team",
-  archived_at: "2026-09-01T09:00:00Z",
+  archived_at: ARCHIVED_AT,
   objects: { contact: NONE, deal: NONE },
 };
 
@@ -111,6 +108,8 @@ function backend(
   } = {},
 ) {
   let directoryReads = 0;
+  const archived = new Set<string>();
+  const made: Role[] = [];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const req =
       input instanceof Request ? input : new Request(String(input), init);
@@ -129,10 +128,11 @@ function backend(
         return json({ title: "Unavailable" }, 503);
       }
       const withArchived = url.searchParams.get("include_archived") === "true";
+      const roles = [ADMIN, RENAMED_REP, FIELD, OLD, ...made].map((role) =>
+        archived.has(role.key) ? { ...role, archived_at: ARCHIVED_AT } : role,
+      );
       return json({
-        roles: withArchived
-          ? [ADMIN, RENAMED_REP, FIELD, OLD]
-          : [ADMIN, RENAMED_REP, FIELD],
+        roles: roles.filter((role) => withArchived || !role.archived_at),
       });
     }
     if (url.pathname.endsWith("/v1/users") && req.method === "GET") {
@@ -165,7 +165,16 @@ function backend(
       );
     }
     if (req.method === "POST" && url.pathname.endsWith("/v1/roles")) {
-      return json({ ...FIELD, key: "custom_closers", name: "Closers" }, 201);
+      made.push({ ...FIELD, key: "custom_closers", name: "Closers" });
+      return json(made.at(-1), 201);
+    }
+    if (url.pathname.endsWith("/custom_field_sales/archive")) {
+      archived.add(FIELD.key);
+      return json({ ...FIELD, version: 8, archived_at: ARCHIVED_AT });
+    }
+    if (url.pathname.endsWith("/custom_field_sales/restore")) {
+      archived.delete(FIELD.key);
+      return json({ ...FIELD, version: 9 });
     }
     return json({ ...FIELD, version: FIELD.version + 1 });
   });
@@ -189,13 +198,18 @@ function render(ui: ReactNode) {
   );
 }
 
+// Opens a role from its row and answers its drawer, found by the dialog's name.
 async function openRole(
   user: ReturnType<typeof userEvent.setup>,
   name: string,
 ) {
   await user.click(await screen.findByRole("button", { name }));
-  return screen.findByRole("heading", { name });
+  return within(await screen.findByRole("dialog", { name }));
 }
+
+beforeEach(() => {
+  globalThis.history.replaceState(null, "", "#/settings/roles");
+});
 
 afterEach(() => {
   cleanup();
@@ -248,7 +262,7 @@ describe("RolesSettings", () => {
     expect(rosterReads).toBe(0);
   });
 
-  it("opens a role from anywhere on its row, by keyboard too", async () => {
+  it("opens a role in a drawer from anywhere on its row, by keyboard too, and gives focus back to the row", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<RolesSettings />);
@@ -258,10 +272,66 @@ describe("RolesSettings", () => {
     row.focus();
     await user.keyboard("{Enter}");
 
-    expect(
-      await screen.findByRole("heading", { name: "Field sales" }),
-    ).toBeTruthy();
+    const drawer = await screen.findByRole("dialog", { name: "Field sales" });
+    expect(drawer.contains(document.activeElement)).toBe(true);
     expect(row.getAttribute("aria-current")).toBe("true");
+    expect(globalThis.location.hash).toBe(
+      "#/settings/roles?role=custom_field_sales",
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(globalThis.location.hash).toBe("#/settings/roles");
+    expect(row.hasAttribute("aria-current")).toBe(false);
+    expect(document.activeElement).toBe(row);
+  });
+
+  it("opens the role a link names, and drops a key no role has from the address", async () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_field_sales",
+    );
+    vi.stubGlobal("fetch", backend([]));
+    const { unmount } = render(<RolesSettings />);
+    expect(
+      await screen.findByRole("dialog", { name: "Field sales" }),
+    ).toBeTruthy();
+    unmount();
+
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_gone",
+    );
+    render(<RolesSettings />);
+    await screen.findByText("Field sales");
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/settings/roles"),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens an archived role a link names, with archived roles still hidden", async () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_old",
+    );
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+
+    const drawer = within(
+      await screen.findByRole("dialog", { name: "Old role" }),
+    );
+    expect(drawer.getByText(en["roles.archivedNote"])).toBeTruthy();
+    expect(screen.queryByTestId(`role-${OLD.key}`)).toBeNull();
+    expect(
+      screen
+        .getByRole("switch", { name: /show archived/i })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(globalThis.location.hash).toBe("#/settings/roles?role=custom_old");
   });
 
   it("makes a new role as a copy of the one picked, and opens it", async () => {
@@ -289,6 +359,11 @@ describe("RolesSettings", () => {
         }),
       ),
     );
+    const drawer = await screen.findByRole("dialog", { name: "Closers" });
+    expect(screen.getAllByRole("dialog")).toEqual([drawer]);
+    await waitFor(() =>
+      expect(drawer.contains(document.activeElement)).toBe(true),
+    );
   });
 
   it("opens the new role even when the directory cannot be re-read", async () => {
@@ -306,8 +381,10 @@ describe("RolesSettings", () => {
     await user.type(dialog.getByRole("textbox", { name: /name/i }), "Closers");
     await user.click(dialog.getByRole("button", { name: "Create role" }));
 
-    const detail = await screen.findByRole("heading", { name: "Closers" });
-    expect(detail.textContent).toBe("Closers");
+    const drawer = within(
+      await screen.findByRole("dialog", { name: "Closers" }),
+    );
+    expect(drawer.getByRole("heading", { name: "Closers" })).toBeTruthy();
   });
 
   it("offers no new role to a reader who is not an admin", async () => {
@@ -322,10 +399,10 @@ describe("RolesSettings", () => {
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls));
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
+    const drawer = await openRole(user, "Field sales");
 
     await user.click(
-      screen.getByRole("switch", { name: /allow field sales to create deal/i }),
+      drawer.getByRole("switch", { name: /allow field sales to create deal/i }),
     );
     await waitFor(() =>
       expect(calls).toContainEqual({
@@ -342,9 +419,9 @@ describe("RolesSettings", () => {
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(calls));
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
+    const drawer = await openRole(user, "Field sales");
 
-    await user.click(screen.getByRole("radio", { name: /everyone/i }));
+    await user.click(drawer.getByRole("radio", { name: /everyone/i }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -369,13 +446,13 @@ describe("RolesSettings", () => {
       const user = userEvent.setup();
       vi.stubGlobal("fetch", backend([], { refuse: { status, code } }));
       render(<RolesSettings />);
-      await openRole(user, "Field sales");
+      const drawer = await openRole(user, "Field sales");
 
       await user.click(
-        screen.getByRole("switch", { name: /allow field sales to read deal/i }),
+        drawer.getByRole("switch", { name: /allow field sales to read deal/i }),
       );
-      expect(await screen.findByText(en[key])).toBeTruthy();
-      expect(screen.queryByText("server words")).toBeNull();
+      expect(await drawer.findByText(en[key])).toBeTruthy();
+      expect(drawer.queryByText("server words")).toBeNull();
     },
   );
 
@@ -385,11 +462,13 @@ describe("RolesSettings", () => {
     vi.stubGlobal("fetch", backend(calls));
     render(<RolesSettings />);
 
-    await openRole(user, "Admin");
-    expect(screen.queryByRole("button", { name: "Archive role" })).toBeNull();
+    const admin = await openRole(user, "Admin");
+    expect(admin.queryByRole("button", { name: "Archive role" })).toBeNull();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-    await openRole(user, "Field sales");
-    await user.click(screen.getByRole("button", { name: "Archive role" }));
+    const drawer = await openRole(user, "Field sales");
+    await user.click(drawer.getByRole("button", { name: "Archive role" }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -400,14 +479,52 @@ describe("RolesSettings", () => {
     );
   });
 
-  it("previews what the open role sees, from the server", async () => {
+  // The live list drops a role once it is archived. Its drawer keeps it, so
+  // the reader can take the archive back where they made it.
+  it("keeps an archived role open with its restore, after the list drops it", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<RolesSettings />);
+
+    const drawer = await openRole(user, "Field sales");
+    await user.click(drawer.getByRole("button", { name: "Archive role" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId(`role-${FIELD.key}`)).toBeNull(),
+    );
+    expect(screen.getByRole("dialog", { name: "Field sales" })).toBeTruthy();
+    expect(drawer.getByText(en["roles.archivedNote"])).toBeTruthy();
+
+    await user.click(drawer.getByRole("button", { name: "Restore role" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          method: "POST",
+          url: "/v1/roles/custom_field_sales/restore",
+        }),
+      ),
+    );
+    expect(await screen.findByTestId(`role-${FIELD.key}`)).toBeTruthy();
+    expect(
+      await drawer.findByRole("button", { name: "Archive role" }),
+    ).toBeTruthy();
+  });
+
+  it("previews what the open role sees, from the server, once asked", async () => {
     const user = userEvent.setup();
     const fetch = backend([]);
     vi.stubGlobal("fetch", fetch);
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
+    const drawer = await openRole(user, "Field sales");
+    const previewReads = () =>
+      fetch.mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/users/access-preview",
+        ),
+      ).length;
+    expect(previewReads()).toBe(0);
 
-    await user.click(screen.getByText(en["roles.preview"]));
+    await user.click(drawer.getByText(en["roles.preview"]));
     await waitFor(() =>
       expect(
         fetch.mock.calls.some(([input]) =>
@@ -417,7 +534,7 @@ describe("RolesSettings", () => {
         ),
       ).toBe(true),
     );
-    expect(await screen.findByText(/contacts: read/i)).toBeTruthy();
+    expect(await drawer.findByText(/contacts: read/i)).toBeTruthy();
   });
 
   it("disables every switch for a reader who may only read roles", async () => {
@@ -427,16 +544,20 @@ describe("RolesSettings", () => {
       backend([], { roles: ["ops"], allow: { role_admin: ["read"] } }),
     );
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
+    const drawer = await openRole(user, "Field sales");
 
-    const switches = screen.getAllByRole("switch", {
+    const switches = drawer.getAllByRole("switch", {
       name: /allow field sales/i,
     });
     expect(switches.length).toBeGreaterThan(0);
     for (const control of switches) {
       expect(control.hasAttribute("disabled")).toBe(true);
     }
-    expect(screen.queryByRole("button", { name: "Rename" })).toBeNull();
+    for (const radio of drawer.getAllByRole("radio")) {
+      expect(radio.hasAttribute("disabled")).toBe(true);
+    }
+    expect(drawer.queryByRole("button", { name: "Rename" })).toBeNull();
+    expect(drawer.queryByRole("button", { name: "Archive role" })).toBeNull();
   });
 
   it("shows a renamed built-in role under the name the operator gave it", async () => {
@@ -451,7 +572,7 @@ describe("RolesSettings", () => {
     ).toBeTruthy();
   });
 
-  it("holds every control on a role while one write on it is in flight, then sends the version it returned", async () => {
+  it("holds every control and the way out while one write is in flight, then sends the version it returned", async () => {
     const user = userEvent.setup();
     const calls: Call[] = [];
     const routed = backend(calls);
@@ -477,27 +598,32 @@ describe("RolesSettings", () => {
       }),
     );
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
+    const drawer = await openRole(user, "Field sales");
 
     await user.click(
-      screen.getByRole("switch", {
+      drawer.getByRole("switch", {
         name: /allow field sales to create contact/i,
       }),
     );
-    const other = screen.getByRole("switch", {
+    const other = drawer.getByRole("switch", {
       name: /allow field sales to read deal/i,
     });
     await waitFor(() => expect(other.hasAttribute("disabled")).toBe(true));
     expect(
-      screen
+      drawer
         .getByRole("radio", { name: /their own/i })
         .hasAttribute("disabled"),
     ).toBe(true);
     expect(
-      screen
+      drawer
         .getByRole("button", { name: "Archive role" })
         .hasAttribute("disabled"),
     ).toBe(true);
+    expect(
+      drawer.getByRole("button", { name: "Close" }).hasAttribute("disabled"),
+    ).toBe(true);
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Field sales" })).toBeTruthy();
 
     answer(
       json({
@@ -533,23 +659,23 @@ describe("RolesSettings", () => {
       }),
     );
     render(<RolesSettings />);
-    await openRole(user, "Field sales");
-    expect(screen.getByText(en["roles.grantsNarrowOnly"])).toBeTruthy();
-    expect(screen.getByText(en["roles.widenAdminOnly"])).toBeTruthy();
+    const drawer = await openRole(user, "Field sales");
+    expect(drawer.getByText(en["roles.grantsNarrowOnly"])).toBeTruthy();
+    expect(drawer.getByText(en["roles.widenAdminOnly"])).toBeTruthy();
 
     // Turning a right on and a wider scope are held.
     expect(
-      screen
+      drawer
         .getByRole("switch", { name: /allow field sales to read deal/i })
         .hasAttribute("disabled"),
     ).toBe(true);
     expect(
-      screen.getByRole("radio", { name: /everyone/i }).hasAttribute("disabled"),
+      drawer.getByRole("radio", { name: /everyone/i }).hasAttribute("disabled"),
     ).toBe(true);
 
     // Turning a right off and a narrower scope are sent.
     await user.click(
-      screen.getByRole("switch", {
+      drawer.getByRole("switch", {
         name: /allow field sales to read contact/i,
       }),
     );
@@ -563,12 +689,12 @@ describe("RolesSettings", () => {
     );
     await waitFor(() =>
       expect(
-        screen
+        drawer
           .getByRole("radio", { name: /their own/i })
           .hasAttribute("disabled"),
       ).toBe(false),
     );
-    await user.click(screen.getByRole("radio", { name: /their own/i }));
+    await user.click(drawer.getByRole("radio", { name: /their own/i }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({

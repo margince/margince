@@ -171,7 +171,9 @@ function RecordField({
     }) => save(values, rows, baseline),
     onSuccess: async () => {
       await Promise.all([
-        invalidateRecord(qc, props.kind, props.record.id),
+        invalidateRecord(qc, props.kind, props.record.id, {
+          anchor: rawRecord(props.record).is_anchor === true,
+        }),
         qc.invalidateQueries({
           queryKey: [props.kind === "company" ? "companies" : `${props.kind}s`],
         }),

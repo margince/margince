@@ -22,7 +22,6 @@ import {
   QueryStates,
   WriteRefused,
 } from "../design-system/querystates";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { today } from "../format/calendarday";
 import { forReader } from "../format/collate";
 import { formatDate, formatUsdPerMTok } from "../format/format";
@@ -55,18 +54,8 @@ function trimDecimal(value: string): string {
   return value.replace(/(?<!0)0+$/, "").replace(/\.$/, "");
 }
 
-// Withheld, not absent (design-system README, "Absent, disabled, or withheld"):
-// a PERMISSION is what denies a price sheet — fx_rate and ai_model_rate grants
-// exist only for admin and ops — so the card keeps its place and says so. Both
-// sheets sit on settings pages other roles open for their other cards (currency
-// rates on Company, model prices on AI), and a sheet that vanished there
-// would read as "this installation has no rates" rather than "not yours to see".
-//
-// It asks the server for NOTHING: each caller keeps `enabled: canRead` on its
-// list query, because the answer is already known and fetching the 403 in order
-// to render it turns a settled denial into red error text with a Retry that can
-// only be refused again. Gated on the /me probe so the notice waits for the
-// grants instead of flashing at every reader while they are still in flight.
+// Withheld, not absent: a vanished sheet reads as "no rates here", not "not
+// yours to see". Callers skip the query, since fetching the 403 shows a Retry.
 function WithheldRateCard({
   title,
   reason,
@@ -118,6 +107,8 @@ export function FxRatesCard() {
     },
   });
 
+  const rates = query.isError ? undefined : query.data;
+
   // After every hook, so the number of hooks a render runs stays the same. A
   // principal holding a write verb but not the read lands here too: without the
   // sheet there is nothing to author a new rate against, so the read decides
@@ -166,59 +157,41 @@ export function FxRatesCard() {
             On the withheld body these two lines would explain one denial twice,
             in two different ways. */}
         {!canManage && <p>{t("settings.rates.readOnly")}</p>}
-        <SettingList>
-          {/* The sheet IS this card's subject rather than an answer that fits
-              beside a label, so it takes the full width below the naming
-              (design-system README, SettingRow: what picks `stack` is
-              complexity, not size). The row names what a reader is looking at
-              — the rates currently in force — which the table's own column
-              headers do not say. */}
-          <SettingRow
-            label={t("settings.rates.fxTableLabel")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("settings.rates.fxTableLabel")}
-              >
-                {(rows) =>
-                  rows.length === 0 ? (
-                    <EmptyState>
-                      <b>{t("settings.rates.fxEmpty")}</b>
-                    </EmptyState>
-                  ) : (
-                    <DataTable<FxRate>
-                      label={t("settings.rates.fxTableLabel")}
-                      rows={rows}
-                      rowKey={(row) => row.from_currency}
-                      columns={[
-                        {
-                          key: "from",
-                          header: t("settings.rates.colFrom"),
-                          render: (row) => row.from_currency,
-                        },
-                        {
-                          key: "rate",
-                          header: t("settings.rates.colRate", {
-                            base: rows[0]?.to_currency ?? "",
-                          }),
-                          render: (row) => trimDecimal(row.rate),
-                        },
-                        {
-                          key: "effective",
-                          header: t("settings.rates.colEffective"),
-                          render: (row) => row.effective_date,
-                        },
-                      ]}
-                    />
-                  )
-                }
-              </QueryGate>
-            }
-          />
-        </SettingList>
+        {!rates?.length && (
+          <QueryGate query={query} pendingLabel={t("settings.rates.fxTitle")}>
+            {() => <EmptyState>{t("settings.rates.fxEmpty")}</EmptyState>}
+          </QueryGate>
+        )}
         {open ? <FxRateModal onClose={() => setOpen(false)} /> : null}
       </PanelBody>
+      {/* The sheet is the panel's subject, so it runs edge to edge. */}
+      {rates?.length ? (
+        <DataTable<FxRate>
+          label={t("settings.rates.fxTableLabel")}
+          bleed
+          rows={rates}
+          rowKey={(row) => row.from_currency}
+          columns={[
+            {
+              key: "from",
+              header: t("settings.rates.colFrom"),
+              render: (row) => row.from_currency,
+            },
+            {
+              key: "rate",
+              header: t("settings.rates.colRate", {
+                base: rates[0]?.to_currency ?? "",
+              }),
+              render: (row) => trimDecimal(row.rate),
+            },
+            {
+              key: "effective",
+              header: t("settings.rates.colEffective"),
+              render: (row) => row.effective_date,
+            },
+          ]}
+        />
+      ) : null}
     </Panel>
   );
 }

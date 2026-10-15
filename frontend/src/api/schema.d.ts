@@ -1764,7 +1764,13 @@ export interface paths {
         delete: operations["archiveCompany"];
         options?: never;
         head?: never;
-        /** Update a company (partial). */
+        /**
+         * Update a company (partial).
+         * @description Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
+         */
         patch: operations["updateCompany"];
         trace?: never;
     };
@@ -9253,7 +9259,8 @@ export interface paths {
         /**
          * Save the installation's own company — the human's confirm-first write.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-         *     later one. This is a HUMAN write: every field is stamped
+         *     later one. Its `display_name` is the installation's name: the same transaction writes it to
+         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
          *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
          *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
          *     theirs, and a later agent read-back will not overwrite it.
@@ -19864,6 +19871,11 @@ export interface paths {
          *
          *     `404` therefore means the company is unreachable, or — for the confirm operation, or for
          *     an agent's first statement — that no such claim exists to answer for.
+         *
+         *     Renaming the installation's own company (`is_anchor`) renames the installation in the same
+         *     transaction, so only an administrator may: another human gets `403`, an agent `422
+         *     anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+         *     past 200 characters (`too_long`); other companies' names have no length cap.
          */
         patch: operations["updateCompanyProfileField"];
         trace?: never;
@@ -20351,7 +20363,11 @@ export interface components {
          *     changed only by admin/ops.
          */
         InstallationSettings: {
-            /** @description The company's display name. */
+            /**
+             * @description The company's display name. An administrator saving the anchor company's `display_name`
+             *     (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+             *     transaction; before the first save it is the name the installation was configured with.
+             */
             name: string;
             /**
              * @description IANA zone name every reporting period boundary is computed in (not a user's own
@@ -20473,7 +20489,12 @@ export interface components {
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
-            /** @description Rename the company. */
+            /**
+             * @deprecated
+             * @description Accepted only when it equals the stored name, so an older client that resends the whole
+             *     form still saves. Any other value is refused with `422 set_on_company_profile`: the
+             *     installation's name is the anchor company's display name, changed through `PUT /company`.
+             */
             name?: string;
             /**
              * @description The installation's jurisdiction: the lower-case ISO 3166-1 alpha-2 code of a pack
@@ -38457,6 +38478,7 @@ export interface components {
          *     sent empty is cleared.
          */
         CompanyProfileInput: {
+            /** @description The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters. */
             display_name: string;
             /** @description The registered legal entity. */
             legal_name?: string | null;
@@ -46279,7 +46301,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
         PayloadTooLarge: {
             headers: {
                 [name: string]: unknown;
@@ -49320,6 +49342,7 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];

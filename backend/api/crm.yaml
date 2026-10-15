@@ -2893,6 +2893,11 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -2908,6 +2913,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -14359,7 +14365,8 @@ paths:
       summary: Save the installation's own company — the human's confirm-first write.
       description: |
         Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
-        later one. This is a HUMAN write: every field is stamped
+        later one. Its `display_name` is the installation's name: the same transaction writes it to
+        `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
         `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
         from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
         theirs, and a later agent read-back will not overwrite it.
@@ -28731,6 +28738,11 @@ paths:
 
         `404` therefore means the company is unreachable, or — for the confirm operation, or for
         an agent's first statement — that no such claim exists to answer for.
+
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -29539,13 +29551,13 @@ components:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
     PayloadTooLarge:
-      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
+      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
           examples:
             tooLarge:
-              value: { type: 'https://errors.gradion.com/payload_too_large', title: Payload too large, status: 413, code: payload_too_large, detail: The upload exceeds this installation's ceiling for this route. }
+              value: { type: 'https://errors.gradion.com/body_too_large', title: Request Entity Too Large, status: 413, code: body_too_large, detail: the upload exceeds the limit this installation sets for this route }
     UnsupportedMediaType:
       description: 'The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success.'
       content:
@@ -29905,7 +29917,10 @@ components:
       properties:
         name:
           type: string
-          description: The company's display name.
+          description: |
+            The company's display name. An administrator saving the anchor company's `display_name`
+            (`PUT /company`, a profile-field correction or a company edit) sets it in the same
+            transaction; before the first save it is the name the installation was configured with.
         timezone:
           type: string
           description: |
@@ -30038,7 +30053,14 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
-        name: { type: string, maxLength: 200, description: Rename the company. }
+        name:
+          type: string
+          maxLength: 200
+          deprecated: true
+          description: |
+            Accepted only when it equals the stored name, so an older client that resends the whole
+            form still saves. Any other value is refused with `422 set_on_company_profile`: the
+            installation's name is the anchor company's display name, changed through `PUT /company`.
         country:
           type: string
           description: |
@@ -52472,7 +52494,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1 }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too, so it carries the installation name''s rule: `422 required` when blank, `422 too_long` past 200 characters.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }

@@ -91,6 +91,7 @@ function Rows({
               <FactRow
                 key={one.id}
                 companyId={COMPANY}
+                anchor={false}
                 fact={one}
                 label={one.field === "founded_year" ? "Founded" : undefined}
                 canEdit={canEdit}

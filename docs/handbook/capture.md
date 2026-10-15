@@ -86,6 +86,18 @@ Capture creates the contact but not their company. A step of its own reads the
 domain's website and proposes the company. So a personal domain such as
 `sebastian@kestner.example` does not become a company called "Kestner".
 
+### A contact you added without an email
+
+You can add a contact without an email, for example from a business card. When
+mail from them is captured, capture does not put the address on that contact.
+It creates a new contact for the sender, as it does for any sender.
+
+Margince then lists the two contacts as a possible duplicate, so a colleague can
+merge them. The pair is listed when the two names match, or are close and the
+employer's domain matches the mail domain. Colleagues see the pair only once
+the sender has been judged a business contact. A sender kept private, for
+example because the message is held, is not shown to them.
+
 ## When nothing matches
 
 An unknown sender goes into a queue, which Margince works through every 10
