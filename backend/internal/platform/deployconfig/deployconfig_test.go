@@ -48,7 +48,7 @@ company_context:
 `
 
 func TestParseAcceptsTheFullDocumentedShape(t *testing.T) {
-	cfg, err := Parse([]byte(fullConfig))
+	cfg, err := LoadBootstrap(writeTemp(t, fullConfig))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestParseValidatesFailClosed(t *testing.T) {
 		"purpose without label":   "version: 1\nseeds: { consent_purposes: [ { key: marketing_email } ] }\n",
 	}
 	for name, doc := range cases {
-		if _, err := Parse([]byte(doc)); err == nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err == nil {
 			t.Errorf("%s: parsed without error", name)
 		}
 	}
@@ -130,7 +130,7 @@ func TestRetentionSeedPostureDefaultsToStandard(t *testing.T) {
 		"explicit standard": "version: 1\nseeds:\n  retention:\n    default_policy: standard\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			cfg, err := Parse([]byte(doc))
+			cfg, err := LoadBootstrap(writeTemp(t, doc))
 			if err != nil {
 				t.Fatalf("Parse: %v", err)
 			}
@@ -143,7 +143,7 @@ func TestRetentionSeedPostureDefaultsToStandard(t *testing.T) {
 }
 
 func TestRetentionSeedRetainOnlyTurnsThePostureOn(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nseeds:\n  retention:\n    default_policy: retain_only\n"))
+	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\nseeds:\n  retention:\n    default_policy: retain_only\n"))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestRetentionSeedRetainOnlyTurnsThePostureOn(t *testing.T) {
 // that set the key on purpose, silence is the exact failure it set it to prevent.
 func TestRetentionSeedRefusesAnUnknownPosture(t *testing.T) {
 	for _, value := range []string{"retain-only", "retainonly", "keep_everything", "Standard"} {
-		_, err := Parse([]byte("version: 1\nseeds:\n  retention:\n    default_policy: " + value + "\n"))
+		_, err := LoadBootstrap(writeTemp(t, "version: 1\nseeds:\n  retention:\n    default_policy: "+value+"\n"))
 		if err == nil {
 			t.Fatalf("Parse accepted seeds.retention.default_policy: %q", value)
 		}
@@ -264,7 +264,7 @@ func TestTheDocumentedRoutingSeedBlockParses(t *testing.T) {
 	}
 	block := commentedBlock(t, string(raw), "seeds:", "ai_routing:")
 
-	cfg, err := Parse([]byte("version: 1\n" + block))
+	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\n"+block))
 	if err != nil {
 		t.Fatalf("the documented seeds.ai_routing block does not parse: %v\n%s", err, block)
 	}
@@ -330,7 +330,7 @@ func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
 		"the original file":  "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password_file: /run/secrets/admin-password }\n",
 	}
 	for name, doc := range both {
-		if _, err := Parse([]byte(doc)); err != nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err != nil {
 			t.Errorf("%s was refused: %v", name, err)
 		}
 	}
@@ -343,14 +343,14 @@ func TestParseAcceptsEitherSpellingOfTheAdminPassword(t *testing.T) {
 		"an inline password": "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A, password: hunter2hunter2 }\n",
 		"neither spelling":   "version: 1\nbootstrap_admin: { email: a@b.co, display_name: A }\n",
 	} {
-		if _, err := Parse([]byte(doc)); err == nil {
+		if _, err := LoadBootstrap(writeTemp(t, doc)); err == nil {
 			t.Errorf("%s parsed without error", name)
 		}
 	}
 }
 
 func TestAValidCountryParsesAsWritten(t *testing.T) {
-	cfg, err := Parse([]byte("version: 1\nworkspace: { name: X, country: de }\n"))
+	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\nworkspace: { name: X, country: de }\n"))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}

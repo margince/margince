@@ -212,7 +212,7 @@ func TestEverySecretFieldAcceptsAReference(t *testing.T) {
 // sentinel. A secret here refuses it, so an operator who writes it learns that
 // at boot, and is told where it does belong.
 func TestTheRemovalSentinelIsRefusedByTheBootstrapPassword(t *testing.T) {
-	_, err := Parse([]byte("version: 1\nbootstrap_admin:\n  email: a@b.co\n  display_name: A\n  password: ${none}\n"))
+	_, err := LoadBootstrap(writeTemp(t, "version: 1\nbootstrap_admin:\n  email: a@b.co\n  display_name: A\n  password: ${none}\n"))
 	if err == nil || !strings.Contains(err.Error(), "email.smtp.password") {
 		t.Fatalf("err %v; want a refusal naming the one key that takes the sentinel", err)
 	}

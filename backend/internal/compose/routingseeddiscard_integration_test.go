@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -46,7 +45,7 @@ seeds:
 
 func declaredFromFile(t *testing.T) yaml.Node {
 	t.Helper()
-	cfg, err := deployconfig.Parse([]byte(seedDoc))
+	cfg, err := bootstrapFrom(t, seedDoc)
 	if err != nil {
 		t.Fatalf("the declared binding does not parse: %v", err)
 	}

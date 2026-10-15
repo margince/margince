@@ -243,7 +243,11 @@ uploads:
 	// Through both loaders the server runs: decoding alone is a weaker claim,
 	// because each also validates. If this stops being accepted the test fails
 	// here, on the premise, rather than asserting a rule nobody holds.
-	if _, err := deployconfig.Parse([]byte(withNulls)); err != nil {
+	nullsFile := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(nullsFile, []byte(withNulls), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deployconfig.LoadBootstrap(nullsFile); err != nil {
 		t.Fatalf("the bootstrap loader refuses an explicit null — this test's premise is gone: %v", err)
 	}
 	if _, err := configtest.Load(t, withNulls, nil, nil, compose.UploadAttachmentMB); err != nil {

@@ -41,15 +41,6 @@ func yamlName(field reflect.StructField) string {
 	return name
 }
 
-// Parse strictly decodes and validates one document's bootstrap roots.
-func Parse(raw []byte) (Bootstrap, error) {
-	boot, _, err := decode(raw)
-	if err != nil {
-		return Bootstrap{}, fmt.Errorf("deployconfig: %w", err)
-	}
-	return boot, boot.validate()
-}
-
 // LoadBootstrap reads the bootstrap roots of one file. A missing file is an
 // installation that is already bootstrapped and needs none.
 func LoadBootstrap(path string) (Bootstrap, error) { return LoadBootstrapFiles(path, "") }
