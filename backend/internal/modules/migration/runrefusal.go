@@ -16,7 +16,7 @@ import (
 // sentence a reader can act on.
 const (
 	// RunInFlightCode refuses a commit or undo while another attempt holds the run.
-	RunInFlightCode = "run_in_flight"
+	RunInFlightCode = string(ReasonRunInFlight)
 	// RunStateCode refuses a move the run's status does not allow.
 	RunStateCode = "import_run_state"
 )

@@ -465,3 +465,26 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 		t.Error("a withheld row lost its kind — a discoverable row still says what it is")
 	}
 }
+
+// The imported-from name is the source's own label for the message, so a
+// reader refused the content learns no more of it than `source` already shows.
+func TestImportedFromFollowsTheContentAudience(t *testing.T) {
+	system := provenance.ReservedSourceSystemPrefix + "csv-import:Acme CRM"
+	for _, tc := range []struct {
+		name      string
+		available bool
+		wantName  bool
+	}{
+		{"readable row names its source", true, true},
+		{"held row names none", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scan := activityScan{contentAvailable: tc.available}
+			scan.a.SourceSystem = &system
+			got := scan.record()
+			if (got.ImportedFrom != nil) != tc.wantName {
+				t.Fatalf("imported_from = %v, present want %v", got.ImportedFrom, tc.wantName)
+			}
+		})
+	}
+}
