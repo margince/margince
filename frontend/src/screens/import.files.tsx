@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
@@ -28,20 +29,34 @@ export function ImportDropzone({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const [refused, setRefused] = useState(false);
+  // A drop skips the picker's `accept` filter, so a CSV-only zone checks here.
+  const pick = (file: File) => {
+    const isCsv = file.name.toLowerCase().endsWith(".csv");
+    setRefused(csvOnly && !isCsv);
+    if (!csvOnly || isCsv) onPick(file);
+  };
   return (
-    <FileDropzone
-      label={t("import.hub.uploadLabel")}
-      hint={
-        sizeLimitMb === undefined
-          ? undefined
-          : t("import.hub.uploadHint", {
-              mb: formatNumber(sizeLimitMb, locale),
-            })
-      }
-      emptyLabel={t("import.hub.uploadEmpty")}
-      accept={csvOnly ? ".csv" : ".zip,.csv"}
-      onPick={onPick}
-    />
+    <>
+      <FileDropzone
+        label={t("import.hub.uploadLabel")}
+        hint={
+          sizeLimitMb === undefined
+            ? undefined
+            : t("import.hub.uploadHint", {
+                mb: formatNumber(sizeLimitMb, locale),
+              })
+        }
+        emptyLabel={t("import.hub.uploadEmpty")}
+        accept={csvOnly ? ".csv" : ".zip,.csv"}
+        onPick={pick}
+      />
+      {refused ? (
+        <p className="import__hint t-sub" role="alert">
+          {t("import.hub.csvOnly")}
+        </p>
+      ) : null}
+    </>
   );
 }
 

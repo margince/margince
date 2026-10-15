@@ -310,7 +310,7 @@ Companies and contacts land before deals, so a deal can link to either in the sa
 Also called: import opportunities, import closed deals, import pipeline history.
 
 ### How do I import activities?
-An `activities.csv` row is one note, call, meeting or email, put on the timeline at the day it happened. Each row needs a `ref`, a `type`, an `occurred_at` and at least one entry in `links`.
+An `activities.csv` row is one note, call, meeting or email, put on the timeline at the day it happened. Every row needs a `ref`, a `type` and an `occurred_at`. An import from the import page also needs at least one entry in `links`. An import started from a contact's page needs no `links` column.
 
 | Column | What goes in it |
 |---|---|

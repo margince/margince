@@ -6001,6 +6001,8 @@ export const en = {
   "import.hub.uploadLabel": "Upload your data",
   "import.hub.uploadHint": "A ZIP of CSV files, or one CSV. Up to {mb} MB.",
   "import.hub.uploadEmpty": "Choose a file or drop it here",
+  "import.hub.csvOnly":
+    "Only a CSV file can be imported here. Choose a .csv file.",
   "import.hub.order": "Import order:",
   "import.recent.title": "Recent imports",
   "import.recent.empty": "No imports yet.",

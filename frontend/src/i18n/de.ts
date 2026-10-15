@@ -5867,6 +5867,8 @@ export const de = {
   "import.hub.uploadHint":
     "Ein ZIP mit CSV-Dateien oder eine CSV. Bis {mb} MB.",
   "import.hub.uploadEmpty": "Datei auswählen oder hier ablegen",
+  "import.hub.csvOnly":
+    "Hier kann nur eine CSV-Datei importiert werden. Wähle eine .csv-Datei.",
   "import.hub.order": "Importreihenfolge:",
   "import.recent.title": "Letzte Importe",
   "import.recent.empty": "Noch keine Importe.",

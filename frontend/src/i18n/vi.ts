@@ -5728,6 +5728,7 @@ export const vi = {
   "import.hub.uploadHint":
     "Tệp ZIP gồm các tệp CSV, hoặc một tệp CSV. Tối đa {mb} MB.",
   "import.hub.uploadEmpty": "Chọn tệp hoặc thả vào đây",
+  "import.hub.csvOnly": "Ở đây chỉ nhập được tệp CSV. Chọn một tệp .csv.",
   "import.hub.order": "Thứ tự nhập:",
   "import.recent.title": "Lần nhập gần đây",
   "import.recent.empty": "Chưa có lần nhập nào.",
@@ -6064,39 +6065,39 @@ export const vi = {
   "import.reason.contact_not_found_dropped":
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.activity_type_unnamed":
-    "Hãy nêu loại hoạt động: “note”, “call”, “meeting” hoặc “email”.",
+    "Nêu loại hoạt động: “note”, “call”, “meeting” hoặc “email”.",
   "import.reason.activity_type_unknown":
     "“{value}” không phải loại hoạt động. Các loại: {allowed}.",
   "import.reason.message_not_importable":
-    "Tin nhắn cần một kênh nên không thể nhập từ tệp. Hãy dùng ghi chú hoặc email.",
+    "Tin nhắn cần một kênh nên không thể nhập từ tệp. Dùng ghi chú hoặc email.",
   "import.reason.task_not_importable":
-    "Nhiệm vụ sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Hãy dùng ghi chú.",
+    "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
   "import.reason.occurred_at_unnamed":
-    "Hãy nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
+    "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
   "import.reason.timestamp_needs_zone":
-    "“{value}” có giờ nhưng không có múi giờ. Hãy thêm múi giờ, ví dụ 2026-03-02T10:00:00+07:00.",
+    "“{value}” có giờ nhưng không có múi giờ. Thêm múi giờ, ví dụ 2026-03-02T10:00:00+07:00.",
   "import.reason.occurred_at_future":
     "“{value}” ở tương lai, mà hoạt động được nhập phải đã xảy ra.",
   "import.reason.duration_not_valid_for_kind":
-    "Chỉ cuộc gọi hoặc cuộc họp mới có thời lượng. Hãy bỏ giá trị này khỏi hàng.",
+    "Chỉ cuộc gọi hoặc cuộc họp mới có thời lượng. Bỏ giá trị này khỏi hàng.",
   "import.reason.duration_out_of_range":
     "“{value}” phút nằm ngoài thời lượng một hoạt động có thể có: từ không đến 31 ngày.",
   "import.reason.meeting_status_unknown":
     "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
-    "Chỉ cuộc họp mới có trạng thái cuộc họp. Hãy bỏ giá trị này khỏi hàng.",
+    "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
   "import.reason.direction_unknown":
     "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
   "import.reason.activity_unlinked":
-    "Hoạt động này không nêu hồ sơ nào để gắn vào. Hãy thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
+    "Hoạt động này không nêu hồ sơ nào để gắn vào. Thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
   "import.reason.link_malformed":
-    "“{value}” không phải liên kết. Hãy viết loại, dấu hai chấm và khóa, ví dụ deal:D-1001.",
+    "“{value}” không phải liên kết. Viết loại, dấu hai chấm và khóa, ví dụ deal:D-1001.",
   "import.reason.link_type_unknown":
     "“{value}” không phải loại liên kết. Các loại: {allowed}.",
   "import.reason.too_many_links":
     "Một hoạt động chỉ được nêu tối đa {max} liên kết.",
   "import.reason.company_link_on_meeting":
-    "Cuộc gọi hoặc cuộc họp diễn ra với một liên hệ, không phải với công ty. Hãy liên kết liên hệ đã tham gia.",
+    "Cuộc gọi hoặc cuộc họp diễn ra với một liên hệ, không phải với công ty. Liên kết liên hệ đã tham gia.",
   "import.reason.link_not_attachable":
     "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
   "import.reason.activity_held":
