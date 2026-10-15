@@ -244,7 +244,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, nil, probeVocabulary{})
-	RegisterOfferLinesTool(r, seamProbeOfferLines{})
+	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, nil)
 	RegisterBriefTool(r, briefOf(0))
 	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })

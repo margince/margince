@@ -41,13 +41,15 @@ var readViewCopy = toolCopy{
 		"it does not take and names the ones it does.",
 }
 
-var changeOfferCopy = toolCopy{
-	Purpose: "Add a line item to an offer, change one, or remove one. Prices are in minor units; " +
-		"read a product for its unit_price_minor rather than inventing one.",
-	Limits: "Totals are computed from the lines and cannot be supplied. A sent or accepted offer " +
-		"keeps its lines. It answers the whole offer with its new totals.",
-	Instead: "Use create_record with record_type offer to make an offer, with its first lines, and " +
-		"update_record for its other fields.",
+var changeRecordPartsCopy = toolCopy{
+	Purpose: "Change what is kept under a record: an offer's line items, a company's facts and " +
+		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
+		"product for its unit_price_minor rather than inventing one.",
+	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
+		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
+		"refused. Each action answers as its route does.",
+	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
+		"to make an offer with its first lines.",
 }
 
 var readRecordCopy = toolCopy{

@@ -8,10 +8,8 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -75,21 +73,6 @@ func (p *Provider) RunReport(ctx context.Context, plan datasource.ReportPlan) (d
 func (p *Provider) WithListMembers(resolve storekit.ListMemberFilterResolver) *Provider {
 	p.contacts, p.deals = p.contacts.WithListMembers(resolve), p.deals.WithListMembers(resolve)
 	return p
-}
-
-// AddOfferLine is change_offer's add, on the deals provider.
-func (p *Provider) AddOfferLine(ctx context.Context, offerID ids.UUID, line json.RawMessage) (crmcontracts.Offer, error) {
-	return p.deals.AddOfferLine(ctx, offerID, line)
-}
-
-// UpdateOfferLine is change_offer's update.
-func (p *Provider) UpdateOfferLine(ctx context.Context, offerID, lineID ids.UUID, line json.RawMessage) (crmcontracts.Offer, error) {
-	return p.deals.UpdateOfferLine(ctx, offerID, lineID, line)
-}
-
-// RemoveOfferLine is change_offer's remove.
-func (p *Provider) RemoveOfferLine(ctx context.Context, offerID, lineID ids.UUID) (crmcontracts.Offer, error) {
-	return p.deals.RemoveOfferLine(ctx, offerID, lineID)
 }
 
 // deleteBlob removes one stored object, or nothing while the server has no

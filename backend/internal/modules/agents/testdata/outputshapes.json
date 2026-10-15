@@ -1521,20 +1521,11 @@
       "warnings"
     ]
   },
-  "change_offer": {
+  "change_record_parts": {
     "type": "object",
     "properties": {
       "data": {
-        "type": "object",
-        "required": [
-          "offer"
-        ],
-        "properties": {
-          "offer": {
-            "type": "object",
-            "description": "The offer after the change, with its lines and its new totals"
-          }
-        }
+        "type": "object"
       },
       "evidence": {
         "type": "array",

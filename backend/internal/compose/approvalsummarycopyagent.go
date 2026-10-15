@@ -66,7 +66,7 @@ var agentActsGerman = agentActVocabulary{
 		"send_message":             "Nachricht senden",
 		"update_tag":               "Tag ändern",
 		"archive_tag":              "Tag stilllegen",
-		"change_offer":             "Angebotspositionen ändern",
+		"change_record_parts":      "Teile eines Datensatzes ändern",
 	},
 	recordFrames: map[string]string{
 		toolCreateRecord:  "%s erstellen",
@@ -120,7 +120,7 @@ var agentActsVietnamese = agentActVocabulary{
 		"send_message":             "Gửi một tin nhắn",
 		"update_tag":               "Cập nhật thẻ",
 		"archive_tag":              "Ngừng dùng thẻ",
-		"change_offer":             "Thay đổi dòng của báo giá",
+		"change_record_parts":      "Thay đổi các phần của bản ghi",
 	},
 	recordFrames: map[string]string{
 		toolCreateRecord:  "Tạo %s",

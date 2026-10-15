@@ -2385,7 +2385,7 @@ export const de = {
   "approval.kind.merge_records": "Datensätze zusammenführen",
   "approval.kind.merge_tags": "Tags zusammenführen",
   "approval.kind.archive_tag": "Tag stilllegen",
-  "approval.kind.change_offer": "Angebotspositionen ändern",
+  "approval.kind.change_record_parts": "Teile eines Datensatzes ändern",
   "approval.kind.update_record": "Datensatz aktualisieren",
   "approval.kind.create_record": "Datensatz erstellen",
   "approval.kind.send_email": "E-Mail senden",

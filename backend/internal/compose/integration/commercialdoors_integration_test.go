@@ -23,7 +23,7 @@ type sharedOffer struct {
 }
 
 // A passport makes, reads, lists and prices an offer through the record tools
-// and change_offer as it does through the offer routes. The two answers agree
+// and change_record_parts as it does through the offer routes. The two answers agree
 // on the deal's offers and on each offer's lines.
 func TestOfferRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "offer-doors", "read", "write")
@@ -54,7 +54,7 @@ func TestOfferRoutesAnswerAsTheirTools(t *testing.T) {
 	if status := d.e.Call(t, "POST", "/v1/offers/"+viaREST.ID+"/line-items", added, d.bearer, &restAnswer); status != http.StatusCreated {
 		t.Fatalf("adding a line as a passport → %d", status)
 	}
-	toolAnswer := memberOf(t, d.tool(t, "change_offer", map[string]any{"action": "add_line", "offer_id": viaTool, "line": added}), "offer")
+	toolAnswer := d.tool(t, "change_record_parts", map[string]any{"action": "add_offer_line", "offer_id": viaTool, "line": added})
 	priced := sameRecords[sharedOffer](t, "after a line is added", restAnswer, toolAnswer)
 	if len(priced.LineItems) != 2 || priced.LineItems[1].UnitPriceMinor != 120000 {
 		t.Errorf("the offer carries %+v, want two lines priced from the product", priced.LineItems)
@@ -62,6 +62,51 @@ func TestOfferRoutesAnswerAsTheirTools(t *testing.T) {
 	sameRecords[sharedOffer](t, "read back",
 		d.rest(t, "GET", "/v1/offers/"+viaREST.ID, nil),
 		recordFieldsOf(t, d.tool(t, "read_record", map[string]any{"record_type": "offer", "id": viaTool})))
+}
+
+// sharedFact is what both doors answer about a stated company fact.
+type sharedFact struct {
+	Category string `json:"category"`
+	Field    string `json:"field"`
+	Value    string `json:"value"`
+	Source   string `json:"source"`
+}
+
+// A fact stated or confirmed through change_record_parts is the row the facts
+// routes write.
+func TestCompanyFactRoutesAnswerAsTheirTool(t *testing.T) {
+	d := newTwoDoors(t, "fact-doors", "read", "write")
+	viaREST := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Door REST GmbH", "source": "manual"})
+	viaTool := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Door Tool GmbH", "source": "manual"})
+	fact := AnyMap{"category": "company", "field": "employee_range", "value": "11-50"}
+
+	var restAnswer struct {
+		sharedFact
+		ValueKey string `json:"value_key"`
+	}
+	if status := d.e.Call(t, "POST", "/v1/companies/"+viaREST+"/facts", fact, d.bearer, &restAnswer); status != http.StatusCreated {
+		t.Fatalf("stating a fact as a passport → %d", status)
+	}
+	restRaw, err := json.Marshal(restAnswer.sharedFact)
+	if err != nil {
+		t.Fatalf("encoding the REST fact: %v", err)
+	}
+	toolAnswer := d.tool(t, "change_record_parts", map[string]any{
+		"action": "add_company_fact", "company_id": viaTool, "category": "company", "field": "employee_range", "value": "11-50",
+	})
+	sameRecords[sharedFact](t, "a stated fact", restRaw, toolAnswer)
+
+	key := "employee_range:" + restAnswer.ValueKey
+	sameRecords[confirmedFact](t, "a confirmed fact",
+		d.rest(t, "POST", "/v1/companies/"+viaTool+"/facts/"+key+"/confirm", nil),
+		d.tool(t, "change_record_parts", map[string]any{"action": "confirm_company_fact", "company_id": viaREST, "fact_key": key}))
+}
+
+// confirmedFact is what a confirm changes on a fact.
+type confirmedFact struct {
+	Source     string  `json:"source"`
+	Confidence float64 `json:"confidence"`
+	Version    int64   `json:"version"`
 }
 
 // A room and a thread in it are made, listed and read alike on either door.

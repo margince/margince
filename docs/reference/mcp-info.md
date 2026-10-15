@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 182.2 KB |
+| Tool catalog | 183.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 47540 |
+| Approx. wire tokens | 47726 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 62.8 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 49.0 KB | 26% | Yes, every step |
-| Input schemas | 56.6 KB | 31% | Yes, every step |
+| Output schemas | 62.6 KB | 34% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 49.2 KB | 26% | Yes, every step |
+| Input schemas | 57.3 KB | 31% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.9 KB | 7% | Partly |
-| **Description + input schema** | **105.6 KB** | **57%** | **the recurring cost** |
+| **Description + input schema** | **106.4 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -69,7 +69,7 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
-| [`change_offer`](#change_offer) | Change an offer's line items |  |  | 348 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 569 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 497 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -2423,16 +2423,18 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 
 </details>
 
-### change_offer
+### change_record_parts
 
-**Change an offer's line items**
+**Change the parts of a record**
 
 ```text
-Add a line item to an offer, change one, or remove one. Prices are in minor units; read a product
-for its unit_price_minor rather than inventing one. Totals are computed from the lines and cannot be
-supplied. A sent or accepted offer keeps its lines. It answers the whole offer with its new totals.
-Use create_record with record_type offer to make an offer, with its first lines, and update_record
-for its other fields. (Runs immediately; requires passport scope "write".)
+Change what is kept under a record: an offer's line items, a company's facts and profile fields, a
+project's companies and stakeholders. Prices are in minor units; read a product for its
+unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot
+be supplied, and a sent or accepted offer keeps its lines. Pass if_version from your read so a
+change made since is refused. Each action answers as its route does. Use update_record for a
+record's own fields, and create_record with record_type offer to make an offer with its first lines.
+(Runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2443,16 +2445,48 @@ for its other fields. (Runs immediately; requires passport scope "write".)
   "properties": {
     "action": {
       "enum": [
-        "add_line",
-        "update_line",
-        "remove_line"
+        "add_company_fact",
+        "add_offer_line",
+        "confirm_company_fact",
+        "confirm_company_profile_field",
+        "remove_company_fact",
+        "remove_offer_line",
+        "remove_project_company",
+        "remove_project_stakeholder",
+        "set_project_company",
+        "set_project_stakeholder",
+        "update_company_fact",
+        "update_company_profile_field",
+        "update_offer_line"
       ],
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "company_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "contact_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "fact_key": {
+      "description": "One fact of the company, spelled \u003cfield\u003e:\u003cvalue_key\u003e from its read",
+      "type": "string"
+    },
+    "field": {
       "type": "string"
     },
     "idempotency_key": {
       "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
+    },
+    "if_version": {
+      "description": "The version you read, so a change made since is refused rather than overwritten",
+      "type": "integer"
     },
     "line": {
       "additionalProperties": false,
@@ -2506,18 +2540,26 @@ for its other fields. (Runs immediately; requires passport scope "write".)
       "type": "object"
     },
     "line_item_id": {
-      "description": "The line to update or remove",
       "format": "uuid",
       "type": "string"
     },
     "offer_id": {
       "format": "uuid",
       "type": "string"
+    },
+    "project_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string"
     }
   },
   "required": [
-    "action",
-    "offer_id"
+    "action"
   ],
   "type": "object"
 }
@@ -2531,15 +2573,6 @@ for its other fields. (Runs immediately; requires passport scope "write".)
 {
   "properties": {
     "data": {
-      "properties": {
-        "offer": {
-          "description": "The offer after the change, with its lines and its new totals",
-          "type": "object"
-        }
-      },
-      "required": [
-        "offer"
-      ],
       "type": "object"
     },
     "evidence": {

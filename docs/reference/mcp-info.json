@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 186603,
+    "tool_catalog_bytes": 187347,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 47540,
+    "approx_wire_tokens_total": 47726,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 50181,
-      "input_schema_bytes": 57945,
-      "output_schema_bytes": 64276,
-      "description_plus_input_schema_bytes": 108126
+      "description_bytes": 50338,
+      "input_schema_bytes": 58665,
+      "output_schema_bytes": 64136,
+      "description_plus_input_schema_bytes": 109003
     }
   },
   "tools": {
@@ -2060,24 +2060,56 @@
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": false,
-          "title": "Change an offer's line items"
+          "title": "Change the parts of a record"
         },
-        "description": "Add a line item to an offer, change one, or remove one. Prices are in minor units; read a product for its unit_price_minor rather than inventing one. Totals are computed from the lines and cannot be supplied. A sent or accepted offer keeps its lines. It answers the whole offer with its new totals. Use create_record with record_type offer to make an offer, with its first lines, and update_record for its other fields. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change what is kept under a record: an offer's line items, a company's facts and profile fields, a project's companies and stakeholders. Prices are in minor units; read a product for its unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot be supplied, and a sent or accepted offer keeps its lines. Pass if_version from your read so a change made since is refused. Each action answers as its route does. Use update_record for a record's own fields, and create_record with record_type offer to make an offer with its first lines. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "action": {
               "enum": [
-                "add_line",
-                "update_line",
-                "remove_line"
+                "add_company_fact",
+                "add_offer_line",
+                "confirm_company_fact",
+                "confirm_company_profile_field",
+                "remove_company_fact",
+                "remove_offer_line",
+                "remove_project_company",
+                "remove_project_stakeholder",
+                "set_project_company",
+                "set_project_stakeholder",
+                "update_company_fact",
+                "update_company_profile_field",
+                "update_offer_line"
               ],
+              "type": "string"
+            },
+            "category": {
+              "type": "string"
+            },
+            "company_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "contact_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "fact_key": {
+              "description": "One fact of the company, spelled \u003cfield\u003e:\u003cvalue_key\u003e from its read",
+              "type": "string"
+            },
+            "field": {
               "type": "string"
             },
             "idempotency_key": {
               "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
+            },
+            "if_version": {
+              "description": "The version you read, so a change made since is refused rather than overwritten",
+              "type": "integer"
             },
             "line": {
               "additionalProperties": false,
@@ -2131,34 +2163,33 @@
               "type": "object"
             },
             "line_item_id": {
-              "description": "The line to update or remove",
               "format": "uuid",
               "type": "string"
             },
             "offer_id": {
               "format": "uuid",
               "type": "string"
+            },
+            "project_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
             }
           },
           "required": [
-            "action",
-            "offer_id"
+            "action"
           ],
           "type": "object"
         },
-        "name": "change_offer",
+        "name": "change_record_parts",
         "outputSchema": {
           "properties": {
             "data": {
-              "properties": {
-                "offer": {
-                  "description": "The offer after the change, with its lines and its new totals",
-                  "type": "object"
-                }
-              },
-              "required": [
-                "offer"
-              ],
               "type": "object"
             },
             "evidence": {
@@ -2239,7 +2270,7 @@
           ],
           "type": "object"
         },
-        "title": "Change an offer's line items"
+        "title": "Change the parts of a record"
       },
       {
         "annotations": {
@@ -11326,7 +11357,7 @@
     "ttlMs": 60000
   },
   "documents": {
-    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":58,\"execute_directly\":[\"advance_project_phase\",\"annotate_brief\",\"archive_record\",\"at_risk_relationships\",\"attach_document\",\"book_meeting\",\"bulk_update_records\",\"catch_me_up_on\",\"change_lead_state\",\"change_lists\",\"change_offer\",\"change_tags\",\"check_availability\",\"commit_import\",\"compose_analytics_report\",\"create_record\",\"create_task\",\"decide_approvals\",\"describe_vocabulary\",\"draft_outbound\",\"list_approvals\",\"list_documents\",\"list_records\",\"log_activity\",\"prep_for_meeting\",\"preview_import\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_directory\",\"read_forecast\",\"read_import\",\"read_input_checks\",\"read_lists\",\"read_project\",\"read_record\",\"read_relationships\",\"read_reporting\",\"read_tags\",\"read_view\",\"resolve_duplicates\",\"resolve_entities\",\"review_commitments\",\"run_analytics_query\",\"run_report\",\"search_context\",\"search_records\",\"search_report_evidence\",\"send_outbound\",\"update_record\",\"whats_slipping_this_week\",\"whoami\"],\"stage_for_approval\":[\"enrich\",\"invite_meeting\",\"merge_tags\"],\"decided_per_call\":[\"progress_deal\",\"relink_activities\",\"relink_activity\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
+    "margince://capabilities": "{\"version\":\"1\",\"governance\":{\"scopes_held\":[\"draft\",\"enrich\",\"read\",\"send\",\"write\"],\"model\":\"A call either executes under this passport's authority or stages an approval a human decides. An agent can never exceed the human who granted the passport, and every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.\",\"host_confirmation\":\"A confirmation your own client shows the user is NOT one of these approvals. A staged call is decided in Margince and returns its outcome here.\"},\"verbs\":{\"offered\":58,\"execute_directly\":[\"advance_project_phase\",\"annotate_brief\",\"archive_record\",\"at_risk_relationships\",\"attach_document\",\"book_meeting\",\"bulk_update_records\",\"catch_me_up_on\",\"change_lead_state\",\"change_lists\",\"change_record_parts\",\"change_tags\",\"check_availability\",\"commit_import\",\"compose_analytics_report\",\"create_record\",\"create_task\",\"decide_approvals\",\"describe_vocabulary\",\"draft_outbound\",\"list_approvals\",\"list_documents\",\"list_records\",\"log_activity\",\"prep_for_meeting\",\"preview_import\",\"query_workspace\",\"read_approval\",\"read_brief\",\"read_directory\",\"read_forecast\",\"read_import\",\"read_input_checks\",\"read_lists\",\"read_project\",\"read_record\",\"read_relationships\",\"read_reporting\",\"read_tags\",\"read_view\",\"resolve_duplicates\",\"resolve_entities\",\"review_commitments\",\"run_analytics_query\",\"run_report\",\"search_context\",\"search_records\",\"search_report_evidence\",\"send_outbound\",\"update_record\",\"whats_slipping_this_week\",\"whoami\"],\"stage_for_approval\":[\"enrich\",\"invite_meeting\",\"merge_tags\"],\"decided_per_call\":[\"progress_deal\",\"relink_activities\",\"relink_activity\"],\"decided_per_call_reason\":\"The tier depends on the arguments — the same verb can execute or stage depending on what it is asked to do.\"}}",
     "margince://schema/analytics": "schema version e3b0c44298fc1c14\naggregates: avg, count, count_distinct, max, median, min, p75, sum\nfilter ops: eq, gt, gte, is_not_null, is_null, lt, lte, ne\n\n",
     "margince://schema/query": "{\"version\":\"v1\",\"grammar\":{\"predicates\":\"{\\\"field\\\": \\u003cname below\\u003e, \\\"op\\\": \\u003cop the field admits\\u003e, \\\"value\\\": \\u003coperand\\u003e} — or \\\"values\\\": [...] for \\\"in\\\". Clauses are combined with AND.\",\"semantic_target\":\"\\\"similar_to\\\": \\u003cfree text\\u003e — one similarity clause, ranked by the hybrid retriever.\",\"traversal\":\"\\\"traverse\\\": {\\\"relation\\\": \\u003crelation below\\u003e, \\\"where\\\": [...]} — exactly one hop. A second hop is refused; ask it as its own query.\",\"limit\":\"\\\"limit\\\": 1..200; omit for the default page.\",\"refusal\":\"Anything outside this vocabulary is refused with a typed clarification naming what was not understood. Nothing is coerced, and no plan is narrowed to the part that was recognised.\"},\"targets\":[],\"unavailable\":[]}",
     "margince://schema/record-fields": "{\"version\":\"1\",\"notation\":\"A key with no `?` is REQUIRED by the contract; `?` marks one the body may omit. A name not listed is not a field: it is refused by name, never stored silently.\",\"create_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, attendee_user_ids?: [uuid], body?: string, channel_provider?: string, direction?: \\\"inbound\\\"|\\\"outbound\\\", due_at?: rfc3339, duration_seconds?: integer, host_user_id?: uuid, ical_instance?: string, ical_uid?: string, kind: \\\"email\\\"|\\\"call\\\"|\\\"meeting\\\"|\\\"note\\\"|\\\"task\\\"|\\\"message\\\", links?: [{entity_id: uuid, entity_type: \\\"contact\\\"|\\\"company\\\"|\\\"deal\\\"|\\\"lead\\\"|\\\"project\\\"}], meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, participants?: {cc?: [string], from?: string, to?: [string]}, raw?: object, remind_at?: rfc3339, request_activity_id?: uuid, rfc_message_id?: string, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, subject?: string, thread_key?: string}\",\"company\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string}\",\"contact\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, title?: string}\",\"deal\":\"{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \\\"new_business\\\"|\\\"renewal\\\"|\\\"upsell\\\"|\\\"cross_sell\\\"|\\\"expansion\\\"|\\\"existing_business\\\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \\\"low\\\"|\\\"medium\\\"|\\\"high\\\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, stage_id: uuid}\",\"deal_room\":\"{deal_id: uuid, expires_at?: rfc3339, source?: string, steward_user_id?: uuid, title: string, welcome_message?: string}\",\"deal_room_comment\":\"{deal_room_id: uuid, thread_id: uuid, body: string, request_id?: uuid, source?: string}\",\"deal_room_thread\":\"{deal_room_id: uuid, body: string, document_id?: uuid, request_id?: uuid, required_change?: boolean, source?: string}\",\"lead\":\"{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, linkedin_url?: string, owner_id?: uuid, phone?: string, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\"|\\\"promoted\\\"|\\\"disqualified\\\", title?: string}\",\"offer\":\"{deal_id: uuid, buyer_company_id?: uuid, currency: string, intro_text?: string, line_items?: [{billing_interval_months?: \\\"1\\\"|\\\"3\\\"|\\\"6\\\"|\\\"12\\\", billing_model?: \\\"one_time\\\"|\\\"recurring\\\", description?: string, discount_pct?: number, interval_count?: integer, position?: integer, product_id?: uuid, quantity: number, tax_rate?: number, unit?: string, unit_price_minor?: integer}], source?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}\",\"offer_template\":\"{is_default?: boolean, layout: object, locale?: string, name: string}\",\"product\":\"{active?: boolean, billing_interval_months?: \\\"1\\\"|\\\"3\\\"|\\\"6\\\"|\\\"12\\\", billing_model?: \\\"one_time\\\"|\\\"recurring\\\", currency: string, default_tax_rate?: number, description?: string, name: string, sku?: string, source?: string, unit?: string, unit_price_minor: integer}\",\"project\":\"{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_system?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \\\"current\\\"|\\\"former\\\"|\\\"unknown\\\", ended_at?: YYYY-MM-DD, ended_precision?: \\\"day\\\"|\\\"month\\\", is_current_primary?: boolean, kind: \\\"employment\\\"|\\\"deal_stakeholder\\\"|\\\"project_stakeholder\\\"|\\\"partner_of\\\"|\\\"referred_by\\\"|\\\"co_sell_with\\\"|\\\"works_with\\\"|\\\"billing_contact\\\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \\\"day\\\"|\\\"month\\\"}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` is accepted but overwritten — this surface stamps its own provenance.\",\"A deal's `pipeline_id` and `stage_id` come from read_directory (list: pipelines) — nothing else on this surface yields them, and neither is defaultable.\",\"A contact's employer is a relationship, not a field on the contact: record_type=relationship with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: company + counterparty_company_id. An edge is not searchable, so keep the id a relationship write returns.\",\"An activity is not searchable — search_records does not serve it — so keep the id an activity write returns; read_record answers it by that id.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (list: colleagues) answers those, whoami answers your own. A contact id is a contact and is refused.\",\"A recording of a conversation is logged with `source_system: \\\"transcript\\\"` — that value is what has it read for next steps and commitments; any other value stores the text and reads nothing.\",\"A company's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship or offer_template or deal_room_thread or deal_room_comment: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]},\"update_record\":{\"fields\":{\"activity\":\"{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \\\"booked\\\"|\\\"held\\\"|\\\"no_show\\\"|\\\"canceled\\\", occurred_at?: rfc3339, remind_at?: rfc3339, subject?: string}\",\"company\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \\\"unknown\\\"|\\\"target\\\"|\\\"prospect\\\"|\\\"opportunity\\\"|\\\"customer\\\"|\\\"former_customer\\\"|\\\"disqualified\\\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, relationship_types?: [\\\"customer\\\"|\\\"partner\\\"|\\\"supplier\\\"|\\\"investor\\\"|\\\"portfolio_company\\\"|\\\"competitor\\\"|\\\"other\\\"], size_band?: \\\"1-10\\\"|\\\"11-50\\\"|\\\"51-200\\\"|\\\"201-500\\\"|\\\"501-1000\\\"|\\\"1001-5000\\\"|\\\"5000+\\\", visibility?: \\\"workspace\\\"|\\\"owner\\\"}\",\"contact\":\"{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \\\"work\\\"|\\\"personal\\\"|\\\"other\\\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \\\"work\\\"|\\\"mobile\\\"|\\\"home\\\"|\\\"other\\\", position?: integer}], social?: object, title?: string, visibility?: \\\"workspace\\\"|\\\"owner\\\"}\",\"deal\":\"{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \\\"new_business\\\"|\\\"renewal\\\"|\\\"upsell\\\"|\\\"cross_sell\\\"|\\\"expansion\\\"|\\\"existing_business\\\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, forecast_category?: \\\"commit\\\"|\\\"best_case\\\"|\\\"pipeline\\\"|\\\"omitted\\\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \\\"sourced\\\"|\\\"influenced\\\", partner_company_id?: uuid, priority?: \\\"low\\\"|\\\"medium\\\"|\\\"high\\\", project_id?: uuid, status?: \\\"open\\\"|\\\"won\\\"|\\\"lost\\\", wait_until?: YYYY-MM-DD}\",\"lead\":\"{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, owner_id?: uuid, phone?: string, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \\\"new\\\"|\\\"contacted\\\"|\\\"engaged\\\", title?: string}\",\"offer\":\"{buyer_company_id?: uuid, currency?: string, intro_text?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}\",\"offer_template\":\"{is_default: boolean, layout: object, locale: string, name: string}\",\"product\":\"{active?: boolean, billing_interval_months?: \\\"1\\\"|\\\"3\\\"|\\\"6\\\"|\\\"12\\\", billing_model?: \\\"one_time\\\"|\\\"recurring\\\"|\\\"not_specified\\\", currency?: string, default_tax_rate?: number, description?: string, name?: string, sku?: string, unit?: string, unit_price_minor?: integer}\",\"project\":\"{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}\",\"relationship\":\"{clear_ended_at?: boolean, clear_started_at?: boolean, employment_status?: \\\"current\\\"|\\\"former\\\"|\\\"unknown\\\", ended_at?: YYYY-MM-DD, ended_precision?: \\\"day\\\"|\\\"month\\\", is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD, started_precision?: \\\"day\\\"|\\\"month\\\"}\"},\"notes\":[\"A task is record_type=activity with kind=task.\",\"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows.\",\"A contact's employer is NOT a field here: employment is a relationship, created and archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched.\",\"An activity's links are NOT patchable, here or by any tool on this surface: this write changes what an activity says, never who it is about.\",\"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (list: colleagues) answers those, whoami answers your own. A contact id is a contact and is refused.\",\"A company's `description` is the header's standing answer to what the company SELLS, and a site read fills it from the company's own website. Omit it rather than summarising a meeting or a document into it; what one conversation covered belongs on that activity.\",\"Extra keys must be named cf_\\u003cslug\\u003e and are read as custom-field values; any other key is REFUSED by name, so an unknown field is never a silent loss. A cf_ key whose custom field is not ACTIVE in this workspace is the one that is: the write reports success and drops the value, so re-read the record if you are unsure a cf_ value landed.\",\"No custom fields on activity or relationship or offer_template: those types carry no cf_ values at all, so a cf_ key there is refused rather than stored.\"]}}",

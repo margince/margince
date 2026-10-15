@@ -179,9 +179,6 @@ var decisionGrants = map[string][]grantRequirement{
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
-	// A line-item change is an offer write, gated on `offer.update` where the
-	// store performs it, so a floored one is decided on that grant.
-	"change_offer": {{targetOffer, principal.ActionUpdate}},
 	// A phase transition writes the project row and one phase-history row in
 	// one transaction (deals/project_advance.go); the gated effect is the
 	// project move, so the approver needs the project's update grant.
@@ -363,6 +360,9 @@ var targetResolvedGrants = map[string]principal.Action{
 	"merge_records":  principal.ActionUpdate,
 	"update_record":  principal.ActionUpdate,
 	"create_record":  principal.ActionCreate,
+	// A part is written on the record it hangs off (an offer, a company, a
+	// project). Its store gates the write on that record's update grant.
+	"change_record_parts": principal.ActionUpdate,
 }
 
 // decidable is the ONE visibility-and-authority predicate for the inbox

@@ -355,7 +355,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
-	RegisterOfferLinesTool(r, seamProbeOfferLines{})
+	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
@@ -640,19 +640,59 @@ func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvit
 	return crmcontracts.MeetingInvitation{}, errSeamReached
 }
 
-// seamProbeOfferLines reports that change_offer's arguments reached its seam.
-type seamProbeOfferLines struct{}
+// seamProbeRecordParts reports that change_record_parts' arguments reached its seam.
+type seamProbeRecordParts struct{}
 
-func (seamProbeOfferLines) AddOfferLine(context.Context, ids.UUID, json.RawMessage) (crmcontracts.Offer, error) {
-	return crmcontracts.Offer{}, errSeamReached
+func (seamProbeRecordParts) AddOfferLine(_ context.Context, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
 }
 
-func (seamProbeOfferLines) UpdateOfferLine(context.Context, ids.UUID, ids.UUID, json.RawMessage) (crmcontracts.Offer, error) {
-	return crmcontracts.Offer{}, errSeamReached
+func (seamProbeRecordParts) UpdateOfferLine(_ context.Context, _, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
 }
 
-func (seamProbeOfferLines) RemoveOfferLine(context.Context, ids.UUID, ids.UUID) (crmcontracts.Offer, error) {
-	return crmcontracts.Offer{}, errSeamReached
+func (seamProbeRecordParts) RemoveOfferLine(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) CreateCompanyFact(_ context.Context, _ ids.UUID, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) UpdateCompanyFact(_ context.Context, _ ids.UUID, _, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) ConfirmCompanyFact(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) DeleteCompanyFact(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) UpdateCompanyProfileField(_ context.Context, _ ids.UUID, _, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) ConfirmCompanyProfileField(_ context.Context, _ ids.UUID, _ string, _ *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) SetProjectCompany(_ context.Context, _, _ ids.UUID, _ *string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) RemoveProjectCompany(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) SetProjectStakeholder(_ context.Context, _, _ ids.UUID, _ string) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeRecordParts) RemoveProjectStakeholder(_ context.Context, _, _ ids.UUID) (json.RawMessage, error) {
+	return nil, errSeamReached
 }
 
 // probeViews are two views in the shapes the contract declares: a record's own

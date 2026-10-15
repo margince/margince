@@ -82,17 +82,12 @@ const (
 	EntityDealRoomParticipant EntityType = "deal_room_participant"
 )
 
-// EntityTypes returns the vocabulary in a stable order, for the callers
-// that enumerate it — the embedding lanes, the provenance surfaces, the
-// description order the tool schemas render in — rather than branch on a
-// single value. It hands back a fresh slice so no caller can widen the
-// vocabulary for the others.
+// EntityTypes returns the vocabulary in a stable order, as a fresh slice so
+// no caller can widen it for the others.
 //
-// It is NOT the custom-field target set any more. That set is now spelled
-// explicitly in customfields.FieldObjects, because a type belongs there only
-// if its store reads cf_* columns AND its contract shapes carry them — two
-// properties this vocabulary says nothing about. Deriving acceptance from it
-// is how `object=activity` came to be creatable and never served.
+// It is not the custom-field target set: customfields.FieldObjects is. A
+// type belongs there only if its store reads cf_* columns and its contract
+// shapes carry them, which this vocabulary does not say.
 func EntityTypes() []EntityType {
 	return []EntityType{
 		EntityContact, EntityCompany, EntityDeal, EntityLead,

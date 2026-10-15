@@ -2338,7 +2338,7 @@ export const vi = {
   "approval.kind.merge_records": "Gộp hồ sơ",
   "approval.kind.merge_tags": "Gộp thẻ",
   "approval.kind.archive_tag": "Ngừng dùng thẻ",
-  "approval.kind.change_offer": "Thay đổi dòng của báo giá",
+  "approval.kind.change_record_parts": "Thay đổi các phần của bản ghi",
   "approval.kind.update_record": "Cập nhật hồ sơ",
   "approval.kind.create_record": "Tạo hồ sơ",
   "approval.kind.send_email": "Gửi email",

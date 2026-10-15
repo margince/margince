@@ -262,9 +262,6 @@ var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 // "METHOD /v1/route#parameter". The list only shrinks: an entry that stops
 // being a gap fails the test above.
 var parameterGapsPendingParity = []string{
-	"DELETE /v1/companies/{id}/facts/{factKey}#factKey",
-	"DELETE /v1/projects/{id}/companies/{company_id}#company_id",
-	"DELETE /v1/projects/{id}/stakeholders/{contact_id}#contact_id",
 	"GET /v1/activities#q",
 	"GET /v1/activities/{id}/email-presentation#thread_cursor",
 	"GET /v1/activities/{id}/transcript-proposals/{readId}#readId",
@@ -317,9 +314,5 @@ var parameterGapsPendingParity = []string{
 	"GET /v1/tags#with_carried_by",
 	"GET /v1/users#include_inactive",
 	"GET /v1/users#include_invited",
-	"PATCH /v1/companies/{id}/facts/{factKey}#factKey",
-	"PATCH /v1/companies/{id}/profile-fields/{field}#field",
-	"POST /v1/companies/{id}/facts/{factKey}/confirm#factKey",
-	"POST /v1/companies/{id}/profile-fields/{field}/confirm#field",
 	"POST /v1/deal-rooms/{id}/threads/{threadId}/comments#threadId",
 }

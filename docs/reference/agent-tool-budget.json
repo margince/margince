@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 58,
     "system_frame_tokens": 597,
-    "tokens": 25898,
-    "median_tool_tokens": 393,
-    "mean_tool_tokens": 446
+    "tokens": 26119,
+    "median_tool_tokens": 395,
+    "mean_tool_tokens": 449
   },
   "agents": [
     {
@@ -137,6 +137,10 @@
       "tokens": 590
     },
     {
+      "name": "change_record_parts",
+      "tokens": 569
+    },
+    {
       "name": "read_reporting",
       "tokens": 566
     },
@@ -218,10 +222,6 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 348
-    },
-    {
-      "name": "change_offer",
       "tokens": 348
     },
     {

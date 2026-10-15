@@ -4602,7 +4602,7 @@ paths:
         A live duplicate is refused with 409 rather than silently upserted — if the fact is already
         stated, the honest verbs are confirm and correct, and an upsert here would let a hand write
         quietly overwrite a machine claim without the correction's audit before-image.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -6144,7 +6144,7 @@ paths:
       tags: [Projects]
       operationId: setProjectStakeholder
       summary: Attach a contact to a project with a role (idempotent per contact).
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
@@ -6171,7 +6171,7 @@ paths:
       tags: [Projects]
       operationId: removeProjectStakeholder
       summary: Detach a contact from a project (archives the edge).
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       responses:
@@ -6192,7 +6192,7 @@ paths:
         so a company is an edge (`relationship` of kind `project_company`), not the project's one
         anchor. Sending a company already on the project re-roles the edge that exists rather than
         adding a second one.
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       requestBody:
@@ -6223,7 +6223,7 @@ paths:
         The company keeps every record it owns; only its place on this project ends. Taking the
         LAST company off a project is refused: a project no company is on is work nobody is doing,
         and it would vanish from every company page that could lead a reader back to it.
-      x-mcp-tool: { verb: update_record, record_type: project, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/ApprovalToken'
       responses:
@@ -24082,7 +24082,7 @@ paths:
       tags: [Offers]
       operationId: addOfferLineItem
       summary: Add a line item to a draft offer (position defaults to next; totals recomputed).
-      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24108,7 +24108,7 @@ paths:
       tags: [Offers]
       operationId: updateOfferLineItem
       summary: Update a draft offer's line item (totals recomputed; totals themselves are not settable).
-      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       requestBody:
         required: true
         content:
@@ -24126,7 +24126,7 @@ paths:
       tags: [Offers]
       operationId: removeOfferLineItem
       summary: Remove a line item from a draft offer (totals recomputed).
-      x-mcp-tool: { verb: change_offer, record_type: offer, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       responses:
         '200':
           description: The offer without the line, totals recomputed.
@@ -28899,7 +28899,7 @@ paths:
         transaction, so only an administrator may: another human gets `403`, an agent `422
         anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
         past 200 characters (`too_long`); other companies' names have no length cap.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28934,7 +28934,7 @@ paths:
         `verified_by` are stamped and the field moves from extracted to confirmed. Version-guarded
         like the correction, so two readers confirming a field one of them has since corrected do not
         silently overwrite each other.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28964,7 +28964,7 @@ paths:
         "confirmed" state nothing is able to produce. Same guarantees as the profile-field
         correction: canonical value first, machine proposal preserved in history, provenance flipped
         to `human`, one transaction carrying the row, the audit entry and the event.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -28999,7 +28999,7 @@ paths:
         again** — the enrichment upserts skip rows a human captured, and a deleted row leaves
         nothing to skip. Removal means "not true today", not "never show this again". The audit
         before-image keeps what was removed, so the deletion is answerable either way.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
@@ -29024,7 +29024,7 @@ paths:
       description: |
         Stamps `verified_at` + `verified_by` and moves the fact from extracted to confirmed
         (PO-AC-N-3). Version-guarded.
-      x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
+      x-mcp-tool: { verb: change_record_parts, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/ApprovalToken'
