@@ -1087,11 +1087,14 @@ function DisplayMenu<Row>({
 }
 
 /**
+ * `Pager` is exported for a table of another kind that holds all its rows and
+ * pages them in memory, the way a list's own footer does.
+ *
  * The pager: the pages in hand as numbers, prev/next either side, and the page
  * size on the right. Next stays enabled on the last loaded page while the
  * cursor still has rows to give, which is how the set grows without a total.
  */
-function Pager({
+export function Pager({
   current,
   lastPage,
   hasMore,

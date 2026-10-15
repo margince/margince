@@ -80,10 +80,17 @@ export function StageLadder({
   label,
   steps,
   hint,
+  wrap,
 }: Readonly<{
   label: string;
   steps: readonly StageStep[];
   hint?: ReactNode;
+  /**
+   * Draws the open stages on as many lines as they need, for a fixed list the
+   * reader has to see whole (a wizard's six steps). Without it a run past its
+   * row scrolls, which is right for a pipeline the workspace may lengthen.
+   */
+  wrap?: boolean;
 }>) {
   const run = steps.filter((step) => !step.terminal);
   const exits = steps.filter((step) => step.terminal);
@@ -123,7 +130,10 @@ export function StageLadder({
     // a role. `<ol>` inside it carries the one thing the shape claims — that
     // the stages have an order. The ways out are a `<ul>`: two alternatives,
     // not two more rungs.
-    <fieldset className="stage-ladder" aria-label={label}>
+    <fieldset
+      className={wrap ? "stage-ladder is-wrap" : "stage-ladder"}
+      aria-label={label}
+    >
       <div className="stage-ladder-track">
         {/* The scroller is a box of its own because the region it may
             become would otherwise replace the list's role. */}
