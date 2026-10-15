@@ -5766,11 +5766,11 @@ paths:
     post:
       tags: [Approvals]
       operationId: approveApproval
-      summary: Approve a staged action (commits it; mints the approval token).
+      summary: Approve a staged action (commits it).
       description: |-
         Approving commits the proposed change in one audit transaction. The (optionally
-        edited) payload is what executes. Returns the approval with the resulting entity ref
-        + the `approval_token` that authorized the downstream operation.
+        edited) payload is what executes. Returns the approval with the resulting entity ref.
+        An agent that staged the call repeats it with `X-Approval-Token: <this approval's id>`.
 
         Needs the passport permission Change records.
 
@@ -7933,13 +7933,12 @@ components:
       in: header
       schema: {type: string}
       description: |-
-        A signed, single-use approval token (see schema `ApprovalToken`) minted by
-        POST /approvals/{id}/approve, authorizing exactly one confirm-first operation. It is a
-        compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-        principal — it is NOT a bare opaque string. The server rejects a token that is
-        expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-        match the operation being executed (`403 code: approval_token_invalid`). Required when an
-        AGENT principal invokes a operation; a human's direct call is itself the approval.
+        The id of the approval that authorizes this one call — the id the `403 approval_required`
+        answer named. MCP takes the same id as `approval_id`. The server checks it against the
+        stored approval: same tool, same diff hash, same staging passport, decided as approved,
+        not yet used, and within 15 minutes of the decision. Anything else is refused with
+        `403 code: approval_token_invalid`. Required when an AGENT principal repeats a call; a
+        human's direct call is itself the approval.
     IfMatch:
       name: If-Match
       in: header
@@ -18551,7 +18550,7 @@ components:
           description: >-
             What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown".
         target_version: {type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race.'}
-        diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.'}
+        diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.'}
         summary: {type: [string, 'null'], description: One-line description of the proposed change.}
         proposed_change:
           type: object
@@ -18564,7 +18563,6 @@ components:
         confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
         result_entity_type: {type: [string, 'null']}
         result_entity_id: {type: [string, 'null'], format: uuid}
-        approval_token: {type: [string, 'null'], description: 'Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream operation it is bound to.'}
         decided_by: {type: [string, 'null'], format: uuid}
         decided_at: {type: [string, 'null'], format: date-time}
         effect_failed_at:

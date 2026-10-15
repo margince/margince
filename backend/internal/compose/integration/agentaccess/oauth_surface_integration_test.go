@@ -6,11 +6,7 @@
 package agentaccess
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -23,22 +19,18 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // What the minted Bearer is once the handshake is done: a passport with real
 // authority on the governed surfaces, and nothing more. Its 🟡 refusals stage
-// a signed, effect-bound approval token (ADR-0036), and its authority dies on
-// the next call after revocation — asserted on the hosted MCP transport, the
-// wire an agent client actually holds it on.
+// an approval it redeems once, by the approval's id. Its authority dies on the
+// next call after revocation, asserted on the hosted MCP transport.
 
-func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
+func TestAnApprovedCallRedeemsOnceByItsApprovalID(t *testing.T) {
 	o := setupOAuth(t)
 
 	code := o.authorize(t, nil)
@@ -46,103 +38,36 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	agentBearer := map[string]string{"Authorization": "Bearer " + body["access_token"].(string)}
 
 	// An overwrite of a field a human last wrote is one of the calls that still
-	// asks a human first. The claim under test is the SHAPE of the approval
-	// token, not which call earned it.
+	// asks a human first.
 	var contact struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
+		ID string `json:"id"`
 	}
 	if status := o.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"source": "manual", "full_name": "Jo Human",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("human contact create → %d", status)
 	}
+	overwrite := integration.AnyMap{"full_name": "Jo Machine"}
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, integration.AnyMap{
-		"full_name": "Jo Machine",
-	}, agentBearer, &problem); status != http.StatusForbidden {
+	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, agentBearer, &problem); status != http.StatusForbidden {
 		t.Fatalf("agent overwrite of a human-written name → %d, want staged 403", status)
 	}
 	approvalID := integration.ExtractStagedApprovalID(t, problem.Detail)
-
-	var approved struct {
-		ApprovalToken *string `json:"approval_token"`
-	}
-	if status := o.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", integration.AnyMap{}, nil, &approved); status != http.StatusOK {
+	if status := o.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", integration.AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("approve → %d", status)
 	}
-	if approved.ApprovalToken == nil || strings.Count(*approved.ApprovalToken, ".") != 2 {
-		t.Fatalf("approve response lacks a compact JWS: %+v", approved.ApprovalToken)
-	}
 
-	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
-	if err != nil {
-		t.Fatal(err)
+	redeeming := map[string]string{"Authorization": agentBearer["Authorization"], "X-Approval-Token": approvalID}
+	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, redeeming, nil); status != http.StatusOK {
+		t.Fatalf("the approved call repeated with its approval id → %d, want 200", status)
 	}
-	t.Cleanup(pool.Close)
-	wsRaw := apptest.InstallationWorkspaceID(context.Background(), t, o.Owner)
-	wsID, err := ids.Parse(wsRaw)
-	if err != nil {
-		t.Fatal(err)
+	var replay struct {
+		Code string `json:"code"`
 	}
-	wsCtx := principal.WithWorkspaceID(context.Background(), wsID)
-
-	svc := approvals.NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID)))
-	claims, err := svc.VerifyApprovalToken(wsCtx, *approved.ApprovalToken)
-	if err != nil {
-		t.Fatalf("verify: %v", err)
-	}
-	// The token binds this approval, this passport, this diff, and the row and
-	// version the human saw. A token missing the target would release the same
-	// patch against any contact.
-	if claims.ApprovalID.String() != approvalID || claims.Kind != "update_record" ||
-		claims.DiffHash == "" || claims.PassportID == nil {
-		t.Fatalf("claims not effect-bound: %+v", claims)
-	}
-	if claims.TargetID == nil || claims.TargetID.String() != contact.ID {
-		t.Errorf("token target_id = %v, want the staged contact %s", claims.TargetID, contact.ID)
-	}
-	if claims.TargetVersion == nil || *claims.TargetVersion != contact.Version {
-		t.Errorf("token target_version = %v, want the contact's own %d", claims.TargetVersion, contact.Version)
-	}
-
-	// The token carries NO workspace claim, and a token minted with one still
-	// verifies. Both halves are the point of retiring it (ADR-0091 §1): the
-	// claim was never read, so dropping it removes no control — and an
-	// unrecognised field is ignored on decode, so tokens issued before the
-	// change are not invalidated by it. A reader who re-adds "ws" for safety
-	// would be adding a field nothing checks, which is what this refuses.
-	parts := strings.Split(*approved.ApprovalToken, ".")
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		t.Fatalf("decoding the token payload: %v", err)
-	}
-	if bytes.Contains(payload, []byte(`"ws"`)) {
-		t.Errorf("the approval token carries a \"ws\" claim: %s\n"+
-			"VerifyApprovalToken does not read it, so it binds the effect to no tenant "+
-			"while looking like it does", payload)
-	}
-	withStaleClaim, err := json.Marshal(map[string]any{
-		"jti": approvalID, "ws": wsID.String(), "kind": "archive_record",
-		"diff_hash": claims.DiffHash, "exp": claims.ExpiresAt,
-	})
-	if err != nil {
-		t.Fatalf("building the pre-retirement payload: %v", err)
-	}
-	var reparsed approvals.ApprovalTokenClaims
-	if err := json.Unmarshal(withStaleClaim, &reparsed); err != nil {
-		t.Fatalf("a token minted before the claim was retired no longer decodes: %v", err)
-	}
-	if reparsed.ApprovalID.String() != approvalID {
-		t.Errorf("the pre-retirement payload decoded to approval %s, want %s", reparsed.ApprovalID, approvalID)
-	}
-
-	// One flipped payload byte is fatal.
-	tampered := parts[0] + "." + flipLastChar(parts[1]) + "." + parts[2]
-	if _, err := svc.VerifyApprovalToken(wsCtx, tampered); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
-		t.Fatalf("tampered token → %v, want ErrApprovalTokenInvalid", err)
+	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, redeeming, &replay); status != http.StatusForbidden || replay.Code != "approval_token_invalid" {
+		t.Errorf("a second redemption → %d %q, want 403 approval_token_invalid", status, replay.Code)
 	}
 }
 
@@ -217,13 +142,4 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized || !strings.Contains(resp.Header.Get("WWW-Authenticate"), "oauth-protected-resource") {
 		t.Fatalf("revoked bearer → %d %q, want 401 + RFC 9728 pointer", resp.StatusCode, resp.Header.Get("WWW-Authenticate"))
 	}
-}
-
-func flipLastChar(s string) string {
-	last := s[len(s)-1]
-	replacement := byte('A')
-	if last == 'A' {
-		replacement = 'B'
-	}
-	return s[:len(s)-1] + string(replacement)
 }

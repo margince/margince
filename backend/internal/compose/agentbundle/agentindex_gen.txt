@@ -274,7 +274,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /approvals` | listApprovals | The approval inbox — list staged actions awaiting human decision. | Read records | at once |
 | `GET /approvals/{id}` | getApproval | Get a single approval item (full proposed diff + evidence). | Read records | at once |
-| `POST /approvals/{id}/approve` | approveApproval | Approve a staged action (commits it; mints the approval token). | Change records | at once |
+| `POST /approvals/{id}/approve` | approveApproval | Approve a staged action (commits it). | Change records | at once |
 | `POST /approvals/{id}/reject` | rejectApproval | Reject a staged action (discards it; nothing commits). | Change records | at once |
 | `POST /approval-bundles/{bundle_id}/approve` | approveApprovalBundle | Approve every still-pending member of one bundle. | Change records | at once |
 | `POST /approval-bundles/{bundle_id}/reject` | rejectApprovalBundle | Reject every still-pending member of one bundle; no records change. | Change records | at once |

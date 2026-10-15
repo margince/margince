@@ -6776,14 +6776,6 @@ public.signal_thread_scan.signal_thread_scan_resolved_company_fkey FOREIGN KEY (
 public.signal_thread_scan.signal_thread_scan_scanned_from_shape CHECK (((scanned_from IS NULL) = (scanned_from_id IS NULL)))
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-
 public.signal_thread_scan_pkey CREATE UNIQUE INDEX signal_thread_scan_pkey ON public.signal_thread_scan USING btree (thread_key)
-public.signing_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.signing_key.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.signing_key.kid text NOT NULL gen=- def=-
-public.signing_key.private_key bytea NOT NULL gen=- def=-
-public.signing_key.public_key bytea NOT NULL gen=- def=-
-public.signing_key.retired_at timestamp with time zone gen=- def=-
-public.signing_key.signing_key_pkey PRIMARY KEY (kid)
-public.signing_key_pkey CREATE UNIQUE INDEX signing_key_pkey ON public.signing_key USING btree (kid)
 public.site_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.site_read.attempt integer NOT NULL gen=- def=1
 public.site_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
