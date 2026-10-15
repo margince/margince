@@ -640,6 +640,17 @@
           }
         }
       }
+    },
+    "integrations": {
+      "description": "The data-provider settings an operator may also set at boot. A value here locks the setting against a change in the product.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatic_lookup": {
+          "description": "Look each new contact up once against the connected data provider for the free details, without anybody asking.",
+          "type": "boolean"
+        }
+      }
     }
   },
   "$defs": {

@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -57,7 +56,6 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	defs = append(defs, consent.Definitions()...)
 	defs = append(defs, deals.Definitions()...)
 	defs = append(defs, identity.Definitions()...)
-	defs = append(defs, integrations.Definitions()...)
 	defs = append(defs, contacts.Definitions()...)
 	defs = append(defs, privacy.Definitions()...)
 	// The settings each module has moved to the configuration registry.

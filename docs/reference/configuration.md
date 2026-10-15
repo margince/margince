@@ -164,6 +164,7 @@ value gets a 409 that names the source, and a save of the same value changes not
 | `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | `32` (1 to 128) | `capture.site_read_max_mib` |
 | `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | `240` (30 to 600) | `capture.site_read_wall_seconds` |
 | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | `120` (30 to 3600) | `capture.mail_sync_interval_seconds` |
+| `MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP` | `true` | `integrations.automatic_lookup` |
 
 A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
 `identity.oidc_group_role_map`, and deletes the rest.

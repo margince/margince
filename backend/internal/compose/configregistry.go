@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
@@ -36,6 +37,7 @@ func allSettings() []config.Any {
 		MailSettings(),
 		identity.Settings(),
 		capture.ConfigSettings(),
+		integrations.ConfigSettings(),
 	)
 }
 

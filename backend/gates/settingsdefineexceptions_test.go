@@ -6,7 +6,6 @@ package gates
 // The reasons a key may still be declared with settings.Define. A module that
 // converts deletes its lines, so the list ends holding only real exceptions.
 const (
-	convertsIn12b = "converts in Task 12b"
 	convertsIn12c = "converts in Task 12c"
 	convertsIn12d = "converts in Task 12d"
 	convertsIn13  = "converts in Task 13, with the other secrets"
@@ -29,8 +28,6 @@ var settingsDefineExceptions = map[string]string{
 	"ai.provider_keys":               convertsIn13,
 	"capture.google_app":             convertsIn13,
 	"capture.microsoft_app":          convertsIn13,
-
-	"integrations.automatic_lookup": convertsIn12b,
 
 	"ai.budget":              convertsIn12c,
 	"ai.price_sync":          convertsIn12c,

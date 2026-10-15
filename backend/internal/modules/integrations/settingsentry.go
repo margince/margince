@@ -10,7 +10,7 @@ package integrations
 // provider's answer about a contact without anybody asking for it.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // AutomaticLookup decides whether a provider run may be queued without a human
@@ -43,15 +43,16 @@ import (
 // a gated read there would pass anyway. The declaration is about the question
 // being the machinery's rather than the caller's. The settings surface answers
 // this value to a caller through Get, and that read keeps its gate.
-var AutomaticLookup = settings.Define[bool](
-	"integrations.automatic_lookup",
-	objectIntegrations,
-	"update",
-	true,
-	nil, // every bool is a valid posture; a validator here would be ceremony
-).MachineryApplied()
+var AutomaticLookup = config.DefineStored(config.Spec[bool]{
+	Key:     "integrations.automatic_lookup",
+	Env:     "MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Look each new contact up once against the connected data provider for the free details, without anybody asking.",
+}, config.Store{RBACObject: objectIntegrations, AuditVerb: "update", MachineryApplied: true})
 
-// Definitions is this module's contribution to the settings catalog.
-func Definitions() []settings.Definition {
-	return []settings.Definition{AutomaticLookup}
+// ConfigSettings are this module's settings in the configuration registry.
+// Named apart from Settings, the posture this package answers with.
+func ConfigSettings() []config.Any {
+	return []config.Any{AutomaticLookup}
 }

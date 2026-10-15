@@ -256,7 +256,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// charges nothing for. Always wired, including where no provider is
 	// connected: the posture is the installation's answer, not the
 	// connection's, and an operator must be able to set it before connecting.
-	s.integrationsSettingsHandlers = integrationsSettingsHandlers{store: integrations.NewSettings(NewSettingsStore(pool))}
+	s.integrationsSettingsHandlers = integrationsSettingsHandlers{store: integrations.NewSettings(NewSettingsStore(pool), StoredConfig(pool))}
 	// The tier→model binding (ai-operational-spec §1.4): read it, replace it
 	// without a restart. Always wired, including on an installation that has
 	// bound nothing — an operator binding models for the first time reaches it
