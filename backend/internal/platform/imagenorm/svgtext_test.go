@@ -60,12 +60,14 @@ func TestDecodeRefusesAnSVGTheRendererCannotDrawAsNotDrawableAndNotAsText(t *tes
 		"foreignObject markup": svgOpen + `<foreignObject width="100" height="50"><div xmlns="http://www.w3.org/1999/xhtml">Acme</div></foreignObject></svg>`,
 		"an embedded image":    svgOpen + `<circle cx="25" cy="25" r="20"/><image href="data:image/png;base64,AAAA" width="10" height="10"/></svg>`,
 		"an image after text, so the fix that covers both is named": svgOpen + `<text>Acme</text><image href="data:image/png;base64,AAAA"/></svg>`,
-		"a filter":             svgOpen + `<defs><filter id="f"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="25" cy="25" r="20" filter="url(#f)"/></svg>`,
-		"a pattern fill":       svgOpen + `<defs><pattern id="p" width="4" height="4"><rect width="2" height="2"/></pattern></defs><circle cx="25" cy="25" r="20" fill="url(#p)"/></svg>`,
-		"a mask":               svgOpen + `<mask id="m"><rect width="50" height="50" fill="#fff"/></mask><circle cx="25" cy="25" r="20" mask="url(#m)"/></svg>`,
-		"a marker":             svgOpen + `<defs><marker id="k"/></defs><path d="M0 0L10 10" marker-end="url(#k)" stroke="#000"/></svg>`,
-		"a use reference":      svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
-		"an unclosed document": svgOpen + `<circle cx="25" cy="25" r="20"`,
+		"a filter":                    svgOpen + `<defs><filter id="f"><feGaussianBlur stdDeviation="2"/></filter></defs><circle cx="25" cy="25" r="20" filter="url(#f)"/></svg>`,
+		"a pattern fill":              svgOpen + `<defs><pattern id="p" width="4" height="4"><rect width="2" height="2"/></pattern></defs><circle cx="25" cy="25" r="20" fill="url(#p)"/></svg>`,
+		"a mask":                      svgOpen + `<mask id="m"><rect width="50" height="50" fill="#fff"/></mask><circle cx="25" cy="25" r="20" mask="url(#m)"/></svg>`,
+		"a marker":                    svgOpen + `<defs><marker id="k"/></defs><path d="M0 0L10 10" marker-end="url(#k)" stroke="#000"/></svg>`,
+		"a referenced filter in defs": svgOpen + `<defs><filter id="f"/></defs><circle cx="25" cy="25" r="20" style="filter:url(#f)"/></svg>`,
+		"a clipPath outside defs":     svgOpen + `<clipPath id="c"><rect width="10" height="10"/></clipPath><circle cx="25" cy="25" r="20" clip-path="url(#c)"/></svg>`,
+		"a use reference":             svgOpen + `<defs><circle id="c" r="5"/></defs><use href="#c"/></svg>`,
+		"an unclosed document":        svgOpen + `<circle cx="25" cy="25" r="20"`,
 		"a currentColor fill the renderer cannot resolve": svgOpen + `<circle cx="25" cy="25" r="20" fill="currentColor"/></svg>`,
 		"an empty viewBox": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 0"><circle r="5"/></svg>`,
 	}
@@ -105,5 +107,14 @@ func TestDecodeKeepsTheMarkupEditorsWriteAroundAnAcceptedDrawing(t *testing.T) {
 				t.Fatalf("markup that loses no drawing was refused: %v", err)
 			}
 		})
+	}
+}
+
+func TestDecodeKeepsAnSVGWhoseDefsHoldOnlyUnreferencedUndrawnElements(t *testing.T) {
+	defs := `<defs><marker id="k"/><pattern id="p"><rect width="2" height="2"/></pattern>` +
+		`<filter id="f"/><clipPath id="c"><rect width="100" height="50"/></clipPath></defs>`
+	doc := svgOpen + defs + `<circle cx="25" cy="25" r="20" fill="#ff6b00"/></svg>`
+	if _, err := Decode([]byte(doc)); err != nil {
+		t.Fatalf("leftover defs that nothing references lose nothing, yet were refused: %v", err)
 	}
 }
