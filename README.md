@@ -84,7 +84,7 @@ for it.
 ## License
 
 Margince uses the Business Source License 1.1 ([LICENSE](LICENSE)). The source is public. You may read,
-run and change it.
+run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you accept [CLA.md](CLA.md) to send code.
 
 - You may use it free in production for your own company, up to 10 seats. The limit is for all your
   installations and the companies you own or that own you. A seat is a named user. AI agents and

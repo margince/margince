@@ -298,11 +298,12 @@ green run, one shard spent about `146s` loading the build cache and about `275s`
 matrix in half costs about a minute of clock time, and gives back about half the lane's runner minutes.
 The compile half is a problem of building once, not of sharding.
 
-### The `ci` aggregate is the only required context
+### The `ci` aggregate is the only required build context
 
-A **ruleset** requires one check: **`ci`**. There is no branch rule of the old kind
+A **ruleset** requires two checks: **`ci`**, and **`cla`**, which asks an author outside the Margince
+team to accept [CLA.md](../../CLA.md). There is no branch rule of the old kind
 (`GET /branches/main/protection` answers 404). The two are set up in different places, and only the
-ruleset is in use here. `main-required-status-checks` is the active ruleset that names `ci`.
+ruleset is in use here. `main-required-status-checks` is the active ruleset that names both.
 `main-required-ai-reviewers` names CodeRabbit, and is **turned off**. Nothing else is required, the
 SonarCloud scan too.
 

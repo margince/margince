@@ -61,8 +61,8 @@ Two things to know about `make dev`:
 
 ### Contributing from a fork
 
-A pull request from a fork runs the same `ci` checks as our own work, and `ci` is the one check a merge
-needs. A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
+A pull request from a fork runs the same `ci` checks as our own work. A merge needs `ci`, and `cla` once
+you accept [CLA.md](CLA.md). A maintainer approves the run before it starts, so expect a short wait. A fork run gets no SonarCloud
 token, so SonarCloud does not report, and a merge does not need it.
 
 ## The checks

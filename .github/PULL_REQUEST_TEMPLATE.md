@@ -32,4 +32,4 @@ By opening this PR, you confirm that you are **accountable** for this change. Yo
 [Code of Conduct](/CODE_OF_CONDUCT.md).
 
 If you are not on the Margince team, a check asks you to accept
-[CLA.md](/CLA.md) before this PR can merge. You accept once, for every later change.
+[CLA.md](/CLA.md) before this PR can merge. You accept each version of it once, and it covers every later change.

@@ -8,10 +8,10 @@
 package gates
 
 // An acceptance of the CLA covers the text it was shown, under the version that
-// text carries. Three places spell that version: CLA.md's header, the sentence a
-// contributor posts, and the signatures file their acceptance is written to. The
-// text itself is pinned per version, so it cannot change under a version somebody
-// has already accepted.
+// text carries. CLA.md's header sets that version, and every place cla.yml names a
+// version must agree with it: the sentence a contributor posts, the prompt, the
+// signatures file and its commit messages. The text itself is pinned per version,
+// so it cannot change under a version somebody has already accepted.
 
 import (
 	"crypto/sha256"
@@ -33,7 +33,14 @@ var (
 	claVersionHeader = regexp.MustCompile(`(?m)^\*\*Version (\d+\.\d+),`)
 	signaturesPath   = regexp.MustCompile(`(?m)^\s*path-to-signatures:\s*(\S+)\s*$`)
 	signSentence     = regexp.MustCompile(`(?m)^\s*custom-pr-sign-comment:\s*(.+?)\s*$`)
+	// workflowVersion matches the CLA version wherever cla.yml spells it, and not
+	// the action's own release in its pin comment.
+	workflowVersion = regexp.MustCompile(`(?i)\bversion (\d+\.\d+)\b|signatures/v(\d+\.\d+)\.json`)
 )
+
+// claVersionMentions is how many places cla.yml names the CLA version today, so a
+// scan that stops matching them fails instead of passing on nothing.
+const claVersionMentions = 5
 
 func TestTheCLATextIsPinnedToItsVersion(t *testing.T) {
 	t.Parallel()
@@ -49,7 +56,7 @@ func TestTheCLATextIsPinnedToItsVersion(t *testing.T) {
 	if got != want {
 		t.Errorf("CLA.md changed under version %s, which contributors may already have accepted.\n"+
 			"A new text is a new version: raise the version in CLA.md, pin it here (digest %s), and move "+
-			"the sign sentence and signatures file in .github/workflows/cla.yml with it.", version, got)
+			"every version in .github/workflows/cla.yml with it.", version, got)
 	}
 }
 
@@ -66,6 +73,17 @@ func TestTheCLAWorkflowRecordsTheVersionCLAMdCarries(t *testing.T) {
 		" and I accept its terms."
 	if got := soleMatch(t, signSentence, workflow, "custom-pr-sign-comment"); got != wantSentence {
 		t.Errorf("cla.yml asks contributors to post %q, but CLA.md is version %s: want %q", got, version, wantSentence)
+	}
+
+	mentions := workflowVersion.FindAllStringSubmatch(workflow, -1)
+	if len(mentions) < claVersionMentions {
+		t.Fatalf("cla.yml names the CLA version %d times, fewer than the %d the gate expects; "+
+			"the pattern has stopped matching them", len(mentions), claVersionMentions)
+	}
+	for _, m := range mentions {
+		if got := m[1] + m[2]; got != version {
+			t.Errorf("cla.yml says %q, but CLA.md is version %s", m[0], version)
+		}
 	}
 }
 

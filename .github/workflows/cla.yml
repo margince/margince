@@ -4,8 +4,8 @@
 # the CLA, so members of the `margince` organisation are allowlisted rather than
 # asked; asking them would blur which instrument covers which code. Bots author
 # nothing a human owns. Everyone else accepts once, by posting the sign phrase
-# below as a comment, and the acceptance is committed to the private
-# margince/cla-signatures repository — that file is the record of the grant.
+# below as a comment, and the acceptance is committed to a separate signatures
+# repository, set below; that file is the record of the grant.
 #
 # pull_request_target, because recording an acceptance needs the signatures
 # secret, which a fork's `pull_request` run never receives. That is safe only
@@ -23,8 +23,8 @@ on:
 permissions:
   contents: read
 
-# Queued, never cancelled: two acceptances on one PR both commit to the same
-# signatures file, and a cancelled run could lose one of them.
+# A run in progress is never cancelled, so a signatures commit is not cut off. A
+# pending run GitHub drops loses nothing: the next run reads every sign comment.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
@@ -85,7 +85,7 @@ jobs:
         with:
           path-to-document: ${{ steps.document.outputs.url }}
           # One file per CLA version, so the record shows which text was accepted.
-          # backend/gates/cla_test.go holds this, the sentence and CLA.md to one version.
+          # backend/gates/cla_test.go holds every version here to CLA.md's.
           path-to-signatures: signatures/v1.0.json
           remote-organization-name: margince
           remote-repository-name: cla-signatures
