@@ -136,14 +136,14 @@ function SortMenuBesideAVerb() {
           aria-expanded={open !== null}
           onClick={() => setOpen(open === null ? "sort" : null)}
         >
-          Sortieren
+          Sort
         </Button>
-        <Menu open={open !== null} head="Sortieren nach">
+        <Menu open={open !== null} head="Sort by">
           <Button variant="ghost">Name</Button>
-          <Button variant="ghost">Zuletzt aktualisiert</Button>
+          <Button variant="ghost">Last updated</Button>
         </Menu>
       </span>
-      <IconAction label="Anrufen" icon={<Phone aria-hidden="true" />} />
+      <IconAction label="Call" icon={<Phone aria-hidden="true" />} />
     </div>
   );
 }
@@ -153,8 +153,8 @@ export const MenuUnderATip: Story = {
   render: () => <SortMenuBesideAVerb />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const menu = canvas.getByRole("group", { name: "Sortieren nach" });
-    const call = canvas.getByRole("button", { name: "Anrufen" });
+    const menu = canvas.getByRole("group", { name: "Sort by" });
+    const call = canvas.getByRole("button", { name: "Call" });
     await userEvent.hover(call);
     const body = within(document.body);
     await waitFor(() => expect(body.getByRole("tooltip")).toBeVisible());

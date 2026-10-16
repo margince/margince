@@ -82,11 +82,7 @@ export function useCloseOnEscape(openKey: string | null, close: () => void) {
     }
     opener.current = document.activeElement;
     const onKey = (event: KeyboardEvent) => {
-      if (
-        event.key !== "Escape" ||
-        event.defaultPrevented ||
-        coveredByDialog(opener.current)
-      ) {
+      if (event.key !== "Escape" || coveredByDialog(opener.current)) {
         return;
       }
       latest.current();
