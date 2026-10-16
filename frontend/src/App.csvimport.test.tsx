@@ -13,7 +13,7 @@ import {
 } from "../vitest.budget";
 import { navigate } from "./lib/router";
 import { formatFixture } from "./screens/import.fixtures";
-import { memoryStorage, renderApp } from "./testing/appharness";
+import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
@@ -151,8 +151,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(importFetch));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
   if (browserLanguages) {
@@ -265,14 +266,17 @@ describe("the CSV import page in the shell", () => {
       await screen.findByText("New import", {}, { timeout: SETTLE_MS });
       globalThis.history.forward();
 
-      expect(
-        await screen.findByLabelText(
-          "Upload your data",
-          {},
-          { timeout: SETTLE_MS },
-        ),
-      ).toBeInTheDocument();
-      expect(window.location.hash).toBe(RUN_PAGE);
+      // Re-queried on every tick rather than awaited once and asserted
+      // after. Forward lands in two steps: the hash write, then the render it
+      // provokes. A `findBy` can answer with the node from between them and
+      // have it detached before the assertion reads it.
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText("Upload your data")).toBeInTheDocument();
+          expect(window.location.hash).toBe(RUN_PAGE);
+        },
+        { timeout: SETTLE_MS },
+      );
     },
     SETTLE_MS * 4,
   );

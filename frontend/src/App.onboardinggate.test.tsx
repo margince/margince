@@ -7,7 +7,7 @@ import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
-import { memoryStorage, wizardRow } from "./testing/appharness";
+import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 
 // Two places decide, on their own, where a session belongs when the
@@ -207,8 +207,9 @@ beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.location.hash = "";
