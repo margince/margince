@@ -30,15 +30,16 @@ import (
 // the pipeline's rule and the rates, so flipping it off stops the next apply
 // rather than the one after. Read at staging instead, it would authorize a
 // move hours before that move happened.
-//
-// MachineryApplied: the apply path reads it; no request carries it.
 var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
 	Key:     "deals.stage_autopilot_enabled",
 	Env:     "MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(false),
 	Doc:     "Let a stage transition move a deal by itself where its rule has earned it. Off stops every automatic move.",
-}, config.Store{RBACObject: stageAutomationObject, AuditVerb: dealsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: stageAutomationObject, AuditVerb: dealsAuditVerb,
+	MachineryApplied: true, // the apply path reads it; no request carries it
+})
 
 // stageAutomationObject is the RBAC object gating stage automation's
 // governance. `pipeline`, because that is what a rule is about — the same
@@ -68,15 +69,16 @@ const stageAutomationObject = "pipeline"
 // Assessment, the receipt and Undo stay outside its reach on purpose. Switching
 // maintenance off stops NEW changes; it does not hide the changes already made
 // or take away a reader's ability to reverse one.
-//
-// MachineryApplied: the sweep reads it; no request carries it.
 var MaintenanceWritesEnabled = config.DefineStored(config.Spec[bool]{
 	Key:     "deals.maintenance_writes_enabled",
 	Env:     "MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(true),
 	Doc:     "Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes.",
-}, config.Store{RBACObject: maintenanceObject, AuditVerb: dealsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: maintenanceObject, AuditVerb: dealsAuditVerb,
+	MachineryApplied: true, // the sweep reads it; no request carries it
+})
 
 // maintenanceObject is the RBAC object gating maintenance governance. `deal`,
 // because a deal is what the sweep writes — the grant that lets somebody update
@@ -91,15 +93,16 @@ const maintenanceObject = "deal"
 // the request, the queue and the criterion kind, and keeps every review
 // already recorded. It is read inside the advance transaction, so switching it
 // off releases a gated stage on the next move.
-//
-// MachineryApplied: the advance gate reads it for whoever moves the deal.
 var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
 	Key:     "deals.legal_review_enabled",
 	Env:     "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(true),
 	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion block an advance.",
-}, config.Store{RBACObject: "installation_settings", AuditVerb: dealsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: dealsAuditVerb,
+	MachineryApplied: true, // the advance gate reads it for whoever moves the deal
+})
 
 // dealsAuditVerb is the verb a change to one of these switches is audited under.
 const dealsAuditVerb = "update"

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -28,9 +29,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
-// settingsDefinitions is the whole catalog, in one list. A module that owns no
-// setting contributes nothing — there is no interface every module must
-// satisfy, because most of them have no settings and never will.
+// settingsDefinitions is the whole catalog, in one list: the configuration
+// registry's stored settings, then the settings.Define exceptions.
 //
 // This function is also the fitness gate's input: settingscatalog_test.go
 // asserts uniqueness and module-prefix ownership over exactly this list, so a
@@ -46,15 +46,15 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	// setting stays changeable) rather than loudly.
 	identity.LockBaseCurrencyWith(deals.BaseCurrencyLock(identity.BaseCurrency.Key()))
 
-	var defs []settings.Definition
-	defs = append(defs, ai.Definitions()...)
-	defs = append(defs, capture.Definitions()...)
-	defs = append(defs, identity.Definitions()...)
-	defs = append(defs, privacy.Definitions()...)
-	// The settings each module has moved to the configuration registry.
-	defs = append(defs, storedDefinitions()...)
-	return defs
+	return slices.Concat(storedDefinitions(), defineExceptions())
 })
+
+// defineExceptions are the settings.Define entries that stay out of the
+// configuration registry. The census gate names each with its reason
+// (gates/settingsdefineexceptions_test.go).
+func defineExceptions() []settings.Definition {
+	return slices.Concat(ai.Definitions(), capture.Definitions(), identity.Definitions(), privacy.Definitions())
+}
 
 // NewSettingsStore builds a store over the pool and the assembled catalog.
 // Exported because it is genuinely part of the composition surface: the

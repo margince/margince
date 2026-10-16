@@ -60,8 +60,8 @@ func TestABootSetPostureIsTheOneEveryDecisionReads(t *testing.T) {
 	}
 }
 
-// A posture that names only some categories is refused at boot, as a save of
-// it is, rather than locking a map no admin could save.
+// A posture that names only some categories fails the boot, as its save would.
+// No admin could save the map it would lock.
 func TestAPartialBootPostureFailsTheLoad(t *testing.T) {
 	reg, err := config.NewRegistry(ConfigSettings())
 	if err != nil {

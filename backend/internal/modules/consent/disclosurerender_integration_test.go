@@ -66,7 +66,7 @@ func operatorCtx(e *channelConsentEnv) context.Context {
 // store that OWNS the setting table, over the same pool this suite runs on.
 // Consent may not write that table, so the operator path goes through here in
 // production too.
-func settingsStoreFor(t *testing.T, environ ...string) *config.Config {
+func settingsStoreFor(t *testing.T) *config.Config {
 	t.Helper()
 	pool, err := testdb.Pool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
 	if err != nil {
@@ -77,7 +77,7 @@ func settingsStoreFor(t *testing.T, environ ...string) *config.Config {
 	// genuinely stopped — a goroutine still holding a connection would go on
 	// writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	cfg := consentConfig(t, environ...)
+	cfg := consentConfig(t)
 	return cfg.WithDatabase(settings.New(pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
 }
 

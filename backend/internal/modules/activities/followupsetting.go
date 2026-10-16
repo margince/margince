@@ -15,14 +15,13 @@ import (
 const (
 	followUpMinDays = 1
 	followUpMaxDays = 30
+	// followUpAuditVerb is the verb a change of the window is audited under.
+	followUpAuditVerb = "update"
 )
 
 // FollowUpAfterDays is how long a message the reader sent may go unanswered
 // before their worklist reminds them to follow up. An admin sets it for the
 // whole workspace; two days is where a sales follow-up is due.
-//
-// MachineryApplied: the worklist applies it to rows the reader is separately
-// gated for.
 var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Key:     "activities.follow_up_after_days",
 	Env:     "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS",
@@ -31,7 +30,10 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(followUpMinDays),
 	Max:     config.Some(followUpMaxDays),
 	Doc:     "Days a sent message may go unanswered before the sender's worklist reminds them to follow up.",
-}, config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: followUpAuditVerb,
+	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
+})
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {

@@ -290,17 +290,14 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 // turned into an agent or dropped to a read seat. A seat nobody reads is the
 // same silence as no seat at all, wearing a configuration that looks correct.
 //
-// Read through config.StoredApplyTx, the ungated seam machinery applies a posture
-// from, the way loadLeadSLAPolicy reads its own pair: this runs inside the SLA
-// sweep under the system principal, and the value is an input to a decision
-// already the sweep's to make. Asking the object gate would be asking a
-// question that cannot answer no — auth.Require returns nil for
-// PrincipalSystem before permissions are consulted.
+// Read through config.StoredApplyTx, the ungated machinery reader, as
+// loadLeadSLAPolicy reads its pair. This runs inside the SLA sweep under the
+// system principal, as an input to a decision that is the sweep's to make. The
+// object gate cannot answer no there: auth.Require admits PrincipalSystem.
 //
-// The machinery reader rather than a raw statement: it refuses any entry not
-// declared MachineryApplied, so the licence to read this one ungated is
-// checked rather than agreed. A decode failure is the reader's to
-// report, and it reports it as an error — which is the answer this path needs.
+// The machinery reader refuses any entry not declared MachineryApplied, so the
+// licence to read this one ungated is checked rather than agreed. It reports a
+// decode failure as an error, which is the answer this path needs.
 // The setting is written through a validated entry, so a value that will not
 // decode means somebody wrote the row around it, and answering "nobody is
 // configured" would hide that behind a queue quietly escalating to no one.

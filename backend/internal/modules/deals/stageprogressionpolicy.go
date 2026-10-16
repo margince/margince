@@ -278,11 +278,10 @@ func transitionRatesTx(
 // automation at all, for the settings surface that renders the per-transition
 // rules beside it.
 //
-// config.StoredApplyTx on StageAutopilotEnabled, which is where StageAutopilotModeTx
-// reads it too — the same SOURCE, not the same read: that one runs inside the
-// caller's transaction and this opens its own, so a switch flipped between them is
-// seen by one and not the other. What this rules out is a screen deriving the answer
-// some other way, which is the defect it closed: the page showed `auto` on
+// config.StoredApplyTx on StageAutopilotEnabled, where StageAutopilotModeTx
+// reads it too. It is the same SOURCE, not the same read: that one runs inside
+// the caller's transaction and this opens its own. What this rules out is a
+// screen deriving the answer some other way, which showed `auto` on
 // transitions the server forces to propose.
 //
 // Gated on `pipeline` read, like the rules it accompanies: one grant answers for

@@ -41,8 +41,6 @@ const SignatureTemplateMaxRunes = 4000
 
 // SignatureTemplate is the workspace's signature layout, set by an admin. Empty
 // means none: each sender signs with their own plain-text signature.
-//
-// MachineryApplied: the send path applies it to the sender's own sign-off.
 var SignatureTemplate = config.DefineStored(config.Spec[string]{
 	Key:  "contacts.signature_template",
 	Env:  "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE",
@@ -54,7 +52,10 @@ var SignatureTemplate = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "The workspace's email signature layout, which replaces each sender's own signature. Empty means none.",
-}, config.Store{RBACObject: "installation_settings", AuditVerb: "update", MachineryApplied: true})
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: "update",
+	MachineryApplied: true, // the send path applies it to the sender's own sign-off
+})
 
 // EmailSignature is the caller's sign-off as the settings tab shows it.
 type EmailSignature struct {

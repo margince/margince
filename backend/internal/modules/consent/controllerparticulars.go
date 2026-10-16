@@ -21,26 +21,26 @@ const controllerParticularsObject = "installation_settings"
 type ControllerParticulars struct {
 	// LegalName is who is writing, as the law would name them. Art. 13(1)(a)
 	// GDPR's "identity of the controller" and Decree 91/2020's advertiser.
-	LegalName string `yaml:"LegalName"`
+	LegalName string `yaml:"LegalName"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// PostalAddress is where they are, as a block of lines. Art. 13(1)(a)
 	// again, and the German business-letter particulars.
-	PostalAddress string `yaml:"PostalAddress"`
+	PostalAddress string `yaml:"PostalAddress"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// PrivacyContact is how to reach whoever answers about the data —
 	// Art. 13(1)(b), which asks for the data protection officer where one
 	// exists and the controller's own contact where one does not.
-	PrivacyContact string `yaml:"PrivacyContact"`
+	PrivacyContact string `yaml:"PrivacyContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// ObjectionRoute is how to say stop, free and without a barrier. §7(3) UWG
 	// requires it on every advertising message rather than only the first, and
 	// the one-click unsubscribe this product already mints is usually the
 	// honest answer — but an installation whose recipients answer by phone
 	// says so here.
-	ObjectionRoute string `yaml:"ObjectionRoute"`
+	ObjectionRoute string `yaml:"ObjectionRoute"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// AdvertiserContact is how to reach the advertiser directly — a phone
 	// number, a website, whatever the jurisdiction asks for. Vietnamese Decree
 	// 91/2020 requires it on advertising beyond naming who is advertising, and
 	// it is a SEPARATE field from the postal address because that requirement
 	// is about reachability rather than about where somebody is registered.
-	AdvertiserContact string `yaml:"AdvertiserContact"`
+	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
 }
 
 // particularsFieldCap bounds one field. Long enough for a postal address with a
@@ -79,8 +79,7 @@ func (p ControllerParticulars) IsZero() bool {
 // installation_settings at update, which is where the trust actually sits.
 //
 // The stored row spells each field by its Go name, so a boot value and the
-// yaml tags do too. No Default: the zero value, nothing stated, is the honest
-// one.
+// yaml tags do too. No Default: the zero value states nothing.
 var ControllerIdentity = config.DefineStored(config.Spec[ControllerParticulars]{
 	Key:      "consent.controller_particulars",
 	Env:      "MARGINCE_CONSENT_CONTROLLER_PARTICULARS",

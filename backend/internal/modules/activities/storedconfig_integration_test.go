@@ -38,8 +38,8 @@ func followUpConfig(t *testing.T, pool *pgxpool.Pool, environ ...string) *config
 }
 
 // A window the environment sets is the one the worklist applies, over a saved
-// row, and the endpoint refuses any other value before it judges it. Not
-// parallel: the binding is the process's own.
+// row. The endpoint refuses any other value before it judges it. Not parallel:
+// the binding is the process's own.
 func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
 	e := setupLoad(t)
 	e.restoreFollowUpWindow(t)

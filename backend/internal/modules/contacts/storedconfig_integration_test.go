@@ -67,8 +67,8 @@ func TestABootSetTargetPairsWithTheSavedSwitch(t *testing.T) {
 	}
 }
 
-// A seat the environment sets is the one a breach escalates to, and a change
-// to any other seat is refused as locked before that seat is judged.
+// A seat the environment sets is the one a breach escalates to. A change to
+// any other seat is refused as locked before that seat is judged.
 func TestABootSetEscalationSeatRefusesAnotherBeforeJudgingIt(t *testing.T) {
 	e := setupPromoteConsent(t)
 	locked := contactsConfig(t, e.store.db.Pool(), "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+e.user.String())

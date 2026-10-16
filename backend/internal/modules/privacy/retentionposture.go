@@ -4,14 +4,14 @@
 package privacy
 
 // The retain-only posture's own read/write surface (GCS-WIRE-5, GCS-PARAM-6),
-// shaped exactly like capture's settings store: the module owns the sparse-patch
-// semantics and the RBAC gate on the write, platform/settings owns the row, the
-// validation and the audit entry.
+// shaped like capture's settings store. The module owns the sparse-patch
+// semantics and the RBAC gate on the write. The configuration owns the boot
+// lock, and platform/settings the row, the validation and the audit entry.
 //
-// The evaluator and the policy store do NOT come through here — they read the
-// posture with retainOnlyTx inside a transaction they already hold, because a
-// pass that read it in a second transaction could act on some records under one
-// posture and the rest under another.
+// The evaluator and the policy store do not come through here. They read the
+// posture with retainOnlyTx inside a transaction they already hold. A pass that
+// read it in a second transaction could act on some records under one posture
+// and the rest under another.
 
 import (
 	"context"
@@ -46,9 +46,9 @@ func (s *PostureStore) Posture(ctx context.Context) (bool, error) {
 // no field: it changes nothing and answers with the current posture, so an
 // idempotent retry is not an error. Returns the posture after the write.
 func (s *PostureStore) SetPosture(ctx context.Context, retainOnly *bool) (bool, error) {
-	// Gated here as well as inside config.Save, and deliberately: the nil
-	// branch below never reaches that write, so without this an update-shaped
-	// request would pass on the READ grant alone.
+	// Gated here as well as inside config.Save. The nil branch below never
+	// reaches that write, so without this an update-shaped request would pass
+	// on the read grant alone.
 	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionUpdate); err != nil {
 		return false, err
 	}

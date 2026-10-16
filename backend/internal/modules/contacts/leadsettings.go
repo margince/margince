@@ -37,22 +37,19 @@ const (
 // FirstResponseEnabled is whether the first-response target is tracked at
 // all. Off by default: a fresh installation should not open on a list where
 // every lead reads "overdue".
-//
-// MachineryApplied: every SLA computation applies it to a lead read already
-// gated by lead:read.
 var FirstResponseEnabled = config.DefineStored(config.Spec[bool]{
 	Key:     "contacts.first_response_enabled",
 	Env:     "MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(false),
 	Doc:     "Track a first-response target on every lead.",
-}, config.Store{RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	MachineryApplied: true, // every SLA computation applies it to a lead read already gated by lead:read
+})
 
 // FirstResponseTargetMinutes is how long a lead may wait for its first
 // genuine response once its clock starts.
-//
-// MachineryApplied: the band it produces rides lead rows the caller is
-// separately gated for.
 var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	Key:     "contacts.first_response_target_minutes",
 	Env:     "MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES",
@@ -61,7 +58,10 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(firstResponseMinMinutes),
 	Max:     config.Some(firstResponseMaxMinutes),
 	Doc:     "Minutes a lead may wait for its first genuine response once its clock starts.",
-}, config.Store{RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	MachineryApplied: true, // the band it produces rides lead rows the caller is separately gated for
+})
 
 // UnassignedEscalationUserID is who answers for a lead nobody owns.
 //
@@ -77,9 +77,6 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 // them answers for the leads nobody has taken. Empty is the honest default: an
 // installation that has not said leaves the breach where it was, and the queue
 // view is what surfaces it.
-//
-// MachineryApplied: the SLA sweep applies it to decide who a breach is
-// addressed to.
 var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 	Key:  "contacts.unassigned_escalation_user_id",
 	Env:  "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID",
@@ -94,7 +91,10 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "The user id of the colleague who answers for a lead nobody owns once it breaches its target. Empty means nobody.",
-}, config.Store{RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb, MachineryApplied: true})
+}, config.Store{
+	RBACObject: leadVocabularyObject, AuditVerb: leadSettingsAuditVerb,
+	MachineryApplied: true, // the SLA sweep applies it to decide who a breach is addressed to
+})
 
 // leadSettingsAuditVerb is the verb a lead-settings change is audited under.
 const leadSettingsAuditVerb = "update"
@@ -117,25 +117,13 @@ func (p leadSLAPolicy) atRisk() time.Duration { return p.target / 4 }
 func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) }
 
 // loadLeadSLAPolicy reads the two settings inside the caller's transaction,
-// through the machinery reader and so without the settings object gate: the policy
-// is an input to a lead read already gated by lead:read, and a connector or
-// agent principal reading leads must not need a settings grant to see them.
+// through the machinery reader and so without the settings object gate. The
+// policy is an input to a lead read already gated by lead:read. A connector or
+// agent reading leads must not need a settings grant to see them.
 //
-// The machinery reader and not a raw statement, which is what this was. Both
-// are ungated; only one is CHECKED. The admitted reader refuses any entry not
-// declared MachineryApplied, so what used to be a sentence a
-// reviewer agreed with is a refusal the store makes — and the next ungated read
-// of some other setting fails at the first test that exercises it rather than
-// needing to be noticed.
-//
-// The PAIRED reader, and that is not a convenience. Two single reads take two
-// snapshots under READ COMMITTED, so a write that changes the switch and the
-// target together can commit between them: the policy would then pair an
-// enabled flag with a target from a different version of the settings, which is
-// a policy the operator never configured, running until the next read. One
-// statement is one snapshot, which is what the raw query this replaces already
-// had — enforcement should not have cost it. A boot value stands in for its
-// row, so a boot-set half pairs with the other half's one snapshot.
+// The paired reader, because two single reads take two snapshots under
+// `READ COMMITTED`. A write of both could land between them and pair values no
+// operator configured together. A boot value stands in for its row.
 func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx) (leadSLAPolicy, error) {
 	enabled, minutes, err := config.StoredApplyPairTx(ctx, tx, config.Bound(), FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
@@ -261,8 +249,8 @@ func (s *Store) UpdateLeadSettings(ctx context.Context, in UpdateLeadSettingsInp
 }
 
 // saveEscalationSeatTx names the seat that answers for the queue. A boot-set
-// seat refuses another before the seat itself is judged, and its own id is a
-// no-op: whether a field is locked does not depend on the value sent.
+// seat refuses another before that seat is judged, and its own id is a no-op.
+// Whether a field is locked does not depend on the value sent.
 func (s *Store) saveEscalationSeatTx(ctx context.Context, tx pgx.Tx, seat *ids.UserID) error {
 	named := seat.String()
 	locked, err := config.LockedChange(s.settings, UnassignedEscalationUserID, func(boot string) bool { return boot == named })

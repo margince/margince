@@ -49,8 +49,8 @@ type Handlers struct {
 // NewHandlers wires the transport over the installation-bound pool and the
 // configuration the retain-only posture is read and saved through.
 //
-// The configuration is a constructor argument rather than an option because
-// every route here needs it: the posture routes read and write it, and the
+// The configuration is a constructor argument rather than an option, because
+// every route here needs it. The posture routes read and write it, and the
 // policy list reports each row's live suppression against it.
 func NewHandlers(db *database.DB, cfg *config.Config) Handlers {
 	return Handlers{db: db, policies: NewPolicyStore(db), posture: NewPostureStore(cfg), eraser: NewEraser(db)}

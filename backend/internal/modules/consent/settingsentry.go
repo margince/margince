@@ -58,11 +58,6 @@ const authorizationModesObject = "installation_settings"
 // of its own it adopts the old gate's answer rather than refusing, so enforcing
 // stops nothing that was being sent. What it ENDS is the old gate overruling
 // the engine on a message the engine can evidence and it cannot.
-//
-// MachineryApplied: the transmit gate reads this inside the transaction that
-// binds its own decision, and the posture must apply whoever the acting
-// principal is — a worker dispatching a delivery holds the system principal and
-// has no settings read gate to pass.
 var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 	Key:      "consent.authorization_modes",
 	Env:      "MARGINCE_CONSENT_AUTHORIZATION_MODES",
@@ -70,7 +65,12 @@ var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 	Default:  config.Some(enforceEveryCategory()),
 	Validate: validateAuthorizationModes,
 	Doc:      "The authority the authorization engine's answer carries for each communication category: observe, warn or enforce.",
-}, config.Store{RBACObject: authorizationModesObject, AuditVerb: "update", MachineryApplied: true})
+}, config.Store{
+	RBACObject: authorizationModesObject, AuditVerb: "update",
+	// The transmit gate reads this inside the transaction that binds its own
+	// decision, whoever acts; a worker dispatching a delivery holds no settings grant.
+	MachineryApplied: true,
+})
 
 // authorizationModesTx is the posture every decision reads, inside the
 // transaction that records it, under the boot value the program bound.

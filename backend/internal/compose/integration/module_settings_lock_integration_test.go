@@ -110,8 +110,11 @@ func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 		{"a changed target", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 90}, http.StatusConflict},
 		{"a target below its bounds", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 5}, http.StatusConflict},
 		{"another seat, which is no colleague", http.MethodPatch, path, map[string]any{"unassigned_escalation_user_id": ids.NewV7().String()}, http.StatusConflict},
-		{"the locked values resent beside the switch", http.MethodPatch, path,
-			map[string]any{"first_response_target_minutes": 60, "unassigned_escalation_user_id": seat, "first_response_enabled": true}, http.StatusOK},
+		{
+			"the locked values resent beside the switch", http.MethodPatch, path,
+			map[string]any{"first_response_target_minutes": 60, "unassigned_escalation_user_id": seat, "first_response_enabled": true},
+			http.StatusOK,
+		},
 	})
 	for _, key := range []string{contacts.FirstResponseTargetMinutes.Key(), contacts.UnassignedEscalationUserID.Key()} {
 		if rows := settingRows(t, e, key); rows != 0 {
