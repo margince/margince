@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { permissionDenied } from "../testing/story-utils";
 import { MailSharingCard } from "./mail-sharing";
 
 // The workspace mail-sharing posture (Settings → Capture rules): every role
@@ -202,5 +204,42 @@ describe("MailSharingCard", () => {
       }),
     );
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  });
+
+  it("names the card's notice on the sync interval a refused save sent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.endsWith("/v1/me")) {
+          return jsonResponse(meFixture({ allow: SETTINGS_EDITOR }));
+        }
+        if (req.method === "PATCH") {
+          return permissionDenied();
+        }
+        return jsonResponse({
+          auto_enrich: true,
+          mail_sharing: true,
+          shared_posture_allowed: false,
+          signature_enrich: true,
+          mail_sync_interval_seconds: 120,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MailSharingCard />);
+
+    const box =
+      await screen.findByTestId<HTMLInputElement>("capture-mail-sync");
+    const before = box.getAttribute("aria-describedby");
+    await user.clear(box);
+    await user.type(box, "60{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(box.getAttribute("aria-describedby")).toBe(`${before} ${alert.id}`);
+    expect(box).toHaveAccessibleDescription(
+      expect.stringContaining(translate("en", "captureSettings.updateFailed")),
+    );
   });
 });

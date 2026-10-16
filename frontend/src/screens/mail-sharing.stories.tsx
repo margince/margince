@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  permissionDenied,
   StoryProviders,
 } from "../testing/story-utils";
 import { MailSharingCard } from "./mail-sharing";
@@ -15,7 +17,11 @@ import { MailSharingCard } from "./mail-sharing";
 // states what turning sharing off costs.
 type CaptureSettings = components["schemas"]["CaptureSettings"];
 
-function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
+function story(
+  mail_sharing: boolean,
+  allow: Parameters<typeof meRoute>[0],
+  refuseWrites = false,
+) {
   return () => {
     let settings: CaptureSettings = {
       auto_enrich: true,
@@ -30,6 +36,7 @@ function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
       "GET /me": meRoute(allow),
       "GET /capture/settings": () => jsonResponse(settings),
       "PATCH /capture/settings": (body) => {
+        if (refuseWrites) return permissionDenied();
         settings = Object.assign({}, settings, body);
         return jsonResponse(settings);
       },
@@ -70,4 +77,18 @@ export const SharingOnPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(true, MANAGER),
+};
+
+export const SyncRefused: Story = {
+  render: story(true, MANAGER, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const box = await canvas.findByTestId("capture-mail-sync");
+    await userEvent.clear(box);
+    await userEvent.type(box, "60{Enter}");
+    await canvas.findByText("Setting not changed");
+    await expect(box).toHaveAccessibleDescription(
+      expect.stringContaining("Setting not changed"),
+    );
+  },
 };
