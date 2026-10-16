@@ -1,5 +1,6 @@
 import { refusedWith } from "./problemmockhelper";
 import { unexported } from "./problemmockhelper";
+import { deny } from "./client";
 import { ProblemError, throwProblem } from "../lib/problem";
 
 // Each line marked `want:` must be read with exactly those codes; every other
@@ -9,9 +10,9 @@ const quoted = '{ status: 403, code: "forbidden" }';
 const pattern = /"code":\s*"forbidden"/;
 
 const status = { status: 403, code: "forbidden" }; // want: forbidden
-const titled = { title: "Forbidden", code: "forbidden" }; // want: forbidden
-const detailed = { detail: "no", code: "forbidden" }; // want: forbidden
-const withDetails = { details: { a: 1 }, code: "forbidden" }; // want: forbidden
+const titled = { title: "Forbidden", code: "forbidden" };
+const detailed = { detail: "no", code: "forbidden" };
+const withDetails = { details: { a: 1 }, code: "forbidden" };
 const keyed = { "status": 403, "code": "forbidden" }; // want: forbidden
 const cast = { status: 403, code: "forbidden" as const }; // want: forbidden
 const either = { status: 403, code: ok ? "forbidden" : "not_found" }; // want: forbidden not_found
@@ -29,13 +30,13 @@ const nested = { status: 403, error: { code: "forbidden" } }; // want: forbidden
 
 const base = { status: 403, title: "Forbidden" };
 const spread = { ...base, code: "forbidden" }; // want: forbidden
-const spreadIn = { title: "Forbidden", ...(ok ? { code: "forbidden" } : {}) }; // want: forbidden
+const spreadIn = { status: 403, ...(ok ? { code: "forbidden" } : {}) }; // want: forbidden
 
 const thrown = new ProblemError({ code: "forbidden" }); // want: forbidden
 throwProblem({ code: "forbidden" }); // want: forbidden
 
-const CODE = "forbidden";
-const named = { status: 403, code: CODE }; // want: forbidden
+const CODE = "forbidden"; // want: forbidden
+const named = { status: 403, code: CODE };
 
 function refusal(code: string) {
   return json({ title: "Refused", code }, 403);
@@ -66,3 +67,48 @@ const okResponse = new Response(JSON.stringify({ code: "vn" }), { status: 200 })
 const field = { status: 422, code: "validation_error", details: { errors: [{ field: "a", code: "too_long" }] } }; // want: validation_error
 const prop = <Create existing={{ id: "1", code: "duplicate_email" }} />;
 const type = (x: { code: string; status: number }) => x;
+const activeStatus = { status: "active", code: "vn" };
+const currency = { code: "EUR", title: "Euro" };
+const okJson = HttpResponse.json({ code: "vn", detail: "fine" });
+const okStatusEntry = { code: "vn", status: 200 };
+const okVariable = json({ code: "vn" }, okStatus);
+const notString = problemCode({ code: 409 });
+const { status: unpacked, code: unpackedCode } = { status: 403, code: "destructured" }; // want: destructured
+
+for (const [status, code] of [
+  [404, "row_tuple"], // want: row_tuple
+  [501, "not_implemented"], // want: not_implemented
+] as const) {
+  json({ title: "Absent", code }, status);
+}
+it.each([
+  [403, "each_tuple", "key"], // want: each_tuple
+] as const)("says %i %s", async (status, code, key) => {
+  json({ code, status, detail: "x" }, status);
+});
+it.each([
+  { status: 409, code: "each_object" }, // want: each_object each_object
+])("refuses %s", ({ status, code }) => json({ code }, status));
+const ROWS = [
+  { code: "row_object", http: 409 }, // want: row_object
+];
+for (const row of ROWS) {
+  json({ code: row.code }, row.http);
+}
+const nested = s ? "nest_j" : t ? "nest_k" : "nest_l";
+const chosen = { status: 403, code: s ? "nest_j" : t ? "nest_k" : "nest_l" }; // want: nest_j nest_k nest_l
+new Response(JSON.stringify(s ? c ? { code: "obj_a" } : { code: "obj_b" } : { code: "obj_c" }), { status: 409 }); // want: obj_a obj_b obj_c
+const fromCall = { status: 403, code: pick() }; // want: computed
+for (const c of rows()) {
+  json({ code: c.code }, 403); // want: computed
+}
+
+function refusedBy(opts: { refuse: { status: number; code: string } }) {
+  return json({ title: "Refused", code: opts.refuse.code }, opts.refuse.status);
+}
+refusedBy({ refuse: { status: 409, code: "object_helper" } }); // want: object_helper object_helper
+refusedBy({});
+
+deny("forbidden"); // want: forbidden
+// problem-code:client a test cannot vouch for a code
+const testMarked = { status: 403, code: "test_marked" }; // want: test_marked

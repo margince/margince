@@ -30,11 +30,9 @@ import (
 )
 
 const (
-	// emittedCodeFloor sits under the 193 codes the census reads today, so a
-	// walk that went blind fails while a code retired here and there does not.
+	// The floors sit well under what the census and the scan read. A walk gone
+	// blind fails them, and a code or mock retired here and there does not.
 	emittedCodeFloor = 150
-	// problemMockFloor sits under the mocks the frontend holds today for the
-	// same reason.
 	problemMockFloor = 300
 	clientCodeMarker = "problem-code:client"
 )
@@ -43,9 +41,11 @@ const (
 // Problem as their first parameter, named `problem`.
 var problemTakerOwners = []string{"frontend/src/lib/problem.ts", "frontend/src/lib/problembody.ts"}
 
-// frontendModuleFile matches the extensions a bundler resolves, as MODULE_FILE
-// in frontend/scripts/lib/source-tree.ts does.
-var frontendModuleFile = regexp.MustCompile(`\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$`)
+// moduleFileOwner declares MODULE_FILE, the extensions a bundler resolves,
+// which the frontend's own walks read too.
+const moduleFileOwner = "frontend/scripts/lib/source-tree.ts"
+
+var moduleFileDeclaration = regexp.MustCompile(`(?m)^export const MODULE_FILE = /(.+)/;$`)
 
 // mockFile names a file that describes rather than ships: a test, story, kit,
 // fixture or mock, or a file under e2e/ or testing/.
@@ -64,28 +64,32 @@ func TestEveryProblemMockAnswersACodeTheServerSends(t *testing.T) {
 				"census cannot see, or an example of a code nothing sends", contractPath, code)
 		}
 	}
-	mocks := frontendProblemMocks(t)
+	mocks, scans := frontendProblemMocks(t)
 	if len(mocks) < problemMockFloor {
 		t.Fatalf("read %d Problem mocks in the frontend and expected at least %d: the scan has gone blind",
 			len(mocks), problemMockFloor)
 	}
-	known, faults := clientMadeCodes(mocks, sourceLines(t))
+	vouched, faults := clientMadeSites(scans)
 	for _, fault := range faults {
 		t.Error(fault)
 	}
+	known := map[string]bool{}
 	for code := range emitted {
 		known[code] = true
 	}
 	statusCodes := sharedStatusCodes(t)
 	for _, mock := range mocks {
+		if vouched[mock] {
+			continue
+		}
 		if message, bad := judgeProblemMock(mock, known, statusCodes); bad {
 			t.Error(message)
 		}
 	}
 }
 
-// judgeProblemMock names the codes httperr's shared writers send with the
-// mock's status, when the mock states one.
+// judgeProblemMock refuses a code no server path sends, or one built at run
+// time, and names the codes httperr's shared writers send with its status.
 func judgeProblemMock(mock problemMock, known map[string]bool, statusCodes map[int][]string) (string, bool) {
 	at := fmt.Sprintf("%s:%d", mock.path, mock.line)
 	if mock.computed {
@@ -110,64 +114,52 @@ func quoteAll(texts []string) string {
 	return strings.Join(quoted, ", ")
 }
 
-// clientMadeCodes answers the codes product files build into a Problem of
-// their own, declared with the marker. A marker in a mock file, or a marker
-// with no reason, is refused: a mock cannot make a code real.
-func clientMadeCodes(mocks []problemMock, lines func(path string) []string) (codes map[string]bool, faults []string) {
-	codes = map[string]bool{}
-	for _, mock := range mocks {
-		reason, marked := clientMarker(lines(mock.path), mock.line)
-		switch {
-		case !marked:
-		case mockFile.MatchString(mock.path):
-			faults = append(faults, fmt.Sprintf("%s:%d: %s in a test file; a mock answers a code the screen "+
-				"receives, it cannot declare one", mock.path, mock.line, clientCodeMarker))
-		case reason == "":
-			faults = append(faults, fmt.Sprintf("%s:%d: %s needs the reason the client builds this Problem",
-				mock.path, mock.line, clientCodeMarker))
-		default:
-			codes[mock.code] = true
-		}
-	}
-	return codes, faults
-}
-
-// sourceLines reads a tracked file's lines, once each.
-func sourceLines(t *testing.T) func(path string) []string {
-	t.Helper()
-	read := map[string][]string{}
-	return func(filePath string) []string {
-		if read[filePath] == nil {
-			raw, err := os.ReadFile(filepath.Join(repoRoot, filePath))
-			if err != nil {
-				t.Fatalf("reading %s: %v", filePath, err)
+// clientMadeSites answers the mocks a `problem-code:client` marker vouches
+// for. It counts in a `//` comment of a product file, with a reason. It vouches
+// only for a literal the same file builds on its line or the next. An imported
+// code is judged where it lands, so a product-named helper vouches for no test.
+func clientMadeSites(scans map[string]*problemFileScan) (vouched map[problemMock]bool, faults []string) {
+	vouched = map[problemMock]bool{}
+	for filePath, scan := range scans {
+		for _, marker := range scan.markers {
+			line := scan.reader.lineOfPos(marker.pos)
+			_, reason, _ := strings.Cut(marker.text, clientCodeMarker)
+			at := fmt.Sprintf("%s:%d", filePath, line)
+			switch {
+			case !marker.line:
+				continue
+			case mockFile.MatchString(filePath):
+				faults = append(faults, at+": "+clientCodeMarker+" in a test file; a mock answers a code the "+
+					"screen receives, it cannot declare one")
+				continue
+			case strings.TrimSpace(reason) == "":
+				faults = append(faults, at+": "+clientCodeMarker+" needs the reason the client builds this Problem")
+				continue
 			}
-			read[filePath] = strings.Split(string(raw), "\n")
-		}
-		return read[filePath]
-	}
-}
-
-func clientMarker(lines []string, line int) (reason string, marked bool) {
-	for _, at := range []int{line - 1, line - 2} {
-		if at < 0 || at >= len(lines) {
-			continue
-		}
-		if _, after, found := strings.Cut(lines[at], clientCodeMarker); found {
-			return strings.TrimSpace(after), true
+			found := false
+			for _, mock := range scan.mocks {
+				if mock.own && (mock.line == line || mock.line == line+1) {
+					vouched[mock], found = true, true
+				}
+			}
+			if !found {
+				faults = append(faults, at+": "+clientCodeMarker+" vouches for no code this file builds into a "+
+					"Problem on its line or the next")
+			}
 		}
 	}
-	return "", false
+	return vouched, faults
 }
 
 // frontendProblemMocks reads every tracked frontend module, its extensions'
 // included, and answers the Problem codes they answer.
-func frontendProblemMocks(t *testing.T) []problemMock {
+func frontendProblemMocks(t *testing.T) ([]problemMock, map[string]*problemFileScan) {
 	t.Helper()
 	takers := problemTakers(t)
+	moduleFile := frontendModuleFile(t)
 	scans := map[string]*problemFileScan{}
 	for _, file := range trackedFiles(t) {
-		if file.symlink || !frontendModuleFile.MatchString(file.path) || !frontendLayer(file.path) {
+		if file.symlink || !moduleFile.MatchString(file.path) || !frontendLayer(file.path) {
 			continue
 		}
 		raw, err := os.ReadFile(filepath.Join(repoRoot, file.path))
@@ -185,15 +177,42 @@ func frontendProblemMocks(t *testing.T) []problemMock {
 		}
 		scans[file.path] = scanProblemFile(file.path, source, tree, takers)
 	}
+	return collectMocks(scans), scans
+}
+
+// collectMocks reads each file's calls of helpers other files export, then
+// answers every file's mocks in path and line order.
+func collectMocks(scans map[string]*problemFileScan) []problemMock {
+	for _, scan := range scans {
+		readImportedHelpers(scan, scans)
+	}
 	var mocks []problemMock
-	for filePath, scan := range scans {
+	for _, scan := range scans {
 		mocks = append(mocks, scan.mocks...)
-		mocks = append(mocks, importedHelperMocks(filePath, scan, scans)...)
 	}
 	slices.SortFunc(mocks, func(a, b problemMock) int {
-		return strings.Compare(fmt.Sprintf("%s:%09d", a.path, a.line), fmt.Sprintf("%s:%09d", b.path, b.line))
+		return strings.Compare(fmt.Sprintf("%s:%09d:%s:%v", a.path, a.line, a.code, a.own),
+			fmt.Sprintf("%s:%09d:%s:%v", b.path, b.line, b.code, b.own))
 	})
-	return mocks
+	return slices.Compact(mocks)
+}
+
+// frontendModuleFile reads MODULE_FILE from the module that declares it.
+func frontendModuleFile(t *testing.T) *regexp.Regexp {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(repoRoot, moduleFileOwner))
+	if err != nil {
+		t.Fatalf("reading %s: %v", moduleFileOwner, err)
+	}
+	declared := moduleFileDeclaration.FindSubmatch(raw)
+	if declared == nil {
+		t.Fatalf("%s declares no MODULE_FILE in the `export const MODULE_FILE = /…/;` shape this gate reads", moduleFileOwner)
+	}
+	pattern, err := regexp.Compile(string(declared[1]))
+	if err != nil {
+		t.Fatalf("%s: MODULE_FILE is no pattern Go can read: %v", moduleFileOwner, err)
+	}
+	return pattern
 }
 
 func frontendLayer(filePath string) bool {
@@ -202,31 +221,32 @@ func frontendLayer(filePath string) bool {
 }
 
 func parseTS(source, filePath string) (*tsTree, error) {
-	tokens, err := tokenizeTS(source, strings.HasSuffix(filePath, "x"))
+	tokens, comments, err := tokenizeTS(source, strings.HasSuffix(filePath, "x"))
 	if err != nil {
 		return nil, err
 	}
-	return buildTSTree(tokens)
+	tree, err := buildTSTree(tokens)
+	if err == nil {
+		tree.comments = comments
+	}
+	return tree, err
 }
 
-// importedHelperMocks reads the calls a file makes of a helper another file
-// exports, at the argument the helper makes a Problem's code.
-func importedHelperMocks(filePath string, scan *problemFileScan, scans map[string]*problemFileScan) []problemMock {
-	var mocks []problemMock
+// readImportedHelpers reads a file's calls of a helper another file exports,
+// at the argument the helper makes a Problem's code.
+func readImportedHelpers(scan *problemFileScan, scans map[string]*problemFileScan) {
 	for _, call := range scan.calls {
-		imported := scan.imports[call.local]
+		imported := scan.imports[scan.reader.tree.word(call)]
 		for _, candidate := range []string{"", ".ts", ".tsx", ".js", ".jsx", "/index.ts", "/index.tsx"} {
 			owner := scans[path.Clean(imported.from+candidate)]
 			if owner == nil {
 				continue
 			}
-			index, isHelper := owner.helpers[imported.name]
-			if code, passed := call.args[index]; isHelper && passed && exports(owner, imported.name) {
-				mocks = append(mocks, problemMock{path: filePath, line: call.line, code: code})
+			if source, isHelper := owner.helpers[imported.name]; isHelper && exports(owner, imported.name) {
+				scan.reader.readCall(call, source)
 			}
 		}
 	}
-	return mocks
 }
 
 func exports(scan *problemFileScan, name string) bool {
@@ -365,11 +385,47 @@ func mappingValues(node *yaml.Node) []*yaml.Node {
 // pass over, each line saying what it must answer.
 func TestTheMockScanReadsEveryPlantedShape(t *testing.T) {
 	t.Parallel()
-	scans := map[string]*problemFileScan{}
-	sources := map[string]string{}
+	scans, sources := plantedScans(t)
+	read := map[string]map[int][]string{}
+	for _, mock := range collectMocks(scans) {
+		code := mock.code
+		if mock.computed {
+			code = "computed"
+		}
+		if read[mock.path] == nil {
+			read[mock.path] = map[int][]string{}
+		}
+		read[mock.path][mock.line] = append(read[mock.path][mock.line], code)
+	}
+	wanted := 0
+	for virtual, source := range sources {
+		want := plantedWants(source)
+		wanted += len(want)
+		lines := slices.Collect(maps.Keys(want))
+		for line := range read[virtual] {
+			lines = append(lines, line)
+		}
+		for _, line := range slices.Compact(slices.Sorted(slices.Values(lines))) {
+			got, wantText := strings.Join(slices.Sorted(slices.Values(read[virtual][line])), " "),
+				strings.Join(slices.Sorted(slices.Values(want[line])), " ")
+			if got != wantText {
+				t.Errorf("%s:%d: read %q, want %q", virtual, line, got, wantText)
+			}
+		}
+	}
+	if wanted < 40 {
+		t.Fatalf("read %d planted expectations; the corpus has lost its markers", wanted)
+	}
+}
+
+// plantedScans reads the planted files under the paths they stand for.
+func plantedScans(t *testing.T) (map[string]*problemFileScan, map[string]string) {
+	t.Helper()
+	scans, sources := map[string]*problemFileScan{}, map[string]string{}
 	for virtual, planted := range map[string]string{
-		"planted/problemmocks.tsx":     "gates/testdata/problemmocks.tsx.txt",
-		"planted/problemmockhelper.ts": "gates/testdata/problemmockhelper.ts.txt",
+		"planted/problemmocks.test.tsx": "gates/testdata/problemmocks.tsx.txt",
+		"planted/problemmockhelper.ts":  "gates/testdata/problemmockhelper.ts.txt",
+		"planted/client.ts":             "gates/testdata/problemclient.ts.txt",
 	} {
 		raw, err := os.ReadFile(planted)
 		if err != nil {
@@ -382,34 +438,7 @@ func TestTheMockScanReadsEveryPlantedShape(t *testing.T) {
 		sources[virtual] = string(raw)
 		scans[virtual] = scanProblemFile(virtual, string(raw), tree, problemTakers(t))
 	}
-	read := map[int][]string{}
-	for virtual, scan := range scans {
-		for _, mock := range append(slices.Clone(scan.mocks), importedHelperMocks(virtual, scan, scans)...) {
-			if virtual != "planted/problemmocks.tsx" {
-				t.Errorf("%s:%d: read %q in the helper file, which answers no code of its own", virtual, mock.line, mock.code)
-				continue
-			}
-			code := mock.code
-			if mock.computed {
-				code = "computed"
-			}
-			read[mock.line] = append(read[mock.line], code)
-		}
-	}
-	want := plantedWants(sources["planted/problemmocks.tsx"])
-	if len(want) < 25 {
-		t.Fatalf("read %d planted expectations; the corpus has lost its markers", len(want))
-	}
-	lines := slices.Sorted(maps.Keys(want))
-	for line := range read {
-		lines = append(lines, line)
-	}
-	for _, line := range slices.Compact(slices.Sorted(slices.Values(lines))) {
-		got, wanted := strings.Join(read[line], " "), strings.Join(want[line], " ")
-		if got != wanted {
-			t.Errorf("planted line %d: read %q, want %q", line, got, wanted)
-		}
-	}
+	return scans, sources
 }
 
 var plantedWant = regexp.MustCompile(`// want: (.+)$`)
@@ -444,27 +473,29 @@ func TestAProblemMockFindingNamesTheSiteAndTheServersCodes(t *testing.T) {
 	}
 }
 
-// A product file may declare a code it builds itself; a test file may not, and
-// a declaration with no reason is refused.
-func TestOnlyAProductFileDeclaresAClientMadeCode(t *testing.T) {
+// A marker vouches for its own file's literal on its line or the next. A
+// string, a block comment, a test file, a helper and an import vouch for none.
+func TestAMarkerVouchesOnlyForTheCodeItsFileBuilds(t *testing.T) {
 	t.Parallel()
-	lines := map[string][]string{
-		"frontend/src/api/client.ts":       {"// " + clientCodeMarker + " the gateway sent none", `code: "gateway_unavailable",`},
-		"frontend/src/api/client.test.ts":  {"// " + clientCodeMarker + " a test cannot", `code: "forbidden",`},
-		"frontend/src/screens/leads.tsx":   {"// " + clientCodeMarker, `code: "duplicate_lead",`},
-		"frontend/src/screens/unmarked.ts": {`code: "unmarked",`},
+	scans, _ := plantedScans(t)
+	collectMocks(scans)
+	vouched, faults := clientMadeSites(scans)
+	var codes []string
+	for mock := range vouched {
+		codes = append(codes, mock.path+":"+mock.code)
 	}
-	var mocks []problemMock
-	for filePath, source := range lines {
-		mocks = append(mocks, problemMock{path: filePath, line: len(source), code: strings.Trim(strings.TrimPrefix(source[len(source)-1], "code: "), `",`)})
+	if strings.Join(codes, " ") != "planted/client.ts:gateway_unavailable" {
+		t.Errorf("vouched for %q, want only the gateway's own literal", codes)
 	}
-	codes, faults := clientMadeCodes(mocks, func(filePath string) []string { return lines[filePath] })
-	if !codes["gateway_unavailable"] || codes["forbidden"] || codes["duplicate_lead"] || codes["unmarked"] {
-		t.Errorf("declared client-made codes %v, want only gateway_unavailable", codes)
+	slices.Sort(faults)
+	want := []string{"planted/client.ts:14:", "planted/client.ts:7:", "planted/client.ts:9:", "planted/problemmocks.test.tsx:"}
+	if len(faults) != len(want) {
+		t.Fatalf("faulted %q, want %d faults", faults, len(want))
 	}
-	if len(faults) != 2 || !strings.Contains(strings.Join(faults, "\n"), "client.test.ts:2") ||
-		!strings.Contains(strings.Join(faults, "\n"), "leads.tsx:2") {
-		t.Errorf("faulted %q, want the test file's marker and the one with no reason", faults)
+	for i, prefix := range want {
+		if !strings.HasPrefix(faults[i], prefix) {
+			t.Errorf("fault %q, want one at %s", faults[i], prefix)
+		}
 	}
 }
 

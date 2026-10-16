@@ -522,10 +522,8 @@ func fieldIndex(shape *ast.StructType, field string) (int, bool) {
 	return 0, false
 }
 
-// read folds a code expression to the codes it can hold. A parameter is read
-// at each call of its function. A receiver's field is read at each literal
-// that sets it, or as every constant of its named type. A range variable's
-// field is read at each row of its table.
+// read folds a code expression to the codes it can hold. It follows the code
+// to the caller, literal or table that sets it, since the census keeps no list.
 func (c *emittedCensus) read(expr ast.Expr, unit *goUnit, in *ast.FuncDecl) {
 	if code, ok := c.constant(expr, unit, 0); ok {
 		if _, seen := c.codes[code]; !seen {
