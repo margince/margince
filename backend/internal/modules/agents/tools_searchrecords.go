@@ -72,7 +72,16 @@ type SearchRecordsResult struct {
 	// TypesWithMore is present on a grouped (per_type) page alone, and empty
 	// there when every type fit.
 	TypesWithMore *[]string `json:"types_with_more,omitempty"`
+	// Coverage is complete_exact only on a page holding every match, each read
+	// back. Not omitempty: an absent coverage would read as a complete one.
+	Coverage string `json:"coverage"`
+	// Notes say why coverage is lowered, never null on the wire.
+	Notes []QueryNote `json:"notes"`
 }
+
+// CodeMoreRecordsMatch is search_records' note for a page with a remainder:
+// more records match than it holds.
+const CodeMoreRecordsMatch = "more_records_match"
 
 // searchedRecord is a ranked record and why it matched.
 type searchedRecord struct {
@@ -134,6 +143,12 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`, types)),
 		OutputSchema: schemaFor[SearchRecordsResult](),
 	}
+}
+
+// CoverageClasses: a page holding every match, or part of them. Never
+// ranked_semantic — the engine ranks on words, not meaning.
+func (t searchRecords) CoverageClasses() []string {
+	return []string{CoverageCompleteExact, CoveragePartialDegraded}
 }
 
 type searchRecordsArgs struct {
@@ -198,18 +213,18 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 }
 
 // hydrate reads each hit back in the engine's order. A hit gone or out of
-// scope since it ranked is dropped and the answer warns, without a count.
+// scope since it ranked is dropped, and the notes say so without a count.
 func (t searchRecords) hydrate(ctx context.Context, page RecordSearchPage) (SearchRecordsResult, error) {
 	wires := make([]wireRecord, 0, len(page.Hits))
 	matches := make([]*RecordMatch, 0, len(page.Hits))
+	var dropped bool
 	for _, hit := range page.Hits {
 		record, readable, err := readServable(ctx, t.p, hit.Ref)
 		if err != nil {
 			return SearchRecordsResult{}, err
 		}
 		if !readable {
-			noteWarning(ctx, CodeRowUnreadable, "at least one ranked record could not be read back and is "+
-				"not among these records; search again to see the current answer")
+			dropped = true
 			continue
 		}
 		wires = append(wires, newWireRecord(ctx, record))
@@ -220,12 +235,43 @@ func (t searchRecords) hydrate(ctx context.Context, page RecordSearchPage) (Sear
 		matches = append(matches, match)
 	}
 	owned := withOwners(ctx, t.name, wires)
-	result := SearchRecordsResult{Records: make([]searchedRecord, len(owned)), NextCursor: page.NextCursor}
+	result := SearchRecordsResult{
+		Records: make([]searchedRecord, len(owned)), NextCursor: page.NextCursor,
+		Coverage: CoverageCompleteExact, Notes: []QueryNote{},
+	}
 	for i, row := range owned {
 		result.Records[i] = searchedRecord{recordWithOwner: row, Match: matches[i]}
 	}
 	if page.TypesWithMore != nil {
 		result.TypesWithMore = &page.TypesWithMore
 	}
+	if more := remainderNote(page); more != nil {
+		result.Coverage = CoveragePartialDegraded
+		result.Notes = append(result.Notes, *more)
+	}
+	if dropped {
+		result.Coverage = CoveragePartialDegraded
+		result.Notes = append(result.Notes, QueryNote{
+			Code: CodeRowUnreadable,
+			// No count: how many records a caller may not read is what
+			// existence-hiding withholds.
+			Detail: "at least one ranked record could not be read back and is not among these records; " +
+				"the ranking goes on past it, so continue with next_cursor when this page has one",
+		})
+	}
 	return result, nil
+}
+
+// remainderNote says where the matches past this page are, or nil when the
+// page holds them all.
+func remainderNote(page RecordSearchPage) *QueryNote {
+	switch {
+	case page.NextCursor != "":
+		return &QueryNote{Code: CodeMoreRecordsMatch, Detail: "more records match than this page holds; continue with next_cursor"}
+	case len(page.TypesWithMore) > 0:
+		return &QueryNote{Code: CodeMoreRecordsMatch, Detail: "the types in types_with_more hold more matches than " +
+			"this page shows; search one of them with record_type to page through it"}
+	default:
+		return nil
+	}
 }

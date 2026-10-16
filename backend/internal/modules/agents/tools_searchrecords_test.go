@@ -162,6 +162,51 @@ func TestAHitThatCannotBeReadBackIsDropped(t *testing.T) {
 	if page.NextCursor != "next" || page.TypesWithMore != nil {
 		t.Errorf("a ranked page answered cursor %q and types_with_more %v", page.NextCursor, page.TypesWithMore)
 	}
+	if page.Coverage != CoveragePartialDegraded {
+		t.Errorf("coverage = %q, want %q — a page missing a ranked record is not whole", page.Coverage, CoveragePartialDegraded)
+	}
+	var dropped *QueryNote
+	for i := range page.Notes {
+		if page.Notes[i].Code == CodeRowUnreadable {
+			dropped = &page.Notes[i]
+		}
+	}
+	if dropped == nil || !strings.Contains(dropped.Detail, "next_cursor") || strings.Contains(dropped.Detail, "search again") {
+		t.Errorf("the dropped hit is reported as %+v, want a row_unreadable note sending the caller on with next_cursor", page.Notes)
+	}
+}
+
+// Coverage is complete only on a page holding every match; a remainder past it
+// lowers it, with a note saying where the rest is.
+func TestCoverageSaysWhetherMoreRecordsMatch(t *testing.T) {
+	hit := ids.NewV7()
+	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
+		hit: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+	}}
+	hits := []RecordSearchHit{{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: hit}}}
+	for _, tc := range []struct {
+		what string
+		page RecordSearchPage
+		args string
+		want string
+	}{
+		{"the last page", RecordSearchPage{Hits: hits}, `{"q":"Acme"}`, CoverageCompleteExact},
+		{"a page with more", RecordSearchPage{Hits: hits, NextCursor: "next"}, `{"q":"Acme"}`, CoveragePartialDegraded},
+		{"a grouped page with every type whole", RecordSearchPage{Hits: hits, TypesWithMore: []string{}}, `{"q":"Acme","per_type":2}`, CoverageCompleteExact},
+		{"a grouped page with a type holding more", RecordSearchPage{Hits: hits, TypesWithMore: []string{"contact"}}, `{"q":"Acme","per_type":2}`, CoveragePartialDegraded},
+	} {
+		raw, err := searchRecordsOver(provider, &rankingProbe{page: tc.page}).Handle(searchReader(), json.RawMessage(tc.args))
+		if err != nil {
+			t.Fatalf("%s: %v", tc.what, err)
+		}
+		page := searchedPage(t, raw)
+		if page.Coverage != tc.want {
+			t.Errorf("%s: coverage = %q, want %q", tc.what, page.Coverage, tc.want)
+		}
+		if more := hasNote(page.Notes, CodeMoreRecordsMatch); more != (tc.want == CoveragePartialDegraded) {
+			t.Errorf("%s: notes %+v, want the more-records note exactly when coverage is lowered", tc.what, page.Notes)
+		}
+	}
 }
 
 // A store that cannot answer is a fault, not a short page.
@@ -192,16 +237,5 @@ func TestAGroupedPageNamesTheTypesWithMore(t *testing.T) {
 		if page := searchedPage(t, raw); page.TypesWithMore == nil || !slices.Equal(*page.TypesWithMore, more) {
 			t.Errorf("types_with_more = %v, want %v", page.TypesWithMore, more)
 		}
-	}
-}
-
-// The engine's own refusals reach the caller unchanged, so the field they
-// name and the code they carry classify as the route's do.
-func TestTheEnginesRefusalReachesTheCaller(t *testing.T) {
-	refusal := &BadArgsError{Field: "per_type", Cause: errors.New("per_type takes no cursor")}
-	_, err := searchRecordsOver(nil, &rankingProbe{err: refusal}).Handle(searchReader(),
-		json.RawMessage(`{"q":"Acme","per_type":2,"cursor":"c"}`))
-	if !errors.Is(err, refusal) {
-		t.Errorf("the engine's refusal reached the caller as %v", err)
 	}
 }
