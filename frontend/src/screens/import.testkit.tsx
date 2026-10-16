@@ -1,40 +1,16 @@
-// SPDX-License-Identifier: BUSL-1.1
-// SPDX-FileCopyrightText: 2026 Gradion
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  type RenderResult,
-  render as rtlRender,
-  screen,
-} from "@testing-library/react";
+import { type RenderResult, screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+import { renderWithQueryClient as render } from "../testing/queryrender";
+import { jsonResponse } from "../testing/story-utils";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 
 // The import screens' test harness: one fetch stub that records what was sent,
 // the providers every screen needs, and the wire fixtures the files share.
 
-export function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-export function render(ui: ReactNode): RenderResult {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
+export { jsonResponse, render };
 
 export const profile = {
   run_id: "019ff-run",

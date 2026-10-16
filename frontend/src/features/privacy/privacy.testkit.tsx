@@ -1,33 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  type RenderResult,
-  render as rtlRender,
-  screen,
-} from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { renderWithQueryClient as render } from "../../testing/queryrender";
+import { jsonResponse } from "../../testing/story-utils";
 
-export function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-export function render(ui: ReactNode): RenderResult {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
+export { jsonResponse, render };
 
 export const PURPOSES = {
   data: [
