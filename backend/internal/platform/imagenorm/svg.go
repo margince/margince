@@ -18,6 +18,7 @@ import (
 	"image"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/srwiley/oksvg"
@@ -66,11 +67,11 @@ var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has t
 // namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
 
-// svgUndrawnElements drop their drawing in the renderer. Inside <defs> only a
-// referenced one is refused; a <clipPath> is refused only outside <defs>.
+// svgUndrawnElements drop their drawing in the renderer; inside <defs> only a
+// referenced one is refused. A clipPath of one viewBox-sized rect loses nothing.
 var svgUndrawnElements = map[string]bool{
 	"foreignobject": true, "image": true, "filter": true, "pattern": true,
-	"mask": true, "marker": true, "symbol": true,
+	"mask": true, "marker": true, "symbol": true, "clippath": true,
 }
 
 // ErrSVGNotDrawable reports an SVG the renderer would draw blank or only partly.
@@ -83,56 +84,135 @@ var svgURLReference = regexp.MustCompile(`url\(\s*['"]?#([^)'"\s]+)`)
 // paint, clip or href names its id.
 type svgDefsElement struct{ name, id string }
 
+// lossyScan is the state of one refuseLossySVG pass.
+type lossyScan struct {
+	textDepth, defsDepth int
+	hasText              bool
+	viewBox              [4]float64
+	clip                 *svgClip
+	pending              []svgDefsElement
+	referenced           map[string]bool
+}
+
+// svgClip collects the children of the <clipPath> being read inside <defs>.
+type svgClip struct {
+	id       string
+	children []xml.StartElement
+	depth    int
+}
+
 // refuseLossySVG rejects a document the renderer would only partly draw; the
 // stored PNG would drop content with no sign to the author.
 func refuseLossySVG(src []byte) error {
 	decoder := xml.NewDecoder(bytes.NewReader(src))
 	decoder.Strict = false
-	var (
-		textDepth, defsDepth int
-		hasText              bool
-		pending              []svgDefsElement
-		referenced           = map[string]bool{}
-	)
+	scan := &lossyScan{referenced: map[string]bool{}}
 	for {
 		token, err := decoder.Token()
 		if errors.Is(err, io.EOF) {
-			return refuseAtEnd(hasText, pending, referenced)
+			return scan.verdict()
 		}
 		if err != nil {
 			return fmt.Errorf("%w: the SVG is not readable as XML: %w", ErrUnsupported, err)
 		}
 		switch t := token.(type) {
 		case xml.StartElement:
-			name := strings.ToLower(t.Name.Local)
-			noteSVGReferences(t.Attr, referenced)
-			switch {
-			case name == "defs":
-				defsDepth++
-			case svgUndrawnElements[name] && defsDepth > 0:
-				pending = append(pending, svgDefsElement{name, svgElementID(t.Attr)})
-			case svgUndrawnElements[name] || (name == "clippath" && defsDepth == 0):
-				return fmt.Errorf("%w: the SVG holds <%s>", ErrSVGNotDrawable, name)
-			case svgTextElements[name]:
-				textDepth++
+			if err := scan.start(t); err != nil {
+				return err
 			}
 		case xml.EndElement:
-			name := strings.ToLower(t.Name.Local)
-			if name == "defs" {
-				defsDepth = max(0, defsDepth-1)
-			}
-			if svgTextElements[name] {
-				textDepth = max(0, textDepth-1)
-			}
+			scan.end(strings.ToLower(t.Name.Local))
 		case xml.CharData:
-			if textDepth > 0 && len(bytes.TrimSpace(t)) > 0 {
-				hasText = true
+			if scan.textDepth > 0 && len(bytes.TrimSpace(t)) > 0 {
+				scan.hasText = true
 			}
 			for _, m := range svgURLReference.FindAllSubmatch(t, -1) {
-				referenced[string(m[1])] = true
+				scan.referenced[string(m[1])] = true
 			}
 		}
 	}
+}
+
+func (s *lossyScan) start(t xml.StartElement) error {
+	name := strings.ToLower(t.Name.Local)
+	noteSVGReferences(t.Attr, s.referenced)
+	if s.clip != nil {
+		s.clip.children = append(s.clip.children, t)
+		s.clip.depth++
+		return nil
+	}
+	switch {
+	case name == "svg" && s.viewBox == [4]float64{}:
+		s.viewBox = svgViewBox(t.Attr)
+	case name == "defs":
+		s.defsDepth++
+	case name == "clippath" && s.defsDepth > 0:
+		s.clip = &svgClip{id: svgElementID(t.Attr)}
+	case svgUndrawnElements[name] && s.defsDepth > 0:
+		s.pending = append(s.pending, svgDefsElement{name, svgElementID(t.Attr)})
+	case svgUndrawnElements[name]:
+		return fmt.Errorf("%w: the SVG holds <%s>", ErrSVGNotDrawable, name)
+	case svgTextElements[name]:
+		s.textDepth++
+	}
+	return nil
+}
+
+func (s *lossyScan) end(name string) {
+	switch {
+	case s.clip != nil && s.clip.depth > 0:
+		s.clip.depth--
+	case s.clip != nil && name == "clippath":
+		if !svgIsArtboardClip(s.clip.children, s.viewBox) {
+			s.pending = append(s.pending, svgDefsElement{"clippath", s.clip.id})
+		}
+		s.clip = nil
+	case name == "defs":
+		s.defsDepth = max(0, s.defsDepth-1)
+	case svgTextElements[name]:
+		s.textDepth = max(0, s.textDepth-1)
+	}
+}
+
+func (s *lossyScan) verdict() error {
+	return refuseAtEnd(s.hasText, s.pending, s.referenced)
+}
+
+// svgViewBox reads the root's viewBox, or the zero box when it has none.
+func svgViewBox(attrs []xml.Attr) [4]float64 {
+	var box [4]float64
+	for _, attr := range attrs {
+		if attr.Name.Local != "viewBox" {
+			continue
+		}
+		fields := strings.FieldsFunc(attr.Value, func(r rune) bool { return r == ',' || r == ' ' })
+		if len(fields) != 4 {
+			return [4]float64{}
+		}
+		for i, field := range fields {
+			value, err := strconv.ParseFloat(field, 64)
+			if err != nil {
+				return [4]float64{}
+			}
+			box[i] = value
+		}
+	}
+	return box
+}
+
+// svgIsArtboardClip reports a clip made of one rect that covers the viewBox.
+func svgIsArtboardClip(children []xml.StartElement, box [4]float64) bool {
+	if len(children) != 1 || strings.ToLower(children[0].Name.Local) != "rect" || box[2] <= 0 {
+		return false
+	}
+	rect := map[string]float64{}
+	for _, attr := range children[0].Attr {
+		if value, err := strconv.ParseFloat(attr.Value, 64); err == nil {
+			rect[attr.Name.Local] = value
+		}
+	}
+	return rect["x"] <= box[0] && rect["y"] <= box[1] &&
+		rect["x"]+rect["width"] >= box[0]+box[2] && rect["y"]+rect["height"] >= box[1]+box[3]
 }
 
 func refuseAtEnd(hasText bool, pending []svgDefsElement, referenced map[string]bool) error {
