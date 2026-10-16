@@ -3,10 +3,9 @@
 
 package gates
 
-// A TypeScript tokenizer for the gates that judge object literals in the
-// frontend. Comments, regular expressions and JSX text become no tokens, so a
-// quote inside one cannot open a string, and a template literal is one token.
-// JSX expression containers keep their braces and their tokens.
+// A TypeScript tokenizer for the gates that read the frontend's object
+// literals. A quote in a comment, a regular expression or JSX text opens no
+// string. Out of scope: a template's substitutions, and JSON inside a string.
 
 import (
 	"errors"

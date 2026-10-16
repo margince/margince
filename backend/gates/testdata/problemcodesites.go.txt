@@ -98,3 +98,23 @@ func asValue() func(string) error {
 }
 
 func valueHelper(code string) error { return &httperr.DetailedError{Code: code} }
+
+func multiValue() (error, error) {
+	refusal := &httperr.DetailedError{}
+	var err error
+	refusal.Code, err = codeAndErr()
+	return refusal, err
+}
+
+func codeAndErr() (string, error) { return "planted_unread", nil }
+
+type holder struct{ refusal *httperr.DetailedError }
+
+func nested(h holder) { h.refusal.Code = "planted_nested" }
+
+type repeated string
+
+const (
+	repeatedFirst repeated = "planted_repeated"
+	repeatedSecond
+)

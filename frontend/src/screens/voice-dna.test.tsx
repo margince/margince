@@ -540,7 +540,8 @@ describe("a build that fails", () => {
       jsonResponse(
         {
           code: "validation_error",
-          detail: "The writing sample is too short to build from.",
+          detail: "at least 800 eligible own-authored words are required",
+          details: { errors: [{ field: "corpus", code: "invalid" }] },
         },
         422,
       ),
@@ -549,7 +550,9 @@ describe("a build that fails", () => {
     await pressRebuild();
 
     expect(
-      await screen.findByText("The writing sample is too short to build from."),
+      await screen.findByText(
+        "at least 800 eligible own-authored words are required",
+      ),
     ).toBeTruthy();
   });
 });

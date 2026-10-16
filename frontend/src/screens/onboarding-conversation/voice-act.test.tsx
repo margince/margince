@@ -763,14 +763,14 @@ describe("the conversational voice act", () => {
         status: 422,
         body: {
           code: "validation_error",
-          detail: "The writing sample is too short to build a voice from.",
+          detail: "at least 800 eligible own-authored words are required",
           details: {
             errors: [
               {
                 field: "corpus",
                 code: "invalid",
                 message:
-                  "The writing sample is too short to build a voice from.",
+                  "at least 800 eligible own-authored words are required",
               },
             ],
           },
@@ -786,7 +786,7 @@ describe("the conversational voice act", () => {
 
     expect(
       await screen.findByText(
-        "The writing sample is too short to build a voice from.",
+        "at least 800 eligible own-authored words are required",
       ),
     ).toBeTruthy();
   });

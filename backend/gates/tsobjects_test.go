@@ -3,9 +3,8 @@
 
 package gates
 
-// Bracket structure over a TypeScript token stream, and the entries of a
-// brace read as an object literal. A block or a type literal reads as one
-// too, and matches `key: value` only where it holds that shape.
+// Bracket structure over a TypeScript token stream. A block or a type literal
+// reads as an object too, and matches `key: value` only where it holds one.
 
 import "fmt"
 
