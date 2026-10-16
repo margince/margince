@@ -60,8 +60,7 @@ type FilterVocabulary interface {
 }
 
 // listRecordTypes is the enumeration vocabulary, in schema order. A type here
-// has a contract list operation and a store behind the seam. An untyped sweep
-// still leaves activity out; a list names it, as GET /activities does.
+// has a contract list operation and a store behind the seam.
 var listRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityLead), string(datasource.EntityProject),
