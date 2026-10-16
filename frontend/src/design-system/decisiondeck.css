@@ -13,7 +13,7 @@
  * The reduced-motion answer is at the FOOT of this file, after every rule it has
  * to beat. A media query adds no specificity, so document order settles the tie
  * — and a reduce block written above the rule it removes is a promise that reads
- * as kept and is not (design-system/conformance.test.ts holds this).
+ * as kept and is not (design-system/conformance.behaviour.test.ts holds this).
  */
 
 .ddeck {
