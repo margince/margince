@@ -27,10 +27,10 @@ export type SearchResult = Readonly<{ value: string; label: string }>;
  * short enough that the list arrives while the reader is still looking at the
  * box.
  *
- * The same rhythm as the list search (listquery.tsx's SEARCH_DEBOUNCE_MS),
- * kept as a sibling rather than imported: that one is a screen-binding concern
- * and this is a design-system one, so the number is the contract and not the
- * module.
+ * The same rhythm as the list search (`SEARCH_DEBOUNCE_MS` in
+ * listqueryparams.ts). It is a sibling copy, not an import: that one belongs to
+ * screen binding and this one to the design system. The number is the
+ * contract, and the module is not.
  */
 export const SEARCH_DEBOUNCE_MS = 250;
 

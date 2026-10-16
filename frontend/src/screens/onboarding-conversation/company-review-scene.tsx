@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { StageActions } from "../../design-system/onboarding-stage";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -14,6 +15,7 @@ import { DecisionScene } from "./decision-scene";
 import { ProfileDigest } from "./profile-digest";
 import type { DeckCard } from "./review-deck";
 import { ReviewDeck } from "./review-deck";
+import { SaveRefusalLine } from "./save-refusal-line";
 import { WayOnward } from "./way-onward";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
@@ -76,7 +78,7 @@ type ConfirmControl = Readonly<{
   held: boolean;
 }>;
 
-type ReviewSceneProps = Readonly<{
+export type ReviewSceneProps = Readonly<{
   mode: ArtifactMode;
   onSwitchMode: (mode: ArtifactMode) => void;
   onReadWhole: () => void;
@@ -141,6 +143,7 @@ function DeckScene({
   onReadWhole,
   goToField,
   identity,
+  error,
 }: SceneWithIdentity) {
   return (
     <ReviewDeck
@@ -163,6 +166,7 @@ function DeckScene({
         />
       )}
       pending={confirm.pending}
+      refusal={error}
       goTo={goToField ?? undefined}
     />
   );
@@ -179,6 +183,7 @@ function WholeRecordScene({
   onSwitchMode,
   draft,
   confirm,
+  error,
 }: SceneWithIdentity) {
   const t = useT();
   const plural = usePlural();
@@ -204,6 +209,11 @@ function WholeRecordScene({
       <Button variant="ghost" onClick={() => onSwitchMode("record")}>
         {t("ob.digest.pickFacts")}
       </Button>
+      {/* Its own fill of the stage foot, mounted in both states so the first
+          edit does not remount the alert and announce it again. */}
+      <StageActions>
+        <SaveRefusalLine message={error} />
+      </StageActions>
       {/* One Save for every corrected line, shown once one is: an untouched
           record already has the deck's Confirm. */}
       {draft.edited.size > 0 && (

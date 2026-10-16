@@ -349,11 +349,11 @@ describe("ContactsScreen — rich create (P-15)", () => {
     expect(screen.getByText("Add phone")).toBeTruthy();
   });
 
-  // Regression: the email/phone "Type" select's options are keyed messages
-  // (field.emailWork/…) resolved by contactCreateFields via useT() — the
+  // The email/phone "Type" select's options are keyed messages
+  // (field.emailWork/…) that contactCreateFields resolves via useT(). The
   // rendered option text must be the translated word, never the raw
-  // MessageKey string (fieldControl in create.tsx renders option.label
-  // verbatim, so an untranslated key would leak straight to the DOM).
+  // MessageKey. fieldControl in create.controls.tsx renders option.label as
+  // given, so an untranslated key would reach the DOM.
   it("shows translated Type option text, not the raw i18n key", async () => {
     const user = userEvent.setup();
     stubFetch(async () => emptyPage());
