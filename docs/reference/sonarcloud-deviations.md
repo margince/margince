@@ -59,7 +59,7 @@ not extra. On a screen up to `720px` across, `listtable.css` sets `display: bloc
 removes the ARIA roles a table has by default. The roles written out keep a
 phone list a table for a screen reader.
 
-The CSS says so where it does it, and `listtable.test.tsx` reads the rows and
+The CSS says so where it does it, and `listtable.surface.test.tsx` reads the rows and
 cells back by role. Removing the roles
 would break the phone table; the tests would stay green only if the roles were
 removed from them too.
