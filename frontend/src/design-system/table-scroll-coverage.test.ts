@@ -50,12 +50,11 @@ const srcRoot = join(dsDir, "..");
 // design system's largest file would have escaped. An exemption nobody needs is
 // a hole nobody is watching.
 //
-// `listtable.tsx` genuinely cannot pass: its `.lt-scroll` box is not a
-// `TableScroll` element, it is a div that calls `useScrollRegion` — the same
-// hook TableScroll calls, so the tab stop and the announced name are the same
-// behaviour rather than a second derivation of it. That is the reason it is
+// `listgrid.tsx` cannot pass. Its `.lt-scroll` box is a plain div that calls
+// `useScrollRegion`, the same hook TableScroll calls. So the tab stop and the
+// announced name are the same behaviour, not a second derivation of it. That is the reason it is
 // sanctioned, and it is why this is a NAMED file and not a pattern.
-const THE_BOX_ITSELF = ["design-system/listtable.tsx"];
+const THE_BOX_ITSELF = ["design-system/listgrid.tsx"];
 
 /** The names of JSX elements enclosing `node`, innermost first. */
 function ancestorElements(node: ts.Node): string[] {
