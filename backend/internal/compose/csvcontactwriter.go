@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -197,8 +196,8 @@ func contactCandidateOf(fields map[string]string, consumerMail *freemail.Matcher
 func (w *csvWriters) leadEmailHeld(ctx context.Context, email string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		holder, found, err := storekit.LiveLeadByEmail(ctx, tx, email, nil)
-		held = found && !slices.Contains(except, holder.UUID)
+		var err error
+		held, err = storekit.LiveLeadEmailHeldOutside(ctx, tx, email, except)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", email, err)

@@ -484,3 +484,23 @@ func TestALaterRowTakesTheKeyAnUpdateFrees(t *testing.T) {
 		})
 	}
 }
+
+// Two leads can hold one LinkedIn URL, since an update moves one onto a lead
+// unchecked. Freeing it from one leaves it held by the other.
+func TestAKeyAnUpdateFreesStaysHeldByItsOtherHolder(t *testing.T) {
+	const url = "https://www.linkedin.com/in/grace"
+	e := setupImportApp(t)
+	run := map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "LinkedIn": "linkedin_url"},
+		"source_key": "Full Name",
+	}
+	previewThenCommit(t, e, "lead", "Full Name,LinkedIn\nGrace Hopper,"+url+"\nAda Lovelace,\n", run)
+	previewThenCommit(t, e, "lead", "Full Name,LinkedIn\nAda Lovelace,"+url+"\n", run)
+	file := "Full Name,LinkedIn\nGrace Hopper,https://www.linkedin.com/in/grace-hopper\nLinus Torvalds," + url + "\n"
+
+	preview, final := previewThenCommit(t, e, "lead", file, run)
+
+	want := dispositionOf(0, 0, 1, 0)
+	want.Updated = 1
+	assertPreviewIsTheCommit(t, preview, final, want)
+}

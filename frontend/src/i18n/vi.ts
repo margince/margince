@@ -5966,7 +5966,7 @@ export const vi = {
   "import.reason.contact_duplicate_skipped":
     "Đã có liên hệ khớp với hàng này trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
   "import.reason.contact_email_held":
-    "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+    "Một liên hệ khác đã dùng địa chỉ email này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể tạo liên hệ thứ hai với nó.",
   "import.reason.contact_unnamed":
     "Hàng không có tên lẫn email nên không xác định được liên hệ nào.",
   "import.reason.currency_unset":
@@ -5974,7 +5974,7 @@ export const vi = {
   "import.reason.description_too_long":
     "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
   "import.reason.domain_held":
-    "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
+    "Một công ty khác đã dùng tên miền này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể tạo công ty thứ hai với nó.",
   "import.reason.duplicate_email":
     "Địa chỉ email này đã thuộc về một liên hệ khác.",
   "import.reason.employer_column_empty":
@@ -5995,7 +5995,7 @@ export const vi = {
   "import.reason.id_on_non_company":
     "Chỉ hàng công ty mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
   "import.reason.lead_email_held":
-    "Địa chỉ email này đã thuộc về một lead trong CRM nên hàng không thể gán nó cho lead thứ hai.",
+    "Một lead khác đã dùng địa chỉ email này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể gán nó cho lead thứ hai.",
   "import.reason.link_ambiguous":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
   "import.reason.link_ambiguous_dropped":
@@ -6005,7 +6005,7 @@ export const vi = {
   "import.reason.link_not_found_dropped":
     "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
   "import.reason.linkedin_held":
-    "URL LinkedIn này đã thuộc về một bản ghi khác trong CRM nên hàng không thể dùng nó.",
+    "Một bản ghi khác đã dùng URL LinkedIn này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể dùng nó.",
   "import.reason.natural_key_taken": "Đã có một bản ghi dùng khóa này.",
   "import.reason.not_a_date":
     "“{value}” không phải ngày. Hãy viết dạng YYYY-MM-DD.",

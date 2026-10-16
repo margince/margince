@@ -87,3 +87,35 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 	}
 	return id, true, nil
 }
+
+// LiveLeadEmailHeldOutside asks whether any live lead outside except holds the
+// address. LiveLeadByEmail cannot: with duplicates, its earliest holder may be
+// one the caller is about to release.
+func LiveLeadEmailHeldOutside(ctx context.Context, tx pgx.Tx, email string, except []ids.UUID) (bool, error) {
+	if email == "" {
+		return false, nil
+	}
+	return liveLeadHeldOutside(ctx, tx, `email = lower($1)`, email, except, "email")
+}
+
+// LiveLeadLinkedInHeldOutside is LiveLeadEmailHeldOutside for a profile URL,
+// normalized by the caller as LiveLeadByLinkedInURL's is.
+func LiveLeadLinkedInHeldOutside(ctx context.Context, tx pgx.Tx, normalizedURL string, except []ids.UUID) (bool, error) {
+	if normalizedURL == "" {
+		return false, nil
+	}
+	return liveLeadHeldOutside(ctx, tx, `linkedin_url = $1`, normalizedURL, except, "linkedin_url")
+}
+
+// liveLeadHeldOutside takes its predicate from the wrappers, as liveLeadBy does.
+func liveLeadHeldOutside(ctx context.Context, tx pgx.Tx, predicate, value string, except []ids.UUID, lane string) (bool, error) {
+	var held bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM lead
+		                WHERE `+predicate+` AND archived_at IS NULL
+		                  AND ($2::uuid[] IS NULL OR id <> ALL($2)))`, value, except).Scan(&held)
+	if err != nil {
+		return false, fmt.Errorf("probe lead %s holders: %w", lane, err)
+	}
+	return held, nil
+}

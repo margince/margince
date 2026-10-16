@@ -131,9 +131,9 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Hàng không có tên lẫn email nên không xác định được liên hệ nào.",
 	}},
 	ReasonContactEmailHeld: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
-		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
-		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+		textlang.English:    "Another contact already has this email address, in the CRM or in an earlier row of this file, so the row cannot create a second contact under it.",
+		textlang.German:     "Ein anderer Kontakt hat diese E-Mail-Adresse bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
+		textlang.Vietnamese: "Một liên hệ khác đã dùng địa chỉ email này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể tạo liên hệ thứ hai với nó.",
 	}},
 	ReasonCompanyNameEmpty: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The mapped display_name is empty, so the row names no company.",
@@ -141,19 +141,19 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Tên hiển thị đã ánh xạ để trống nên hàng không xác định được công ty nào.",
 	}},
 	ReasonDomainHeld: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
-		textlang.German:     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
-		textlang.Vietnamese: "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
+		textlang.English:    "Another company already has this domain, in the CRM or in an earlier row of this file, so the row cannot create a second company under it.",
+		textlang.German:     "Ein anderes Unternehmen hat diese Domain bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
+		textlang.Vietnamese: "Một công ty khác đã dùng tên miền này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể tạo công ty thứ hai với nó.",
 	}},
 	ReasonLinkedinHeld: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
-		textlang.German:     "Diese LinkedIn-URL gehört im CRM bereits einem anderen Datensatz, daher kann die Zeile sie nicht beanspruchen.",
-		textlang.Vietnamese: "URL LinkedIn này đã thuộc về một bản ghi khác trong CRM nên hàng không thể dùng nó.",
+		textlang.English:    "Another record already has this LinkedIn URL, in the CRM or in an earlier row of this file, so the row cannot claim it.",
+		textlang.German:     "Ein anderer Datensatz hat diese LinkedIn-URL bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile sie nicht beanspruchen.",
+		textlang.Vietnamese: "Một bản ghi khác đã dùng URL LinkedIn này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể dùng nó.",
 	}},
 	ReasonLeadEmailHeld: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This email address is already held by a lead in the CRM, so the row cannot give it to a second lead.",
-		textlang.German:     "Diese E-Mail-Adresse gehört im CRM bereits einem Lead, daher kann die Zeile sie keinem zweiten Lead geben.",
-		textlang.Vietnamese: "Địa chỉ email này đã thuộc về một lead trong CRM nên hàng không thể gán nó cho lead thứ hai.",
+		textlang.English:    "Another lead already has this email address, in the CRM or in an earlier row of this file, so the row cannot give it to a second lead.",
+		textlang.German:     "Ein anderer Lead hat diese E-Mail-Adresse bereits, im CRM oder in einer früheren Zeile dieser Datei, daher kann die Zeile sie keinem zweiten Lead geben.",
+		textlang.Vietnamese: "Một lead khác đã dùng địa chỉ email này, trong CRM hoặc ở một hàng trước đó của tệp, nên hàng không thể gán nó cho lead thứ hai.",
 	}},
 	ReasonRecordArchived: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This row’s record was archived, so it is not updated. Restore the record to update it.",

@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -104,13 +103,13 @@ func (w *csvWriters) companyLinkedInHeld(ctx context.Context, url string, except
 	return held, nil
 }
 
-// leadLinkedInHeld is the lead store's own probe, asked before a create, of
-// a live lead outside except.
+// leadLinkedInHeld asks before a create whether a live lead outside except
+// holds the URL, which the lead store would refuse.
 func (w *csvWriters) leadLinkedInHeld(ctx context.Context, url string, except []ids.UUID) (bool, error) {
 	var held bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		holder, found, err := storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
-		held = found && !slices.Contains(except, holder.UUID)
+		var err error
+		held, err = storekit.LiveLeadLinkedInHeldOutside(ctx, tx, url, except)
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
