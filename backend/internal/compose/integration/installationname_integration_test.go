@@ -140,20 +140,22 @@ func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	agent := apptest.PassportBearer(t, e, "renaming agent", "read", "write")
 
-	var refused companyProblem
-	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
-		AnyMap{"display_name": "Agent Picked Ltd"}, agent, &refused); status != http.StatusUnprocessableEntity {
-		t.Fatalf("an agent's PATCH /v1/companies/{anchor} = %d, want 422", status)
+	for door, body := range map[string]AnyMap{
+		"/v1/companies/" + anchor:                                  {"display_name": "Agent Picked Ltd"},
+		"/v1/companies/" + anchor + "/profile-fields/display_name": {"value": "Agent Picked Ltd"},
+	} {
+		var refused companyProblem
+		if status := e.Call(t, http.MethodPatch, door, body, agent, &refused); status != http.StatusUnprocessableEntity {
+			t.Fatalf("an agent's PATCH %s = %d, want 422", door, status)
+		}
+		wantNameFault(t, refused, "anchor_protected")
 	}
-	wantNameFault(t, refused, "anchor_protected")
-	var inbox struct {
-		Data []struct{} `json:"data"`
+	var staged int
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatalf("counting approvals: %v", err)
 	}
-	if status := e.Call(t, http.MethodGet, "/v1/approvals?status=pending", nil, nil, &inbox); status != http.StatusOK {
-		t.Fatalf("GET /v1/approvals = %d, want 200", status)
-	}
-	if len(inbox.Data) != 0 {
-		t.Errorf("the refused rename staged %d approvals, want none", len(inbox.Data))
+	if staged != 0 {
+		t.Errorf("the refused renames staged %d approvals, want none", staged)
 	}
 	if got := anchorName(t, e, anchor); got != "Profile Name AG" {
 		t.Errorf("the refused rename left the anchor named %q, want %q", got, "Profile Name AG")
