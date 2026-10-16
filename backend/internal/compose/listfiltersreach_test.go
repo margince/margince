@@ -61,9 +61,9 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 	}
 }
 
-// The timeline is listed by name, as GET /activities lists it, and searched
-// only by name: search_records leaves activity out when no type is named.
-func TestTheTimelineIsListedAndSearchedOnlyByName(t *testing.T) {
+// Both record tools offer the timeline by name, as GET /activities and
+// GET /v1/search do.
+func TestListRecordsAndSearchRecordsBothOfferTheTimelineByName(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	list, listed := registry.Spec("list_records")
 	search, searched := registry.Spec("search_records")
