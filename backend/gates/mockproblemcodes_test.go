@@ -93,7 +93,8 @@ func TestEveryProblemMockAnswersACodeTheServerSends(t *testing.T) {
 func judgeProblemMock(mock problemMock, known map[string]bool, statusCodes map[int][]string) (string, bool) {
 	at := fmt.Sprintf("%s:%d", mock.path, mock.line)
 	if mock.computed {
-		return fmt.Sprintf("%s: a Problem mock builds its code at run time, so no check can read it; spell the code", at), true
+		return fmt.Sprintf("%s: this scan cannot follow the Problem mock's code to a literal (a call, a row spread "+
+			"in, an imported table or constant); write the code or its table's rows inline in this file", at), true
 	}
 	if known[mock.code] {
 		return "", false
