@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -23,5 +24,8 @@ func TestResolveLogoSkipsAnSVGWhoseWordsAreLiveTextForTheNextCandidate(t *testin
 	})
 	if logo.SourceURL != "https://acme.example/favicon.ico" {
 		t.Fatalf("chose %q, want the well-known favicon after the text SVG was skipped; attempts %+v", logo.SourceURL, attempts)
+	}
+	if len(attempts) == 0 || !strings.Contains(attempts[0].Outcome, "live text") {
+		t.Fatalf("the SVG's drop reason = %+v, want it to name the live text", attempts)
 	}
 }

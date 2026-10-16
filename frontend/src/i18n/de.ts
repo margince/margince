@@ -10289,7 +10289,7 @@ export const de = {
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
   "settings.companyMarkSvgText":
-    "Diese SVG-Datei enthält Live-Text, der sich nicht darstellen lässt. Wandle den Text in deinem Design-Tool in Umrisse um, oder lade eine PNG-Datei hoch.",
+    "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
   "settings.companyMarkAddWide": "Breites Logo hinzufügen",
   "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",

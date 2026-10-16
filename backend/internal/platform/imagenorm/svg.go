@@ -61,9 +61,50 @@ func looksLikeSVG(src []byte) bool {
 // for. It wraps ErrUnsupported so a candidate chain still skips the file.
 var ErrSVGTextNotOutlined = fmt.Errorf("%w: the SVG draws live text, which has to be converted to outlines", ErrUnsupported)
 
-// svgTextElements are the elements that put glyphs on the canvas. Names are
-// matched without their namespace prefix, so svg:text counts too.
+// svgTextElements put glyphs on the canvas. Names are matched without their
+// namespace prefix, so svg:text counts too.
 var svgTextElements = map[string]bool{"text": true, "tspan": true, "textpath": true}
+
+// svgUndrawnElements carry content the renderer silently skips, so a document
+// holding one would lose part of what its author drew.
+var svgUndrawnElements = map[string]bool{"foreignobject": true, "image": true}
+
+// ErrSVGBlank reports an SVG that rasterized to nothing visible.
+var ErrSVGBlank = fmt.Errorf("%w: the SVG draws nothing the renderer can show", ErrUnsupported)
+
+// refuseLossySVG rejects a document whose drawing the renderer would only
+// partly keep: live text, or elements it skips. Storing the result would drop
+// content with no sign to the author. Text holding only whitespace draws nothing
+// and is left alone.
+func refuseLossySVG(src []byte) error {
+	decoder := xml.NewDecoder(bytes.NewReader(src))
+	decoder.Strict = false
+	textDepth := 0
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil // refuseUnsafeSVG has already vetted readability
+		}
+		switch t := token.(type) {
+		case xml.StartElement:
+			name := strings.ToLower(t.Name.Local)
+			if svgUndrawnElements[name] {
+				return fmt.Errorf("%w: the SVG holds <%s>, which the renderer does not draw", ErrUnsupported, name)
+			}
+			if svgTextElements[name] {
+				textDepth++
+			}
+		case xml.EndElement:
+			if svgTextElements[strings.ToLower(t.Name.Local)] {
+				textDepth = max(0, textDepth-1)
+			}
+		case xml.CharData:
+			if textDepth > 0 && len(bytes.TrimSpace(t)) > 0 {
+				return ErrSVGTextNotOutlined
+			}
+		}
+	}
+}
 
 // svgMaxElements bounds how much document the rasterizer is asked to draw. A
 // company's mark is tens of shapes; a file with tens of thousands is not a
@@ -78,6 +119,9 @@ const svgMaxElements = 20_000
 // to the next one.
 func rasterizeSVG(src []byte) (image.Image, error) {
 	if err := refuseUnsafeSVG(src); err != nil {
+		return nil, err
+	}
+	if err := refuseLossySVG(src); err != nil {
 		return nil, err
 	}
 	icon, err := oksvg.ReadIconStream(bytes.NewReader(src), oksvg.WarnErrorMode)
@@ -106,6 +150,11 @@ func rasterizeSVG(src []byte) (image.Image, error) {
 	canvas := image.NewNRGBA(target)
 	scanner := rasterx.NewScannerGV(target.Dx(), target.Dy(), canvas, target)
 	icon.Draw(rasterx.NewDasher(target.Dx(), target.Dy(), scanner), 1)
+	// Only SVG is held to this: Decode also reads stored PNGs, and a blank one
+	// must still reach TrimTransparentPNG unchanged.
+	if _, painted := paintedBounds(canvas); !painted {
+		return nil, ErrSVGBlank
+	}
 	return canvas, nil
 }
 
@@ -139,15 +188,8 @@ func refuseUnsafeSVG(src []byte) error {
 		if elements > svgMaxElements {
 			return fmt.Errorf("%w: the SVG carries more than %d elements", ErrUnsupported, svgMaxElements)
 		}
-		start, ok := token.(xml.StartElement)
-		if !ok {
-			continue
-		}
-		switch name := strings.ToLower(start.Name.Local); {
-		case name == "use":
+		if start, ok := token.(xml.StartElement); ok && strings.EqualFold(start.Name.Local, "use") {
 			return fmt.Errorf("%w: the SVG references other elements with <use>", ErrUnsupported)
-		case svgTextElements[name]:
-			return ErrSVGTextNotOutlined
 		}
 	}
 }

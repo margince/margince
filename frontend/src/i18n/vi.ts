@@ -10038,7 +10038,7 @@ export const vi = {
     "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
   "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
   "settings.companyMarkSvgText":
-    "Tệp SVG này có chữ dạng văn bản, không thể vẽ được. Hãy chuyển chữ thành outline bằng công cụ thiết kế, hoặc tải lên tệp PNG.",
+    "Tệp SVG này chứa chữ chưa chuyển thành đường nét nên không thể hiển thị. Chuyển chữ thành đường nét (outline) trong công cụ thiết kế, hoặc tải lên tệp PNG.",
   "settings.companyMarkAddWide": "Thêm logo rộng",
   "settings.companyMarkReplaceWide": "Thay logo rộng",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",

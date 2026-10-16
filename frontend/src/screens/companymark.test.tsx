@@ -368,7 +368,7 @@ it("tells the admin to outline the text when an SVG draws its words as text", as
   const alert = await screen.findByRole("alert");
   expect(
     within(alert).getByText(
-      "This SVG has live text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
+      "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
     ),
   ).toBeTruthy();
   expect(within(alert).queryByText(/cannot render/)).toBeNull();

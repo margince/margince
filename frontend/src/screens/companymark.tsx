@@ -185,8 +185,7 @@ function useMarkWrites(
 
 type MarkRefusalState = NonNullable<MarkWrites["refusal"]>;
 
-// The server's sentence is for an API reader: lowercase, and a list of formats
-// with nothing to do. These codes get a sentence that says what to do.
+// The server's sentence is for an API reader; these codes get the reader's language.
 const REFUSAL_COPY = new Map<string, MessageKey>([
   ["unsupported_media_type", "settings.companyMarkUnsupported"],
   ["body_too_large", "settings.companyMarkTooLarge"],
