@@ -21,7 +21,6 @@
 1086 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1037 frontend/src/features/worklist/worklist.test.tsx
 1100 frontend/src/features/contacts/contactpage.test.tsx
-1059 frontend/src/design-system/listsurface.tsx
 1133 frontend/src/screens/companyrail.test.tsx
 1134 frontend/src/screens/record360/spine.test.tsx
 1104 frontend/src/design-system/conformance.test.ts

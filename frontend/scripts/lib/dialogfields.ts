@@ -29,6 +29,7 @@ export const FIELD_ROWS = new Map([
 export const NOT_ROWS = new Map([
   ["InlineText", "edits a value in place, its label hidden"],
   ["ChipValueList", "picks a list filter's values"],
+  ["Toolbar", "a list's search box, a label around its input in the toolbar"],
 ]);
 const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
 export const keyIs = (n: ts.Node, key: string) => {
