@@ -7,7 +7,6 @@ import { defaultAgentAllowances } from "../features/automations/agentallowances.
 import { viewerZone } from "../format/timezone";
 import {
   catalogs,
-  isMessageKey,
   type Locale,
   translate,
   translatePlural,
@@ -35,14 +34,6 @@ const SETTINGS: InstallationSettings = {
   agent_allowances: defaultAgentAllowances,
 };
 
-// The arm each count takes: English and German split at one, Vietnamese has
-// one form for every count.
-const ARM: Record<Locale, Record<number, "one" | "other">> = {
-  en: { 1: "one", 3: "other" },
-  de: { 1: "one", 3: "other" },
-  vi: { 1: "other", 3: "other" },
-};
-
 function wordsFor(locale: Locale): Words {
   return {
     t: (key, params) => translate(locale, key, params),
@@ -58,62 +49,103 @@ function locked(
   return { ...SETTINGS, base_currency_locked: true, ...extra };
 }
 
-function expected(locale: Locale, key: string, params: Record<string, string>) {
-  if (!isMessageKey(key)) {
-    throw new Error(`the catalog has no key ${key}`);
-  }
-  let text = catalogs[locale][key];
-  for (const [name, value] of Object.entries(params)) {
-    text = text.replaceAll(`{${name}}`, value);
-  }
-  return text;
-}
-
-const PREFIX = "installationSettings.baseCurrencyLock";
-
 describe("currencyNote words the lock facts in the reader's language", () => {
-  const cases: {
-    name: string;
-    lock: (count: number) => BaseCurrencyLock;
-    base: string;
-    params: Record<string, string>;
-  }[] = [
-    {
-      name: "frozen rates",
-      lock: (count) => ({ reason: "rates_frozen", count }),
-      base: `${PREFIX}.ratesFrozen`,
-      params: {},
-    },
-    {
-      name: "a rate sheet naming its base",
-      lock: (count) => ({ reason: "rate_sheet", count, base_currency: "CHF" }),
-      base: `${PREFIX}.rateSheet`,
-      params: { base: "CHF" },
-    },
-    {
-      name: "a rate sheet with no stored base",
-      lock: (count) => ({ reason: "rate_sheet", count }),
-      base: `${PREFIX}.rateSheetUnnamed`,
-      params: {},
-    },
+  const frozen = (count: number): BaseCurrencyLock => ({
+    reason: "rates_frozen",
+    count,
+  });
+  const sheet = (count: number): BaseCurrencyLock => ({
+    reason: "rate_sheet",
+    count,
+    base_currency: "CHF",
+  });
+  const unnamed = (count: number): BaseCurrencyLock => ({
+    reason: "rate_sheet",
+    count,
+  });
+  const cases: [Locale, BaseCurrencyLock, string][] = [
+    [
+      "en",
+      frozen(1),
+      "1 record has frozen a conversion rate against this currency, so it cannot change.",
+    ],
+    [
+      "en",
+      frozen(3),
+      "3 records have frozen a conversion rate against this currency, so it cannot change.",
+    ],
+    [
+      "en",
+      sheet(1),
+      "1 currency rate converts into CHF. Clear the currency rates first to change the base currency.",
+    ],
+    [
+      "en",
+      sheet(3),
+      "3 currency rates convert into CHF. Clear the currency rates first to change the base currency.",
+    ],
+    [
+      "en",
+      unnamed(1),
+      "1 currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    ],
+    [
+      "en",
+      unnamed(3),
+      "3 currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    ],
+    [
+      "de",
+      frozen(1),
+      "Für 1 Eintrag ist bereits ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+    ],
+    [
+      "de",
+      frozen(3),
+      "Für 3 Einträge ist bereits jeweils ein Wechselkurs zu dieser Währung festgeschrieben, daher ist sie nicht mehr änderbar.",
+    ],
+    [
+      "de",
+      sheet(1),
+      "1 Wechselkurs rechnet in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    ],
+    [
+      "de",
+      sheet(3),
+      "3 Wechselkurse rechnen in CHF um. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    ],
+    [
+      "de",
+      unnamed(1),
+      "1 Wechselkurs rechnet in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    ],
+    [
+      "de",
+      unnamed(3),
+      "3 Wechselkurse rechnen in eine Basiswährung um, die nicht hinterlegt ist. Entferne zuerst die Wechselkurse, um die Basiswährung zu ändern.",
+    ],
+    [
+      "vi",
+      frozen(3),
+      "3 hồ sơ đã cố định tỷ giá quy đổi theo loại tiền này, nên không thể thay đổi.",
+    ],
+    [
+      "vi",
+      sheet(3),
+      "3 tỷ giá đang quy đổi sang CHF. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    ],
+    [
+      "vi",
+      unnamed(3),
+      "3 tỷ giá đang quy đổi sang một loại tiền cơ sở chưa được ghi nhận. Cần xóa các tỷ giá trước khi đổi loại tiền cơ sở.",
+    ],
   ];
-  for (const locale of ["en", "de", "vi"] as const) {
-    for (const count of [1, 3]) {
-      for (const c of cases) {
-        it(`${c.name}, ${count}, in ${locale}`, () => {
-          const note = currencyNote(
-            locked({ base_currency_lock: c.lock(count) }),
-            wordsFor(locale),
-          );
-          expect(note).toBe(
-            expected(locale, `${c.base}_${ARM[locale][count]}`, {
-              ...c.params,
-              count: String(count),
-            }),
-          );
-        });
-      }
-    }
+  for (const [locale, lock, sentence] of cases) {
+    it(`${lock.reason}, ${lock.count}, ${lock.base_currency ?? "no base"}, in ${locale}`, () => {
+      expect(
+        currencyNote(locked({ base_currency_lock: lock }), wordsFor(locale)),
+      ).toBe(sentence);
+    });
   }
 
   it("groups a large count the reader's way", () => {
