@@ -12,6 +12,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { describedByIds } from "../design-system/describedby";
 import { Heading } from "../design-system/heading";
 import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -411,11 +412,10 @@ function ExcludeDialog({
                     : t("captureExclusions.placeholder.domain")
                 }
                 disabled={refused}
-                aria-describedby={
-                  [control["aria-describedby"], refused ? denialId : null]
-                    .filter(Boolean)
-                    .join(" ") || undefined
-                }
+                aria-describedby={describedByIds(
+                  control["aria-describedby"],
+                  refused && denialId,
+                )}
                 onChange={(event) => setDraft(event.target.value)}
               />
             )}

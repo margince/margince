@@ -43,7 +43,7 @@ caller that drops the closure still has no stop, and the tests catch that.
 
 ## The accessibility rules, on a table and two menus that are already correct
 
-14 findings in `frontend/src/design-system/`, `frontend/src/app/account.tsx`
+14 findings in `frontend/src/design-system/`, `frontend/src/app/accounttheme.tsx`
 and `frontend/src/app/agentrail.tsx`: `typescript:S6825`, `S6843`, `S6845`, `S6848`
 and `S6852`. They stay open together because they are one error made five
 ways. Each rule states a default that the code leaves for a reason WCAG itself

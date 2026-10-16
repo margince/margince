@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -83,6 +83,7 @@ export function MailSharingCard() {
   const canManage = useCanWrite("capture_settings", "update");
   const query = useCaptureSettings();
   const sync = useUpdateCaptureSettings();
+  const syncRefusalId = useId();
   const queryClient = useQueryClient();
   // null = no unsaved change; the switch renders the stored posture.
   const [pending, setPending] = useState<boolean | null>(null);
@@ -122,7 +123,7 @@ export function MailSharingCard() {
   });
 
   const notAdmin = canManage ? undefined : t("captureSettings.adminOnly");
-
+  const syncRefused = sync.isError ? syncRefusalId : undefined;
   return (
     <Panel title={t("mailSharing.cardTitle")}>
       <QueryGate query={query} pendingLabel={t("mailSharing.cardTitle")}>
@@ -212,6 +213,7 @@ export function MailSharingCard() {
                   refusal={t("captureMailSync.interval.refusal")}
                   disabled={!canManage || sync.isPending}
                   reason={notAdmin}
+                  describedBy={syncRefused}
                   onCommit={(next) =>
                     sync.mutate({ mail_sync_interval_seconds: next })
                   }
@@ -246,7 +248,11 @@ export function MailSharingCard() {
       <PanelNotices
         refused={
           sync.isError
-            ? { title: t("captureSettings.updateFailed"), error: sync.error }
+            ? {
+                title: t("captureSettings.updateFailed"),
+                error: sync.error,
+                id: syncRefusalId,
+              }
             : undefined
         }
       />

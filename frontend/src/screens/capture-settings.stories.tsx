@@ -2,20 +2,27 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  permissionDenied,
   StoryProviders,
 } from "../testing/story-utils";
 import { CaptureSettingsCard } from "./capture-settings";
 
 // The denied fixture holds `capture_settings` read without update: `meRoute({})`
 // is an admin with no object grants, which draws a different card.
-function story(auto_enrich: boolean, allow: Parameters<typeof meRoute>[0]) {
+function story(
+  auto_enrich: boolean,
+  allow: Parameters<typeof meRoute>[0],
+  refuseWrites = false,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
+      ...(refuseWrites && { "PATCH /capture/settings": permissionDenied }),
       "GET /capture/settings": () =>
         jsonResponse({
           auto_enrich,
@@ -72,4 +79,28 @@ export const EnrichOnPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(true, MANAGER),
+};
+
+export const LimitRefused: Story = {
+  render: story(true, MANAGER, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const cap = await canvas.findByTestId("capture-daily-cap");
+    await userEvent.clear(cap);
+    await userEvent.type(cap, "5000{Enter}");
+    await canvas.findByText("Setting not changed");
+    await expect(cap).toHaveAccessibleDescription(
+      expect.stringContaining("Setting not changed"),
+    );
+    await expect(
+      canvas.getByTestId("capture-auto-enrich-toggle"),
+    ).not.toHaveAccessibleDescription(
+      expect.stringContaining("Setting not changed"),
+    );
+    await expect(
+      canvas.getByTestId("capture-read-max-pages"),
+    ).not.toHaveAccessibleDescription(
+      expect.stringContaining("Setting not changed"),
+    );
+  },
 };
