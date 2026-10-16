@@ -43,7 +43,7 @@ func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *Lead
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `email = lower($1)`, email, exclude, "email")
+	return liveLeadBy(ctx, tx, leadEmail, email, exclude, nil)
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -59,13 +59,44 @@ func LiveLeadByLinkedInURL(ctx context.Context, tx pgx.Tx, normalizedURL string,
 	if normalizedURL == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `linkedin_url = $1`, normalizedURL, exclude, "linkedin_url")
+	return liveLeadBy(ctx, tx, leadLinkedIn, normalizedURL, exclude, nil)
 }
 
-// liveLeadBy is the one query shape behind both probes. The predicate is a
-// fixed literal chosen by the exported wrappers, never caller text; the value
-// is always a bind parameter.
-func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude *LeadSourceKey, lane string) (ids.LeadID, bool, error) {
+// leadKey is one exclusive key a probe asks about. The predicate is a fixed
+// literal, never caller text; the value is always a bind parameter.
+type leadKey struct{ predicate, lane string }
+
+var (
+	leadEmail    = leadKey{predicate: `email = lower($1)`, lane: "email"}
+	leadLinkedIn = leadKey{predicate: `linkedin_url = $1`, lane: "linkedin_url"}
+)
+
+// LiveLeadEmailHeldOutside asks whether a live lead outside except holds the
+// address. The address has one live holder at most (uq_lead_email_dedupe), but
+// that one may be in except.
+func LiveLeadEmailHeldOutside(ctx context.Context, tx pgx.Tx, email string, except []ids.UUID) (bool, error) {
+	if email == "" {
+		return false, nil
+	}
+	_, held, err := liveLeadBy(ctx, tx, leadEmail, email, nil, except)
+	return held, err
+}
+
+// LiveLeadLinkedInHeldOutside asks the same of a normalized profile URL, which
+// idx_lead_linkedin lets several live leads hold.
+func LiveLeadLinkedInHeldOutside(ctx context.Context, tx pgx.Tx, normalizedURL string, except []ids.UUID) (bool, error) {
+	if normalizedURL == "" {
+		return false, nil
+	}
+	_, held, err := liveLeadBy(ctx, tx, leadLinkedIn, normalizedURL, nil, except)
+	return held, err
+}
+
+// liveLeadBy is the one query shape behind every probe: the earliest live
+// holder of key outside exclude's source record and the except ids.
+func liveLeadBy(
+	ctx context.Context, tx pgx.Tx, key leadKey, value string, exclude *LeadSourceKey, except []ids.UUID,
+) (ids.LeadID, bool, error) {
 	var excludeSystem, excludeID *string
 	if exclude != nil {
 		excludeSystem, excludeID = &exclude.SourceSystem, &exclude.SourceID
@@ -73,49 +104,18 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 	var id ids.LeadID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM lead
-		 WHERE `+predicate+` AND archived_at IS NULL
+		 WHERE `+key.predicate+` AND archived_at IS NULL
 		   AND ($2::text IS NULL
 		        OR source_system IS DISTINCT FROM $2
 		        OR source_id IS DISTINCT FROM $3)
+		   AND ($4::uuid[] IS NULL OR id <> ALL($4))
 		 ORDER BY created_at, id
-		 LIMIT 1`, value, excludeSystem, excludeID).Scan(&id)
+		 LIMIT 1`, value, excludeSystem, excludeID, except).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.LeadID{}, false, nil
 	}
 	if err != nil {
-		return ids.LeadID{}, false, fmt.Errorf("probe lead %s dedupe: %w", lane, err)
+		return ids.LeadID{}, false, fmt.Errorf("probe lead %s dedupe: %w", key.lane, err)
 	}
 	return id, true, nil
-}
-
-// LiveLeadEmailHeldOutside asks whether any live lead outside except holds the
-// address. LiveLeadByEmail cannot: with duplicates, its earliest holder may be
-// one the caller is about to release.
-func LiveLeadEmailHeldOutside(ctx context.Context, tx pgx.Tx, email string, except []ids.UUID) (bool, error) {
-	if email == "" {
-		return false, nil
-	}
-	return liveLeadHeldOutside(ctx, tx, `email = lower($1)`, email, except, "email")
-}
-
-// LiveLeadLinkedInHeldOutside is LiveLeadEmailHeldOutside for a profile URL,
-// normalized by the caller as LiveLeadByLinkedInURL's is.
-func LiveLeadLinkedInHeldOutside(ctx context.Context, tx pgx.Tx, normalizedURL string, except []ids.UUID) (bool, error) {
-	if normalizedURL == "" {
-		return false, nil
-	}
-	return liveLeadHeldOutside(ctx, tx, `linkedin_url = $1`, normalizedURL, except, "linkedin_url")
-}
-
-// liveLeadHeldOutside takes its predicate from the wrappers, as liveLeadBy does.
-func liveLeadHeldOutside(ctx context.Context, tx pgx.Tx, predicate, value string, except []ids.UUID, lane string) (bool, error) {
-	var held bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM lead
-		                WHERE `+predicate+` AND archived_at IS NULL
-		                  AND ($2::uuid[] IS NULL OR id <> ALL($2)))`, value, except).Scan(&held)
-	if err != nil {
-		return false, fmt.Errorf("probe lead %s holders: %w", lane, err)
-	}
-	return held, nil
 }

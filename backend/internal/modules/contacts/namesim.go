@@ -315,7 +315,7 @@ func jaro(a, b string) float64 {
 // cannot fold its two sides with different normalizations of one name.
 //
 // One function because there is one question. NormalizeContactName is
-// normalizeName plus a whitespace collapse, and companyNamesAreTheSame is the
+// normalizeName plus a whitespace collapse, and foldedNameKey is the
 // same pair — case, accents and spacing folded away, and nothing else. The
 // company lane's legal-suffix key is a DIFFERENT question and is not this one:
 // see CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc"

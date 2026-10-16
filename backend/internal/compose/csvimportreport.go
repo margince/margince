@@ -117,7 +117,7 @@ func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (mig
 // against the estate and against the file's earlier rows. A row predicted to
 // land is marked pending, so a later file's link to it resolves.
 func predictPages(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string) (p prediction, err error) {
-	earlier, err := newInFileCreates(ctx, writers)
+	earlier, err := newInFileLedger(ctx, writers)
 	if err != nil {
 		return prediction{}, err
 	}

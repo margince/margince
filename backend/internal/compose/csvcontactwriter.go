@@ -101,7 +101,7 @@ func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.
 }
 
 // contactEmailHeld answers whether a live contact outside except holds this
-// address, without regard to who holds it. A create reads the page's answer.
+// address. With nothing left out it reads the page's answer.
 //
 // It is deliberately not visibility-filtered, and that is the opposite of the
 // rule the collision check below follows. The reason is that the two answer

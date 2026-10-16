@@ -72,7 +72,7 @@ type csvWriters struct {
 	consumerMail *freemail.Matcher
 	// earlier is the dry run's ledger of the file's earlier rows; nil on the
 	// commit, which meets them in the estate.
-	earlier *inFileCreates
+	earlier *inFileLedger
 
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned

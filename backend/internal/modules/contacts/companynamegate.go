@@ -202,11 +202,6 @@ func squashedCompanyName(name string) string {
 	return strings.Join(strings.FieldsFunc(companyNameForMatching(name), nameWordSeparators), "")
 }
 
-// sharesADistinctiveWord is formsShareADistinctiveWord over raw names.
-func sharesADistinctiveWord(a, b string) bool {
-	return formsShareADistinctiveWord(companyNameFormOf(a), companyNameFormOf(b))
-}
-
 // formsShareADistinctiveWord is the gate itself: may these two names be scored?
 //
 // The SQUASHED NAME is asked first, because compounding hides a shared word

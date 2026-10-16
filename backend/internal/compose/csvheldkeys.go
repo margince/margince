@@ -5,8 +5,9 @@ package compose
 
 // The held-key refusals. An address, a domain or a LinkedIn URL names one
 // live record across the estate. The store refuses a write that would give it
-// to a second one, and the commit skips the row. The preview asks first, so it
-// does not promise a landing the commit skips.
+// to a second one, and the commit skips the row. A lead's LinkedIn URL is the
+// exception, checked on create only. The preview asks first, so it does not
+// promise a landing the commit skips.
 
 import (
 	"context"
@@ -32,8 +33,8 @@ type rowKey struct {
 // createPathRefusal is why a create is refused before the collision check, or
 // the zero Reason. It refuses a row naming no record, or a unique key already
 // held. The preview and the commit both ask it first. Not visibility-filtered,
-// because the store refuses a held key whoever holds it. A refused row then
-// reads the same whoever holds the key, and the answer is no existence oracle.
+// because the store refuses a held key whoever holds it. A refusal says the
+// key is spoken for, and never by whom or whether the caller could see them.
 func (w *csvWriters) createPathRefusal(ctx context.Context, row migration.Row, typed map[string]any) (migration.Reason, error) {
 	fields := textFields(row.Fields)
 	if why := unnamedWhy(w.object, fields); why.Code != "" {

@@ -27,6 +27,28 @@ func TestCompanyBatchFindsTheLookAlikesTheLadderWouldScore(t *testing.T) {
 	}
 }
 
+// A typo in a name's one distinctive word still passes the gate, which matches
+// words fuzzily. The batch must find the member the ladder would score.
+func TestCompanyBatchFindsATypoInTheOneDistinctiveWord(t *testing.T) {
+	pairs := [][2]string{
+		{"Siemens", "Siemenss"},
+		{"Microsoft", "Mircosoft"},
+		{"Kestrel", "Kestral"},
+		{"Nordwind Logistik", "Nordwnd Logistic"},
+	}
+	for _, pair := range pairs {
+		var batch CompanyBatch
+		batch.Add(CompanyCandidate{DisplayName: pair[0]})
+		_, ladder := companyPairRival(companyNamePairOf(pair[1], ""), companyNamePairOf(pair[0], ""))
+		if !ladder {
+			t.Fatalf("the ladder does not score %q against %q, so the case proves nothing", pair[1], pair[0])
+		}
+		if rivals := batch.Rivals(CompanyCandidate{DisplayName: pair[1]}); len(rivals.scored) == 0 {
+			t.Errorf("Rivals(%q) after %q found no rival, but the ladder scores the pair", pair[1], pair[0])
+		}
+	}
+}
+
 func TestContactBatchNeedsTheSharedEmployerDomainTheLadderNeeds(t *testing.T) {
 	var batch ContactBatch
 	batch.Add(ContactCandidate{FullName: "Mareike Olsen", Emails: []string{"mareike@kestrel.example"}})

@@ -24,19 +24,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// inFileCreates is what the dry run has counted as landing so far.
+// inFileLedger is what the dry run has counted as landing so far.
 //
-// Every earlier row lands within the caller's own write scope, so the caller
-// may see it. Unlike the estate, nothing here is filtered for visibility.
-type inFileCreates struct {
+// Nothing here is filtered for visibility. The commit's ladder sees every
+// earlier row, because contacts and companies are identity tables any reader
+// sees whole (auth's identityTables). Only capture privacy narrows one, and
+// the typed create an import uses writes contacts.TypedCreateVisibility.
+type inFileLedger struct {
 	writers *csvWriters
 	// holders maps each unique key an earlier row will hold to the record
 	// holding it: "row:<ref>" for a create, "id:<uuid>" for an update.
 	holders map[string]string
-	// freedBy maps each key an earlier update frees to the record that held
-	// it. The estate still shows that record holding it, so a probe leaves
-	// the record out.
-	freedBy map[string]ids.UUID
+	// freedBy maps each key earlier updates free to the records that held it.
+	// The estate still shows them holding it, so a probe leaves them out.
+	freedBy map[string][]ids.UUID
 	// claimed and freeing are the row under prediction's keys, filed once it
 	// is known to land.
 	claimed     []rowKey
@@ -47,8 +48,8 @@ type inFileCreates struct {
 	contactRows contacts.ContactBatch
 }
 
-func newInFileCreates(ctx context.Context, writers *csvWriters) (*inFileCreates, error) {
-	ledger := &inFileCreates{writers: writers, holders: map[string]string{}, freedBy: map[string]ids.UUID{}}
+func newInFileLedger(ctx context.Context, writers *csvWriters) (*inFileLedger, error) {
+	ledger := &inFileLedger{writers: writers, holders: map[string]string{}, freedBy: map[string][]ids.UUID{}}
 	if writers.object != migration.ObjectContact {
 		return ledger, nil
 	}
@@ -65,33 +66,30 @@ func newInFileCreates(ctx context.Context, writers *csvWriters) (*inFileCreates,
 
 // claim notes the keys the row under prediction would hold, and for which
 // record. A nil ledger is the commit's, which has no earlier rows to carry.
-func (f *inFileCreates) claim(holder string, keys []rowKey) {
+func (f *inFileLedger) claim(holder string, keys []rowKey) {
 	if f != nil {
 		f.claimant, f.claimed = holder, keys
 	}
 }
 
 // release notes the keys the update under prediction frees from record id.
-func (f *inFileCreates) release(id ids.UUID, keys []string) {
+func (f *inFileLedger) release(id ids.UUID, keys []string) {
 	if f != nil {
 		f.freer, f.freeing = id, keys
 	}
 }
 
-// leaveOut is except plus the record an earlier update freed key from.
-func (f *inFileCreates) leaveOut(key string, except []ids.UUID) []ids.UUID {
-	if f == nil {
+// leaveOut is except plus the records earlier updates freed key from.
+func (f *inFileLedger) leaveOut(key string, except []ids.UUID) []ids.UUID {
+	if f == nil || len(f.freedBy[key]) == 0 {
 		return except
 	}
-	if id, ok := f.freedBy[key]; ok {
-		return append(slices.Clone(except), id)
-	}
-	return except
+	return append(slices.Clone(except), f.freedBy[key]...)
 }
 
 // heldByAnother reports whether an earlier row's record other than holder
 // will hold key.
-func (f *inFileCreates) heldByAnother(key, holder string) bool {
+func (f *inFileLedger) heldByAnother(key, holder string) bool {
 	if f == nil {
 		return false
 	}
@@ -102,7 +100,7 @@ func (f *inFileCreates) heldByAnother(key, holder string) bool {
 // reconsider answers what the commit does with a row the estate alone said
 // would create. By then the file's earlier rows are in the estate too, and
 // the collision ladder may meet one of them.
-func (f *inFileCreates) reconsider(
+func (f *inFileLedger) reconsider(
 	ctx context.Context, row migration.Row, outcome predictedOutcome, problem *migration.SkippedRow,
 ) (predictedOutcome, *migration.SkippedRow, error) {
 	if outcome != predictCreate {
@@ -118,9 +116,10 @@ func (f *inFileCreates) reconsider(
 	return predictCollides, problem, nil
 }
 
-// record files the row's claimed keys when the prediction says it lands, and a
-// created row as a rival for the rows after it.
-func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
+// record files the row's claimed keys when the prediction says it lands. It
+// files the names the row lands under as rivals for later rows. An update's
+// names count too, since the commit's ladder meets the record as it left it.
+func (f *inFileLedger) record(row migration.Row, outcome predictedOutcome) {
 	claimed, claimant, freeing, freer := f.claimed, f.claimant, f.freeing, f.freer
 	f.claimed, f.claimant, f.freeing, f.freer = nil, "", nil, ids.UUID{}
 	if outcome != predictCreate && outcome != predictCollides && outcome != predictUpdate {
@@ -129,16 +128,13 @@ func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
 	// Freed before claimed: an update that only recases a company's URL frees
 	// and claims one key.
 	for _, key := range freeing {
-		f.freedBy[key] = freer
+		f.freedBy[key] = append(f.freedBy[key], freer)
 		if f.holders[key] == claimant {
 			delete(f.holders, key)
 		}
 	}
 	for _, key := range claimed {
 		f.holders[key.ledger] = claimant
-	}
-	if outcome == predictUpdate {
-		return
 	}
 	fields := textFields(row.Fields)
 	switch f.writers.object {
@@ -156,7 +152,7 @@ func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
 // hasRival answers whether the ladder would meet an earlier create as this
 // row's duplicate. The scorers run first, so a row they clear opens no
 // transaction.
-func (f *inFileCreates) hasRival(ctx context.Context, fields map[string]string) (bool, error) {
+func (f *inFileLedger) hasRival(ctx context.Context, fields map[string]string) (bool, error) {
 	var admit func(tx pgx.Tx) (bool, error)
 	switch f.writers.object {
 	case migration.ObjectCompany:

@@ -304,46 +304,31 @@ func searchAxes(c CompanyCandidate) []string {
 	return axes
 }
 
-// companyExactNameArms builds one equality arm per (non-empty candidate name ×
-// stored name column), so a pair the Go comparison calls the SAME NAME reaches
-// the scorer whatever the trigram operators make of it.
+// companyExactNameArms builds one equality arm per non-empty candidate name and
+// stored name column. A pair the Go comparison calls one name then reaches the
+// scorer whatever the trigram operators make of it.
 //
-// WHY THE ARM, when the trigram ones are already here. Those narrow a set for a
-// SCORE, and being approximate is right there: a row they miss was never going
-// to win. ExactName is not a score — it is decided by companyNamesAreTheSame,
-// and a reviewer is shown a name collision on the strength of it — so a
-// prefilter that is merely approximate can hide a row that would have been
-// exactly equal, and the company lane has no employer arm to rescue it the way
-// the contact lane does.
+// The trigram arms narrow a set for a score, where being approximate is right.
+// ExactName is decided by foldedKeysAreTheSame, and a reviewer sees a collision
+// on its strength. An approximate prefilter could hide an exact match.
 //
-// THE SAME KEY, not a company-shaped one. companyNamesAreTheSame folds case,
-// accents and spacing and nothing else, which is exactly what exactNameKeySQL
-// spells; the legal-suffix strip that searchAxes applies is a different
-// question and must not reach here, because "Baqend GmbH" and "Baqend Inc"
-// fold together under it and are two legal entities.
+// The key folds case, accents and spacing, as foldedKeysAreTheSame does, and
+// SQL folds both sides. The legal-suffix strip of searchAxes must not reach
+// here: "Baqend GmbH" and "Baqend Inc" fold together under it.
 //
-// Both sides folded by SQL's own functions, exactly as the trigram arms do.
-// Computing one side in Go would move the divergence rather than close it.
-//
-// NO KNOWN PAIR NEEDS IT — measured, `'health care' % 'healthcare'` is 0.64 and
-// `'the group' % 'the group ltd'` is 0.71, both well over the 0.3 limit. It is
-// a GUARANTEE rather than a bug fix, for the reason the contact lane states:
-// this lane's correctness should not rest on one approximate predicate
-// happening to cover another normalization's output.
+// No known pair needs the arm (`'health care' % 'healthcare'` is 0.64). It
+// guarantees what an approximate predicate covers only by chance.
 func companyExactNameArms(args *[]any, c CompanyCandidate) []string {
 	var arms []string
 	for _, name := range []string{c.DisplayName, c.LegalName} {
-		// An empty candidate name is dropped rather than passed as "": SQL
-		// would fold it to the empty key and match every stored name that
-		// folds to nothing, which is the one pairing companyNamesAreTheSame
-		// refuses outright.
+		// An empty name is dropped rather than passed as "". SQL would fold it
+		// to the empty key, which foldedKeysAreTheSame refuses to match.
 		if collapseSpaces(normalizeName(name)) == "" {
 			continue
 		}
 		*args = append(*args, name)
 		at := "$" + strconv.Itoa(len(*args))
-		// The same two columns bestCompanyNamePairing scores, named by the
-		// same constants: an arm that reached a column the scorer never reads
+		// The columns bestCompanyFormPairing scores. An arm on any other column
 		// would widen the candidate set for nothing.
 		for _, column := range []string{fieldDisplayName, fieldLegalName} {
 			arms = append(arms, exactNameKeySQL(column)+" = "+exactNameKeySQL(at))
@@ -410,11 +395,6 @@ func companyTrigramArms(args *[]any, axes ...string) []string {
 	return arms
 }
 
-// bestCompanyNamePairing is bestCompanyFormPairing over raw names.
-func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) CompanyCandidateScore {
-	return bestCompanyFormPairing(companyNamePairOf(candidateDisplay, candidateLegal), companyNamePairOf(rowDisplay, rowLegal))
-}
-
 // bestCompanyFormPairing scores every pairing of the two name axes and reports
 // which one won. It keeps the raw values behind the winner, so the queue can
 // show the comparison that was actually made.
@@ -475,16 +455,11 @@ func bestCompanyFormPairing(candidate, row companyNamePair) CompanyCandidateScor
 	return best
 }
 
-// companyNamesAreTheSame answers whether two names are one name.
+// foldedKeysAreTheSame answers whether two folded names are one name.
 //
 // Strict on purpose: case, accents and spacing are noise in a name, and
 // everything else is signal. A legal suffix is NOT folded away — see
 // CompanyCandidateScore.ExactName for why that distinction is the whole point.
-func companyNamesAreTheSame(left, right string) bool {
-	return foldedKeysAreTheSame(foldedNameKey(left), foldedNameKey(right))
-}
-
-// foldedKeysAreTheSame is companyNamesAreTheSame over keys already folded.
 func foldedKeysAreTheSame(left, right string) bool { return left != "" && left == right }
 
 // collapseSpaces reduces every run of whitespace to one space. A name read off

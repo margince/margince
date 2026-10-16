@@ -22,11 +22,14 @@ import (
 // CompanyBatch is the companies a batch will create.
 type CompanyBatch struct {
 	members []batchCompany
-	// byWord files each member under its squashed names and distinctive
-	// words. The gate scores no pairing that shares neither, so every member a
-	// candidate could rival is filed under a word of its own.
-	byWord  map[string][]int
-	domains map[string]bool
+	// The gate scores a pairing only when it shares a squashed name or a word
+	// sameCompanyToken matches. A member is found by one or the other.
+	bySquashed map[string][]int
+	byToken    map[string][]int
+	// tokensOfLength holds each distinct word under its rune length, since
+	// sameCompanyToken matches only words within companyFuzzyTokenLengthSlack.
+	tokensOfLength map[int][]string
+	domains        map[string]bool
 }
 
 type batchCompany struct {
@@ -36,12 +39,22 @@ type batchCompany struct {
 
 // Add records a company the batch will create.
 func (b *CompanyBatch) Add(c CompanyCandidate) {
-	if b.byWord == nil {
-		b.byWord, b.domains = map[string][]int{}, map[string]bool{}
+	if b.domains == nil {
+		b.bySquashed, b.byToken, b.tokensOfLength, b.domains = map[string][]int{}, map[string][]int{}, map[int][]string{}, map[string]bool{}
 	}
+	at := len(b.members)
 	member := batchCompany{display: c.DisplayName, legal: c.LegalName, names: companyNamePairOf(c.DisplayName, c.LegalName)}
-	for _, word := range member.names.gateWords() {
-		b.byWord[word] = append(b.byWord[word], len(b.members))
+	for _, form := range member.names.forms() {
+		if form.squashed != "" {
+			b.bySquashed[form.squashed] = append(b.bySquashed[form.squashed], at)
+		}
+		for _, token := range form.tokens {
+			if _, filed := b.byToken[token]; !filed {
+				length := len([]rune(token))
+				b.tokensOfLength[length] = append(b.tokensOfLength[length], token)
+			}
+			b.byToken[token] = append(b.byToken[token], at)
+		}
 	}
 	b.members = append(b.members, member)
 	for _, d := range c.Domains {
@@ -49,18 +62,30 @@ func (b *CompanyBatch) Add(c CompanyCandidate) {
 	}
 }
 
-// gateWords are the keys formsShareADistinctiveWord can match a pair on.
-func (p companyNamePair) gateWords() []string {
-	var words []string
-	for _, form := range []companyNameForm{p.display, p.legal} {
+func (p companyNamePair) forms() []companyNameForm {
+	return []companyNameForm{p.display, p.legal}
+}
+
+// gateMatches finds the members filed under a key formsShareADistinctiveWord
+// could match the candidate on.
+func (b *CompanyBatch) gateMatches(candidate companyNamePair) []int {
+	var matches []int
+	for _, form := range candidate.forms() {
 		if form.squashed != "" {
-			words = append(words, "squashed:"+form.squashed)
+			matches = append(matches, b.bySquashed[form.squashed]...)
 		}
 		for _, token := range form.tokens {
-			words = append(words, "token:"+token)
+			length := len([]rune(token))
+			for near := length - companyFuzzyTokenLengthSlack; near <= length+companyFuzzyTokenLengthSlack; near++ {
+				for _, filed := range b.tokensOfLength[near] {
+					if sameCompanyToken(token, filed) {
+						matches = append(matches, b.byToken[filed]...)
+					}
+				}
+			}
 		}
 	}
-	return words
+	return matches
 }
 
 // CompanyRivals is the Go half of DedupeCompany's verdict on one candidate.
@@ -72,7 +97,7 @@ type CompanyRivals struct {
 	scored    []batchCompany
 }
 
-// Rivals scores c against the members it shares a gate word with.
+// Rivals scores c against the members the gate may pair it with.
 func (b *CompanyBatch) Rivals(c CompanyCandidate) CompanyRivals {
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
 		return CompanyRivals{}
@@ -83,15 +108,13 @@ func (b *CompanyBatch) Rivals(c CompanyCandidate) CompanyRivals {
 	candidate := companyNamePairOf(c.DisplayName, c.LegalName)
 	rivals := CompanyRivals{candidate: c}
 	seen := map[int]bool{}
-	for _, word := range candidate.gateWords() {
-		for _, at := range b.byWord[word] {
-			if seen[at] {
-				continue
-			}
-			seen[at] = true
-			if _, rival := companyPairRival(candidate, b.members[at].names); rival {
-				rivals.scored = append(rivals.scored, b.members[at])
-			}
+	for _, at := range b.gateMatches(candidate) {
+		if seen[at] {
+			continue
+		}
+		seen[at] = true
+		if _, rival := companyPairRival(candidate, b.members[at].names); rival {
+			rivals.scored = append(rivals.scored, b.members[at])
 		}
 	}
 	return rivals
