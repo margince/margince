@@ -16,11 +16,13 @@
 }
 
 /* One pipeline in the catalog: the whole row is the one press that opens it,
-   so it fills the row the list draws around it. */
+   so it fills the row the list draws around it. Wraps, so on a phone the count
+   takes a line of its own rather than squeezing the name. */
 .pipeline-choice {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   width: 100%;
   padding: var(--space-1) 0;
   border: 0;
@@ -34,14 +36,6 @@
 .pipeline-choice:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
-}
-/* Wraps, so on a phone the count takes a line of its own rather than squeezing
-   the name down to its first letters. */
-.pipeline-choice-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
 }
 /* The name is the only free text in the row, so it is what gives way. */
 .pipeline-choice-name {
@@ -82,18 +76,6 @@
   margin: 0;
 }
 
-/* A phone has no width for the strip, so there the table alone says the
-   order. A body holding only the strip goes with it, seam included. */
-@media (width < 720px) {
-  .pipeline-flow > .stage-strip,
-  .pipeline-flow.is-bare {
-    display: none;
-  }
-  .pipeline-flow.is-bare + .panel-grouphead::before {
-    content: none;
-  }
-}
-
 /* A stage name is free text nobody promised would be short. */
 .stage-name {
   display: inline-flex;
@@ -128,9 +110,29 @@
     display: none;
   }
 }
+/* Block by the global svg reset, so the end edge comes from the margin: the
+   lock stands where the step numbers above it end. */
 .stage-lock {
   inline-size: 16px;
   block-size: 16px;
-  vertical-align: middle;
+  margin-inline-start: auto;
   color: var(--textSecondary);
+}
+
+/* A stage's exit criteria, opened under its row: the list, then the verb that
+   adds one, at the end edge under the rows' own verbs. */
+.stage-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.stage-criteria-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+.stage-criteria-foot > p {
+  margin: 0 auto 0 0;
 }

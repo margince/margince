@@ -95,11 +95,11 @@ import { sourcePickOptions, useLeadSources } from "./leadsources";
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
 
+import { AddToShortlistAction } from "../features/lists/addtoshortlist";
+import { WorklistReturnLink } from "../features/worklist/worklist.return";
 import { leadKey, leadScoreKey, leadWriteKeys } from "../lib/leadkeys";
-import { AddToShortlistAction } from "./addtoshortlist";
 import { RecordListsPanel } from "./recordlists";
 import { useAddressedTab } from "./recordtab";
-import { WorklistReturnLink } from "./worklist.return";
 
 export { LeadsScreen } from "./leads.list";
 

@@ -7,14 +7,6 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { en } from "../../i18n/en";
-import { useMe } from "../../lib/session";
-import {
-  jsonResponse,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
 import {
   changesNeeded,
   DEAL_ID,
@@ -23,8 +15,15 @@ import {
   legalOff,
   legalOn,
   summary,
-} from "../legalreviews.fixtures";
-import { useLegalReviewAvailable } from "../legalreviews.queries";
+} from "../../features/privacy/legalreviews.fixtures";
+import { useLegalReviewAvailable } from "../../features/privacy/legalreviews.queries";
+import { en } from "../../i18n/en";
+import { useMe } from "../../lib/session";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
 import { DealLegalTab, RequestLegalReviewAction } from "./deallegaltab";
 
 afterEach(() => {

@@ -21,12 +21,7 @@ var startedDrillID = regexp.MustCompile(`^drill ([0-9a-f-]{36}) started`)
 // what the ledger binds to.
 func drillInstallation(t *testing.T, suffix string) string {
 	t.Helper()
-	maint, base, withDB := testDSNs(t)
-	name := base + suffix
-	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
-	mustMigrate(t, "recreate-db", "--dsn", maint, "--name", name)
-	dsn := withDB(name)
-	mustMigrate(t, "up", "--dsn", dsn)
+	dsn := migratedDatabase(t, suffix)
 	stamp(t, dsn, `INSERT INTO workspace DEFAULT VALUES`)
 	return dsn
 }

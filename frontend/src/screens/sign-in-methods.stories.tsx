@@ -4,7 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -29,10 +31,14 @@ type Story = StoryObj<typeof SignInMethodsCard>;
 function Served({
   providers,
   groupRoleMap = {},
+  requireMfa = false,
+  ownMfaConfirmed = true,
   children,
 }: Readonly<{
   providers: { key: string; label: string; enabled: boolean }[];
   groupRoleMap?: Record<string, string>;
+  requireMfa?: boolean;
+  ownMfaConfirmed?: boolean;
   children: ReactNode;
 }>) {
   installFetchStub({
@@ -40,16 +46,23 @@ function Served({
       jsonResponse({
         sign_in_providers: providers,
         require_sso: false,
-        require_mfa: false,
+        require_mfa: requireMfa,
         oidc_group_role_map: groupRoleMap,
       }),
     "GET /me": () =>
+      jsonResponse(
+        meFixture({
+          allow: {
+            installation_settings: ["read", "update"],
+            authentication_policy: ["read", "update"],
+          },
+        }),
+      ),
+    "GET /me/mfa": () =>
       jsonResponse({
-        user: { email: "admin@brandt.example" },
-        authorization: {
-          installation_settings: ["read", "update"],
-          authentication_policy: ["read", "update"],
-        },
+        enrolled: ownMfaConfirmed,
+        confirmed: ownMfaConfirmed,
+        recovery_codes_left: ownMfaConfirmed ? 10 : 0,
       }),
     "GET /users/assignable-roles": () =>
       jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
@@ -123,4 +136,43 @@ export const GroupsGrantRolesPhone: Story = {
       <SignInMethodsCard />
     </Served>
   ),
+};
+
+/** A second factor required of every member. Turning it off saves at once. */
+export const SecondFactorRequired: Story = {
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      requireMfa
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+};
+
+/** Turning the requirement on asks first. This admin holds no factor of their
+ * own, so the dialog says they are asked to set one up too. */
+export const SecondFactorConfirm: Story = {
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      ownMfaConfirmed={false}
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const control = await canvas.findByRole("switch", {
+      name: /require second factor/i,
+    });
+    // The switch draws before the session grants arrive, and a disabled one
+    // ignores the click.
+    await waitFor(() => expect(control).toBeEnabled());
+    await userEvent.click(control);
+    // The dialog portals to the body, outside the canvas.
+    await within(canvasElement.ownerDocument.body).findByText(
+      /you have not set up two-step sign-in/i,
+    );
+  },
 };

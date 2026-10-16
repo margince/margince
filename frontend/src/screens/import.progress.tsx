@@ -58,12 +58,36 @@ function totalsOf(run: ImportRun) {
   };
 }
 
+/**
+ * True once the worker has sent no heartbeat for the stall threshold. The age
+ * is the server's, taken on its own clock; a run that sends none is not silent.
+ */
+export function workerSilent(run: ImportRun): boolean {
+  return (run.heartbeat_age_seconds ?? 0) >= STALL_SECONDS;
+}
+
+/**
+ * True when the progress panel shows its own notice for a run that stopped
+ * moving. A screen around it must not say the same again.
+ */
+export function panelStalled(run: ImportRun): boolean {
+  const queued = run.started_at === undefined && run.phase === undefined;
+  return !queued && (run.idle_seconds ?? 0) >= STALL_SECONDS;
+}
+
 /** True when the run has said nothing but its status: an older API or worker. */
 export function hasProgress(run: ImportRun): boolean {
   return run.phase !== undefined || run.progress !== undefined;
 }
 
 type Translate = ReturnType<typeof useT>;
+
+// An undo counts rows reversed, so its total says so.
+function totalKey(run: ImportRun) {
+  return run.status === "undoing"
+    ? "import.progress.reversed"
+    : "import.progress.total";
+}
 
 // The reader's word for what the run is working on: a record type, the links
 // pass, or a general word while the server names nothing.
@@ -85,7 +109,7 @@ function figuresLine(
   const overall = totalsOf(run);
   const parts: (string | null)[] = [
     overall.total > 0
-      ? t("import.progress.total", {
+      ? t(totalKey(run), {
           done: formatNumber(overall.done, locale),
           total: formatNumber(overall.total, locale),
         })
@@ -197,11 +221,12 @@ export function ImportProgressPanel({
   const minutes = useSettledEta(run);
   const queued = run.started_at === undefined && run.phase === undefined;
   const idle = run.idle_seconds ?? 0;
-  const stalled = !queued && idle >= STALL_SECONDS;
+  const stalled = panelStalled(run);
   const phase = run.phase
     ? t(`import.phase.${run.phase}`, { type: typeName(t, run.phase_object) })
     : waiting;
-  const serverSilent = (run.heartbeat_age_seconds ?? 0) >= STALL_SECONDS;
+  const serverSilent = workerSilent(run);
+  const reversing = run.status === "undoing";
   const stalledTitle = serverSilent
     ? t("import.progress.stalled.server")
     : t("import.progress.stalled.working");
@@ -223,7 +248,7 @@ export function ImportProgressPanel({
         <ProgressBar
           fraction={overall.done / overall.total}
           label={t("import.progress.overall")}
-          valueText={t("import.progress.total", {
+          valueText={t(totalKey(run), {
             done: formatNumber(overall.done, locale),
             total: formatNumber(overall.total, locale),
           })}
@@ -231,7 +256,9 @@ export function ImportProgressPanel({
       ) : null}
       {figures === "" ? null : <p className="t-sub">{figures}</p>}
       <ObjectBars run={run} />
-      {run.progress ? <Counts counts={run.progress.counts} /> : null}
+      {run.progress && !reversing ? (
+        <Counts counts={run.progress.counts} />
+      ) : null}
       {stalled ? (
         <Callout tone="warning" kind="standing" title={stalledTitle}>
           {t("import.progress.stalled.body", {

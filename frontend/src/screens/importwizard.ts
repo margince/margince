@@ -8,7 +8,7 @@ import { useSettledValue } from "../design-system/debouncedsearch";
 import { postMultipart } from "../lib/multipart";
 import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { useAddressedRun } from "./importaddress";
+import { useAddressedRun, usePresetContact } from "./importaddress";
 import {
   choicesOf,
   type DraftPatch,
@@ -22,6 +22,7 @@ import { defaultSourceName, filesOf, stepOfRun } from "./importflow";
 import { asProfile } from "./importprofile";
 import {
   IMPORTS_KEY,
+  orInFlight,
   useImportReport,
   useImportRun,
   useLandedRecords,
@@ -62,6 +63,10 @@ export function useImportWizard() {
   const latest = useRef(edits);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
+  // The contact a file of activities is filed under: the address names it for
+  // a new upload, and the run keeps it after that.
+  const presetContact =
+    usePresetContact() ?? run.data?.preset_links?.[0]?.id ?? null;
   const status = run.data?.status;
   const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
@@ -151,11 +156,13 @@ export function useImportWizard() {
   // changed since is refused rather than imported unread.
   const approve = useMutation({
     mutationFn: async ({ id, version }: Pick<ImportRun, "id" | "version">) =>
-      unwrap(
-        await api.POST("/imports/{id}/approve", {
-          params: { path: { id } },
-          body: { version },
-        }),
+      orInFlight(async () =>
+        unwrap(
+          await api.POST("/imports/{id}/approve", {
+            params: { path: { id } },
+            body: { version },
+          }),
+        ),
       ),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
@@ -229,6 +236,8 @@ export function useImportWizard() {
     setContextTagID: (contextTagID: string) =>
       edit((current) => ({ ...current, contextTagID })),
     runId,
+    /** The contact every activity of this run is filed under, if one is. */
+    presetContact,
     run,
     report,
     upload,
@@ -239,7 +248,7 @@ export function useImportWizard() {
         sent.current = latest.current;
         test.mutate({
           id: runId,
-          patch: fullPatch(files, zip, choices, run.data),
+          patch: fullPatch(files, zip, choices, run.data, presetContact),
         });
       }
     },
@@ -272,7 +281,7 @@ export function useImportWizard() {
         // Cancelling a draft another tab is testing only stops that test and
         // leaves the draft, so the page stays on it until it is cancelled.
         onSuccess: (stopped) => {
-          if (stopped.status !== "cancelled") return;
+          if (stopped?.status !== "cancelled") return;
           reset();
           navigate(settingsHref("import"));
         },

@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
 import type { Locale } from "../i18n";
-import { unwrap } from "../lib/problem";
+import { problemCodeOf, unwrap } from "../lib/problem";
 import type { ImportRun } from "./importtypes";
 
 // Every read of the import surface sits under this key. One invalidation after
@@ -88,14 +88,36 @@ export function useImportRun(id: string | null) {
   });
 }
 
+// The refusal of a press on a run another attempt already holds. The run is
+// moving by itself, so the press is neither done nor wrong: the reads that
+// follow show where it is.
+export const RUN_IN_FLIGHT = "run_in_flight";
+
+/**
+ * Runs a write on a run and answers null when the server says another attempt
+ * already holds it. Every other refusal is thrown as before.
+ */
+export async function orInFlight<T>(
+  write: () => Promise<T>,
+): Promise<T | null> {
+  try {
+    return await write();
+  } catch (error) {
+    if (problemCodeOf(error) === RUN_IN_FLIGHT) return null;
+    throw error;
+  }
+}
+
 // Starts the reversal of one run. It answers at once with the run `undoing`;
 // the reads above follow it to `undone`.
 export function useUndoImport() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) =>
-      unwrap(
-        await api.POST("/imports/{id}/undo", { params: { path: { id } } }),
+      orInFlight(async () =>
+        unwrap(
+          await api.POST("/imports/{id}/undo", { params: { path: { id } } }),
+        ),
       ),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
@@ -107,8 +129,10 @@ export function useStopImportTest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) =>
-      unwrap(
-        await api.POST("/imports/{id}/cancel", { params: { path: { id } } }),
+      orInFlight(async () =>
+        unwrap(
+          await api.POST("/imports/{id}/cancel", { params: { path: { id } } }),
+        ),
       ),
     onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });

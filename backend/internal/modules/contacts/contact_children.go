@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -338,6 +339,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	p.Version = &version
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
+	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	return p, nil
 }
 

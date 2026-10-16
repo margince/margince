@@ -49,13 +49,15 @@ type runOptions struct {
 	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
 	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
 	FromZip bool
+	// PresetLinks file every activity of the run under the same records.
+	PresetLinks []migration.PresetLink
 }
 
 // runOptionsOf reads the run-wide decisions off a stored mapping.
 func runOptionsOf(m migration.RunMapping) runOptions {
 	return runOptions{
 		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
-		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
+		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0, PresetLinks: m.PresetLinks,
 	}
 }
 

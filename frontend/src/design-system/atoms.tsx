@@ -12,7 +12,6 @@ import {
   type FormEventHandler,
   type InputHTMLAttributes,
   type ReactNode,
-  useContext,
   useEffect,
   useId,
   useRef,
@@ -25,9 +24,10 @@ import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
 import {
   coveredByDialog,
-  InsideDialog,
   panelsOpenedFrom,
+  pressedInLayerAbove,
   useDialogFocus,
+  useDialogLayer,
 } from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
@@ -677,7 +677,7 @@ export function Field({
    * accessible name.
    */
   labelEnd?: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
   /**
    * Announce the hint when it CHANGES, not only when focus reaches the field.
    *
@@ -1237,11 +1237,9 @@ function isSetting(item: Element): boolean {
 // and the frequent actions rather than a row of buttons of equal weight where
 // the destructive ones sit next to the routine ones.
 //
-// The children are the caller's own action components (each opening its own
-// confirm flow), so the menu owns only the disclosure: it closes on Escape, on
-// a click outside, and on an item being chosen — with the two exceptions
-// `isSetting` and `coveredByDialog` below name, an item that SETS rather than
-// does, and one that put a dialog up which now owns the screen and the focus.
+// The children are the caller's own action components, so the menu owns only
+// the disclosure. It closes on Escape, on a click outside, and on a chosen item
+// that does something rather than sets something (`isSetting`).
 //
 // The children are not rendered until the menu is first opened. They are
 // components with their own reads — the company's edit form alone fetches the
@@ -1249,12 +1247,10 @@ function isSetting(item: Element): boolean {
 // record page was paying for them without ever opening the menu. Once opened
 // they STAY mounted, so a dialog survives the panel being hidden again.
 //
-// The PANEL is portalled to the body and positioned against the trigger. A
-// menu that opened inside its own container was clipped by whatever that
-// container clips — a Panel hides its overflow so full-bleed rows respect its
-// radius — and a row near the bottom edge of a card lost the actions the menu
-// exists to offer. Positioning against the trigger keeps it under the button
-// it belongs to wherever that button has moved to.
+// The PANEL is portalled to its layer: the dialog's overlay, or the body. In
+// its own container a Panel's hidden overflow clipped it, so a row near a
+// card's bottom edge lost its actions. Positioned against the trigger, it
+// stays under its button wherever that button has moved to.
 export function OverflowMenu({
   label,
   keepMounted = false,
@@ -1280,49 +1276,15 @@ export function OverflowMenu({
 }>) {
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
-  // How many times an item has been chosen. A counter rather than a flag
-  // because it is a fact that RECURS: the second press of the second item has
-  // to reach the effect below as its own event, and a boolean already true
-  // would be no change at all.
-  const [chosen, setChosen] = useState(0);
   const wrap = useRef<HTMLDivElement | null>(null);
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
-  const inDialog = useContext(InsideDialog);
   const at = useAnchoredToTrigger(open, trigger, panel);
+  const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
 
-  // Choosing an item closes the menu, one commit after the press.
-  //
-  // The delay is the whole design. Some items DO something and are finished —
-  // and a menu still standing over the page after that reads as a control that
-  // did not take the press. Others only open a dialog, which restores focus on
-  // close to the control that opened it, so hiding that control first would
-  // strand the reader on <body>. Which of the two happened is not knowable
-  // while the item's own handler is running: the dialog is not in the document
-  // until React has committed the state that handler set. So the press records
-  // that it happened, and this effect — after that commit — asks the same
-  // `coveredByDialog` the Escape handler asks and answers accordingly.
-  useEffect(() => {
-    if (chosen === 0 || coveredByDialog(trigger.current)) {
-      return;
-    }
-    setOpen(false);
-    trigger.current?.focus();
-  }, [chosen]);
-
-  // FOCUS GOES IN. The panel is portalled to the body, so it sits at the end of
-  // the document rather than after its trigger: without this a reader who opens
-  // a menu Tabs to the NEXT row's trigger, then through every control on the
-  // page, and reaches the items they opened it for last. On a list drawing one
-  // menu per row that is dozens of stops, which is a menu no keyboard reaches.
-  //
-  // The same hook the dialogs use, and for the same reason its own header
-  // gives: a surface that keeps its chrome private still owes the keyboard one
-  // answer to "where is focus now". Escape and the click-outside stay below,
-  // because this menu closes on a third thing a dialog does not have — an item
-  // being chosen — and that path has to leave the dialog it may have opened
-  // holding focus.
+  // The panel is portalled to the end of its layer, so without moving focus in,
+  // Tab reaches the next row's trigger before this menu's items.
   useDialogFocus({
     open,
     onClose: () => setOpen(false),
@@ -1355,21 +1317,14 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog or a panel this menu opened is portalled to the body, so every
+      // A dialog or a panel this menu opened is portalled out of it, so every
       // click inside it looks like a click outside the menu. Closing on those
       // would hide the item it has to give focus back to when it closes.
-      const target = event.target;
-      if (
-        (target instanceof Element && target.closest(".overlay")) ||
-        panelsOpenedFrom(panel.current).some((opened) =>
-          opened.contains(target),
-        )
-      ) {
+      if (pressedInLayerAbove(event.target, layer, panel.current)) {
         return;
       }
-      // The panel lives at the body, not inside the wrapper, so "outside" is
-      // outside BOTH — without the second test every click on an item would
-      // read as a click away from the menu.
+      // The panel lives in its layer, not inside the wrapper, so "outside" is
+      // outside both. Without the second test, a click on an item would close it.
       if (
         !wrap.current?.contains(event.target) &&
         !panel.current?.contains(event.target)
@@ -1383,10 +1338,10 @@ export function OverflowMenu({
       globalThis.removeEventListener("keydown", onKey);
       globalThis.removeEventListener("mousedown", onPointer);
     };
-  }, [open]);
+  }, [open, layer]);
 
   return (
-    <div className="overflow-menu" ref={wrap}>
+    <div className="overflow-menu" ref={joinLayer}>
       {/* A disclosure, not an ARIA menu. `role="menu"` promises arrow-key
           navigation and a roving tabstop; the items here are the caller's own
           buttons — each running its own verb, opening its own dialog or setting
@@ -1406,6 +1361,7 @@ export function OverflowMenu({
         aria-label={label}
         title={label}
         onClick={() => {
+          join();
           setEverOpened(true);
           setOpen((was) => !was);
         }}
@@ -1422,7 +1378,6 @@ export function OverflowMenu({
           id={panelId}
           ref={panel}
           className="overflow-menu-items"
-          data-layer={inDialog ? "dialog" : undefined}
           hidden={!open}
           style={{
             top: `${at.top}px`,
@@ -1430,7 +1385,12 @@ export function OverflowMenu({
             maxHeight: `${at.maxHeight}px`,
           }}
           onClick={(event) => {
-            if (!(event.target instanceof Element)) {
+            // React bubbles a press inside an item's own dialog to here through
+            // the portal; only a press inside this panel's DOM chose an item.
+            if (
+              !(event.target instanceof Element) ||
+              !event.currentTarget.contains(event.target)
+            ) {
               return;
             }
             // A control was pressed, not merely the panel. The caller also puts
@@ -1438,15 +1398,18 @@ export function OverflowMenu({
             // refuses these verbs — and a click landing on a paragraph has
             // chosen nothing. A refused item never arrives at all: `reason` and
             // `reasonId` disable the button natively.
+            // Focus moves to the trigger inside the press, before any dialog
+            // the item opened mounts, so that dialog hands focus back to it.
             const item = event.target.closest("button, a");
             if (item && !isSetting(item)) {
-              setChosen((count) => count + 1);
+              setOpen(false);
+              trigger.current?.focus();
             }
           }}
         >
-          {(keepMounted || everOpened) && children}
+          {(keepMounted || everOpened) && layer !== null && children}
         </div>,
-        document.body,
+        layer ?? document.body,
       )}
     </div>
   );

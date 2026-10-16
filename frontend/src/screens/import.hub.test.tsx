@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportCard } from "./import";
@@ -171,8 +171,53 @@ describe("the data import hub", () => {
         jsonResponse({ ...formatFixture, order: ["contact", "company"] }),
     });
     render(<ImportCard />);
-    const line = (await screen.findByText("Import order:")).parentElement;
-    expect(line).toHaveTextContent("Import order:Contacts→Companies");
+    const line = await screen.findByText("Import order: Contacts Companies");
+    expect(line).toHaveTextContent("Import order: Contacts → Companies");
+    // The arrows are drawn for the eye only; a screen reader hears the names.
+    const arrows = [...line.children].filter((one) =>
+      one.textContent?.includes("→"),
+    );
+    expect(arrows).toHaveLength(1);
+    for (const arrow of arrows) {
+      expect(arrow).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
+  it("keeps the history panel while a read is pending, and says a failed one", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({ data: [{ ...run, file_name: "crm.csv" }] }),
+    });
+    const routed = vi.mocked(fetch).getMockImplementation();
+    let answerDrafts: (response: Response) => void = () => undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://test.local",
+        );
+        if (url.searchParams.get("view") === "drafts") {
+          return new Promise<Response>((resolve) => {
+            answerDrafts = resolve;
+          });
+        }
+        return routed?.(input, init) ?? Promise.reject(new Error("unrouted"));
+      }),
+    );
+    render(<ImportCard />);
+    const panel = await screen.findByRole("region", { name: "Recent imports" });
+    expect(within(panel).queryByRole("table")).toBeNull();
+    act(() =>
+      answerDrafts(
+        jsonResponse(
+          { title: "Server error", status: 500, type: "about:blank" },
+          500,
+        ),
+      ),
+    );
+    expect(await within(panel).findByRole("alert")).toBeVisible();
+    expect(within(panel).queryByRole("table")).toBeNull();
   });
 
   it("asks before an undo, then starts it", async () => {
@@ -236,10 +281,19 @@ describe("the data import hub", () => {
     }
   });
 
-  it("says so when there is no import yet", async () => {
-    stubRoutes();
+  it("shows no history panel before the first import", async () => {
+    const sent = stubRoutes();
     render(<ImportCard />);
-    expect(await screen.findByText("No imports yet.")).toBeVisible();
+    expect(await screen.findByText("Upload your data")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        sent.filter((one) => one.path === "GET /imports").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    await act(async () => {});
+    expect(
+      screen.queryByRole("heading", { name: "Recent imports" }),
+    ).toBeNull();
   });
 
   it("opens the run page with the dropped file", async () => {

@@ -140,9 +140,13 @@ export function fullPatch(
   zip: boolean,
   choices: Choices,
   run: ImportRun | undefined,
+  presetContact: string | null = null,
 ): DraftPatch {
   return {
     ...filesPatch(files, zip, choices),
+    ...(presetContact
+      ? { preset_links: [{ type: "contact" as const, id: presetContact }] }
+      : null),
     ...namePatch(choices),
     ...tagPatch(choices, Boolean(run?.context_tag_id)),
     draft_step: "map",

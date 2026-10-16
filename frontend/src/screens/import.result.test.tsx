@@ -131,7 +131,21 @@ describe("the import and its result", () => {
                     run_id: "r1",
                     status,
                     reversed_count: 2,
-                    kept: [{ object: "lead", id: "l-1" }],
+                    kept: [
+                      {
+                        object: "lead",
+                        id: "l-1",
+                        reason:
+                          "Someone changed this record after the import, so it was left in place.",
+                        reason_code: "undo_edited",
+                      },
+                      {
+                        object: "company",
+                        id: "c-1",
+                        reason_code: "undo_still_referenced",
+                        params: { deals: "2", contacts: "1" },
+                      },
+                    ],
                     errored: [],
                   }
                 : undefined,
@@ -159,10 +173,40 @@ describe("the import and its result", () => {
       status = "undone";
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText("Import undone")).toBeVisible();
-      expect(screen.getByText("Prospects: l-1")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Prospects: l-1 — Someone changed this record after the import, so it was left in place.",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          "Companies: c-1 — Live deals or contacts still name this company (deals: 2, contacts: 1), so it was left in place.",
+        ),
+      ).toBeVisible();
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("reads a finished import whose report sends no issue list, and says it is finished", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "complete" }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({
+          ...dryRun,
+          run_id: "r1",
+          status: "complete",
+          issues: null,
+        }),
+    });
+    renderAtImport("r1");
+    expect(await screen.findByText("Import complete")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "problems.csv" })).toBeNull();
+    expect(screen.queryByText(/A test run is staged/)).toBeNull();
+    expect(
+      screen.getByText(/This import is finished, so its files and map/),
+    ).toBeInTheDocument();
   });
 
   it("counts what each file wrote and the rows it left out", async () => {
@@ -194,5 +238,116 @@ describe("the import and its result", () => {
       "href",
       "/v1/imports/r1/problems.csv?lang=en",
     );
+  });
+
+  it("shows how far an undo has got and offers Continue undo only once the worker is silent", async () => {
+    let silent = 0;
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          phase: "undoing",
+          phase_object: "contact",
+          heartbeat_age_seconds: silent,
+          rate_rows_per_second: 40,
+          progress: {
+            objects: [
+              { object: "contact", rows_done: 30, rows_total: 50 },
+              { object: "company", rows_done: 0, rows_total: 20 },
+            ],
+            counts: {
+              created: 0,
+              updated: 0,
+              unchanged: 0,
+              skipped: 0,
+              problems: 0,
+            },
+          },
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+    });
+    const view = renderAtImport("r1");
+    expect(
+      await screen.findByText(/30 of 70 rows processed · 40 rows\/s/),
+    ).toBeVisible();
+    expect(screen.getAllByText("Undoing Contacts").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Continue undo" })).toBeNull();
+    view.unmount();
+    silent = 45;
+    renderAtImport("r1");
+    expect(
+      await screen.findByRole("button", { name: "Continue undo" }),
+    ).toBeVisible();
+  });
+
+  it("says a stopped undo once, in the progress panel's notice", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          phase: "undoing",
+          phase_object: "contact",
+          heartbeat_age_seconds: 45,
+          idle_seconds: 45,
+          progress: {
+            objects: [{ object: "contact", rows_done: 30, rows_total: 50 }],
+            counts: {
+              created: 0,
+              updated: 0,
+              unchanged: 0,
+              skipped: 0,
+              problems: 0,
+            },
+          },
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+    });
+    renderAtImport("r1");
+    expect(
+      (await screen.findAllByText("Waiting for the server")).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/The undo has stopped/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Continue undo" })).toBeVisible();
+  });
+
+  it("treats a press on a run another attempt holds as progress, not as a failure", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "undoing",
+          heartbeat_age_seconds: 45,
+        }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({ ...dryRun, run_id: "r1", status: "undoing" }),
+      "POST /imports/r1/undo": () =>
+        jsonResponse(
+          {
+            type: "https://errors.gradion.com/conflict",
+            title: "Conflict",
+            status: 409,
+            code: "run_in_flight",
+            detail: "This import is already running.",
+          },
+          409,
+        ),
+    });
+    renderAtImport("r1");
+    await user.click(
+      await screen.findByRole("button", { name: "Continue undo" }),
+    );
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r1/undo"),
+    );
+    expect(screen.queryByText("Undo did not run")).toBeNull();
+    expect(screen.queryByText(/already running/)).toBeNull();
   });
 });

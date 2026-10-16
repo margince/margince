@@ -54,7 +54,7 @@ const notARecordZone = new Map<string, string>([
     "one learning of a list, titled by kind, inside the learnings panel's body",
   ],
   [
-    "screens/contactnetwork/edgedetail.tsx",
+    "features/contacts/contactnetwork/edgedetail.tsx",
     "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],
 ]);
@@ -210,7 +210,7 @@ describe("a titled zone is a Panel", () => {
     expect(modules.map(pathOf)).toContain("screens/company360.tsx");
     expect(modules.map(pathOf)).toContain("components/recordfields.tsx");
     expect(modules.map(pathOf)).toContain(
-      "screens/contactnetwork/edgedetail.tsx",
+      "features/contacts/contactnetwork/edgedetail.tsx",
     );
   });
 

@@ -69,7 +69,7 @@ if ! run "50 example.com/slow"; then fail "a waived package replayed from cache 
 printf '?   \texample.com/empty\t[no test files]\n' >"$LOG"
 if run; then fail "a log with no timed package line passed"; fi
 
-if [ "$FAILURES" -gt 0 ]; then
+if [[ "$FAILURES" -gt 0 ]]; then
   echo "FAIL: check-test-budget.test.sh — $FAILURES case(s)" >&2
   exit 1
 fi

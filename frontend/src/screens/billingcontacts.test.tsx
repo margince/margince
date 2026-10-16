@@ -8,9 +8,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { ContactBillingRoles } from "../features/contacts/contactbillingroles";
 import { LocaleProvider } from "../i18n";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
-import { ContactBillingRoles } from "./contactbillingroles";
 
 // The rule this panel turns on is the difference between WITHHELD and EMPTY,
 // and it is the one that fails silently: both render as "no rows", and a card

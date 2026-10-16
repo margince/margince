@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 175.4 KB |
+| Tool catalog | 175.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45780 |
+| Approx. wire tokens | 45819 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,9 +32,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 61.1 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.2 KB | 27% | Yes, every step |
-| Input schemas | 52.6 KB | 30% | Yes, every step |
+| Output schemas | 61.2 KB | 34% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 48.3 KB | 27% | Yes, every step |
+| Input schemas | 52.6 KB | 29% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
 | **Description + input schema** | **100.9 KB** | **57%** | **the recurring cost** |
 
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 993 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -6111,23 +6111,23 @@ when an item happened, in UTC — prefer it over a date the prose recalls.
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
 checks every row against the workspace and reports what importing it would do. Writes nothing.
-`object` is company, contact, lead or deal. Use `contact` for a file the business already knows —
-a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
-nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
-here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
-email is already held, which is always refused, because an email is a real key. A company's Website
-or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops
-guessing from names. To link contacts to their employers, map the company column to `company_name`
-— import the companies FIRST, because a name that matches nothing links nothing and says so. To
-CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company
-it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may
-both correct and add. Files that link to each other go together in `files`, at most one per type,
-instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's
-`company_ref` names a company's ref. read_import with view format lists each file's columns.
-create_record for one record you already know. Keep the run_id. The counts its report answers —
-created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report
-both: a column this placed by a name they did not write is a decision they did not make. (Runs
-immediately; requires passport scope "write".)
+`object` is company, contact, lead, deal or activity. Use `contact` for a file the business already
+knows — a migration off another CRM, a corrected export coming back. Use `lead` for a
+machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row
+naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip —
+except a contact whose email is already held, which is always refused, because an email is a real
+key. A company's Website or Domain column maps to `domain`, which is what identifies a company —
+import it and dedupe stops guessing from names. To link contacts to their employers, map the company
+column to `company_name` — import the companies FIRST, because a name that matches nothing links
+nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a
+row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new
+company, so one file may both correct and add. Files that link to each other go together in `files`,
+at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link
+such as a contact's `company_ref` names a company's ref. read_import with view format lists each
+file's columns. create_record for one record you already know. Keep the run_id. The counts its
+report answers — created, duplicates, skipped — and the mapping it settled on are what the user
+weighs, so report both: a column this placed by a name they did not write is a decision they did not
+make. (Runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6164,7 +6164,8 @@ immediately; requires passport scope "write".)
               "company",
               "lead",
               "contact",
-              "deal"
+              "deal",
+              "activity"
             ],
             "type": "string"
           }
@@ -6176,7 +6177,7 @@ immediately; requires passport scope "write".)
         ],
         "type": "object"
       },
-      "maxItems": 4,
+      "maxItems": 5,
       "minItems": 1,
       "type": "array"
     },
@@ -6197,7 +6198,8 @@ immediately; requires passport scope "write".)
         "company",
         "lead",
         "contact",
-        "deal"
+        "deal",
+        "activity"
       ],
       "type": "string"
     },
@@ -6517,6 +6519,18 @@ immediately; requires passport scope "write".)
                         "type": "string"
                       },
                       "object": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "reason_code": {
                         "type": "string"
                       }
                     },

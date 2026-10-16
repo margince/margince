@@ -146,9 +146,9 @@ offers to narrow what is already captured. It never opens up captured mail; to
 open older mail, share its threads one by one.
 
 ### How do I turn email sharing off for the whole company?
-To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Email sharing** card, they switch off **Share captured mail with the team**.
+To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
 1. Open **Settings**, then **Capture rules**.
-2. In **Email sharing**, switch **Share captured mail with the team** off and save.
+2. In **Mail sharing and sync**, switch **Share captured mail with the team** off and save.
 
 From then on, only those on each message can see new mail. The card warns: "With email sharing off, the CRM is hard to use".
 The same card holds **Allow mailboxes to share on arrival**, which lets mailboxes pick **Shared with the team**.
@@ -156,7 +156,7 @@ Only an administrator or an Ops user can change this.
 
 ## The company-wide floor
 
-**Settings → Capture rules → Email sharing** decides whether captured mail is
+**Settings → Capture rules → Mail sharing and sync** decides whether captured mail is
 shared with colleagues at all. It is on by default.
 
 When it is off, every message captured from then on is held to those on it,
@@ -244,7 +244,7 @@ never shows mail from another seat's own mailbox.
 | What you want | Where |
 |---|---|
 | This mailbox's posture | Settings → Connections → Mail visibility |
-| The company-wide floor | Settings → Capture rules → Email sharing |
+| The company-wide floor | Settings → Capture rules → Mail sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
 | Share one thread | The message itself, or Settings → Connections → Held threads |
 | One logged message's audience | Change visibility, on its row |

@@ -39,6 +39,10 @@ import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
 import { EntityRef } from "../components/entityref";
 import { FactList } from "../design-system/factlist";
+import {
+  TaskCompleteCheck,
+  type useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { HealthStat, WITHHELD_READING } from "./company360health";
 import { LastTouchStat } from "./company360lasttouch";
 import {
@@ -60,7 +64,6 @@ import {
   SentenceList,
   WrittenBy,
 } from "./record360";
-import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
 
 // The company view's data layer and its right-rail cards.
 //

@@ -18,6 +18,7 @@ import "../design-system/recordcard.css";
 import "./company360.css";
 import "./companyrailprojects.css";
 import { useEntityName } from "../components/entityref";
+import { TagsPanel } from "../features/lists/tagspanel";
 import { problemMessageOf } from "../lib/problem";
 import { SectionSummary } from "./companyrailshared";
 import { LeadFillFromContact } from "./leadfillfromcontact";
@@ -26,7 +27,6 @@ import { useProjectRecord } from "./projectrecord";
 import { PhaseBadge } from "./projects";
 import type { Project } from "./projects.form";
 import { searchProjectReferences } from "./recordreferences";
-import { TagsPanel } from "./tagspanel";
 
 // The lead's own two doors out: the deal it opened once qualified, and the
 // project its Details name. Split out of leads.tsx so that file's own length

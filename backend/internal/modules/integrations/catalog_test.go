@@ -142,7 +142,7 @@ func TestTheCatalogNamesEveryCategoryItPricesWith(t *testing.T) {
 }
 
 // namedWith is what a buy button reads off one catalog entry — the same set
-// frontend/src/screens/contactprovider.tsx builds from the wire.
+// frontend/src/features/contacts/contactprovider.tsx builds from the wire.
 func namedWith(entry CategoryCost) []string {
 	out := []string{entry.Category}
 	if entry.Requires != "" {

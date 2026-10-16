@@ -20,6 +20,7 @@ import {
   ProvenanceTag,
   toEvidence,
 } from "../design-system/trust";
+import { ResolvedPassportChip } from "../features/automations/passportchip";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
@@ -36,7 +37,6 @@ import {
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import type { HistoryValueCtx } from "./historyvalues";
-import { ResolvedPassportChip } from "./passportchip";
 import "./history.css";
 import "./historyfields.css";
 

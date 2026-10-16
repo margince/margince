@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { defaultAgentAllowances } from "../../src/screens/agentallowances.fixtures";
+import { defaultAgentAllowances } from "../../src/features/automations/agentallowances.fixtures";
 import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
 import { E2E_ADMIN_GRANTS } from "./fixtures";

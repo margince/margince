@@ -3,9 +3,9 @@
 
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { useClaimSettle } from "../features/worklist/taskactions";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
-import { useClaimSettle } from "./taskactions";
 
 /**
  * Dismissing a commitment the reader judges was never made. Kept beside the

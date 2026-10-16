@@ -98,6 +98,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
+- [move-a-frontend-feature.md](how-to/move-a-frontend-feature.md): put one feature from `screens/` in a folder of its own.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
@@ -144,6 +145,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [modules.md](reference/modules.md): each module, what it owns, its tables and its API.
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
+  Generated.
+- [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages

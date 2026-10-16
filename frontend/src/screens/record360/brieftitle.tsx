@@ -4,8 +4,8 @@
 // The head of the card a machine wrote: the mark that says WHO produced this
 // reading, and WHAT it is a reading of.
 //
-// One line (DESIGN.md §7): the mark leads it, so a reader has the authorship
-// before they weigh a word of it, and the name follows as the subject.
+// The mark leads the row, so the authorship comes before any word of it. The
+// name follows as the subject and may wrap beside it.
 //
 // The mark carries the claim ALONE. Indigo on its own tile means "a machine
 // wrote what is under this" everywhere in the product, so the sentence that
@@ -21,7 +21,7 @@ import { Sparkles } from "lucide-react";
 import { useT } from "../../i18n";
 import "../company360.css";
 
-/** BriefTitle is the head's one line, over whichever record it reads. */
+/** BriefTitle is the head's title, over whichever record it reads. */
 export function BriefTitle({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   return (

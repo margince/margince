@@ -354,13 +354,8 @@ export const SETTINGS_PAGES = [
     // direction — a card narrower than its page withholds itself — and it
     // closes when they move to `oauth_application`.
     requires: reads("authentication_policy"),
-    // SignInMethodsCard writes on two grants: the provider switches save
-    // `installation_settings:update`, while the group→role map saves
-    // `authentication_policy:update` — admin-only, because writing it grants
-    // roles. The two OAuth application cards beside them save and remove
-    // through `capture_settings:update`, a different grant and a wider audience.
-    // All are on this page, so any of them makes it the reader's to work in — a
-    // custom role holding only the OAuth half still has working controls.
+    // Each card saves on its own grant below, and any one of them makes the
+    // page the reader's to work in.
     changes: acts(
       writes("installation_settings", ["update"]),
       writes("authentication_policy", ["update"]),
@@ -485,14 +480,12 @@ export const SETTINGS_PAGES = [
   },
   {
     id: "reviewtemplates",
-    // `custom_field` read, which is what the templates endpoint itself
-    // requires. The card has no write of any kind — the API serves these
-    // templates and accepts no edits — so reading them IS the action, and the
-    // two questions have one answer.
+    // `custom_field` read, which is what the templates endpoint requires.
+    // Editing a template's questions is `custom_field` update on the server.
     group: "sales",
     scope: "workspace",
     requires: reads("custom_field"),
-    changes: readingIsTheAct,
+    changes: acts(writes("custom_field", ["update"])),
   },
   {
     id: "recordroles",
@@ -816,9 +809,8 @@ export function visibleSettingsPages(
  * navigates every day is the work they can do; the settings home carries both,
  * under headings that say which is which.
  *
- * Splitting here rather than at each caller is what keeps the rail, the home
- * and the read-only banner agreeing. Three readers deriving "can this contact
- * act?" separately is three chances to disagree in front of one user.
+ * Splitting here keeps the rail, the home, the read-only banner and the cards
+ * that defer to it agreeing on whether this contact can act.
  */
 export type SettingsReach = {
   /** Pages with at least one control this reader may use. */
@@ -843,3 +835,6 @@ export function settingsReach(
   }
   return { acts, looksUp };
 }
+
+export const readsOnly = (reach: SettingsReach, page: SettingsPageId) =>
+  reach.looksUp.some((each) => each.id === page);

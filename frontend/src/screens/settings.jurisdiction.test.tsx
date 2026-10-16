@@ -58,7 +58,7 @@ const UNSET: Jurisdiction = {
 
 type Sent = { method: string; path: string; body: unknown };
 
-function stub(page: Jurisdiction, canChange = true): Sent[] {
+function stub(page: Jurisdiction, canChange = true, refuse = false): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
@@ -86,6 +86,20 @@ function stub(page: Jurisdiction, canChange = true): Sent[] {
       }
       if (url.pathname.endsWith("/installation/jurisdiction"))
         return json(page);
+      if (refuse && method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            type: "about:blank",
+            title: "Change refused",
+            status: 422,
+            detail: "Try again later.",
+          }),
+          {
+            status: 422,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      }
       return json({});
     }),
   );
@@ -127,15 +141,26 @@ describe("the jurisdiction page", () => {
     const sent = stub(UNSET);
     const user = userEvent.setup();
     render();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["jurisdiction.change.label"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: en["jurisdiction.change.label"],
+    });
+    expect(
+      within(dialog).getByRole("button", {
+        name: en["jurisdiction.confirm.confirm"],
+      }),
+    ).toBeDisabled();
     await pickOption(
       user,
-      await screen.findByLabelText(en["jurisdiction.change.label"]),
+      within(dialog).getByRole("combobox", {
+        name: en["jurisdiction.card.title"],
+      }),
       "Vietnam",
     );
-    await user.click(
-      screen.getByRole("button", { name: en["jurisdiction.change.action"] }),
-    );
-    const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/becomes no floor/)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/keeps Commercial correspondence/),
@@ -152,6 +177,33 @@ describe("the jurisdiction page", () => {
         body: { country: "vn" },
       }),
     );
+  });
+
+  it("keeps its title through a choice and drops a refusal once the choice changes", async () => {
+    stub(UNSET, true, true);
+    const user = userEvent.setup();
+    render();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["jurisdiction.change.label"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: en["jurisdiction.change.label"],
+    });
+    const choice = within(dialog).getByRole("combobox", {
+      name: en["jurisdiction.card.title"],
+    });
+    await pickOption(user, choice, "Vietnam");
+    expect(dialog).toHaveAccessibleName(en["jurisdiction.change.label"]);
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["jurisdiction.confirm.confirm"],
+      }),
+    );
+    expect(await within(dialog).findByText(/Try again later/)).toBeVisible();
+    await pickOption(user, choice, "Germany");
+    expect(within(dialog).queryByText(/Try again later/)).toBeNull();
   });
 
   it("shows a carried floor and when it stops binding", async () => {
@@ -182,6 +234,8 @@ describe("the jurisdiction page", () => {
     stub(UNSET, false);
     render();
     await screen.findByText(en["jurisdiction.selected.none"]);
-    expect(screen.queryByText(en["jurisdiction.change.label"])).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["jurisdiction.change.label"] }),
+    ).toBeNull();
   });
 });

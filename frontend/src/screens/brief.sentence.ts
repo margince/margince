@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { itemTitle, rowHref } from "../features/worklist/worklist.copy";
+import type {
+  Worklist,
+  WorklistItem,
+} from "../features/worklist/worklist.queries";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { laneUnread } from "./brief.readings.honesty";
-import { itemTitle, rowHref } from "./worklist.copy";
-import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence, composed from the rows the page is showing.
 //

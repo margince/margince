@@ -288,10 +288,54 @@ describe("AuditEntryLine", () => {
     );
     expect(screen.getByText("You")).toBeTruthy();
     expect(screen.getByText("Created")).toBeTruthy();
-    expect(screen.getByText("custom field")).toBeTruthy();
+    expect(screen.getByText("Custom field")).toBeTruthy();
     // the opaque uuids never reach the reader
     expect(screen.queryByText(/cf-1/)).toBeNull();
     expect(screen.queryByText(new RegExp(ME))).toBeNull();
+  });
+
+  it("names the record by what the change wrote when the server names none", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({ after: { label: "Fleet size", type: "number" } })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Fleet size")).toBeTruthy();
+  });
+
+  it("names a removed record by the name it had before", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({ after: { label: "" }, before: { label: "Fleet size" } })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Fleet size")).toBeTruthy();
+  });
+
+  it("reads no name out of a change on a kind whose label is not its name", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({ entity_type: "deal", after: { label: "Q3 upsell" } })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.queryByText("Q3 upsell")).toBeNull();
+  });
+
+  it("prefers the record's live name to the one the change wrote", () => {
+    wrap(
+      <AuditEntryLine
+        entry={entry({
+          entity_label: "Fleet count",
+          before: { label: "Fleet size" },
+        })}
+        meUserId={ME}
+      />,
+    );
+    expect(screen.getByText("Fleet count")).toBeTruthy();
+    expect(screen.queryByText("Fleet size")).toBeNull();
   });
 
   it("dates an entry on the company's clock, not the reader's", () => {

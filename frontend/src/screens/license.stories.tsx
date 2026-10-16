@@ -4,18 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { StoryProviders } from "../testing/story-utils";
-import { LicenseReading } from "./license";
+import { LicenseReading, SeatUsageReading } from "./license";
 
-// Settings → License. The reading is rendered directly rather than through the
-// fetching card: every state worth looking at is a state of the ENTITLEMENT, and
-// stubbing a query to reach it would put the fetch on trial instead of the
-// surface.
-//
-// The seats are ONE reading in a stacked `SettingRow` — used against granted,
-// with the bar under it — because that is one fact, and the two slots plus a
-// separate bar it used to be spelled it three times. So what these stories put
-// on trial is a stat card INSIDE a row: the row's label and its
-// what-counts-as-a-seat description above it, and the hairline the row draws.
+// The reading renders without the fetching card. Every state worth seeing is a
+// state of the entitlement, and a stubbed query would test the fetch instead.
 
 type Entitlement = components["schemas"]["LicenseEntitlement"];
 
@@ -29,12 +21,31 @@ function story(entitlement: Entitlement) {
   );
 }
 
-const meta: Meta<typeof LicenseReading> = {
+const meta = {
   title: "Settings/People/Seats and license/Terms",
   component: LicenseReading,
-};
+  args: {
+    entitlement: {
+      state: "valid",
+      seats_used: 9,
+      seats_granted: 10,
+      over_limit: false,
+      checked_at: CHECKED_AT,
+    },
+  },
+} satisfies Meta<typeof LicenseReading>;
 export default meta;
-type Story = StoryObj<typeof LicenseReading>;
+type Story = StoryObj<typeof meta>;
+
+// The seat count for a reader who may not see the entitlement: no grant, no
+// bar, and nothing that reads as "unlicensed".
+export const CapacityOnly: Story = {
+  render: () => (
+    <StoryProviders>
+      <SeatUsageReading seatsUsed={7} />
+    </StoryProviders>
+  ),
+};
 
 // Room left, which is what most installations look like most of the time.
 export const InsideTheGrant: Story = {
@@ -47,10 +58,8 @@ export const InsideTheGrant: Story = {
   }),
 };
 
-// The state this screen exists for. Three things are on trial together: the
-// interrupting notice, the alert tint on the reading that caused it, and a bar
-// whose value is past its own maximum — it fills and stops, and the detail line
-// is what says by how much.
+// The state this screen exists for: the interrupting notice, the danger line,
+// and a bar past its own maximum that fills and stops.
 export const OverTheGrant: Story = {
   render: story({
     state: "valid",
@@ -112,11 +121,8 @@ export const LicenseRefusedDark: Story = {
   }),
 };
 
-// Over the grant in dark, because this is the surface with the most colour on it
-// and every derived value is a color-mix that follows the dark accent lift: the
-// danger callout, the alert tint on the reading and the bar's fill are three
-// different tints that have to stay apart from each other AND from the card
-// under them.
+// Dark mode lifts every color-mix here. The danger callout, danger line and bar
+// fill must stay apart from each other and from the card.
 export const OverTheGrantDark: Story = {
   globals: { theme: "dark" },
   render: story({
@@ -128,10 +134,8 @@ export const OverTheGrantDark: Story = {
   }),
 };
 
-// At 390px, where the value carries both figures on ONE line and the ellipsis
-// rule decides what a reader loses if it cannot. The row folds at the same
-// width, so its label and description sit above the reading rather than beside
-// it.
+// At 390px the row folds: its name and description sit above the reading
+// rather than beside it.
 export const OverTheGrantNarrow: Story = {
   globals: { viewport: { value: "phone" } },
   // The TAG is what drives the browser to 390px; the global alone only moves

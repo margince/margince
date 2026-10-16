@@ -25,45 +25,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
-// draftSystem names which of this task's system prompts a call is made under.
-//
-// A TYPE rather than a bare string, because this value chooses what the model
-// is told it is doing: a first message sent under the reply prompt is told an
-// activity is the authoritative reason for it, and there is no activity. The
-// two are one task — same schema, same bounds, same rules block, same data
-// boundary — differing in what evidence exists to write from, which is what a
-// site is.
-type draftSystem string
-
-const replyDraftSystem draftSystem = `Draft a professional email reply, for the sender to send under their own name.
+const replyDraftSystem = `Draft a professional email reply, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
 - Conversation contains other readable messages in the same thread, with their directions and dates, for context only. Do not switch the reply target. An outbound selected message calls for a follow-up to its recipient, not an answer to ourselves.
 - Where the message raises several distinct points, answer at least two by name, a clause each, before the ask.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
-- Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
-
-// firstDraftSystem is the draft_reply/first site: a message that OPENS a
-// conversation, written from the caller's stated intent and nothing else.
-//
-// It is a separate prompt rather than the reply's because the reply's is not
-// true here. That one tells the model "the activity and stated intent are the
-// authoritative reason for this reply" — and on this site there is no activity,
-// no thread and no prior message. A prompt that names evidence which does not
-// exist invites the model to supply it, which on a first message to a stranger
-// is the one failure that cannot be edited out afterwards: an opening line
-// referring to a conversation nobody had.
-//
-// The intent is stated as the WHOLE brief, positively, for the same reason. A
-// caller's sentence is thin material and the honest instruction is to write
-// from it rather than around it.
-const firstDraftSystem draftSystem = `Draft the FIRST email of a new conversation, for the sender to send under their own name.
-Return ONLY a JSON object: {"subject":"...","body":"..."}.
-- Nothing has been sent or received yet: conversation_state is "fresh" because this message opens the conversation now, not because an exchange is running. There is no thread and no earlier message, so never refer to one, never open with a follow-up phrase, and never give the subject "Follow-up", "Re:" or any word for a reply.
-- The stated intent is the whole brief. Write the message it describes; if it is thin, keep the message short rather than inventing a reason for it.
-- Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities — and never a prior meeting, call or email the intent does not name.
-- Say one thing and ask for one thing. Three short paragraphs at most.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`
 
 // replyDraftSchema is the answer's shape, subject first: the order the model
@@ -91,23 +59,15 @@ type replyDraft struct {
 	Body    string `json:"body"`
 }
 
-// replyDraftSystemFor assembles this call's system turn: what this surface is
-// for, the rules every drafting surface shares, and THIS call's data boundary
-// (see promptfence.Fence.Rule).
-func replyDraftSystemFor(system draftSystem, fence promptfence.Fence) string {
-	return string(system) + "\n\n" + draftrules.Shared + "\n" + fence.Rule("activity")
-}
-
-// voicedSite is a site's prompt with the voice rule added — the system turn a
-// call carrying a profile block is made under.
-//
-// A function rather than a second constant per site, because the voiced turn is
-// DERIVED from the plain one. Two spelled-out variants drift the moment a site's
-// own rules change, and the first-message site's variant would then be a copy of
-// the reply's that nobody remembered to update — which is precisely the shape
-// this replaced.
-func voicedSite(site draftSystem) draftSystem {
-	return draftSystem(string(site) + "\n\n" + draftvoice.SystemRule)
+// replyDraftSystemFor assembles the system turn for one call. It carries what
+// this surface is for, the voice rule when voiced, the rules every drafting
+// surface shares, and this call's data boundary (promptfence.Fence.Rule).
+func replyDraftSystemFor(fence promptfence.Fence, voiced bool) string {
+	system := replyDraftSystem
+	if voiced {
+		system += "\n\n" + draftvoice.SystemRule
+	}
+	return system + "\n\n" + draftrules.Shared + "\n" + fence.Rule("activity")
 }
 
 // replyDraftRequest builds the one request a draft call sends, in whichever of
@@ -117,7 +77,7 @@ func voicedSite(site draftSystem) draftSystem {
 // same invocation site: same schema, same bounds, same data boundary.
 //
 //promptvoice:exempt the reply is an email sent to a customer under the user's own name, and draftrules carries that user's voice; Margince's register belongs to what it says TO the user, never to what it writes AS them.
-func replyDraftRequest(site draftSystem, activity replyActivityData, voiceBlock voiceBlockFor, correction string) (model.Request, error) {
+func replyDraftRequest(activity replyActivityData, voiceBlock voiceBlockFor, correction string) (model.Request, error) {
 	payload, err := json.Marshal(activity)
 	if err != nil {
 		return model.Request{}, fmt.Errorf("compose: encode reply activity context: %w", err)
@@ -127,17 +87,8 @@ func replyDraftRequest(site draftSystem, activity replyActivityData, voiceBlock 
 	// could not be spelled — and an accident of the encoder is not a boundary:
 	// it goes the moment this block is rendered as text rather than JSON.
 	fence := promptfence.New()
-	system := site
 	content := fence.Wrap(string(payload))
 	if voiceBlock != nil {
-		// The voice rule is ADDED to whichever site this call is made under,
-		// never substituted for it. A swap carried the reply site's evidence
-		// claim onto every voiced call, and on the first-message site that
-		// claim is false: telling a model "the activity is the authoritative
-		// reason for this reply" when there is no activity is an invitation to
-		// invent the thread, which is the one error a first message to a
-		// stranger cannot be edited back from.
-		system = voicedSite(site)
 		content = voiceBlock(fence) + "\n\n" + content
 	}
 	// The correction rides the USER turn and never the variant choice: it is
@@ -145,7 +96,7 @@ func replyDraftRequest(site draftSystem, activity replyActivityData, voiceBlock 
 	// stay a plain draft rather than silently becoming a voiced one.
 	content += correction
 	return model.Request{
-		System: replyDraftSystemFor(system, fence),
+		System: replyDraftSystemFor(fence, voiceBlock != nil),
 		Messages: []model.Message{{
 			Role:    chatRoleUser,
 			Content: content,
@@ -157,12 +108,12 @@ func replyDraftRequest(site draftSystem, activity replyActivityData, voiceBlock 
 }
 
 func (d replyDrafter) complete(ctx context.Context, activity replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	return d.completeWith(ctx, replyDraftSystem, activity, voiceBlock, "")
+	return d.completeWith(ctx, activity, voiceBlock, "")
 }
 
 // completeWith is complete plus the correction a retry carries.
-func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activity replyActivityData, voiceBlock voiceBlockFor, correction string) (replyDraft, error) {
-	req, err := replyDraftRequest(site, activity, voiceBlock, correction)
+func (d replyDrafter) completeWith(ctx context.Context, activity replyActivityData, voiceBlock voiceBlockFor, correction string) (replyDraft, error) {
+	req, err := replyDraftRequest(activity, voiceBlock, correction)
 	if err != nil {
 		return replyDraft{}, err
 	}
@@ -188,14 +139,14 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 // The voice block rides along unchanged: it selects the system variant, and the
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
-func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
+func (d replyDrafter) completeChecked(ctx context.Context, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
 	record := draftcheck.Grounds{
 		Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent),
 		FirstName: data.Recipient, LastName: data.RecipientLastName,
 	}
 	draft, err := draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
 		func(ctx context.Context, correction string) (replyDraft, error) {
-			return d.completeWith(ctx, site, data, voiceBlock, correction)
+			return d.completeWith(ctx, data, voiceBlock, correction)
 		},
 		// The reply site returns no reasoning: its schema is subject and body
 		// alone, so there is no second channel to judge here.

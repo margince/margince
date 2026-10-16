@@ -7,10 +7,10 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { Row } from "../../design-system/stack";
+import { OvernightGrantChoice } from "../../features/automations/overnight-grant";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useConnectors } from "../connectors";
-import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
 import { WayOnward } from "./way-onward";
 

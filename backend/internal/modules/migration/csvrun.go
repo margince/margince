@@ -67,6 +67,16 @@ type RunMapping struct {
 	// the run is decided by it.
 	FileName     string `json:"file_name,omitempty"`
 	OnBrokenLink string `json:"on_broken_link,omitempty"`
+	// PresetLinks are the records every activity of the run is filed under, so
+	// the file needs no links column. Both the test and the commit read them
+	// from here.
+	PresetLinks []PresetLink `json:"preset_links,omitempty"`
+}
+
+// PresetLink names one record a run files every activity under.
+type PresetLink struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
 }
 
 // PartMapping is one file of a run: which object its rows are, which column

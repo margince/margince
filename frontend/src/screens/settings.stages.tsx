@@ -9,15 +9,14 @@
 // draws and never reaches for the catalog around it.
 
 import { ArrowDown, Lock } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { PanelBody, PanelGroupHead, PanelIntro } from "../design-system/panel";
+import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
 import { Meter } from "../design-system/readings";
-import { StageStrip } from "../design-system/stagestrip";
 import { foldForMatch } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type PluralTranslator, useLocale, usePlural, useT } from "../i18n";
@@ -106,16 +105,17 @@ function criteriaCell(stage: Stage, { t, plural, locale }: ColumnsOf) {
         count: formatNumber(counts.optional, locale),
       }),
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : t("stage.criteriaNone");
+  return parts.length > 0 ? parts.join(" · ") : t("stage.criteriaNoneFolded");
 }
 
-function criteriaFolded(stage: Stage, { t, plural, locale }: ColumnsOf) {
+function criteriaFolded(stage: Stage, { plural, locale }: ColumnsOf) {
   const counts = stage.exit_criteria;
   if (stage.semantic !== "open" || counts === undefined) return undefined;
   const all = counts.required + counts.optional;
-  return all === 0
-    ? t("stage.criteriaNoneFolded")
-    : plural("stage.criteriaCount", all, { count: formatNumber(all, locale) });
+  if (all === 0) return undefined;
+  return plural("stage.criteriaCount", all, {
+    count: formatNumber(all, locale),
+  });
 }
 
 function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
@@ -186,25 +186,6 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
   ];
 }
 
-/** The ladder's shape at a glance, above the table that edits it. */
-function StageFlow({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <StageStrip
-      label={t("pipeline.flow")}
-      empty={t("stage.noneOpen")}
-      steps={ladderOf(pipeline).map((stage) => ({
-        key: stage.id,
-        name: stage.name,
-        probability: stage.win_probability,
-        reading: `${formatNumber(stage.win_probability, locale)}%`,
-        outcome: stage.semantic === "open" ? undefined : stage.semantic,
-      }))}
-    />
-  );
-}
-
 /**
  * The ladder of one pipeline. A retired pipeline's ladder is read-only: the
  * server refuses every stage write on it, so this draws no verb it would refuse.
@@ -212,17 +193,17 @@ function StageFlow({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
 export function StageLadderEditor({
   pipeline,
   canEdit,
-  hintId,
-}: Readonly<{ pipeline: Pipeline; canEdit: boolean; hintId: string }>) {
+}: Readonly<{ pipeline: Pipeline; canEdit: boolean }>) {
   const t = useT();
   const plural = usePlural();
+  const hintId = useId();
   const { locale } = useLocale();
   const order = useStageOrder();
   const writable = canEdit && !pipeline.archived_at;
-  const orders = ordersStages(pipeline, canEdit);
   const canRemove = useCanWrite("pipeline", "delete") && !pipeline.archived_at;
   const ladder = ladderOf(pipeline);
   const open = ladder.filter((stage) => stage.semantic === "open");
+  const orders = writable && open.length > 1;
   const head = useRef<HTMLSpanElement>(null);
   const removal = useStageRemoval(
     ladder,
@@ -256,7 +237,18 @@ export function StageLadderEditor({
             {label}
           </span>
         }
-        action={writable && <StageCreate pipeline={pipeline} />}
+        action={
+          writable && (
+            <>
+              <StageCreate pipeline={pipeline} />
+              {orders && (
+                <span id={hintId} className="sr-only">
+                  {t("stage.orderHint")}
+                </span>
+              )}
+            </>
+          )
+        }
       />
       {ladder.length === 0 ? (
         <PanelBody>
@@ -333,37 +325,4 @@ export function StageLadderEditor({
       <StageRemoveConfirm removal={removal} />
     </>
   );
-}
-
-/**
- * What stands above the ladder: why a retired one is read-only, how to order
- * it, and its shape. Bare holds the strip alone, which a phone does not draw.
- */
-export function StageLadderIntro({
-  pipeline,
-  canEdit,
-  hintId,
-}: Readonly<{ pipeline: Pipeline; canEdit: boolean; hintId: string }>) {
-  const t = useT();
-  const retired = Boolean(pipeline.archived_at);
-  const hinted = ordersStages(pipeline, canEdit);
-  return (
-    <PanelBody
-      className={retired || hinted ? "pipeline-flow" : "pipeline-flow is-bare"}
-    >
-      {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
-      {hinted && (
-        <PanelIntro>
-          <span id={hintId}>{t("stage.orderHint")}</span>
-        </PanelIntro>
-      )}
-      <StageFlow pipeline={pipeline} />
-    </PanelBody>
-  );
-}
-
-/** Whether the ladder takes the arrow-key order hint: a writer, and two open stages to swap. */
-function ordersStages(pipeline: Pipeline, canEdit: boolean): boolean {
-  const open = ladderOf(pipeline).filter((stage) => stage.semantic === "open");
-  return canEdit && !pipeline.archived_at && open.length > 1;
 }

@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import type { GrantSpec } from "../testing/mefixture";
 import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { JurisdictionReading } from "./settings.jurisdiction";
 
@@ -97,9 +99,12 @@ const VIETNAM_CARRIED: Jurisdiction = {
   },
 };
 
-function story(jurisdiction: Jurisdiction) {
+function story(
+  jurisdiction: Jurisdiction,
+  actions: GrantSpec["installation_settings"] = ["read", "update"],
+) {
   return () => {
-    stubWithSession({}, { installation_settings: ["read", "update"] });
+    stubWithSession({}, { installation_settings: actions });
     return (
       <StoryProviders>
         <JurisdictionReading jurisdiction={jurisdiction} />
@@ -128,4 +133,31 @@ export const CarriedFloor: Story = { render: story(VIETNAM_CARRIED) };
 export const CarriedFloorDark: Story = {
   ...CarriedFloor,
   globals: { theme: "dark" },
+};
+
+/** A seat that may read the selection and not change it: no Change verb. */
+export const ReadOnly: Story = { render: story(UNSET, ["read"]) };
+
+/** The change asks for the new jurisdiction in its dialog, then lists what it
+ * changes before the confirm is pressed. */
+export const ChangeDialog: Story = {
+  render: story(UNSET),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Change jurisdiction" }),
+    );
+    await userEvent.click(
+      await body.findByRole("combobox", { name: "Jurisdiction" }),
+    );
+    await userEvent.click(await body.findByRole("option", { name: "Vietnam" }));
+    await body.findByText(/becomes no floor/);
+  },
+};
+
+/** At a phone width the value and its verb drop under the description. */
+export const NotSetPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(UNSET),
 };

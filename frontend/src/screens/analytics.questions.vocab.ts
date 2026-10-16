@@ -10,11 +10,11 @@
 // without a render and the builder only draws what these decide.
 
 import type { components } from "../api/schema";
+import type { Reference } from "../features/lists/filterreference";
 import { isMessageKey, type useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemDetails } from "../lib/problembody";
 import type { FilterOp } from "../lib/segmentpredicate";
-import type { Reference } from "./filterreference";
 
 export type AnalyticsQuery = components["schemas"]["AnalyticsQuery"];
 export type AnalyticsAnswer = components["schemas"]["AnalyticsAnswer"];

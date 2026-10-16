@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { useContact360 } from "../features/contacts/contact360";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
@@ -24,7 +25,6 @@ import {
   company as pageCompany,
 } from "./company.fixtures";
 import { stubFetch } from "./company.testkit";
-import { useContact360 } from "./contact360";
 import { RecordAccess } from "./recordaccess";
 
 type Contact = components["schemas"]["Contact"];

@@ -23,7 +23,7 @@ var (
 	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
 	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)
 	ownerRefusedWhy         = migration.Why(migration.ReasonOwnerRefused)
-	unknownOwnerWhy         = migration.Why(migration.ReasonOwnerUnknown)
+	unknownOwnerWhy         = migration.WhyCount(migration.ReasonOwnerUnknown, "rows", 1)
 	newTagWhy               = migration.Why(migration.ReasonTagNew)
 	createdTagWhy           = migration.Why(migration.ReasonTagCreated)
 	contactUnnamedWhy       = migration.Why(migration.ReasonContactUnnamed)

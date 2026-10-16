@@ -3,6 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import type { WorklistItem } from "../features/worklist/worklist.queries";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../features/worklist/worklist.receiptreview.fixtures";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -36,11 +41,6 @@ import {
   wholeMeetings,
 } from "./brief.fixtures";
 import type { MorningDigest } from "./brief.queries";
-import type { WorklistItem } from "./worklist.queries";
-import {
-  automaticDateReceipt,
-  automaticStageReceipt,
-} from "./worklist.receiptreview.fixtures";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same
 // review drawer used by the worklist, and accepting one refreshes the agenda.

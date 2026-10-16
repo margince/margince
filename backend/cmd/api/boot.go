@@ -354,7 +354,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
 	if err != nil {
 		return nil, nil, err
 	}

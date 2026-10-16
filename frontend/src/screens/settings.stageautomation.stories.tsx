@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   installFetchStub,
@@ -227,4 +227,68 @@ export const PopulatedPhone: Story = {
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("table");
   },
+};
+
+/** Every figure in the table and in the details spelled out, one press under the table. */
+export const ColumnsExplained: Story = {
+  render: Populated.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("table");
+    await userEvent.click(canvas.getByText("What the figures mean"));
+    await expect(
+      await canvas.findByText(/Every rate is a share of this number/),
+    ).toBeVisible();
+    await expect(
+      canvas.getByText("Proposals someone turned down."),
+    ).toBeVisible();
+  },
+};
+
+/** More than one pipeline: the report's own head chooses which one it reads. */
+export const SeveralPipelines: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ pipeline: ["read", "update"] }),
+      "GET /pipelines": () =>
+        jsonResponse({
+          data: [
+            ...pipelines.data,
+            {
+              id: "88888888-8888-4888-8888-888888888888",
+              name: "Renewals",
+              is_default: false,
+              position: 1,
+            },
+          ],
+        }),
+      ...populatedRoutes,
+    });
+    return (
+      <StoryProviders>
+        <StageAutomationCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The loading panel carries the same name, so wait for the picker first.
+    const picker = await canvas.findByRole("combobox", { name: "Pipeline" });
+    const record = canvas.getByRole("region", { name: "Track record" });
+    await expect(record).toContainElement(picker);
+  },
+};
+
+export const NothingProposedYetPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: NothingProposedYet.render,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("No proposed moves yet");
+  },
+};
+
+export const PopulatedDark: Story = {
+  globals: { theme: "dark" },
+  render: Populated.render,
 };

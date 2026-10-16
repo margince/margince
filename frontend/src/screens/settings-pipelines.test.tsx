@@ -64,6 +64,8 @@ function server(opts: {
   onlyStage?: boolean;
   dealCount?: number;
   soloInUse?: boolean;
+  // Sales and nothing else: no retired pipeline beside it either.
+  onlyPipeline?: boolean;
   countsWithheld?: boolean;
 }) {
   const calls: Call[] = [];
@@ -93,16 +95,17 @@ function server(opts: {
     version: salesVersion,
     stages: sales,
   });
+  const retiredLine = {
+    id: "pl-old",
+    name: "Retired line",
+    is_default: false,
+    position: 1,
+    version: 4,
+    archived_at: "2026-09-01T00:00:00Z",
+    stages: [],
+  };
   const catalog = () => [
-    {
-      id: "pl-old",
-      name: "Retired line",
-      is_default: false,
-      position: 1,
-      version: 4,
-      archived_at: "2026-09-01T00:00:00Z",
-      stages: [],
-    },
+    ...(opts.onlyPipeline ? [] : [retiredLine]),
     // Live and NOT the default: the only shape that can actually be retired.
     ...(opts.soloInUse
       ? []
@@ -276,7 +279,8 @@ describe("PipelinesCard: who is shown what", () => {
     expect(screen.queryByText("New pipeline")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
-    expect(screen.getByText(/Read-only/)).toBeTruthy();
+    // The settings page says read-only once, above every card; the card adds none.
+    expect(screen.queryByText(/Read-only/)).toBeNull();
   });
 
   // One grant at a time: create and update govern different controls, and a
@@ -362,6 +366,14 @@ describe("PipelinesCard: the catalog", () => {
     expect(await screen.findByText("Order saved")).toBeTruthy();
   });
 
+  it("stands a lone pipeline without a catalog, its own head offering the next", async () => {
+    server({ soloInUse: true, onlyPipeline: true });
+    renderPage();
+    const sales = await screen.findByRole("region", { name: "Sales" });
+    expect(within(sales).getByText("New pipeline")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "All pipelines" })).toBeNull();
+  });
+
   // One pipeline in use has nothing to be ordered against: no grip, and no
   // hint for a grip that is not there.
   it("draws no grip and no order hint while one pipeline is in use", async () => {
@@ -428,7 +440,7 @@ describe("PipelinesCard: the ladder", () => {
     const qualify = await screen.findByTestId("stage-s1");
     expect(within(qualify).getByText("2 required · 1 optional")).toBeTruthy();
     expect(
-      within(screen.getByTestId("stage-s1b")).getByText("None"),
+      within(screen.getByTestId("stage-s1b")).getByText("No criteria"),
     ).toBeTruthy();
   });
 
@@ -437,7 +449,7 @@ describe("PipelinesCard: the ladder", () => {
     renderPage();
     const qualify = await screen.findByTestId("stage-s1");
     expect(within(qualify).getByText("—")).toBeTruthy();
-    expect(within(qualify).queryByText("None")).toBeNull();
+    expect(within(qualify).queryByText("No criteria")).toBeNull();
   });
 
   // The editor reads its stage's criteria only once a reader opens it: a
@@ -817,9 +829,7 @@ describe("PipelinesCard: the pipeline's own verbs", () => {
   it("disables retire on the default pipeline and says why under the row", async () => {
     server({ allow: { pipeline: ["read", "update", "delete"] } });
     renderPage();
-    const reason = await screen.findByText(
-      /Make another pipeline the default first/,
-    );
+    const reason = await screen.findByText(/Make another one the default/);
     expect(reason.closest(".settingrow-description")).not.toBeNull();
     const retire = screen.getByRole("button", { name: "Retire" });
     expect(retire.hasAttribute("disabled")).toBe(true);

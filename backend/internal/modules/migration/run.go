@@ -304,7 +304,7 @@ func (s *RunStore) Resume(ctx context.Context, id RunID) error {
 			return fmt.Errorf("resuming import run: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("import run %s is not failed, nothing to resume: %w", id, apperrors.ErrConflict)
+			return RefuseRun(id, "this import is not failed, so there is nothing to resume")
 		}
 		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id, map[string]any{auditFieldStatus: StatusFailed}, map[string]any{auditFieldStatus: StatusRunning})
 		return err

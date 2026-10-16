@@ -8,6 +8,7 @@ import { Button, Field } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
 import { MultiSelect, Select } from "../design-system/select";
+import { ValueControl } from "../features/lists/filtervalue";
 import { forReader } from "../format/collate";
 import { ordinalNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -37,7 +38,6 @@ import {
   valueControlOp,
   valueShape,
 } from "./analytics.questions.vocab";
-import { ValueControl } from "./filtervalue";
 import "./analytics.questions.css";
 
 type Translate = ReturnType<typeof useT>;

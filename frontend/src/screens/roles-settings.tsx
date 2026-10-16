@@ -20,11 +20,11 @@ import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
+import { useExtensions } from "../features/automations/extensions.queries";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../lib/capability";
 import { replaceDial, useUrlParams } from "../lib/urlstate";
-import { useExtensions } from "./extensions.queries";
 import {
   type Role,
   roleLabel,

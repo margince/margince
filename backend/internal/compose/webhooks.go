@@ -49,7 +49,7 @@ func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.L
 // single shared deliverer would carry one tenant's handle into all three
 // (ADR-0091 §9 step 3). The cipher and the resolver are built once and closed
 // over; only the store's binding varies.
-func NewWebhookDeliverer(pool *pgxpool.Pool, key string, log *slog.Logger) (func(*database.DB) *webhooks.Deliverer, error) {
+func NewWebhookDeliverer(pool *pgxpool.Pool, key, publicBaseURL string, log *slog.Logger) (func(*database.DB) *webhooks.Deliverer, error) {
 	raw, err := webhooks.DecodeKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("webhook signing key: %w", err)
@@ -61,7 +61,7 @@ func NewWebhookDeliverer(pool *pgxpool.Pool, key string, log *slog.Logger) (func
 	resolver := identity.NewService(pool)
 	return func(db *database.DB) *webhooks.Deliverer {
 		return webhooks.NewDeliverer(webhooks.NewStore(db, cipher),
-			webhooks.NewGuardedClient(), nil, resolver, log)
+			webhooks.NewGuardedClient(), nil, resolver, log).WithPublicBaseURL(publicBaseURL)
 	}, nil
 }
 

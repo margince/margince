@@ -29,6 +29,8 @@ const (
 		"the server log carries the provider's own message"
 	reasonModelWithheld = "model declined — the AI provider withheld its answer to this run; " +
 		"the server log carries the provider's reason"
+	reasonStepTooLong = "model answer was longer than one step allows — " +
+		"the next scheduled run starts clean"
 	reasonStepBudgetExhausted        = "step budget exhausted"
 	reasonOutputTokenBudgetExhausted = "output token budget exhausted"
 )
@@ -38,7 +40,7 @@ const (
 // not, and it stays in the log.
 func invalidOutputReason(attempts int) string {
 	return fmt.Sprintf("model output failed validation %d times — "+
-		"the server log carries what the parser rejected", attempts)
+		"the server log carries the parser's error", attempts)
 }
 
 // modelCallReason names a failed model call for its reader. A withheld answer

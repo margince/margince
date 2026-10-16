@@ -19,6 +19,16 @@ import { provenanceOf } from "../design-system/provenanceof";
 import type { SectionState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
+import {
+  resolveDisplay,
+  stagedDayFormatter,
+} from "../features/automations/approvaldisplay";
+import {
+  approvalKindLabel,
+  decisionSkewKey,
+} from "../features/automations/approvalkind";
+import { worklistLaneHref } from "../features/worklist/worklist.header";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -35,11 +45,7 @@ import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
-import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
-import { worklistLaneHref } from "./worklist.header";
-import { worklistKey } from "./worklist.queries";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.

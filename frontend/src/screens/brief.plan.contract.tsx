@@ -5,9 +5,12 @@ import { useState } from "react";
 import { Button, Field, Textarea } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import {
+  useSetPlanContract,
+  type WeeklyPlan,
+} from "../features/worklist/weeklyplan.queries";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { useSetPlanContract, type WeeklyPlan } from "./weeklyplan.queries";
 
 // The rows' own sheet, beside the plan's: one surface, one stylesheet, and it
 // has to be imported HERE as well because this panel is rendered on its own —

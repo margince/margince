@@ -141,14 +141,17 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				return prediction{}, err
 			}
 			earlier.record(row, outcome)
-			if p.tally(object, row, outcome, problem) {
-				p.countClosedDeal(writers.dealStages, object, row, outcome)
-				writers.links.markPending(object, row.ExternalID)
-				if object == migration.ObjectCompany {
-					fields := textFields(row.Fields)
-					creates := outcome == predictCreate || outcome == predictCollides
-					writers.links.markNamesPending(creates, fields[fieldDisplayName], fields[fieldLegalName])
-				}
+			if !p.tally(object, row, outcome, problem) {
+				writers.links.markRefused(object, row.ExternalID)
+				continue
+			}
+			p.countClosedDeal(writers.dealStages, object, row, outcome)
+			writers.links.markPending(object, row.ExternalID)
+			writers.links.markNaturalPending(object, textFields(row.Fields)[naturalKeyField(object)])
+			if object == migration.ObjectCompany {
+				fields := textFields(row.Fields)
+				creates := outcome == predictCreate || outcome == predictCollides
+				writers.links.markNamesPending(creates, fields[fieldDisplayName], fields[fieldLegalName])
 			}
 		}
 		if len(rows) < importPredictPage {

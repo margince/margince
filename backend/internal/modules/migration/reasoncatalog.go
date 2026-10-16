@@ -70,6 +70,8 @@ const (
 	ReasonLinkRowNotImported         ReasonCode = "link_row_not_imported"
 	ReasonLinkContactNotImported     ReasonCode = "link_contact_not_imported"
 	ReasonLinkEdgeUnsupported        ReasonCode = "link_edge_unsupported"
+	ReasonLeadStatusUnknown          ReasonCode = "lead_status_unknown"
+	ReasonLeadStatusNotImportable    ReasonCode = "lead_status_not_importable"
 	ReasonUndoGrantLost              ReasonCode = "undo_grant_lost"
 	ReasonUndoNotVisible             ReasonCode = "undo_not_visible"
 	ReasonUndoRuleProtects           ReasonCode = "undo_rule_protects"
@@ -85,11 +87,15 @@ type reasonEntry struct {
 // droppedTwin names the code a link problem takes once the run dropped the link
 // instead of skipping the row.
 var droppedTwin = map[ReasonCode]ReasonCode{
-	ReasonLinkNotFound:        ReasonLinkNotFoundDropped,
-	ReasonContactNotFound:     ReasonContactNotFoundDropped,
-	ReasonLinkAmbiguous:       ReasonLinkAmbiguousDropped,
-	ReasonEmployerColumnEmpty: ReasonEmployerColumnEmptyDropped,
-	ReasonEmployerNotFound:    ReasonEmployerNotFoundDropped,
+	ReasonLinkNotFound:          ReasonLinkNotFoundDropped,
+	ReasonContactNotFound:       ReasonContactNotFoundDropped,
+	ReasonLinkAmbiguous:         ReasonLinkAmbiguousDropped,
+	ReasonEmployerColumnEmpty:   ReasonEmployerColumnEmptyDropped,
+	ReasonEmployerNotFound:      ReasonEmployerNotFoundDropped,
+	ReasonLeadNotFound:          ReasonLeadNotFoundDropped,
+	ReasonDealNotFound:          ReasonDealNotFoundDropped,
+	ReasonLinkRowSkipped:        ReasonLinkRowSkippedDropped,
+	ReasonActivityLinkAmbiguous: ReasonActivityLinkAmbiguousDropped,
 }
 
 // Parameter names and a text three reasons share.
@@ -103,7 +109,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",
@@ -169,10 +175,10 @@ var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
 		textlang.German:     "Sie dürfen dieses Mitglied nicht als zuständig eintragen, daher sind Sie für dessen Zeilen zuständig.",
 		textlang.Vietnamese: "Bạn không thể đặt người dùng này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
 	}},
-	ReasonOwnerUnknown: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "No user has this email, so you become the owner.",
-		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig.",
-		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu.",
+	ReasonOwnerUnknown: {params: []string{"rows"}, text: map[textlang.Lang]string{
+		textlang.English:    "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
+		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
 	}},
 	ReasonTagNew: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No tag has this name yet, so the import creates it.",
@@ -399,6 +405,16 @@ var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
 		textlang.German:     "Ein CSV-Import kennt keine Verknüpfung {from}→{to}; sie wurde nicht angewendet.",
 		textlang.Vietnamese: "Nhập từ tệp CSV không có liên kết {from}→{to}; liên kết này không được áp dụng.",
 	}},
+	ReasonLeadStatusUnknown: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is not a lead status. The statuses are: {allowed}.",
+		textlang.German:     "{value:q} ist kein Lead-Status. Es gibt: {allowed}.",
+		textlang.Vietnamese: "{value:q} không phải trạng thái lead. Các trạng thái: {allowed}.",
+	}},
+	ReasonLeadStatusNotImportable: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
+		textlang.English:    "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
+		textlang.German:     "Eine Datei kann den Status {value:q} nicht setzen. Nutzen Sie Qualifizieren oder Disqualifizieren am Lead. Eine Datei darf setzen: {allowed}.",
+		textlang.Vietnamese: "Tệp không thể đặt trạng thái {value:q}. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
+	}},
 	ReasonUndoGrantLost: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Your permissions no longer cover this record.",
 		textlang.German:     "Die Berechtigung des Aufrufers deckt diesen Datensatz nicht mehr ab.",
@@ -419,4 +435,4 @@ var reasonCatalog = withDealReasons(map[ReasonCode]reasonEntry{
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-})
+})))

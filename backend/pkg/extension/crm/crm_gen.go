@@ -471,6 +471,9 @@ type Activity struct {
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
 
+	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
+	ImportedFrom *string `json:"imported_from,omitempty"`
+
 	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
 	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
 

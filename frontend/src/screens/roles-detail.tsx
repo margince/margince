@@ -6,6 +6,7 @@ import { Disclosure, Radio } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import type { ExtensionUnit } from "../features/automations/extensions.queries";
 import { stable } from "../format/collate";
 import {
   CORE_OBJECTS,
@@ -14,7 +15,6 @@ import {
   objectLabel,
 } from "../format/rbacobjects";
 import { useT } from "../i18n";
-import type { ExtensionUnit } from "./extensions.queries";
 import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
 import {
   type Role,

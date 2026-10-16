@@ -15,7 +15,6 @@ import { EntityRef } from "../components/entityref";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { KeyedName } from "../design-system/keyedname";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { formatDate } from "../format/format";
@@ -147,10 +146,7 @@ function FieldName({ field }: Readonly<{ field: CustomField }>) {
       <span className="cf-fieldicon" aria-hidden>
         <Icon />
       </span>
-      <KeyedName
-        name={field.label}
-        code={`${field.object}.${field.column_name}`}
-      />
+      <span>{field.label}</span>
       {field.status === "retired" && <Badge>{t("cf.retired")}</Badge>}
     </span>
   );

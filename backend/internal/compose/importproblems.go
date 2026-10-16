@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -51,7 +50,7 @@ func (h importHandlers) reported(r *http.Request, id openapi_types.UUID) (migrat
 		return migration.Run{}, err
 	}
 	if run.Report == nil {
-		return migration.Run{}, fmt.Errorf("import run %s has not been validated yet: %w", run.ID, apperrors.ErrConflict)
+		return migration.Run{}, migration.RefuseRun(run.ID, "this import has not been tested yet")
 	}
 	return run, nil
 }

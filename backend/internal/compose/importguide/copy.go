@@ -21,7 +21,7 @@ type Column struct {
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
-var Columns = map[string]Column{
+var Columns = withActivityColumns(map[string]Column{
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
@@ -78,9 +78,9 @@ var Columns = map[string]Column{
 		Vi: "Người đã viết hồ sơ trong hệ thống nguồn, giữ nguyên như ở đó. Nếu là email của một thành viên Margince, hồ sơ sẽ ghi tên thành viên đó. Chỉ được ghi khi dòng tạo hồ sơ mới.",
 	}, Example: same("mai@yourcompany.com · Mai Nguyen")},
 	"owner_email": {Description: langcopy.Phrase{
-		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so.",
-		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin.",
-		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này.",
+		En: "Email of the Margince user who owns the record. If no user has this email, you become the owner and the import preview says so. A lead stays unassigned.",
+		De: "E-Mail-Adresse des Mitglieds, das für den Datensatz zuständig ist. Hat kein Mitglied diese Adresse, wirst du zuständig, und die Importvorschau weist darauf hin. Ein Lead bleibt nicht zugewiesen.",
+		Vi: "Email của thành viên Margince phụ trách hồ sơ. Nếu không thành viên nào có email này, bạn sẽ là người phụ trách và bản xem trước lần nhập sẽ báo điều này. Lead vẫn chưa giao.",
 	}, Example: same("mai@yourcompany.com")},
 	"tags": {Description: langcopy.Phrase{
 		En: "Tags, separated by semicolons. Tags that do not exist yet are created, and the import preview lists them.",
@@ -152,6 +152,11 @@ var Columns = map[string]Column{
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
 	}, Example: same("Acme")},
+	"lead.status": {Description: langcopy.Phrase{
+		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
+		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
+		Vi: "Lead đang ở giai đoạn nào: new, contacted hoặc engaged. Để trống nghĩa là new. Lead được xác nhận đủ điều kiện hoặc loại ngay trong Margince, nên tệp không thể đặt hai trạng thái này.",
+	}, Example: same("contacted")},
 	"contact.company_name": {Description: langcopy.Phrase{
 		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",
@@ -217,7 +222,7 @@ var Columns = map[string]Column{
 		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal anlegt.",
 		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
-}
+})
 
 // Custom is the guide of a custom field, by its type. A picklist's
 // example is replaced by its first option where the caller may read them.
@@ -267,9 +272,9 @@ var KeyRules = []langcopy.Phrase{
 		Vi: "Mỗi dòng được nhận biết qua ref và tên nguồn của lần nhập. Tải lên lại tệp với cùng ref và tên nguồn, hồ sơ sẽ được cập nhật chứ không bị tạo hai lần.",
 	},
 	{
-		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email. A deal needs a ref.",
-		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse. Ein Deal braucht eine Ref.",
-		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead. Deal bắt buộc có ref.",
+		En: "A row without a ref is matched by a company's display name, or by a contact's or lead's email. A deal or an activity needs a ref.",
+		De: "Eine Zeile ohne Ref wird bei einem Unternehmen über den Anzeigenamen zugeordnet, bei Kontakt und Lead über die E-Mail-Adresse. Ein Deal oder eine Aktivität braucht eine Ref.",
+		Vi: "Dòng không có ref được đối chiếu theo tên hiển thị của công ty, hoặc email của liên hệ hay lead. Deal hoặc hoạt động bắt buộc có ref.",
 	},
 	{
 		En: "Files are imported in the order above, so a contact's company_ref can name a company from the same upload.",

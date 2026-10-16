@@ -162,12 +162,20 @@ afterEach(() => {
 });
 
 describe("KnowledgeCard", () => {
-  it("names each set and says how much of it is searchable", async () => {
+  it("names each set with one searchability badge, and its figures once opened", async () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    const user = userEvent.setup();
     render(<KnowledgeCard />);
 
-    expect(await screen.findByText("How-to")).toBeTruthy();
+    const row = await screen.findByTestId(`knowledge-set-${SET_ID}`);
+    expect(within(row).getByText("How-to")).toBeTruthy();
+    expect(within(row).getByText("Searchable")).toBeTruthy();
+    expect(screen.queryByText(/4 of 4 passages/i)).toBeNull();
+    await user.click(
+      within(row).getByRole("button", { name: "Documents in How-to" }),
+    );
     expect(await screen.findByText(/4 of 4 passages/i)).toBeTruthy();
+    expect(screen.getByText("How this product is operated.")).toBeTruthy();
   });
 
   it("does not call a read document searchable while none of its set's passages are", async () => {
@@ -189,10 +197,10 @@ describe("KnowledgeCard", () => {
     const user = userEvent.setup();
     render(<KnowledgeCard />);
 
-    expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
     await user.click(
       await screen.findByRole("button", { name: "Documents in How-to" }),
     );
+    expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
     // The set says why nothing is searchable, and a read document draws no
     // green "Imported" beside it to contradict that.
     expect(screen.getByText("Not searchable")).toBeTruthy();
@@ -211,7 +219,43 @@ describe("KnowledgeCard", () => {
     expect(
       screen.queryByRole("button", { name: "Actions for How-to" }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: /create set/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "New document set" }),
+    ).toBeNull();
+  });
+
+  it("says no set is filed in one line, with no table of headings", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN, { sets: [] }).fetchMock);
+    render(<KnowledgeCard />);
+
+    expect(await screen.findByText("No document sets yet.")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("states why a set is not searchable on its own line under the figures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        sets: [
+          corpus({
+            coverage: {
+              documents_total: 1,
+              chunks_total: 4,
+              chunks_embedded: 0,
+              embed_state: "indexing",
+            },
+          }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const reason = await screen.findByText("Passages are still being indexed.");
+    expect(reason.textContent).toBe("Passages are still being indexed.");
   });
 
   it("withholds the list from a reader with no grant, rather than showing an empty one", async () => {
@@ -233,11 +277,18 @@ describe("KnowledgeCard", () => {
       "fetch",
       backendFor(ADMIN, { sets: [corpus({ reindexing: true })] }).fetchMock,
     );
+    const user = userEvent.setup();
     render(<KnowledgeCard />);
 
     // There is nothing for the reader to do but wait, and the copy has to say
     // so — "not ready" would send them looking for a document to finish
     // uploading.
+    const row = await screen.findByTestId(`knowledge-set-${SET_ID}`);
+    expect(within(row).getByText("Reindexing")).toBeTruthy();
+    expect(within(row).queryByText("Not searchable")).toBeNull();
+    await user.click(
+      within(row).getByRole("button", { name: "Documents in How-to" }),
+    );
     expect(await screen.findByText(/reindexing this set/i)).toBeTruthy();
   });
 
@@ -271,18 +322,23 @@ describe("KnowledgeCard", () => {
 
   it("refuses to create a set without both a name and a topic statement", async () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    const user = userEvent.setup();
     render(<KnowledgeCard />);
 
-    const create = await screen.findByRole("button", { name: /create set/i });
+    await user.click(
+      await screen.findByRole("button", { name: "New document set" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const create = dialog.getByRole("button", { name: "Create" });
     expect(create).toBeDisabled();
 
-    await userEvent.type(await screen.findByLabelText(/^name$/i), "Handbook");
+    await user.type(dialog.getByLabelText(/^name/i), "Handbook");
     // Still refused: a set with no topic statement has nothing to quote back
     // when it refuses a question, which is the one moment it is read.
     expect(create).toBeDisabled();
 
-    await userEvent.type(
-      screen.getByLabelText(/what this set covers/i),
+    await user.type(
+      dialog.getByLabelText(/what this set covers/i),
       "How the product is operated.",
     );
     expect(create).toBeEnabled();
@@ -335,19 +391,17 @@ describe("KnowledgeCard", () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
     render(<KnowledgeCard />);
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Actions for How-to" }),
-    );
-    const archive = screen.getByRole("button", { name: /archive set/i });
-    await user.click(archive);
+    const menu = await screen.findByRole("button", {
+      name: "Actions for How-to",
+    });
+    await user.click(menu);
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Cancel",
       }),
     );
-    await waitFor(() =>
-      expect(globalThis.document.activeElement).toBe(archive),
-    );
+    await waitFor(() => expect(globalThis.document.activeElement).toBe(menu));
   });
 
   it("keeps two files that share a name, because the server dedupes on content", async () => {
@@ -450,7 +504,7 @@ describe("KnowledgeCard documents", () => {
     );
   });
 
-  it("names a shipped page by its title, its file under it, and offers no delete", async () => {
+  it("names a shipped page by its title, its file under it where it differs, and offers no delete", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(ADMIN, {
@@ -460,6 +514,12 @@ describe("KnowledgeCard documents", () => {
             id: "s",
             filename: "approvals.md",
             title: "Approving agent proposals",
+            shipped: true,
+          }),
+          document({
+            id: "t",
+            filename: "your-week.md",
+            title: "Your week",
             shipped: true,
           }),
         ],
@@ -474,13 +534,20 @@ describe("KnowledgeCard documents", () => {
     const table = await screen.findByRole("table", {
       name: "Documents in How-to",
     });
-    const [shipped, uploaded] = within(table).getAllByRole("row").slice(1);
-    if (!shipped || !uploaded) throw new Error("expected two document rows");
-    expect(
-      within(shipped).getByText("Approving agent proposals"),
-    ).toBeInTheDocument();
-    expect(within(shipped).getByText("approvals.md").tagName).toBe("CODE");
+    const rowOf = (text: string) =>
+      within(table)
+        .getAllByRole("row")
+        .find((row) => row.textContent?.includes(text));
+    const shipped = rowOf("Approving agent proposals");
+    const uploaded = rowOf("pricing.md");
+    const sameName = rowOf("Your week");
+    if (!shipped || !uploaded || !sameName) {
+      throw new Error("expected three document rows");
+    }
+    expect(within(shipped).getByText("approvals.md")).toHaveClass("t-caption");
     expect(within(shipped).queryByRole("button")).toBeNull();
+    // A file named after its title adds nothing under it.
+    expect(within(sameName).queryByText("your-week.md")).toBeNull();
     // An upload has no title: its file is its name, once.
     expect(within(uploaded).getAllByText("pricing.md")).toHaveLength(1);
     expect(

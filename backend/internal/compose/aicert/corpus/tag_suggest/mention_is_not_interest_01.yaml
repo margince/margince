@@ -1,0 +1,39 @@
+name: a_mention_or_our_own_footer_is_not_interest
+task: tag_suggest
+site: interest
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Both items name the offer and neither shows the counterparty wanting it. The
+# first carries our own advertising line in a quoted signature; the second is a
+# note that the buyer is content with what they have. A model that tags on the
+# words alone tags both.
+fixture:
+  tags:
+    - key: ledger_migration
+      name: 'Ledger migration'
+      description: 'wants to move their bookkeeping off spreadsheets'
+  items:
+    - kind: email
+      subject: 'Re: Thursday'
+      body: |
+        Thursday at 10 works, see you then.
+
+        > On Monday, Jan Weber wrote:
+        > Could we move our call to Thursday?
+        > --
+        > Jan Weber, Nordwind Systems
+        > Ledger migration: move your books off spreadsheets in a week.
+    - kind: note
+      subject: 'Call with Steinbach'
+      body: |
+        Mentioned that their sister company moved off spreadsheets last year.
+        They are happy with their own bookkeeping setup and see no reason to
+        change it. Main topic was the delivery schedule for the second site.
+expect:
+  outcome: accepted
+  answer: [[], []]
+  judge: none
+  judge_none_reason: >
+    The answer is a closed set of tag keys per item, and the check requires
+    each item's set exactly. A rubric could only rank wrong sets, which the
+    check fails outright.

@@ -3,7 +3,7 @@
 This page is for an operator who deploys Margince or finds an import that has stopped. An import's
 test run, its commit and its undo run in the worker, not in the API. The API only moves the run and
 queues the job. To use the import, read [import-a-company-spreadsheet.md](import-a-company-spreadsheet.md) or the
-[Settings](../handbook/settings.md) page.
+[Importing data](../handbook/importing-data.md) page.
 
 ## What runs where
 

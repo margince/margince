@@ -1,16 +1,9 @@
 /* Settings → Data model: the two lead vocabularies and the lead-handling
    posture. */
 
-/* The name, then the Built-in badge on the same line when it has one. */
-.lead-vocab-name {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 /* `Select`'s face is `width: 100%`, which an auto-sized cell would resolve to
-   the narrowest option; the intent column holds one fixed measure instead. */
+   the narrowest option; the intent column holds one fixed measure, wide
+   enough for the longest German option, instead. */
 .lead-vocab-intent .select-control {
-  inline-size: 10rem;
+  inline-size: 13rem;
 }

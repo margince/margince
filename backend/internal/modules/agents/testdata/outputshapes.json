@@ -7846,6 +7846,18 @@
                         },
                         "object": {
                           "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -9233,6 +9245,18 @@
                           "format": "uuid"
                         },
                         "object": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },

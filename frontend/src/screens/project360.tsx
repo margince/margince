@@ -22,6 +22,10 @@ import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { groupChronology } from "../design-system/timelinegroups";
+import {
+  TaskDetailModal,
+  useTaskUpdate,
+} from "../features/worklist/taskactions";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "../lib/activitykeys";
 import { useCan } from "../lib/capability";
@@ -76,7 +80,6 @@ import {
 import { RecordEmailVerb } from "./recordemail";
 import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
-import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
 import "./projects.css";
 

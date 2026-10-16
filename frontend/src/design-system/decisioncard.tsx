@@ -88,7 +88,7 @@ export function decisionUrgency(msRemaining: number): DecisionUrgency {
  *
  * The status vocabulary lives on the server and grows there, so a build is
  * always one deploy from meeting a status it has no word for. This tree already
- * settled that argument for `kind` (`screens/approvalkind.ts`), and the
+ * settled that argument for `kind` (`features/automations/approvalkind.ts`), and the
  * answer was the same: render what arrived rather than drop it. Held to the
  * closed union, the fallback in `verdictOf` would be unreachable to the compiler
  * and dead by the letter of the rule, while still being the branch that runs the

@@ -14,6 +14,7 @@ import { Badge, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { KeyedName } from "../design-system/keyedname";
 import type { ListColumn } from "../design-system/listtable";
+import { sortState } from "../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { formatMoney } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
@@ -24,7 +25,7 @@ import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ArchiveAction } from "./archive";
 import { billingOf, billingPatchOf } from "./billingclassification";
-import "./listsection.css";
+import "../features/lists/listsection.css";
 
 type Product = components["schemas"]["Product"];
 
@@ -171,13 +172,18 @@ function ProductPrice({ product }: Readonly<{ product: Product }>) {
   );
 }
 
-// Only a status that differs from the usual one is drawn.
+// Only a status that differs from the usual one has a name.
+function productStatus(product: Product): MessageKey | null {
+  if (product.archived_at) {
+    return "product.archived";
+  }
+  return product.active ? null : "product.inactive";
+}
+
 function ProductStatus({ product }: Readonly<{ product: Product }>) {
   const t = useT();
-  if (product.archived_at) {
-    return <Badge>{t("product.archived")}</Badge>;
-  }
-  return product.active ? null : <Badge>{t("product.inactive")}</Badge>;
+  const status = productStatus(product);
+  return status === null ? null : <Badge>{t(status)}</Badge>;
 }
 
 function editableProduct(p: Product) {
@@ -302,6 +308,14 @@ export function ProductsAdmin() {
       );
     };
 
+  // Only while some row has a status to show, or the list is ordered by it.
+  const statusColumn: ListColumn<Product> = {
+    key: "status",
+    header: t("product.status"),
+    sort: "active",
+    cell: (p: Product) => <ProductStatus product={p} />,
+  };
+
   // The per-row affordances, in a column that exists only while at least one of
   // them does. Keeping the column and emptying its cells would leave a headed,
   // width-taking, column-picker-listed strip of nothing, which reads as a table
@@ -352,7 +366,24 @@ export function ProductsAdmin() {
   };
 
   return (
-    <Panel className="listsection" title={t("product.title")}>
+    <Panel
+      className="listsection"
+      title={t("product.title")}
+      titleAction={
+        canCreate ? (
+          <CreateAction
+            label={t("product.new")}
+            invalidate="products"
+            // `stay`: a fresh product has no page of its own to open. The list
+            // it joins is already on screen.
+            screen="settings"
+            stay
+            create={createProduct}
+            fields={fields}
+          />
+        ) : undefined
+      }
+    >
       <PanelBody className="listsection-intro">
         <PanelIntro>{t("product.settingsSub")}</PanelIntro>
         {/* A reader who holds no write verb here sees a list with no editor, and
@@ -371,23 +402,8 @@ export function ProductsAdmin() {
       </PanelBody>
       <ListTable
         state={list}
-        hideShortPager
+        hideShortChrome
         unit="unit.products"
-        action={
-          canCreate ? (
-            <CreateAction
-              label={t("product.new")}
-              invalidate="products"
-              // `stay` because a fresh product has no page of its own to
-              // open: the list the row joins is already on screen, and this
-              // panel is one of the settings surfaces the screen names.
-              screen="settings"
-              stay
-              create={createProduct}
-              fields={fields}
-            />
-          ) : undefined
-        }
         columns={[
           {
             key: "name",
@@ -409,12 +425,10 @@ export function ProductsAdmin() {
             header: t("product.billingModel"),
             cell: (p: Product) => billingLabel(p, t),
           },
-          {
-            key: "status",
-            header: t("product.status"),
-            sort: "active",
-            cell: (p: Product) => <ProductStatus product={p} />,
-          },
+          ...(list.rows.some((p) => productStatus(p) !== null) ||
+          sortState(statusColumn, list.query.sort) !== null
+            ? [statusColumn]
+            : []),
           ...(canUpdate || canArchive ? [rowMenu] : []),
         ]}
         rowKey={(p) => p.id}

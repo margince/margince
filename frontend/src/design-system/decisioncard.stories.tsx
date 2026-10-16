@@ -354,12 +354,13 @@ const CLOSE_DATE_META = (
   </>
 );
 
-// What `screens/approvalkind.ts` resolves for this payload, written out: the
-// story shows the CARD, so it hands over finished strings the way the screen
-// does rather than importing the screen's vocabulary. The date appears once
-// because the sweep proposes the date the deal already carries — it keeps the
-// date on a stale deal and asks a contact instead of guessing a new one — and
-// two captions over one value is not a comparison.
+// What `features/automations/approvalkind.ts` resolves for this payload,
+// written out. The story shows the CARD, so it hands over finished strings the
+// way the screen does rather than importing the screen's vocabulary.
+//
+// The date appears once because the sweep proposes the date the deal already
+// carries. It keeps the date on a stale deal and asks a contact instead of
+// guessing a new one. Two captions over one value would not be a comparison.
 export const DeclaredFields: Story = {
   args: {
     ...Deck.args,

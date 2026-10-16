@@ -114,7 +114,7 @@ var dealReasons = map[ReasonCode]reasonEntry{
 	}},
 	ReasonCannotLinkStakeholders: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot add stakeholders to deals, so this row’s contact is not linked.",
-		textlang.German:     "Du kannst keine Stakeholder zu Deals hinzufügen, daher wird der Kontakt dieser Zeile nicht verknüpft.",
+		textlang.German:     "Sie dürfen keine Stakeholder zu Deals hinzufügen, daher wird der Kontakt dieser Zeile nicht verknüpft.",
 		textlang.Vietnamese: "Bạn không thể thêm bên liên quan vào deal nên liên hệ của hàng này không được liên kết.",
 	}},
 	ReasonContactNotFound: {params: []string{paramRef}, text: map[textlang.Lang]string{

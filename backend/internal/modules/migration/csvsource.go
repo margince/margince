@@ -31,10 +31,11 @@ import (
 // `contact` bypasses nothing. It runs the same identity ladder every other contact
 // create runs, and an email already belonging to someone else refuses the row.
 const (
-	ObjectLead    = "lead"
-	ObjectCompany = "company"
-	ObjectContact = "contact"
-	ObjectDeal    = "deal"
+	ObjectLead     = "lead"
+	ObjectCompany  = "company"
+	ObjectContact  = "contact"
+	ObjectDeal     = "deal"
+	ObjectActivity = "activity"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). The column's CHECK also admits salesforce — the DDL is the
 	// chapter's pinned arrival shape — but it gets its Go constant when that

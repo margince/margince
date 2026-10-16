@@ -34,7 +34,7 @@ import { ShareAction } from "../share";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
-import { AddToShortlistAction } from "../addtoshortlist";
+import { AddToShortlistAction } from "../../features/lists/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
 
 type Deal = components["schemas"]["Deal"];

@@ -80,8 +80,8 @@ seeds:
       # are stated here because they are the reason these three ids and not
       # three larger ones.
       #
-      # local_small leads 6 tasks — capture_classify, the two capture verdicts,
-      # owed_verdict, request_settlement, enrich. All short answers under a JSON
+      # local_small leads 7 tasks — capture_classify, the two capture verdicts,
+      # owed_verdict, request_settlement, tag_suggest, enrich. All short answers under a JSON
       # schema, so schema adherence is the whole job and size buys little.
       #
       # 26b-a4b is the MoE: 26B of weights, ~4B active per token. That is the

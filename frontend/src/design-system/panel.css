@@ -15,19 +15,32 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * Wider than 720px it holds one height, --panel-head-h, so a page of panels
- * reads as one column of titles. The phone rule below says why a phone wraps.
+ * A floor, not a height. Above 720px the padding leaves room for a --controlHeight
+ * control or a 44px target, so a head holding one stands at 56px; taller grows it.
  *
  * Its rule divides the CARD from its content, so it runs edge to edge; where a
  * rule between two pieces of content stops is the seam rule's call, below. */
 .panel-head {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: var(--space-3);
-  height: var(--panel-head-h);
-  padding: 0 var(--padPanel);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  min-height: var(--panel-head-h);
+  padding: var(--space-2) var(--padPanel);
   border-bottom: 1px solid var(--borderSubtle);
+}
+/* A touch target is 44px, which a one-line head holds only on this padding. */
+@media (pointer: coarse) {
+  .panel-head {
+    padding-block: var(--space-1);
+  }
+}
+/* A phone wraps most heads, and a wrapped band reads cramped on less air. A
+ * one-line head with a control stands at 57px here. */
+@media (max-width: 720px) {
+  .panel-head {
+    padding-block: var(--space-3);
+  }
 }
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card.
@@ -38,40 +51,23 @@
  * only move ONE node, so a pair of actions splits with one of them still
  * crowding the title.
  *
- * Wider than 720px it ends in an ellipsis, because the band's height is fixed;
- * the full string stays the element's text for a screen reader. */
+ * A compound longer than the line breaks at a syllable, as `.fieldgrid-label`
+ * does. */
 .panel-head .panel-title {
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);
   min-width: 0;
   margin-right: auto;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
-/* Only the title gives way. A badge, a button or a count is sized by its own
- * words, and a shrunken one reads as a different control — or loses its label
- * to the ellipsis above. `:where()` carries no specificity, so a caller whose
- * action genuinely can give way (a wrapping action strip) says so with an
- * ordinary class of its own and wins without depending on sheet order. */
+/* Only the title shrinks: a squeezed badge or button reads as another control.
+ * Capped at the band, so a wrapping control wraps inside it, not off the pane.
+ * `:where()` adds no specificity: a caller's class wins without sheet order. */
 .panel-head > :where(:not(.panel-title)) {
   flex-shrink: 0;
-}
-
-/* On a phone a cut title is worse than a taller band: a verb that does not fit
- * drops under the title, and a long title wraps. */
-@media (max-width: 720px) {
-  .panel-head {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: var(--panel-head-h);
-    padding-block: var(--space-3);
-    row-gap: var(--space-2);
-  }
-  .panel-head .panel-title {
-    white-space: normal;
-  }
+  max-width: 100%;
 }
 
 .panel-body {
@@ -137,6 +133,11 @@
    itself a `.panel-body`, so this is declared after the seam rule it must beat. */
 .panel-grouphead + .panel-body::before {
   content: none;
+}
+/* The head's bottom interval is the whole gap to what it labels. The body's top
+   padding as well would set the label a seam's distance from its rows. */
+.panel-grouphead + .panel-body:not(.panel-grouphead) {
+  padding-block-start: 0;
 }
 /* Two bleeding blocks meet edge to edge, so a border serves; a pseudo-element
    inside the table's scroll box would scroll away with the table. */

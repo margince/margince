@@ -28,11 +28,9 @@ func rateFallbacks() (from, to []string) {
 	return from, to
 }
 
-// rateMatch is the rate a call is priced at: the latest ai_model_rate row
-// effective on day for the model, the provider's own row when one is
-// effective, else the row of the provider it is priced by. RateFor, the cost
-// report and a run's transparency select through it, so they price a call
-// alike.
+// rateMatch is the rate a model is priced at: the latest ai_model_rate row
+// effective on day. The provider's own row wins over the row of the provider
+// it is priced by. RateFor and pricedRate both select through it.
 //
 // provider, model and day are SQL expressions (a placeholder or a column);
 // fromArg and toArg are the placeholder numbers bound to rateFallbacks().
@@ -44,4 +42,22 @@ func rateMatch(provider, model, day string, fromArg, toArg int) string {
 		    WHERE pf.from_provider = %[1]s))
 		ORDER BY (mr.provider = %[1]s) DESC, mr.effective_date DESC
 		LIMIT 1`, provider, model, day, fromArg, toArg)
+}
+
+// pricedRate is the rate the ai_call row aliased alias is priced at: the
+// answered model's rate on the call's day, else the binding's. So a served model
+// the sheet does not price yet still prices the call. Every SQL reader that
+// prices a call joins it LATERAL as r, the alias callCostMicroUSD reads.
+func pricedRate(alias string, fromArg, toArg int) string {
+	day := alias + ".occurred_at::date"
+	return fmt.Sprintf(`SELECT ranked.* FROM (
+		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered WHERE %[3]s
+		  UNION ALL
+		  SELECT 1 AS match_rank, bound.* FROM (%[2]s) bound
+		) ranked
+		ORDER BY ranked.match_rank
+		LIMIT 1`,
+		rateMatch(alias+".provider", alias+".served_model", day, fromArg, toArg),
+		rateMatch(alias+".provider", alias+".model_id", day, fromArg, toArg),
+		answeredModelSQL(alias)+" <> "+alias+".model_id")
 }

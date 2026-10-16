@@ -13,13 +13,13 @@ import {
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { KeyedName } from "../design-system/keyedname";
+import { KeyCode } from "../design-system/keyedname";
 import {
   NameDialog,
   nameRefusal,
   useRefusedName,
 } from "../design-system/namedialog";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { useSinglePress } from "../design-system/presslatch";
 import { QueryStates } from "../design-system/querystates";
@@ -27,9 +27,8 @@ import { Switch } from "../design-system/switch";
 import { INTL_LOCALE } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
-import { vocabMenuColumn } from "./leadvocab.rows";
+import { useVocabGrants, vocabMenuColumn } from "./leadvocab.rows";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -87,7 +86,7 @@ function roleColumns({
       key: "name",
       header: t("recordRoles.colRole"),
       grow: true,
-      render: (role) => <KeyedName name={role.label} code={role.key} />,
+      render: (role) => role.label,
     },
     {
       key: "reach",
@@ -97,6 +96,7 @@ function roleColumns({
     {
       key: "active",
       header: t("leadSources.colActive"),
+      fold: "end",
       render: (role) => (
         <Switch
           label={t("recordRoles.activeFor", { label: role.label })}
@@ -252,8 +252,7 @@ function AddRoleDialog({
 // retires it. Where a role applies is set at creation only.
 export function RecordRolesCard() {
   const t = useT();
-  const canCreate = useCanWrite("custom_field", "create");
-  const canEdit = useCanWrite("custom_field", "update");
+  const { canCreate, canEdit, refusal } = useVocabGrants("recordroles");
   const query = useRecordRoles();
   const create = useCreateRecordRole();
   const update = useUpdateRecordRole();
@@ -285,9 +284,6 @@ export function RecordRolesCard() {
         )
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("recordRoles.sub")}</PanelIntro>
-      </PanelBody>
       {query.isSuccess && roles.length > 0 ? (
         <DataTable
           bleed
@@ -306,7 +302,7 @@ export function RecordRolesCard() {
         </PanelBody>
       )}
       <PanelNotices
-        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        readOnly={refusal && t(refusal)}
         refused={
           update.isError
             ? { title: t("leadSources.notSaved"), error: update.error }
@@ -329,6 +325,7 @@ export function RecordRolesCard() {
         title={t("recordRoles.renameTitle")}
         label={t("recordRoles.addLabel")}
         initial={renaming?.label ?? ""}
+        hint={renaming && <KeyCode code={renaming.key} />}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
         problem={rename.isError ? problemMessageOf(rename.error, t) : null}

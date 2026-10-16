@@ -59,8 +59,7 @@ func TestReasonCodesMatchTheContractEnum(t *testing.T) {
 // reason a screen can only show in English.
 //
 // ImportIgnoredEntry is left out: its Reason is itself the closed enum
-// (not_yet_importable, unknown_name) the screen words, with no sentence beside
-// it.
+// (unknown_name) the screen words, with no sentence beside it.
 var reasonSentenceKeys = map[string][2]string{
 	"SkippedRow":           {"Reason", "Code"},
 	"SkippedAssoc":         {"Reason", "Code"},

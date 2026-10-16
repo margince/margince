@@ -11,6 +11,7 @@ import {
   jsonResponse,
   ROSTER,
   render,
+  roleControl,
   roleSelect,
   roleShown,
   rowFor,
@@ -35,37 +36,30 @@ describe("UsersAdminCard", () => {
     // authenticated principal, and who is on the team is not an admin's private
     // question. So a rep reads the list.
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(screen.getByRole("heading", { name: /^Users$/ })).toBeTruthy();
+    expect(
+      screen.getByRole("table", { name: en["users.membersTitle"] }),
+    ).toBeTruthy();
 
     // No picker, and no menu the verbs would live behind. Nor any role TEXT:
     // this reader is not sent `roles` at all (handlers_roster.go withholds the
     // privileged projection), so there is no fact to state — which is why the
     // fixture above answers them the narrow roster the server would.
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(roleControl(rowFor("Ada Active"), "Ada Active")).toBeNull();
     expect(screen.queryByText("Read-only")).toBeNull();
     expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
     // The deactivated member is absent for the same reason: `include_inactive`
     // is honoured only for a caller who passes that read.
     expect(screen.queryByText("Otto Off")).toBeNull();
 
-    // Inviting IS the admin's, and the card SAYS it is withheld rather than
-    // simply dropping the verb: the page opens for every seat, so a roster with
-    // no explanation reads as "this installation cannot add contacts".
-    expect(screen.queryByRole("button", { name: /invite user/i })).toBeNull();
-    // Matched on the KEY's text, not on the words "admins only": the string
-    // stopped saying that when these became delegatable grants.
-    expect(
-      screen.getByText(new RegExp(en["users.adminOnly"], "i")),
-    ).toBeTruthy();
+    // Inviting is the admin's. The read-only notice is the page's, not this
+    // card's (settings-reach.test.tsx, "says once that it is theirs to read").
+    expect(screen.queryByRole("button", { name: /invite member/i })).toBeNull();
+    expect(screen.queryByText(en["users.role.withheld"])).toBeNull();
     expect(screen.queryByLabelText(/^Email/)).toBeNull();
   });
 
-  // The escalation Codex found: `user_admin:update` WITHOUT the read. The
-  // roster omits every member's roles for this caller, `RoleCell` would read the
-  // missing field as [], and `ChangeUserRole` REPLACES the whole role set — so
-  // picking a role would silently drop every other role the target holds, none
-  // of which this reader can see. The picker is withheld until the read is
-  // there too.
+  // `user_admin:update` without the read: the roster omits roles, and a role
+  // change replaces the whole set, so a pick would drop roles nobody saw.
   it("offers no role picker to a write holder who cannot read the roster", async () => {
     vi.stubGlobal(
       "fetch",
@@ -80,9 +74,9 @@ describe("UsersAdminCard", () => {
     // Without it every assertion below would run against the loading render,
     // where each predicate reads false and nothing is offered anyway.
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(roleControl(rowFor("Ada Active"), "Ada Active")).toBeNull();
     expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /invite user/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /invite member/i })).toBeNull();
   });
 
   // And the same holder WITH the read gets all of it, so the case above is not
@@ -98,25 +92,26 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
 
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /invite user/i })).toBeTruthy();
+    expect(roleSelect(rowFor("Ada Active"), "Ada Active")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /invite member/i })).toBeTruthy();
   });
 
-  it("carries the invite verb in the card's header and no count or intro", async () => {
+  // The page heading names the roster, so the card carries no title. With no
+  // shell around it, the invite verb draws outside the panel (PageHeadAction).
+  it("puts the invite verb outside the panel, with no title, count or intro", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(screen.getAllByRole("heading", { name: /^Users$/ })).toHaveLength(1);
-    const header = screen
-      .getByRole("heading", { name: /^Users$/ })
-      .closest(".panel-head");
-    if (!(header instanceof HTMLElement)) {
-      throw new Error("the members card has no header band");
+    expect(screen.queryByRole("heading")).toBeNull();
+    const head = document.querySelector(".pagehead-action");
+    if (!(head instanceof HTMLElement)) {
+      throw new Error("the members card declares no page-head verb");
     }
     expect(
-      within(header).getByRole("button", { name: /invite user/i }),
+      within(head).getByRole("button", { name: en["users.inviteOpen"] }),
     ).toBeTruthy();
+    expect(head.closest(".panel")).toBeNull();
     // The page subtitle already says who is listed; a count pill and an intro
     // repeating it are gone.
     expect(screen.queryByText(/^\d+ users$/)).toBeNull();
@@ -143,8 +138,8 @@ describe("UsersAdminCard", () => {
 
   it("offers on a member only the verbs the server lists for them", async () => {
     // The reader holds every user_admin verb, and Ada is the only admin. The
-    // server lists nothing on her, so her row draws no menu. Her picker is the
-    // same control, refused with the reason beside it.
+    // server lists nothing on her, so her row draws no menu. Her role reads as
+    // words, with the reason for a screen reader instead of a chooser.
     const routed = backend([]);
     vi.stubGlobal(
       "fetch",
@@ -171,11 +166,9 @@ describe("UsersAdminCard", () => {
     expect(
       within(ada).queryByRole("button", { name: /actions for/i }),
     ).toBeNull();
-    const picker = roleSelect(ada, "Ada Active");
-    expect(picker.disabled).toBe(true);
-    expect(roleShown(ada, "Ada Active")).toBe("Admin");
-    const reason = within(ada).getByText(en["users.role.lastAdmin"]);
-    expect(picker.getAttribute("aria-describedby")).toContain(reason.id);
+    expect(roleControl(ada, "Ada Active")).toBeNull();
+    expect(roleShown(ada)).toBe("Admin");
+    expect(within(ada).getByText(en["users.role.lastAdmin"])).toBeTruthy();
     // The same reader keeps every verb on a member the server lists them on.
     expect(roleSelect(rowFor("Nora None"), "Nora None")).toBeTruthy();
   });
@@ -187,9 +180,7 @@ describe("UsersAdminCard", () => {
 
     const row = rowFor("Ada Active");
     expect(within(row).getByText("ada@acme.test")).toBeTruthy();
-    expect(
-      within(row).getByRole("combobox", { name: /set role for ada/i }),
-    ).toBeTruthy();
+    expect(roleSelect(row, "Ada Active")).toBeTruthy();
     expect(
       within(row).getByRole("button", { name: /actions for ada active/i }),
     ).toBeTruthy();
@@ -213,10 +204,8 @@ describe("UsersAdminCard", () => {
     expect(within(agent).getByText("Agent")).toBeTruthy();
     // No role control at all, not a disabled one: the seat's authority comes
     // from a passport and the contact it names, never from a role of its own. The
-    // line stands where the picker would be, as the row's ANSWER.
-    expect(
-      within(agent).queryByRole("combobox", { name: /set role for/i }),
-    ).toBeNull();
+    // line stands where the role would be, as the row's ANSWER.
+    expect(roleControl(agent, "Margince Agent")).toBeNull();
     expect(within(agent).getByText(/acts through a passport/i)).toBeTruthy();
     // No set-password link: the seat holds no password by construction, which
     // is what makes it a thing that signs in nowhere. Its menu still opens —
@@ -270,7 +259,9 @@ describe("UsersAdminCard", () => {
   // whole act ("Invite a member") while the dialog's submit carries the bare
   // one ("Invite").
   const openInvite = async () => {
-    await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /invite member/i }),
+    );
     return screen.findByRole("dialog");
   };
 
@@ -437,9 +428,7 @@ describe("UsersAdminCard", () => {
       }),
     );
 
-    // The menu the verb was pressed in stays open — a dialog restores focus to
-    // whatever opened it, so hiding that item first would send focus, on close,
-    // to a node that is gone. What it now offers is the opposite verb.
+    // The closed menu keeps its items mounted, and now offers the opposite verb.
     await waitFor(() => expect(verbs.getByText("Reactivate")).toBeTruthy());
     expect(within(row).getByText("Deactivated")).toBeTruthy();
     expect(document.activeElement).toBe(
@@ -528,15 +517,13 @@ describe("UsersAdminCard", () => {
 
     await waitFor(() => expect(within(active).getByRole("alert")).toBeTruthy());
     expect(screen.getByText(/leave no admin/i)).toBeTruthy();
-    // The refused change left the role untouched, so the select must read the
-    // role the member still holds — anything else would claim a change the
-    // server rejected.
-    expect(roleShown(active, "ada active")).toBe("Admin");
+    // The refusal keeps the operator's pick open beside the reason; backing out
+    // puts back the role the member still holds.
+    expect(roleShown(active)).toBe("User");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(roleShown(active)).toBe("Admin"));
   });
 
-  // The whole reason the select returns to the held role after a refusal: a
-  // select left showing the refused target would make re-picking it a no-op,
-  // and the operator's retry would silently never reach the server.
   it("surfaces a failed invite as an inline error", async () => {
     vi.stubGlobal(
       "fetch",

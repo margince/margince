@@ -112,9 +112,10 @@ export function actionLabel(action: string, t: Translator): string {
   return key ? t(key) : humanizeToken(action);
 }
 
-const KIND_LABELS = new Map<string, MessageKey>(
-  Object.entries(SEARCH_HIT_KIND_KEY),
-);
+const KIND_LABELS = new Map<string, MessageKey>([
+  ...Object.entries(SEARCH_HIT_KIND_KEY),
+  ["custom_field", "audit.kind.customField"],
+]);
 
 // A record kind reads in the reader's language; a governance object keeps its
 // own name.
@@ -290,6 +291,21 @@ export function ActorTag({
   );
 }
 
+// Kinds whose change `label` is the record's own name. On other kinds a field
+// called `label` may hold any value, so the line shows none.
+const NAMED_BY_CHANGE: ReadonlySet<string> = new Set(["custom_field"]);
+
+// The live name when the server resolves one, else the name the change wrote.
+function entryName(entry: AuditLogEntry): string | undefined {
+  const live = entry.entity_label?.trim();
+  if (live) return live;
+  if (!NAMED_BY_CHANGE.has(entry.entity_type)) return undefined;
+  return [entry.after?.label, entry.before?.label].find(
+    (label): label is string =>
+      typeof label === "string" && label.trim() !== "",
+  );
+}
+
 // AuditEntryLine is the one-line rendering of an audit entry: who, what, on
 // which kind of thing, and when. The entity's uuid is deliberately dropped —
 // it is opaque to a reader and carries no meaning without a name lookup.
@@ -300,11 +316,13 @@ export function AuditEntryLine({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const name = entryName(entry);
   return (
     <div className="audit-line t-sub">
       <ActorTag entry={entry} meUserId={meUserId} />
       <Badge tone="accent">{actionLabel(entry.action, t)}</Badge>
       <span>{entityLabel(entry.entity_type, t)}</span>
+      {name && <span className="audit-target">{name}</span>}
       {/* An audit entry is a fact in the company's book, like the change
           history beside it, so it reads on the company's clock. On the
           viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin

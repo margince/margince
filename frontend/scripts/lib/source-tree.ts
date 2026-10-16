@@ -17,7 +17,7 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 
 // Every extension a bundler resolves. Not just the two a well-behaved unit
@@ -119,6 +119,27 @@ export function extensionLayers(
   });
 }
 
+// The layers gen-composition mounts (collectUnitFrontend): a `frontend/` with a
+// package.json. A unit shipping copy alone (frontend/i18n) holds no source.
+export function extensionPackageLayers(root: string): string[] {
+  return extensionLayers(root).filter((layer) =>
+    existsSync(join(layer, "package.json")),
+  );
+}
+
+// The files of every extension layer that match `pattern`, less a built
+// `dist/`: output a gate on source would judge twice, once as its source.
+export function extensionFilesMatching(
+  root: string,
+  pattern: RegExp,
+): string[] {
+  return extensionLayers(root).flatMap((layer) =>
+    filesMatching(layer, pattern).filter(
+      (file) => !relative(layer, file).split(sep).includes("dist"),
+    ),
+  );
+}
+
 // scriptKindFor picks the dialect to parse a file as. ONE answer, because there
 // were two: the native-control gate read a `.js` as TypeScript and the
 // extension-import gate read it as JavaScript, neither stating why, in the pair
@@ -156,34 +177,45 @@ export function extensionFrontendFiles(extensionsDir: string): string[] {
 //
 // `path` names the file for diagnostics and the dialect; `text` is what is
 // parsed, so a fixture or a prefiltered read can be handed in directly.
+//
+// The last tree parsed for each path is kept and handed back for the same
+// text, which can only parse the same way. A gate that walks the corpus once
+// per rule, or an import graph from many entry points, asks for the same files
+// again and again. The cache lives as long as this module does: one test file
+// under vitest's isolation.
+const parsedSources = new Map<string, ts.SourceFile>();
+
 export function parseSource(path: string, text: string): ts.SourceFile {
-  return ts.createSourceFile(
+  const known = parsedSources.get(path);
+  if (known?.text === text) return known;
+  const parsed = ts.createSourceFile(
     path,
     text,
     ts.ScriptTarget.Latest,
     true,
     scriptKindFor(path),
   );
-}
-
-// sourceFileAt reads and parses the module at `path` ONCE for the run, and
-// hands every later caller the same tree.
-//
-// A gate that walks the corpus several times — one pass per rule — re-parsed
-// every file on every pass, and a gate that walks the import graph from many
-// entry points re-parsed the shared subgraph once per entry. The tree does not
-// change while a suite runs, so the second parse can only agree with the first;
-// what it costs is the whole runner for the tail of the run. The cache is per
-// worker: vitest isolates test files from one another, so one file's reads are
-// never another's stale view.
-const parsedSources = new Map<string, ts.SourceFile>();
-
-export function sourceFileAt(path: string): ts.SourceFile {
-  const known = parsedSources.get(path);
-  if (known) return known;
-  const parsed = parseSource(path, readFileSync(path, "utf8"));
   parsedSources.set(path, parsed);
   return parsed;
+}
+
+// sourceFileAt is parseSource for a committed file, read once for the run.
+export function sourceFileAt(path: string): ts.SourceFile {
+  return parseSource(path, sourceTextAt(path));
+}
+
+// sourceTextAt is sourceFileAt for a gate that reads text rather than syntax:
+// one read per file per run, however many rules ask. Both answer with the file
+// as it was first read: the committed tree does not change during a run. A
+// test reading back a file it rewrites uses readFileSync.
+const sourceTexts = new Map<string, string>();
+
+export function sourceTextAt(path: string): string {
+  const known = sourceTexts.get(path);
+  if (known !== undefined) return known;
+  const text = readFileSync(path, "utf8");
+  sourceTexts.set(path, text);
+  return text;
 }
 
 // Vite's default `resolve.extensions`, in its order, tried on the exact path and

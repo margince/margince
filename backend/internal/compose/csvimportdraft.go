@@ -76,8 +76,8 @@ func (h importHandlers) draftOfSource(ctx context.Context, req crmcontracts.Crea
 		return migration.Run{}, err
 	}
 	if run.SourceReleased {
-		return migration.Run{}, fmt.Errorf(
-			"import run %s has released this upload; upload the file again to import it: %w", run.ID, apperrors.ErrConflict)
+		return migration.Run{}, migration.RefuseRun(run.ID,
+			"this import has released its upload; upload the file again to import it")
 	}
 	return run, nil
 }
@@ -100,8 +100,18 @@ func (h importHandlers) UpdateImportRun(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
+	if patch.PresetLinks != nil {
+		if err := h.presetsAreVisible(ctx, *patch.PresetLinks); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	run, err := h.stagedFor(ctx, id)
 	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := refuseNonActivityPreset(mergedWithPatch(run.Mapping, patch)); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -111,6 +121,25 @@ func (h importHandlers) UpdateImportRun(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractImportRun(saved))
+}
+
+// mergedWithPatch is the mapping a draft would hold once patch is saved, for
+// the checks that look at the object and the preset together.
+func mergedWithPatch(stored *migration.RunMapping, patch migration.DraftPatch) migration.RunMapping {
+	var merged migration.RunMapping
+	if stored != nil {
+		merged = *stored
+	}
+	if patch.Object != nil {
+		merged.Object = *patch.Object
+	}
+	if patch.Parts != nil {
+		merged.Parts = *patch.Parts
+	}
+	if patch.PresetLinks != nil {
+		merged.PresetLinks = *patch.PresetLinks
+	}
+	return merged
 }
 
 // draftPatchFrom reads a save into the store's patch. tagSent with a nil tag
@@ -128,6 +157,13 @@ func draftPatchFrom(req crmcontracts.UpdateImportRunRequest, tagSent bool) (migr
 		patch.SourceName = &name
 	}
 	patch.Fields, patch.SourceKey = req.Mapping, req.SourceKey
+	if req.PresetLinks != nil {
+		presets, err := presetLinksFrom(req.PresetLinks)
+		if err != nil {
+			return migration.DraftPatch{}, err
+		}
+		patch.PresetLinks = &presets
+	}
 	if req.Parts != nil {
 		parts := make([]migration.PartMapping, 0, len(*req.Parts))
 		for _, p := range *req.Parts {

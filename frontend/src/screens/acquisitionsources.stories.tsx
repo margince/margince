@@ -70,6 +70,7 @@ const DUPLICATE = {
 
 const ADMIN = { custom_field: ["read", "create", "update", "delete"] } as const;
 const READER = { custom_field: ["read"] } as const;
+const ADDER = { custom_field: ["read", "create"] } as const;
 
 function story(
   allow: Parameters<typeof meRoute>[0],
@@ -93,12 +94,12 @@ function story(
   };
 }
 
-const meta: Meta<typeof AcquisitionSourcesCard> = {
+const meta = {
   title: "Settings/Sales/Acquisition sources/Sources",
   component: AcquisitionSourcesCard,
-};
+} satisfies Meta<typeof AcquisitionSourcesCard>;
 export default meta;
-type Story = StoryObj<typeof AcquisitionSourcesCard>;
+type Story = StoryObj<typeof meta>;
 
 export const Admin: Story = { render: story(ADMIN) };
 
@@ -106,12 +107,22 @@ export const Admin: Story = { render: story(ADMIN) };
 // holder who may not change it, not a wall.
 export const Reader: Story = { render: story(READER) };
 
+// May add but not edit: no page callout covers it, so the card says why.
+export const Adder: Story = {
+  render: story(ADDER),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(
+      "Your role can add entries but not change them",
+    );
+  },
+};
+
 // No deal count came back, so each row says so rather than reading as zero.
 export const WithoutDealCounts: Story = {
   render: story(READER, { counted: false }),
 };
 
-// At 390 each row folds: name and key over the count and the switch.
+// At 390 each row folds: the name with its switch and menu, over the count.
 export const AdminPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

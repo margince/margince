@@ -6,10 +6,10 @@ import { isImportObject } from "./importtypes";
 
 describe("isImportObject", () => {
   it("accepts every type the contract names and nothing else", () => {
-    for (const object of ["company", "contact", "lead", "deal"]) {
+    for (const object of ["company", "contact", "lead", "deal", "activity"]) {
       expect(isImportObject(object)).toBe(true);
     }
-    for (const other of ["activity", "", "toString", "constructor", 1, null]) {
+    for (const other of ["note", "", "toString", "constructor", 1, null]) {
       expect(isImportObject(other)).toBe(false);
     }
   });

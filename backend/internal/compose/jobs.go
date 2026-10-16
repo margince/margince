@@ -199,6 +199,10 @@ type JobRunnerConfig struct {
 	// owed until somebody ticks its reminder, because a reply alone has never
 	// settled one.
 	SettlementBrain completer
+	// TagSuggestBrain is the tag_suggest lane, which reads captured items
+	// against the suggestible tags' descriptions. Nil = the tag scout matches
+	// description phrases instead.
+	TagSuggestBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
 	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer

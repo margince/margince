@@ -33,6 +33,9 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 	case migration.ObjectDeal:
 		deal, err := w.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.IncludeArchived)
 		return err == nil && deal.ArchivedAt != nil, err
+	case migration.ObjectActivity:
+		activity, err := w.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived)
+		return err == nil && activity.ArchivedAt != nil, err
 	default:
 		return false, fmt.Errorf("import: %q is not an importable object: %w", object, apperrors.ErrConflict)
 	}

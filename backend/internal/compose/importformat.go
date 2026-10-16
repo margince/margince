@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -116,10 +117,15 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 		if !ok {
 			return nil, fmt.Errorf("import format: %s.%s has no guide", object, target)
 		}
-		columns = append(columns, crmcontracts.ImportFormatColumn{
+		column := crmcontracts.ImportFormatColumn{
 			Name: target, Description: spoken.Say(guide.Description), Example: spoken.Say(guide.Example),
 			RequiredOnNewRow: guide.RequiredOnNew,
-		})
+		}
+		if object == migration.ObjectLead && target == leadTargetStatus {
+			options := contacts.OpenLeadStatuses()
+			column.Options = &options
+		}
+		columns = append(columns, column)
 	}
 	return columns, nil
 }

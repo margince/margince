@@ -35,10 +35,15 @@ func TestOfferSentEmitsTypedPayload(t *testing.T) {
 		DealId:     dealID,
 		Revision:   &revision,
 		GrossMinor: &gross,
+		Currency:   "EUR",
 		ValidUntil: &validUntil,
 	}
 
 	payload := offerSentPayload(current, "1.0842")
+
+	if payload.Currency == nil || *payload.Currency != "EUR" {
+		t.Errorf("currency = %v, want EUR beside gross_minor so a receiver can print the amount", payload.Currency)
+	}
 
 	if !reflect.DeepEqual(payload.OfferId, offerID) {
 		t.Errorf("got %v, want %v", payload.OfferId, offerID)
@@ -78,5 +83,16 @@ func TestOfferSentEmitsTypedPayload(t *testing.T) {
 	}
 	if !reflect.DeepEqual(decoded, payload) {
 		t.Errorf("got %v, want %v", decoded, payload)
+	}
+}
+
+func TestAnOfferAcceptedCarriesTheCurrencyOfItsAmount(t *testing.T) {
+	gross := int64(500000)
+	payload := offerAcceptedPayload(crmcontracts.Offer{GrossMinor: &gross, Currency: "EUR"})
+	if payload.GrossMinor == nil || *payload.GrossMinor != gross {
+		t.Errorf("gross_minor = %v, want %d", payload.GrossMinor, gross)
+	}
+	if payload.Currency == nil || *payload.Currency != "EUR" {
+		t.Errorf("currency = %v, want EUR beside gross_minor so a receiver can print the amount", payload.Currency)
 	}
 }

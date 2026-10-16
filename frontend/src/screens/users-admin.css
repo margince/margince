@@ -30,18 +30,12 @@
   gap: var(--space-1);
 }
 
-/* One width on every row, so the pickers line up whatever role each shows.
-   Inline, so a folded row's dot separator stays on the picker's line. */
+/* A long role name wraps inside its column instead of widening the table, so
+   the row's verbs stay in view. Inline, so a folded row keeps it on line two. */
 .users-role {
   display: inline-flex;
   vertical-align: middle;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  max-inline-size: 13rem;
-}
-.users-role-select {
-  inline-size: 13rem;
+  max-inline-size: 12rem;
 }
 
 /* A capped strip truncates its badges instead of widening the table; a folded

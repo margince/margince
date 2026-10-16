@@ -268,23 +268,22 @@ it.each([
       user.keyboard("{Escape}"),
   },
 ])(
-  "gives focus back to the Delete item when $how leaves the dialog",
+  "gives focus back to the file's menu when $how leaves the dialog",
   async ({ leave }) => {
     const { calls } = stubApi([upload()]);
     const user = userEvent.setup();
     render(<DealFiles deal={dealOf()} />);
 
-    await user.click(
-      await screen.findByRole("button", { name: /Actions for pricing/ }),
-    );
+    const menu = await screen.findByRole("button", {
+      name: /Actions for pricing/,
+    });
+    await user.click(menu);
     await user.click(screen.getByRole("button", { name: en["files.delete"] }));
     await screen.findByRole("dialog");
     await leave(user);
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: en["files.delete"] }),
-    );
+    expect(document.activeElement).toBe(menu);
     expect(calls).toHaveLength(0);
   },
 );

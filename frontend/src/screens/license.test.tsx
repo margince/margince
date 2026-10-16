@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -121,14 +122,17 @@ describe("LicenseCard", () => {
     );
     render(<LicenseCard />);
 
-    // ONE reading, and the words carry it: the bar is hidden from a screen
-    // reader precisely because the value and its detail already say the share
-    // in full, so a reader who hears the card hears both figures.
-    const card = await waitFor(() => screen.getByText(ofGranted("9", "10")));
+    // One reading: the words say the share in full, and the meter carries the
+    // same two figures for a screen reader.
+    const reading = await waitFor(() => screen.getByText(ofGranted("9", "10")));
     expect(screen.getByText(left("1"))).toBeTruthy();
-    expect(
-      card.closest(".stat-card")?.querySelector(".stat-card-meter"),
-    ).not.toBeNull();
+    const row = reading.closest(".settingrow");
+    if (!(row instanceof HTMLElement)) {
+      throw new Error("the seat reading is not a settings row");
+    }
+    expect(within(row).getByRole("meter").getAttribute("aria-valuemax")).toBe(
+      "10",
+    );
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -174,9 +178,9 @@ describe("LicenseCard", () => {
 
     const rule = await waitFor(() => screen.getByText(/Read-only seats/));
     const reading = screen.getByText(ofGranted("9", "10"));
-    // One reading holds the label and the figure: no settings row frames it.
-    expect(reading.closest(".stat-card")?.textContent).toContain("Seats");
-    expect(reading.closest(".settingrow")).toBeNull();
+    // One row holds the name, the rule and the figure, with no card inside it.
+    expect(reading.closest(".settingrow")?.contains(rule)).toBe(true);
+    expect(reading.closest(".stat-card")).toBeNull();
     expect(
       rule.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

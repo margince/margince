@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import type { ExtensionUnit } from "../features/automations/extensions.queries";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import type { ExtensionUnit } from "./extensions.queries";
 import type { Role } from "./roles.queries";
 import { RoleDrawer } from "./roles-drawer";
 

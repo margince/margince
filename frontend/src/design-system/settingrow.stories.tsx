@@ -341,6 +341,57 @@ export const BleedAtPhoneWidth: Story = {
   tags: ["uat-phone"],
 };
 
+function rowBoxes(row: Element) {
+  const naming = row.querySelector(".settingrow-naming");
+  const control = row.querySelector(".settingrow-control");
+  if (naming === null || control === null) {
+    throw new Error("a setting row drew no naming or no control");
+  }
+  return {
+    naming: naming.getBoundingClientRect(),
+    control: control.getBoundingClientRect(),
+  };
+}
+
+// A card as narrow as a tablet's settings column. The long answer goes under
+// its naming instead of squeezing it; the short one beside it keeps its line.
+export const LongAnswerInNarrowCard: Story = {
+  render: () => (
+    <div style={{ maxWidth: "32rem" }}>
+      <Panel title="Account">
+        <SettingList bleed="settings">
+          <SettingRow
+            label="Email signature"
+            description="Sits under every message you send, above the unsubscribe footer."
+            value="Kind regards, Alice Müller, Head of Sales"
+            control={<Button variant="ghost">Edit signature</Button>}
+          />
+          <SettingRow
+            label="Reply-to address"
+            value="alice@demo.test"
+            control={<Button variant="ghost">Edit</Button>}
+          />
+        </SettingList>
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [long, short] = canvasElement.querySelectorAll(".settingrow");
+    if (long === undefined || short === undefined) {
+      throw new Error("the card drew fewer than two setting rows");
+    }
+    const wrapped = rowBoxes(long);
+    await expect(wrapped.control.top).toBeGreaterThanOrEqual(
+      wrapped.naming.bottom,
+    );
+    await expect(wrapped.control.right).toBeLessThanOrEqual(
+      long.getBoundingClientRect().right,
+    );
+    const beside = rowBoxes(short);
+    await expect(beside.control.top).toBeLessThan(beside.naming.bottom);
+  },
+};
+
 // 32rem is the pane beside the rail at 768px. A story cannot set that viewport,
 // and the collapse depends only on the row's own width.
 export const LongValueInNarrowPane: Story = {

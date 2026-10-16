@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 311 |
-| Columns | 3676 |
-| Foreign keys | 514 |
+| Tables | 312 |
+| Columns | 3686 |
+| Foreign keys | 515 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 135 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 35 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 36 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 26 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -97,7 +97,7 @@ erDiagram
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 24 |
-| [collections](collections.md) | 12 |
+| [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
@@ -129,7 +129,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 60 | 35 |
+| [`activity`](activities.md#activity) | activities | 60 | 36 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
@@ -398,6 +398,7 @@ erDiagram
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 10 | 3 |
+| [`tag_interest_read`](collections.md#tag_interest_read) | collections | 5 | 0 |
 | [`tag_suggestion`](collections.md#tag_suggestion) | collections | 12 | 1 |
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
@@ -421,8 +422,8 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 16 | 0 |
-| [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 10 | 1 |
+| [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
+| [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 17 | 0 |
 | [`weekly_review`](compose.md#weekly_review) | compose | 35 | 7 |

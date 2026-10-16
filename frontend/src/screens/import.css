@@ -34,12 +34,32 @@
   gap: var(--space-2);
 }
 
-/* The table scrolls inside its own box: a file with twenty columns must not
-   push the settings column sideways, and the column names and fill rates below
-   are deliberately nowrap. */
+/* The columns divide the card instead of the content dividing the table, so
+   the Field select keeps its room and the sample values are cut with an
+   ellipsis rather than pushing the select past the card's edge. The floor
+   keeps the four columns readable on a narrow window, where the table scrolls
+   inside its own box. */
 .import__table {
   width: 100%;
+  min-width: 34rem;
+  table-layout: fixed;
   border-collapse: collapse;
+}
+
+.import__colWidthName {
+  width: 22%;
+}
+
+.import__colWidthFill {
+  width: 13%;
+}
+
+.import__colWidthSamples {
+  width: 25%;
+}
+
+.import__colWidthField {
+  width: 40%;
 }
 
 .import__table th,
@@ -59,7 +79,7 @@
 }
 
 .import__colName {
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .import__fill {
@@ -70,7 +90,6 @@
 /* Sample values are evidence, not content: they are allowed to be clipped
    rather than to widen the table past its column. */
 .import__samples {
-  max-width: 18rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -88,21 +107,6 @@
   gap: var(--space-1);
 }
 
-/* The hub's two ways in sit side by side, and stack once the pane is narrow. */
-.import-hub__ways {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.import-hub__way {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
 .import-hub__verbs {
   display: flex;
   flex-wrap: wrap;
@@ -111,17 +115,8 @@
 }
 
 .import-hub__order {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-}
-
-.import-hub__step {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  display: block;
+  margin-top: var(--space-1);
 }
 
 .import-template__chips {
@@ -154,10 +149,50 @@
   gap: var(--gapActions);
 }
 
+/* The select takes the room, and the marks beside it stay in one piece: when
+   the cell is too narrow for both they drop under the select together, so the
+   Guide button is never split from its label. */
 .import__target {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.import__select {
+  flex: 1 1 5rem;
+  min-inline-size: 0;
+}
+
+.import__marks {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+/* The footer is a row of the card's own width, so its call to action stands on
+   the card's end edge, not at the end of its own content. */
+/* A rung's name stays on one line, and the track between rungs is shorter, so
+   the last rung never drops under its own connector on a narrow card. */
+.import-wizard .stage-ladder-step > .btn,
+.import-wizard .stage-ladder-here {
+  white-space: nowrap;
+}
+
+.import-wizard .stage-ladder-sep {
+  inline-size: var(--space-3);
+}
+
+.import__footer {
+  align-self: stretch;
+}
+
+.import__problems {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 

@@ -54,6 +54,12 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
+	// refused holds the rows of this run that were skipped, so a link to one
+	// says so instead of claiming the row never existed.
+	refused map[linkKey]bool
+	// pendingNatural holds the natural keys of those rows (a contact's email,
+	// a company's domain), so a link written with one resolves as the commit's does.
+	pendingNatural map[linkKey]bool
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
@@ -70,14 +76,16 @@ type linkResolver struct {
 
 func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 	r := &linkResolver{
-		sourceSystem: sourceSystem,
-		identities:   migration.NewRunStore(db),
-		pool:         db.Pool(),
-		pending:      map[linkKey]bool{},
-		landed:       map[linkKey]ids.UUID{},
-		cache:        map[linkKey]linkAnswer{},
-		employers:    map[string]employerCandidate{},
-		names:        map[string]pendingName{},
+		sourceSystem:   sourceSystem,
+		identities:     migration.NewRunStore(db),
+		pool:           db.Pool(),
+		pending:        map[linkKey]bool{},
+		refused:        map[linkKey]bool{},
+		pendingNatural: map[linkKey]bool{},
+		landed:         map[linkKey]ids.UUID{},
+		cache:          map[linkKey]linkAnswer{},
+		employers:      map[string]employerCandidate{},
+		names:          map[string]pendingName{},
 	}
 	r.byBinding, r.byNaturalKey, r.byID = r.bindingOf, r.naturalKeyOf, r.visibleByID
 	return r
@@ -86,10 +94,16 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 // linkNotFoundWhy is the one sentence for a ref no step answers to, whether
 // nothing carries it or only records the caller cannot see do.
 func linkNotFoundWhy(object, ref string) migration.Reason {
-	if object == migration.ObjectContact {
-		return migration.Why(migration.ReasonContactNotFound, "ref", strings.TrimSpace(ref))
+	code := migration.ReasonLinkNotFound
+	switch object {
+	case migration.ObjectContact:
+		code = migration.ReasonContactNotFound
+	case migration.ObjectLead:
+		code = migration.ReasonLeadNotFound
+	case migration.ObjectDeal:
+		code = migration.ReasonDealNotFound
 	}
-	return migration.Why(migration.ReasonLinkNotFound, "ref", strings.TrimSpace(ref))
+	return migration.Why(code, "ref", strings.TrimSpace(ref))
 }
 
 // markPending records a row the dry run predicts will land, so a later file's
@@ -98,6 +112,40 @@ func (r *linkResolver) markPending(object, ref string) {
 	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
 	r.pending[key] = true
 	delete(r.cache, key)
+}
+
+// markRefused records a row this run skipped. A link to it follows the run's
+// broken-link policy, in the dry run and in the commit alike.
+func (r *linkResolver) markRefused(object, ref string) {
+	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
+	if r.refused == nil {
+		r.refused = map[linkKey]bool{}
+	}
+	r.refused[key] = true
+	delete(r.cache, key)
+}
+
+// naturalKeyFor is the key the commit's natural-key step reads a link by: a
+// contact's folded email, a company's canonical domain. Marking a pending row
+// and looking a link up both spell the key here.
+func naturalKeyFor(object, raw string) (linkKey, bool) {
+	raw = strings.TrimSpace(raw)
+	switch {
+	case object == migration.ObjectContact && strings.Contains(raw, "@"):
+		return linkKey{Object: object, Key: canonicalFor(fieldEmail, raw)}, true
+	case object == migration.ObjectCompany && strings.Contains(raw, ".") && !strings.ContainsRune(raw, ' '):
+		return linkKey{Object: object, Key: canonicalFor(fieldDomain, raw)}, true
+	}
+	return linkKey{}, false
+}
+
+// markNaturalPending records the natural key of a row the dry run predicts will
+// land. A link naming it by email or domain then resolves before the row exists.
+func (r *linkResolver) markNaturalPending(object, raw string) {
+	if key, ok := naturalKeyFor(object, raw); ok {
+		r.pendingNatural[key] = true
+		clear(r.cache)
+	}
 }
 
 // pendingName counts the rows of this upload that will land under one company
@@ -167,6 +215,9 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 	if r.pending[key] {
 		return linkAnswer{Pending: true}, nil
 	}
+	if natural, ok := naturalKeyFor(key.Object, key.Key); ok && r.pendingNatural[natural] {
+		return linkAnswer{Pending: true}, nil
+	}
 	if id, ok := r.landed[key]; ok {
 		return linkAnswer{ID: id, Found: true}, nil
 	}
@@ -175,13 +226,16 @@ func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, err
 		return answer, err
 	}
 	// An ambiguous name stops here with its own reason: an id cannot carry it.
-	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.Found || answer.Why.Code != "" {
+	if answer, err = r.byNaturalKey(ctx, key.Object, key.Key); err != nil || answer.resolves() || answer.Why.Code != "" {
 		return answer, err
 	}
 	if _, parseErr := ids.Parse(key.Key); parseErr == nil {
 		if answer, err = r.byID(ctx, key.Object, key.Key); err != nil || answer.Found {
 			return answer, err
 		}
+	}
+	if r.refused[key] {
+		return linkAnswer{Why: migration.Why(migration.ReasonLinkRowSkipped, "ref", key.Key)}, nil
 	}
 	return linkAnswer{Why: linkNotFoundWhy(key.Object, key.Key)}, nil
 }
@@ -221,10 +275,15 @@ func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) 
 }
 
 // naturalKeyOf finds a company by the key a human would write: its domain, or
-// the one name it carries. A contact's is its email address.
+// the one name it carries. A contact's is its email address. A lead or a deal
+// has none a file can write. It is found by ref or id, never by a name that
+// happens to be a company's.
 func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (linkAnswer, error) {
-	if object == migration.ObjectContact {
+	switch object {
+	case migration.ObjectContact:
 		return r.visibleContactByEmail(ctx, key)
+	case migration.ObjectLead, migration.ObjectDeal:
+		return linkAnswer{}, nil
 	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
@@ -285,4 +344,16 @@ func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (link
 		return linkAnswer{}, fmt.Errorf("import: finding the linked company: %w", err)
 	}
 	return answer, nil
+}
+
+// naturalKeyField is the column holding a row's natural key. It is empty when
+// a record of that type has none a link can name.
+func naturalKeyField(object string) string {
+	switch object {
+	case migration.ObjectContact:
+		return fieldEmail
+	case migration.ObjectCompany:
+		return fieldDomain
+	}
+	return ""
 }

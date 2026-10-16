@@ -23,4 +23,5 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["duplicate_contact_lead", "common.duplicate.contactLead"],
   ["slot_taken", "common.duplicate.slotTaken"],
   ["import_source_busy", "import.sourceBusy"],
+  ["run_in_flight", "import.reason.run_in_flight"],
 ]);

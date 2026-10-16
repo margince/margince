@@ -111,7 +111,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterErrorUsers",
     "share.rosterLoading",
     "share.subject",
-    "signInMethods.sub",
     "users.deactivateAgentConfirmBody",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
@@ -155,7 +154,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A human being in a sentence about contacts rather than about the record.
     "deals.winReasonVerbal",
     "privacy.inboxAdminOnly",
-    "provider.automaticLookupJurisdiction",
   ],
   de: [
     // The meeting host is a human, not the CRM contact record type.
@@ -203,7 +201,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterErrorUsers",
     "share.rosterLoading",
     "share.subject",
-    "signInMethods.sub",
     "users.deactivateConfirmBody",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
@@ -326,13 +323,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "settings.voice.worksNot",
     "settings.voice.worksTranscripts",
     "users.access.title",
-    "users.adminOnly",
-    "users.empty",
-    "users.inviteOpen",
-    "users.inviteSub",
-    "users.inviteTitle",
-    "users.membersTitle",
-    "users.teamNobodyToAdd",
     "worklist.because.champion_unknown",
     "worklist.because.no_champion",
     "worklist.disposition.done.not_mine",
@@ -499,11 +489,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "notice.ruleHint.art13",
     "privacy.assignee",
     "privacy.correctionNote",
-    "privacy.correctionsEmpty",
     "privacy.correctionsSub",
     "project.ownerKeep",
     "project.stakeholders.empty",
-    "provider.automaticLookupJurisdiction",
     "role.rep",
     "room.card.lastSeen",
     // "người mua" — the BUYER who walks into the room: a human being from

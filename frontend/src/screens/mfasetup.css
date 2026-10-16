@@ -1,0 +1,27 @@
+/* A QR code stays dark on light in both themes: scanners read only that way. */
+.mfa-qr {
+  display: block;
+  width: 12rem;
+  max-width: 100%;
+  height: auto;
+}
+
+.mfa-qr-ground {
+  fill: var(--overlayLight);
+}
+
+.mfa-qr-ink {
+  fill: var(--overlayDark);
+}
+
+.mfa-copy-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mfa-copy-row .code-block {
+  flex: 1 1 16rem;
+  min-width: 0;
+}

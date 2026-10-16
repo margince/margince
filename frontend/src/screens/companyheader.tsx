@@ -6,6 +6,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { rosterOwnerName, useRoster } from "../components/entityref";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
+import { AddToShortlistAction } from "../features/lists/addtoshortlist";
 import { useT } from "../i18n";
 import {
   useCanWrite,
@@ -16,7 +17,6 @@ import { useMemberName } from "../lib/membernames";
 import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
-import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
 import { DecisionsChip } from "./companyapprovals";

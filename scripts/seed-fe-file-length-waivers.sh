@@ -3,9 +3,11 @@
 #
 # The baseline is "the tree as it stands", so it is taken when the gate lands —
 # and until then every merge to main moves it. This is that operation as a
-# command rather than a one-liner somebody retypes: it writes exactly what
-# check-fe-file-length.sh reads, including the exemptions, so the two cannot
-# disagree about which files are in the population.
+# command rather than a one-liner somebody retypes. The population comes from
+# the gate itself, run against an empty ledger, so neither the roots it walks
+# nor the wider ceiling it gives a test is spelled twice. Restating them here
+# is what let the gate learn frontend/scripts while this script still wrote
+# only the screens.
 #
 # It is NOT a way past a failing gate. Once the gate is in force, a file that
 # grew is a file to shrink, and running this would freeze the growth instead —
@@ -14,9 +16,28 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-CAP="${FE_FILE_LINE_CAP:-500}"
-TEST_CAP="${FE_TEST_FILE_LINE_CAP:-1000}"
-WAIVERS="scripts/fe-file-length-waivers.txt"
+WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
+GATE="$(dirname "$0")/check-fe-file-length.sh"
+
+# The gate's own report over an empty ledger: one FAIL line per file above its
+# cap, carrying the count this ledger freezes.
+set +e
+report="$(FE_FILE_LENGTH_WAIVERS=/dev/null bash "$GATE" 2>&1)"
+status=$?
+set -e
+# A clean tree exits 0 and the ledger comes out empty. Any other non-zero needs
+# at least one line this script can read a count off, because that is what a
+# baseline is made of.
+#
+# The gate's summary line is not enough to look for. The refusal it prints for a
+# root that is not there carries the same prefix, so matching that alone would
+# read a broken census as a tree with nothing over the cap, and write the empty
+# ledger this guard exists to refuse.
+if [[ "$status" -ne 0 ]] && ! grep -Eq "^FAIL: .* is [0-9]+ lines \(> " <<<"$report"; then
+  echo "$report" >&2
+  echo "seed-fe-file-length-waivers: the gate did not run, so there is no baseline to freeze" >&2
+  exit 1
+fi
 
 {
   cat <<'HEAD'
@@ -30,23 +51,16 @@ WAIVERS="scripts/fe-file-length-waivers.txt"
 #
 # Regenerate with scripts/seed-fe-file-length-waivers.sh — to ESTABLISH this
 # baseline, never to absorb a file that grew.
+#
+# One exception: a PR that only moves modules may raise a line by the import
+# lines its rewritten paths added, and by nothing else. Its PR body lists each
+# raise.
+#
+# The population is the two trees the gate walks: frontend/src and
+# frontend/scripts.
 # Format: <frozen-line-count> <path>
 HEAD
-  find frontend/src \( -name "*.ts" -o -name "*.tsx" \) \
-      ! -name "*.d.ts" \
-      ! -path "frontend/src/api/public-events.ts" \
-      ! -path "frontend/src/i18n/en.ts" \
-      ! -path "frontend/src/i18n/de.ts" \
-      ! -path "frontend/src/i18n/vi.ts" \
-      -exec wc -l {} + \
-  | awk -v cap="$CAP" -v testcap="$TEST_CAP" '
-      $2 == "total" { next }
-      {
-        lines = $1 + 0
-        f = $2
-        limit = (f ~ /\.test\.tsx?$/ || f ~ /\.stories\.tsx?$/ || f ~ /\.testkit\.tsx?$/ || f ~ /(^|[\/.-])fixtures?\.tsx?$/) ? testcap : cap
-        if (lines > limit) printf "%d %s\n", lines, f
-      }' \
+  sed -n 's/^FAIL: \(.*\) is \([0-9][0-9]*\) lines (> .*$/\2 \1/p' <<<"$report" \
   | sort -k2
 } > "$WAIVERS"
 

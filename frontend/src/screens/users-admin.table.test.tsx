@@ -9,7 +9,8 @@ import {
   backend,
   ROSTER,
   render,
-  roleSelect,
+  roleControl,
+  roleShown,
   rowFor,
 } from "./users-admin.testkit";
 import type { User } from "./users-members";
@@ -87,7 +88,7 @@ describe("the members table", () => {
     expect(within(rowFor("Ada Active")).getByText(/^Added /)).toBeTruthy();
   });
 
-  it("refuses every picker against one card sentence when the reader may not change roles", async () => {
+  it("states roles as words under one card sentence when the reader may not change them", async () => {
     vi.stubGlobal(
       "fetch",
       backend([], {
@@ -98,12 +99,26 @@ describe("the members table", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
 
-    const sentence = screen.getByText(en["users.role.withheld"]);
+    expect(screen.getByText(en["users.role.withheld"])).toBeTruthy();
     for (const name of ["Ada Active", "Nora None", "Ivy Invited"]) {
-      const picker = roleSelect(rowFor(name), name);
-      expect(picker.disabled).toBe(true);
-      expect(picker.getAttribute("aria-describedby")).toBe(sentence.id);
+      expect(roleControl(rowFor(name), name)).toBeNull();
     }
+    expect(roleShown(rowFor("Ada Active"))).toBe("Admin");
+  });
+
+  // Deactivate is a verb on this page, so the page carries no read-only notice
+  // and the card says which half is withheld.
+  it("tells a seat that may only deactivate that roles are not theirs to change", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend([], {
+        roles: ["custom"],
+        allow: { user_admin: ["read", "delete"] },
+      }),
+    );
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
+    expect(screen.getByText(en["users.role.withheld"])).toBeTruthy();
   });
 });
 
@@ -117,7 +132,6 @@ describe("roleRefusal", () => {
     roster,
     roles: SEEDED_ASSIGNABLE_ROLES,
     canChangeRole: true,
-    cardReasonId: "posture",
     meId,
     t: (key: string) => key,
   });
@@ -130,15 +144,15 @@ describe("roleRefusal", () => {
   it("names the last admin, the reader's own row, and a member out of reach", () => {
     const sole = member({ id: "a", allowed_actions: [] });
     expect(roleRefusal(sole, context([sole]))).toEqual({
-      text: "users.role.lastAdmin",
+      reason: "users.role.lastAdmin",
     });
     const self = member({ id: "me", roles: ["rep"], allowed_actions: [] });
     expect(roleRefusal(self, context([sole, self], "me"))).toEqual({
-      text: "users.role.own",
+      reason: "users.role.own",
     });
     const other = member({ id: "b", roles: ["rep"], allowed_actions: [] });
     expect(roleRefusal(other, context([sole, other], "me"))).toEqual({
-      text: "users.role.outside",
+      reason: "users.role.outside",
     });
   });
 
@@ -149,14 +163,14 @@ describe("roleRefusal", () => {
       allowed_actions: [],
     });
     expect(roleRefusal(self, context([self], "me"))).toEqual({
-      text: "users.role.own",
+      reason: "users.role.own",
     });
   });
 
-  it("points at the card's sentence when the reader holds no role change", () => {
+  it("leaves the reason to the card's sentence when the reader holds no role change", () => {
     const ada = member({ allowed_actions: ["change_role"] });
     expect(
       roleRefusal(ada, { ...context([ada]), canChangeRole: false }),
-    ).toEqual({ id: "posture" });
+    ).toEqual({});
   });
 });

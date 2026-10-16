@@ -24,8 +24,10 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  extensionFilesMatching,
   extensionFrontendFiles,
   extensionLayers,
+  extensionPackageLayers,
   filesUnder,
   moduleSpecifiers,
   parseSource,
@@ -101,6 +103,27 @@ describe("the walk the source-wide gates share", () => {
     expect(rel(extensionLayers(dir))).toEqual([
       "flat/frontend",
       "unit/panel/frontend",
+    ]);
+  });
+
+  it("counts only a layer with a package.json as a screen layer", () => {
+    mkdirSync(join(dir, "screen", "frontend"), { recursive: true });
+    writeFileSync(join(dir, "screen", "frontend", "package.json"), "{}");
+    mkdirSync(join(dir, "copy", "frontend", "i18n"), { recursive: true });
+    writeFileSync(join(dir, "copy", "frontend", "i18n", "en.json"), "{}");
+    expect(rel(extensionLayers(dir))).toEqual([
+      "copy/frontend",
+      "screen/frontend",
+    ]);
+    expect(rel(extensionPackageLayers(dir))).toEqual(["screen/frontend"]);
+  });
+
+  it("leaves a layer's built dist/ out of its files", () => {
+    mkdirSync(join(dir, "unit", "frontend", "dist"), { recursive: true });
+    writeFileSync(join(dir, "unit", "frontend", "screen.css"), "");
+    writeFileSync(join(dir, "unit", "frontend", "dist", "screen.css"), "");
+    expect(rel(extensionFilesMatching(dir, /\.css$/))).toEqual([
+      "unit/frontend/screen.css",
     ]);
   });
 

@@ -2,9 +2,12 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  type Approval,
+  usePendingApprovals,
+} from "../features/automations/approvals.queries";
 import { useNow } from "../format/now";
 import { en } from "../i18n/en";
-import { type Approval, usePendingApprovals } from "./approvals.queries";
 import { DecisionsSection } from "./brief.decisions";
 import { deckItems } from "./brief.decisions.items";
 import {

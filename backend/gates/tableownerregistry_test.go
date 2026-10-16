@@ -161,6 +161,7 @@ var tableOwners = map[string]string{
 	"legal_review":             "internal/modules/deals",
 	"tag_suggestion":           "internal/modules/collections",
 	"tag_suggestion_evidence":  "internal/modules/collections",
+	"tag_interest_read":        "internal/modules/collections",
 	"deal_suggestion_evidence": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than

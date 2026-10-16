@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,14 +46,14 @@ func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 		return err == nil && c.ArchivedAt == nil
 	}
 
-	if err := reverse(); !errors.Is(err, apperrors.ErrConflict) || !live() {
-		t.Fatalf("reverse with a live deal and contact = %v, company live %v; want a conflict and the company kept", err, live())
+	if err := reverse(); !keptStillReferenced(err) || !live() {
+		t.Fatalf("reverse with a live deal and contact = %v, company live %v; want it kept as still referenced", err, live())
 	}
 	if _, err := e.Deals.ArchiveDeal(e.Admin(), ids.From[ids.DealKind](ids.UUID(deal.Id)), nil); err != nil {
 		t.Fatalf("archiving the deal: %v", err)
 	}
-	if err := reverse(); !errors.Is(err, apperrors.ErrConflict) || !live() {
-		t.Fatalf("reverse with a live employment = %v, company live %v; want a conflict and the company kept", err, live())
+	if err := reverse(); !keptStillReferenced(err) || !live() {
+		t.Fatalf("reverse with a live employment = %v, company live %v; want it kept as still referenced", err, live())
 	}
 	if _, err := e.Contacts.ArchiveContact(e.Admin(), contact, nil); err != nil {
 		t.Fatalf("archiving the contact: %v", err)
@@ -62,4 +61,9 @@ func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 	if err := reverse(); err != nil || live() {
 		t.Fatalf("reverse with nothing live = %v, company live %v; want it archived", err, live())
 	}
+}
+
+func keptStillReferenced(err error) bool {
+	kept, ok := errors.AsType[*migration.KeptError](err)
+	return ok && kept.Why.Code == migration.ReasonUndoStillReferenced
 }

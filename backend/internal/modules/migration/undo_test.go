@@ -6,6 +6,7 @@ package migration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -83,6 +84,24 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 		if len(rep.Kept) != 1 || rep.ReversedCount != 0 {
 			t.Fatalf("rep = %+v, want the row kept and Reverse never invoked", rep)
 		}
+		if rep.Kept[0].Code != ReasonUndoEdited || rep.Kept[0].Reason == "" {
+			t.Fatalf("kept = %+v, want the edited reason beside it", rep.Kept[0])
+		}
+	})
+
+	t.Run("a refusal that keeps the row is kept with its own reason, not errored", func(t *testing.T) {
+		var rep UndoReport
+		why := Why(ReasonUndoStillReferenced, "deals", "2", "contacts", "0")
+		w := stubUndoWriters{err: fmt.Errorf("reversing: %w", &KeptError{Why: why})}
+		if err := reverseOneRow(context.Background(), w, row, false, &rep); err != nil {
+			t.Fatalf("reverseOneRow: %v", err)
+		}
+		if len(rep.Errored) != 0 || len(rep.Kept) != 1 {
+			t.Fatalf("rep = %+v, want one kept row and no errored one", rep)
+		}
+		if got := rep.Kept[0]; got.Code != ReasonUndoStillReferenced || got.Params["deals"] != "2" {
+			t.Fatalf("kept = %+v, want the code and its counts", got)
+		}
 	})
 
 	t.Run("untouched and reversible increments ReversedCount", func(t *testing.T) {
@@ -121,9 +140,9 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 }
 
 func TestAnUndoReversesTheTypesALaterImportLandedFirst(t *testing.T) {
-	want := []string{ObjectDeal, ObjectLead, ObjectContact, ObjectCompany}
+	want := []string{ObjectActivity, ObjectDeal, ObjectLead, ObjectContact, ObjectCompany}
 	if got := reverseImportOrder(); !slices.Equal(got, want) {
-		t.Fatalf("undo order = %v, want %v: a contact archived first leaves its deals naming an archived record", got, want)
+		t.Fatalf("undo order = %v, want %v: a contact archived first leaves its deals and activities naming an archived record", got, want)
 	}
 	if ImportOrder[0] != ObjectCompany {
 		t.Fatalf("reversing changed ImportOrder itself: %v", ImportOrder)

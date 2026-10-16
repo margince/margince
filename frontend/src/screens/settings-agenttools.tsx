@@ -17,10 +17,10 @@ import {
 import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { AutonomyDot } from "../design-system/trust";
+import { usePassports } from "../features/automations/passports.queries";
 import { useT } from "../i18n";
 import { dotTier } from "../lib/autonomy";
 import { unwrap } from "../lib/problem";
-import { usePassports } from "./passports.queries";
 import "./settings-agents.css";
 
 type AgentTool = components["schemas"]["AgentTool"];

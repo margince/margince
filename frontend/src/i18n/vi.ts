@@ -2489,7 +2489,7 @@ export const vi = {
   "linkedinImport.notConnectedNote":
     "Khi lưu URL hồ sơ, các kết nối đã nhập sẽ được gắn với tên của bạn.",
   "linkedinImport.whichFile":
-    "LinkedIn cung cấp tệp Connections.csv trong “Settings”, rồi “Data privacy”, rồi “Get a copy of your data”. Tải lên tệp đó từ tệp nén. Kết nối đã tải lên không bao giờ trở thành liên hệ: các kết nối này nằm ngoài tìm kiếm, danh sách và trang liên hệ, và không ai có thể nhắn tin hay gửi email cho họ.",
+    "Tệp Connections.csv từ mục “Get a copy of your data” của LinkedIn. Kết nối đã nhập không bao giờ trở thành liên hệ, và không ai gửi email cho họ được.",
   "linkedinImport.choose": "Chọn tệp Connections.csv",
   "linkedinImport.importLabel": "Tệp xuất danh sách kết nối",
   "linkedinImport.noMatchesYet":
@@ -2503,9 +2503,6 @@ export const vi = {
   "linkedinReach.title": "Phạm vi mạng lưới",
   "linkedinReach.sub":
     "Các công ty đã có trong CRM mà bạn có người quen, công ty nhiều kết nối nhất xếp trước.",
-  "linkedinReach.readFailed": "Không thể tải phạm vi mạng lưới.",
-  "linkedinReach.empty":
-    "Chưa có kết nối nào làm việc tại công ty đã có trong CRM.",
   "linkedinReach.allUnresolved":
     "Mọi kết nối đều làm việc tại công ty chưa có trong CRM. Số kết nối: {unresolved}.",
   "linkedinReach.accountsLabel": "Công ty bạn tiếp cận được",
@@ -2877,11 +2874,10 @@ export const vi = {
   "co.recent.minutes": "{count} phút",
   "co.recent.re": "về một deal",
   "co.recent.reNamed": "về {name}",
-  "tagAdmin.title": "Thẻ",
   "tagAdmin.sub":
-    "Thẻ mà công ty dùng để phân loại hồ sơ. Ai cũng có thể gắn thẻ; chỉ quản trị viên và thành viên Vận hành mới có thể thêm, đổi tên hoặc ngừng dùng thẻ.",
+    "Ai cũng có thể gắn thẻ cho hồ sơ. Chỉ quản trị viên và thành viên Vận hành mới có thể thêm, đổi tên hoặc ngừng dùng thẻ.",
   "tagAdmin.listLabel": "Danh sách thẻ",
-  "tagAdmin.empty": "Chưa có thẻ nào. Thêm thẻ đầu tiên.",
+  "tagAdmin.empty": "Chưa có thẻ nào.",
   "import.contextTag": "Thẻ cho lần nhập này",
   "import.contextTagChosen":
     "Các hồ sơ do lần nhập này tạo sẽ được gắn thẻ {name}.",
@@ -2913,11 +2909,11 @@ export const vi = {
   "tagSuggestion.decided":
     "Gợi ý này đã có quyết định. Tải lại để xem tình trạng hiện tại.",
   "tagSuggestion.unavailable": "Không thể tải gợi ý. Thử lại sau.",
-  "tagAdmin.descriptionLabel": "Từ ngữ cho thấy mối quan tâm",
+  "tagAdmin.descriptionLabel": "Dấu hiệu quan tâm",
   "tagAdmin.descriptionHint":
-    "Phân tách các từ hoặc cụm từ bằng dấu phẩy, ví dụ: giá Product X, demo Product X.",
+    "Ví dụ: hỏi về giá hoặc demo Product X. Khi không có AI, mỗi cụm từ cách nhau bằng dấu phẩy được tính là một kết quả khớp.",
   "tagAdmin.suggestibleLabel":
-    "Gợi ý thẻ này khi email hoặc ghi chú cuộc họp dùng các từ này",
+    "Gợi ý thẻ này khi email, cuộc họp, ghi chú hoặc cuộc gọi cho thấy mối quan tâm này",
   "tagAdmin.colorNone": "Không màu",
   "tagAdmin.color.teal": "Xanh mòng két",
   "tagAdmin.color.amber": "Hổ phách",
@@ -3046,10 +3042,10 @@ export const vi = {
   "leadSources.title": "Nguồn lead",
   "leadSources.sub":
     "Lead đến từ đâu. Dùng trong biểu mẫu Lead mới, trong bộ lọc và khi chấm điểm.",
-  "leadSources.readOnly":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này.",
-  "leadSources.readOnlyTitle":
-    "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được danh sách này",
+  "leadSources.removeOnlyTitle":
+    "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
+  "leadSources.addOnlyTitle":
+    "Vai trò hiện tại chỉ thêm được mục mới, không thay đổi được mục đã có",
   "leadSources.notSaved": "Không thể lưu thay đổi",
   "leadSources.notAdded": "Không thể thêm nguồn",
   "leadSources.duplicate":
@@ -3061,7 +3057,6 @@ export const vi = {
   "leadSources.intent.low": "Ý định mua thấp",
   "leadSources.intentHint":
     "Cao cộng điểm, Thấp trừ điểm. Thay đổi áp dụng ở lần tính lại điểm tiếp theo của từng lead.",
-  "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên hoặc tắt, nhưng không thể gỡ.",
   "leadSources.inUse_one":
@@ -3114,8 +3109,9 @@ export const vi = {
   "followUpSettings.daysHint":
     "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc liên hệ lại, từ 1 đến 30.",
   "followUpSettings.outOfRange": "Nhập số ngày là số nguyên từ 1 đến 30.",
-  "leadHandling.title": "Quản lý lead",
-  "leadHandling.sub": "Cách xử lý lead mới.",
+  "leadHandling.title": "Thời gian phản hồi",
+  "leadHandling.readOnly":
+    "Vai trò hiện tại không có quyền thay đổi cài đặt này.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
   "leadHandling.firstResponseHint":
     "Mặc định tắt. Khi bật, mọi lead đang mở có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
@@ -3453,9 +3449,9 @@ export const vi = {
     "Họ viết lần cuối vào ngày {date}, cách đây {days} ngày.",
   "deal.pulse.wroteUnknown": "Họ đã gửi thư và chưa ai trả lời.",
   "deal.timeline.empty": "Chưa có hoạt động nào trên deal này.",
-  "acqSources.title": "Nguồn tiếp cận",
+  "acqSources.title": "Danh sách nguồn",
   "acqSources.sub":
-    "Các kênh kinh doanh có thể gán cho deal. Nguồn lead, ghi nhận cách một hồ sơ vào Margince, là danh mục riêng.",
+    "Tách biệt với nguồn lead, vốn ghi nhận cách một hồ sơ vào Margince.",
   "acqSources.loading": "Đang tải nguồn…",
   "acqSources.addOpen": "Nguồn mới",
   "acqSources.addTitle": "Nguồn tiếp cận mới",
@@ -3556,9 +3552,7 @@ export const vi = {
   "assignments.rolePlaceholder": "Chọn vai trò",
   "assignments.saveAdd": "Giao",
   "assignments.saveChange": "Lưu thay đổi",
-  "recordRoles.title": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
-  "recordRoles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm có thể chịu trách nhiệm trên công ty, deal hoặc dự án. Vai trò không cấp quyền truy cập hồ sơ.",
+  "recordRoles.title": "Danh sách vai trò",
   "recordRoles.loading": "Đang tải vai trò…",
   "recordRoles.addOpen": "Th\u00eam vai tr\u00f2",
   "recordRoles.addTitle": "Th\u00eam vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
@@ -4340,6 +4334,7 @@ export const vi = {
   "create.relatedCompany": "Công ty",
   "create.expectedClose": "Ngày chốt dự kiến",
 
+  "keyCode.label": "Khóa: {key}",
   "field.unset": "Chưa có",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
@@ -5693,10 +5688,12 @@ export const vi = {
   "import.object.company": "Công ty",
   "import.object.contact": "Liên hệ",
   "import.object.deal": "Deal",
+  "import.object.activity": "Hoạt động",
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
-  "import.col.filled": "Có dữ liệu",
+  "import.col.filled": "Đã điền",
+  "import.col.filledHint": "Tỷ lệ dòng trong tệp này có giá trị ở cột",
   "import.col.samples": "Giá trị",
   "import.col.destination": "Trường",
   "import.dontImport": "Không nhập",
@@ -5719,7 +5716,7 @@ export const vi = {
   "import.undone": "Đã hoàn tác lần nhập",
   "import.undoReversed_one": "Đã hoàn tác 1 dòng.",
   "import.undoReversed_other": "Đã hoàn tác {rows} dòng.",
-  "import.undoKeptLead": "Giữ nguyên vì đã được sửa sau khi nhập:",
+  "import.undoKeptLead": "Được giữ nguyên khi hoàn tác:",
   "import.undoErroredLead": "Không thể hoàn tác, giữ nguyên:",
   "import.hub.title": "Lần nhập mới",
   "import.hub.templateTitle": "Mẫu",
@@ -5730,9 +5727,9 @@ export const vi = {
   "import.hub.uploadHint":
     "Tệp ZIP gồm các tệp CSV, hoặc một tệp CSV. Tối đa {mb} MB.",
   "import.hub.uploadEmpty": "Chọn tệp hoặc thả vào đây",
+  "import.hub.csvOnly": "Ở đây chỉ nhập được tệp CSV. Chọn một tệp .csv.",
   "import.hub.order": "Thứ tự nhập:",
   "import.recent.title": "Lần nhập gần đây",
-  "import.recent.empty": "Chưa có lần nhập nào.",
   "import.recent.col.date": "Ngày",
   "import.recent.col.file": "Tệp",
   "import.recent.col.rows": "Dòng",
@@ -5784,7 +5781,8 @@ export const vi = {
   "import.guide.custom": "trường tùy chỉnh",
   "import.guide.required": "Cần cho dòng mới",
   "import.guide.example": "Ví dụ: {example}",
-  "import.guide.whatGoesIn": "Nội dung của cột {column}",
+  "import.guide.button": "Hướng dẫn",
+  "import.guide.buttonFor": "Hướng dẫn cho {column}",
   "import.template.title": "Bản xem trước mẫu",
   "import.template.download": "Tải mẫu xuống",
   "import.template.lead":
@@ -5820,9 +5818,12 @@ export const vi = {
   "import.files.columns_other": "{count} cột",
   "import.files.skip": "Bỏ qua tệp này",
   "import.files.typeFor": "Loại hồ sơ cho {file}",
+  "import.preset.into": "Đang nhập vào {name}",
+  "import.preset.intoUnnamed": "Đang nhập vào liên hệ này",
+  "import.preset.hint":
+    "Mọi dòng được gắn vào liên hệ này, nên tệp không cần cột links.",
   "import.files.ignoredTitle": "Tệp bị bỏ qua",
   "import.files.ignored.unknown_name": "tên tệp không khớp loại hồ sơ nào",
-  "import.files.ignored.not_yet_importable": "loại hồ sơ này chưa nhập được",
   "import.files.sourceName": "Tên nguồn",
   "import.files.sourceNameHint":
     "Dùng cùng tên ở lần tải lên sau để cập nhật các hồ sơ này thay vì thêm lại.",
@@ -5841,6 +5842,7 @@ export const vi = {
   "import.map.testStopped": "Chạy thử đã dừng",
   "import.step.hintStaged":
     "Đã tạo lần chạy thử nên tệp và ánh xạ đã cố định. Sửa và tải lại sẽ bắt đầu lại.",
+  "import.step.hintDone": "Lần nhập đã hoàn tất nên tệp và ánh xạ đã cố định.",
   "import.progress.waiting": "Đang chờ",
   "import.progress.running": "Đang chạy",
   "import.progress.done": "Xong",
@@ -5851,6 +5853,7 @@ export const vi = {
   "import.progress.links": "Liên kết",
   "import.progress.overall": "Tất cả tệp",
   "import.progress.total": "{done} trên {total} dòng",
+  "import.progress.reversed": "Đã xử lý {done} trên {total} dòng",
   "import.progress.rate": "{rate} dòng/giây",
   "import.progress.elapsed": "đã qua {span}",
   "import.progress.etaObject": "còn khoảng {minutes} phút cho {type}",
@@ -5880,7 +5883,9 @@ export const vi = {
   "import.result.skipped_other":
     "Đã bỏ qua {count} dòng. problems.csv liệt kê từng dòng.",
   "import.result.undoing":
-    "Đang hoàn tác. Nếu bị dừng, Tiếp tục hoàn tác sẽ chạy tiếp từ đó.",
+    "Đang hoàn tác. Quá trình tự chạy tiếp và trang này tự cập nhật.",
+  "import.result.undoStopped":
+    "Việc hoàn tác đã dừng. Tiếp tục hoàn tác sẽ chạy tiếp từ chỗ dừng.",
   "import.result.problemsFile": "problems.csv",
   "import.result.undo": "Hoàn tác lần nhập này",
   "import.result.done": "Xong",
@@ -5899,7 +5904,14 @@ export const vi = {
     "Vẫn nhập 1 dòng có liên kết hỏng, bỏ liên kết đó. Kết quả liệt kê mọi liên kết bị bỏ.",
   "import.test.anyway_other":
     "Vẫn nhập {count} dòng có liên kết hỏng, bỏ các liên kết đó. Kết quả liệt kê mọi liên kết bị bỏ.",
+  "import.test.nothing.title": "Không có gì để nhập",
+  "import.test.nothing.body":
+    "Mọi hàng đã có trong CRM hoặc được liệt kê ở trên như một vấn đề. Chưa ghi gì cả.",
+  "import.test.nothing.skipped":
+    "Hãy tải problems.csv trước khi bấm Xong: tệp liệt kê các hàng bị bỏ qua và lý do.",
+  "import.test.nothing.done": "Xong",
   "import.test.reupload": "Sửa và tải lại",
+  "import.test.issuesUnit": "vấn đề",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway": "Vẫn nhập",
@@ -5927,6 +5939,8 @@ export const vi = {
   "import.reason.undo_not_visible": "Bạn không còn thấy bản ghi này.",
   "import.reason.undo_rule_protects":
     "Bản ghi từ chối hoàn tác vì có một quy tắc nghiệp vụ bảo vệ nó.",
+  "import.reason.run_in_flight":
+    "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
@@ -6011,7 +6025,7 @@ export const vi = {
   "import.reason.owner_refused":
     "Bạn không thể đặt thành viên này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
   "import.reason.owner_unknown":
-    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu.",
+    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
   "import.reason.phone_needs_country":
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":
@@ -6063,6 +6077,68 @@ export const vi = {
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.contact_not_found_dropped":
     "Không có liên hệ nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.activity_type_unnamed":
+    "Nêu loại hoạt động: “note”, “call”, “meeting” hoặc “email”.",
+  "import.reason.activity_type_unknown":
+    "“{value}” không phải loại hoạt động. Các loại: {allowed}.",
+  "import.reason.message_not_importable":
+    "Tin nhắn cần một kênh nên không thể nhập từ tệp. Dùng ghi chú hoặc email.",
+  "import.reason.task_not_importable":
+    "Việc cần làm sẽ nằm mở trong danh sách của chính bạn nên không được nhập. Dùng ghi chú.",
+  "import.reason.occurred_at_unnamed":
+    "Nêu ngày hoạt động xảy ra, dạng YYYY-MM-DD hoặc kèm múi giờ.",
+  "import.reason.timestamp_needs_zone":
+    "“{value}” có giờ nhưng không có múi giờ. Thêm múi giờ, ví dụ 2026-03-02T10:00:00+07:00.",
+  "import.reason.occurred_at_future":
+    "“{value}” ở tương lai, mà hoạt động được nhập phải đã xảy ra.",
+  "import.reason.duration_not_valid_for_kind":
+    "Chỉ cuộc gọi hoặc cuộc họp mới có thời lượng. Bỏ giá trị này khỏi hàng.",
+  "import.reason.duration_out_of_range":
+    "“{value}” phút nằm ngoài thời lượng một hoạt động có thể có: từ không đến 31 ngày.",
+  "import.reason.meeting_status_unknown":
+    "“{value}” không phải trạng thái cuộc họp. Các trạng thái: {allowed}.",
+  "import.reason.meeting_status_not_valid_for_kind":
+    "Chỉ cuộc họp mới có trạng thái cuộc họp. Bỏ giá trị này khỏi hàng.",
+  "import.reason.direction_unknown":
+    "“{value}” không phải chiều hoạt động. Các chiều: {allowed}.",
+  "import.reason.activity_unlinked":
+    "Hoạt động này không nêu hồ sơ nào để gắn vào. Thêm liên kết như deal:D-1001 hoặc contact:jo@acme.com.",
+  "import.reason.link_malformed":
+    "“{value}” không phải liên kết. Viết loại, dấu hai chấm và khóa, ví dụ deal:D-1001.",
+  "import.reason.link_type_unknown":
+    "“{value}” không phải loại liên kết. Các loại: {allowed}.",
+  "import.reason.too_many_links":
+    "Một hoạt động chỉ được nêu tối đa {max} liên kết.",
+  "import.reason.company_link_on_meeting":
+    "Cuộc gọi hoặc cuộc họp diễn ra với một liên hệ, không phải với công ty. Liên kết liên hệ đã tham gia.",
+  "import.reason.link_not_attachable":
+    "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
+  "import.reason.activity_held":
+    "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+  "import.reason.lead_not_found":
+    "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.lead_not_found_dropped":
+    "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.deal_not_found":
+    "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.link_row_skipped":
+    "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết.",
+  "import.reason.link_row_skipped_dropped":
+    "Hàng “{ref}” đã bị bỏ qua trong lần nhập này nên không có gì để liên kết. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.undo_edited":
+    "Hồ sơ này đã được sửa sau khi nhập nên được giữ nguyên.",
+  "import.reason.undo_still_referenced":
+    "Vẫn còn deal hoặc liên hệ đang dùng công ty này (deal: {deals}, liên hệ: {contacts}) nên công ty được giữ nguyên.",
+  "import.reason.lead_status_unknown":
+    "“{value}” không phải trạng thái lead. Các trạng thái: {allowed}.",
+  "import.reason.lead_status_not_importable":
+    "Tệp không thể đặt trạng thái “{value}”. Dùng Xác nhận đủ điều kiện hoặc Loại lead trên lead. Trạng thái tệp được đặt: {allowed}.",
+  "import.reason.deal_not_found_dropped":
+    "Không có deal nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.activity_link_ambiguous":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào.",
+  "import.reason.activity_link_ambiguous_dropped":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên quyết định hoạt động này nói về công ty nào. Hàng đã được nhập mà không có liên kết.",
   "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
@@ -6073,10 +6149,8 @@ export const vi = {
   "import.problem.permission": "Không có quyền",
   "import.problem.unusable_row": "Dòng không dùng được",
   "settings.dangerZone": "Vùng nguy hiểm",
-  "settings.dangerZoneSub":
-    "Chỉ dành cho bản cài đặt ngoài production. Không thể hoàn tác.",
   "settings.resetDataDesc":
-    "Đưa bản cài đặt này về trạng thái khởi động lần đầu. Dữ liệu nghiệp vụ và cấu hình sẽ bị xóa; công ty và các thành viên được giữ lại và vẫn đang đăng nhập.",
+    "Chỉ dành cho bản cài đặt ngoài production. Xóa toàn bộ hồ sơ và cấu hình; công ty và các thành viên được giữ lại và vẫn đang đăng nhập.",
   "settings.resetDataButton": "Đặt lại dữ liệu",
   "settings.resetDataLabel": "Đặt lại toàn bộ dữ liệu",
   "settings.resetDataConfirmButton": "Đặt lại toàn bộ dữ liệu",
@@ -6462,8 +6536,7 @@ export const vi = {
   "privacy.corrections": "Yêu cầu chỉnh sửa",
   "privacy.correctionsSub":
     "Người liên hệ đã nhập các nội dung này qua liên kết được gửi cho họ qua email. Chưa có nội dung nào làm thay đổi hồ sơ; yêu cầu sửa chỉ là yêu cầu cho đến khi được chấp nhận.",
-  "privacy.correctionsEmpty":
-    "Không có yêu cầu sửa nào đang chờ. Người liên hệ gửi yêu cầu qua liên kết nhận được trong email.",
+  "privacy.correctionsEmpty": "Không có yêu cầu sửa nào đang chờ.",
   "privacy.correctionContact": "Liên hệ",
   "privacy.correctionChange": "Nội dung cần sửa",
   "privacy.correctionReceived": "Ngày nhận",
@@ -6658,7 +6731,6 @@ export const vi = {
   "privacy.kindRectify": "Chỉnh sửa",
   "privacy.kindErasure": "Xóa",
   "privacy.purpose": "Mục đích",
-  "privacy.purposeDoiColumn": "Xác nhận",
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
   "privacy.purposesEmpty": "Chưa có mục đích nào.",
@@ -6712,12 +6784,11 @@ export const vi = {
     "Gỡ lưu trữ pháp lý sẽ XÓA mục này, không đưa mục này trở lại sử dụng. Yêu cầu xóa mà nghĩa vụ này đã tạm hoãn vẫn còn mở, nên gỡ lưu trữ pháp lý sẽ hoàn tất yêu cầu đó. Không thể hoàn tác.",
   "restricted.release.confirm": "Gỡ lưu trữ pháp lý và xóa",
   "restricted.pin.action": "Ghim một mục",
-  "restricted.pin.submit": "Ghim",
   "restricted.pin.idHint":
     "Dành cho thư từ mà quy tắc tự động không nhận ra, ví dụ thư nhà cung cấp và thư mua hàng thuộc §257 HGB nhưng không có deal ở đây. Mã của mục có trong nhật ký hoạt động.",
   "restricted.pin.idMalformed":
     "Mã mục không hợp lệ. Định dạng gồm 8-4-4-4-12 ký tự thập lục phân, hiển thị đầy đủ trong nhật ký hoạt động của mục đó.",
-  "restricted.pin.idPlaceholder": "Mã mục",
+  "restricted.pin.idLabel": "Mã mục",
   "restricted.pin.title": "Đưa mục này vào lưu trữ pháp lý?",
   "restricted.pin.body":
     "Mục này được giữ trong thời hạn luật định: bị ẩn khỏi mọi chế độ xem thông thường, bị khóa và sẽ bị xóa khi hết thời hạn. Mã định danh của mục này bị che ngay từ bây giờ.",
@@ -6735,7 +6806,7 @@ export const vi = {
   "retention.editScope": "Sửa {scope}",
   "retention.retainOnly": "Chế độ chỉ lưu trữ",
   "retention.retainOnlyHelp":
-    "Khi bật, bản cài đặt này không hủy gì: không ẩn danh hóa và không xóa, bất kể chính sách bên dưới quy định gì. Tác vụ chuyển vào kho lưu trữ vẫn chạy; hồ sơ trong kho lưu trữ được giữ lại, không bị hủy.",
+    "Khi bật, không chính sách nào ẩn danh hóa hay xóa dữ liệu. Tác vụ chuyển vào kho lưu trữ vẫn chạy.",
   "retention.adminOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được cài đặt lưu trữ.",
   "retention.withheld":
@@ -6752,7 +6823,6 @@ export const vi = {
   "retention.lawfulBasisHint":
     "Không bắt buộc. Cơ sở theo Điều 6 mà thời hạn này dựa vào, dành cho kiểm toán viên đọc chính sách.",
   "retention.enabled": "Đang bật",
-  "retention.edit": "Sửa",
   "retention.save": "Lưu chính sách",
   "retention.delete": "Xóa chính sách",
   "retention.deleteTitle": "Xóa chính sách lưu trữ?",
@@ -6780,11 +6850,6 @@ export const vi = {
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
-  "settings.pipelines": "Pipeline",
-  "settings.pipelinesReadOnly":
-    "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi pipeline hoặc giai đoạn.",
-  "settings.pipelinesSub":
-    "Các giai đoạn deal đi qua, mỗi pipeline một trình tự.",
   "pipeline.new": "Pipeline mới",
   "pipeline.name": "Tên",
   "pipeline.default": "Mặc định",
@@ -6794,7 +6859,7 @@ export const vi = {
   "pipeline.retireConfirm":
     "Ngừng dùng {name}? Pipeline này sẽ không còn trong bộ chọn và biểu mẫu deal mới. Deal trong pipeline vẫn giữ giai đoạn, lịch sử và phần đóng góp vào dự báo, và có thể khôi phục pipeline bất cứ lúc nào.",
   "pipeline.retireBlocked":
-    "Đây là pipeline mặc định, và deal mới cần có một pipeline mặc định. Đặt pipeline khác làm mặc định trước, rồi ngừng dùng pipeline này.",
+    "Deal mới bắt đầu trong pipeline mặc định. Đặt pipeline khác làm mặc định để ngừng dùng pipeline này.",
   "pipeline.retired.done": "Đã ngừng dùng {name}",
   "pipeline.restore": "Khôi phục",
   "pipeline.restored": "Đã khôi phục {name}",
@@ -6802,6 +6867,9 @@ export const vi = {
   "pipeline.makeDefault": "Đặt làm mặc định",
   "pipeline.defaultSet": "Đã đặt {name} làm mặc định",
   "pipeline.inUse": "Pipeline đang dùng",
+  "pipeline.catalog": "Tất cả pipeline",
+  "pipeline.none": "Chưa có pipeline nào",
+  "pipeline.noneNote": "Pipeline chứa các giai đoạn mà deal đi qua.",
   "pipeline.orderHint":
     "Kéo pipeline bằng tay nắm, hoặc chọn tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
   "pipeline.handle": "Di chuyển {name}, vị trí {position} trên {total}",
@@ -6814,7 +6882,6 @@ export const vi = {
     "Đã ngừng dùng. Không thể bắt đầu deal mới trong pipeline này, và không thể thay đổi giai đoạn của pipeline cho đến khi được khôi phục.",
   "pipeline.retireNote":
     "Pipeline sẽ không còn trong bộ chọn và biểu mẫu deal mới. Deal trong pipeline vẫn giữ giai đoạn.",
-  "pipeline.flow": "Cách deal chuyển giai đoạn",
   "pipeline.orderSaved": "Đã lưu thứ tự",
   "pipeline.orderRestored": "Đã khôi phục thứ tự trước",
   "pipeline.orderStale":
@@ -6855,7 +6922,6 @@ export const vi = {
   "stage.criteriaRequired_other": "{count} bắt buộc",
   "stage.criteriaOptional_one": "{count} không bắt buộc",
   "stage.criteriaOptional_other": "{count} không bắt buộc",
-  "stage.criteriaNone": "Không có",
   "stage.criteriaCount_one": "{count} tiêu chí",
   "stage.criteriaCount_other": "{count} tiêu chí",
   "stage.criteriaNoneFolded": "Không có tiêu chí",
@@ -6864,8 +6930,6 @@ export const vi = {
   "stage.occupied_one": "{count} deal đang ở giai đoạn này",
   "stage.occupied_other": "{count} deal đang ở giai đoạn này",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
-  "stage.criteria.sub":
-    "Điều kiện phải đáp ứng trước khi deal rời giai đoạn này.",
   "stage.criteria.buyerCalloutTitle": "Bằng chứng phải đến từ bên mua",
   "stage.criteria.buyerCallout":
     "Tin nhắn từ nhóm của bạn không bao giờ đáp ứng tiêu chí về hành động của bên mua.",
@@ -7224,11 +7288,9 @@ export const vi = {
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
-  "overnightGrant.sub":
-    "Margince xử lý deal của bạn qua đêm và chuẩn bị sẵn Bản tin sáng khi bạn bắt đầu làm việc. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
   "overnightGrant.label": "Cho phép Margince chuẩn bị Bản tin sáng qua đêm",
   "overnightGrant.help":
-    "Margince đọc deal và thư của bạn để xếp hạng ưu tiên hôm nay, và ghi lại ghi chú. Margince không thể gửi: quyền cấp ở đây chỉ gồm đọc và ghi, không bao giờ gồm quyền gửi.",
+    "Xếp hạng deal và thư hôm nay, rồi ghi chú cho Bản tin sáng của bạn. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy và không bao giờ gửi thư.",
   "overnightGrant.dangerTitle": "Trợ lý AI qua đêm sẽ không chạy",
   "overnightGrant.danger":
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
@@ -7328,12 +7390,26 @@ export const vi = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
+  "connectionOutcomes.view": "Xem",
+  "connectionOutcomes.viewNamed": "Xem {name}",
+  "connectionOutcomes.retryNamed": "Tải lại {name}",
+  "connectionOutcomes.none": "Chưa có",
+  "connectionOutcomes.unread": "Không tải được",
+  "connectionOutcomes.waitingEmpty":
+    "Không có liên hệ nào đang chờ quyết định.",
+  "connectionOutcomes.senders_one": "{count} địa chỉ",
+  "connectionOutcomes.senders_other": "{count} địa chỉ",
+  "connectionOutcomes.threads_one": "{count} chuỗi thư",
+  "connectionOutcomes.threads_other": "{count} chuỗi thư",
+  "connectionOutcomes.contacts_one": "{count} liên hệ",
+  "connectionOutcomes.contacts_other": "{count} liên hệ",
+  "connectionOutcomes.companies_one": "{count} công ty",
+  "connectionOutcomes.companies_other": "{count} công ty",
   "mailSharing.title": "Chia sẻ email",
-  "mailSharing.sub":
-    "Mọi đồng nghiệp xem được liên hệ đều đọc được email đã thu thập. Mặc định bật, để công việc về deal được chia sẻ.",
   "mailSharing.label": "Chia sẻ email đã thu thập với nhóm",
   "mailSharing.help":
-    "Có thể giới hạn từng email sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
+    "Mọi đồng nghiệp xem được liên hệ đều đọc được thư đã thu thập của liên hệ đó. Có thể giới hạn từng thư sau đó.",
   "mailSharing.danger":
     "Khi tắt chia sẻ email, CRM khó sử dụng. Email mới chỉ hiển thị với những người có trong từng email.",
   "mailSharing.posture.shared":
@@ -7351,14 +7427,12 @@ export const vi = {
     "Mục này khẳng định có cơ sở pháp lý",
   "mailSharing.saveFailed": "Không thể lưu cài đặt",
   "mailSharing.save": "Lưu",
+  "mailSharing.cardTitle": "Chia sẻ và đồng bộ thư",
   "connectors.originLabel":
     "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
   "connectors.originUnreachable": "Không thể truy cập",
-  "connectors.sub":
-    "Hộp thư và lịch đang thu thập dữ liệu vào CRM. Khi ngắt kết nối một mục, các hồ sơ đã thu thập vẫn được giữ nguyên.",
   "connectors.loading": "Đang tải trình kết nối…",
   "connectors.loadFailed": "Không thể tải trình kết nối. Tải lại trang.",
-  "connectors.empty": "Chưa kết nối hộp thư hay lịch nào.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7530,7 +7604,6 @@ export const vi = {
   "connectors.telegramNotConfigured":
     "Bản cài đặt này chưa cấu hình kênh nhắn tin.",
   "connectors.telegramConnectCta": "Kết nối bot Telegram",
-  "connectors.telegramEmpty": "Chưa kết nối bot nào.",
   "connectors.telegramReadOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể kết nối hoặc đổi bot.",
   "connectors.telegramEditToken": "Thay token",
@@ -7547,13 +7620,17 @@ export const vi = {
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
   "connectors.openNamed": "Mở {name}",
+  "connectors.emptyLabel": "Chưa kết nối hộp thư",
+  "connectors.emptyHint":
+    "Kết nối hộp thư hoặc lịch để thu thập thư và cuộc họp.",
+  "connectors.telegramEmptyLabel": "Chưa kết nối bot",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Tên miền thư cá nhân",
   "consumerMail.sub":
-    "Thư gửi từ hộp thư cá nhân tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách các nhà cung cấp này; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
+    "Thư từ các tên miền này tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
   "consumerMail.addedTitle": "Đã thêm tại đây",
   "consumerMail.addTitle": "Thêm tên miền",
   "consumerMail.domainLabel": "Tên miền",
@@ -7582,7 +7659,7 @@ export const vi = {
 
   "blockedDomains.title": "Tên miền bị từ chối",
   "blockedDomains.sub":
-    "Tên miền bị từ chối làm công ty, và điều đã quyết định từng trường hợp: kết quả của mô hình, quy tắc suy đoán hoặc một thành viên. Cho phép một tên miền sẽ mở lại câu hỏi. Chỉ câu hỏi đang mở chưa có ai phụ trách mới hiển thị ở đây.",
+    "Tên miền bị từ chối làm công ty, và việc quyết định do mô hình, quy tắc suy đoán hay một thành viên đưa ra. Cho phép một tên miền sẽ mở lại câu hỏi.",
   "blockedDomains.listTitle": "Quyết định đã ghi nhận",
   "blockedDomains.record": "Ghi nhận quyết định",
   "blockedDomains.recordOpen": "Ghi nhận quyết định",
@@ -8211,6 +8288,12 @@ export const vi = {
   "auth.unavailableTitle": "Bản cài đặt chưa sẵn sàng",
   "auth.unavailableBody":
     "Bản cài đặt Margince này chưa sẵn sàng để đăng nhập. Quản trị viên cần hoàn tất hoặc sửa lại phần thiết lập.",
+  "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.title": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.body":
+    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+  "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
+  "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
   "forcedPassword.title": "Đặt mật khẩu của riêng bạn",
   "forcedPassword.body":
@@ -8231,6 +8314,61 @@ export const vi = {
   "password.done": "Đã đăng xuất mọi thiết bị khác.",
   "password.changeFailedTitle": "Không thể đổi mật khẩu",
   "password.errorGeneric": "Không rõ nguyên nhân. Thử lại.",
+  "mfa.title": "Đăng nhập hai bước",
+  "mfa.body": "Mã từ ứng dụng xác thực, được hỏi sau mật khẩu.",
+  "mfa.off": "Chưa thiết lập",
+  "mfa.pending": "Chưa hoàn tất",
+  "mfa.on_one": "Đang bật · còn {count} mã khôi phục",
+  "mfa.on_other": "Đang bật · còn {count} mã khôi phục",
+  "mfa.statusFailed": "Không thể tải trạng thái. Tải lại trang.",
+  "mfa.setUp": "Thiết lập",
+  "mfa.remove": "Gỡ bỏ",
+  "mfa.lowTitle": "Sắp hết mã khôi phục",
+  "mfa.low": "Để có mã mới, gỡ đăng nhập hai bước rồi thiết lập lại.",
+  "mfa.setupTitle": "Thiết lập đăng nhập hai bước",
+  "mfa.startFailedTitle": "Chưa bắt đầu thiết lập",
+  "mfa.alreadyOn":
+    "Đăng nhập hai bước đang bật. Gỡ bỏ trước rồi thiết lập lại.",
+  "mfa.scan": "Quét mã QR này bằng ứng dụng xác thực.",
+  "mfa.qrLabel": "Mã QR cho ứng dụng xác thực",
+  "mfa.secretLabel": "Khóa bí mật",
+  "mfa.secretHint": "Nếu ứng dụng không quét được, nhập khóa này vào ứng dụng.",
+  "mfa.copyKey": "Sao chép khóa",
+  "mfa.copied": "Đã sao chép",
+  "mfa.copyKeyFailed": "Không thể sao chép. Chọn khóa ở trên rồi tự sao chép.",
+  "mfa.code": "Mã từ ứng dụng",
+  "mfa.signsOut": "Khi bật, mọi thiết bị khác sẽ bị đăng xuất.",
+  "mfa.turnOn": "Bật",
+  "mfa.turningOn": "Đang bật…",
+  "mfa.codeRefused": "Mã không hợp lệ. Kiểm tra lại rồi thử lại.",
+  "mfa.tooManyCodes": "Sai mã quá nhiều lần. Chờ vài phút rồi thử lại.",
+  "mfa.confirmFailedTitle": "Chưa bật đăng nhập hai bước",
+  "mfa.onTitle": "Đã bật đăng nhập hai bước",
+  "mfa.onBody": "Mọi thiết bị khác đã bị đăng xuất.",
+  "mfa.saveCodesTitle": "Lưu các mã khôi phục này ngay",
+  "mfa.saveCodes":
+    "Mỗi mã dùng để đăng nhập một lần khi không có ứng dụng. Các mã sẽ không hiển thị lại.",
+  "mfa.codesLabel": "Mã khôi phục",
+  "mfa.copyCodes": "Sao chép mã",
+  "mfa.copyCodesFailed":
+    "Không thể sao chép. Chọn các mã ở trên rồi tự sao chép.",
+  "mfa.keepCodes": "Lưu các mã rồi chọn Xong.",
+  "mfa.onElsewhere":
+    "Đăng nhập hai bước đã bật ở phiên khác. Nhập mã để gỡ bỏ.",
+  "mfa.done": "Xong",
+  "mfa.cancel": "Hủy",
+  "mfa.removeTitle": "Gỡ đăng nhập hai bước?",
+  "mfa.removeBody":
+    "Khi đó chỉ cần mật khẩu để đăng nhập, và các mã khôi phục sẽ hết hiệu lực.",
+  "mfa.removeConfirm": "Gỡ đăng nhập hai bước",
+  "mfa.removeCode": "Mã",
+  "mfa.removeCodeHint":
+    "Mã từ ứng dụng xác thực, hoặc một mã khôi phục chưa dùng.",
+  "mfa.discardTitle": "Hủy thiết lập chưa xong?",
+  "mfa.discardBody": "Ứng dụng xác thực chưa được xác nhận nên không cần mã.",
+  "mfa.discard": "Hủy thiết lập",
+  "mfa.removed": "Đã gỡ đăng nhập hai bước",
+  "mfa.discarded": "Đã hủy thiết lập",
   "setup.pageTitle": "Thiết lập Margince",
   "setup.title": "Nhận quyền quản trị bản cài đặt này",
   "setup.body":
@@ -8303,6 +8441,13 @@ export const vi = {
   "auth.resetDoneTitle": "Đã cập nhật mật khẩu",
   "auth.resetDoneBody":
     "Đã đổi mật khẩu và đăng xuất mọi phiên khác. Đăng nhập bằng mật khẩu mới.",
+  "auth.mfaTitle": "Mã xác minh",
+  "auth.mfaSub":
+    "Nhập mã từ ứng dụng xác thực, hoặc một mã khôi phục chưa dùng.",
+  "auth.mfaCode": "Mã",
+  "auth.mfaVerify": "Xác minh mã",
+  "auth.mfaErrCode":
+    "Mã không được chấp nhận. Kiểm tra mã rồi thử lại, hoặc quay lại đăng nhập và bắt đầu lại.",
   "auth.backToLogin": "Quay lại đăng nhập",
   "auth.signOut": "Đăng xuất",
 
@@ -8698,6 +8843,7 @@ export const vi = {
     "Chưa có trường tùy chỉnh nào trên Dự án. Thêm một trường để theo dõi dữ liệu triển khai dự án mà trường lõi chưa bao quát.",
   "cf.empty.contract":
     "Chưa có trường tùy chỉnh nào trên Hợp đồng. Thêm một trường cho cách phân loại mà điều khoản chuẩn chưa bao quát.",
+  "cf.emptyReadOnly": "Chưa có trường tùy chỉnh nào trên {object}.",
   "cf.type.text": "Văn bản",
   "cf.type.number": "Số",
   "cf.type.date": "Ngày",
@@ -8742,10 +8888,10 @@ export const vi = {
   "cf.renamePrompt": "Nhãn mới",
   "cf.renamed": "Đã đổi tên thành “{label}”",
   "cf.audit.title": "Thay đổi trường gần đây",
+  "audit.kind.customField": "Trường tùy chỉnh",
   "cf.audit.empty": "Chưa có thay đổi nào về trường tùy chỉnh.",
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
-  "cf.noPermission": "Bạn chỉ có quyền đọc trường tùy chỉnh.",
   "cf.retired": "Đã ngừng dùng",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
@@ -8796,8 +8942,7 @@ export const vi = {
     "Cách thành viên đăng nhập vào bản cài đặt này, ứng dụng nào được thay mặt bản cài đặt, và nhóm IdP nào cấp vai trò.",
   "settings.page.members.sub":
     "Mọi thành viên có tài khoản, và quyền truy cập của từng thành viên.",
-  "settings.page.teams.sub":
-    "Thành viên nhóm, căn cứ để cấp quyền truy cập hồ sơ theo nhóm.",
+  "settings.page.teams.sub": "Các nhóm dùng để chia sẻ hồ sơ.",
   "settings.page.roles.sub":
     "Mỗi vai trò được làm gì, và được truy cập hồ sơ của ai.",
   "settings.page.seats.sub":
@@ -8809,7 +8954,8 @@ export const vi = {
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
   "settings.page.recordroles.sub":
     "Những gì một đồng nghiệp hoặc nhóm có thể phụ trách trên một hồ sơ. Không cấp quyền truy cập.",
-  "settings.page.leads.sub": "Các thuật ngữ nguồn lead mà công ty sử dụng.",
+  "settings.page.leads.sub":
+    "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.fields.sub":
     "Trường tùy chỉnh mà công ty thêm vào ngoài các trường chuẩn.",
   "settings.page.tags.sub":
@@ -8896,7 +9042,7 @@ export const vi = {
   "jurisdiction.selected.label": "Khu vực pháp lý đã chọn",
   "jurisdiction.selected.none": "Chưa đặt",
   "jurisdiction.selected.noneDescription":
-    "Chưa đặt khu vực pháp lý. Yêu cầu nhận thời hạn GDPR là một tháng dương lịch, và thư giữ thời hạn lưu trữ dài nhất trong các gói của bản dựng này.",
+    "Mức cơ sở GDPR được áp dụng cho đến khi đặt khu vực pháp lý.",
   "jurisdiction.unit.label": "Cung cấp bởi",
   "jurisdiction.unit.value": "{name}, phiên bản {version}",
   "jurisdiction.change.label": "Đổi khu vực pháp lý",
@@ -8905,7 +9051,6 @@ export const vi = {
   "jurisdiction.change.placeholder": "Chọn khu vực pháp lý",
   "jurisdiction.option.none": "Không có gói khu vực pháp lý (mức cơ sở GDPR)",
   "jurisdiction.change.action": "Đổi",
-  "jurisdiction.confirm.title": "Đổi khu vực pháp lý sang {name}?",
   "jurisdiction.confirm.confirm": "Đổi khu vực pháp lý",
   "jurisdiction.confirm.floor": "Thời hạn lưu trữ: {from} trở thành {to}.",
   "jurisdiction.confirm.floorCarried":
@@ -8938,8 +9083,6 @@ export const vi = {
   "jurisdiction.rule.gdpr": "GDPR, một tháng dương lịch",
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
-  "jurisdiction.documents.intro":
-    "Tài liệu trong gói của khu vực pháp lý này, để đọc, tải xuống và xem xét.",
   "jurisdiction.documents.empty":
     "Gói của khu vực pháp lý này không có tài liệu.",
   "jurisdiction.documents.emptyUnset":
@@ -8981,6 +9124,12 @@ export const vi = {
   "privacy.dueRule": "Quy tắc thời hạn",
   "privacy.dueRuleUnknown": "Nhập tay trước khi thời hạn được tính tự động",
   "privacy.dueOverridden": "Đặt sớm hơn quy tắc",
+  "privacy.requestsPanel": "Yêu cầu",
+  "privacy.lanesLabel": "Danh sách yêu cầu",
+  "privacy.laneRequests": "Quyền riêng tư",
+  "privacy.laneCorrections": "Chỉnh sửa",
+  "privacy.laneRestricted": "Bị giữ",
+  "privacy.requestsEmpty": "Chưa có yêu cầu nào về quyền riêng tư.",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.knowledge": "Tài liệu",
@@ -9023,6 +9172,7 @@ export const vi = {
   "knowledge.sub":
     "Các bộ tài liệu công ty có thể truy vấn. Câu trả lời chỉ dùng tài liệu đã lưu, và câu hỏi nằm ngoài phạm vi sẽ bị từ chối.",
   "knowledge.withheld": "Bạn không có quyền xem danh sách bộ tài liệu.",
+  "knowledge.empty": "Chưa có bộ tài liệu nào.",
   "knowledge.documentCount_one": "{count} tài liệu",
   "knowledge.documentCount_other": "{count} tài liệu",
   "knowledge.passages_one": "{embedded} trên {count} đoạn tìm kiếm được",
@@ -9039,6 +9189,9 @@ export const vi = {
   "knowledge.col.added": "Ngày thêm",
   "knowledge.col.status": "Trạng thái",
   "knowledge.col.actions": "Thao tác",
+  "knowledge.col.documents": "Tài liệu",
+  "knowledge.col.searchable": "Tìm kiếm được",
+  "knowledge.col.detail": "Chi tiết",
   "knowledge.passageCount_one": "{count} đoạn",
   "knowledge.passageCount_other": "{count} đoạn",
   "knowledge.addedOn": "thêm ngày {date}",
@@ -9076,8 +9229,8 @@ export const vi = {
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
-  "knowledge.new.submit": "Tạo bộ",
-  "knowledge.new.failed": "Không thể tạo bộ tài liệu. Thử lại.",
+  "knowledge.searchable": "Tìm kiếm được",
+  "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "verdictPass.subject.senders": "Người gửi",
@@ -9096,7 +9249,7 @@ export const vi = {
   "captureActivity.scope.mine": "Của tôi",
   "captureActivity.scope.workspace": "Kênh dùng chung",
   "captureActivity.scopeNote":
-    "Tính từ lúc trình kết nối chuyển tin nhắn cho CRM này. Không tính các mục đã bị lọc ngay tại trình kết nối, ví dụ một biểu tượng cảm xúc trong chat hay một quy tắc thư. Chỉ gồm tin nhắn; thu thập lead không hiển thị ở đây.",
+    "Tin nhắn do trình kết nối chuyển cho Margince. Không tính thu thập lead và các mục trình kết nối tự lọc.",
   "captureActivity.filtered":
     "Đang hiển thị {shown} trên {total} {outcome} trong khoảng thời gian này.",
   "captureActivity.openTraceFrom":
@@ -9281,9 +9434,6 @@ export const vi = {
   "pipeline.reason.would_restore_erased":
     "báo cáo điều này sẽ khôi phục dữ liệu mà một yêu cầu xóa đã gỡ bỏ",
   "pipeline.reason.no_writer_yet": "bước này chưa tồn tại",
-  "license.card.title": "Giấy phép và tài khoản",
-  "license.state.licensed": "Đã có giấy phép",
-  "license.state.uncapped": "Đã có giấy phép, không giới hạn tài khoản",
   "license.absent.title": "Bản cài đặt này chưa có giấy phép",
   "license.absent.body":
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
@@ -9291,8 +9441,9 @@ export const vi = {
   "license.refused.body":
     "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
-    "Số tài khoản đầy đủ quyền mà bản cài đặt này đang dùng. Số tài khoản được cấp bị ẩn với vai trò này.",
+    "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
   "license.seats.title": "Tài khoản",
+  "license.seats.inUse": "Tài khoản đầy đủ quyền đang dùng",
   "license.seats.uncapped": "Không giới hạn",
   "license.seats.ofGranted": "{used} trên {granted}",
   "license.seats.left": "còn {count}",
@@ -9314,7 +9465,7 @@ export const vi = {
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
   "license.counting":
-    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn số lượng và không bao giờ được tính. Thành viên mới được nhận theo con số này.",
+    "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
     "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
@@ -9684,15 +9835,13 @@ export const vi = {
     "Vai trò quản trị luôn giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn có thể được quản trị.",
   "roles.refusal.nameTaken": "Đã có vai trò khác mang tên này. Chọn tên khác.",
   "extAccess.title": "Tiện ích và quyền truy cập",
-  "extAccess.sub":
-    "Mỗi đơn vị tiện ích bổ sung gì cho bản cài đặt này, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
     "Trang này cần quyền đọc tiện ích mở rộng và vai trò của bản cài đặt. Vai trò hiện tại thiếu một hoặc cả hai quyền.",
   "extAccess.readOnly":
     "Vai trò của bạn xem được trang này. Cần tài khoản đầy đủ quyền để thay đổi phân quyền.",
   "extAccess.empty": "Chưa cài đơn vị tiện ích nào.",
   "extAccess.version": "Phiên bản {version}",
-  "extAccess.openUnit": "Mở trang {name}",
+  "extAccess.openUnit": "Đi tới {name}",
   "extAccess.noPage":
     "{name} đã được cài trên API, nhưng bản dựng ứng dụng này không có trang cho tiện ích đó. Có thể ứng dụng cũ hơn máy chủ.",
   "extAccess.brings.heading": "Đơn vị này bổ sung gì",
@@ -9717,19 +9866,18 @@ export const vi = {
   "extAccess.grantFailed": "Không thể thay đổi quyền",
   "extAccess.nobodyReads":
     "Không vai trò nào có quyền đọc {object}, nên mọi thành viên sẽ thấy màn hình trống ở tiện ích này. Cấp quyền đọc cho ít nhất một vai trò bên dưới.",
-  "users.empty": "Chưa có người dùng nào.",
-  "users.adminOnly": "Vai trò hiện tại không có quyền quản lý người dùng.",
-  "users.inviteTitle": "Mời người dùng",
+  "extAccess.matrixName": "Quyền của các vai trò với {unit}",
+  "users.empty": "Chưa có thành viên nào.",
+  "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm nào.",
-  "users.teamNobodyToAdd": "Không có người dùng nào để thêm.",
+  "users.teamNobodyToAdd": "Không có thành viên nào để thêm.",
   "users.teamMembersLabel": "Thành viên nhóm",
   "users.teamMembersAdminOnly":
     "Vai trò hiện tại không có quyền xem thành viên nhóm.",
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
-    "Các nhóm có tên, dùng để chia sẻ hồ sơ. Với hầu hết vai trò, việc thuộc một nhóm không mang lại quyền truy cập nào. Trưởng nhóm được thêm vào một nhóm có thể đọc và sửa hồ sơ của nhóm đó mà không cần chia sẻ.",
-  "users.teamsAdminOnly": "Vai trò hiện tại không có quyền quản lý nhóm.",
+    "Là thành viên nhóm không mang lại quyền truy cập, trừ trưởng nhóm: trưởng nhóm có thể đọc và sửa hồ sơ của nhóm mà không cần chia sẻ.",
   "users.deactivated": "Đã vô hiệu hóa {name}",
   "users.reactivated": "Đã kích hoạt lại {name}",
   "users.roleSaved": "Đã đổi vai trò cho {name}",
@@ -9781,8 +9929,8 @@ export const vi = {
   "users.access.maskAlways": "trong mọi trường hợp",
   "users.access.maskOutside": "trên hồ sơ mà họ không có quyền sửa",
   "users.inviteSub":
-    "Thêm người dùng vào bản cài đặt này và chọn vai trò ban đầu.",
-  "users.membersTitle": "Người dùng",
+    "Thêm thành viên vào bản cài đặt này và chọn vai trò ban đầu.",
+  "users.membersTitle": "Thành viên",
   "users.col.member": "Tên",
   "users.col.activity": "Hoạt động",
   "users.addedOn": "Đã thêm {date}",
@@ -9810,12 +9958,12 @@ export const vi = {
   "users.agentSeat": "Trợ lý AI",
   "users.agentSeatRole": "Hoạt động qua passport, không theo vai trò",
   "users.roleLabel": "Vai trò",
-  "users.inviteOpen": "Mời người dùng",
+  "users.inviteOpen": "Mời thành viên",
   "users.invite": "Mời",
   "users.setRole": "Chọn vai trò…",
-  "users.setRoleFor": "Chọn vai trò cho {name}",
-  "users.rolesHeld":
-    "Đang có vai trò {roles}. Chọn một vai trò sẽ thay thế toàn bộ.",
+  "users.roleOf": "vai trò của {name}",
+  "users.rolesReplace":
+    "Vai trò được chọn sẽ thay thế toàn bộ vai trò hiện có.",
   "users.deactivate": "Vô hiệu hóa",
   "users.reactivate": "Kích hoạt lại",
   "users.status.active": "Đang hoạt động",
@@ -10103,6 +10251,7 @@ export const vi = {
   "aicalls.outcome.failed": "Không thành công",
   "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
   "aicalls.filter.servedProvider": "Nhà cung cấp phục vụ",
+  "aicalls.filter.servedModel": "Mô hình trả lời",
   "aicalls.sentinel.provider_quota": "Hết hạn mức",
   "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
   "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
@@ -10216,6 +10365,14 @@ export const vi = {
     "Hiển thị nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng các lượt đăng nhập đang diễn ra; các phiên hiện có vẫn tiếp tục.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfaHint":
+    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
+  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+  "signInMethods.requireMfaConfirmBody":
+    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+  "signInMethods.requireMfaConfirmSelf":
+    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",
@@ -10596,19 +10753,15 @@ export const vi = {
   "autonomy.kind.lifecycle_change.help":
     "Chuyển công ty sang giai đoạn vòng đời khác dựa trên hoạt động. Tắt để tự xem lại các đề xuất này. Thay đổi giai đoạn có thể ảnh hưởng đến ai thấy công ty và tự động hóa nào chạy.",
   "captureSettings.title": "Bổ sung dữ liệu",
-  "captureSettings.sub":
-    "Cách bổ sung dữ liệu cho công ty và liên hệ đã thu thập sau khi tạo.",
   "captureSettings.autoEnrich.label": "Tự bổ sung dữ liệu công ty đã thu thập",
   "captureSettings.autoEnrich.help":
     "Mỗi công ty mới tạo từ thư đã thu thập sẽ có hồ sơ web tự động, lập từ trang web của công ty. Chạy trong giới hạn hằng ngày.",
   "captureSettings.signatureEnrich.label": "Đọc thông tin liên hệ từ thư",
   "captureSettings.signatureEnrich.help":
-    "Khi bật, Margince đọc những gì một người tự ghi dưới tên của họ trong thư họ gửi cho bạn: chữ ký, hoặc danh thiếp đính kèm, gồm chức danh, số điện thoại, địa chỉ hoặc công ty. Việc này diễn ra trong vài phút sau khi thư đến. Không suy đoán gì; thông tin thư không nêu thì không được ghi. Đây là mặc định của công ty; hộp thư có cài đặt riêng thì giữ cài đặt đó.",
+    "Đọc chức danh, số điện thoại, địa chỉ hoặc công ty mà một người tự ghi trong chữ ký hoặc danh thiếp của họ. Không suy đoán gì. Cài đặt riêng của hộp thư được ưu tiên.",
   "captureSettings.addFailed": "Không thể thêm mục loại trừ",
   "captureSettings.updateFailed": "Không thể thay đổi cài đặt",
   "captureReading.title": "Đọc trang web",
-  "captureReading.sub":
-    "Lượng nội dung Margince đọc từ trang web công ty. Thay đổi áp dụng cho lần đọc tiếp theo.",
   "captureReading.dailyCap.label": "Số lượt đọc tự động mỗi ngày",
   "captureReading.dailyCap.help":
     "Số lượt đọc không do ai yêu cầu, trên mọi công ty, từ 1 đến 20.000 mỗi ngày.",
@@ -10758,9 +10911,6 @@ export const vi = {
     "Nhập 0 để tắt, hoặc số giây nguyên từ {min} đến {max}.",
   "operations.refusal.hours": "Nhập số giờ nguyên từ {min} đến {max}.",
   "operations.refusal.count": "Nhập một số nguyên từ {min} đến {max}.",
-  "captureMailSync.title": "Đồng bộ thư",
-  "captureMailSync.sub":
-    "Tần suất kiểm tra thư mới của từng hộp thư đã kết nối.",
   "captureMailSync.interval.label": "Khoảng đồng bộ (giây)",
   "captureMailSync.interval.help":
     "Khoảng thời gian giữa hai lần đồng bộ của một hộp thư, từ 30 đến 3.600. Áp dụng từ lần đồng bộ tiếp theo của mỗi hộp thư.",
@@ -10775,7 +10925,6 @@ export const vi = {
     "Địa chỉ và tên miền có tin nhắn không bao giờ vào CRM. Quy tắc của bạn chỉ áp dụng cho hộp thư bạn đã kết nối; quy tắc của công ty áp dụng cho mọi thành viên.",
   "captureExclusions.notRetroactive":
     "Có hiệu lực từ tin nhắn tiếp theo. Tin nhắn đã thu thập vẫn giữ nguyên.",
-  "captureExclusions.current": "Quy tắc đang áp dụng",
   "captureExclusions.empty": "Chưa có loại trừ nào.",
   "ownerIdentities.title": "Địa chỉ khác của bạn",
   "ownerIdentities.sub":
@@ -10784,10 +10933,8 @@ export const vi = {
   "ownerIdentities.addLabel": "Thêm địa chỉ của bạn",
   "ownerIdentities.addDescription":
     "Chỉ riêng bạn thấy. Đồng nghiệp không bao giờ thấy danh sách này.",
-  "ownerIdentities.current": "Đã khai báo",
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư tiếp theo. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ bí danh vẫn còn cho đến khi bạn gộp hoặc gỡ liên hệ đó.",
-  "ownerIdentities.empty": "Chưa thêm địa chỉ nào khác.",
   "ownerIdentities.remove": "Gỡ {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ",
   "ownerIdentities.confirm": "Thêm",
@@ -10812,6 +10959,8 @@ export const vi = {
     "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
+  "ownerIdentities.addDescriptionEmpty":
+    "Chưa thêm địa chỉ nào. Đồng nghiệp không bao giờ thấy danh sách này.",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
@@ -10891,7 +11040,6 @@ export const vi = {
   "ownDomains.curatedTitle": "Quản lý tại đây",
   "ownDomains.irreversible":
     "Thêm tên miền có hiệu lực từ thư tiếp theo; gỡ tên miền thì thu thập tiếp tục từ lúc đó. Thư đã bỏ qua trong thời gian tên miền được đăng ký sẽ không bao giờ được hộp thư nào đưa lại. Thư đã thu thập vẫn giữ nguyên.",
-  "ownDomains.fromCompany": "Từ hồ sơ công ty. Sửa tại đó:",
   "ownDomains.openCompany": "Mở hồ sơ công ty",
   "ownDomains.empty":
     "Chưa đăng ký thêm tên miền nào. Thêm tên miền nếu công ty còn gửi thư từ tên miền khác.",
@@ -10912,7 +11060,7 @@ export const vi = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook gửi đi chưa được bật trên bản cài đặt này. Cấu hình khóa ký trước.",
+    "Webhook chưa được bật trên bản cài đặt này cho đến khi cấu hình khóa ký.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",
@@ -10920,7 +11068,6 @@ export const vi = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.edit": "Sửa",
-  "webhooks.saveDone": "Đã lưu webhook",
   "webhooks.archiveDone": "Đã chuyển webhook vào kho lưu trữ",
   "webhooks.archive": "Chuyển vào kho lưu trữ",
   "webhooks.archiveConfirm":
@@ -10962,6 +11109,522 @@ export const vi = {
   "webhooks.deliveries.replayConfirm.title": "Gửi lại lượt này?",
   "webhooks.deliveries.replayConfirm.body":
     "Thử gửi lại ngay bằng khóa ký hiện tại và dấu thời gian mới, không chờ lần thử lại theo lịch kế tiếp.",
+  "webhooks.drawer.editTitle": "Sửa đăng ký",
+  "webhooks.drawer.sub":
+    "Sự kiện hoặc nội dung mới áp dụng cho các sự kiện sau. Giá trị header mới cũng áp dụng cho các lần thử lại đang chờ.",
+  "webhooks.drawer.create": "Tạo đăng ký",
+  "webhooks.drawer.cancel": "Hủy",
+  "webhooks.field.targetUrlHint": "Chỉ HTTPS.",
+  "webhooks.field.targetUrlFixed":
+    "Không thể đổi đích. Tạo đăng ký mới để gửi đến nơi khác.",
+  "webhooks.field.stateHint":
+    "Đăng ký đã tạm dừng vẫn giữ cài đặt và không nhận gì.",
+  "webhooks.events.add": "Thêm sự kiện",
+  "webhooks.field.targetUrlPlaceholder": "https://example.test/hooks/margince",
+  "webhooks.headers.namePlaceholder": "X-Api-Key",
+  "webhooks.events.selected_one": "Đã chọn: {count} trên {total}",
+  "webhooks.events.selected_other": "Đã chọn: {count} trên {total}",
+  "webhooks.events.groupCount_one": "{count}/{total}",
+  "webhooks.events.groupCount_other": "{count}/{total}",
+  "webhooks.events.appliesAtOnce": "Mỗi lựa chọn có hiệu lực ngay.",
+  "webhooks.drawer.saveSubscription": "Lưu đăng ký",
+  "webhooks.events.helpLabel": "Về loại sự kiện",
+  "webhooks.events.help":
+    "Margince gửi một lần mỗi khi một sự kiện đã chọn xảy ra. Thêm sự kiện mở toàn bộ danh sách, nhóm theo bản ghi, kèm dữ liệu của từng sự kiện.",
+  "webhooks.events.count_one": "Đã chọn {count}",
+  "webhooks.events.count_other": "Đã chọn {count}",
+  "webhooks.events.none": "Chưa chọn sự kiện nào.",
+  "webhooks.events.clear": "Xóa hết",
+  "webhooks.events.done": "Xong",
+  "webhooks.events.search": "Tìm sự kiện, ví dụ stage hoặc merged",
+  "webhooks.events.noMatch": "Không có loại sự kiện nào khớp.",
+  "webhooks.events.selectAll": "Chọn tất cả",
+  "webhooks.events.remove": "Gỡ {event}",
+  "webhooks.events.info": "Về {event}",
+  "webhooks.events.when": "Khi nào sự kiện phát sinh",
+  "webhooks.events.fields": "Trường trong data",
+  "webhooks.events.noFields": "Sự kiện này không có trường nào trong data.",
+  "webhooks.events.fieldsFailed":
+    "Không thể tải các trường. Đóng khung này rồi mở lại.",
+  "webhooks.events.visibility":
+    "Chỉ gửi cho hồ sơ mà thành viên phụ trách đăng ký có thể xem.",
+  "webhooks.events.required": "Chọn ít nhất một sự kiện.",
+  "webhooks.headers.title": "Header tùy chỉnh",
+  "webhooks.headers.hint":
+    "Gửi kèm mọi lượt gửi. Giá trị được niêm phong khi lưu và không bao giờ hiển thị lại.",
+  "webhooks.headers.helpLabel": "Về header tùy chỉnh",
+  "webhooks.headers.help":
+    "Dùng header cho bên nhận kiểm tra token hoặc định tuyến theo header. Margince tự đặt các header chữ ký, sự kiện và nội dung, nên các tên đó bị từ chối. Giá trị đã đổi áp dụng từ lần thử tiếp theo, kể cả lần thử lại.",
+  "webhooks.headers.add": "Thêm header",
+  "webhooks.headers.addAuthorization": "Thêm Authorization",
+  "webhooks.headers.name": "Tên header",
+  "webhooks.headers.value": "Giá trị header",
+  "webhooks.headers.valueSet": "Đã đặt giá trị",
+  "webhooks.headers.replace": "Thay thế",
+  "webhooks.headers.remove": "Gỡ header {name}",
+  "webhooks.headers.none":
+    "Chưa có header tùy chỉnh. Các lượt gửi chỉ mang header do Margince đặt.",
+  "webhooks.body.format": "Định dạng nội dung",
+  "webhooks.body.standard": "Định dạng chuẩn",
+  "webhooks.body.custom": "Mẫu tùy chỉnh",
+  "webhooks.body.standardHint":
+    "JSON sự kiện đã công bố, mọi thư viện Standard Webhooks đều xác minh được.",
+  "webhooks.body.customHint": "Nội dung riêng, điền từ sự kiện.",
+  "webhooks.body.helpLabel": "Về định dạng nội dung",
+  "webhooks.body.help":
+    "Mẫu được dựng một lần khi lượt gửi vào hàng chờ, và chữ ký bao trùm đúng các byte đó. Lần thử lại và lần gửi lại dùng nội dung đã lưu, nên thay đổi chỉ áp dụng cho các sự kiện sau.",
+  "webhooks.body.contentType": "Loại nội dung",
+  "webhooks.body.contentTypeHint": "Gửi dưới dạng header Content-Type.",
+  "webhooks.body.startFrom": "Bắt đầu từ",
+  "webhooks.body.startFromPlaceholder": "Chọn mẫu có sẵn",
+  "webhooks.body.preset.slack": "Slack",
+  "webhooks.body.preset.teams": "Microsoft Teams",
+  "webhooks.body.preset.generic": "JSON chung",
+  "webhooks.body.sample": "Sự kiện mẫu",
+  "webhooks.body.template": "Mẫu",
+  "webhooks.body.templateHint":
+    "Trong dấu ngoặc kép, biến điền vào văn bản. Với cả một giá trị ngoài dấu ngoặc kép, thêm | json.",
+  "webhooks.body.tab.template": "Mẫu",
+  "webhooks.body.tab.preview": "Xem trước",
+  "webhooks.body.insert": "Chèn biến",
+  "webhooks.body.size": "Kích thước: {size} byte",
+  "webhooks.body.previewEmpty": "Chọn loại sự kiện để xem trước.",
+  "webhooks.row.customBody": "Nội dung tùy chỉnh",
+  "webhooks.row.headers_one": "Số header: {count}",
+  "webhooks.row.headers_other": "Số header: {count}",
+  "webhooks.eventGroup.deals": "Deal",
+  "webhooks.event.deal.created.label": "Đã tạo deal",
+  "webhooks.event.deal.created.when": "Một deal được mở.",
+  "webhooks.event.deal.updated.label": "Đã đổi thông tin deal",
+  "webhooks.event.deal.updated.when":
+    "Các trường của deal thay đổi, trừ giai đoạn và phụ trách.",
+  "webhooks.event.deal.stage_changed.label": "Deal đã chuyển giai đoạn",
+  "webhooks.event.deal.stage_changed.when":
+    "Deal chuyển sang giai đoạn mới, kể cả Thắng và Thua.",
+  "webhooks.event.deal.owner_changed.label": "Đã giao lại deal",
+  "webhooks.event.deal.owner_changed.when":
+    "Deal được giao cho thành viên khác phụ trách.",
+  "webhooks.event.deal.archived.label": "Đã chuyển deal vào kho lưu trữ",
+  "webhooks.event.deal.archived.when": "Một deal được chuyển vào kho lưu trữ.",
+  "webhooks.event.deal.restored.label": "Đã khôi phục deal",
+  "webhooks.event.deal.restored.when":
+    "Một deal được khôi phục từ kho lưu trữ.",
+  "webhooks.eventGroup.offers": "Báo giá",
+  "webhooks.event.offer.created.label": "Đã tạo phiên bản báo giá",
+  "webhooks.event.offer.created.when":
+    "Báo giá được tạo, hoặc báo giá đã gửi được tạo lại thành bản nháp mới.",
+  "webhooks.event.offer.sent.label": "Báo giá đã đánh dấu là đã gửi",
+  "webhooks.event.offer.sent.when":
+    "Bản nháp báo giá được đánh dấu đã gửi và các điều khoản được cố định.",
+  "webhooks.event.offer.accepted.label": "Báo giá được chấp nhận",
+  "webhooks.event.offer.accepted.when": "Một báo giá đã gửi được chấp nhận.",
+  "webhooks.event.offer.rejected.label": "Báo giá bị từ chối",
+  "webhooks.event.offer.rejected.when": "Một báo giá đã gửi bị từ chối.",
+  "webhooks.event.offer.superseded.label": "Báo giá bị thay thế",
+  "webhooks.event.offer.superseded.when":
+    "Một báo giá đã gửi được tạo lại thành phiên bản nháp mới.",
+  "webhooks.eventGroup.pipelines_stages": "Pipeline và giai đoạn",
+  "webhooks.event.pipeline.created.label": "Đã tạo pipeline",
+  "webhooks.event.pipeline.created.when":
+    "Pipeline được tạo cùng các giai đoạn đầu tiên.",
+  "webhooks.event.pipeline.updated.label": "Đã đổi pipeline",
+  "webhooks.event.pipeline.updated.when":
+    "Pipeline được đổi tên, đặt làm mặc định hoặc sắp xếp lại, hoặc các giai đoạn của pipeline được sắp xếp lại.",
+  "webhooks.event.pipeline.archived.label":
+    "Đã chuyển pipeline vào kho lưu trữ",
+  "webhooks.event.pipeline.archived.when":
+    "Pipeline không còn xuất hiện trong bộ chọn.",
+  "webhooks.event.stage.created.label": "Đã thêm giai đoạn",
+  "webhooks.event.stage.created.when": "Một giai đoạn được thêm vào pipeline.",
+  "webhooks.event.stage.updated.label": "Đã đổi giai đoạn",
+  "webhooks.event.stage.updated.when":
+    "Tên, loại giai đoạn hoặc xác suất thắng của giai đoạn thay đổi.",
+  "webhooks.event.stage.archived.label": "Đã gỡ giai đoạn",
+  "webhooks.event.stage.archived.when": "Một giai đoạn được gỡ khỏi pipeline.",
+  "webhooks.eventGroup.contacts": "Liên hệ",
+  "webhooks.event.contact.created.label": "Đã tạo liên hệ",
+  "webhooks.event.contact.created.when":
+    "Liên hệ được tạo thủ công, từ email đã thu thập hoặc khi xác nhận lead đủ điều kiện.",
+  "webhooks.event.contact.updated.label": "Đã đổi thông tin liên hệ",
+  "webhooks.event.contact.updated.when":
+    "Các trường hoặc quan hệ của liên hệ thay đổi.",
+  "webhooks.event.contact.merged.label": "Đã gộp liên hệ",
+  "webhooks.event.contact.merged.when": "Hai liên hệ được gộp thành một.",
+  "webhooks.event.contact.archived.label": "Đã chuyển liên hệ vào kho lưu trữ",
+  "webhooks.event.contact.archived.when":
+    "Một liên hệ được chuyển vào kho lưu trữ.",
+  "webhooks.event.contact.restored.label": "Đã khôi phục liên hệ",
+  "webhooks.event.contact.restored.when":
+    "Một liên hệ được khôi phục từ kho lưu trữ.",
+  "webhooks.event.conversation_claim.captured.label":
+    "Đã ghi nhận cam kết hoặc yêu cầu",
+  "webhooks.event.conversation_claim.captured.when":
+    "Điều liên hệ đã hứa, yêu cầu hoặc quyết định trong cuộc trao đổi được ghi vào hồ sơ liên hệ.",
+  "webhooks.event.conversation_claim.changed.label":
+    "Đã sửa cam kết đã ghi nhận",
+  "webhooks.event.conversation_claim.changed.when":
+    "Có ai đó sửa hoặc bỏ qua một cam kết, yêu cầu hoặc quyết định đã ghi nhận.",
+  "webhooks.event.relationship_nudge.decided.label":
+    "Đã gác lại liên hệ im lặng",
+  "webhooks.event.relationship_nudge.decided.when":
+    "Nhân viên kinh doanh gác lại một liên hệ im lặng trong Danh sách công việc, hoặc đưa liên hệ đó trở lại.",
+  "webhooks.eventGroup.companies": "Công ty",
+  "webhooks.event.company.created.label": "Đã tạo công ty",
+  "webhooks.event.company.created.when":
+    "Công ty được tạo thủ công, qua nhập dữ liệu, từ email đã thu thập hoặc từ lượt đọc trang web.",
+  "webhooks.event.company.updated.label": "Đã đổi thông tin công ty",
+  "webhooks.event.company.updated.when":
+    "Các trường hoặc quan hệ của công ty thay đổi, kể cả khi bổ sung dữ liệu.",
+  "webhooks.event.company.merged.label": "Đã gộp công ty",
+  "webhooks.event.company.merged.when": "Hai công ty được gộp thành một.",
+  "webhooks.event.company.archived.label": "Đã chuyển công ty vào kho lưu trữ",
+  "webhooks.event.company.archived.when":
+    "Một công ty được chuyển vào kho lưu trữ.",
+  "webhooks.event.company.restored.label": "Đã khôi phục công ty",
+  "webhooks.event.company.restored.when":
+    "Một công ty được khôi phục từ kho lưu trữ.",
+  "webhooks.eventGroup.leads": "Lead",
+  "webhooks.event.lead.created.label": "Đã tạo lead",
+  "webhooks.event.lead.created.when":
+    "Lead được tạo thủ công, từ thu thập hoặc qua nhập dữ liệu.",
+  "webhooks.event.lead.updated.label": "Đã đổi thông tin lead",
+  "webhooks.event.lead.updated.when":
+    "Các trường của lead thay đổi, kể cả trường tùy chỉnh, hoặc lead được phân bổ lại.",
+  "webhooks.event.lead.disqualified.label": "Đã loại lead",
+  "webhooks.event.lead.disqualified.when": "Một lead bị loại.",
+  "webhooks.event.lead.promoted.label": "Lead đã chuyển thành liên hệ",
+  "webhooks.event.lead.promoted.when":
+    "Lead có tương tác thực sự và trở thành liên hệ.",
+  "webhooks.event.lead.demoted.label": "Đã hủy xác nhận lead",
+  "webhooks.event.lead.demoted.when":
+    "Lần xác nhận bị hủy và lead quay lại kho lead.",
+  "webhooks.event.lead.merged.label": "Đã gộp lead",
+  "webhooks.event.lead.merged.when":
+    "Hai lead được xác định là trùng nhau được gộp lại.",
+  "webhooks.event.lead.sla_breached.label": "Quá hạn phản hồi đầu tiên",
+  "webhooks.event.lead.sla_breached.when":
+    "Lần kiểm tra phát hiện lead đã quá hạn phản hồi đầu tiên mà chưa có câu trả lời.",
+  "webhooks.event.lead_source.changed.label": "Đã đổi danh sách nguồn lead",
+  "webhooks.event.lead_source.changed.when":
+    "Nguồn lead được thêm, sửa hoặc gỡ trong Cài đặt.",
+  "webhooks.event.lead_disqualify_reason.changed.label":
+    "Đã đổi lý do loại lead",
+  "webhooks.event.lead_disqualify_reason.changed.when":
+    "Lý do loại lead được thêm, sửa hoặc gỡ trong Cài đặt.",
+  "webhooks.eventGroup.activities_email": "Hoạt động và email",
+  "webhooks.event.activity.captured.label": "Đã ghi nhận hoạt động",
+  "webhooks.event.activity.captured.when":
+    "Hoạt động được ghi thủ công hoặc do trình kết nối thu thập.",
+  "webhooks.event.activity.updated.label": "Đã đổi hoạt động",
+  "webhooks.event.activity.updated.when":
+    "Hoạt động được sửa hoặc liên kết với hồ sơ khác.",
+  "webhooks.event.activity.archived.label":
+    "Đã chuyển hoạt động vào kho lưu trữ",
+  "webhooks.event.activity.archived.when":
+    "Một hoạt động được chuyển vào kho lưu trữ.",
+  "webhooks.event.activity.disposition_recorded.label":
+    "Đã gác lại tin nhắn đang chờ",
+  "webhooks.event.activity.disposition_recorded.when":
+    "Có ai đó quyết định cách xử lý một tin nhắn đang chờ và Danh sách công việc không hiển thị tin nhắn đó nữa.",
+  "webhooks.event.activity.marked_handled.label":
+    "Đã đánh dấu xong việc trong Danh sách công việc",
+  "webhooks.event.activity.marked_handled.when":
+    "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
+  "webhooks.event.engagement.reply.when":
+    "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",
+  "webhooks.event.comms.delivery_bounced.label": "Email bị trả lại",
+  "webhooks.event.comms.delivery_bounced.when":
+    "Hệ thống thư bên nhận trả lại một tin nhắn đã gửi.",
+  "webhooks.eventGroup.files": "Tệp",
+  "webhooks.event.attachment.created.label": "Đã tải tệp lên",
+  "webhooks.event.attachment.created.when": "Một tệp được tải lên hồ sơ.",
+  "webhooks.event.attachment.updated.label": "Đã đổi thông tin tệp",
+  "webhooks.event.attachment.updated.when":
+    "Danh mục, tiêu đề, trạng thái, ghim của tệp hoặc tệp mà tệp này thay thế thay đổi.",
+  "webhooks.event.attachment.archived.label": "Đã chuyển tệp vào kho lưu trữ",
+  "webhooks.event.attachment.archived.when":
+    "Tệp của một hồ sơ được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.projects": "Dự án",
+  "webhooks.event.project.created.label": "Đã tạo dự án",
+  "webhooks.event.project.created.when": "Một dự án được mở cho một công ty.",
+  "webhooks.event.project.updated.label": "Đã đổi thông tin dự án",
+  "webhooks.event.project.updated.when": "Các trường của dự án thay đổi.",
+  "webhooks.event.project.phase_changed.label": "Dự án đã chuyển giai đoạn",
+  "webhooks.event.project.phase_changed.when":
+    "Dự án chuyển sang giai đoạn mới.",
+  "webhooks.event.project.archived.label": "Đã chuyển dự án vào kho lưu trữ",
+  "webhooks.event.project.archived.when":
+    "Một dự án được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.contracts": "Hợp đồng",
+  "webhooks.event.contract.created.label": "Đã ghi nhận hợp đồng",
+  "webhooks.event.contract.created.when":
+    "Một thỏa thuận được ghi nhận cho một công ty.",
+  "webhooks.event.contract.updated.label": "Đã đổi thông tin hợp đồng",
+  "webhooks.event.contract.updated.when": "Các trường của hợp đồng thay đổi.",
+  "webhooks.event.contract.status_changed.label": "Đã đổi trạng thái hợp đồng",
+  "webhooks.event.contract.status_changed.when":
+    "Một thành viên hoặc một đề xuất đã duyệt đặt trạng thái mới.",
+  "webhooks.event.contract.archived.label":
+    "Đã chuyển hợp đồng vào kho lưu trữ",
+  "webhooks.event.contract.archived.when":
+    "Một hợp đồng được chuyển vào kho lưu trữ.",
+  "webhooks.eventGroup.commissions": "Hoa hồng",
+  "webhooks.event.commission.accrued.label": "Đã ghi nhận hoa hồng",
+  "webhooks.event.commission.accrued.when":
+    "Một deal đã chốt mang lại hoa hồng cho đối tác.",
+  "webhooks.event.commission.decided.label": "Đã quyết định hoa hồng",
+  "webhooks.event.commission.decided.when":
+    "Một khoản hoa hồng được duyệt, thanh toán hoặc đảo ngược.",
+  "webhooks.eventGroup.lists": "Danh sách",
+  "webhooks.event.list.created.label": "Đã tạo danh sách",
+  "webhooks.event.list.created.when":
+    "Có ai đó tạo danh sách động hoặc danh sách rút gọn.",
+  "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
+  "webhooks.event.list.updated.when":
+    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc phụ trách của danh sách thay đổi.",
+  "webhooks.event.list.archived.label": "Đã chuyển danh sách vào kho lưu trữ",
+  "webhooks.event.list.archived.when":
+    "Một danh sách được chuyển vào kho lưu trữ.",
+  "webhooks.event.list.restored.label": "Đã khôi phục danh sách",
+  "webhooks.event.list.restored.when":
+    "Một danh sách được khôi phục từ kho lưu trữ.",
+  "webhooks.event.list.member_added.label":
+    "Đã thêm hồ sơ vào danh sách rút gọn",
+  "webhooks.event.list.member_added.when":
+    "Hồ sơ được thêm vào danh sách rút gọn thủ công, qua thay đổi hàng loạt hoặc do tự động hóa.",
+  "webhooks.event.list.member_removed.label":
+    "Đã gỡ hồ sơ khỏi danh sách rút gọn",
+  "webhooks.event.list.member_removed.when":
+    "Hồ sơ được gỡ khỏi danh sách rút gọn thủ công hoặc qua thay đổi hàng loạt.",
+  "webhooks.event.list.evaluated.label": "Danh sách động đã thay đổi",
+  "webhooks.event.list.evaluated.when":
+    "Lần kiểm tra danh sách động thấy có hồ sơ vào hoặc rời danh sách.",
+  "webhooks.eventGroup.deal_rooms": "Deal Room",
+  "webhooks.event.deal_room.opened.label": "Đã mở Deal Room",
+  "webhooks.event.deal_room.opened.when": "Deal Room được tạo cho một deal.",
+  "webhooks.event.deal_room.updated.label": "Đã đổi nội dung Deal Room",
+  "webhooks.event.deal_room.updated.when":
+    "Nội dung bên mua đọc thay đổi: tiêu đề, lời chào hoặc tài liệu.",
+  "webhooks.event.deal_room.paused.label": "Đã tạm dừng Deal Room",
+  "webhooks.event.deal_room.paused.when":
+    "Deal Room bị tạm dừng và bên mua không thể truy cập.",
+  "webhooks.event.deal_room.resumed.label": "Đã mở lại Deal Room",
+  "webhooks.event.deal_room.resumed.when":
+    "Bên mua lại truy cập được Deal Room đã tạm dừng.",
+  "webhooks.event.deal_room.closed.label": "Đã đóng Deal Room",
+  "webhooks.event.deal_room.closed.when": "Nội dung Deal Room được cố định.",
+  "webhooks.event.deal_room.archived.label":
+    "Đã chuyển Deal Room vào kho lưu trữ",
+  "webhooks.event.deal_room.archived.when":
+    "Deal Room kết thúc và quyền truy cập của bên mua bị thu hồi.",
+  "webhooks.event.deal_room.participant_invited.label": "Đã mời bên mua",
+  "webhooks.event.deal_room.participant_invited.when":
+    "Một liên hệ bên ngoài được cho vào Deal Room.",
+  "webhooks.event.deal_room.participant_revoked.label":
+    "Đã thu hồi quyền truy cập của bên mua",
+  "webhooks.event.deal_room.participant_revoked.when":
+    "Quyền truy cập Deal Room của một liên hệ bên ngoài bị thu hồi.",
+  "webhooks.event.deal_room.participant_credential_reissued.label":
+    "Đã cấp lại liên kết cho bên mua",
+  "webhooks.event.deal_room.participant_credential_reissued.when":
+    "Liên kết truy cập được gửi lại, hoặc địa chỉ nhận liên kết được sửa.",
+  "webhooks.event.deal_room.comment_posted.label":
+    "Đã đăng bình luận trong Deal Room",
+  "webhooks.event.deal_room.comment_posted.when":
+    "Có ai đó ở một trong hai bên bình luận trong chủ đề của Deal Room.",
+  "webhooks.event.deal_room.thread_resolved.label":
+    "Đã giải quyết chủ đề trong Deal Room",
+  "webhooks.event.deal_room.thread_resolved.when": "Bên bán đóng một chủ đề.",
+  "webhooks.event.deal_room.decision_recorded.label":
+    "Quyết định của bên mua về tài liệu",
+  "webhooks.event.deal_room.decision_recorded.when":
+    "Hiện không còn gửi. Giữ lại cho hệ thống nhận vẫn đọc sự kiện cũ.",
+  "webhooks.eventGroup.introductions": "Giới thiệu",
+  "webhooks.event.intro_request.created.label": "Đã yêu cầu giới thiệu",
+  "webhooks.event.intro_request.created.when":
+    "Nhân viên kinh doanh nhờ đồng nghiệp giới thiệu với một liên hệ.",
+  "webhooks.event.intro_request.decided.label": "Đã trả lời yêu cầu giới thiệu",
+  "webhooks.event.intro_request.decided.when": "Đồng nghiệp trả lời yêu cầu.",
+  "webhooks.event.intro_request.completed.label": "Đã giới thiệu",
+  "webhooks.event.intro_request.completed.when":
+    "Lời giới thiệu diễn ra, hoặc nhân viên kinh doanh dùng tên được đồng nghiệp cho mượn.",
+  "webhooks.event.intro_request.replied.label":
+    "Liên hệ đã trả lời lời giới thiệu",
+  "webhooks.event.intro_request.replied.when":
+    "Liên hệ trả lời, theo hoạt động đã thu thập.",
+  "webhooks.event.intro_request.closed.label": "Đã đóng yêu cầu giới thiệu",
+  "webhooks.event.intro_request.closed.when":
+    "Yêu cầu kết thúc mà không có lời giới thiệu.",
+  "webhooks.eventGroup.consent_privacy": "Sự đồng ý và quyền riêng tư",
+  "webhooks.event.consent.changed.label": "Đã ghi nhận sự đồng ý",
+  "webhooks.event.consent.changed.when":
+    "Sự đồng ý của liên hệ hoặc lead cho một mục đích được ghi nhận.",
+  "webhooks.event.consent.suppressed.label": "Liên hệ yêu cầu ngừng liên lạc",
+  "webhooks.event.consent.suppressed.when":
+    "Có ai đó ghi nhận rằng không được gửi thư cho liên hệ này.",
+  "webhooks.event.consent.suppression_lifted.label": "Đã gỡ lệnh chặn",
+  "webhooks.event.consent.suppression_lifted.when":
+    "Ai đó có thẩm quyền gỡ một lệnh chặn.",
+  "webhooks.event.consent.override_recorded.label": "Đã ghi nhận ghi đè",
+  "webhooks.event.consent.override_recorded.when":
+    "Nhân viên kinh doanh xác nhận có thể bỏ qua lệnh từ chối tự động cho một loại liên lạc.",
+  "webhooks.event.consent.override_lifted.label": "Đã gỡ ghi đè",
+  "webhooks.event.consent.override_lifted.when":
+    "Ai đó có thẩm quyền gỡ một ghi đè.",
+  "webhooks.event.retention.applied.label": "Đã chạy quy tắc lưu trữ",
+  "webhooks.event.retention.applied.when":
+    "Quy tắc lưu trữ hoặc xóa dữ liệu được áp dụng cho một hồ sơ.",
+  "webhooks.event.retention.restricted.label": "Hồ sơ bị hạn chế theo luật",
+  "webhooks.event.retention.restricted.when":
+    "Nghĩa vụ lưu trữ theo luật thay đổi những gì được phép làm với hồ sơ.",
+  "webhooks.eventGroup.signals": "Tín hiệu",
+  "webhooks.event.signal.detected.label": "Đã phát hiện tín hiệu",
+  "webhooks.event.signal.detected.when": "Một tín hiệu được tạo.",
+  "webhooks.event.signal.resolved.label": "Đã đối chiếu tín hiệu",
+  "webhooks.event.signal.resolved.when":
+    "Tín hiệu được đối chiếu với công ty và liên hệ của bạn.",
+  "webhooks.eventGroup.forecasts_weekly_plans": "Dự báo và kế hoạch tuần",
+  "webhooks.event.forecast.created.label": "Đã đưa ra nhận định",
+  "webhooks.event.forecast.created.when":
+    "Có ai đó nêu nhận định về những gì sẽ chốt trong một kỳ.",
+  "webhooks.event.forecast.assurance_created.label":
+    "Đã xong kiểm tra đầu vào dự báo",
+  "webhooks.event.forecast.assurance_created.when":
+    "Lần kiểm tra đầu vào dự báo hằng đêm hoàn tất.",
+  "webhooks.event.forecast.exception_resolved.label":
+    "Đã trả lời phát hiện về dự báo",
+  "webhooks.event.forecast.exception_resolved.when":
+    "Có ai đó trả lời một phát hiện từ lần kiểm tra hằng đêm.",
+  "webhooks.event.forecast.snapshot_created.label": "Đã lưu ảnh chụp dự báo",
+  "webhooks.event.forecast.snapshot_created.when":
+    "Một bộ số liệu dự báo được cố định.",
+  "webhooks.event.forecast.share_issued.label": "Đã chia sẻ liên kết dự báo",
+  "webhooks.event.forecast.share_issued.when":
+    "Có ai đó tạo liên kết để chia sẻ dự báo với ai khác.",
+  "webhooks.event.forecast.share_revoked.label": "Đã đóng liên kết dự báo",
+  "webhooks.event.forecast.share_revoked.when":
+    "Liên kết chia sẻ bị đóng trước khi hết hạn.",
+  "webhooks.event.weekly_plan.updated.label": "Đã đổi kế hoạch tuần",
+  "webhooks.event.weekly_plan.updated.when":
+    "Kế hoạch tuần của nhân viên kinh doanh được mở, hoặc một cam kết được thêm, sửa hoặc chốt kết quả.",
+  "webhooks.event.weekly_plan.help_requested.label":
+    "Đã nhờ hỗ trợ một cam kết",
+  "webhooks.event.weekly_plan.help_requested.when":
+    "Nhân viên kinh doanh nhờ trưởng nhóm hỗ trợ một cam kết.",
+  "webhooks.eventGroup.notices_notifications": "Thông điệp và thông báo",
+  "webhooks.event.notice.created.label": "Đã ghi nhận thông điệp",
+  "webhooks.event.notice.created.when":
+    "Một thông điệp được ghi nhận cho một thành viên.",
+  "webhooks.event.notice.read.label": "Đã đọc thông điệp",
+  "webhooks.event.notice.read.when":
+    "Thành viên nhận thông điệp đánh dấu là đã đọc.",
+  "webhooks.event.notification.preference_changed.label":
+    "Đã đổi cài đặt thông báo",
+  "webhooks.event.notification.preference_changed.when":
+    "Thành viên thay đổi cách nhận một loại thông báo.",
+  "webhooks.event.user_delivery.changed.label": "Đã đổi cài đặt nhận tin",
+  "webhooks.event.user_delivery.changed.when":
+    "Thành viên thay đổi những gì Margince được phép gửi cho họ.",
+  "webhooks.eventGroup.members_access": "Thành viên và quyền truy cập",
+  "webhooks.event.user.invited.label": "Đã mời thành viên",
+  "webhooks.event.user.invited.when": "Quản trị viên mời một thành viên mới.",
+  "webhooks.event.user.activated.label": "Thành viên đã kích hoạt",
+  "webhooks.event.user.activated.when":
+    "Thành viên được mời đặt mật khẩu và bắt đầu hoạt động.",
+  "webhooks.event.user.password_link_issued.label":
+    "Đã cấp liên kết đặt mật khẩu",
+  "webhooks.event.user.password_link_issued.when":
+    "Quản trị viên tạo liên kết đặt mật khẩu để chuyển cho thành viên ngoài Margince, khi chưa thiết lập gửi email.",
+  "webhooks.event.user.deactivated.label": "Đã vô hiệu hóa thành viên",
+  "webhooks.event.user.deactivated.when":
+    "Phiên đăng nhập và passport của agent thuộc thành viên bị thu hồi.",
+  "webhooks.event.user.reactivated.label": "Đã kích hoạt lại thành viên",
+  "webhooks.event.user.reactivated.when":
+    "Một thành viên đã vô hiệu hóa được kích hoạt lại.",
+  "webhooks.event.role.changed.label": "Đã đổi vai trò thành viên",
+  "webhooks.event.role.changed.when":
+    "Vai trò của thành viên được thay bằng vai trò khác.",
+  "webhooks.event.team.changed.label": "Đã đổi nhóm",
+  "webhooks.event.team.changed.when":
+    "Nhóm được tạo, đổi tên, chuyển vào kho lưu trữ hoặc khôi phục, hoặc có thành viên vào hay rời nhóm.",
+  "webhooks.event.passport.revoked.label": "Đã thu hồi passport của agent",
+  "webhooks.event.passport.revoked.when": "Một passport của agent bị thu hồi.",
+  "webhooks.event.onboarding.state_changed.label": "Đã đến bước thiết lập mới",
+  "webhooks.event.onboarding.state_changed.when":
+    "Trình hướng dẫn thiết lập của thành viên bắt đầu hoặc chuyển sang bước tiếp theo.",
+  "webhooks.eventGroup.member_settings_linkedin":
+    "Cài đặt thành viên và LinkedIn",
+  "webhooks.event.user_display_name.changed.label": "Đã đổi tên hiển thị",
+  "webhooks.event.user_display_name.changed.when":
+    "Thành viên đổi tên mà đồng nghiệp nhìn thấy.",
+  "webhooks.event.user_greeting_name.changed.label": "Đã đổi tên gọi",
+  "webhooks.event.user_greeting_name.changed.when":
+    "Tên gọi của thành viên được lưu, hoặc được điền ở lần đầu đăng nhập qua nhà cung cấp.",
+  "webhooks.event.user_locale.changed.label": "Đã đổi ngôn ngữ giao diện",
+  "webhooks.event.user_locale.changed.when":
+    "Thành viên chọn ngôn ngữ cho giao diện của chính mình.",
+  "webhooks.event.email_signature.changed.label": "Đã đổi chữ ký email",
+  "webhooks.event.email_signature.changed.when":
+    "Thành viên viết, sửa hoặc xóa chữ ký email.",
+  "webhooks.event.linkedin_account.changed.label": "Đã đổi tài khoản LinkedIn",
+  "webhooks.event.linkedin_account.changed.when":
+    "Thành viên ghi nhận hoặc sửa kết nối LinkedIn của chính mình.",
+  "webhooks.event.linkedin_network.imported.label":
+    "Đã nhập mạng lưới LinkedIn",
+  "webhooks.event.linkedin_network.imported.when":
+    "Thành viên tải lên tệp xuất danh sách kết nối LinkedIn.",
+  "webhooks.event.linkedin_match.decided.label": "Đã liên kết kết nối LinkedIn",
+  "webhooks.event.linkedin_match.decided.when":
+    "Một kết nối được liên kết với liên hệ đã có trong CRM.",
+  "webhooks.eventGroup.voice_dna": "Voice DNA",
+  "webhooks.event.voice.profile_created.label": "Đã tạo hồ sơ giọng văn",
+  "webhooks.event.voice.profile_created.when":
+    "Thành viên mở hồ sơ giọng văn cá nhân.",
+  "webhooks.event.voice.profile_updated.label": "Đã đổi hồ sơ giọng văn",
+  "webhooks.event.voice.profile_updated.when":
+    "Chủ hồ sơ thay đổi tùy chọn hoặc chế độ tự học.",
+  "webhooks.event.voice.profile_archived.label":
+    "Đã chuyển hồ sơ giọng văn vào kho lưu trữ",
+  "webhooks.event.voice.profile_archived.when":
+    "Một hồ sơ giọng văn được chuyển vào kho lưu trữ.",
+  "webhooks.event.voice.corpus_changed.label": "Đã đổi văn mẫu",
+  "webhooks.event.voice.corpus_changed.when":
+    "Văn mẫu được thêm, sửa hoặc gỡ, hoặc toàn bộ văn mẫu bị xóa.",
+  "webhooks.event.voice.build_changed.label": "Đã xếp lịch dựng giọng văn",
+  "webhooks.event.voice.build_changed.when":
+    "Lần dựng giọng văn được xếp lịch, hoặc lần dựng đang chờ được trả lại.",
+  "webhooks.event.voice.version_changed.label": "Đã đổi phiên bản giọng văn",
+  "webhooks.event.voice.version_changed.when":
+    "Phiên bản giọng văn được tạo, kích hoạt, từ chối hoặc khôi phục về bản trước.",
+  "webhooks.event.voice.draft_outcome_recorded.label":
+    "Đã ghi nhận kết quả bản nháp",
+  "webhooks.event.voice.draft_outcome_recorded.when":
+    "Kết quả của bản nháp viết theo giọng văn của thành viên được ghi nhận.",
+  "webhooks.eventGroup.approvals_audit": "Phê duyệt và nhật ký hoạt động",
+  "webhooks.event.approval.requested.label": "Đã yêu cầu phê duyệt",
+  "webhooks.event.approval.requested.when":
+    "Hành động của trợ lý AI được giữ lại để chờ quyết định.",
+  "webhooks.event.approval.decided.label": "Đã quyết định phê duyệt",
+  "webhooks.event.approval.decided.when":
+    "Hành động đang giữ được duyệt, bị từ chối hoặc hết hạn.",
+  "webhooks.event.approval.failure_acknowledged.label":
+    "Đã xem phê duyệt bị lỗi",
+  "webhooks.event.approval.failure_acknowledged.when":
+    "Thành viên đã duyệt biết rằng việc đã duyệt không chạy được.",
+  "webhooks.event.coldstart.read_back_proposed.label":
+    "Đã đề xuất bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.read_back_proposed.when":
+    "Bản tóm tắt hồ sơ công ty đang chờ duyệt.",
+  "webhooks.event.coldstart.accepted.label":
+    "Đã chấp nhận bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.accepted.when":
+    "Có ai đó chấp nhận bản tóm tắt đang chờ duyệt.",
+  "webhooks.event.coldstart.rejected.label": "Đã từ chối bản tóm tắt thiết lập",
+  "webhooks.event.coldstart.rejected.when":
+    "Có ai đó từ chối bản tóm tắt đang chờ duyệt.",
+  "webhooks.event.audit.appended.label": "Đã thêm mục nhật ký hoạt động",
+  "webhooks.event.audit.appended.when": "Hiện không còn gửi.",
   "reindexbanner.needed": "Cần lập chỉ mục lại",
   "reindexbanner.link": "Xem lại trong Cài đặt",
 
@@ -11313,6 +11976,7 @@ export const vi = {
   "contact.action.openLead": "Mở lead",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",
+  "contact.action.importActivities": "Nhập hoạt động",
 
   "contact.strip.never": "Chưa có",
   "contact.strip.today": "Hôm nay",
@@ -11581,9 +12245,7 @@ export const vi = {
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
-    "Mỗi liên hệ được tra cứu một lần cho các thông tin mà kết nối này chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này; các thông tin này tốn credit và vẫn được quyết định riêng cho từng liên hệ.",
-  "provider.automaticLookupJurisdiction":
-    "Tắt mục này nếu liên hệ trong CRM thuộc phạm vi một đạo luật cấm mua bán dữ liệu cá nhân, như luật Việt Nam. Nút trên từng liên hệ vẫn hoạt động, nên quyết định vẫn thuộc về người đưa ra quyết định đó.",
+    "Liên hệ mới được bổ sung các thông tin miễn phí từ nhà cung cấp, như vai trò và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua tự động, và nút trên từng liên hệ vẫn dùng được. Tắt mục này nếu luật cấm mua bán dữ liệu cá nhân.",
   "provider.buyable": "Cho phép mua {category}",
   "provider.buyableWriteFailed": "Không thể đổi hạng mục",
   "provider.postureReadFailed": "Không rõ cài đặt hiện tại",
@@ -11672,10 +12334,6 @@ export const vi = {
   "provider.profile.buy_other": "Mua {category} · {credits} credit",
   "provider.profile.buyRebuys":
     "Giá đã bao gồm mua lại {categories}: nhà cung cấp yêu cầu mục đó cho lần tìm kiếm này và tính phí mọi thông tin trả về.",
-  "provider.freeTier.hint":
-    "Hồ sơ LinkedIn, vai trò hiện tại và lịch sử công tác không tốn credit. Giữ bật để mọi liên hệ mới tự động có các thông tin này.",
-  "provider.pricedTier.hint":
-    "Không bao giờ mua tự động. Mua cho từng liên hệ một, giá hiện trên nút.",
   "provider.profile.receiptAt": "Tra cứu ngày {at}.",
   "provider.profile.receipt":
     "Tra cứu ngày {at} · trả về {answered} trên {asked} thông tin.",
@@ -13099,7 +13757,7 @@ export const vi = {
   "aiRates.refresh.keptCount_one": "Đã giữ {count} giá nhập thủ công",
   "aiRates.refresh.keptCount_other": "Đã giữ {count} giá nhập thủ công",
   "aiProviders.setByHand": "Nhập thủ công",
-  "aiRates.refresh.unlisted": "Không có trong danh sách của broker: {ids}",
+  "aiRates.refresh.unlisted": "Không có trong bảng giá: {ids}",
   "aiRates.refresh.updatedCount_one": "Đã ghi {count} giá",
   "aiRates.refresh.updatedCount_other": "Đã ghi {count} giá",
   "aiRates.refresh.unchangedCount_one": "{count} giá đã mới nhất",
@@ -13220,9 +13878,7 @@ export const vi = {
   "lead.today.nextTask": "Việc cần làm tiếp theo",
   "lead.today.openTasks": "Việc cần làm đang mở",
   "lead.readings.answered": "Đã trả lời",
-  "stageAutomation.title": "Tự động chuyển giai đoạn",
-  "stageAutomation.intro":
-    "Kết quả của các bước chuyển giai đoạn Margince đã đề xuất. Báo cáo này không thay đổi gì; đây là bằng chứng để cho phép một bước chuyển tự động chuyển deal.",
+  "stageAutomation.record": "Thành tích",
   "stageAutomation.pipeline": "Pipeline",
   "stageAutomation.transition": "B\u01b0\u1edbc chuy\u1ec3n",
   "stageAutomation.reviewed": "Đã quyết định",
@@ -13241,21 +13897,19 @@ export const vi = {
   "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
   "stageAutomation.observationHint":
     "Từ đề xuất đầu tiên đã được xem xét đến đề xuất cuối cùng. Tỷ lệ tốt trong một buổi chiều chưa phải là thành tích lâu dài.",
+  "stageAutomation.glossary": "Ý nghĩa các số liệu",
   "stageAutomation.evidenceKinds": "Theo b\u1eb1ng ch\u1ee9ng",
+  "stageAutomation.emptyTitle": "Chưa có đề xuất chuyển giai đoạn nào",
   "stageAutomation.empty":
-    "Margince chưa đề xuất bước chuyển giai đoạn nào trên pipeline này.",
+    "Mỗi bước chuyển Margince đề xuất trên pipeline này được ghi lại ở đây, cùng với câu trả lời cho bước chuyển đó.",
   "stageAutomation.noPipelines": "Chưa có pipeline nào để báo cáo.",
   "stageAutomation.unreadable": "Không thể tải báo cáo này",
-  "stageAutomation.readOnly":
-    "Có thể xem thành tích của từng bước chuyển. Cần quyền sửa pipeline để thay đổi bước chuyển.",
   "stageAutomation.rules": "Quy tắc bước chuyển",
   "stageAutomation.rulesIntro":
-    "Bật một bước chuyển không làm deal bắt đầu tự chuyển. Margince vẫn hỏi cho đến khi thành tích ở trên đạt ngưỡng, rồi tự động áp dụng bước chuyển.",
+    "Bật một bước chuyển chưa làm deal tự chuyển ngay. Margince vẫn đề xuất cho đến khi thành tích ở trên đạt ngưỡng, rồi tự chuyển deal và báo lại sau.",
   "stageAutomation.offTitle": "Tự động chuyển giai đoạn đang tắt",
   "stageAutomation.offBody":
     "Khi tính năng này tắt, không deal nào tự chuyển, bất kể bước chuyển bên dưới được thiết lập thế nào. Bên vận hành bản cài đặt này bật tính năng trong cấu hình của bản cài đặt.",
-  "stageAutomation.modeHint":
-    "Khi bật và thành tích đạt yêu cầu, Margince chuyển deal rồi báo cho bạn sau.",
   "stageAutomation.notEarnedYet": "Chưa đạt: {why}",
   "stageAutomation.suspended": "Margince đã tạm ngưng",
   "stageAutomation.suspendedSince": "Đã tạm ngưng {date}",
@@ -13276,6 +13930,9 @@ export const vi = {
     "Chấp nhận nguyên đề xuất {accepted} trên {reviewed}",
   "stageAutomation.acceptedHint": "Chấp nhận nguyên đề xuất, không sửa gì.",
   "stageAutomation.editedHint": "Chấp nhận sau khi đề xuất đã được sửa.",
+  "stageAutomation.rejectedHint": "Đề xuất đã bị từ chối.",
+  "stageAutomation.openHint":
+    "Đề xuất chưa ai trả lời. Không tính vào tỷ lệ nào.",
   "employment.importLoading": "Đang tải lịch sử công tác đã mua…",
   "employment.apply": "Liên kết công ty đã nhập",
   "employment.status.current": "Hiện tại",
@@ -13526,6 +14183,11 @@ export const vi = {
   "aiFigures.line.timeoutCount_one": "{count} lần hết thời gian",
   "aiFigures.line.timeoutCount_other": "{count} lần hết thời gian",
   "aiFigures.line.p50": "p50 {latency}",
+  "aiFigures.switched_one":
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
+  "aiFigures.switched_other":
+    "Nhà cung cấp đã trả lời {count} trong {total} lượt gọi bằng mô hình khác với mô hình đã gán, thường nhất là {model}.",
+  "aiFigures.switchedBadge": "Đã đổi mô hình",
   "aiFigures.line.sort": "sắp xếp: {sort}",
   "aiFigures.line.week": "7 ngày: {figures}",
   "aiFigures.line.prefix": "7 ngày: {sentence}",

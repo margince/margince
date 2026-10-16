@@ -189,7 +189,13 @@ func (b *ContactBatch) Rivals(c ContactCandidate) ContactRivals {
 		// employer term is one number for all of them.
 		employer := companyMatch(c, contactCandidateRow{mailDomains: []string{domain}})
 		for _, member := range b.byDomain[domain] {
-			confidence := contactScore(normalizedNameSimilarity(name, member.normalized), employer)
+			similarity := normalizedNameSimilarity(name, member.normalized)
+			// Corroboration is the costlier test, and only a pair the employer
+			// lifts over the bar needs it.
+			if contactScore(similarity, employer, true) < dedupeReviewThreshold {
+				continue
+			}
+			confidence := contactScore(similarity, employer, namesCorroborate(c.FullName, member.name))
 			if confidence >= dedupeReviewThreshold {
 				rivals.names = append(rivals.names, member.name)
 				rivals.confidences = append(rivals.confidences, confidence)

@@ -200,56 +200,47 @@ export function TelegramConnectorsPanel() {
   };
 
   return (
-    <Panel
-      title={t("connectors.telegramTitle")}
-      // The connect verb in the header, the same shape the mail card next to it
-      // takes: as the zero state's row it was labelled "Telegram" under a card
-      // titled "Telegram bot" — the card's own subject, said twice, with the
-      // act beside it.
-      titleAction={
-        canCreate &&
-        live &&
-        connections.length === 0 && (
-          <Button
-            data-testid="telegram-connect"
-            onClick={() => setConnectOpen(true)}
-          >
-            <Send aria-hidden /> {t("connectors.telegramConnectCta")}
-          </Button>
-        )
-      }
-    >
-      <PanelBody>
-        {/* In the BODY, not `Panel`'s `sub`. A description in the header band
-            raises that band's own height, so this card's title sat lower than
-            every sibling's on the tab and the whole page lost its beat over one
-            sentence. Read here it is also the first thing under the title
-            rather than a second line competing with it. */}
-        <PanelIntro>{t("connectors.telegramSub")}</PanelIntro>
-        {readOnly && (
-          <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
-        )}
-        <TelegramNotice query={query} />
-        {live && connections.length === 0 && (
-          <EmptyState>
-            <p>{t("connectors.telegramEmpty")}</p>
-          </EmptyState>
-        )}
-      </PanelBody>
-      {connections.length > 0 && (
-        <SettingList bleed="records">
-          {connections.map((connection) => (
-            <TelegramConnectionRow
-              key={connection.id}
-              connection={connection}
-              onEdit={
-                canEdit ? () => setEditingConnection(connection) : undefined
-              }
-              onDisconnect={
-                canDisconnect ? () => setDisconnecting(connection) : undefined
+    <Panel title={t("connectors.telegramTitle")}>
+      {(!live || readOnly) && (
+        <PanelBody>
+          {readOnly && (
+            <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
+          )}
+          <TelegramNotice query={query} />
+        </PanelBody>
+      )}
+      {live && (
+        <SettingList bleed={connections.length > 0 ? "records" : "settings"}>
+          {connections.length === 0 ? (
+            <SettingRow
+              testId="telegram-empty"
+              label={t("connectors.telegramEmptyLabel")}
+              description={t("connectors.telegramSub")}
+              control={
+                canCreate && (
+                  <Button
+                    data-testid="telegram-connect"
+                    onClick={() => setConnectOpen(true)}
+                  >
+                    <Send aria-hidden /> {t("connectors.telegramConnectCta")}
+                  </Button>
+                )
               }
             />
-          ))}
+          ) : (
+            connections.map((connection) => (
+              <TelegramConnectionRow
+                key={connection.id}
+                connection={connection}
+                onEdit={
+                  canEdit ? () => setEditingConnection(connection) : undefined
+                }
+                onDisconnect={
+                  canDisconnect ? () => setDisconnecting(connection) : undefined
+                }
+              />
+            ))
+          )}
         </SettingList>
       )}
       <TelegramConnectForm

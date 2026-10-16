@@ -3,18 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
-  jsonResponse,
-  StoryProviders,
-  stubWithSession,
-} from "../../testing/story-utils";
-import {
   changesNeeded,
   DEAL_ID,
   legalDeal,
   legalOn,
   summary,
-} from "../legalreviews.fixtures";
-import type { LegalReviewSummary } from "../legalreviews.queries";
+} from "../../features/privacy/legalreviews.fixtures";
+import type { LegalReviewSummary } from "../../features/privacy/legalreviews.queries";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
 import { DealLegalTab } from "./deallegaltab";
 
 // A deal's legal review tab: what the deal's side asked and what legal said.

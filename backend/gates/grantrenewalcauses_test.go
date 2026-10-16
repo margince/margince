@@ -37,7 +37,7 @@ import (
 
 const (
 	grantRenewalContract = "api/crm.yaml"
-	grantRenewalCard     = "../frontend/src/screens/overnight-grant.tsx"
+	grantRenewalCard     = "../frontend/src/features/automations/overnight-grant.tsx"
 )
 
 // TestEveryRenewalCauseReachesTheCardThatAsksForIt is the parity check.

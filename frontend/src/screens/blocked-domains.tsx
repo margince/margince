@@ -14,12 +14,7 @@ import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { CountLine } from "../design-system/listsurface";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -185,18 +180,20 @@ export function BlockedDomainsCard() {
         </Button>
       }
     >
-      <PanelBody>
-        <PanelIntro>{t("blockedDomains.sub")}</PanelIntro>
-      </PanelBody>
-      <PanelGroupHead title={t("blockedDomains.listTitle")} level="h3" />
       <QueryGate query={query} pendingLabel={t("blockedDomains.listTitle")}>
         {(list) =>
           list.data.length === 0 ? (
             // `empty`, and only `empty`: no decision has been recorded, which
             // is a fact about the installation rather than a read that failed.
-            <EmptyState>{t("blockedDomains.none")}</EmptyState>
+            <PanelBody>
+              <PanelIntro>{t("blockedDomains.sub")}</PanelIntro>
+              <EmptyState>{t("blockedDomains.none")}</EmptyState>
+            </PanelBody>
           ) : (
             <>
+              <PanelBody>
+                <PanelIntro>{t("blockedDomains.sub")}</PanelIntro>
+              </PanelBody>
               <DataTable
                 bleed
                 fold

@@ -79,19 +79,19 @@ func TestUnmappedColumnsAreNamedRatherThanDroppedSilently(t *testing.T) {
 	}
 }
 
-// `object` takes company, contact, lead or deal. Not activity.
+// `object` takes company, contact, lead, deal or activity. Nothing else.
 //
 // The refused set is what has no import WRITER: offering it would advertise a
 // door that answers an error. The accepted set has to match the REST contract's
 // own enum, which is what TestEveryToolEnumMatchesTheContractItMirrors holds it
 // to.
 func TestOnlyTheImportableObjectsAreAccepted(t *testing.T) {
-	for _, object := range []string{"activity", ""} {
+	for _, object := range []string{"note", ""} {
 		if err := refuseUnimportableObject(object); err == nil {
 			t.Errorf("`object` accepted %q; nothing imports it", object)
 		}
 	}
-	for _, object := range []string{importObjectLead, importObjectCompany, importObjectContact, importObjectDeal} {
+	for _, object := range []string{importObjectLead, importObjectCompany, importObjectContact, importObjectDeal, importObjectActivity} {
 		if err := refuseUnimportableObject(object); err != nil {
 			t.Errorf("`object` refused %q: %v", object, err)
 		}

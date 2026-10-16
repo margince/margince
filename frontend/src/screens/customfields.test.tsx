@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider, translate } from "../i18n";
 import { en } from "../i18n/en";
@@ -194,7 +195,7 @@ async function openFieldMenu(label: string) {
 }
 
 describe("FieldTable", () => {
-  it("lists a field with its immutable api key and a type chip", () => {
+  it("lists a field by its name and type, with the api key left to the builder", () => {
     wrap(
       <FieldTable
         object="deal"
@@ -206,7 +207,7 @@ describe("FieldTable", () => {
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
-    expect(screen.getByText("deal.cf_renewal_date")).toBeInTheDocument();
+    expect(screen.queryByText("deal.cf_renewal_date")).toBeNull();
     expect(screen.getByText(/Date/)).toBeInTheDocument();
     expect(screen.getByText("You")).toBeInTheDocument();
   });
@@ -402,7 +403,7 @@ describe("CustomFieldsAdmin", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders every object chip and the selected object's fields", async () => {
+  it("offers every object in the Object picker beside the selected object's fields", async () => {
     vi.stubGlobal(
       "fetch",
       customFieldsBackend([field({ id: "d1", label: "Renewal date" })], [], []),
@@ -411,19 +412,21 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
+    await userEvent.click(screen.getByRole("combobox", { name: "Object" }));
+    const listbox = within(screen.getByRole("listbox"));
     for (const name of [
-      /Deal/,
-      /Company/,
-      /Contact/,
-      /Lead/,
-      /Project/,
-      /Contract/,
+      "Deal",
+      "Company",
+      "Contact",
+      "Lead",
+      "Project",
+      "Contract",
     ]) {
-      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+      expect(listbox.getByRole("option", { name })).toBeInTheDocument();
     }
   });
 
-  it("swaps to the company fields when the Company chip is clicked", async () => {
+  it("swaps to the company fields when Company is picked", async () => {
     const calls: Recorded[] = [];
     vi.stubGlobal(
       "fetch",
@@ -445,7 +448,11 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getByRole("button", { name: /Company/ }));
+    await pickOption(
+      userEvent.setup(),
+      screen.getByRole("combobox", { name: "Object" }),
+      "Company",
+    );
     await waitFor(() =>
       expect(screen.getByText("Industry code")).toBeInTheDocument(),
     );
@@ -502,9 +509,20 @@ describe("CustomFieldsAdmin", () => {
     expect(
       screen.queryByRole("button", { name: menuName("Renewal date") }),
     ).toBeNull();
+    // The page says once that it is read-only; the intro about adding fields
+    // is for a reader who can add one.
+    expect(screen.queryByText(en["cf.subtitle"])).toBeNull();
+  });
+
+  it("tells a read-only reader the object has no fields without asking them to add one", async () => {
+    vi.stubGlobal("fetch", customFieldsBackend([], [], [], {}));
+    renderAdmin();
     expect(
-      screen.getByText(/read-only access to custom fields/i),
+      await screen.findByText(
+        translate("en", "cf.emptyReadOnly", { object: "Deal" }),
+      ),
     ).toBeInTheDocument();
+    expect(screen.queryByText(en["cf.empty.deal"])).toBeNull();
   });
 
   // One grant at a time: the builder needs create, rename/retire need update.
@@ -687,6 +705,7 @@ describe("CustomFieldsAdmin", () => {
     const menu = await openFieldMenu("Renewal date");
     await userEvent.click(menu.getByRole("button", { name: en["cf.edit"] }));
     const input = screen.getByLabelText(/New label/i);
+    expect(screen.getByText("deal.cf_renewal_date").tagName).toBe("CODE");
     await userEvent.clear(input);
     await userEvent.type(input, "Contract end date");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));

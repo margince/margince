@@ -21,6 +21,9 @@ type group struct {
 	// two families naming the same map would not compile — and only the
 	// public contract has gates that read one.
 	VersionsVar string
+	// SamplesVar names the generated event-type→sample-data map, or is empty.
+	// The webhook body preview renders a template against these samples.
+	SamplesVar string
 }
 
 // groups is the config-driven list of payload families: the public
@@ -32,6 +35,7 @@ var groups = []group{
 		Out:         "internal/contracts/publicevents_gen.go",
 		Package:     "crmcontracts",
 		VersionsVar: "PublicEventVersions",
+		SamplesVar:  "PublicEventSamples",
 	},
 	{
 		// Internal payloads: on the bus, deliberately not in the public

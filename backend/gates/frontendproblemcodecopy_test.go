@@ -52,7 +52,7 @@ var readerCodeBuilders = []codeBuilder{
 var problemCopyBlock = regexp.MustCompile(`(?s)const PROBLEM_CODE_COPY = new Map<string, MessageKey>\(\[(.*?)\]\);`)
 
 // problemCopyEntry is one `["code", "catalog.key"]` pair of that map.
-var problemCopyEntry = regexp.MustCompile(`\[\s*"([a-z_]+)"\s*,\s*"([A-Za-z.]+)"\s*,?\s*\]`)
+var problemCopyEntry = regexp.MustCompile(`\[\s*"([a-z_]+)"\s*,\s*"([A-Za-z_.]+)"\s*,?\s*\]`)
 
 func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
 	t.Parallel()

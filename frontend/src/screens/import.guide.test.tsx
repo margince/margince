@@ -81,7 +81,7 @@ describe("the column guide", () => {
     expect(screen.queryByText("Needed on a new row")).toBeNull();
   });
 
-  it("names the `?` beside a chosen field by the column it explains", async () => {
+  it("names the Guide button beside a chosen field by the column it explains", async () => {
     const user = userEvent.setup();
     render(
       <ColumnGuideButton
@@ -96,7 +96,7 @@ describe("the column guide", () => {
       />,
     );
     await user.click(
-      screen.getByRole("button", { name: "What goes in company_ref" }),
+      screen.getByRole("button", { name: "Guide for company_ref" }),
     );
     expect(
       await screen.findByText("Which company this row belongs to."),

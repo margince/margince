@@ -300,13 +300,18 @@ func contactNameAdmitsSQL(column, param string) string {
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	return contactScore(nameSimilarity(c.FullName, row.fullName), companyMatch(c, row))
+	corroborated := namesCorroborate(c.FullName, row.fullName)
+	return contactScore(nameSimilarity(c.FullName, row.fullName), companyMatch(c, row), corroborated)
 }
 
 // contactScore weighs PO-F-1's two terms, for a scorer that measures them
-// itself.
-func contactScore(nameSim, employer float64) float64 {
-	return dedupeNameWeight*nameSim + dedupeCompanyDomainWeight*employer
+// itself. The employer counts only for names that corroborate.
+func contactScore(nameSim, employer float64, corroborated bool) float64 {
+	name := dedupeNameWeight * nameSim
+	if !corroborated {
+		return name
+	}
+	return name + dedupeCompanyDomainWeight*employer
 }
 
 // companyMatch is PO-F-1's employer agreement term, most-specific first: a shared

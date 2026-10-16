@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { type Fact, FactList } from "../design-system/factlist";
 import { EvidenceChip, FieldDiff, toEvidence } from "../design-system/trust";
+import { ResolvedPassportChip } from "../features/automations/passportchip";
 import {
   type PluralTranslator,
   type Translator,
@@ -11,7 +12,6 @@ import {
   useT,
 } from "../i18n";
 import { humanizeToken } from "./audit";
-import { ResolvedPassportChip } from "./passportchip";
 import { roleLabel } from "./roles.queries";
 import {
   type AuditLogEntry,

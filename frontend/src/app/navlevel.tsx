@@ -258,9 +258,8 @@ function NavLevelRow({
       onClick={() => onSelect(entry)}
     >
       <entry.icon aria-hidden />
-      {/* The label stays mounted and collapses its width, so the transition is
-          continuous rather than a pop. aria-label carries the accessible name
-          either way. */}
+      {/* The label stays mounted and fades, so the transition is continuous
+          rather than a pop. aria-label carries the accessible name either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to

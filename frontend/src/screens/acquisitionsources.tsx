@@ -5,7 +5,7 @@ import { useState } from "react";
 import { rowsOf } from "../api/rows";
 import { Button, EmptyState } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { KeyedName } from "../design-system/keyedname";
+import { KeyCode } from "../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
@@ -20,7 +20,6 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import {
   type AcquisitionSource,
@@ -28,7 +27,7 @@ import {
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
-import { vocabMenuColumn } from "./leadvocab.rows";
+import { useVocabGrants, vocabMenuColumn } from "./leadvocab.rows";
 
 function sourceColumns({
   t,
@@ -49,7 +48,7 @@ function sourceColumns({
     key: "name",
     header: t("acqSources.colSource"),
     grow: true,
-    render: (source) => <KeyedName name={source.label} code={source.key} />,
+    render: (source) => source.label,
   };
   const deals: DataTableColumn<AcquisitionSource> = {
     key: "deals",
@@ -71,6 +70,7 @@ function sourceColumns({
   const active: DataTableColumn<AcquisitionSource> = {
     key: "active",
     header: t("leadSources.colActive"),
+    fold: "end",
     render: (source) => (
       <Switch
         label={t("acqSources.activeFor", { label: source.label })}
@@ -118,8 +118,7 @@ export function AcquisitionSourcesCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const canCreate = useCanWrite("custom_field", "create");
-  const canEdit = useCanWrite("custom_field", "update");
+  const { canCreate, canEdit, refusal } = useVocabGrants("acquisition");
   const query = useAcquisitionSources();
   const create = useCreateAcquisitionSource();
   const update = useUpdateAcquisitionSource();
@@ -185,7 +184,7 @@ export function AcquisitionSourcesCard() {
         </PanelBody>
       )}
       <PanelNotices
-        readOnly={!canEdit && t("leadSources.readOnlyTitle")}
+        readOnly={refusal && t(refusal)}
         refused={
           update.isError
             ? { title: t("leadSources.notSaved"), error: update.error }
@@ -202,6 +201,7 @@ export function AcquisitionSourcesCard() {
         )}
         label={t("acqSources.addLabel")}
         initial={naming.mode === "rename" ? naming.source.label : ""}
+        hint={naming.mode === "rename" && <KeyCode code={naming.source.key} />}
         confirmLabel={t(
           naming.mode === "rename"
             ? "leadSources.renameSave"

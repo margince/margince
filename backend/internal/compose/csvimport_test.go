@@ -35,32 +35,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	defer nonFieldTargets.AssertAllMatched(t)
 	defer createOnlyTargets.AssertAllMatched(t)
 	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
-		migration.ObjectLead: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
-			in := leadCreateFrom(fields, typed, "import:csv", "ext-1", "src")
-			up := leadUpdateFrom(fields, typed)
-			created := map[string]bool{
-				"full_name":    in.FullName != nil,
-				"email":        in.Email != nil,
-				"phone":        in.Phone != nil,
-				"title":        in.Title != nil,
-				"company_name": in.CompanyName != nil,
-				"linkedin_url": in.LinkedInURL != nil,
-				"author":       in.Author.AuthorName != nil,
-				"owner_email":  in.OwnerID != nil,
-				"cf_tier":      in.CustomFields["cf_tier"] != nil,
-			}
-			patched := map[string]bool{
-				"full_name":    up.FullName != nil,
-				"email":        up.Email != nil,
-				"phone":        up.Phone != nil,
-				"title":        up.Title != nil,
-				"company_name": up.CompanyName != nil,
-				"linkedin_url": up.LinkedInURL != nil,
-				"owner_email":  up.OwnerID != nil,
-				"cf_tier":      up.CustomFields["cf_tier"] != nil,
-			}
-			return created, patched
-		},
+		migration.ObjectLead: leadRoundTrip,
 		migration.ObjectCompany: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
 			in := companyCreateFrom(fields, typed, importSourceSystem(""), "src")
 			up := companyUpdateFrom(fields, typed)
@@ -147,7 +122,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			return created, patched
 		},
-		migration.ObjectDeal: dealRoundTrip,
+		migration.ObjectDeal:     dealRoundTrip,
+		migration.ObjectActivity: activityRoundTrip,
 	} {
 		t.Run(object, func(t *testing.T) {
 			targets, err := importTargets(object, tierCatalog())
@@ -175,7 +151,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					// a target with no entry is held to the rule.
 					continue
 				}
-				if createOnlyTargets.Waived(t, target) {
+				if isCreateOnly(object, target) && createOnlyTargets.Waived(t, target) {
 					assertCreateOnlyTarget(t, object, target, created, patched)
 					continue
 				}
@@ -592,12 +568,18 @@ var nonFieldTargets = gatekit.Waive(map[string]string{
 var createOnlyTargets = gatekit.Waive(map[string]string{
 	csvTargetAuthor:      "who wrote the record where it came from is fixed when it lands; a later file does not rewrite it",
 	dealTargetLostReason: "a lost reason is written when the deal closes; a later file does not rewrite a closed deal's reason",
+	// Only on an activity, where it names the author and UpdateActivityInput
+	// has no member for one. On a deal the owner is rewritten.
+	csvTargetOwner:          "an activity's author is fixed when it lands; a later file does not rewrite it",
+	activityTargetType:      "what an activity was is fixed when it lands; the update input has no kind",
+	activityTargetDirection: "which way a message went is fixed when it lands; the update input has no direction",
+	activityTargetLinks:     "an activity is filed under its records when it lands; moving it is a relink, not an import update",
 })
 
 func assertCreateOnlyTarget(t *testing.T, object, target string, created, patched map[string]bool) {
 	t.Helper()
-	if !isCreateOnlyTarget(target) {
-		t.Errorf("%s: %q is create-only here but the import's own isCreateOnlyTarget does not say so, so a re-import diffs it", object, target)
+	if !isCreateOnly(object, target) {
+		t.Errorf("%s: %q is create-only here but the import's own isCreateOnly does not say so, so a re-import diffs it", object, target)
 	}
 	if !created[target] {
 		t.Errorf("%s: target %q is advertised but never reaches the create input", object, target)

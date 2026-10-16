@@ -103,7 +103,7 @@ export type CreateField = {
   placeholder?: string;
   maxLength?: number;
   // Already translated guidance beneath the control.
-  hint?: string;
+  hint?: ReactNode;
   // A validation refusal blocks Save and is announced through Field.error.
   // The server remains authoritative for uniqueness and cross-record rules.
   validate?: (value: string) => string | undefined;

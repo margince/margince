@@ -3,13 +3,18 @@
 // a template literal the sweep has to recognize, not one this file meant to
 // interpolate.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
-import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  extensionFilesMatching,
+  parseSource,
+  sourceFileAt,
+  sourceTextAt,
+} from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 
 // The two source-wide design gates from B-EP09.1, derived from the tree so a
@@ -38,16 +43,10 @@ function sourceFiles(dir: string): string[] {
 // and visible only here. Leaving the tier out of THIS corpus is the census that
 // fails short — it reads a smaller tree, reports PASS, and nothing asserts.
 function extensionFrontends(): string[] {
-  const root = join(frontendRoot, "..", "extensions");
-  if (!existsSync(root)) {
-    return [];
-  }
-  return readdirSync(root, { withFileTypes: true }).flatMap((unit) => {
-    const frontend = join(root, unit.name, "frontend");
-    return unit.isDirectory() && existsSync(frontend)
-      ? sourceFiles(frontend)
-      : [];
-  });
+  return extensionFilesMatching(
+    join(frontendRoot, "..", "extensions"),
+    /\.(css|tsx?|html)$/,
+  );
 }
 
 const files = sourceFiles(join(frontendRoot, "src"))
@@ -216,7 +215,7 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       // strips comments for one rule and not the other is the inconsistency
       // that made this pair hard to reason about.
       for (const name of familiesIn(
-        scannableSource(file, readFileSync(file, "utf8")),
+        scannableSource(file, sourceTextAt(file)),
       )) {
         expect(
           allowedFamilies.has(name),
@@ -511,6 +510,8 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   });
 
   it("keeps literal colours in tokens.css only — everything else reads a token", () => {
+    // Asserted once: half a million `expect` calls cost more than the scan.
+    const hardCoded: string[] = [];
     for (const file of files) {
       // tokens.css is where literals live (tests pin them); index.html's
       // meta theme-color cannot read a CSS custom property.
@@ -529,14 +530,17 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
       ) {
         continue;
       }
-      const text = scannableSource(file, readFileSync(file, "utf8"));
+      const text = scannableSource(file, sourceTextAt(file));
       for (const [index, line] of text.split("\n").entries()) {
-        expect(
-          LITERAL_COLOUR.test(line),
-          `${relative(frontendRoot, file)}:${index + 1} hard-codes a colour — read it from a token`,
-        ).toBe(false);
+        if (LITERAL_COLOUR.test(line)) {
+          hardCoded.push(`${relative(frontendRoot, file)}:${index + 1}`);
+        }
       }
     }
+    expect(
+      hardCoded,
+      `these lines hard-code a colour — read it from a token:\n${hardCoded.join("\n")}`,
+    ).toEqual([]);
   });
 
   it("reads a colour beside a comment, and not an issue reference inside one", () => {
@@ -705,7 +709,7 @@ describe("motion", () => {
   // who had asked them not to. Both stylesheets read as if the promise were kept.
   it("declares every reduced-motion rule after the rule it has to beat", () => {
     for (const file of cssFiles) {
-      const text = readFileSync(file, "utf8");
+      const text = sourceTextAt(file);
       const plain = plainRules(text);
       for (const { selector, property, endsAt } of reducedMotionRules(text)) {
         const defeated = plain.find(
@@ -730,7 +734,7 @@ describe("motion", () => {
   // screen. The finite ones are a smaller promise and are tracked separately.
   it("gives every infinite animation a reduced-motion answer", () => {
     for (const file of cssFiles) {
-      const text = readFileSync(file, "utf8");
+      const text = sourceTextAt(file);
       // Per SELECTOR, not per file: a stylesheet that carries one reduce block
       // and three pulses would otherwise read as covered. The gate asks the
       // question a reader would — is THIS animation answered.
@@ -791,9 +795,7 @@ describe("pending states", () => {
       // `aria-busy={true}` — the same unconditional claim, written the other
       // way — declare a second pending region and pass.
       .filter((file) =>
-        /aria-busy=(?:["']true["']|\{\s*true\s*\})/.test(
-          readFileSync(file, "utf8"),
-        ),
+        /aria-busy=(?:["']true["']|\{\s*true\s*\})/.test(sourceTextAt(file)),
       )
       .map((file) => relative(frontendRoot, file));
 
@@ -821,7 +823,7 @@ describe("pending states", () => {
     // second placeholder therefore has to carry that class rather than restate
     // it. Restating it is what drops half the behaviour.
     const wearers = cssFiles.flatMap((file) =>
-      plainRules(readFileSync(file, "utf8"))
+      plainRules(sourceTextAt(file))
         .filter((rule) => /animation[^;]*\bds-pulse\b/.test(rule.body))
         .map((rule) => `${relative(frontendRoot, file)} ${rule.selector}`),
     );
@@ -853,7 +855,7 @@ describe("focus", () => {
       // Comments first, or a sentence ABOUT an outline is read as one: the
       // conversation sheet explains at length why it leaves `outline: 0` unset,
       // and the earlier form of this gate reported that paragraph as a finding.
-      const text = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      const text = sourceTextAt(file).replace(/\/\*[\s\S]*?\*\//g, "");
       return (
         [...text.matchAll(/outline:\s*([^;]+);/g)]
           .map((match) => match[1].trim())
@@ -896,7 +898,7 @@ describe("focus", () => {
       if (file.endsWith("tokens.css")) {
         return [];
       }
-      const text = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      const text = sourceTextAt(file).replace(/\/\*[\s\S]*?\*\//g, "");
       return [...text.matchAll(/:focus[^{]*\{([^}]*)\}/g)].flatMap((rule) =>
         [...rule[1].matchAll(/box-shadow:\s*([^;]+);/g)]
           .map((match) => match[1].trim())
@@ -935,7 +937,7 @@ describe("problem details", () => {
       .filter((file) => /\.tsx?$/.test(file))
       .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
       .flatMap((file) => {
-        const text = readFileSync(file, "utf8").replace(
+        const text = sourceTextAt(file).replace(
           /\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
           "",
         );
@@ -964,7 +966,7 @@ describe("unsaved edits", () => {
     const wearers = files
       .filter((file) => /\.tsx$/.test(file))
       .filter((file) => !/\.(test|stories|testkit)\.tsx$/.test(file))
-      .filter((file) => /<UnsavedGuard[\s>]/.test(readFileSync(file, "utf8")))
+      .filter((file) => /<UnsavedGuard[\s>]/.test(sourceTextAt(file)))
       .map((file) => relative(frontendRoot, file))
       .sort();
     expect(
@@ -991,9 +993,7 @@ describe("the transient confirmation", () => {
       files
         .filter((file) => /\.tsx$/.test(file))
         .filter((file) => !/\.(test|stories|testkit)\.tsx$/.test(file))
-        .filter((file) =>
-          new RegExp(`<${tag}[\\s/>]`).test(readFileSync(file, "utf8")),
-        )
+        .filter((file) => new RegExp(`<${tag}[\\s/>]`).test(sourceTextAt(file)))
         .map((file) => relative(frontendRoot, file))
         .sort();
     expect(
@@ -1024,9 +1024,7 @@ describe("the opened file", () => {
     const mounts = files
       .filter((file) => /\.tsx$/.test(file))
       .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
-      .filter((file) =>
-        /<FilePreviewProvider[\s/>]/.test(readFileSync(file, "utf8")),
-      )
+      .filter((file) => /<FilePreviewProvider[\s/>]/.test(sourceTextAt(file)))
       .map((file) => relative(frontendRoot, file))
       .sort();
     expect(
@@ -1050,7 +1048,7 @@ describe("the phone nav's clearance", scanBudget, () => {
   it("is read through --stickyBottomInset everywhere but the shell", () => {
     const readers = files
       .filter((file) => /\.css$/.test(file))
-      .filter((file) => /--phoneNavClearance/.test(readFileSync(file, "utf8")))
+      .filter((file) => /--phoneNavClearance/.test(sourceTextAt(file)))
       .map((file) => relative(frontendRoot, file))
       .sort();
     expect(
@@ -1081,7 +1079,7 @@ describe("the empty plate", () => {
       .filter((file) => file.endsWith(".tsx"))
       .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
       .flatMap((file) => {
-        const source = readFileSync(file, "utf8");
+        const source = sourceTextAt(file);
         // The child immediately inside the opening tag, whitespace and
         // newlines crossed. A type class further down the tree may be a
         // deliberate second line — the deck's cleared-at timestamp is one —

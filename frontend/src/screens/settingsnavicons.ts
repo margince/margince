@@ -17,6 +17,7 @@ import {
   Mail,
   Mic,
   Plug,
+  RotateCcw,
   Scale,
   ShieldCheck,
   Sparkles,
@@ -72,5 +73,5 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   audit: ShieldCheck,
   "system-health": Wrench,
   extensions: Blocks,
-  reset: Wrench,
+  reset: RotateCcw,
 };

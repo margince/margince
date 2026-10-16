@@ -23,7 +23,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -42,14 +41,18 @@ const insertOptsFloor = 20
 
 func TestNoInsertOptsNamesItsOwnQueue(t *testing.T) {
 	t.Parallel()
-	root := moduleRoot(t)
+	root := gatekit.ModuleRoot(t)
 	paths, err := goFilesUnder(filepath.Join(root, "internal"))
 	if err != nil {
 		t.Fatalf("walking the module: %v", err)
 	}
 	named, seen := 0, 0
 	for _, path := range paths {
-		rel := filepath.ToSlash(strings.TrimPrefix(path, root+string(filepath.Separator)))
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			t.Fatalf("spelling %s relative to the module root: %v", path, err)
+		}
+		rel = filepath.ToSlash(rel)
 		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", rel, err)

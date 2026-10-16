@@ -5,6 +5,7 @@ import {
 } from "@composition/extensions";
 import { extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
+import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
 
@@ -60,7 +61,7 @@ export type ExtensionScreenRegistry = Readonly<
  * add a thirteenth: enabling a unit is not the product growing a destination.
  * A unit is OFFERED in Settings instead, on the page that already holds the
  * kind of credential it is configured with — see `unitsForSecretScope` below
- * and `screens/extension-units.tsx`.
+ * and `features/automations/extension-units.tsx`.
  *
  * `RAIL_LESS_SCREENS` was reviewed with it and is unchanged: a unit's screen
  * wants the rail like any other destination, and `nav.ts` marks Settings
@@ -146,14 +147,14 @@ export function findExtension(
   return registry.find((unit) => unit.name === name) ?? null;
 }
 
-/** What `unit` is called in `locale`: its own title, else its directory name. */
+/** What `unit` is called in `locale`: its own title, else its name read as words. */
 export function unitTitle(unit: ExtensionDescriptor, locale: Locale): string {
-  return unit.title ? translate(locale, unit.title) : unit.name;
+  return unit.title ? translate(locale, unit.title) : readableKey(unit.name);
 }
 
 /**
  * What unit `name` is called in `locale`. A unit this installation does not
- * compose has only its name.
+ * compose has only its name, read as words.
  */
 export function extensionTitle(
   name: string,
@@ -161,7 +162,7 @@ export function extensionTitle(
   registry: readonly ExtensionDescriptor[] = extensions,
 ): string {
   const unit = findExtension(name, registry);
-  return unit ? unitTitle(unit, locale) : name;
+  return unit ? unitTitle(unit, locale) : readableKey(name);
 }
 
 /**

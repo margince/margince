@@ -9,16 +9,16 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import {
+  useAnswerCommitment,
+  useTeammateWeeklyPlan,
+  type WeeklyPlanCommitment,
+} from "../features/worklist/weeklyplan.queries";
 import { middayInstant } from "../format/calendarday";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useRecordZone } from "../lib/recordzone";
-import {
-  useAnswerCommitment,
-  useTeammateWeeklyPlan,
-  type WeeklyPlanCommitment,
-} from "./weeklyplan.queries";
 
 export function TeamPlanReview({
   owner,

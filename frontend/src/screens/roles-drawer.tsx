@@ -7,8 +7,8 @@ import { Callout } from "../design-system/callout";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
+import type { ExtensionUnit } from "../features/automations/extensions.queries";
 import { useT } from "../i18n";
-import type { ExtensionUnit } from "./extensions.queries";
 import { type Role, roleLabel, roleRefusalOf } from "./roles.queries";
 import { RoleDetail, type RoleWrites, useRoleWrites } from "./roles-detail";
 

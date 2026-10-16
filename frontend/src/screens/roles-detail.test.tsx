@@ -12,9 +12,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ExtensionUnit } from "../features/automations/extensions.queries";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import type { ExtensionUnit } from "./extensions.queries";
 import type { Role } from "./roles.queries";
 import { RoleDetail, useRoleWrites } from "./roles-detail";
 

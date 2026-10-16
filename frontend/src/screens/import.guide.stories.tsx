@@ -61,5 +61,5 @@ export const BesideAChosenFieldDark: Story = {
       ) : null}
     </StoryProviders>
   ),
-  play: opened("What goes in company_ref"),
+  play: opened("Guide for company_ref"),
 };

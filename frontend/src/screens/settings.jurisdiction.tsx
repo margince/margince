@@ -2,16 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, EmptyState } from "../design-system/atoms";
+import { Button, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FactList } from "../design-system/factlist";
 import { FileChip } from "../design-system/filechip";
 import { Markdown } from "../design-system/markdown";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { DSR_KIND_LABEL } from "../features/privacy/privacy.logic";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import {
   jurisdictionName,
@@ -22,7 +23,6 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
-import { DSR_KIND_LABEL } from "./privacy.logic";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
@@ -78,6 +78,8 @@ export function JurisdictionReading({
   );
 }
 
+// Untitled: the page's own heading names it, and the panels after it are titled
+// by what they hold.
 function SelectionPanel({
   jurisdiction,
 }: Readonly<{ jurisdiction: Jurisdiction }>) {
@@ -86,56 +88,75 @@ function SelectionPanel({
   const canChange = useCanWrite("installation_settings", "update");
   const selected = jurisdiction.selected ?? null;
   return (
-    <Panel title={t("jurisdiction.card.title")}>
-      <PanelBody>
-        <SettingList>
+    <Panel>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("jurisdiction.selected.label")}
+          description={
+            selected === null
+              ? t("jurisdiction.selected.noneDescription")
+              : jurisdiction.unit?.description
+          }
+          value={
+            selected === null
+              ? t("jurisdiction.selected.none")
+              : jurisdictionName(selected, locale)
+          }
+          control={
+            canChange && <ChangeJurisdiction jurisdiction={jurisdiction} />
+          }
+        />
+        {jurisdiction.unit?.unit_name && (
           <SettingRow
-            label={t("jurisdiction.selected.label")}
-            description={
-              selected === null
-                ? t("jurisdiction.selected.noneDescription")
-                : jurisdiction.unit?.description
-            }
-            control={
-              <strong>
-                {selected === null
-                  ? t("jurisdiction.selected.none")
-                  : jurisdictionName(selected, locale)}
-              </strong>
-            }
+            label={t("jurisdiction.unit.label")}
+            value={t("jurisdiction.unit.value", {
+              name: jurisdiction.unit.unit_name,
+              version: jurisdiction.unit.unit_version,
+            })}
+            control={null}
           />
-          {jurisdiction.unit?.unit_name && (
-            <SettingRow
-              label={t("jurisdiction.unit.label")}
-              control={t("jurisdiction.unit.value", {
-                name: jurisdiction.unit.unit_name,
-                version: jurisdiction.unit.unit_version,
-              })}
-            />
-          )}
-          {canChange && <ChangeRow jurisdiction={jurisdiction} />}
-        </SettingList>
-      </PanelBody>
+        )}
+        {/* A pack's documents get a panel of their own; their absence is one
+            fact about the selection. */}
+        {jurisdiction.documents.length === 0 && (
+          <SettingRow
+            label={t("jurisdiction.documents.title")}
+            description={t(
+              jurisdiction.selected
+                ? "jurisdiction.documents.empty"
+                : "jurisdiction.documents.emptyUnset",
+            )}
+            control={null}
+          />
+        )}
+      </SettingList>
     </Panel>
   );
 }
 
-function ChangeRow({ jurisdiction }: Readonly<{ jurisdiction: Jurisdiction }>) {
+function ChangeJurisdiction({
+  jurisdiction,
+}: Readonly<{ jurisdiction: Jurisdiction }>) {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [choice, setChoice] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
   const current = jurisdiction.selected ?? "";
   const change = useMutation({
     mutationFn: async (country: string) =>
       unwrap(await api.PATCH("/installation/settings", { body: { country } })),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      setConfirming(false);
+      setOpen(false);
       setChoice("");
     },
   });
+  const close = () => {
+    setOpen(false);
+    setChoice("");
+    change.reset();
+  };
   const target = choice === NO_PACK ? "" : choice;
   const options = [
     ...jurisdiction.available.map((unit) => ({
@@ -147,40 +168,46 @@ function ChangeRow({ jurisdiction }: Readonly<{ jurisdiction: Jurisdiction }>) {
     (option) => (option.value === NO_PACK ? "" : option.value) !== current,
   );
   return (
-    <SettingRow
-      label={t("jurisdiction.change.label")}
-      description={t("jurisdiction.change.description")}
-      control={(control) => (
-        <div className="form-actions">
-          <Select
-            {...control}
-            options={options}
-            value={choice}
-            placeholder={t("jurisdiction.change.placeholder")}
-            onChange={setChoice}
-          />
-          <Button disabled={choice === ""} onClick={() => setConfirming(true)}>
-            {t("jurisdiction.change.action")}
-          </Button>
-          <ConfirmModal
-            open={confirming}
-            onClose={() => setConfirming(false)}
-            title={t("jurisdiction.confirm.title", {
-              name:
-                target === ""
-                  ? t("jurisdiction.option.none")
-                  : jurisdictionName(target, locale),
-            })}
-            confirmLabel={t("jurisdiction.confirm.confirm")}
-            onConfirm={() => change.mutate(target)}
-            pending={change.isPending}
-            error={change.isError ? problemMessageOf(change.error, t) : null}
-          >
-            <ChangeConsequences jurisdiction={jurisdiction} target={target} />
-          </ConfirmModal>
-        </div>
-      )}
-    />
+    <>
+      <Button
+        aria-haspopup="dialog"
+        aria-label={t("jurisdiction.change.label")}
+        onClick={() => setOpen(true)}
+      >
+        {t("jurisdiction.change.action")}
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={close}
+        title={t("jurisdiction.change.label")}
+        confirmLabel={t("jurisdiction.confirm.confirm")}
+        confirmDisabled={choice === ""}
+        onConfirm={() => change.mutate(target)}
+        pending={change.isPending}
+        error={change.isError ? problemMessageOf(change.error, t) : null}
+      >
+        <Field
+          label={t("jurisdiction.card.title")}
+          hint={t("jurisdiction.change.description")}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              options={options}
+              value={choice}
+              placeholder={t("jurisdiction.change.placeholder")}
+              onChange={(next) => {
+                setChoice(next);
+                change.reset();
+              }}
+            />
+          )}
+        </Field>
+        {choice !== "" && (
+          <ChangeConsequences jurisdiction={jurisdiction} target={target} />
+        )}
+      </ConfirmModal>
+    </>
   );
 }
 
@@ -208,14 +235,14 @@ export function ChangeConsequences({
     : t("jurisdiction.floor.none");
   const weakens = jurisdiction.floor.known && !afterClass;
   return (
-    <ul>
-      <li>{t("jurisdiction.confirm.floor", { from: before, to: after })}</li>
+    <>
+      <p>{t("jurisdiction.confirm.floor", { from: before, to: after })}</p>
       {weakens && (
-        <li>{t("jurisdiction.confirm.floorCarried", { from: before })}</li>
+        <p>{t("jurisdiction.confirm.floorCarried", { from: before })}</p>
       )}
-      <li>{t("jurisdiction.confirm.deadlines")}</li>
-      <li>{t("jurisdiction.confirm.messaging")}</li>
-    </ul>
+      <p>{t("jurisdiction.confirm.deadlines")}</p>
+      <p>{t("jurisdiction.confirm.messaging")}</p>
+    </>
   );
 }
 
@@ -351,59 +378,47 @@ function DocumentsPanel({
   const { locale } = useLocale();
   const [reading, setReading] = useState<string | null>(null);
   const documents = jurisdiction.documents;
+  if (documents.length === 0) {
+    return null;
+  }
   return (
     <Panel title={t("jurisdiction.documents.title")}>
       <PanelBody>
-        {documents.length === 0 ? (
-          <EmptyState>
-            {t(
-              jurisdiction.selected
-                ? "jurisdiction.documents.empty"
-                : "jurisdiction.documents.emptyUnset",
-            )}
-          </EmptyState>
-        ) : (
-          <>
-            <PanelIntro>{t("jurisdiction.documents.intro")}</PanelIntro>
-            <FactList
-              facts={documents.map((document) => ({
-                key: document.id,
-                term: document.title,
-                value: (
-                  <span className="form-actions">
-                    <FileChip
-                      href={`/v1/installation/jurisdiction/documents/${encodeURIComponent(document.id)}`}
-                      filename={documentFilename(document)}
-                      size={formatBytes(document.size_bytes, locale)}
-                    />
-                    {document.media_type === "text/markdown" && (
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          setReading(
-                            reading === document.id ? null : document.id,
-                          )
-                        }
-                      >
-                        {t(
-                          reading === document.id
-                            ? "jurisdiction.documents.close"
-                            : "jurisdiction.documents.read",
-                        )}
-                      </Button>
+        <FactList
+          facts={documents.map((document) => ({
+            key: document.id,
+            term: document.title,
+            value: (
+              <span className="form-actions">
+                <FileChip
+                  href={`/v1/installation/jurisdiction/documents/${encodeURIComponent(document.id)}`}
+                  filename={documentFilename(document)}
+                  size={formatBytes(document.size_bytes, locale)}
+                />
+                {document.media_type === "text/markdown" && (
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      setReading(reading === document.id ? null : document.id)
+                    }
+                  >
+                    {t(
+                      reading === document.id
+                        ? "jurisdiction.documents.close"
+                        : "jurisdiction.documents.read",
                     )}
-                  </span>
-                ),
-                note: t("jurisdiction.documents.note", {
-                  audience: t(AUDIENCE_LABEL[document.audience]),
-                  kind: t(DOCUMENT_KIND_LABEL[document.kind]),
-                  language: document.language.toUpperCase(),
-                }),
-              }))}
-            />
-            {reading && <DocumentReader id={reading} />}
-          </>
-        )}
+                  </Button>
+                )}
+              </span>
+            ),
+            note: t("jurisdiction.documents.note", {
+              audience: t(AUDIENCE_LABEL[document.audience]),
+              kind: t(DOCUMENT_KIND_LABEL[document.kind]),
+              language: document.language.toUpperCase(),
+            }),
+          }))}
+        />
+        {reading && <DocumentReader id={reading} />}
       </PanelBody>
     </Panel>
   );

@@ -11,6 +11,7 @@ package collections
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,6 +24,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// seedConcurrently runs seed for 0..n-1 on eight workers. Each call is its own
+// transaction through the real writer; only the order they land in changes.
+func (f fixture) seedConcurrently(t *testing.T, n int, seed func(i int) error) {
+	t.Helper()
+	next := make(chan int)
+	errs := make([]error, n)
+	var workers sync.WaitGroup
+	for range 8 {
+		workers.Go(func() {
+			for i := range next {
+				errs[i] = seed(i)
+			}
+		})
+	}
+	for i := range n {
+		next <- i
+	}
+	close(next)
+	workers.Wait()
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("seed %d: %v", i, err)
+		}
+	}
+}
 
 // liveList makes a Live List on contact over definition.
 func (f fixture) liveList(t *testing.T, name string, definition map[string]any) ids.ListID {
@@ -85,17 +112,16 @@ func TestALiveListPastAThousandMatchesIsCompleteAndEqualsItsPreview(t *testing.T
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Cohort Big", Type: customfieldsmod.TypeText})
 	const matching = 1010
-	for i := range matching + 5 {
+	f.seedConcurrently(t, matching+5, func(i int) error {
 		cohort := "k5"
 		if i >= matching {
 			cohort = "other"
 		}
-		if _, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{
+		_, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{
 			FullName: fmt.Sprintf("Cohort %04d", i), Source: "manual", CustomFields: map[string]any{column: cohort},
-		}); err != nil {
-			t.Fatalf("seed contact %d: %v", i, err)
-		}
-	}
+		})
+		return err
+	})
 	definition := map[string]any{"field": column, "op": "eq", "value": "k5"}
 	list := f.liveList(t, "Every K5", definition)
 

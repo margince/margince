@@ -402,28 +402,19 @@ export const PrivacyTabPhone: Story = {
   render: tab("privacy", privacyRoutes),
 };
 
-// The Maintenance entry's danger zone: the ONE control on this screen that
-// destroys an installation's data, so it is gated twice — the literal admin role
-// AND the switch a deployment arms — and it is one ROW now, with the verb in the
-// right column beside what it does. The whole card is still absent on either
-// gate: an action-only surface holds no fact a reader could misread as "zero".
-export const MaintenanceDangerZone: Story = {
-  name: "Maintenance — danger zone",
-  render: tab("maintenance", {
+// The reset page's danger zone: the one control that destroys an
+// installation's data, gated on the grant and on the switch a deployment arms.
+export const ResetDangerZone: Story = {
+  name: "Reset data — danger zone",
+  render: tab("reset", {
     "GET /me": () =>
       jsonResponse({
         ...meFixture({
           roles: ["admin"],
-          allow: { embedding_reindex: ["read", "update"] },
+          allow: { system_reset: ["delete"] },
         }),
         workspace_name: "Acme Inc",
         data_reset_available: true,
-      }),
-    "GET /admin/job-health": () =>
-      jsonResponse({
-        generated_at: "2026-08-13T09:30:00Z",
-        kinds: [],
-        recent_failures: [],
       }),
   }),
 };

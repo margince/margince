@@ -215,7 +215,7 @@ func TestALinkThatPinnedNoQuestionStillRecordsTheGrant(t *testing.T) {
 }
 
 // A German link records the German question, filled with the purpose's stored
-// label. The page shows that same sentence (frontend/src/screens/confirm.test.tsx),
+// label. The page shows that same sentence (frontend/src/features/privacy/confirm.test.tsx),
 // so what the proof says the subject read is what they read.
 func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
 	c := setupConsent(t)

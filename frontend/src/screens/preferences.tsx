@@ -5,9 +5,9 @@ import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { SaveBar } from "../design-system/savebar";
+import { PublicPage } from "../features/privacy/publicpage";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { PreferenceRow } from "./preferencerow";
 import {
@@ -21,7 +21,6 @@ import {
   toChoices,
 } from "./preferences.logic";
 import { type ChoiceOutcome, PendingConfirmations } from "./preferencespending";
-import { PublicPage } from "./publicpage";
 import "./preferences.css";
 
 // The public, anonymous email preference center (G-6, B-E11.32): the page a

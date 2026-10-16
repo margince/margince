@@ -99,7 +99,7 @@ func RegisterImportTools(r *Registry, imports Imports) {
 // `lead` and `contact` are BOTH here and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
 // business already knows lands as contacts. Neither skips the identity ladder.
-var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact, importObjectDeal}
+var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact, importObjectDeal, importObjectActivity}
 
 // importObjectEnumJSON is importObjectEnum as the JSON array a tool schema's enum takes.
 func importObjectEnumJSON() string { return `["` + strings.Join(importObjectEnum, `","`) + `"]` }
@@ -108,10 +108,11 @@ func importObjectEnumJSON() string { return `["` + strings.Join(importObjectEnum
 // ImportObject enum, and the tool's schema is built from them so the two
 // cannot drift.
 const (
-	importObjectCompany = "company"
-	importObjectLead    = "lead"
-	importObjectContact = "contact"
-	importObjectDeal    = "deal"
+	importObjectCompany  = "company"
+	importObjectLead     = "lead"
+	importObjectContact  = "contact"
+	importObjectDeal     = "deal"
+	importObjectActivity = "activity"
 )
 
 // maxImportCSVBytes caps the pasted file.

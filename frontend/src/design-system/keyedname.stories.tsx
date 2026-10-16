@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { DataTable } from "./datatable";
-import { KeyedName } from "./keyedname";
+import { KeyCode, KeyedName } from "./keyedname";
 
 const meta = {
   title: "Components/Text and data display/Keyed name",
@@ -25,6 +25,17 @@ export const KeyWithoutName: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findAllByText("nightly_batch")).toHaveLength(1);
+  },
+};
+
+/** `KeyCode`: the key alone under a field, said as a key. */
+export const KeyUnderAField: Story = {
+  render: (args) => <KeyCode code={args.code} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const key = await canvas.findByText("cheap_cloud");
+    await expect(key.tagName).toBe("CODE");
+    await expect(key.parentElement).toHaveTextContent("Key: cheap_cloud");
   },
 };
 
