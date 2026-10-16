@@ -99,6 +99,8 @@ var unsurfaced = []string{"consent.authorization_modes", "deals.stage_autopilot_
 
 // censusValues are boot values for the stored settings that declare no
 // usable default. Every other stored setting is set to its own default.
+//
+// gatekit:fixture boot values a test environment sets, not reasons
 var censusValues = map[string]string{
 	"installation.name":                      "Census GmbH",
 	"installation.country":                   "zk",
