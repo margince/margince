@@ -460,7 +460,7 @@ func (e *QueryTooBroadError) Unwrap() error { return e.Err }
 // FieldFault names `q`, because `q` is what the reader can change.
 func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 	return "q", "query_too_broad", "this search matched too much of the workspace to rank in time — " +
-		"add another word, or narrow it with types"
+		"add another word, or narrow it by record type"
 }
 
 func knownEntity(t string) bool {

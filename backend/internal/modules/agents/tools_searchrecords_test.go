@@ -60,7 +60,7 @@ func searchedPage(t *testing.T, raw json.RawMessage) SearchRecordsResult {
 func TestASearchWithoutWordsIsSentToListRecords(t *testing.T) {
 	engine := &rankingProbe{}
 	tool := searchRecordsOver(nil, engine)
-	for _, args := range []string{`{"q":""}`, `{"q":"   ","record_type":"deal"}`} {
+	for _, args := range []string{`{"q":""}`, `{"q":"   ","record_type":"deal"}`, `{"q":" ?! "}`} {
 		_, err := tool.Handle(searchReader("deal"), json.RawMessage(args))
 		badArgs, ok := errors.AsType[*BadArgsError](err)
 		if !ok || badArgs.Field != "q" || !strings.Contains(badArgs.Error(), "list_records") {

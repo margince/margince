@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -182,10 +183,10 @@ func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 }
 
 // query turns the arguments into one engine query. It refuses a search with no
-// words. It refuses a named type the caller may not read, which the engine would
+// letter or digit, which holds no word to match. It refuses a named type the caller may not read, which the engine would
 // drop in silence. The registry holds the type enum.
 func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error) {
-	if strings.TrimSpace(a.Q) == "" {
+	if !strings.ContainsFunc(a.Q, func(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }) {
 		return RecordSearchQuery{}, &BadArgsError{Field: "q", Cause: errors.New(
 			"`q` takes the words to search for; list_records lists records without words")}
 	}

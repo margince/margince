@@ -56,3 +56,13 @@ func TestAQueryWithTooManyWordsIsRefusedBeforeItRuns(t *testing.T) {
 		t.Fatalf("a %d-word query answered %v, want a refusal of q naming the limit %d", maxQueryWords+1, err, maxQueryWords)
 	}
 }
+
+// The refusal reaches both doors, so it names neither door's argument.
+func TestTheTooBroadRefusalNamesNoDoorsArgument(t *testing.T) {
+	_, _, message := (&QueryTooBroadError{Err: errors.New("canceled")}).FieldFault()
+	for _, argument := range []string{"types", "record_types"} {
+		if strings.Contains(message, argument) {
+			t.Errorf("the refusal %q names %q, which only one door takes", message, argument)
+		}
+	}
+}
