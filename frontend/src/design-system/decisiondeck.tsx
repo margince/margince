@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SegmentedControl } from "./atoms";
-import type {
-  DecisionApproval,
-  DecisionCardLabels,
-  DecisionCompactWords,
-  DecisionDisplay,
-} from "./decisioncard";
 import {
   DeckQueue,
   DeckSurface,
@@ -18,14 +12,12 @@ import {
 import { DeckItemCard } from "./decisiondeck.item";
 import { DeckStack, type Leaving, useDeckDrag } from "./decisiondeck.stack";
 import {
-  type DecisionSharedFacts,
   deckKeyHandler,
   itemLapsed,
   verdictSends,
 } from "./decisiondeck.verdicts";
 import { usePrefersReducedMotion } from "./motion";
-import type { SectionDetail, SectionState } from "./surfacestate";
-import type { ConfidenceLevel, Provenance } from "./trust";
+import type { SectionState } from "./surfacestate";
 import "./decisiondeck.css";
 
 // DecisionDeck — the morning queue of staged proposals, answered one at a time.
@@ -50,119 +42,22 @@ import "./decisiondeck.css";
 // send is one question with ten recipients behind an expander, never ten
 // questions. Rendered flat it would be ten answers to something the reader
 // decided once.
+import type {
+  DecisionDeckItem,
+  DecisionDeckProps,
+  DeckVerdict,
+  StagedDecision,
+} from "./decisiondeckprops";
 
-/** What a contact can say about one staged proposal. */
-export type DeckVerdict = "accept" | "edit" | "reject" | "skip";
-
-// The input vocabulary and the bundle readings live beside the deck rather than
-// in it (decisiondeck.verdicts.ts), and are reached THROUGH it: a caller talking
-// to the deck should not have to know which of its files answered.
-export {
-  type DecisionSharedFacts,
-  dragVerdict,
-  keyVerdict,
-  sharedFacts,
-} from "./decisiondeck.verdicts";
-
-/**
- * One thing to decide: a proposal staged on its own, or one act's bundle, which
- * the API decides as a unit and which therefore reads as a single decision.
- *
- * A bundle of ONE is deliberately not a bundle — the caller emits it as a
- * `single`. A group holding a single child hides the very question it exists to
- * present, and the reader gains nothing for the click.
- */
-export type DecisionDeckItem =
-  | Readonly<{ kind: "single"; id: string; approval: DecisionApproval }>
-  | Readonly<{
-      kind: "bundle";
-      id: string;
-      bundleId: string;
-      members: readonly DecisionApproval[];
-    }>;
-
-/** A verdict waiting in the tray, and what it answers. */
-export type StagedDecision = Readonly<{
-  id: string;
-  verdict: DeckVerdict;
-}>;
-
-/**
- * The chips the CALLER owns on one card's meta line, plus its trust readings.
- * A function rather than a field on the item, because each of these needs
- * something this tier does not hold: the agent tier map, the kind catalog, the
- * signed-in reader's own id, the locale the countdown is spelled in.
- */
-export type DecisionDeckChips = Readonly<{
-  meta?: ReactNode;
-  aside?: ReactNode;
-  provenance?: Provenance;
-  confidence?: ConfidenceLevel;
-  /**
-   * What THIS kind of proposal shows, in the reader's language. It rides here
-   * for the same reason the chips do: resolving it needs the kind catalogue and
-   * the locale, and this tier holds neither.
-   */
-  display?: readonly DecisionDisplay[];
-}>;
-
-/**
- * The words. All of them the caller's, for the reason `DecisionCardLabels` gives:
- * a primitive that carried its own copy would be the second author of the
- * product's vocabulary.
- *
- * The three counted ones are functions rather than templates because plural
- * agreement is a property of the language, not of this component — a caller
- * hands them the count and gets its own catalog's answer back.
- */
-export type DecisionDeckLabels = Readonly<{
-  /** Forwarded to every card. */
-  card: DecisionCardLabels;
-  /** Names the deck as a region, and names its keyboard surface. */
-  deckLabel: string;
-  /** The `[Deck | List]` toggle: the group's name and its two options. */
-  viewLabel: string;
-  viewDeck: string;
-  viewList: string;
-  /** The keyboard legend. Drawn, not hidden: a shortcut nobody is told about is
-   *  a shortcut for whoever wrote it.
-   *
-   *  It must say that the arrows STAGE. This deck is stage-then-commit — an
-   *  arrow moves a verdict into the tray and nothing leaves until `commit`
-   *  runs — so a legend reading "→ accept" beside "Enter send" invites the
-   *  reading where the arrow already sent it and Enter is a separate act. A
-   *  reader who believes that presses four arrows, walks away, and has sent
-   *  nothing. */
-  keys: string;
-  /** How many cards are still behind the live one. */
-  behind: (count: number) => string;
-  /** The tray and its controls, split as the COMMIT splits it — `StagingTray`. */
-  staged: (count: number) => string;
-  skipped: (count: number) => string;
-  edited: (count: number) => string;
-  commit: string;
-  commitNothingToSend: string;
-  unstage: string;
-  /** The earned moment: the queue is clear, this many were decided, at this time. */
-  clearedTitle: string;
-  cleared: (count: number) => string;
-  clearedTime: (atMs: number) => string;
-  /** There was never anything here — the ONE sentence allowed to say that. */
-  empty: string;
-  /** A bundle, as one decision with N members behind it. */
-  bundleSummary: (members: number) => string;
-  bundleMembers: (members: number) => string;
-  /**
-   * The two words that turn the LIST form's rows dense, and the switch that
-   * turns it on: a surface that has them gets one line per decision with the
-   * proposal behind a popover, and one that has not keeps the full row.
-   *
-   * Words rather than a flag for the reason `DecisionCompactWords` states: the
-   * dense line hides the proposal behind one control and folds two verdicts
-   * into another, and neither is reachable unnamed.
-   */
-  compactRow?: DecisionCompactWords;
-}>;
+export type {
+  DecisionDeckChips,
+  DecisionDeckItem,
+  DecisionDeckLabels,
+  DecisionDeckProps,
+  DeckFrame,
+  DeckVerdict,
+  StagedDecision,
+} from "./decisiondeckprops";
 
 // What the deck's body is in, given what the caller knows and what the deck can
 // see. A caller's non-ready state wins — a failed read is a fact the deck has no
@@ -180,120 +75,6 @@ function bodyState(
 }
 
 type DeckView = "deck" | "list";
-
-export type DecisionDeckProps = Readonly<{
-  /** Everything still waiting. The deck reorders nothing. */
-  items: readonly DecisionDeckItem[];
-  /**
-   * The instant deadlines are judged against, in wall-clock ms. A prop for the
-   * reason `DecisionCard` takes one: a story pins it, and a test does not depend
-   * on what time the suite happens to run at.
-   */
-  now: number;
-  labels: DecisionDeckLabels;
-  /**
-   * The deck's own heading, drawn on the same row as the Deck/List toggle. A
-   * prop rather than a caller-side `SectionHeader` because a title above the
-   * deck and a toggle inside it are two rows saying one thing, and the row the
-   * toggle belongs to is the one that names what it switches. Omitted, the deck
-   * carries no heading and the toggle keeps the row to itself.
-   */
-  title?: string;
-  /** Fired ONCE, on the explicit commit, with exactly what is in the tray. */
-  onCommit: (staged: readonly StagedDecision[]) => void;
-  /**
-   * Told when a CONTACT puts a verdict in the tray or takes it back out, for a
-   * caller keeping a count of its own. Neither sends anything.
-   *
-   * User-triggered only, and deliberately: the tray also empties on its own —
-   * when a committed item leaves the queue, and when a verdict that sends
-   * nothing is committed — and reporting those as un-staging would tell a caller
-   * that somebody changed their mind about a decision that has already gone.
-   */
-  onStage?: (staged: StagedDecision) => void;
-  onUnstage?: (staged: StagedDecision) => void;
-  /**
-   * Whether the commit the caller was handed is still in flight, or came back
-   * refused. A refused commit KEEPS the tray: the verdicts are the only copy of
-   * a contact's answers, and clearing them on failure would ask for all of them
-   * again.
-   */
-  commitState?: "idle" | "sending" | "failed";
-  /** What the caller says about the read behind these items. `ready` defers to
-   *  what the deck can see; anything else wins. */
-  state?: SectionState;
-  /** What the four honest-but-not-ready states need in order to be actionable —
-   *  above all a retry, without which `failed` is `unavailable` with extra
-   *  words. */
-  stateDetail?: SectionDetail;
-  // Required, like the SurfaceState it forwards to: this deck cannot know what
-  // its caller is waiting for, and a generic line is what the required prop
-  // one level down exists to prevent.
-  loadingLabel: string;
-  /** Under the tray: what a refused commit said, in the caller's words. */
-  notice?: ReactNode;
-  chips?: (
-    approval: DecisionApproval,
-    shared: DecisionSharedFacts,
-  ) => DecisionDeckChips;
-  /**
-   * Lets the SURFACE draw the deck's chrome: it is handed the view toggle and
-   * the deck's whole content, and decides where each goes.
-   *
-   * For a deck that lives inside a `Panel`, where the toggle belongs in the
-   * header band beside the panel's title — one band, one interval, the same
-   * shape as every other zone on the page. Without this the deck draws its own
-   * heading row, and a panel around it would then carry two headings: the
-   * panel's title and a second one inside its body.
-   *
-   * It does NOT lift the deck's state. The toggle is the deck's own control,
-   * already wired; the frame only says where it stands.
-   */
-  frame?: (parts: DeckFrame) => ReactNode;
-  /**
-   * How many rows the LIST form draws before it defers to the fuller surface.
-   *
-   * Absent draws them all, which is right for a deck that IS its page. A capped
-   * list is for a page that OPENS with the decisions and goes on to something
-   * else: three questions a reader can answer on the way past, and the rest
-   * where every one of them is. The cap never reaches the deck form — a stack
-   * hides what is behind the live card anyway, and capping it would leave a
-   * count that says "4 more behind" over a pile that holds three.
-   */
-  listCap?: number;
-  /** The way to the rest, drawn under a list the cap cut. */
-  listRest?: (hidden: number) => ReactNode;
-}>;
-
-/**
- * The deck's parts, for a surface that frames them.
- *
- * Two rather than a slot per piece: the toggle is what a header band wants and
- * everything else — the body, the tray, the notice — is one block that belongs
- * under it in that order. A frame that could reorder those would be a second
- * opinion about what a reader reads first.
- */
-export type DeckFrame = Readonly<{
-  /** The Deck/List control, or null while there is nothing to switch between. */
-  toggle: ReactNode;
-  /**
-   * The queue itself — and NULL while every card is staged, which is a state
-   * with nothing to draw rather than an empty one: the tray below says what is
-   * true, and a body reading "nothing is waiting on you" over a reader's own
-   * staged verdicts would contradict it.
-   */
-  content: ReactNode;
-  /**
-   * The staging tray, and anything a refused commit said under it. Null while
-   * the tray is empty and the last commit was clean.
-   *
-   * Apart from `content` because of WHERE it goes: it belongs to the whole zone
-   * rather than to the queue, so a surface puts it in its own band — `Panel`'s
-   * foot, edge to edge with a hairline over it — and the tray then stops
-   * drawing the standalone box it needs when it floats at the foot of a page.
-   */
-  tray: ReactNode;
-}>;
 
 export function DecisionDeck({
   items,
@@ -544,3 +325,13 @@ export function DecisionDeck({
     />
   );
 }
+
+// The input vocabulary and the bundle readings live beside the deck, in
+// decisiondeck.verdicts.ts, and are reached through it. A caller talking to the
+// deck should not have to know which of its files answered.
+export {
+  type DecisionSharedFacts,
+  dragVerdict,
+  keyVerdict,
+  sharedFacts,
+} from "./decisiondeck.verdicts";
