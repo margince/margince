@@ -54,12 +54,13 @@ function lockSentence(
             { count, base: lock.base_currency },
           );
     default:
+      lock.reason satisfies never;
       return undefined;
   }
 }
 
-// The Base currency row and the field inside the edit dialog both read this,
-// so the two cannot word the lock differently.
+// Every surface that shows the base currency reads the lock through this, so
+// no two of them word it differently.
 export function useCurrencyNote(): (settings: InstallationSettings) => string {
   const t = useT();
   const plural = usePlural();

@@ -36,3 +36,14 @@ func TestTheProseStatesTheFactsItWasWordedFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestALockWithNoKnownReasonHasNoProse(t *testing.T) {
+	for name, lock := range map[string]Lock{
+		"the zero lock":  {},
+		"a stray reason": {Reason: "ledger_sealed", Count: 2, BaseCurrency: "EUR"},
+	} {
+		if prose := lock.Prose(); prose != "" {
+			t.Errorf("%s: Prose() = %q, want none rather than another reason's sentence", name, prose)
+		}
+	}
+}

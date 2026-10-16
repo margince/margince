@@ -49,16 +49,19 @@ func TestTheLockFactsTravelExactlyWithTheirProse(t *testing.T) {
 }
 
 // The reasons are read from the kernel's source. A reason added there without
-// a contract value fails here, not on a client that cannot render it.
+// a contract value or prose fails here, not on a client.
 func TestEveryLockReasonIsOneTheContractPublishes(t *testing.T) {
 	reasons := lockReasonsDeclared(t)
 	if len(reasons) == 0 {
 		t.Fatal("no currencylock.Reason constants found; the census read the wrong package")
 	}
 	for _, reason := range reasons {
-		wire := toBaseCurrencyLock(currencylock.Lock{Reason: reason, Count: 1}).Reason
-		if !wire.Valid() {
+		lock := currencylock.Lock{Reason: reason, Count: 1}
+		if !toBaseCurrencyLock(lock).Reason.Valid() {
 			t.Errorf("currencylock reason %q is not a BaseCurrencyLock.reason value in crm.yaml", reason)
+		}
+		if lock.Prose() == "" {
+			t.Errorf("currencylock reason %q has no prose, so an older client would be sent an empty reason", reason)
 		}
 	}
 }

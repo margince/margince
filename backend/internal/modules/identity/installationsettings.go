@@ -246,8 +246,8 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}, nil
 }
 
-// baseCurrencyLock asks the probe the write enforces. Unwired, both read and
-// write answer "changeable", and the fitness gate catches the wiring.
+// baseCurrencyLock asks the probe LockBaseCurrencyWith also gave the write.
+// The settings-catalog gate holds that both slots are wired.
 func (s *InstallationSettingsStore) baseCurrencyLock(ctx context.Context) (currencylock.Lock, bool, error) {
 	if baseCurrencyLockProbe == nil {
 		return currencylock.Lock{}, false, nil

@@ -28,19 +28,24 @@ type Lock struct {
 	BaseCurrency string
 }
 
-// Prose is the English reason older clients render as it stands.
+// Prose is the English reason older clients render as it stands. A reason
+// this package does not name, the zero Lock included, has no prose.
 func (l Lock) Prose() string {
-	if l.Reason == RatesFrozen {
+	switch l.Reason {
+	case RatesFrozen:
 		return fmt.Sprintf(
 			"%d record(s) — closed deals, sent offers, mirrored invoices, contracts and commission entries — "+
 				"have already frozen a conversion rate against it, so changing the base would re-mean "+
 				"every roll-up built on them", l.Count)
+	case RateSheet:
+		base := l.BaseCurrency
+		if base == "" {
+			base = "the base it was set to"
+		}
+		return fmt.Sprintf(
+			"%d rate(s) in the sheet convert into %s and cannot be restated against another base; "+
+				"clear the rate sheet first", l.Count, base)
+	default:
+		return ""
 	}
-	base := l.BaseCurrency
-	if base == "" {
-		base = "the base it was set to"
-	}
-	return fmt.Sprintf(
-		"%d rate(s) in the sheet convert into %s and cannot be restated against another base; "+
-			"clear the rate sheet first", l.Count, base)
 }
