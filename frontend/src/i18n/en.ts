@@ -10369,6 +10369,8 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkSvgNotDrawable":
+    "This SVG has parts that cannot be drawn, such as embedded images. Export it as a PNG.",
   "settings.companyMarkSvgText":
     "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
   "settings.companyMarkAddWide": "Add wide logo",
