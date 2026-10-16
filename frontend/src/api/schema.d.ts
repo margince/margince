@@ -1761,6 +1761,8 @@ export interface paths {
         /**
          * Create a company.
          * @description Domains are normalized/lowercased and unique per workspace (409 on collision).
+         *     A `parent_company_id` that names no company the caller can read answers `404`, the same
+         *     for a missing company and for one hidden by row scope.
          */
         post: operations["createCompany"];
         delete?: never;
@@ -3500,7 +3502,10 @@ export interface paths {
          * Create a deal.
          * @description Amount is integer minor-units + ISO-4217 currency (no float money). The stage
          *     must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
-         *     never to a raw lead (ADR-0008 §5).
+         *     never to a raw lead (ADR-0008 §5). An id in the body that names nothing the caller can
+         *     read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
+         *     `404`, the same for a missing record and for one hidden by row scope, so the answer does
+         *     not say which exists.
          */
         post: operations["createDeal"];
         delete?: never;
@@ -4831,7 +4836,9 @@ export interface paths {
          *     transport, so the same message reaching two connected mailboxes is one activity —
          *     and that reserved value is refused here (422): only a connector, or this system's
          *     own send, may claim a mail identity. An activity may link to >1 entity
-         *     (contact and deal). `log_activity` is 🟢 (reversible).
+         *     (contact and deal). A link that names a record the caller cannot read answers `404`,
+         *     the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
+         *     (reversible).
          */
         post: operations["logActivity"];
         delete?: never;
@@ -6615,7 +6622,8 @@ export interface paths {
          * @description With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
          *     `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
-         *     for idempotent re-import.
+         *     for idempotent re-import. A `project_id` that names no project the caller can read
+         *     answers `404`, the same for a missing project and for one hidden by row scope.
          */
         post: operations["createLead"];
         delete?: never;
@@ -16114,8 +16122,8 @@ export interface paths {
         /**
          * Open a thread as the seller's side — a question on a document, or a room-level update.
          * @description The first comment is the body. Refused once the room can no longer reach a
-         *     buyer (closed, expired, archived). A document thread is pinned to the
-         *     document's current version.
+         *     buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
+         *     document thread is pinned to the document's current version.
          */
         post: operations["openDealRoomThread"];
         delete?: never;
@@ -16139,7 +16147,9 @@ export interface paths {
         put?: never;
         /**
          * Reply in a thread as the seller's side.
-         * @description Refused on a resolved thread and in a room that can no longer reach a buyer.
+         * @description Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
+         *     thread instead) and in a room that can no longer reach a buyer
+         *     (`409 deal_room_content_not_editable`).
          */
         post: operations["replyDealRoomThread"];
         delete?: never;
@@ -46737,7 +46747,12 @@ export interface components {
          *     create (API-CC-6). **Scope:** the key is unique within
          *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
          *     returns the original status + body. Reusing the same key with a *different* request body
-         *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+         *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+         *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+         *     means the first request under the key is still running, carries `Retry-After`, and
+         *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+         *     request under the key failed after it had started, so check whether it took effect before
+         *     retrying under a new key.
          *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
          *     answer lost": without it the blind retry answers `409 version_skew`, because the first
          *     attempt already bumped the version.
@@ -47824,7 +47839,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -47880,7 +47900,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -48031,7 +48056,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -48089,7 +48119,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49043,7 +49078,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49113,7 +49153,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49192,7 +49237,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49445,7 +49495,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49479,6 +49534,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description A domain already maps to another company. */
             409: {
                 headers: {
@@ -49558,7 +49614,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49615,7 +49676,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -49673,7 +49739,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -51004,7 +51075,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -51531,7 +51607,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -51581,7 +51662,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -51750,7 +51836,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -51784,6 +51875,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Validation error (e.g. stage not in pipeline, lost without lost_reason). */
             422: {
                 headers: {
@@ -51956,7 +52048,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52012,7 +52109,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52235,7 +52337,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52326,7 +52433,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52431,7 +52543,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52489,7 +52606,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52602,7 +52724,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52669,7 +52796,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52836,7 +52968,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -52885,7 +53022,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53137,7 +53279,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53241,7 +53388,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53315,7 +53467,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53369,7 +53526,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53444,7 +53606,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53548,7 +53715,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53633,7 +53805,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53785,7 +53962,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -53898,7 +54080,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54045,7 +54232,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54186,7 +54378,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54229,6 +54426,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -54299,7 +54497,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54538,7 +54741,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54670,7 +54878,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54716,7 +54929,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -54996,7 +55214,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -55069,7 +55292,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -55439,7 +55667,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -55742,7 +55975,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -56007,7 +56245,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -56198,7 +56441,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -56341,7 +56589,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -57442,7 +57695,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -57476,6 +57734,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description A live lead already owns this email. */
             409: {
                 headers: {
@@ -57721,7 +57980,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -57776,7 +58040,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -57940,7 +58209,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58005,7 +58279,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58254,7 +58533,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58323,7 +58607,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58393,7 +58682,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58438,7 +58732,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58508,7 +58807,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58553,7 +58857,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58627,7 +58936,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58700,7 +59014,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58770,7 +59089,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -58847,7 +59171,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -62054,7 +62383,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -62456,7 +62790,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -62600,7 +62939,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65994,7 +66338,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66239,7 +66588,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66393,6 +66747,9 @@ export interface operations {
                     "application/json": components["schemas"]["NoticeCase"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     assignNoticeCase: {
@@ -66419,6 +66776,10 @@ export interface operations {
                     "application/json": components["schemas"]["NoticeCase"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     excuseNoticeCase: {
@@ -66445,6 +66806,10 @@ export interface operations {
                     "application/json": components["schemas"]["NoticeCase"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCommunicationReviews: {
@@ -66614,6 +66979,10 @@ export interface operations {
                     "application/json": components["schemas"]["DataSubjectRequest"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -66708,6 +67077,10 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listAuditLog: {
@@ -66995,7 +67368,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67074,7 +67452,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67158,7 +67541,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67210,7 +67598,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67429,7 +67822,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67482,7 +67880,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67574,7 +67977,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67628,7 +68036,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67817,7 +68230,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -68283,7 +68701,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69318,7 +69741,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69487,7 +69915,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69679,7 +70112,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69722,7 +70160,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69844,7 +70287,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69897,7 +70345,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69942,7 +70395,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70052,7 +70510,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70154,7 +70617,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70347,7 +70815,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70980,6 +71453,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -71012,6 +71486,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -71040,6 +71515,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listOfferTemplates: {
@@ -71106,7 +71582,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71195,7 +71676,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71415,7 +71901,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71644,7 +72135,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71768,7 +72264,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71812,7 +72313,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71951,7 +72457,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72054,7 +72565,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72109,7 +72625,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74750,7 +75271,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75910,7 +76436,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75979,7 +76510,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -76044,7 +76580,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -76111,7 +76652,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -76184,7 +76730,12 @@ export interface operations {
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
                  *     returns the original status + body. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running, carries `Retry-After`, and
+                 *     resending the same request returns its answer; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.

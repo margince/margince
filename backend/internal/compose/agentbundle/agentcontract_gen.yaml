@@ -544,6 +544,8 @@ paths:
       summary: Create a company.
       description: |-
         Domains are normalized/lowercased and unique per workspace (409 on collision).
+        A `parent_company_id` that names no company the caller can read answers `404`, the same
+        for a missing company and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -571,6 +573,7 @@ paths:
               schema: {$ref: '#/components/schemas/Company'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A domain already maps to another company.
           content:
@@ -1394,7 +1397,10 @@ paths:
       description: |-
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
-        never to a raw lead.
+        never to a raw lead. An id in the body that names nothing the caller can
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`, among others) answers
+        `404`, the same for a missing record and for one hidden by row scope, so the answer does
+        not say which exists.
 
         Needs the passport permission Change records.
 
@@ -1426,6 +1432,7 @@ paths:
               schema: {$ref: '#/components/schemas/Deal'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422':
           description: Validation error (e.g. stage not in pipeline, lost without lost_reason).
           content:
@@ -2529,7 +2536,9 @@ paths:
         transport, so the same message reaching two connected mailboxes is one activity —
         and that reserved value is refused here (422): only a connector, or this system's
         own send, may claim a mail identity. An activity may link to >1 entity
-        (contact and deal). `log_activity` is (reversible).
+        (contact and deal). A link that names a record the caller cannot read answers `404`,
+        the same for a missing record and for one hidden by row scope. `log_activity` is
+        (reversible).
 
         Needs the passport permission Change records.
 
@@ -2556,6 +2565,7 @@ paths:
               schema: {$ref: '#/components/schemas/Activity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}:
     parameters:
@@ -3336,7 +3346,8 @@ paths:
         With name + email returns 201 + stable UUID; round-trips on GET.
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
-        for idempotent re-import.
+        for idempotent re-import. A `project_id` that names no project the caller can read
+        answers `404`, the same for a missing project and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -3368,6 +3379,7 @@ paths:
               schema: {$ref: '#/components/schemas/Lead'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: A live lead already owns this email.
           content:
@@ -6386,8 +6398,8 @@ paths:
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |-
         The first comment is the body. Refused once the room can no longer reach a
-        buyer (closed, expired, archived). A document thread is pinned to the
-        document's current version.
+        buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
+        document thread is pinned to the document's current version.
 
         Needs the passport permission Change records.
 
@@ -6406,6 +6418,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deal-rooms/{id}/threads/{threadId}/comments:
     parameters:
@@ -6419,7 +6432,9 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: |-
-        Refused on a resolved thread and in a room that can no longer reach a buyer.
+        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
+        thread instead) and in a room that can no longer reach a buyer
+        (`409 deal_room_content_not_editable`).
 
         Needs the passport permission Change records.
 
@@ -6438,6 +6453,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /offer-templates:
     get:
@@ -7966,7 +7982,12 @@ components:
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
         returns the original status + body. Reusing the same key with a *different* request body
-        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+        do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+        means the first request under the key is still running, carries `Retry-After`, and
+        resending the same request returns its answer; `idempotency_key_failed` means an earlier
+        request under the key failed after it had started, so check whether it took effect before
+        retrying under a new key.
         **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
         answer lost": without it the blind retry answers `409 version_skew`, because the first
         attempt already bumped the version.

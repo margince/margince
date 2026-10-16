@@ -38,6 +38,7 @@ package ratelimit
 
 import (
 	"log/slog"
+	"math"
 	"sync/atomic"
 	"time"
 )
@@ -118,6 +119,17 @@ type Limiter struct {
 	// on every request, and a line per request is a second outage on the log
 	// pipeline at exactly the moment an operator needs it readable.
 	mutedUntil atomic.Int64
+}
+
+// Limit is how many events one key may spend in a window.
+func (l *Limiter) Limit() int { return l.limit }
+
+// RetryAfterSeconds is how long a refused caller waits for a fresh window. The
+// windows are fixed and the store does not report where a key's window began, so
+// this is the whole span: waiting it out always clears the ceiling, and it never
+// overstates the wait by more than the time already spent in the window.
+func (l *Limiter) RetryAfterSeconds() int {
+	return int(math.Ceil(l.window.Seconds()))
 }
 
 // Allow records one attempt for key and reports whether it is within the

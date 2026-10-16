@@ -263,8 +263,12 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 		// credential just died produces a handful, so real traffic never
 		// approaches it — while a grinder now meets a bound at 600 lookups a
 		// minute instead of none.
-		if lim.preAuth.Blocked(failures) || lim.preAuthPeer.Blocked(peer) {
-			httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		if lim.preAuth.Blocked(failures) {
+			writeMCPRefused(w, r, lim.preAuth)
+			return
+		}
+		if lim.preAuthPeer.Blocked(peer) {
+			writeMCPRefused(w, r, lim.preAuthPeer)
 			return
 		}
 		if credential != "" {
@@ -272,12 +276,12 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			// it gets its own tighter bucket. It is metered here, ahead of the
 			// transport's method dispatch, so what bounds the churn is whether
 			// the request was made — not what the transport answers it with.
-			bucket := lim.perPassport
+			bucket, what := lim.perPassport, "tool calls on this credential"
 			if r.Method == http.MethodGet {
-				bucket = lim.streams
+				bucket, what = lim.streams, "stream opens on this credential"
 			}
 			if !bucket.Allow(credential) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				writeMCPRateLimited(w, r, bucket, what)
 				return
 			}
 		}
@@ -290,6 +294,31 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			lim.preAuth.Record(failures)
 			lim.preAuthPeer.Record(peer)
 		}
+	})
+}
+
+// writeMCPRateLimited answers an MCP edge ceiling with the ceiling named and the
+// wait a client needs, so it does not have to guess a backoff.
+func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter, what string) {
+	wait := bucket.RetryAfterSeconds()
+	writeMCPWait(w, r, wait, fmt.Sprintf("too many %s: the limit is %d every %d seconds. Wait %d seconds and send the request again.",
+		what, bucket.Limit(), wait, wait))
+}
+
+// writeMCPRefused answers a pre-auth ceiling without claiming a count: those
+// limiters fail closed, so an unreachable shared store trips them too, and a
+// count the caller never reached would be false.
+func writeMCPRefused(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter) {
+	wait := bucket.RetryAfterSeconds()
+	writeMCPWait(w, r, wait, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))
+}
+
+func writeMCPWait(w http.ResponseWriter, r *http.Request, wait int, detail string) {
+	httperr.Write(w, r, &httperr.DetailedError{
+		Status:            http.StatusTooManyRequests,
+		Code:              "rate_limited",
+		Detail:            detail,
+		RetryAfterSeconds: wait,
 	})
 }
 
