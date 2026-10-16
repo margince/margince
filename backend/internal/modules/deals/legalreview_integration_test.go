@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -214,7 +215,7 @@ func TestSwitchingLegalReviewOffReleasesTheGate(t *testing.T) {
 
 func switchLegalReview(t *testing.T, e *reviewEnv, on bool) {
 	t.Helper()
-	store := dealsConfig(t, e.pool)
+	store := configtest.StoredOver(t, e.pool, ConfigSettings())
 	admin := humanWith(e.ws, e.admin, map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}})
 	if err := config.Save(admin, store, LegalReviewEnabled, on); err != nil {
 		t.Fatalf("switching legal review to %v: %v", on, err)

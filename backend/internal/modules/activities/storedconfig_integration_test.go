@@ -6,36 +6,14 @@
 package activities
 
 import (
-	"io/fs"
 	"net/http"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// followUpConfig is this module's configuration as a program loads it from
-// environ alone, reading and saving through pool.
-func followUpConfig(t *testing.T, pool *pgxpool.Pool, environ ...string) *config.Config {
-	t.Helper()
-	reg, err := config.NewRegistry(ConfigSettings())
-	if err != nil {
-		t.Fatalf("the activities settings do not register: %v", err)
-	}
-	cfg, err := config.Load(reg, config.Sources{
-		Environ:  environ,
-		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
-	})
-	if err != nil {
-		t.Fatalf("loading the activities settings from %v: %v", environ, err)
-	}
-	return cfg.WithDatabase(settings.New(pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
-}
 
 // A window the environment sets is the one the worklist applies, over a saved
 // row. The endpoint refuses any other value before it judges it. Not parallel:
@@ -45,14 +23,12 @@ func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
 	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	admin := e.settingsAdmin(true)
-	if code, _ := followUpCall(admin, t, NewHandlers(db).WithSettings(followUpConfig(t, e.pool)),
+	if code, _ := followUpCall(admin, t, NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings())),
 		http.MethodPatch, `{"follow_up_after_days": 9}`); code != http.StatusOK {
 		t.Fatalf("saving 9 days with nothing set at boot = %d, want 200", code)
 	}
-	locked := followUpConfig(t, e.pool, "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=4")
-	before := config.Bound()
-	config.Bind(locked)
-	t.Cleanup(func() { config.Bind(before) })
+	locked := configtest.StoredOver(t, e.pool, ConfigSettings(), "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=4")
+	configtest.Bind(t, locked)
 
 	_, window, err := NewStore(db).AwaitingReplies(admin, clocktest.Now(t))
 	if err != nil || window != 4 {

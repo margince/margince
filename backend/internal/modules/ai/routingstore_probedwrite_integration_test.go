@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,7 +57,7 @@ func TestALocationMoveIsProbedAgainstABindingWrittenWhileGoogleWasAsked(t *testi
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)
-	st, cfg := storedOver(t, e.pool)
+	st, cfg := configtest.StoredOverWith(t, e.pool, Definitions(), ConfigSettings())
 	store := &RoutingStore{settings: st, cfg: cfg, keys: allCloudKeys(t)}
 	if err := config.Save(ctx, cfg, Routing, vertexRouting("europe-west4").canonical()); err != nil {
 		t.Fatalf("seeding the binding: %v", err)
@@ -99,7 +100,7 @@ func TestALocationMoveOutpacedOnEveryRoundIsRefusedAsStale(t *testing.T) {
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)
-	st, cfg := storedOver(t, e.pool)
+	st, cfg := configtest.StoredOverWith(t, e.pool, Definitions(), ConfigSettings())
 	store := &RoutingStore{settings: st, cfg: cfg, keys: allCloudKeys(t)}
 	if err := config.Save(ctx, cfg, Routing, vertexRouting("europe-west4").canonical()); err != nil {
 		t.Fatalf("seeding the binding: %v", err)

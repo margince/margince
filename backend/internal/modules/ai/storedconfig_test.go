@@ -10,43 +10,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
-
-// aiConfig is this package's settings as a program loads them from environ
-// alone: no flag, and no file beside the test.
-func aiConfig(t *testing.T, environ ...string) *config.Config {
-	t.Helper()
-	reg, err := config.NewRegistry(ConfigSettings())
-	if err != nil {
-		t.Fatalf("the ai settings do not register: %v", err)
-	}
-	cfg, err := config.Load(reg, config.Sources{
-		Environ:  environ,
-		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
-	})
-	if err != nil {
-		t.Fatalf("loading the ai settings from %v: %v", environ, err)
-	}
-	return cfg
-}
-
-// storedOver is the settings store a program builds over pool, and the
-// configuration that reads and saves through it under environ's locks.
-func storedOver(t *testing.T, pool *pgxpool.Pool, environ ...string) (*settings.Store, *config.Config) {
-	t.Helper()
-	cfg := aiConfig(t, environ...)
-	store := settings.New(pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...))
-	return store, cfg.WithDatabase(store)
-}
 
 // storedRow is the row a program registers for key.
 func storedRow(t *testing.T, key string) settings.Definition {
 	t.Helper()
-	for _, def := range aiConfig(t).StoredDefinitions() {
+	for _, def := range configtest.MustLoadEnv(t, ConfigSettings()).StoredDefinitions() {
 		if def.Key() == key {
 			return def
 		}
@@ -87,7 +59,7 @@ func TestABootValueASaveWouldRefuseFailsTheLoad(t *testing.T) {
 
 // Each value a save accepts is accepted from the environment too, and locks.
 func TestABootValueASaveWouldAcceptLocksItsSetting(t *testing.T) {
-	cfg := aiConfig(t,
+	cfg := configtest.MustLoadEnv(t, ConfigSettings(),
 		`MARGINCE_AI_BUDGET={"tokens_per_full_user":5,"company_monthly_tokens":null}`,
 		`MARGINCE_AI_TASK_OVERRIDES={"capture_confidentiality_verdict":{"decision_timeout_ms":30000,"attempt_timeout_ms":10000}}`,
 		`MARGINCE_AI_PRICE_SYNC={"auto_sync":false}`,

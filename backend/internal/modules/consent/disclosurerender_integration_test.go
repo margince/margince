@@ -25,7 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,8 +77,7 @@ func settingsStoreFor(t *testing.T) *config.Config {
 	// genuinely stopped — a goroutine still holding a connection would go on
 	// writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	cfg := consentConfig(t)
-	return cfg.WithDatabase(settings.New(pool, settings.NewRegistry(cfg.StoredDefinitions()...)))
+	return configtest.StoredOver(t, pool, ConfigSettings())
 }
 
 // stateParticulars saves what the installation says about itself.

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
 // A boot-set binding is kept or refused as it stands, so neither a resend nor
@@ -24,7 +25,7 @@ func TestALockedVertexBindingIsNeverProbed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st, cfg := storedOver(t, e.pool, "MARGINCE_AI_ROUTING_BINDING="+string(boot))
+	st, cfg := configtest.StoredOverWith(t, e.pool, Definitions(), ConfigSettings(), "MARGINCE_AI_ROUTING_BINDING="+string(boot))
 	selector, google := googleAt(t, servesEverything(t))
 	store := &RoutingStore{settings: st, cfg: cfg, keys: allCloudKeys(t), selectBrain: selector}
 

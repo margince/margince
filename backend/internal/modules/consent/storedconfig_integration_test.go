@@ -8,6 +8,7 @@ package consent
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
@@ -19,7 +20,7 @@ func TestBootSetParticularsAreWhatAMessageDiscloses(t *testing.T) {
 	store := inJurisdiction(t, e, "zb",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity})
 	stateParticulars(t, e, ControllerParticulars{LegalName: "Saved GmbH", PostalAddress: "Savedweg 2"})
-	bindForTest(t, consentConfig(t,
+	configtest.Bind(t, configtest.MustLoadEnv(t, ConfigSettings(),
 		`MARGINCE_CONSENT_CONTROLLER_PARTICULARS={"LegalName":"Boot GmbH","PostalAddress":"Bootweg 1"}`))
 
 	lines := disclosures(t, e, store, commsauthz.CategoryReplyToInbound)

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -68,7 +69,7 @@ func TestAnAdminSetsTheFollowUpWindowTheWorklistApplies(t *testing.T) {
 	e := setupLoad(t)
 	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
-	h := NewHandlers(db).WithSettings(followUpConfig(t, e.pool))
+	h := NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings()))
 	admin := e.settingsAdmin(true)
 
 	if code, days := followUpCall(admin, t, h, http.MethodGet, ""); code != http.StatusOK || days != 2 {
@@ -95,7 +96,7 @@ func TestAnUpdateOnlySeatSeesItsChangeConfirmed(t *testing.T) {
 	e := setupLoad(t)
 	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
-	h := NewHandlers(db).WithSettings(followUpConfig(t, e.pool))
+	h := NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings()))
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{

@@ -8,7 +8,6 @@ package capture_test
 import (
 	"context"
 	"errors"
-	"io/fs"
 	"testing"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,20 +25,7 @@ import (
 // it loads environ, read and saved through pool.
 func captureSettingsStore(t *testing.T, pool *pgxpool.Pool, environ ...string) (*capture.SettingsStore, *config.Config) {
 	t.Helper()
-	reg, err := config.NewRegistry(capture.ConfigSettings())
-	if err != nil {
-		t.Fatalf("capture's settings do not register: %v", err)
-	}
-	cfg, err := config.Load(reg, config.Sources{
-		Environ:  environ,
-		ReadFile: func(string) ([]byte, error) { return nil, fs.ErrNotExist },
-	})
-	if err != nil {
-		t.Fatalf("loading capture's settings from %v: %v", environ, err)
-	}
-	defs := append(capture.Definitions(), cfg.StoredDefinitions()...)
-	store := settings.New(pool, settings.NewRegistry(defs...))
-	cfg = cfg.WithDatabase(store)
+	store, cfg := configtest.StoredOverWith(t, pool, capture.Definitions(), capture.ConfigSettings(), environ...)
 	return capture.NewSettings(store, cfg), cfg
 }
 
@@ -64,9 +50,7 @@ func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
 	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	store, cfg := captureSettingsStore(t, pool, "MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS=1800")
-	before := config.Bound()
-	config.Bind(cfg)
-	t.Cleanup(func() { config.Bind(before) })
+	configtest.Bind(t, cfg)
 
 	other := 600
 	if _, err := store.Update(captureAdmin(ctx, ws), capture.SettingsPatch{MailSyncIntervalSeconds: &other}); !errors.Is(err, apperrors.ErrConflict) {
