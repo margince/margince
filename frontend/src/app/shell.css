@@ -1052,12 +1052,8 @@
 }
 
 /* ===== the section switcher (phone width only) =====
- * At phone width the sidebar is a bar of four destinations, so a section's own
- * entries are reached from here. Rendered only at that width (app/shell.tsx
- * asks lib/viewport.ts), and it keeps the 44px target WCAG 2.5.5 asks of a
- * phone control. Bare, like the title it is: the chevron beside the name is the
- * affordance, and the negative inset keeps the name on the page gutter while
- * the pressed ground reaches past it. */
+ * The 44px target WCAG 2.5.5 asks of a phone control; the negative inset keeps
+ * the name on the page gutter while the pressed ground reaches past it. */
 .pageswitch {
   display: inline-flex;
   align-items: flex-start;

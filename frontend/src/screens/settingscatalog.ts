@@ -13,6 +13,7 @@
 // page asks for without running it.
 
 import type { components } from "../api/schema";
+import type { MessageKey } from "../i18n/en";
 // `accessgrants`, not `capability`: the latter's other exports are hooks that
 // reach `useMe` and through it the design system's stylesheets, so importing it
 // pulls the component graph into anything that only wants to read this table.
@@ -135,6 +136,10 @@ export const SETTINGS_GROUPS = [
   "governance",
 ] as const;
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];
+
+/** The words naming a settings group, wherever a group is shown. */
+export const groupHeadingKey = (group: SettingsGroupId): MessageKey =>
+  `settings.group.${group}`;
 
 /**
  * Whose state a setting changes, in the reader's words.
@@ -805,9 +810,8 @@ export function visibleSettingsPages(
  * The two halves partition `visibleSettingsPages` — every page a reader may
  * open is in exactly one of them, and neither is a permission: a page in
  * `looksUp` opens normally, answers its address and appears in search. The
- * split decides PROMINENCE. The rail carries `acts`, so the furniture somebody
- * navigates every day is the work they can do; the settings home carries both,
- * under headings that say which is which.
+ * split decides prominence: the rail carries `acts`, and the settings home
+ * lists both, with a lock on each page in `looksUp`.
  *
  * Splitting here keeps the rail, the home, the read-only banner and the cards
  * that defer to it agreeing on whether this contact can act.

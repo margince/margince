@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { SettingRow } from "../design-system/settingrow";
@@ -113,6 +113,7 @@ function NameSettingRow({
   // null means "not editing" — the row shows the stored name until the reader
   // types, so a `/me` refetch cannot overwrite what they are in the middle of.
   const [draft, setDraft] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
   const shown = draft ?? stored;
   const save = useMutation({
     mutationFn: send,
@@ -132,6 +133,10 @@ function NameSettingRow({
   const tooLong = [...trimmed].length > maxRunes;
   const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
   const savable = dirty && (emptyAllowed || trimmed !== "") && !tooLong;
+  // The Save button leaves once the name lands, so focus goes back to the
+  // field rather than to the page.
+  const commit = () =>
+    save.mutate(trimmed, { onSettled: () => input.current?.focus() });
   return (
     <SettingRow
       label={label}
@@ -143,6 +148,7 @@ function NameSettingRow({
             {(field) => (
               <TextInput
                 {...field}
+                ref={input}
                 aria-labelledby={row["aria-labelledby"]}
                 aria-describedby={[field, row]
                   .map((owner) => owner["aria-describedby"])
@@ -153,8 +159,14 @@ function NameSettingRow({
                 // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && savable) {
-                    save.mutate(trimmed);
+                  // An Enter that ends an IME composition picks the word.
+                  if (
+                    event.key === "Enter" &&
+                    !event.nativeEvent.isComposing &&
+                    savable &&
+                    !save.isPending
+                  ) {
+                    commit();
                   }
                 }}
               />
@@ -166,7 +178,7 @@ function NameSettingRow({
                 variant="primary"
                 disabled={!savable}
                 pending={save.isPending}
-                onClick={() => save.mutate(trimmed)}
+                onClick={commit}
               >
                 {saveLabel}
               </Button>

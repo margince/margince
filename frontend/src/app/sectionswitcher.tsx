@@ -59,11 +59,8 @@ function SectionPickGroup({
 }
 
 /**
- * The way between a section's pages at phone width, where the sidebar is a bar
- * of four destinations. It names the current entry and opens the section's list.
- *
- * The list's links claim the current page; the button opens them and is not
- * a page.
+ * A section's pages at phone width, where the sidebar is a bar of four places.
+ * The links claim the current page; the button only opens them.
  */
 export function SectionSwitcher({
   section,

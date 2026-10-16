@@ -8923,6 +8923,7 @@ export const vi = {
   "settings.home.reach.team": "Hồ sơ của nhóm bạn",
   "settings.home.reach.all": "Mọi hồ sơ trong công ty",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
+  "settings.home.accessLoading": "Đang tải quyền truy cập…",
   "settings.boundary.deniedTitle": "Không có quyền truy cập trang cài đặt này",
   "settings.boundary.deniedBody":
     "Trang này có tồn tại, nhưng vai trò hiện tại không có quyền mở. Sao chép địa chỉ để hỏi một thành viên có quyền truy cập.",
@@ -9509,7 +9510,8 @@ export const vi = {
   "settings.voice.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi Voice DNA.",
   "settings.voice.emptyBody":
-    "Thêm văn mẫu để dựng Voice DNA. Voice DNA chỉ học từ những gì đã thêm, và lần dựng đầu mất khoảng một phút.",
+    "Thêm văn mẫu để dựng Voice DNA. Voice DNA chỉ bạn xem được và chỉ học từ những gì đã thêm. Lần dựng đầu mất khoảng một phút.",
+  "settings.voice.privacy": "Chỉ bạn xem được Voice DNA này.",
   "settings.voice.status.collecting": "Đang thu thập",
   "settings.voice.status.stale": "Cần dựng lại",
   "settings.voice.bandThin": "mỏng",

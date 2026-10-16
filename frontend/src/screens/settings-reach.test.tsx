@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsRail } from "../app/shell";
@@ -155,6 +155,19 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     ).toBeTruthy();
   });
 
+  it("names the lock in a tip when the row takes focus", async () => {
+    vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
+    renderHome();
+    await expectSnapshotResolved();
+    const row = await screen.findByRole("link", {
+      name: new RegExp(`^${labelOf("pipelines")}`),
+    });
+    act(() => row.focus());
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      translate("en", "settings.home.readOnly"),
+    );
+  });
+
   // The control: a page this rep can change carries no marker.
   it("marks no page the reader can change", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
@@ -233,5 +246,18 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     expect(
       screen.queryByText(translate("en", "settings.readOnlyPage")),
     ).toBeNull();
+  });
+});
+
+describe("the settings home's access panel", () => {
+  it("says it is loading while the session is still out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderHome();
+    expect(
+      await screen.findByText(translate("en", "settings.home.accessLoading")),
+    ).toBeTruthy();
   });
 });

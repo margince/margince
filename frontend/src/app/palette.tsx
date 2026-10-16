@@ -58,6 +58,25 @@ export type Command = {
   route?: Route;
 };
 
+/** The commands whose label, subtitle or one keyword holds the whole query. */
+export function matchingCommands(
+  commands: readonly Command[],
+  query: string,
+): readonly Command[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return commands;
+  }
+  return commands.filter(
+    (command) =>
+      command.label.toLowerCase().includes(needle) ||
+      (command.subtitle ?? "").toLowerCase().includes(needle) ||
+      (command.keywords ?? []).some((word) =>
+        word.toLowerCase().includes(needle),
+      ),
+  );
+}
+
 export function useBuiltinCommands(): Command[] {
   const t = useT();
   const { locale } = useLocale();
@@ -207,20 +226,10 @@ export function CommandPalette({
     }
   }, [open]);
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return commands;
-    }
-    return commands.filter(
-      (command) =>
-        command.label.toLowerCase().includes(needle) ||
-        (command.subtitle ?? "").toLowerCase().includes(needle) ||
-        (command.keywords ?? []).some((word) =>
-          word.toLowerCase().includes(needle),
-        ),
-    );
-  }, [commands, query]);
+  const filtered = useMemo(
+    () => matchingCommands(commands, query),
+    [commands, query],
+  );
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,

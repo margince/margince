@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Bell, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Button, TextInput } from "./atoms";
 import { ProviderMark } from "./provider-mark";
@@ -86,6 +86,9 @@ export const EveryAxis: Story = {
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
             <RefreshCw aria-hidden />
+          </Button>
+          <Button variant="bare" iconOnly aria-label="Notifications">
+            <Bell aria-hidden />
           </Button>
         </div>
       </div>

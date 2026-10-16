@@ -540,6 +540,34 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
   });
 });
 
+describe("the bare variant is the .iconbtn control, not a copy of it", () => {
+  it("emits the class the stylesheet keys on", () => {
+    render(
+      <Button variant="bare" iconOnly aria-label="Notifications">
+        <svg aria-hidden />
+      </Button>,
+    );
+    expect(classesOf("Notifications")).toContain("btn-bare");
+  });
+
+  // A rule for one of the two and not the other is where their looks part.
+  // A `.btn:` rule already reaches the variant through the button box.
+  it("shares every rule with .iconbtn, and outranks the button box", () => {
+    const sheet = stripComments(readFileSync(join(here, "base.css"), "utf8"));
+    const selectors = [...sheet.matchAll(/([^{}]*)\{[^}]*\}/g)]
+      .map(([, selector]) => selector.replace(/\s+/g, " ").trim())
+      .filter((selector) => /\.iconbtn|\.btn-bare/.test(selector));
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      if (/(^|, )\.btn:/.test(selector)) {
+        continue;
+      }
+      expect(selector).toContain(".iconbtn");
+      expect(selector).toContain(".btn.btn-bare");
+    }
+  });
+});
+
 // The control owns its icon's size, and this is the fitness function for it.
 //
 // A "New deal" button shipped its Plus at 14px while `.btn svg` said

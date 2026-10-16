@@ -58,7 +58,15 @@ export function AgentToolsCard() {
   const reachable = (tool: AgentTool) =>
     !scopeId || tool.required_scope == null || granted.has(tool.required_scope);
   const all = tools.data?.data ?? [];
-  const shown = matching(all, query);
+  const needle = query.trim().toLowerCase();
+  const shown = matching(all, needle);
+  // A row found by its key alone shows the key, or nothing on it says why.
+  const keyHit = (tool: AgentTool) =>
+    needle !== "" &&
+    tool.name.toLowerCase().includes(needle) &&
+    ![tool.title, tool.description].some((text) =>
+      text.toLowerCase().includes(needle),
+    );
 
   return (
     <Panel title={t("tools.title")}>
@@ -99,10 +107,11 @@ export function AgentToolsCard() {
       <PanelBody>
         {shown.length > 0 ? (
           <ToolGroups
-            key={query.trim() === "" ? "browse" : "search"}
+            key={needle === "" ? "browse" : "search"}
             groups={groupByScope(shown)}
-            searching={query.trim() !== ""}
+            searching={needle !== ""}
             reachable={reachable}
+            keyHit={keyHit}
           />
         ) : (
           <QueryStates query={tools} pendingLabel={t("tools.title")}>
@@ -118,9 +127,8 @@ export function AgentToolsCard() {
 
 function matching(
   tools: readonly AgentTool[],
-  query: string,
+  needle: string,
 ): readonly AgentTool[] {
-  const needle = query.trim().toLowerCase();
   if (needle === "") {
     return tools;
   }
@@ -170,10 +178,12 @@ function ToolGroups({
   groups,
   searching,
   reachable,
+  keyHit,
 }: Readonly<{
   groups: readonly ToolGroup[];
   searching: boolean;
   reachable: (tool: AgentTool) => boolean;
+  keyHit: (tool: AgentTool) => boolean;
 }>) {
   const t = useT();
   const sections = groups.map((group) => {
@@ -192,7 +202,12 @@ function ToolGroups({
           </span>
         }
       >
-        <ToolTable label={label} tools={group.tools} reachable={reachable} />
+        <ToolTable
+          label={label}
+          tools={group.tools}
+          reachable={reachable}
+          keyHit={keyHit}
+        />
       </Disclosure>
     );
   });
@@ -203,10 +218,12 @@ function ToolTable({
   label,
   tools,
   reachable,
+  keyHit,
 }: Readonly<{
   label: string;
   tools: readonly AgentTool[];
   reachable: (tool: AgentTool) => boolean;
+  keyHit: (tool: AgentTool) => boolean;
 }>) {
   const t = useT();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -253,6 +270,11 @@ function ToolTable({
               </span>
             )}
           </span>
+          {!open.has(tool.name) && keyHit(tool) && (
+            <span className="tools-key">
+              <KeyCode code={tool.name} />
+            </span>
+          )}
         </CellStack>
       ),
     },

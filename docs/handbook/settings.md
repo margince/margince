@@ -70,13 +70,13 @@ AI and governance settings in Margince each have one page.
 
 ### Why can't I see a settings page?
 A Margince settings page you cannot see is one your role's permissions do not open, or one your installation has not turned on.
-1. Type its name into **Search settings**, or press ⌘K (Ctrl+K). A page you may only read is still listed on **Overview**, marked **Read-only**.
+1. Type its name into **Search settings**, or press ⌘K (Ctrl+K). A page you may only read is still listed on **Overview**, marked with a lock.
 2. If you open its address and it is not yours, the page says so and keeps the address. You can send that address to an administrator.
 
 Only an administrator can change your role or permissions, in **Members**.
 Also called: settings missing, no access to settings, greyed out.
 
-The settings list down the side shows what you can change. A page where every control is closed to you is not in it, but you can still open it. Overview lists everything you can open, in the same groups as the side list, with **You** first. A page you can read and not change is marked **Read-only** there, and says so once at its top: "Your role cannot change these settings."
+The settings list down the side shows what you can change. A page where every control is closed to you is not in it, but you can still open it. Overview lists everything you can open, in the same groups as the side list, with **You** first. A page you can read and not change has a lock there, which says **Read-only** when you point at it. The page says so once at its top: "Your role cannot change these settings."
 
 ## Whose settings are you changing?
 
@@ -127,7 +127,7 @@ To offer sign-in with Google or Microsoft in Margince, store that company's app 
 1. Under **Google app** or **Microsoft app**, open **Authorized redirect URIs**. Add each address to the app at Google or Microsoft.
 2. Enter the **Client ID** and **Client secret**, then choose **Store app**.
 3. Under **Sign-in methods**, check that **Continue with Google** or **Continue with Microsoft** is on.
-Until the app is stored, the row says it is not on the sign-in screen yet.
+A provider that is on but has no app yet says it is not on the sign-in screen.
 Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
@@ -194,7 +194,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
 - **Products and offers**: what this company sells, and the templates an offer
   starts from.
 
-Every seat can read all of them. All but two are for Admin and Ops to change, so for most seats they appear on **Overview** marked **Read-only**. Two stay in a sales seat's side list. A sales seat writes **Products and offers**, and a seller opens **Outcome reviews** to read the questions.
+Every seat can read all of them. All but two are for Admin and Ops to change, so for most seats they appear on **Overview** marked with a lock. Two stay in a sales seat's side list. A sales seat writes **Products and offers**, and a seller opens **Outcome reviews** to read the questions.
 
 ## AI usage, AI models, AI call log, and Automations
 

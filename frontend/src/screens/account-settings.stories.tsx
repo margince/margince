@@ -2,18 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { AccountSettings } from "./account-settings";
 
-function story(roles: string[]) {
+function story(roles: string[], routes: RouteMap = {}) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ roles })),
+      ...routes,
     });
     return (
       <StoryProviders>
@@ -48,4 +51,29 @@ export const RepPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(["rep"]),
+};
+
+// A refused save keeps the page in the picked language and says the save failed.
+export const LanguageRefused: Story = {
+  render: story(["rep"], {
+    "PUT /me/locale": () =>
+      new Response(JSON.stringify({ status: 503, code: "unavailable" }), {
+        status: 503,
+        headers: { "content-type": "application/problem+json" },
+      }),
+  }),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("combobox", { name: "Language" }),
+    );
+    await userEvent.click(await page.findByRole("option", { name: "Deutsch" }));
+    await page.findByRole("alert");
+  },
+};
+
+export const LanguageRefusedPhone: Story = {
+  ...LanguageRefused,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

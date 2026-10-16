@@ -211,10 +211,17 @@ describe("AgentToolsCard", () => {
 
     await user.type(search, "Send");
     expect(shown()).toEqual(["send_email"]);
+    expect(screen.queryByText("send_email")).toBeNull();
 
     await user.clear(search);
     await user.type(search, "search_rec");
     expect(shown()).toEqual(["search_records"]);
+    // The row shows the key it matched on, though it is still closed.
+    expect(
+      within(screen.getByTestId("tool-search_records")).getByText(
+        "search_records",
+      ).tagName,
+    ).toBe("CODE");
 
     await user.clear(search);
     await user.type(search, "real recipient");

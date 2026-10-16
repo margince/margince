@@ -249,3 +249,46 @@ it("pauses a public link without overwriting meeting settings saved in another t
     calendar_id: "another-calendar",
   });
 });
+
+it("keeps focus on Accept bookings after its answer comes back", async () => {
+  const user = userEvent.setup();
+  let latest = { ...bookingProfile, enabled: true };
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(latest),
+    "PUT /scheduling/profile": () => {
+      latest = { ...latest, enabled: false };
+      return jsonResponse(latest);
+    },
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  const accept = await screen.findByRole("switch", { name: "Accept bookings" });
+  await user.click(accept);
+  await waitFor(() =>
+    expect(accept.getAttribute("aria-checked")).toBe("false"),
+  );
+  expect(document.activeElement).toBe(accept);
+});
+
+it("names the link once on its own page, in the heading and not again on the card", async () => {
+  installFetchStub({
+    "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
+    "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+  });
+  render(
+    <StoryProviders>
+      <BookingProfileScreen />
+    </StoryProviders>,
+  );
+  await screen.findByRole("switch", { name: "Accept bookings" });
+  expect(
+    screen.getAllByRole("heading", { name: "My booking link" }),
+  ).toHaveLength(1);
+  expect(screen.getAllByText(/One link for your email signature/)).toHaveLength(
+    1,
+  );
+});

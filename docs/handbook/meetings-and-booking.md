@@ -73,7 +73,7 @@ Margince checks your hours, notice and live calendar again each time a guest boo
 
 The Margince booking page shows your name from **Settings → Account**, and your company name and logo from the company profile. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace booking link** stops the old public address, but guests keep the private links that let them change their own meetings.
+Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace link** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 
 Every calendar invitation carries a private link that lets the guest move or cancel the meeting. Anyone who can read the full invitation, such as a colleague who manages your calendar, can use that link too. Think about who can read your calendar.
 

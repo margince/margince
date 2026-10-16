@@ -52,7 +52,11 @@ export function MeetingSettings() {
     return (
       <>
         <WorkingHoursCard />
-        <Callout kind="standing" title={t("scheduling.bookRefused")} />
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("scheduling.bookRefused")}
+        />
       </>
     );
   return <MeetingPreferences />;

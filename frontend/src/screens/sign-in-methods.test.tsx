@@ -38,6 +38,7 @@ function jsonResponse(body: unknown, status = 200) {
 const fullSignInGrants: GrantSpec = {
   installation_settings: ["read", "update"],
   authentication_policy: ["read", "update"],
+  capture_settings: ["read"],
 };
 
 function mount(
@@ -52,6 +53,7 @@ function mount(
   } = {},
 ) {
   const calls: unknown[] = [];
+  const appReads: string[] = [];
   const refusing = { writes: false, reads: false };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
@@ -81,6 +83,7 @@ function mount(
       return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
     }
     if (request.url.includes("/installation/oauth-apps/")) {
+      appReads.push(request.url);
       return server.app
         ? jsonResponse({
             provider: "google",
@@ -108,7 +111,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<SignInMethodsCard />, { wrapper: Wrap });
-  return { calls, refusing, qc };
+  return { calls, appReads, refusing, qc };
 }
 
 describe("the sign-in methods card", () => {
@@ -189,6 +192,41 @@ describe("the sign-in methods card", () => {
     ).toBeTruthy();
     const control = screen.getByRole("switch", { name: /google/i });
     expect(control.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("keeps the plain hint on a switched-off provider and asks for no app", async () => {
+    const { appReads } = mount(
+      [
+        { key: "google", label: "Google", enabled: false },
+        { key: "microsoft", label: "Microsoft", enabled: true },
+      ],
+      {},
+      undefined,
+      { app: "none" },
+    );
+    expect(
+      await screen.findByText(/not on the sign-in screen yet/i),
+    ).toBeTruthy();
+    expect(screen.getAllByText(/not on the sign-in screen yet/i)).toHaveLength(
+      1,
+    );
+    expect(appReads.some((url) => url.endsWith("/google"))).toBe(false);
+  });
+
+  it("asks for no app when the reader may not read capture settings", async () => {
+    const { appReads } = mount(
+      [{ key: "google", label: "Google", enabled: true }],
+      {},
+      {
+        installation_settings: ["read", "update"],
+        authentication_policy: ["read", "update"],
+      },
+      { app: "none" },
+    );
+    expect(
+      await screen.findByText(/shows this provider on the sign-in screen/i),
+    ).toBeTruthy();
+    expect(appReads).toEqual([]);
   });
 
   it("describes a provider whose app is stored as shown on sign-in", async () => {

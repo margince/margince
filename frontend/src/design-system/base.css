@@ -72,8 +72,8 @@
   padding: 0 var(--controlPaddingX);
   min-block-size: var(--controlHeight);
   /* The one resting layer, so a verb has a top side. Every variant carries a
-     fill — the ghost's is the pane — except `link`, which is text and takes it
-     straight back off below. */
+     fill — the ghost's is the pane — except `link`, which is text, and `bare`;
+     both take it straight back off below. */
   box-shadow: var(--shadow-rest);
   /* Named properties, not `all`. `transition: <time>` alone is the shorthand
      for `transition-property: all`, which put min-block-size, padding, width
@@ -363,7 +363,8 @@
 .btn:active:not(:disabled, [aria-disabled="true"]) {
   box-shadow: none;
 }
-.iconbtn:active:not(:disabled, [aria-disabled="true"]) {
+.iconbtn:active:not(:disabled, [aria-disabled="true"]),
+.btn.btn-bare:active:not(:disabled, [aria-disabled="true"]) {
   background: var(--bgInset);
 }
 
@@ -518,8 +519,10 @@ a:not([class]):focus-visible {
    the verb a row offers where a full button would be louder than the row it
    sits in. It lived only as one panel's own rule in the shell's sheet, so the
    four call sites outside that panel rendered a preflight-reset native button:
-   no padding, no hover, no focus ring, and no hit target at all. */
-.iconbtn {
+   no padding, no hover, no focus ring, and no hit target at all.
+   `Button variant="bare"` wears these rules too, so the two cannot drift. */
+.iconbtn,
+.btn.btn-bare {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -529,6 +532,7 @@ a:not([class]):focus-visible {
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
+  box-shadow: none;
   cursor: pointer;
   transition:
     background-color var(--dur-state) var(--ease-out),
@@ -538,20 +542,24 @@ a:not([class]):focus-visible {
     filter var(--dur-state) var(--ease-out),
     transform var(--dur-move) var(--ease-spring);
 }
-.iconbtn svg {
+.iconbtn svg,
+.btn.btn-bare svg {
   inline-size: var(--controlIcon);
   block-size: var(--controlIcon);
   flex: none;
 }
-.iconbtn:hover {
+.iconbtn:hover,
+.btn.btn-bare:hover {
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.iconbtn:focus-visible {
+.iconbtn:focus-visible,
+.btn.btn-bare:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-.iconbtn:disabled {
+.iconbtn:disabled,
+.btn.btn-bare:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

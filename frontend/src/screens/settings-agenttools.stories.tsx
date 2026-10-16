@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
 import {
+  expectFoldedRowsUnderSummary,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -92,11 +93,28 @@ export const ToolsDark: Story = {
   render: story(),
 };
 
+// Folded, each row's first cell starts where its group's summary starts.
 export const ToolsPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(),
-  play: openSendGroup,
+  play: async (context) => {
+    await openSendGroup(context);
+    await expectFoldedRowsUnderSummary(context.canvasElement);
+  },
+};
+
+// Found by its key alone, a closed row shows the key it matched on.
+export const SearchByKey: Story = {
+  render: story(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("searchbox", { name: "Search tools" }),
+      "search_rec",
+    );
+    await canvas.findByText("search_records");
+  },
 };
 
 // A row opened: its whole description, governance clause included, and the key.

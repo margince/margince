@@ -295,3 +295,26 @@ export async function expectNameAndValueApart(canvasElement: HTMLElement) {
     await expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
   }
 }
+
+// Real Chromium only. A datatable.css selector spells out the DOM chain that
+// insets a folded row under a Disclosure; a changed chain shows here.
+export async function expectFoldedRowsUnderSummary(canvasElement: HTMLElement) {
+  await within(canvasElement).findAllByRole("table");
+  const rows = canvasElement.querySelectorAll(
+    ".disclosure .table-scroll-fold > .table > tbody > tr",
+  );
+  await expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    const cell = row.querySelector("td");
+    const summary = row.closest(".disclosure")?.querySelector("summary");
+    if (!cell || !summary) {
+      throw new Error("a folded row has no cell, or no summary above it");
+    }
+    await expect(
+      Math.round(
+        cell.getBoundingClientRect().left -
+          summary.getBoundingClientRect().left,
+      ),
+    ).toBe(0);
+  }
+}

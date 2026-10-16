@@ -416,7 +416,6 @@ it("uses the link's current enabled state without losing an edited title", async
   const title = await screen.findByLabelText("Meeting title");
   await user.clear(title);
   await user.type(title, "Keep this draft");
-  // The panel remounts on each answer, so the switch is found again each time.
   const accept = () => screen.getByRole("switch", { name: "Accept bookings" });
   await user.click(accept());
   await waitFor(() =>
@@ -622,4 +621,12 @@ it("says the booking page has no company to show rather than leaving the fact bl
   });
   const term = await screen.findByText("Company name and logo");
   expect(term.nextElementSibling?.textContent).toContain("Not set");
+});
+
+it("tells a seat that may not book why, as an alert beside its hours", async () => {
+  mount({ "GET /me": meRoute({}) });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "An administrator must grant permission to book meetings.",
+  );
+  expect(screen.queryByRole("switch", { name: "Accept bookings" })).toBeNull();
 });

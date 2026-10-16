@@ -49,7 +49,7 @@ export function BookingProfileScreen({
       <QueryGate pendingLabel={t("common.loading")} query={query}>
         {(profile) => (
           <ProfileForm
-            key={JSON.stringify(profile)}
+            key={profile.public_url ?? ""}
             profile={profile}
             embedded={embedded}
           />
@@ -88,13 +88,14 @@ function ProfileForm({
   });
   return (
     <div className="book-form">
-      {/* The lead card on its own page; one panel among several in settings. */}
+      {/* On its own page the heading above names this lead card; in settings
+          it is one titled panel among several. */}
       <Panel
-        title={t("scheduling.myLink")}
+        title={embedded ? t("scheduling.myLink") : undefined}
         tone={embedded ? undefined : "accent"}
       >
         <PanelBody className="form-stack">
-          <PanelIntro>{t("scheduling.linkIntro")}</PanelIntro>
+          {embedded && <PanelIntro>{t("scheduling.linkIntro")}</PanelIntro>}
           {profile.enabled &&
             !calendar.connections.isPending &&
             !calendar.ready && (

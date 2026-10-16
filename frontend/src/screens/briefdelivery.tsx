@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -22,9 +23,7 @@ export function BriefDeliveryPanel() {
   const t = useT();
   return (
     <Panel title={t("delivery.panelTitle")}>
-      <SettingList bleed="settings">
-        <BriefDeliveryRows />
-      </SettingList>
+      <BriefDeliveryRows />
     </Panel>
   );
 }
@@ -70,45 +69,54 @@ function BriefDeliveryRows() {
 
   return (
     <>
-      <SettingRow
-        label={t("delivery.morningLabel")}
-        description={t("delivery.morningHelp")}
-        testId="delivery-morning"
-        control={(control) => (
-          <Select
-            {...control}
-            className="settingrow-measure"
-            value={chosen(settings.data?.morning_brief_delivery)}
-            onChange={(next) => {
-              // Narrowed through the same list the options are built from, so
-              // nothing is acted on that the control was never offering.
-              const picked = CHOICES.find((option) => option === next);
-              if (picked) {
-                save.mutate({ morning_brief_delivery: picked });
-              }
-            }}
-            options={options}
-          />
-        )}
-      />
-      <SettingRow
-        label={t("delivery.weeklyLabel")}
-        description={t("delivery.weeklyHelp")}
-        testId="delivery-weekly"
-        control={(control) => (
-          <Select
-            {...control}
-            className="settingrow-measure"
-            value={chosen(settings.data?.weekly_delivery)}
-            onChange={(next) => {
-              const picked = CHOICES.find((option) => option === next);
-              if (picked) {
-                save.mutate({ weekly_delivery: picked });
-              }
-            }}
-            options={options}
-          />
-        )}
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("delivery.morningLabel")}
+          description={t("delivery.morningHelp")}
+          testId="delivery-morning"
+          control={(control) => (
+            <Select
+              {...control}
+              className="settingrow-measure"
+              value={chosen(settings.data?.morning_brief_delivery)}
+              onChange={(next) => {
+                // Narrowed through the same list the options are built from, so
+                // nothing is acted on that the control was never offering.
+                const picked = CHOICES.find((option) => option === next);
+                if (picked) {
+                  save.mutate({ morning_brief_delivery: picked });
+                }
+              }}
+              options={options}
+            />
+          )}
+        />
+        <SettingRow
+          label={t("delivery.weeklyLabel")}
+          description={t("delivery.weeklyHelp")}
+          testId="delivery-weekly"
+          control={(control) => (
+            <Select
+              {...control}
+              className="settingrow-measure"
+              value={chosen(settings.data?.weekly_delivery)}
+              onChange={(next) => {
+                const picked = CHOICES.find((option) => option === next);
+                if (picked) {
+                  save.mutate({ weekly_delivery: picked });
+                }
+              }}
+              options={options}
+            />
+          )}
+        />
+      </SettingList>
+      <PanelNotices
+        refused={
+          save.isError
+            ? { title: t("settings.saveFailed"), error: save.error }
+            : undefined
+        }
       />
     </>
   );

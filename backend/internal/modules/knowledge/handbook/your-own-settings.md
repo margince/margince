@@ -26,7 +26,7 @@ Also called: email notifications, turn off emails, alerts, daily digest.
 ## Account
 
 The Account page in Settings has three panels. **Profile** holds who you are,
-your display and greeting names, and how you sign off. **Security** holds your
+your display and greeting names, and your email signature. **Security** holds your
 password and two-step sign-in, and **Sign out**. **Language and appearance**
 holds which language the product uses with you (English, Deutsch or Tiếng
 Việt), and how it looks.
@@ -166,8 +166,9 @@ choose a time and enter their own details; you do not need to pick a contact
 first.
 
 **Preview public page** shows what guests will see. Turning off **Accept
-bookings** stops new bookings without changing the link. **Replace booking link** stops the old link
-working, so update any signatures or pages where you shared it.
+bookings** stops new bookings without changing the link. **Replace link**, then
+**Replace booking link** to confirm, stops the old link working, so update any
+signatures or pages where you shared it.
 
 ### How do I arrange a meeting with a contact?
 Open the **Meetings** tab of the contact and choose **Book a meeting**. Suggest two or three times and check the email before you send it. Or share a personal booking link, or send an invitation for a time you already agreed.

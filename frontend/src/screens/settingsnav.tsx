@@ -10,36 +10,16 @@
 // cost of asking "where does this go" separate from the cost of drawing it, and
 // it is the property settings-imports.test.ts holds.
 
-import {
-  Activity,
-  BadgeCheck,
-  Blocks,
-  BookOpen,
-  Building2,
-  Database,
-  House,
-  KeyRound,
-  type LucideIcon,
-  Mail,
-  Mic,
-  Plug,
-  ShieldCheck,
-  Sparkles,
-  UserRound,
-  UsersRound,
-  Webhook,
-  Wrench,
-} from "lucide-react";
+import { House } from "lucide-react";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
-import type { MessageKey } from "../i18n/en";
 import { unitsForSecretScope } from "../lib/extensions";
 import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
+  groupHeadingKey,
   readsOnly,
   SETTINGS_PAGES,
-  type SettingsGroupId,
   type SettingsPage,
   type SettingsPageId,
   type SettingsReach,
@@ -113,29 +93,27 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // column, the control constrains itself (`.settingrow-measure`, and each
 // surface's own field widths) — that is a property of the control, which knows
 // how wide it wants to be, not of the page, which does not.
-// The two audience groups the rail renders, in order. Beside the register they
-// group, so a group added to one is visible from the other.
 
+// Older addresses resolve through this table, so a saved link still lands.
 export const SETTINGS_TABS = [
-  { id: "account", icon: UserRound, group: "you" },
-  { id: "voice", icon: Mic, group: "you" },
-  { id: "agents", icon: KeyRound, group: "you" },
-  { id: "connections", icon: Plug, group: "you" },
-  { id: "capture-activity", icon: Activity, group: "you" },
-  { id: "general", icon: Building2, group: "admin" },
-  { id: "users", icon: UsersRound, group: "admin" },
-  { id: "integrations", icon: Webhook, group: "admin" },
-  { id: "extensions", icon: Blocks, group: "admin" },
-  { id: "capture", icon: Mail, group: "admin" },
-  { id: "data-model", icon: Database, group: "admin" },
-  { id: "ai", icon: Sparkles, group: "admin" },
-  { id: "knowledge", icon: BookOpen, group: "admin" },
-  { id: "privacy", icon: ShieldCheck, group: "admin" },
-  { id: "license", icon: BadgeCheck, group: "admin" },
-  { id: "maintenance", icon: Wrench, group: "admin" },
+  { id: "account", group: "you" },
+  { id: "voice", group: "you" },
+  { id: "agents", group: "you" },
+  { id: "connections", group: "you" },
+  { id: "capture-activity", group: "you" },
+  { id: "general", group: "admin" },
+  { id: "users", group: "admin" },
+  { id: "integrations", group: "admin" },
+  { id: "extensions", group: "admin" },
+  { id: "capture", group: "admin" },
+  { id: "data-model", group: "admin" },
+  { id: "ai", group: "admin" },
+  { id: "knowledge", group: "admin" },
+  { id: "privacy", group: "admin" },
+  { id: "license", group: "admin" },
+  { id: "maintenance", group: "admin" },
 ] as const satisfies readonly {
   id: string;
-  icon: LucideIcon;
   group: "you" | "admin";
 }[];
 
@@ -235,17 +213,6 @@ export function settingsAddress(tab?: string): Route {
  */
 export const SETTINGS_HOME_ID = "home";
 
-/**
- * The settings level, as data the sidebar can render.
- *
- * The shell asks for this and renders it as the second navigation level; it
- * never learns what a grant is. The two groups are the ones this screen has
- * always had — "You" is per-user work, "Company" is posture an admin
- * curates — and a group with no visible member is dropped rather than printed
- * empty. They are named for the SUBJECT rather than repeating the word the level
- * above them already carries: "Settings / Your settings / …" said it twice in a
- * 200px column.
- */
 /** One rail row for a page, with everything the chrome reads off it. */
 function navEntry(page: SettingsPage): NavLevelEntry {
   return {
@@ -267,15 +234,10 @@ function navEntry(page: SettingsPage): NavLevelEntry {
   };
 }
 
-/** The words naming a settings group, in the rail and on the settings home. */
-export const groupHeadingKey = (group: SettingsGroupId): MessageKey =>
-  `settings.group.${group}`;
-
+/** The settings level as data, so the shell draws it without knowing grants. */
 export function useSettingsSection(route: Route): NavSection {
-  // The rail carries what this reader can act on. A page they may only read
-  // still answers its address, appears in search and is listed on the settings
-  // home, marked read-only. `reach.acts` and `reach.looksUp` partition the
-  // pages `useVisibleSettingsPages` returns, so nothing leaves the product here.
+  // The rail carries what this reader can act on; a read-only page stays
+  // reachable from the settings home and from search.
   const reach = useSettingsReach();
   const pages = reach.acts;
   // Everything this reader may open, rail or not. A page reached from the home

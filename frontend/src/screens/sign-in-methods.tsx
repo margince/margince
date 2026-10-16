@@ -15,7 +15,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useOAuthApp, type Vendor } from "../features/automations/oauth-app";
 import { useT } from "../i18n";
-import { useCanWrite } from "../lib/capability";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { useMyMfa } from "./mfa.queries";
@@ -330,7 +330,7 @@ function isVendor(key: string): key is Vendor {
 }
 
 // A switched-on provider stays off the sign-in screen until its OAuth app
-// exists. An unreadable app keeps the plain hint.
+// exists. Only a switched-on row asks; an unreadable app keeps the plain hint.
 function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
   const t = useT();
   const app = useOAuthApp(provider);
@@ -348,6 +348,8 @@ export function SignInMethodsCard() {
   // settings but must not be able to grant itself a role through the directory.
   // Gated separately so the switches stay usable for them while the map does not.
   const canManageGrants = useCanWrite("authentication_policy", "update");
+  // Reading a vendor app takes capture settings, which a custom role may lack.
+  const canReadApps = useCan("capture_settings", "read");
   const settings = useAuthenticationPolicy();
   const save = useSaveSignInPolicy();
   const [confirmingMfa, setConfirmingMfa] = useState(false);
@@ -423,7 +425,9 @@ export function SignInMethodsCard() {
                       key={provider.key}
                       label={provider.label}
                       description={
-                        isVendor(provider.key) ? (
+                        isVendor(provider.key) &&
+                        provider.enabled &&
+                        canReadApps ? (
                           <ProviderHint provider={provider.key} />
                         ) : (
                           t("signInMethods.providerHint")

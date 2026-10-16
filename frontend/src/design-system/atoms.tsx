@@ -65,6 +65,9 @@ import "./evidencemark.css";
  * own, so the two spellings of a link affordance cannot drift apart. `iconOnly`
  * says nothing here: the class has no fill, no width floor and no control
  * height for it to shrink.
+ *
+ * `bare` is the catalog's `.iconbtn` reached through this component: no fill and
+ * no edge, for a glyph among glyphs such as the top strip's. Pair it with `iconOnly`.
  */
 export type ButtonVariant =
   | "primary"
@@ -73,7 +76,8 @@ export type ButtonVariant =
   | "federated"
   | "ai"
   | "aiQuiet"
-  | "link";
+  | "link"
+  | "bare";
 
 /**
  * The turning mark a control shows while a write it started is in flight.

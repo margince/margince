@@ -9269,6 +9269,7 @@ export const en = {
   "settings.home.reach.team": "Your team\u2019s records",
   "settings.home.reach.all": "All company records",
   "settings.home.access": "Your access",
+  "settings.home.accessLoading": "Loading your access…",
   "settings.boundary.deniedTitle": "No access to this settings page",
   "settings.boundary.deniedBody":
     "This page exists, but your role cannot open it. Copy the address to ask someone who has access.",
@@ -9847,7 +9848,8 @@ export const en = {
   "settings.voice.title": "Voice DNA",
   "settings.voice.readOnly": "Read-only. Your role cannot change Voice DNA.",
   "settings.voice.emptyBody":
-    "Add writing samples to build your Voice DNA. It learns only from what you add, and a first build takes about a minute.",
+    "Add writing samples to build your Voice DNA, which only you can see. It learns only from what you add, and a first build takes about a minute.",
+  "settings.voice.privacy": "Only you can see your Voice DNA.",
   "settings.voice.status.collecting": "Collecting",
   "settings.voice.status.stale": "Rebuild needed",
   "settings.voice.bandThin": "thin",

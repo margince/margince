@@ -5,18 +5,22 @@ import { ArrowLeft, Lock } from "lucide-react";
 import type { MouseEvent } from "react";
 import { EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
+import { useTooltip } from "../design-system/tooltip";
 import { useT } from "../i18n";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
-import type {
-  SettingsGroupId,
-  SettingsPage,
-  SettingsReach,
+import {
+  groupHeadingKey,
+  readsOnly,
+  SETTINGS_GROUPS,
+  SETTINGS_PAGES,
+  type SettingsGroupId,
+  type SettingsPage,
+  type SettingsReach,
 } from "./settingscatalog";
-import { SETTINGS_GROUPS, SETTINGS_PAGES } from "./settingscatalog";
-import { groupHeadingKey } from "./settingsnav";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsHref } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
@@ -129,52 +133,55 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
       {groupsOf(openable).map(({ group, items }) => (
         <Panel key={group} title={t(groupHeadingKey(group))}>
           <PanelBody>
-            <PageRows pages={items} looksUp={reach.looksUp} />
+            <div className="settings-home-links">
+              {items.map((page) => (
+                <PageRow key={page.id} page={page} reach={reach} />
+              ))}
+            </div>
           </PanelBody>
         </Panel>
       ))}
 
       <Panel title={t("settings.home.access")}>
         <PanelBody>
-          {/* Facts, not settings: a definition list rather than SettingRow,
-              which requires a control because every row of it is something a
-              reader can operate. Nothing here is operable — this panel answers
-              "who am I here", and the way to change any of it is to ask. */}
-          <dl className="settings-facts">
-            <dt>{t("settings.home.rolesLabel")}</dt>
-            <dd>
-              {/* The roles as the server resolved them, not as a role name this
-                  screen guessed. A reader with a custom role sees its key,
-                  which is the word they would quote when asking for more. */}
-              <div className="settings-home-roles">
-                {(me.data?.roles ?? []).map((role) => (
-                  <RoleBadge key={role} roleKey={role} />
-                ))}
-              </div>
-            </dd>
-            {/* Seat and reach in words. Both are on the snapshot already and
-                neither was shown: a reader told "read seat" by a disabled
-                button has to guess whether it is their seat, their role or a
-                bug. `authorization` is absent while /me is in flight, and an
-                absent answer says nothing rather than guessing the narrowest —
-                a wrong claim about someone's own access is worse than a gap. */}
-            {me.data?.authorization && (
-              <>
-                <dt>{t("settings.home.seatLabel")}</dt>
+          <QueryGate query={me} pendingLabel={t("settings.home.accessLoading")}>
+            {(snapshot) => (
+              /* Facts, not settings: a definition list rather than SettingRow,
+                 which requires a control. The way to change any of it is to ask. */
+              <dl className="settings-facts">
+                <dt>{t("settings.home.rolesLabel")}</dt>
                 <dd>
-                  {t(
-                    me.data.authorization.seat_type === "full"
-                      ? "settings.home.seat.full"
-                      : "settings.home.seat.read",
-                  )}
+                  {/* The server's role keys, so a custom role shows the word a
+                      reader would quote when asking for more. */}
+                  <div className="settings-home-roles">
+                    {(snapshot.roles ?? []).map((role) => (
+                      <RoleBadge key={role} roleKey={role} />
+                    ))}
+                  </div>
                 </dd>
-                <dt>{t("settings.home.reachLabel")}</dt>
-                <dd>
-                  {t(`settings.home.reach.${me.data.authorization.row_scope}`)}
-                </dd>
-              </>
+                {/* An absent answer says nothing rather than guessing the
+                    narrowest: a wrong claim about someone's access is worse. */}
+                {snapshot.authorization && (
+                  <>
+                    <dt>{t("settings.home.seatLabel")}</dt>
+                    <dd>
+                      {t(
+                        snapshot.authorization.seat_type === "full"
+                          ? "settings.home.seat.full"
+                          : "settings.home.seat.read",
+                      )}
+                    </dd>
+                    <dt>{t("settings.home.reachLabel")}</dt>
+                    <dd>
+                      {t(
+                        `settings.home.reach.${snapshot.authorization.row_scope}`,
+                      )}
+                    </dd>
+                  </>
+                )}
+              </dl>
             )}
-          </dl>
+          </QueryGate>
         </PanelBody>
       </Panel>
     </div>
@@ -195,49 +202,52 @@ function groupsOf(
 }
 
 /** One row per page: its glyph, its name and what it is for. */
-function PageRows({
-  pages,
-  looksUp,
-}: Readonly<{
-  pages: readonly SettingsPage[];
-  looksUp: readonly SettingsPage[];
-}>) {
+function PageRow({
+  page,
+  reach,
+}: Readonly<{ page: SettingsPage; reach: SettingsReach }>) {
   const t = useT();
+  const Glyph = PAGE_ICONS[page.id];
+  const lock = useTooltip<HTMLSpanElement>(t("settings.home.readOnly"));
+  // The tip opens over the lock for a pointer and on the row for a keyboard.
+  // The hidden word already names the lock, so the tip adds no description.
+  const {
+    onPointerEnter,
+    onPointerLeave,
+    "aria-describedby": _spoken,
+    ...onRowFocus
+  } = lock.trigger;
+  const locked = readsOnly(reach, page.id);
   return (
-    <div className="settings-home-links">
-      {pages.map((page) => {
-        const Glyph = PAGE_ICONS[page.id];
-        return (
-          <a
-            key={page.id}
-            className="settings-home-row"
-            href={`#/settings/${page.id}`}
-            onClick={(event) => {
-              if (!opensInThisTab(event)) {
-                return;
-              }
-              event.preventDefault();
-              navigate(settingsHref(page.id));
-            }}
+    <a
+      className="settings-home-row"
+      href={`#/settings/${page.id}`}
+      {...(locked ? onRowFocus : {})}
+      onClick={(event) => {
+        if (!opensInThisTab(event)) {
+          return;
+        }
+        event.preventDefault();
+        navigate(settingsHref(page.id));
+      }}
+    >
+      <Glyph size={16} aria-hidden className="settings-home-glyph" />
+      <span className="settings-home-name">
+        {t(`settings.tab.${page.id}`)}
+        {locked && (
+          <span
+            ref={lock.ref}
+            className="settings-home-lock"
+            onPointerEnter={onPointerEnter}
+            onPointerLeave={onPointerLeave}
           >
-            <Glyph size={16} aria-hidden className="settings-home-glyph" />
-            <span className="settings-home-name">
-              {t(`settings.tab.${page.id}`)}
-              {/* A lock rather than a badge on each row: a reader holding
-                  many read grants would otherwise see a column of chips. */}
-              {looksUp.includes(page) && (
-                <>
-                  <Lock size={14} aria-hidden className="settings-home-lock" />
-                  <span className="sr-only">{t("settings.home.readOnly")}</span>
-                </>
-              )}
-            </span>
-            <span className="t-caption">
-              {t(`settings.page.${page.id}.sub`)}
-            </span>
-          </a>
-        );
-      })}
-    </div>
+            <Lock size={14} aria-hidden />
+            <span className="sr-only">{t("settings.home.readOnly")}</span>
+            {lock.tip}
+          </span>
+        )}
+      </span>
+      <span className="t-caption">{t(`settings.page.${page.id}.sub`)}</span>
+    </a>
   );
 }

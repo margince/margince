@@ -9149,6 +9149,7 @@ export const de = {
   "settings.home.reach.team": "Datensätze deines Teams",
   "settings.home.reach.all": "Alle Datensätze des Unternehmens",
   "settings.home.access": "Dein Zugriff",
+  "settings.home.accessLoading": "Dein Zugriff wird geladen…",
   "settings.boundary.deniedTitle": "Kein Zugriff auf diese Einstellungsseite",
   "settings.boundary.deniedBody":
     "Diese Seite existiert, aber deine Rolle kann sie nicht öffnen. Kopiere die Adresse, um jemanden mit Zugriff zu fragen.",
@@ -9754,7 +9755,8 @@ export const de = {
   "settings.voice.readOnly":
     "Nur Lesezugriff. Deine Rolle darf die Voice DNA nicht ändern.",
   "settings.voice.emptyBody":
-    "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Die Voice DNA lernt nur aus dem, was du hinzufügst, und der erste Aufbau dauert etwa eine Minute.",
+    "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Nur du siehst sie, und sie lernt nur aus dem, was du hinzufügst. Der erste Aufbau dauert etwa eine Minute.",
+  "settings.voice.privacy": "Nur du siehst deine Voice DNA.",
   "settings.voice.status.collecting": "Wird gesammelt",
   "settings.voice.status.stale": "Neuaufbau nötig",
   "settings.voice.bandThin": "dünn",

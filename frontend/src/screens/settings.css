@@ -168,6 +168,7 @@
   grid-column: 2;
 }
 .settings-home-lock {
+  display: inline-flex;
   color: var(--textSecondary);
 }
 /* A term and its answer, where the answer is a FACT rather than a setting: who

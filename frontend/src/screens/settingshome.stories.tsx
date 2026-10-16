@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -41,10 +43,18 @@ const NO_UNITS = {};
  * foot is who this seat IS. Built from two snapshots they could disagree, which
  * is exactly the defect the screen's own partition exists to prevent.
  */
-function home(spec: Parameters<typeof meFixture>[0]) {
+function home(
+  spec: Parameters<typeof meFixture>[0],
+  session: "answered" | "pending" = "answered",
+) {
   return () => {
     const snapshot = meFixture(spec);
-    installFetchStub({ "GET /me": () => jsonResponse(snapshot) });
+    installFetchStub({
+      "GET /me": () =>
+        session === "answered"
+          ? jsonResponse(snapshot)
+          : new Promise<Response>(() => {}),
+    });
     return (
       <StoryProviders>
         <div className="wrap">
@@ -104,6 +114,33 @@ export const Ready: Story = { render: home(LEAD) };
 export const ReadyDark: Story = {
   globals: { theme: "dark" },
   render: home(LEAD),
+};
+
+// The lock's word, on focus of the row a keyboard reaches.
+export const ReadOnlyLockTip: Story = {
+  render: home(LEAD),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = await canvas.findByRole("link", {
+      name: new RegExp(en["settings.tab.fields"]),
+    });
+    row.focus();
+    const tip = await within(canvasElement.ownerDocument.body).findByRole(
+      "tooltip",
+    );
+    await expect(tip).toHaveTextContent(en["settings.home.readOnly"]);
+  },
+};
+
+// While /me is still out, the access panel says it is loading rather than empty.
+export const AccessLoading: Story = {
+  render: home(LEAD, "pending"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText(en["settings.home.accessLoading"]),
+    ).toBeInTheDocument();
+  },
 };
 
 // At phone width the rail is gone, so the directory carries the search box.

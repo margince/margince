@@ -67,6 +67,7 @@ function Served({
           allow: {
             installation_settings: ["read", "update"],
             authentication_policy: ["read", "update"],
+            capture_settings: ["read"],
           },
         }),
       ),
@@ -98,14 +99,14 @@ export const ProviderEnabled: Story = {
   ),
 };
 
-/** Kept on by the admin, but no OAuth app exists for either vendor yet, so the
- * rows say the sign-in screen does not show them. */
+/** No OAuth app exists for either vendor yet. Only the provider switched on
+ * says the sign-in screen does not show it; the one switched off keeps its hint. */
 export const ProviderWithoutApp: Story = {
   render: () => (
     <Served
       providers={[
         { key: "google", label: "Continue with Google", enabled: true },
-        { key: "microsoft", label: "Continue with Microsoft", enabled: true },
+        { key: "microsoft", label: "Continue with Microsoft", enabled: false },
       ]}
       appSource="none"
     >
@@ -114,9 +115,10 @@ export const ProviderWithoutApp: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    expect(
-      await canvas.findAllByText(/not on the sign-in screen yet/i),
-    ).toHaveLength(2);
+    await canvas.findByText(/not on the sign-in screen yet/i);
+    await expect(
+      canvas.getAllByText(/not on the sign-in screen yet/i),
+    ).toHaveLength(1);
   },
 };
 

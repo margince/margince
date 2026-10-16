@@ -61,4 +61,30 @@ describe("the delivery settings", () => {
       expect(saves[0].body).toEqual({ weekly_delivery: "none" });
     });
   });
+
+  it("says so in the panel when a choice is not saved", async () => {
+    stubApi({
+      "GET /me/brief-delivery": () => jsonResponse({}),
+      "PUT /me/brief-delivery": () =>
+        new Response(JSON.stringify({ status: 503, code: "unavailable" }), {
+          status: 503,
+          headers: { "content-type": "application/problem+json" },
+        }),
+    });
+    render(<BriefDeliveryPanel />);
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByTestId("delivery-morning")).getByRole(
+        "combobox",
+      ),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: en["delivery.none"],
+      }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      en["settings.saveFailed"],
+    );
+  });
 });

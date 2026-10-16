@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useId } from "react";
 import { api } from "../api/client";
 import { THEME_LABEL_KEYS } from "../app/account";
 import { Avatar, Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
@@ -139,6 +141,7 @@ function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
+  const refusalId = useId();
   // Saved to the seat so it follows the reader to their next browser. A failed
   // write keeps the language they picked; the next sign-in asks the server again.
   const remember = useMutation({
@@ -154,25 +157,32 @@ function LanguageSettingRow() {
       label={t("locale.switchLabel")}
       description={t("settings.languageHelp")}
       control={(control) => (
-        <Select
-          {...control}
-          className="settingrow-measure"
-          value={locale}
-          onChange={(next) => {
-            const picked = LOCALES.find((option) => option === next);
-            if (picked) {
-              setLocale(picked);
-              remember.mutate(picked);
+        <div className="form-stack settingrow-measure">
+          <Select
+            {...control}
+            aria-describedby={
+              [control["aria-describedby"], remember.error && refusalId]
+                .filter(Boolean)
+                .join(" ") || undefined
             }
-          }}
-          // Each name is in its own language, so each option carries `lang`
-          // (WCAG 2.2 AA 3.1.2).
-          options={LOCALES.map((option) => ({
-            value: option,
-            label: t(localeNameKey(option)),
-            lang: option,
-          }))}
-        />
+            value={locale}
+            onChange={(next) => {
+              const picked = LOCALES.find((option) => option === next);
+              if (picked) {
+                setLocale(picked);
+                remember.mutate(picked);
+              }
+            }}
+            // Each name is in its own language, so each option carries `lang`
+            // (WCAG 2.2 AA 3.1.2).
+            options={LOCALES.map((option) => ({
+              value: option,
+              label: t(localeNameKey(option)),
+              lang: option,
+            }))}
+          />
+          <ErrorLine id={refusalId} error={remember.error} />
+        </div>
       )}
     />
   );

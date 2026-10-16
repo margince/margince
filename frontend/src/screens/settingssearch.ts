@@ -3,7 +3,11 @@
 
 import { foldForMatch } from "../format/collate";
 import type { MessageKey } from "../i18n/en";
-import type { SettingsPage, SettingsPageId } from "./settingscatalog";
+import {
+  groupHeadingKey,
+  type SettingsPage,
+  type SettingsPageId,
+} from "./settingscatalog";
 
 /**
  * Finding a setting by the word a reader already has for it.
@@ -14,7 +18,7 @@ import type { SettingsPage, SettingsPageId } from "./settingscatalog";
  * disagree with the navigation beside it, and the disagreement a reader notices
  * is the one where search offers a page that then refuses them.
  *
- * It never calls an endpoint. Twenty-eight rows is not a query.
+ * It never calls an endpoint: the catalog is a short table, not a query.
  */
 
 // Old names and the nouns a reader types, in English: a translated query already
@@ -40,7 +44,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "buffer",
     "notice",
   ],
-  voice: ["writing", "tone", "style", "drafts"],
+  voice: ["writing style", "tone", "drafts"],
   agents: [
     "passport",
     "token",
@@ -92,10 +96,9 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "login",
     "sso",
     "oidc",
-    "oauth",
+    "oauth app",
     "google",
     "microsoft",
-    "app",
     "agent",
     "mcp",
     "token",
@@ -224,7 +227,6 @@ export type SettingsHit = {
  * the sidebar is already the list of everything, and repeating it under a
  * search box would say the reader had searched for something.
  */
-
 export function settingsSearch(
   query: string,
   pages: readonly SettingsPage[],
@@ -245,7 +247,7 @@ export function settingsSearch(
   const scored: { hit: SettingsHit; rank: number }[] = [];
   for (const page of pages) {
     const label = t(`settings.tab.${page.id}`);
-    const group = t(`settings.group.${page.group}`);
+    const group = t(groupHeadingKey(page.group));
     const sub = t(`settings.page.${page.id}.sub`);
     const fields = [
       // Order is the ranking: a hit on the page's own name beats one on its
@@ -260,11 +262,9 @@ export function settingsSearch(
     // single word would — and a page matching only half the phrase is out
     // rather than ranked low, because a reader who typed two words meant both.
     const ranks = words.map((word) => rankOf(word, fields));
-    if (ranks.every((rank) => rank !== undefined)) {
-      scored.push({
-        hit: { page, label, group },
-        rank: Math.min(...(ranks as number[])),
-      });
+    const reached = ranks.filter((rank) => rank !== undefined);
+    if (reached.length === ranks.length) {
+      scored.push({ hit: { page, label, group }, rank: Math.min(...reached) });
     }
   }
   return scored

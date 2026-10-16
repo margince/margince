@@ -4,7 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { StoryProviders } from "../../testing/story-utils";
+import {
+  expectFoldedRowsUnderSummary,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { RedirectUriGroup, RedirectUris } from "./oauth-redirects";
 
 // The callback addresses on their own, two ways. In a vendor's panel they fold
@@ -74,7 +77,9 @@ export const InAPanelNoAppPhone: Story = {
   play: InAPanelNoApp.play,
 };
 
-const openFold: Story["play"] = async ({ canvasElement }) => {
+const openFold = async ({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
     await within(canvasElement).findByText("Authorized redirect URIs"),
   );
@@ -86,11 +91,15 @@ export const InAPanelOpen: Story = {
   play: openFold,
 };
 
+// Folded, each address row starts where the summary above it starts.
 export const InAPanelPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: InAPanel.render,
-  play: openFold,
+  play: async (context) => {
+    await openFold(context);
+    await expectFoldedRowsUnderSummary(context.canvasElement);
+  },
 };
 
 export const Bare: Story = {
