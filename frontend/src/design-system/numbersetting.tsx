@@ -54,8 +54,10 @@ export function NumberSetting({
   disabled?: boolean;
   /** Why this reader may not change it, under the box; refuses the edit alone. */
   reason?: ReactNode;
-  /** An element elsewhere that describes this number, named beside the row's
-   * own description, as `Switch`'s `describedBy` is. */
+  /**
+   * An element elsewhere that describes this number, named after the row's
+   * own description.
+   */
   describedBy?: string;
   testId?: string;
 }>) {

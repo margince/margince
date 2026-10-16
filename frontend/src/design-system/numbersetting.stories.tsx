@@ -98,7 +98,7 @@ export const NotYours: Story = {
   },
 };
 
-export const RefusedSave: Story = {
+export const NamesCallerElement: Story = {
   render: () => (
     <Card title="Website reads">
       <SettingList>
@@ -126,9 +126,9 @@ export const RefusedSave: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("textbox", { name: "Pages per read" }),
+      await canvas.findByRole("textbox", { name: "Pages per read" }),
     ).toHaveAccessibleDescription(
-      expect.stringContaining("Couldn't save the setting"),
+      expect.stringMatching(/^Most pages one read fetches.*Couldn't save/),
     );
   },
 };

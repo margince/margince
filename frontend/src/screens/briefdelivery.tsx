@@ -65,8 +65,11 @@ function BriefDeliveryRows() {
   });
 
   const chosen = (value: Choice | undefined): Choice => value ?? "email";
-  const describedBy = (own: string | undefined) =>
-    describedByIds(own, save.isError && refusalId);
+  const describedBy = (own: string | undefined, setting: keyof BriefDelivery) =>
+    describedByIds(
+      own,
+      save.isError && save.variables?.[setting] !== undefined && refusalId,
+    );
   const options = CHOICES.map((choice) => ({
     value: choice,
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
@@ -82,7 +85,10 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
-              aria-describedby={describedBy(control["aria-describedby"])}
+              aria-describedby={describedBy(
+                control["aria-describedby"],
+                "morning_brief_delivery",
+              )}
               className="settingrow-measure"
               value={chosen(settings.data?.morning_brief_delivery)}
               onChange={(next) => {
@@ -104,7 +110,10 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
-              aria-describedby={describedBy(control["aria-describedby"])}
+              aria-describedby={describedBy(
+                control["aria-describedby"],
+                "weekly_delivery",
+              )}
               className="settingrow-measure"
               value={chosen(settings.data?.weekly_delivery)}
               onChange={(next) => {
