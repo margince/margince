@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { MAX_GROUP_GRANTS } from "./group-role-grants";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
 
@@ -485,7 +486,10 @@ describe("the group role grant editor", () => {
 
   it("hands focus to the first group when a full map leaves Add disabled", async () => {
     const full = Object.fromEntries(
-      Array.from({ length: 64 }, (_, index) => [`team-${index}`, "rep"]),
+      Array.from({ length: MAX_GROUP_GRANTS }, (_, index) => [
+        `team-${index}`,
+        "rep",
+      ]),
     );
     mount([], full);
     const user = userEvent.setup();

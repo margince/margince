@@ -21,7 +21,7 @@ import { useSaveSignInPolicy } from "./sign-in-policy";
 
 // The server refuses a larger map; mirrored here so the refusal reaches the
 // admin before a request does.
-const MAX_GROUP_GRANTS = 64;
+export const MAX_GROUP_GRANTS = 64;
 
 // A draft grant row, keyed by a minted id. Keyed by the group being typed, the
 // input would remount under the admin's cursor at every keystroke.

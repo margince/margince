@@ -59,10 +59,13 @@ export const SaveRefused: Story = {
     {},
     {
       "PUT /me/brief-delivery": () =>
-        new Response(JSON.stringify({ status: 503, code: "service_unavailable" }), {
-          status: 503,
-          headers: { "content-type": "application/problem+json" },
-        }),
+        new Response(
+          JSON.stringify({ status: 503, code: "service_unavailable" }),
+          {
+            status: 503,
+            headers: { "content-type": "application/problem+json" },
+          },
+        ),
     },
   ),
   play: async ({ canvasElement }) => {

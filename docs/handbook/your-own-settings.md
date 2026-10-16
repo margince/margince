@@ -127,7 +127,7 @@ To set when customers can book time with you in Margince, open Settings → **Me
 4. While the list is open, type the place name to go to it.
 5. Choose **Save settings** in the bar at the foot of the page.
 
-If you may not book meetings yourself, the page shows the **Bookable hours** panel instead. Below it, a notice says "An administrator must grant permission to book meetings." Set the same fields there and choose **Save working hours**.
+If you may not book meetings yourself, the page shows the **Bookable hours** panel instead. Set the same fields there and choose **Save working hours**. Below the panel, a notice says "An administrator must grant permission to book meetings."
 
 Until you save, the panel says **Not set yet**, and customers are offered 09:00 to 17:00, Monday to Friday, in the installation's time zone.
 Also called: working hours, availability, office hours.

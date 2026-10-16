@@ -66,10 +66,13 @@ describe("the delivery settings", () => {
     stubApi({
       "GET /me/brief-delivery": () => jsonResponse({}),
       "PUT /me/brief-delivery": () =>
-        new Response(JSON.stringify({ status: 503, code: "service_unavailable" }), {
-          status: 503,
-          headers: { "content-type": "application/problem+json" },
-        }),
+        new Response(
+          JSON.stringify({ status: 503, code: "service_unavailable" }),
+          {
+            status: 503,
+            headers: { "content-type": "application/problem+json" },
+          },
+        ),
     });
     render(<BriefDeliveryPanel />);
     const user = userEvent.setup();
