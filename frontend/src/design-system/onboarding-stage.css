@@ -548,6 +548,11 @@
   gap: var(--space-3);
   margin-inline-start: auto;
 }
+/* Fills mount in arrival order, so an alert that arrives after the button
+   would otherwise land last and crowd it. */
+.ob-stage-acts > [role="alert"] {
+  order: -1;
+}
 
 /*
  * The Core's first light: a dot at the orb's own centre, crossing the room.
