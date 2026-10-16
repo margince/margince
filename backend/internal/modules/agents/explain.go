@@ -152,6 +152,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", "unknown_tool", "err", unknownTool)
 		return unknownTool.Error() + ". Nothing was changed, and no retry will make this name resolve. " +
 			"Call tools/list and use a name from it."
+	case errors.As(err, &badArgs) && badArgs.Code != "":
+		return s.explainClassified(tool, err)
 	case errors.As(err, &badArgs):
 		// The tool surface's own validation refusal: a misspelled argument, a
 		// value outside a closed vocabulary, an empty message body. The agent

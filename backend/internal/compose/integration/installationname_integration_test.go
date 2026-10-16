@@ -185,8 +185,14 @@ func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 	// Renames run before resends. A resend makes the agent the name's last
 	// writer, and a rename over an agent's name never stages.
 	for door, rename := range doors {
-		if answer, refused := rename(t, "Agent Picked Ltd"); !refused || !strings.Contains(answer, values.AnchorRenameRefusal) {
+		answer, refused := rename(t, "Agent Picked Ltd")
+		if !refused || !strings.Contains(answer, values.AnchorRenameRefusal) {
 			t.Errorf("%s: an agent's rename answered %s, want it refused as the installation's name", door, answer)
+		}
+		if !strings.Contains(answer, "display_name") || !strings.Contains(answer, "anchor_protected") ||
+			strings.Contains(answer, "inputSchema") {
+			t.Errorf("%s: the refusal %s must name display_name and anchor_protected, and not send the agent to the schema",
+				door, answer)
 		}
 	}
 	for door, rename := range doors {
