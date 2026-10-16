@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -294,6 +296,17 @@ func (s *Store) FinishRun(
 	return storekit.EmitEvent(ctx, tx, auditID, runID, event)
 }
 
+// noInputCheckYet answers before the first nightly input check. A bare
+// not-found would read as a check hidden from the caller, not one never run.
+func noInputCheckYet() *httperr.DetailedError {
+	return &httperr.DetailedError{
+		Status: http.StatusNotFound,
+		Code:   "no_input_check_yet",
+		Detail: "No input check has run yet, so no source has been read: the figures cover only " +
+			"what was typed into Margince by hand. The nightly check creates the first one.",
+	}
+}
+
 // LatestRun answers the most recent completed pass.
 func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
@@ -313,7 +326,7 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Run{}, apperrors.ErrNotFound
+			return Run{}, noInputCheckYet()
 		}
 		return Run{}, err
 	}
